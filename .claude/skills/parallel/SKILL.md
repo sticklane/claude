@@ -1,6 +1,6 @@
 ---
 name: parallel
-description: Dispatches an independent group of task files to concurrent background agents in isolated worktrees and collects their verdicts.
+description: Dispatches an independent group of task files to concurrent background agents in isolated worktrees and collects their verdicts. For wall-clock throughput on independent tasks; costs proportionally more tokens.
 argument-hint: "[specs/<slug> or task files...]"
 disable-model-invocation: true
 ---
@@ -51,4 +51,5 @@ which branches merged cleanly and which are pending, and let the user decide.
 For BLOCKED tasks, report the blocker and
 whether the task file needs amending (back to /breakdown) or just a retry.
 Dependent tasks unlocked by this group run next — sequentially via /build, or
-another /parallel group if independent.
+another /parallel group if independent. If any worker's verdict exposed a
+task-file or decomposition problem, run /distill before dispatching more.
