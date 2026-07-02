@@ -1,0 +1,45 @@
+---
+description: Launch a task for low-supervision execution with verification guardrails - classify it, set the guardrails, then run hands-off. For walking away from well-specified, peripheral work.
+---
+
+Run the task file given after the command with minimal supervision.
+Autonomy is earned by verification, not granted by optimism.
+
+1. **Classify (go/no-go).** Low-supervision execution fits: peripheral
+   features, prototypes, mechanical migrations — anything with runnable
+   acceptance criteria and no irreversible actions. It does NOT fit: core
+   business logic, security-sensitive code, ambiguous specs. If the task is
+   on the wrong side, say so and recommend attended /build instead. Don't
+   launch.
+
+2. **Preconditions (all mandatory).**
+   - Clean git state; dedicated branch or worktree — recovery must be
+     "discard the branch", never "untangle the tree".
+   - Runnable acceptance criteria in the task file (no criteria → no
+     autonomy).
+   - Gates installed (/gate hooks) so edits are checked deterministically.
+   - Terminal Execution Policy: deny list covers `git push`, deploys, and
+     destructive commands (Settings → Antigravity → Terminal Execution
+     Policy). Turbo mode ONLY with the deny list in place; never disable
+     review policies for core work.
+
+3. **Launch shape.** Confirm with the user, then either:
+   - This conversation: proceed hands-off through /build with artifact
+     review policy relaxed ("Always Proceed") — appropriate only because
+     step 1 classified the task as peripheral; or
+   - Background: a separate Agent Manager agent (or scheduled task) on the
+     worktree with the /build prompt from the parallel workflow. Note:
+     scheduled tasks run on a Flash-class model — fine for mechanical
+     tasks, wrong for judgment-heavy ones.
+   - Timebox exploratory bets (the slot machine): one run; accept the
+     result or DISCARD the branch and restart fresh with a better task
+     file. Never debug a failed autonomous run in place.
+
+4. **The walk-away contract.** Before launching, state: what's running,
+   where (branch/worktree), the gate that decides success, and the evidence
+   the run must produce (acceptance-command output in the walkthrough —
+   claims don't count). On completion: PASS → present evidence and the diff
+   for human review (a human still approves). FAIL → report, discard or
+   re-scope, relaunch clean. Either way, if the run exposed a task-file or
+   gate problem, apply the distill skill so the next launch doesn't repay
+   for it.
