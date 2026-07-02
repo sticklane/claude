@@ -98,14 +98,49 @@ may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
 
 ## Install
 
-- **Per project**: copy `.claude/` into the repo root (skills, agents, and
-  rules are all project-scoped and version-controlled — share them with your
-  team).
-- **Globally**: copy the contents of `.claude/skills/` and `.claude/agents/`
-  into `~/.claude/skills/` and `~/.claude/agents/`.
+Clone it once:
+
+```bash
+git clone https://github.com/sticklane/claude.git ~/agentic-toolkit
+```
+
+**Option A — per project** (recommended: version-controlled, shared with
+your team). From your project's root:
+
+```bash
+cp -r ~/agentic-toolkit/.claude .
+git add .claude && git commit -m "Add agentic development toolkit"
+```
+
+If the project already has a `.claude/` directory, copy the subdirectories
+(`skills/`, `agents/`, `rules/`) into it instead of overwriting.
+
+**Option B — global** (available in every repo, just for you):
+
+```bash
+mkdir -p ~/.claude/skills ~/.claude/agents
+cp -r ~/agentic-toolkit/.claude/skills/* ~/.claude/skills/
+cp -r ~/agentic-toolkit/.claude/agents/* ~/.claude/agents/
+```
+
+Symlink instead of `cp` if you want `git pull` in `~/agentic-toolkit` to
+update everything in place. Note the token-discipline rule is
+project-scoped (`.claude/rules/` has no user-level equivalent) — for global
+use, fold its points into `~/.claude/CLAUDE.md`.
+
+**Verify**: start a new Claude Code session (skills load at session start)
+and type `/` — you should see `idea`, `breakdown`, `build`, `gate`, and the
+rest in the menu. Then point it at a real repo: `/onboard` first, `/idea`
+for your first feature.
+
+Notes:
+
 - Specs land in `specs/<slug>/` in whatever repo you run the pipeline in.
 - This toolkit layers on top of Claude Code's bundled commands — it assumes
   `/simplify` and `/code-review` exist rather than duplicating them.
+- Nothing here changes permissions or installs hooks by itself; only
+  `/onboard` and `/gate` write to `.claude/settings.json`, and they ask
+  first.
 
 ## Extending it
 
