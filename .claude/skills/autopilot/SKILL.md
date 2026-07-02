@@ -1,6 +1,6 @@
 ---
 name: autopilot
-description: Launches a task for unattended execution with verification gates - classifies whether the task is safe to run autonomously, scopes permissions, sets a bounded goal, and starts it in the background or headless.
+description: Launches a task for unattended execution with verification gates - classifies whether the task is safe to run autonomously, scopes permissions, sets a bounded goal, and starts it in the background or headless. For walking away from well-specified, peripheral work.
 argument-hint: "[path/to/task.md]"
 disable-model-invocation: true
 ---
@@ -25,9 +25,11 @@ wrong side, say so and recommend attended `/build` instead. Don't launch.
   bad run must be "discard the branch", never "untangle the tree".
 - Runnable acceptance criteria in the task file (no criteria → no autonomy).
 - Quality gates installed (`/gate`) or a bounded goal set (below).
-- Permissions scoped: the run can build/test/commit but NOT push, deploy,
-  or touch anything outside the worktree. Never `bypassPermissions` outside
-  a network-isolated container.
+- Permissions scoped: the run can build/test/commit but NOT push or deploy.
+  Be honest about the limit — allowlists gate commands, not the filesystem;
+  a worktree isolates the diff, not the machine. For hard isolation use the
+  containment ladder in reference.md. Never `bypassPermissions` outside a
+  network-isolated container.
 
 ## 3. Pick the mechanism (see reference.md for exact commands)
 
@@ -46,4 +48,5 @@ verifier verdict — claims don't count). On completion: PASS → present
 evidence and the diff for human review (a human still approves; the agent
 does the work). FAIL or gate-capped → report, discard or re-scope, and
 restart clean. Correcting a wandering autonomous run in-context is the
-known losing move.
+known losing move. Either way, if the run exposed a task-file or gate
+problem, run /distill so the next launch doesn't repay for it.

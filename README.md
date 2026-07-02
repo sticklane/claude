@@ -31,7 +31,8 @@ built from, with citations, lives in [docs/anthropic-playbook.md](docs/anthropic
 ```
 
 Each arrow crosses a **file on disk**, not conversation memory — every stage
-can (and should) run in a fresh, cheap session.
+can (and should) run in a fresh, cheap session. Small single-session specs
+may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
 
 ## What's in the box
 
@@ -63,7 +64,9 @@ can (and should) run in a fresh, cheap session.
   work isn't the one grading it"); hooks make the gate deterministic.
 - **Review is high-signal or it is noise** — Anthropic's internal review
   pipeline drops any finding below 80/100 confidence and never flags what a
-  linter would catch. The `critic` agent enforces the same bar.
+  linter would catch. The `critic` agent enforces the same bar for diffs
+  (specs may include lower-confidence ambiguity findings, marked as such —
+  ambiguity is cheap to fix before implementation).
 - **Tech choices stay on distribution** — prefer stacks the model already
   knows deeply (Anthropic picked Claude Code's own stack this way, so Claude
   could build it), do the simple thing first, and record decisions so no

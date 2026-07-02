@@ -5,7 +5,8 @@ argument-hint: "[path/to/SPEC.md or the decision to make]"
 ---
 
 Resolve the open design/technology decision in $ARGUMENTS. Three principles
-govern everything here (see docs/anthropic-playbook.md, "Choosing tech"):
+govern everything here (see docs/anthropic-playbook.md, "How they choose
+tech"):
 
 - **Stay on distribution.** Prefer technology the model already knows deeply
   — popular, well-documented, boringly mainstream. Anthropic chose Claude
@@ -37,8 +38,14 @@ parallel (general-purpose, or `Explore` for pure research). Each reports:
   that matters most for agentic development.
 - The simplest version of this option that could work.
 
-For choices where reading isn't enough, prototype instead: one worktree per
-candidate, timeboxed, throwaway — keep the winner's lessons, not its code.
+For choices where reading isn't enough, prototype instead: one background
+agent per candidate with `isolation: worktree`, timeboxed to a small fixed
+scope ("make the spec's riskiest requirement work end to end"), each
+returning a short report — what worked, what fought back, verification
+story. The prototypes are throwaway: keep the winner's lessons, not its
+code. Note the cost before launching: each investigator or prototype agent
+pays its own full context, so 3 candidates ≈ 3× the tokens of deciding from
+a survey — worth it only when the decision is expensive to reverse.
 
 ## 3. Decide and record
 
@@ -47,9 +54,12 @@ on-distribution, then simplicity. Present the decision with the runner-up
 and the one scenario that would flip it. Then record:
 
 - SPEC.md Solution section: the choice, in one paragraph.
+- SPEC.md Open questions: delete the entry this decision resolves —
+  /breakdown refuses any spec with unresolved entries there.
 - SPEC.md appendix: rejected options and the reason, one line each.
 - CLAUDE.md: a single line constraining future agents ("Use X for Y; do not
   introduce Z") — only if the decision is repo-wide, and it passes the
   "would removing this cause mistakes?" test.
 
-Next step: `/breakdown` (or `/build` for small specs).
+Next step: `/breakdown specs/<slug>/SPEC.md` (or `/build specs/<slug>/SPEC.md`
+for small specs).

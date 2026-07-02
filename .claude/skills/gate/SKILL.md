@@ -12,7 +12,9 @@ every time with zero exceptions. Exact JSON and script templates are in
 ## 1. Establish the check commands
 
 From $ARGUMENTS, CLAUDE.md, or the build files — then RUN each one to
-confirm it works and observe how long it takes. Gate rules:
+confirm it works and observe how long it takes (pipe long output through
+`tail`, or delegate the run to a subagent — raw logs don't belong in the
+main context). Gate rules:
 
 - The Stop-hook check must be fast (seconds, not minutes) and deterministic.
   A flaky or slow gate is worse than none — it teaches everyone to bypass it.
@@ -21,17 +23,18 @@ confirm it works and observe how long it takes. Gate rules:
 
 ## 2. Install (per reference.md)
 
-1. **Stop gate**: a script hook on `Stop` that runs the checks and exits 2
-   with the failure output as reason, so Claude keeps working until green.
-   MUST include the `stop_hook_active` guard so it can't infinite-loop.
-   Claude Code force-ends the turn after 8 consecutive blocks
+1. **Stop gate**: a script hook on `Stop` that re-runs the checks on every
+   stop attempt and exits 2 with the failure output as reason, so Claude
+   keeps working until green. Loop safety is Claude Code's built-in cap —
+   it force-ends the turn after 8 consecutive blocks without progress
    (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` raises it).
 2. **Auto-format**: `PostToolUse` on `Edit|Write` piping the edited file to
    the project's formatter — style stops consuming review attention.
 3. **Protected files**: `PreToolUse` on `Edit|Write` denying edits to
    `.env*`, lockfiles, and generated code. During TDD builds, optionally add
-   the project's test glob so the implementing agent physically cannot make
-   tests pass by editing them.
+   the project's test glob so the implementing agent cannot make tests pass
+   by editing them through Edit/Write (Bash writes need a permission `deny`
+   rule too — the reference covers pairing them).
 4. Offer but don't force: session-scoped alternatives (`/goal "<condition>"`
   for one task rather than permanent hooks).
 

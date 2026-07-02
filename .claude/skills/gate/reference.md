@@ -5,21 +5,30 @@ Semantics that matter: exit code 2 blocks (exit 1 is non-blocking and
 proceeds); `PostToolUse` cannot block (the tool already ran); a PreToolUse
 `permissionDecision: "deny"` blocks even in `bypassPermissions` mode.
 
+Setup rules that silently break gates when skipped:
+
+- `chmod +x .claude/hooks/*.sh` — files created by the Write tool are not
+  executable, and hooks fail open on script errors.
+- The scripts depend on `jq`; check `command -v jq` first and install or
+  rewrite without it if absent.
+- If `.claude/settings.json` already exists, MERGE the `hooks` key into it —
+  never overwrite the file.
+
 ## Stop gate (blocks "done" until checks pass)
 
-`.claude/hooks/stop-gate.sh` — replace the check command; keep the guard:
+`.claude/hooks/stop-gate.sh` — replace `npm test` with the project's check;
+note the exit status is captured from the check itself, never from a pipe:
 
 ```bash
 #!/bin/bash
-INPUT=$(cat)
-# Anti-loop guard: if we already triggered a continuation, allow stopping.
-if [ "$(echo "$INPUT" | jq -r '.stop_hook_active')" = "true" ]; then
-  exit 0
-fi
-RESULT=$(npm test 2>&1 | tail -20)
-if [ $? -ne 0 ]; then
-  echo "Checks failing — keep working. Output:" >&2
-  echo "$RESULT" >&2
+# Re-runs the check on every stop attempt, including continuation rounds
+# (stop_hook_active=true), so the gate only opens when the check is green.
+# Loop safety comes from Claude Code's cap: after 8 consecutive blocks
+# without progress it force-ends the turn (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
+# raises that if a gate legitimately needs more rounds).
+if ! RESULT=$(npm test 2>&1); then
+  echo "Checks failing — keep working. Output (last 20 lines):" >&2
+  printf '%s\n' "$RESULT" | tail -20 >&2
   exit 2
 fi
 exit 0
@@ -45,10 +54,18 @@ Registration in `.claude/settings.json`:
 }
 ```
 
-Notes: Stop hooks fire whenever Claude finishes responding, not only at task
-completion — keep the check cheap. Claude Code overrides the hook after 8
-consecutive blocks without progress; raise with
-`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` if a gate legitimately needs more rounds.
+Stop hooks fire whenever Claude finishes responding, not only at task
+completion — keep the check cheap, or the gate taxes every conversational
+turn. If the check is too slow to re-run each round, use the
+`stop_hook_active` input field to allow stopping after one forced retry —
+but then describe the gate honestly as "one retry", not "until green":
+
+```bash
+INPUT=$(cat)
+if [ "$(printf '%s' "$INPUT" | jq -r '.stop_hook_active')" = "true" ]; then
+  exit 0
+fi
+```
 
 ## Auto-format on edit
 
@@ -61,7 +78,7 @@ consecutive blocks without progress; raise with
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path' | xargs npx prettier --write --ignore-unknown"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-file.sh"
           }
         ]
       }
@@ -70,23 +87,31 @@ consecutive blocks without progress; raise with
 }
 ```
 
-Swap the formatter per project (`gofmt -w`, `ruff format`, `cargo fmt --`).
-
-## Protected files (deny even in bypassPermissions)
-
-`.claude/hooks/protect-files.sh`:
+`.claude/hooks/format-file.sh` (quoted variable — paths with spaces survive;
+`// empty` prevents formatting the literal string "null"):
 
 ```bash
 #!/bin/bash
-INPUT=$(cat)
-FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+FILE=$(jq -r '.tool_input.file_path // empty')
+[ -n "$FILE" ] && npx prettier --write --ignore-unknown "$FILE"
+exit 0
+```
+
+Swap the formatter per project (`gofmt -w`, `ruff format`, `cargo fmt --`).
+
+## Protected files
+
+`.claude/hooks/protect-files.sh` — output built with jq so a hostile file
+path cannot inject JSON; tighten or extend the pattern list per repo:
+
+```bash
+#!/bin/bash
+FILE=$(jq -r '.tool_input.file_path // empty')
 case "$FILE" in
-  *.env*|*package-lock.json|*pnpm-lock.yaml|*.git/*)
-    cat <<JSON
-{"hookSpecificOutput": {"hookEventName": "PreToolUse",
- "permissionDecision": "deny",
- "permissionDecisionReason": "Protected file: $FILE"}}
-JSON
+  .env|.env.*|*/.env|*/.env.*|*package-lock.json|*pnpm-lock.yaml|*.git/*)
+    jq -n --arg reason "Protected file: $FILE" \
+      '{hookSpecificOutput: {hookEventName: "PreToolUse",
+        permissionDecision: "deny", permissionDecisionReason: $reason}}'
     exit 0
     ;;
 esac
@@ -111,10 +136,17 @@ exit 0
 }
 ```
 
+**Scope honestly**: this matcher covers Edit/Write only. An agent with Bash
+can still write via `sed -i` or `cat >` — pair the hook with permission
+`deny` rules in settings.json (e.g. `Bash(sed -i *)` or denying Bash write
+patterns) if the protection must be hard, and remember hooks fail open on
+script errors while permission rules don't.
+
 **TDD variant** (anti-test-gaming, community practice built on the official
 deny mechanism): add the project's test glob (e.g. `*.test.ts|*_test.go`)
 to the case list while an implementation task is running, after the failing
-tests are committed. Remove it for test-authoring work.
+tests are committed. Remove it for test-authoring work. Same Bash caveat
+applies — the committed failing tests are the tamper-evidence either way.
 
 ## Session-scoped alternatives
 

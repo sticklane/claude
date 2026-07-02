@@ -19,7 +19,12 @@ points); conventions that differ from language defaults; any existing
 RUN every command that will go into CLAUDE.md — install, build, test, lint —
 and record the real invocations and their quirks (slow suites, required env
 vars, flaky tests). A CLAUDE.md that lies is worse than none: every future
-session inherits the lie.
+session inherits the lie. Two cautions:
+
+- First contact means untrusted code: confirm with the user before running
+  install hooks or long/side-effectful suites, and timebox anything slow.
+- Keep raw logs out of the main context — pipe through `tail`, or delegate
+  the runs to a subagent that reports command + exit status + quirks only.
 
 ## 3. Write CLAUDE.md
 
@@ -39,17 +44,21 @@ a procedure, it should be a skill instead.
 ## 4. Permissions
 
 `.claude/settings.json` allowlist covering exactly the verified commands
-(test/lint/build, git add/commit) with `deny` on push and anything
-destructive — the autopilot reference
-(.claude/skills/autopilot/reference.md) has the template and syntax rules.
+(test/lint/build, git add/commit) with `deny` on `git push` — the autopilot
+reference (.claude/skills/autopilot/reference.md) has the template and
+syntax rules. Merge into any existing settings file rather than overwriting,
+and keep denies that would annoy attended sessions (like WebFetch) out of
+the shared file — those belong in a personal settings.local.json autonomy
+profile.
 
 ## 5. Offer the next layer
 
 Ask which the user wants now (don't install unasked):
 - `/gate` — Stop-hook check gate, auto-format, protected files.
 - `REVIEW.md` — repo-specific code-review tuning (severity redefinitions,
-  nit caps, skip rules like "anything CI already enforces"), injected into
-  review runs at highest priority.
+  nit caps, skip rules like "anything CI already enforces"). Note the scope:
+  it's read by the managed GitHub Code Review service; for the local
+  `/code-review` command, review rules belong in CLAUDE.md instead.
 
 Close by reporting what was created, each command's verification evidence,
 and the suggested first move: `/idea` for new work.

@@ -11,7 +11,7 @@ skill teaches, and cite it rather than restating it.
   phrases (trigger phrases not required for `disable-model-invocation: true`
   skills — Claude never auto-triggers those); command name comes from the
   directory name.
-- Side-effectful pipeline steps (`/build`, `/parallel`) keep
+- Side-effectful pipeline steps (`/build`, `/parallel`, `/autopilot`) keep
   `disable-model-invocation: true` — only humans launch them.
 - SKILL.md bodies stay well under 500 lines; procedures as numbered steps or
   checklists; heavy reference goes in a separate file, loaded on demand.

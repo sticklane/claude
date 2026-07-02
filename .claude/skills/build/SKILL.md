@@ -1,6 +1,6 @@
 ---
 name: build
-description: Executes one task file (or a small SPEC.md) end to end - explore via scouts, plan proportionally, implement test-first, verify with an independent agent, commit.
+description: Executes one task file (or a small SPEC.md) end to end - explore via scouts, plan proportionally, implement test-first, verify with an independent agent, commit. The attended inner loop of the pipeline; run it in a fresh session per task.
 argument-hint: "[path/to/task.md or SPEC.md]"
 disable-model-invocation: true
 ---

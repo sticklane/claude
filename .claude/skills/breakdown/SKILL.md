@@ -4,8 +4,9 @@ description: Decomposes a SPEC.md into independent task files sized for one clea
 argument-hint: "[path/to/SPEC.md]"
 ---
 
-Decompose the spec at $ARGUMENTS into task files under the spec's directory,
-each executable by a fresh session with no other context.
+Decompose the spec at $ARGUMENTS (if empty: the most recently modified
+`specs/*/SPEC.md`, or ask) into task files under the spec's directory, each
+executable by a fresh session with no other context.
 
 ## Sizing rule
 
@@ -54,4 +55,6 @@ Runnable commands only:
 ## Hand off
 
 Tell the user: run `/build specs/<slug>/tasks/01-*.md` in a fresh session per
-task, or `/parallel specs/<slug>` to dispatch an independent group at once.
+task, `/parallel specs/<slug>` to dispatch an independent group at once, or
+`/autopilot specs/<slug>/tasks/NN-*.md` for unattended execution of
+peripheral tasks (once `/gate` is installed).
