@@ -21,6 +21,10 @@ skill teaches, and cite it rather than restating it.
   `reference.md`, loaded on demand — never in the SKILL.md body.
 - Agents keep hard output budgets (scout ≤300 words) — they exist to protect
   the caller's context; a verbose agent defeats its purpose.
+- `.claude/` is the source of truth; `antigravity/` is a mirrored port
+  (skills near-identical, agents→skills, human-only skills→workflows,
+  hooks in Antigravity's JSON shape). When a skill changes here, mirror the
+  change there in the same commit.
 
 ## Testing changes
 

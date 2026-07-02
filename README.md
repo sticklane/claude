@@ -133,6 +133,20 @@ and type `/` — you should see `idea`, `breakdown`, `build`, `gate`, and the
 rest in the menu. Then point it at a real repo: `/onboard` first, `/idea`
 for your first feature.
 
+**Option C — Google Antigravity** instead of the Claude Code CLI: the full
+port lives in [antigravity/](antigravity/README.md) — same skills (native
+Agent Skills support), the human-only commands as workflows, `AGENTS.md`
+replacing CLAUDE.md, and hooks in Antigravity's format. From your project
+root:
+
+```bash
+cp -r ~/agentic-toolkit/antigravity/.agents .
+cp ~/agentic-toolkit/antigravity/AGENTS.md .    # merge if you have one
+```
+
+See [antigravity/README.md](antigravity/README.md) for the concept mapping
+and what degrades (notably: no enforced cheap subagents, softer stop gates).
+
 Notes:
 
 - Specs land in `specs/<slug>/` in whatever repo you run the pipeline in.

@@ -1,0 +1,58 @@
+---
+name: onboard
+description: Prepares an existing repository for agentic development - scouts the codebase, writes a concise AGENTS.md with verified commands, and offers quality gates. Use on first contact with a repo, or when the user says "set this repo up", "make this codebase agent-ready", or "bootstrap AGENTS.md".
+---
+
+Make this repo a place where agents can work reliably. The deliverables are
+an AGENTS.md that never lies and (optionally) gates. Everything else agents
+can discover themselves.
+
+## 1. Scout
+
+Apply the scout skill (in a separate cheap conversation for big repos):
+build system and candidate commands; architecture map (top modules, entry
+points); conventions that differ from language defaults; any existing
+AGENTS.md/GEMINI.md, `.agents/` config, or CI workflows to align with.
+
+## 2. Verify before writing
+
+RUN every command that will go into AGENTS.md — install, build, test, lint —
+and record the real invocations and their quirks (slow suites, required env
+vars, flaky tests). An AGENTS.md that lies is worse than none. Two cautions:
+
+- First contact means untrusted code: confirm with the user before running
+  install hooks or long/side-effectful suites, and timebox anything slow.
+- Keep raw logs out of the conversation — pipe through `tail` and record
+  command + exit status + quirks only.
+
+## 3. Write AGENTS.md
+
+Target well under 200 lines; it's loaded every conversation. Include only
+what passes "would removing this line cause an agent to make a mistake?":
+
+- Verified commands (with the quirks discovered above).
+- Conventions an agent can't infer from the code.
+- Architecture facts that prevent wrong-place edits ("API handlers live in
+  X; generated code in Y — never edit").
+- Known gotchas.
+
+Exclude: standard language conventions, anything readable from the code,
+file-by-file tours, platitudes. If a section is becoming a procedure, it
+should be a skill instead. Merge with any existing AGENTS.md rather than
+overwriting; put subtree-specific rules in nested AGENTS.md files.
+
+## 4. Guardrails
+
+Walk the user through the Terminal Execution Policy settings (Antigravity
+has no checked-in permissions file): recommend Auto mode, plus deny-list
+entries for `git push`, deploy commands, and anything destructive, so
+unattended runs can't take irreversible actions.
+
+## 5. Offer the next layer
+
+Ask which the user wants now (don't install unasked):
+- `/gate` — PostToolUse format/lint hooks in `.agents/hooks.json`.
+- Artifact review policy check: implementation-plan pause ON for core work.
+
+Close by reporting what was created, each command's verification evidence,
+and the suggested first move: `/idea` for new work.
