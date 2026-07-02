@@ -8,19 +8,26 @@ built from, with citations, lives in [docs/anthropic-playbook.md](docs/anthropic
 ## The pipeline
 
 ```
- idea ──▶ /idea ──▶ SPEC.md ──▶ /breakdown ──▶ tasks/NN-*.md
-                    (critic-                     │
-                     reviewed)     ┌─────────────┴─────────────┐
-                                   ▼                           ▼
-                             /build (one task,          /parallel (independent
-                             fresh session)             tasks, worktree agents)
-                                   │                           │
-                                   └────────── verified ───────┘
-                                   (verifier agent, evidence required)
-                                               │
-                                               ▼
-                                           /distill
-                              (mistakes → CLAUDE.md, procedures → skills)
+ first contact with a repo:  /onboard  (verified CLAUDE.md, permissions)
+ once per repo:              /gate     (Stop-hook check gate, auto-format,
+                                        protected files)
+
+ idea ──▶ /idea ──▶ SPEC.md ──▶ /design ──▶ /breakdown ──▶ tasks/NN-*.md
+                    (critic-    (only if an                    │
+                     reviewed)   approach or                   │
+                                 stack choice     ┌────────────┼────────────────┐
+                                 is open)         ▼            ▼                ▼
+                                               /build      /parallel      /autopilot
+                                               (attended,  (independent   (unattended,
+                                                fresh       tasks, work-   gated, walk
+                                                session)    tree agents)   away)
+                                                  │            │                │
+                                                  └── verified ┴────────────────┘
+                                                  (verifier agent, evidence required)
+                                                               │
+                                                               ▼
+                                                           /distill
+                                             (mistakes → CLAUDE.md, procedures → skills)
 ```
 
 Each arrow crosses a **file on disk**, not conversation memory — every stage
@@ -30,16 +37,20 @@ can (and should) run in a fresh, cheap session.
 
 | Piece | What it does |
 |---|---|
+| `/onboard` | First contact with an existing repo: scouts it, writes a CLAUDE.md whose every command was actually run, adds a permission allowlist |
 | `/idea` | Interviews you about a raw idea, scouts the codebase, writes an agent-ready `SPEC.md` with runnable acceptance criteria, critic-reviewed |
+| `/design` | Resolves open tech/architecture choices: parallel agents investigate candidates, judged on agent-buildability; decision recorded in the spec and CLAUDE.md |
 | `/breakdown` | Splits a spec into one-session task files with dependencies and a parallelization map |
-| `/build` | Executes one task: scout-explore → proportional plan → test-first implement → independent verify → commit |
+| `/build` | Executes one task: scout-explore → proportional plan → test-first implement → independent verify → simplification pass → commit |
 | `/parallel` | Dispatches an independent task group to concurrent worktree-isolated agents |
+| `/autopilot` | Unattended execution with guardrails: classifies the task (peripheral vs core), scopes permissions, sets a bounded goal, launches background or headless |
+| `/gate` | Installs deterministic quality gates: a Stop hook that blocks "done" until checks pass, auto-format on edit, protected-file denies |
 | `/critique` | Adversarial review of any spec, plan, or diff |
 | `/distill` | Compounding engineering: session learnings → CLAUDE.md lines, rules, or new skills |
 | `/handoff` | Writes a resume-from-scratch handoff file, then you `/clear` |
 | `scout` agent | Haiku, read-only, low effort — answers "where/how does X work" so the main session never reads files to look around |
-| `critic` agent | Attacks specs/plans/diffs for ambiguity, missing failure modes, and unverifiable requirements |
-| `verifier` agent | Fresh-eyes check of finished work against acceptance criteria; evidence over assertion |
+| `critic` agent | Attacks specs/plans/diffs; high-signal only — confidence-scored findings, false positives filtered the way Anthropic's own review pipeline does |
+| `verifier` agent | Fresh-eyes check of finished work against acceptance criteria, including overfitting-to-tests; evidence over assertion |
 | `rules/token-discipline.md` | Always-loaded token economics: delegate consumption, match model to task, one task per session |
 
 ## Why this shape (the Anthropic practices it encodes)
@@ -49,10 +60,20 @@ can (and should) run in a fresh, cheap session.
 - **Verification gates everything** — "give Claude a way to verify its work
   and it will 2–3x the quality of the result." Acceptance criteria are
   runnable commands; a separate agent grades the work ("the agent doing the
-  work isn't the one grading it").
+  work isn't the one grading it"); hooks make the gate deterministic.
+- **Review is high-signal or it is noise** — Anthropic's internal review
+  pipeline drops any finding below 80/100 confidence and never flags what a
+  linter would catch. The `critic` agent enforces the same bar.
+- **Tech choices stay on distribution** — prefer stacks the model already
+  knows deeply (Anthropic picked Claude Code's own stack this way, so Claude
+  could build it), do the simple thing first, and record decisions so no
+  future agent re-litigates them.
+- **Autonomy is classified, not assumed** — auto-accept for peripheral work,
+  synchronous supervision for core logic; unattended runs get scoped
+  permissions, bounded goals, branch isolation, and a discard-and-relaunch
+  recovery rule (the "slot machine").
 - **Subagents protect the context window** — exploration, test noise, and
-  review happen in disposable contexts; only conclusions return. The context
-  window is the most important resource to manage.
+  review happen in disposable contexts; only conclusions return.
 - **One task, one session, one commit** — after two failed corrections,
   restart clean; a better prompt beats a longer session.
 - **Compounding engineering** — every mistake becomes a CLAUDE.md line or a
@@ -63,7 +84,8 @@ can (and should) run in a fresh, cheap session.
 - Scouts run **Haiku at low effort**; the expensive model only ever sees
   their ~300-word reports.
 - Skills load **on demand** (only name+description cost anything at session
-  start); heavy reference material stays in `docs/`, read only when needed.
+  start); exact hook/permission configs live in per-skill `reference.md`
+  files read only when installing; heavy research stays in `docs/`.
 - Specs/tasks/handoffs on disk mean sessions stay short and `/clear` is
   always safe — no 200k-token kitchen-sink conversations.
 - `/parallel` warns that concurrency multiplies spend and refuses
@@ -79,6 +101,8 @@ can (and should) run in a fresh, cheap session.
 - **Globally**: copy the contents of `.claude/skills/` and `.claude/agents/`
   into `~/.claude/skills/` and `~/.claude/agents/`.
 - Specs land in `specs/<slug>/` in whatever repo you run the pipeline in.
+- This toolkit layers on top of Claude Code's bundled commands — it assumes
+  `/simplify` and `/code-review` exist rather than duplicating them.
 
 ## Extending it
 

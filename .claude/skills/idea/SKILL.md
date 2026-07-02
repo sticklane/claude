@@ -74,7 +74,8 @@ returns READY. This costs ~1% of what implementing an ambiguous spec costs.
 
 ## 5. Hand off
 
-Tell the user: for multi-session work run `/breakdown specs/<slug>/SPEC.md`;
-for single-session work run `/build specs/<slug>/SPEC.md` — in a FRESH
-session (`/clear` first). The spec is the handoff artifact; this
+Tell the user: if the spec leaves a technology or architecture choice open,
+run `/design specs/<slug>/SPEC.md` first; then `/breakdown` for
+multi-session work, or `/build specs/<slug>/SPEC.md` for single-session
+work — in a FRESH session (`/clear` first). The spec is the handoff artifact; this
 conversation's context should not be needed again.

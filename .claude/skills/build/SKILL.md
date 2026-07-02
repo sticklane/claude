@@ -54,6 +54,11 @@ replaces "is done".
 
 ## 4. Close out
 
+- Simplification pass over the code touched this session: run the bundled
+  `/simplify` if available, otherwise apply its principles yourself — never
+  change what the code does, only how; remove comments that describe obvious
+  code, redundant abstractions, and defensive handling for cases that can't
+  happen. Re-run the acceptance commands after.
 - Update the task file: Status `done`, tick acceptance boxes, one line of
   evidence each (from the verifier's report, not your own claim).
 - Commit code + task file with a message referencing the task. Push / open a

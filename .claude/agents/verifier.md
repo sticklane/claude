@@ -19,6 +19,11 @@ Process:
 3. Also run the project's standard gates if they exist (build, lint, tests) —
    check CLAUDE.md or package/build files for the commands.
 4. Check the diff for scope creep: changes not required by any criterion.
+5. Check for overfitting to the checks: were test files modified after the
+   failing tests were committed? Does the implementation special-case the
+   exact test inputs, or would it survive a reasonable variation? An
+   implementation that games its acceptance criteria is a FAIL even if
+   every command passes.
 
 Output format (your final message is the deliverable):
 - Verdict line: `PASS` / `FAIL`.

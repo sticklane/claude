@@ -17,6 +17,8 @@ skill teaches, and cite it rather than restating it.
   checklists; heavy reference goes in a separate file, loaded on demand.
 - Every skill that produces an artifact must say where the file goes and what
   the next pipeline step is.
+- Exact config JSON (hooks, permissions, headless flags) lives in a skill's
+  `reference.md`, loaded on demand — never in the SKILL.md body.
 - Agents keep hard output budgets (scout ≤300 words) — they exist to protect
   the caller's context; a verbose agent defeats its purpose.
 
