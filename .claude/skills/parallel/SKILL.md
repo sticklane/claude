@@ -35,6 +35,10 @@ For each task in the group, launch a background `general-purpose` agent with
 
 Launch all agents of the group in one message so they actually run
 concurrently. Then stop and wait for completion notifications — do not poll.
+(Worker agents spawning their own scouts/verifiers requires Claude Code
+v2.1.172+; on older versions, or if worktree isolation is unavailable, fall
+back to headless dispatch: `git worktree add` per task, then
+`claude -p "<task prompt>" --allowedTools ...` in each.)
 
 ## 3. Collect and integrate
 
