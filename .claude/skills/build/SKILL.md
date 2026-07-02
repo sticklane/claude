@@ -12,7 +12,8 @@ designed to run in a fresh session.
 ## 0. Load only the task
 
 Read the task file (and its spec's Requirements section if referenced). Mark
-the task's Status as `in-progress`. Do NOT preload the codebase: for anything
+the task's Status as `in-progress` (a bare SPEC.md has no Status field — skip
+the bookkeeping steps for it and work from its acceptance criteria directly). Do NOT preload the codebase: for anything
 unclear about existing code, fan out `scout` agents and work from their
 reports. Read a file directly only when you're about to edit it.
 

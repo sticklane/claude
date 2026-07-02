@@ -12,8 +12,9 @@ not efficiency. Use it when the user wants throughput; otherwise sequential
 
 ## 1. Verify independence
 
-Read the task files and the spec's Parallelization section. A group is
-dispatchable only if: no `Depends on` edges between members, disjoint `Touch`
+Read the task files and the spec's Parallelization section (if there is no
+such section, derive independence yourself from the tasks' `Depends on` and
+`Touch` fields). A group is dispatchable only if: no `Depends on` edges between members, disjoint `Touch`
 lists, and every member has runnable acceptance criteria. If tasks share
 files, run them sequentially instead — merge conflicts cost more than the
 parallelism saves. Tell the user the dispatch plan (which tasks, which
@@ -39,7 +40,11 @@ concurrently. Then stop and wait for completion notifications — do not poll.
 
 As verdicts arrive: summarize per task (verdict + evidence, not transcripts).
 When the group completes, merge the DONE branches in task order, running the
-project gates after each merge. For BLOCKED tasks, report the blocker and
+project gates after each merge. Disjoint `Touch` lists don't guarantee clean
+merges (lockfiles, barrel files, snapshots): on a merge conflict or a
+post-merge gate failure, STOP — leave the remaining branches unmerged, report
+which branches merged cleanly and which are pending, and let the user decide.
+For BLOCKED tasks, report the blocker and
 whether the task file needs amending (back to /breakdown) or just a retry.
 Dependent tasks unlocked by this group run next — sequentially via /build, or
 another /parallel group if independent.

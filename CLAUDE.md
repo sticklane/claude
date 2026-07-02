@@ -8,7 +8,9 @@ skill teaches, and cite it rather than restating it.
 ## Authoring conventions
 
 - Skill descriptions: third person, state what it does AND concrete trigger
-  phrases; command name comes from the directory name.
+  phrases (trigger phrases not required for `disable-model-invocation: true`
+  skills — Claude never auto-triggers those); command name comes from the
+  directory name.
 - Side-effectful pipeline steps (`/build`, `/parallel`) keep
   `disable-model-invocation: true` — only humans launch them.
 - SKILL.md bodies stay well under 500 lines; procedures as numbered steps or

@@ -21,7 +21,9 @@ their conclusions, not their contents. Informed questions beat generic ones.
 
 ## 2. Interview the user
 
-Use AskUserQuestion in small batches. Cover, as relevant:
+Use AskUserQuestion in small batches (if the session is non-interactive, ask
+in plain prose — or stop and say the interview needs an interactive session
+rather than inventing answers). Cover, as relevant:
 
 - Problem and user: who needs this, what breaks or annoys them today?
 - Behavior: happy path, then edge cases (empty, error, concurrent, permission).
