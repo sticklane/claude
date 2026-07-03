@@ -26,7 +26,7 @@ phrases from the spec are used verbatim.
   see specs/QUEUE.md
 - `.claude/skills/drain/reference.md` (binding sentence in both worker
   prompts only). Cross-spec: also edited by review-fixes,
-  beads-integration, model-agnostic, context-management — see
+  model-agnostic, context-management — see
   specs/QUEUE.md
 - `antigravity/.agents/workflows/drain.md` (mirror of the binding
   sentence; ag files follow their sources)
