@@ -152,8 +152,8 @@ cannot pass vacuously.
 - Shipping any `.claude/workflows/*.js` in THIS repo — nothing here
   runs workflows unattended; add one only when a concrete recurring
   orchestration shows up.
-- Workflow-tool feature documentation beyond the ≤20-line API summary
-  (the harness documents itself).
+- Workflow-tool feature documentation beyond the ≤25-line API summary
+  (the harness documents itself inside opted-in sessions).
 
 ## Acceptance criteria
 
