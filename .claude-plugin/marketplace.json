@@ -1,5 +1,6 @@
 {
   "name": "agentic-toolkit",
+  "description": "Marketplace for the agentic toolkit: a spec-driven development pipeline with cheap review subagents and dashboards, distributed as a single plugin.",
   "owner": {
     "name": "sticklane"
   },
