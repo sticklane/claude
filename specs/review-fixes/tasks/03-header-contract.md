@@ -12,8 +12,8 @@ lives in a `## Touch` body section, and `Budget` isn't in the inventory
 list at all. Fix the contract end to end: breakdown's template moves Touch
 to a `Touch:` single-line header (comma-separated paths) above the first
 `##`, keeping an optional `## Touch` body section for prose boundaries;
-drain's inventory reads all four headers (`Status`, `Depends on`,
-`Budget`, `Touch`); build's plan-comment blocks are pinned below the
+drain's inventory reads all five headers (`Status`, `Depends on`,
+`Priority`, `Budget`, `Touch`); build's plan-comment blocks are pinned below the
 header lines so header parsing survives them. (Depends on task 02: both
 edit the drain files — apply on top of its wording.)
 
