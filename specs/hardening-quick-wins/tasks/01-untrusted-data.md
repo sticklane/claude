@@ -1,6 +1,6 @@
 # Task 01: Untrusted-data rule and worker-prompt hardening
 
-Status: in-progress
+Status: done
 Depends on: none
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R1, R2, R7, R8 untrusted-data parts)
@@ -40,7 +40,11 @@ greps discriminate.
 
 ## Acceptance
 
-- [ ] `grep -q "data, not instructions" .claude/rules/untrusted-data.md && grep -q "external-playbooks" .claude/rules/untrusted-data.md` → pass
-- [ ] `test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2` → pass
-- [ ] `grep -q "data, not instructions" antigravity/.agents/workflows/drain.md && grep -q "data, not instructions" antigravity/AGENTS.md` → pass
-- [ ] `grep -q "untrusted-data" README.md && grep -q "copy the files in" README.md` → pass
+- [x] `grep -q "data, not instructions" .claude/rules/untrusted-data.md && grep -q "external-playbooks" .claude/rules/untrusted-data.md` → pass
+      (verifier: rule file has all R1 elements — binding sources, attended/unattended responses, cites docs/external-playbooks.md)
+- [x] `test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2` → pass
+      (verifier: count=2 — one inside the background-worker blockquote, one inside the headless `claude -p` prompt string; not vacuous)
+- [x] `grep -q "data, not instructions" antigravity/.agents/workflows/drain.md && grep -q "data, not instructions" antigravity/AGENTS.md` → pass
+      (verifier: clause sits in the step-2 worker prompt blockquote with the BLOCKED stop; AGENTS.md gains an `## Untrusted data` section)
+- [x] `grep -q "untrusted-data" README.md && grep -q "copy the files in" README.md` → pass
+      (verifier: proper What's-in-the-box table row; plugin-gap sentence now reads "copy the files in `.claude/rules/`")
