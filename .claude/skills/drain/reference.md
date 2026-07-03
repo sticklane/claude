@@ -129,6 +129,9 @@ to the verdict routing at the end of this section, with the two prior
 verdicts — when attempt 2 (the relaunch) returned BLOCKED over budget.
 Attempt 1 necessarily returned DONE — a failed merge of its branch is
 what got here — so only attempt 2 can be BLOCKED over budget.
+Verifier votes triple verifier cost inside tournaments only — bounded
+by the at-most-one-tournament-per-task rule — and the tournament
+remains inside the human-authorized /drain launch (docs/human-gates.md).
 
 **Generate.** Delete any existing `task/NN-<slug>-t*` branches and
 worktrees, then launch three concurrent background workers
@@ -151,20 +154,32 @@ base prompt:
 > from scratch, deliberately ignoring the failed approach described in
 > the evidence.
 
-**Filter.** Each DONE candidate gets one verifier run per candidate,
-inside that candidate's worktree, exactly as in /build except that NO
-evidence path is passed — PASS/FAIL against the task's acceptance
-criteria only (for queues using the `specs/<slug>/ layout` the winner's
-branch already carries the worker's committed evidence file; for other
-layouts the task file's inline evidence is the artifact). FAIL =
-discarded. BLOCKED candidates are
-non-survivors — their reason goes into the recorded evidence. DEFERRED
-candidates are non-survivors — collect their questions for the routing
-below.
+**Filter.** Each DONE candidate gets three independent verifier runs —
+same verifier agent as /build, each inside that candidate's worktree,
+fresh eyes per run (no shared transcript), and NO evidence path passed
+— against the task's acceptance criteria only (for queues using the
+`specs/<slug>/ layout` the winner's branch already carries the worker's
+committed evidence file; for other layouts the task file's inline
+evidence is the artifact). Vote values are the verifier's verdicts
+only — PASS, FAIL, or INCOMPLETE; verifiers never DEFER. A candidate
+survives only on majority PASS (two of three); FAIL and INCOMPLETE
+count as non-PASS votes. A verifier run returning BLOCKED (the
+untrusted-data rule firing on a redirection attempt in the candidate's
+content) is NOT a vote: it DISQUALIFIES the candidate outright
+regardless of the other votes, and the verifier's quoted content goes
+into the recorded evidence — survivors must be injection-clean, and
+two PASS votes never drop the quote. Candidates whose WORKER verdict
+was BLOCKED or DEFERRED never reach the verifier: worker-BLOCKED
+candidates are non-survivors — their reason goes into the recorded
+evidence; worker-DEFERRED candidates are non-survivors — collect their
+questions for the routing below.
 
-**Rank.** Drain, not the verifier, orders the PASSing survivors
-mechanically: fewest gate findings in the verifier report, then
-smallest `git diff --stat` total. No new verifier output mode.
+**Rank.** Drain, not the verifier, orders the surviving candidates
+mechanically: most PASS votes first (3 ahead of 2), then fewest gate
+findings summed across the candidate's three verifier reports, then
+smallest `git diff --stat` total, then — the final tiebreak, so the
+mechanical ranker always terminates with an order — lowest angle index
+(t1 before t2 before t3). No new verifier output mode.
 
 **Merge.** The winner goes through the normal DONE bookkeeping, except
 the slot machine does not re-enter: if the winner's merge or post-merge
