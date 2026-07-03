@@ -76,8 +76,14 @@ wave, not this spec (coordination note in Out of scope). Marker phrases
   best-effort reporting). The verifier's ceiling (~20) EXEMPTS
   per-criterion acceptance commands from the count (it must exercise
   every criterion), and on hitting the ceiling its verdict is
-  INCOMPLETE — never PASS — listing the unexercised criteria; callers
-  treat INCOMPLETE as non-PASS. Runaway exploration gets a stop without
+  INCOMPLETE — never PASS — listing the unexercised criteria. The
+  verifier's output-contract line becomes "Verdict line: `PASS` /
+  `FAIL` / `INCOMPLETE`" in BOTH `.claude/agents/verifier.md` and
+  `antigravity/.agents/skills/verifier/SKILL.md`. Caller files
+  (autopilot, build, drain) are deliberately NOT edited: their existing
+  routing treats anything non-PASS as not-passed (drain ranks "PASSing
+  survivors"; autopilot's non-PASS branch reports), so INCOMPLETE is
+  non-PASS by construction. Runaway exploration gets a stop without
   ever letting partial evidence pass a gate.
 - R6 (machine-state convention): CLAUDE.md's authoring conventions gain
   one bullet: fields any skill reads programmatically (Status, Depends
@@ -127,7 +133,7 @@ wave, not this spec (coordination note in Out of scope). Marker phrases
 - [ ] `for f in .claude/skills/*/reference.md; do [ "$(wc -l < "$f")" -le 100 ] || head -5 "$f" | grep -qi "contents\|TOC" || exit 1; done` — every >100-line reference file opens with a TOC (R2)
 - [ ] `grep -q "docs/memory.md" .claude/skills/distill/SKILL.md && grep -qi "stale" .claude/skills/distill/SKILL.md && grep -q "docs/memory.md" CLAUDE.md` (R3)
 - [ ] `grep -q "static-first" .claude/rules/token-discipline.md && grep -qi "session end" .claude/skills/distill/SKILL.md` (R4)
-- [ ] `grep -q "tool-call ceiling" .claude/agents/critic.md && grep -q "tool-call ceiling" .claude/agents/verifier.md` (R5)
+- [ ] `grep -q "tool-call ceiling" .claude/agents/critic.md && grep -q "tool-call ceiling" .claude/agents/verifier.md && grep -q "INCOMPLETE" .claude/agents/verifier.md && grep -q "INCOMPLETE" antigravity/.agents/skills/verifier/SKILL.md` (R5)
 - [ ] `grep -qi "single-line" CLAUDE.md && grep -qi "header" .claude/skills/breakdown/SKILL.md` (R6)
 - [ ] `grep -qi "context management" docs/external-playbooks.md && grep -qi "tool-result size" docs/external-playbooks.md` (R7)
 - [ ] `grep -q "static-first" antigravity/AGENTS.md && grep -q "tool-call ceiling" antigravity/.agents/skills/critic/SKILL.md && grep -q "tool-call ceiling" antigravity/.agents/skills/verifier/SKILL.md && grep -q "docs/memory.md" antigravity/.agents/skills/distill/SKILL.md` (R8)
