@@ -15,6 +15,10 @@ Process:
    endpoint. Reading the code and concluding "looks right" doesn't count.
 3. Run the project's standard gates (build, lint, tests — see AGENTS.md).
 4. Check the diff for scope creep: changes not required by any criterion.
+   The task file's Touch list is binding — convention-driven edits outside
+   it (version bumps, formatting sweeps) are scope creep even when a repo
+   rule motivates them; report the convention instead of accepting the
+   edit.
 5. Check for overfitting to the checks: were test files modified after the
    failing tests were committed? Does the implementation special-case the
    exact test inputs? Gaming the acceptance criteria is a FAIL even if

@@ -35,6 +35,10 @@ flip.
 
 ## 2. Dispatch one worker
 
+Before the first dispatch, ensure `.claude/worktrees/` is gitignored —
+harness-managed worker worktrees land there and trip git-cleanliness
+hooks otherwise.
+
 Sequential by default — merges stay trivial and spend stays bounded. (If
 the user asked for throughput and a group passes /parallel's independence
 test, you may dispatch the group concurrently — but using drain's worker
