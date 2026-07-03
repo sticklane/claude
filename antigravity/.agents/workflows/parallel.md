@@ -16,7 +16,8 @@ prepares the dispatch and gives the user everything to launch.
    deferred and why).
 
 2. **Prepare isolation.** Create one git worktree per task:
-   `git worktree add ../<repo>-task-NN task/NN-<slug>` (creating the branch).
+   `git worktree add -b task/NN-<slug> ../<repo>-task-NN` (the `-b` creates
+   the branch).
    Each parallel agent gets its own checkout so edits don't collide.
 
 3. **Hand the user the launch list.** For each task, one Agent Manager
