@@ -3,7 +3,16 @@
 This repo IS the toolkit: skills in `.claude/skills/`, subagents in
 `.claude/agents/`, always-on rules in `.claude/rules/`. The research it
 encodes is in `docs/anthropic-playbook.md` — read it before changing what a
-skill teaches, and cite it rather than restating it.
+skill teaches, and cite it rather than restating it. Narrow per-topic
+lessons are indexed in `docs/memory.md`; check it when a task matches a topic.
+
+## Compact instructions
+
+When this session compacts, preserve: task-file paths and their Status
+values, the current wave/dispatch state, branch names,
+acceptance-evidence pointers (paths to `evidence/` files, not their
+contents), and unresolved review findings. Drop first: raw tool output
+and file listings — both are re-derivable from disk.
 
 ## Authoring conventions
 
@@ -17,6 +26,16 @@ skill teaches, and cite it rather than restating it.
   in docs/human-gates.md (cite it, don't restate it).
 - SKILL.md bodies stay well under 500 lines; procedures as numbered steps or
   checklists; heavy reference goes in a separate file, loaded on demand.
+- SKILL.md files put execution-critical contracts in their first 30 lines —
+  skill bodies truncate when a session compacts; descriptions reload,
+  bodies do not.
+- Reference files over 100 lines open with a table of contents.
+- References stay one level deep: SKILL.md → reference file, never
+  reference → reference.
+- Fields any skill reads programmatically — Status, Depends on, Priority
+  (optional; absent = P2), Budget, and (post-review-fix-wave) Touch — are
+  single-line `Key: value` headers above the file's first `##` heading;
+  body sections are for humans and workers, never for orchestrator parsing.
 - Every skill that produces an artifact must say where the file goes and what
   the next pipeline step is.
 - Exact config JSON (hooks, permissions, headless flags) lives in a skill's

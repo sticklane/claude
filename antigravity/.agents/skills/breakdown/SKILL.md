@@ -28,6 +28,7 @@ dispatchers parse it for the over-budget stop and headless `--max-turns`.
 ```markdown
 # Task NN: <title>
 
+<!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 Status: pending
 Depends on: <task numbers, or "none">
 Budget: <N> turns
