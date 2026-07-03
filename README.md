@@ -55,6 +55,7 @@ questions into the task files instead of stopping on them.
 | `/distill` | Compounding engineering: session learnings → CLAUDE.md lines, rules, or new skills |
 | `/handoff` | Writes a resume-from-scratch handoff file, then you `/clear` |
 | `/fleet` | Dashboard of this session's open agents — running/queued/completed/failed, status tiles + timeline, as a self-contained HTML snapshot |
+| `/workboard` | Cross-repo dashboard of ALL open work on the machine — specs, task files, handoffs, Kiro/Antigravity state, every Claude Code session — with a needs-attention inbox (blocked / needs-review / stale) |
 | `scout` agent | Haiku, read-only, low effort — answers "where/how does X work" so the main session never reads files to look around |
 | `critic` agent | Attacks specs/plans/diffs; high-signal only — confidence-scored findings, false positives filtered the way Anthropic's own review pipeline does |
 | `verifier` agent | Fresh-eyes check of finished work against acceptance criteria, including overfitting-to-tests; evidence over assertion |

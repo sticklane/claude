@@ -33,6 +33,7 @@ be listed. Type `/idea` in the agent input to test a workflow.
 | Permission allowlists in settings.json | Terminal Execution Policy (Settings UI): Off/Auto/Turbo + deny list — not a checked-in file |
 | `/goal`, Stop-hook gates | Artifact review: implementation plan pause + walkthrough evidence, plus PostToolUse hooks |
 | `/fleet` open-agents dashboard | Not ported — Antigravity's Agent Manager is this surface natively |
+| `/workboard` cross-repo work dashboard | Ported as-is — it also reads Antigravity's own `brain/` artifacts, covering what the Agent Manager can't see (other tools, specs, git, Claude Code sessions) |
 
 ## What degrades (be aware)
 
