@@ -68,9 +68,14 @@ acceptance greps below cannot pass vacuously.
     `specs/status.sh` renders the dashboard on demand; in-flight
     session handoffs land as `HANDOFF.md` next to the active task/spec
     file (or `.claude/HANDOFF.md`).
-  - `## Commands` — the repo's verified commands only (currently
-    `./evals/run.sh <skill>` and `claude plugin validate .`; add
-    `./specs/status.sh`), each with a half-line on what it proves.
+  - `## Commands` — the repo's verified commands only, each with a
+    half-line on what it proves, and every listed command RE-RUN at
+    implementation time (a context file that lies is worse than none —
+    the onboard doctrine applies to us too). Candidates:
+    `./evals/run.sh <skill>`, `./specs/status.sh`, and
+    `claude plugin validate .` — the last one currently exits non-zero
+    (review-fixes task 01 owns the fix), so it is listed only if that
+    task has landed; the decomposition carries the `Depends on:` line.
 - R2 (CLAUDE.md interop): CLAUDE.md's first 10 lines gain one line
   containing `@AGENTS.md` — the Anthropic-documented import so Claude
   sessions load the orientation file at launch. If the implementing
@@ -80,8 +85,12 @@ acceptance greps below cannot pass vacuously.
   CLAUDE.md; CLAUDE.md stays ≤200 lines (budget shared with the
   context-management spec's R1).
 - R3 (state dashboard): `specs/status.sh` exists, is executable, and:
-  - takes no arguments; scans `specs/*/tasks/*.md` for the `Status:`
-    header line of each file;
+  - takes no arguments; scans `specs/*/tasks/*.md`, reading each
+    file's status as the FIRST line matching `^Status:` anywhere in
+    the file (not just a top header block — one current file,
+    `specs/skill-evals/tasks/01-evals-harness.md`, carries its Status
+    line below a comment block); a file with no `Status:` line prints
+    status `none`;
   - prints one row per task file containing the status value and the
     file path, then a `TOTAL` summary section with one `<status>: <n>`
     line per distinct status found;
@@ -168,7 +177,7 @@ acceptance greps below cannot pass vacuously.
 - [ ] `head -10 CLAUDE.md | grep -q "AGENTS.md" && [ "$(wc -l < CLAUDE.md)" -le 200 ]` (R2)
 - [ ] `test -x specs/status.sh && bash -n specs/status.sh && [ "$(wc -l < specs/status.sh)" -le 40 ]` (R3)
 - [ ] `out=$(mktemp) && ./specs/status.sh > "$out" && grep -q "TOTAL" "$out" && for f in specs/*/tasks/*.md; do grep -q "$f" "$out" || exit 1; done` — every task file appears, totals rendered (R3)
-- [ ] `d=$(mktemp -d) && mkdir -p "$d/specs" && (cd "$d" && bash "$OLDPWD/specs/status.sh"); echo exit=$?` → exit=0 (R3 empty-queue path; run from a tree with no task files)
+- [ ] `d=$(mktemp -d) && mkdir -p "$d/specs" && (cd "$d" && bash "$OLDPWD/specs/status.sh")` → exits 0 (R3 empty-queue path; run from the repo root so `$OLDPWD` resolves; the subshell's exit status is the line's status)
 - [ ] `grep -qi "repo map" .claude/skills/onboard/SKILL.md && grep -q "per-directory CLAUDE.md" .claude/skills/onboard/SKILL.md && grep -q "AGENTS.md" .claude/skills/onboard/SKILL.md && grep -qi "open work" .claude/skills/onboard/SKILL.md` (R4)
 - [ ] `sed -n '/[Rr]epo orientation for agents/,/^## /p' docs/external-playbooks.md | grep -qi "agents.md" && sed -n '/[Rr]epo orientation for agents/,/^## /p' docs/external-playbooks.md | grep -qi "kiro" && sed -n '/[Rr]epo orientation for agents/,/^## /p' docs/external-playbooks.md | grep -qi "llms.txt"` (R5, scoped to this spec's section)
 - [ ] `grep -qi "repo map" antigravity/.agents/skills/onboard/SKILL.md && grep -q "per-directory" antigravity/.agents/skills/onboard/SKILL.md` (R6)
@@ -180,3 +189,18 @@ acceptance greps below cannot pass vacuously.
 (none — the four decisions are recorded in Solution; recommended
 options adopted per the non-interactive fallback, reversible before
 implementation.)
+
+## Parallelization
+
+Not yet decomposed — when /breakdown runs, its tasks join the combined
+queue in [specs/QUEUE.md](../QUEUE.md) (single wave-plan copy there;
+update its task count and wave table as part of decomposition). Three
+of this spec's targets sit on QUEUE.md's declared serial chains, so
+the decomposition must carry cross-spec `Depends on:` lines:
+- `CLAUDE.md` (R2) — shares the ≤200-line budget and file with
+  context-management 01 and chaining-antipatterns 02/03.
+- `.claude/skills/onboard/SKILL.md` (R4) — also edited by
+  chaining-antipatterns 02.
+- `docs/external-playbooks.md` (R5) — the appenders serialize
+  (QUEUE.md); R5 is a sixth append.
+R1/R3 (new files) have no collisions and can dispatch in any wave.
