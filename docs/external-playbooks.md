@@ -95,3 +95,53 @@ Where the three vendors converge on architecting generative-AI features
   which every runtime can read and diff; the useful ideas that rode
   with it (discovered-work capture, ready-work dispatch, priority
   fields) are adopted natively by their own specs instead.
+
+## Context management
+
+How the toolkit spends, preserves, and recovers context across
+compaction, memory, and caches → `rules/token-discipline.md` (cache
+economics), CLAUDE.md (Compact instructions; authoring conventions),
+and /distill (memory layer). Those files state the rules; the research
+stays here.
+
+- **Adopted.** Compaction steering via CLAUDE.md's "Compact
+  instructions" (R1) and the post-compact survival conventions —
+  execution-critical contracts in a SKILL.md's first 30 lines,
+  reference-file TOCs, references one level deep (R2) ← Anthropic's
+  context-engineering post (context as a finite attention budget;
+  progressive disclosure) plus the Claude Code docs on auto-compact
+  (descriptions reload after compaction; bodies do not). Agent-written
+  memory — `docs/memory.md` index plus `docs/memory/` topic files,
+  pruned on write (R3) ← the same post's structured note-taking /
+  agentic-memory pattern and ADK's sessions/memory split (long-term
+  memory is curated and searched on demand, never accumulated into the
+  prompt). Static-first cache economics (R4) ← OpenAI's prompt-caching
+  guide (stable prefix first; any edit invalidates the cached prefix)
+  and Anthropic's prompt-caching docs. Tool-call ceilings on critic and
+  verifier with a non-PASS INCOMPLETE verdict (R5) ← the GPT-5
+  prompting guide's tool budgets and early-stop criteria, extended from
+  the scout. Machine-read fields as single-line `Key: value` headers
+  (R6) ← ADK's separation of structured session state from prose
+  history.
+- **Already covered before this pass.** Attention budget and JIT
+  retrieval (token-discipline); subagent isolation — Anthropic's
+  guidance that research subagents return 1,000–2,000-token summaries
+  validates the scout's ≤300-word report budget; progressive disclosure
+  (skills load reference files on demand).
+- **Where the toolkit leads.** Tool-result size discipline: hard output
+  budgets on every fan-out agent's report. No vendor guidance found on
+  sizing the results an agent returns to its caller — the closest is
+  Anthropic's summaries-over-raw-dumps note above.
+- **Deliberately skipped.** ADK scope tiers (`user:`/`app:`/`temp:`
+  state prefixes) — harness-level session machinery a markdown toolkit
+  cannot express. ADK artifact versioning — git already versions every
+  artifact here. OpenAI verbatim-minus-tools handoffs — harness-level
+  context transfer; the toolkit's handoffs are deliberate summaries on
+  disk, not transcript copies.
+- Sources: [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents),
+  [Claude Code docs](https://code.claude.com/docs) (compaction, memory,
+  prompt caching),
+  [ADK sessions & memory](https://google.github.io/adk-docs/sessions/)
+  (docs home of the sessions/memory whitepaper material),
+  [OpenAI prompt caching](https://platform.openai.com/docs/guides/prompt-caching),
+  [GPT-5 prompting guide](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5_prompting_guide).

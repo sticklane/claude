@@ -1,5 +1,9 @@
 # /drain reference
 
+Contents: When NOT to drain · Status field semantics · Worker prompt ·
+Deferred question format · Relaunch-with-evidence prompt · Tournament ·
+Headless fallback
+
 Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt, the tournament procedure, and the headless
 fallback.

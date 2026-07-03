@@ -1,5 +1,8 @@
 # Quality-gate hook templates
 
+Contents: Stop gate · Auto-format on edit · Protected files ·
+Session-scoped alternatives · Sanity rules
+
 Verified against code.claude.com/docs/en/hooks and hooks-guide (July 2026).
 Semantics that matter: exit code 2 blocks (exit 1 is non-blocking and
 proceeds); `PostToolUse` cannot block (the tool already ran); a PreToolUse
