@@ -1,6 +1,6 @@
 # Task 03: Budget line in task template, over-budget stop in /drain
 
-Status: in-progress
+Status: done
 Depends on: 01
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R4, R8 breakdown + drain budget parts)
@@ -36,6 +36,9 @@ workflow — apply on top of its wording.)
 
 ## Acceptance
 
-- [ ] `grep -q "^Budget:" .claude/skills/breakdown/SKILL.md` → pass
-- [ ] `test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2` → pass
-- [ ] `grep -q "^Budget:" antigravity/.agents/skills/breakdown/SKILL.md && grep -q "over budget" antigravity/.agents/workflows/drain.md` → pass
+- [x] `grep -q "^Budget:" .claude/skills/breakdown/SKILL.md` → pass
+      (verifier: exit 0; template gains `Budget:` line + sizing sentence)
+- [x] `test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2` → pass
+      (verifier: exit 0, count=2 — one per worker prompt, backed by substantive stop text)
+- [x] `grep -q "^Budget:" antigravity/.agents/skills/breakdown/SKILL.md && grep -q "over budget" antigravity/.agents/workflows/drain.md` → pass
+      (verifier: exit 0; mirrors carry identical template line and BLOCKED "over budget" stop)

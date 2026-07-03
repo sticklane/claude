@@ -46,8 +46,18 @@ replaces "is done".
 2. Run the project's standard gates (build/lint/tests per CLAUDE.md).
 3. Spawn the `verifier` agent with the task file path and instruct it to
    verify the working tree against the acceptance criteria. It has no memory
-   of your implementation and won't rationalize shortcuts.
-4. On FAIL: fix and re-verify. After two failed fix attempts on the same
+   of your implementation and won't rationalize shortcuts. Also pass it an
+   evidence file path derived from the task file's location:
+   `specs/<slug>/tasks/<name>.md` → `specs/<slug>/evidence/<name>.md`; a
+   bare `specs/<slug>/SPEC.md` → `specs/<slug>/evidence/spec.md`; any other
+   layout → pass no path (the verifier then writes nothing; note at
+   close-out that evidence was not persisted). The verifier writes its full
+   report there; a re-verify overwrites it.
+4. Collect every subagent's result within your current turn — ending a
+   turn while a verifier or monitor is still pending orphans its report
+   (the observed stall mode in drained runs). If a subagent goes silent,
+   respawn it once and continue.
+5. On FAIL: fix and re-verify. After two failed fix attempts on the same
    issue, stop and report — repeated correction in a degraded context is the
    known failure mode; a fresh session with a better task file beats a long
    session of thrashing.
@@ -60,9 +70,10 @@ replaces "is done".
   code, redundant abstractions, and defensive handling for cases that can't
   happen. Re-run the acceptance commands after.
 - Update the task file: Status `done`, tick acceptance boxes, one line of
-  evidence each (from the verifier's report, not your own claim).
-- Commit code + task file with a message referencing the task. Push / open a
-  PR only if the user asked.
+  evidence each citing the `evidence/` file (from the verifier's report,
+  not your own claim) rather than duplicating output.
+- Commit code + task file + the verifier's `evidence/` file with a message
+  referencing the task. Push / open a PR only if the user asked.
 - Report: what shipped, evidence summary, anything learned the hard way — and
   if there WAS such a learning, run /distill before ending.
 - Tell the user to `/clear` before starting the next task.
