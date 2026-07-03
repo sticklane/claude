@@ -1,6 +1,6 @@
 # Task 01: CLAUDE.md compaction, conventions, memory pointer; breakdown header note
 
-Status: in-progress
+Status: done
 Depends on: ../../model-agnostic/tasks/02-core-tier-language.md, ../../review-fixes/tasks/04-worker-prompt-resolution.md
 Budget: 25 turns
 Spec: ../SPEC.md (requirements R1, R2-conventions, R3-pointer, R6; R9 note)
@@ -54,7 +54,7 @@ global task 99 in specs/review-fixes.
 
 ## Acceptance
 
-- [ ] `grep -q "^## Compact instructions" CLAUDE.md && test "$(wc -l < CLAUDE.md)" -le 200` (R1)
-- [ ] `grep -qi "first 30 lines" CLAUDE.md && grep -qi "table of contents" CLAUDE.md` (R2 conventions)
-- [ ] `grep -q "docs/memory.md" CLAUDE.md` (R3, CLAUDE.md half — distill half lives in task 02)
-- [ ] `grep -qi "single-line" CLAUDE.md && grep -qi "header" .claude/skills/breakdown/SKILL.md` (R6)
+- [x] `grep -q "^## Compact instructions" CLAUDE.md && test "$(wc -l < CLAUDE.md)" -le 200` (R1) — exit 0, CLAUDE.md 68 lines; ../evidence/01-claude-md-and-breakdown-note.md
+- [x] `grep -qi "first 30 lines" CLAUDE.md && grep -qi "table of contents" CLAUDE.md` (R2 conventions) — exit 0; ../evidence/01-claude-md-and-breakdown-note.md
+- [x] `grep -q "docs/memory.md" CLAUDE.md` (R3, CLAUDE.md half — distill half lives in task 02) — exit 0, always-on pointer in intro; ../evidence/01-claude-md-and-breakdown-note.md
+- [x] `grep -qi "single-line" CLAUDE.md && grep -qi "header" .claude/skills/breakdown/SKILL.md` (R6) — exit 0, comment mirrored in antigravity; ../evidence/01-claude-md-and-breakdown-note.md
