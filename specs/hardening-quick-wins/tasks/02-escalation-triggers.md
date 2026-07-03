@@ -1,6 +1,6 @@
 # Task 02: Escalation triggers and tool risk-rating in /autopilot
 
-Status: pending
+Status: in-progress
 Depends on: none
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R3, R8 autopilot part)
