@@ -138,5 +138,7 @@ task's `Budget:` turn count when present (else 80) — the hard cap
 behind the prompt's soft stop. Because no independent
 verifier ran inside the worker, re-run the task's acceptance commands
 from the main checkout after merging, before flipping anything to `done`.
+Headless merges carry no evidence file — that post-merge re-run is the
+record; paste it into `specs/<slug>/evidence/<name>.md` before the flip.
 Then collect the printed verdict, apply step 3's bookkeeping exactly as
 for a background worker, and `git worktree remove` the checkout.
