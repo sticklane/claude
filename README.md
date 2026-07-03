@@ -50,6 +50,7 @@ questions into the task files instead of stopping on them.
 | `/autopilot` | Unattended execution with guardrails: classifies the task (peripheral vs core), scopes permissions, sets a bounded goal, launches background or headless |
 | `/drain` | Works the whole task queue unattended: one fresh worker per unblocked task, questions deferred into the task files and batched at the end, resumable from `Status` lines after any `/clear` |
 | `/gate` | Installs deterministic quality gates: a Stop hook that blocks "done" until checks pass, auto-format on edit, protected-file denies |
+| `/evals` | Scaffolds and runs stored skill evals (`evals/run.sh`): fresh fixture, headless run of the skill under test, artifact assertions — the repeatable complement to fresh-session testing |
 | `/critique` | Adversarial review of any spec, plan, or diff |
 | `/distill` | Compounding engineering: session learnings → CLAUDE.md lines, rules, or new skills |
 | `/handoff` | Writes a resume-from-scratch handoff file, then you `/clear` |
