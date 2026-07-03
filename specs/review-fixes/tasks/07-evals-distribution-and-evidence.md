@@ -1,6 +1,6 @@
 # Task 07: Evals distribution caveat + conditional evidence commits
 
-Status: pending
+Status: in-progress
 Depends on: 02, 05
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 07)
