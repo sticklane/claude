@@ -30,12 +30,15 @@ Status: pending
 Depends on: <task numbers, or "none">
 Budget: <rough ceiling, e.g. "40 turns">
 Spec: ../SPEC.md (requirements R2, R3)
+Touch: <comma-separated paths this task may change>
 
 ## Goal
 What exists when this task is done, in 2–4 sentences.
 
 ## Touch
-Files/modules this task may change. Anything else is scope creep.
+Optional prose on boundaries (why a path is in or out). Dispatchers parse
+the `Touch:` header line above, not this section; anything not listed
+there is scope creep.
 
 ## Steps
 Numbered, concrete. Include "write the failing test first" where the

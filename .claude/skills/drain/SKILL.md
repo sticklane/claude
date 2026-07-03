@@ -23,9 +23,12 @@ reference.md has the checklist.
 
 ## 1. Inventory
 
-Read only the header fields of each task file (`Status`, `Depends on`,
-`Touch`) — not the bodies; workers read their own task. A task is
-**dispatchable** when `Status: pending` and every dependency is `done`.
+Read only the header fields of each task file
+(`Status`, `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies;
+workers read their own task. `Budget` feeds the worker's over-budget stop
+and the headless `--max-turns` cap; `Priority` is an optional tie-break
+(absent = P2). A task is **dispatchable** when `Status: pending` and
+every dependency is `done`.
 Report the plan in one block: dispatch order, what's already done, what's
 deferred/blocked and why. Any `in-progress` with no live worker is a dead
 worker's lock: discard its branch/worktree if present, along with any

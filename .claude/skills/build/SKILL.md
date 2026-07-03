@@ -25,8 +25,10 @@ replaces "is done".
 
 - Diff describable in one sentence → skip planning, implement.
 - Otherwise → write a short plan (files to change, in what order, what could
-  go wrong) as a comment block in the task file. Think hard on genuinely
-  tricky design points; don't burn extended thinking on mechanical steps.
+  go wrong) as a comment block in the task file, placed below the header lines
+  (never between them — dispatchers parse the headers and the block must not
+  break them). Think hard on genuinely tricky design points; don't burn
+  extended thinking on mechanical steps.
 - Plan contradicts the task or reveals a missing decision → stop and surface
   it rather than guessing.
 
@@ -71,7 +73,8 @@ replaces "is done".
   happen. Re-run the acceptance commands after.
 - Update the task file: Status `done`, tick acceptance boxes, one line of
   evidence each citing the `evidence/` file (from the verifier's report,
-  not your own claim) rather than duplicating output.
+  not your own claim) rather than duplicating output; delete the plan
+  comment block from step 1.
 - Commit code + task file + the verifier's `evidence/` file with a message
   referencing the task. Push / open a PR only if the user asked.
 - Report: what shipped, evidence summary, anything learned the hard way — and

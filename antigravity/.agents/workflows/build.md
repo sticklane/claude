@@ -16,7 +16,10 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
 
 2. **Plan proportionally.** Diff describable in one sentence → implement
    directly. Otherwise write the implementation plan (files to change, in
-   what order, what could go wrong) and pause for review before executing.
+   what order, what could go wrong) as a comment block in the task file,
+   placed below the header lines (never between them — dispatchers parse
+   the headers and the block must not break them), and pause for review
+   before executing.
    If the plan contradicts the task or reveals a missing decision, surface
    it rather than guessing.
 
@@ -46,7 +49,8 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    redundant abstractions, and defensive handling for impossible cases;
    re-run the acceptance commands after. Update the task file (Status
    `done`, ticked boxes, one line of evidence each citing the `evidence/`
-   file rather than duplicating output). Commit code + task file + the
+   file rather than duplicating output; delete the plan comment block
+   from step 2). Commit code + task file + the
    `evidence/` file referencing the task; push/PR only if asked. If anything was
    learned the hard way, apply the distill skill. Tell the user to start
    the next task in a NEW conversation.

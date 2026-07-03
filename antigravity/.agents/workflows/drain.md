@@ -14,8 +14,11 @@ First the classification gate: drain only peripheral work — runnable
 acceptance criteria, cheap to discard, no core business logic, auth,
 payments, or migrations. Pull core tasks out for attended /build runs.
 
-1. **Inventory.** Read only each task file's `Status`, `Depends on`, and
-   `Touch` lines. Dispatchable = `pending` with all dependencies `done`.
+1. **Inventory.** Read only each task file's header lines (`Status`,
+   `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies. `Budget`
+   feeds the worker's over-budget stop; `Priority` is an optional
+   tie-break (absent = P2). Dispatchable = `pending` with all
+   dependencies `done`.
    Any `in-progress` with no live agent is a dead worker's lock: discard
    its worktree/branch, along with any `task/NN-<slug>-t*` tournament
    branches/worktrees a crashed run left behind (recovery is
