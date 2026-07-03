@@ -1,8 +1,7 @@
 # Task 01: Caller-directed evidence files from the verifier
 
 Status: pending
-Depends on: none (within this spec; see cross-spec ordering in
-../SPEC.md Parallelization)
+Depends on: ../../hardening-quick-wins/tasks/03-task-budgets.md (drain reference.md overlap; cross-spec waves in ../SPEC.md)
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R1–R6)
 
@@ -52,3 +51,4 @@ pastes the post-merge re-run); antigravity mirrors updated.
 - [ ] `grep -q "evidence/" .claude/skills/build/SKILL.md` → pass
 - [ ] `grep -q "evidence/" .claude/skills/drain/SKILL.md && grep -q "evidence/" .claude/skills/drain/reference.md` → pass
 - [ ] `grep -q "evidence/" antigravity/.agents/skills/verifier/SKILL.md && grep -q "evidence/" antigravity/.agents/workflows/build.md && grep -q "evidence/" antigravity/.agents/workflows/drain.md` → pass
+- [ ] Regression guards (earlier waves' phrases survive this task's edits): `test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2 && test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2` → pass

@@ -1,8 +1,7 @@
 # Task 01: /evals skill, runner, and the breakdown reference evalset
 
 Status: pending
-Depends on: none (within this spec; see cross-spec ordering in
-../SPEC.md Parallelization)
+Depends on: ../../hardening-quick-wins/tasks/01-untrusted-data.md (README.md overlap; cross-spec waves in ../SPEC.md)
 Budget: 50 turns
 Spec: ../SPEC.md (requirements R1–R8)
 

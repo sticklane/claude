@@ -1,8 +1,7 @@
 # Task 01: Tournament stage in /drain
 
 Status: pending
-Depends on: none (within this spec; see cross-spec ordering in
-../SPEC.md Parallelization)
+Depends on: ../../evidence-artifacts/tasks/01-evidence.md (drain SKILL.md + reference.md overlap; cross-spec waves in ../SPEC.md)
 Budget: 50 turns
 Spec: ../SPEC.md (requirements R1–R6)
 
@@ -48,4 +47,5 @@ drain workflow mirrors the design.
 - [ ] `awk '/^## Tournament/,0' .claude/skills/drain/reference.md | grep -q "diff --stat"` → pass
 - [ ] `awk '/^## Tournament/,0' .claude/skills/drain/reference.md | grep -qi "DEFERRED"` → pass
 - [ ] `grep -qi "3 more worker runs\|three more" .claude/skills/drain/SKILL.md` → pass
-- [ ] `grep -qi "tournament" antigravity/.agents/workflows/drain.md` → pass
+- [ ] `grep -qi "tournament" antigravity/.agents/workflows/drain.md && grep -q -- "-t1" antigravity/.agents/workflows/drain.md` → pass
+- [ ] Regression guards (earlier waves' phrases survive this task's edits): `grep -q "evidence/" .claude/skills/drain/SKILL.md && test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2 && test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2` → pass
