@@ -54,32 +54,43 @@ procedure plus the defer contract: **the worker never asks the human and
 never edits queue state; on ambiguity it stops with verdict DEFERRED and
 puts the exact question in its final message.** Wait for the completion
 notification — do not poll. (No background agents available? reference.md
-has the headless fallback — a different, self-contained prompt.)
+has the headless fallback — a different, self-contained prompt. Headless
+workers, unlike /build workers, never flip the task's `Status: done`:
+after a headless DONE verdict and the post-merge acceptance re-run, drain
+itself flips the status to `done` and commits the flip.)
 
 ## 3. Collect the verdict
 
 - **DONE** — merge the task branch (it carries the task file with
   `Status: done`, ticked boxes, and the verifier's `evidence/` file, per
   /build) and run the project gates.
-  If the merge or gates fail: slot machine — discard the branch, relaunch
-  once with the failure evidence in the prompt. A second failure routes
+  If the merge or gates fail: run `git merge --abort` first (a failed
+  merge leaves the checkout wedged in a conflicted state), then slot
+  machine — discard the branch, relaunch once with the failure evidence
+  in the prompt. A second failure routes
   into one tournament (at most one per task per drain run; procedure in
   reference.md "Tournament") instead of straight to `Status: failed`:
   sweep any leftover `task/NN-<slug>-t*` branches/worktrees, then dispatch
   three concurrent background workers, `isolation: worktree`, each on its
   own `task/NN-<slug>-tN` branch with an angle-variant prompt carrying the
-  failure evidence from both prior attempts. Log one line before dispatch:
+  failure evidence from both prior attempts. If the tournament winner's
+  merge fails, likewise run `git merge --abort` before moving to the
+  next-ranked survivor. Log one line before dispatch:
   a tournament costs ~3 more worker runs. Skip it — straight to the
-  tournament's verdict routing with the two prior verdicts — when either
-  prior attempt returned BLOCKED over budget: budget is the one signal
-  drain already holds, and three more capped runs would buy three more
-  BLOCKEDs.
+  tournament's verdict routing with the two prior verdicts — when the
+  relaunch (attempt 2) returned BLOCKED over budget (attempt 1 must have
+  returned DONE to reach a merge, so only attempt 2 can be): budget is
+  the one signal drain already holds, and three more capped runs would
+  buy three more BLOCKEDs.
 - **DEFERRED** — the verdict message contains the question. Drain writes
   it into the main-checkout task file under `## Deferred questions`, sets
   `Status: deferred`, commits, and discards the worker's branch/worktree.
   Dependents simply never become dispatchable.
 - **BLOCKED** (technical blocker, no human question) — write
-  `Status: blocked` with the reason, commit.
+  `Status: blocked` with the reason, commit — except BLOCKED over budget
+  after a merge-failure relaunch, which routes per the tournament skip
+  above (straight to the tournament's verdict routing with both prior
+  verdicts).
 
 Keep verdicts, not transcripts. Log one line per task to the user as you
 go; /fleet shows the workers live. Loop to step 2 while anything is

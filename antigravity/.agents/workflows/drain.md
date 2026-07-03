@@ -50,19 +50,24 @@ payments, or migrations. Pull core tasks out for attended /build runs.
 3. **Collect.** DONE → merge the branch (it carries the task file's
    `Status: done` and the verifier's `evidence/` file from /build) and run
    the project gates; on merge/gate
-   failure discard the branch and relaunch once with the failure
-   evidence in the prompt; a second miss routes into step 4's
-   tournament instead of straight to `Status: failed`. DEFERRED → write
+   failure run `git merge --abort` (a failed merge leaves the checkout
+   wedged in a conflicted state), discard the branch, and relaunch once
+   with the failure evidence in the prompt; a second miss routes into
+   step 4's tournament instead of straight to `Status: failed`. DEFERRED → write
    the verdict's question into
    the main-checkout task file under `## Deferred questions`, set
    `Status: deferred`, commit, discard the worker's branch/worktree.
-   BLOCKED → write `Status: blocked` + reason, commit. Keep verdicts,
+   BLOCKED → write `Status: blocked` + reason, commit — except BLOCKED
+   over budget after a merge-failure relaunch, which
+   routes per the tournament skip in step 4. Keep verdicts,
    not transcripts. Loop to step 2 while anything is dispatchable.
 
 4. **Tournament** (second miss on one task; at most once per task per
    drain run). Tell the user first: this costs ~3 more worker runs.
    Skip it — straight to the verdict routing below with the two prior
-   verdicts — when either prior attempt returned BLOCKED over budget.
+   verdicts — when attempt 2 (the relaunch) returned BLOCKED over
+   budget; attempt 1 must have returned DONE to reach a merge, so only
+   attempt 2 can be.
 
    - Sweep: delete any existing `task/NN-<slug>-t*` branches/worktrees,
      then create three fresh ones with
@@ -86,7 +91,8 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    - Rank (the workflow, not the verifier): fewest gate findings in the
      verifier report, then smallest `git diff --stat` total.
    - Merge: winner via the normal DONE bookkeeping, but no relaunch —
-     on merge/gate failure move to the next-ranked survivor; delete
+     on merge/gate failure run `git merge --abort`, then move to the
+     next-ranked survivor; delete
      survivor branches/worktrees only after a merge passes gates. All
      survivors failing to merge → `Status: failed`.
    - Verdict routing (no survivor): DEFERRED beats failed — if any
