@@ -7,8 +7,11 @@ Turn the user's idea into a spec precise enough that a fresh conversation
 can implement and verify it without this one.
 
 **Right-size first.** If the change is describable as a one-sentence diff
-(typo, log line, rename, config tweak), say so and just do it. Continue only
-for work with real uncertainty or multiple files.
+(typo, log line, rename, config tweak), say so and just do it. And if the
+change is a mechanical transform a deterministic tool can perform (codemod,
+bulk rename, formatting sweep), it gets a script, not a spec — write and run
+the script instead. Continue only for work with real uncertainty or multiple
+files.
 
 ## 1. Scout before you ask
 
