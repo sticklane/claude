@@ -1,6 +1,6 @@
 # Task 01: Root AGENTS.md, CLAUDE.md pointer, status dashboard
 
-Status: pending
+Status: in-progress
 Depends on: ../../review-fixes/tasks/01-plugin-manifest.md, ../../chaining-antipatterns/tasks/03-antipattern-guards.md
 Priority: P2
 Budget: 25 turns

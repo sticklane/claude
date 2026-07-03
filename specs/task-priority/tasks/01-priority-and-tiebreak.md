@@ -1,6 +1,6 @@
 # Task 01: Priority header, breakdown rubric, drain tie-break, mirrors
 
-Status: pending
+Status: in-progress
 Depends on: ../../review-fixes/tasks/02-drain-state-machine.md, ../../review-fixes/tasks/03-header-contract.md, ../../context-management/tasks/01-claude-md-and-breakdown-note.md, ../../chaining-antipatterns/tasks/03-antipattern-guards.md
 Priority: P1
 Budget: 25 turns
