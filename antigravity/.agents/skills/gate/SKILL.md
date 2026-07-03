@@ -31,7 +31,10 @@ check (lint + typecheck + affected tests); the full suite belongs in CI.
    event fires at session end). The "done means verified" gate here is the
    artifact system: keep the implementation-plan review pause ON for core
    work, and require walkthrough artifacts to contain command output as
-   evidence (the verifier skill checks this).
+   evidence (the verifier skill checks this). A session ending with a
+   verdict line (`DEFERRED`, `BLOCKED`, `INCOMPLETE`) is a sanctioned stop,
+   not a failed exit — unattended workers stop mid-red by contract
+   (details in reference.md).
 
 ## 3. Verify the gates fire
 

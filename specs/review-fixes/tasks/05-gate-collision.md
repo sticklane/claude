@@ -1,6 +1,6 @@
 # Task 05: Gate Stop hook — verdict-line bypass for unattended workers' contractual stops
 
-Status: in-progress
+Status: done
 Depends on: 02, 04
 Budget: 24 turns
 Spec: ../SPEC.md (cluster 05)
@@ -46,8 +46,13 @@ BLOCKED/DEFERRED bullets — apply on top.)
 
 ## Acceptance
 
-- [ ] `grep -q "sanctioned stop" .claude/skills/gate/reference.md && grep -q "DEFERRED" .claude/skills/gate/reference.md && grep -q "INCOMPLETE" .claude/skills/gate/reference.md` → exit 0 (bypass contract documented)
-- [ ] `grep -q "transcript" .claude/skills/gate/reference.md` → exit 0 (mechanism named — hook reads the transcript tail before exiting 2)
-- [ ] `grep -qi "sanctioned" .claude/skills/gate/SKILL.md` → exit 0
-- [ ] `grep -qi "sanctioned stop" .claude/skills/autopilot/reference.md && grep -qi "sanctioned stop\|gate.*hook" .claude/skills/drain/reference.md` → exit 0 (interaction noted both places; confirm by reading, greps alone can pass on unrelated text)
-- [ ] `grep -q "sanctioned stop" antigravity/.agents/skills/gate/reference.md` → exit 0 (mirror)
+- [x] `grep -q "sanctioned stop" .claude/skills/gate/reference.md && grep -q "DEFERRED" .claude/skills/gate/reference.md && grep -q "INCOMPLETE" .claude/skills/gate/reference.md` → exit 0 (bypass contract documented)
+  — verifier: exit 0; exact grep documented (../evidence/05-gate-collision.md, C1)
+- [x] `grep -q "transcript" .claude/skills/gate/reference.md` → exit 0 (mechanism named — hook reads the transcript tail before exiting 2)
+  — verifier: exit 0; prose + script read `transcript_path` (../evidence/05-gate-collision.md, C2)
+- [x] `grep -qi "sanctioned" .claude/skills/gate/SKILL.md` → exit 0
+  — verifier: exit 0; one sentence with rationale (../evidence/05-gate-collision.md, C3)
+- [x] `grep -qi "sanctioned stop" .claude/skills/autopilot/reference.md && grep -qi "sanctioned stop\|gate.*hook" .claude/skills/drain/reference.md` → exit 0 (interaction noted both places; confirm by reading, greps alone can pass on unrelated text)
+  — verifier: exit 0; confirmed by reading, both notes substantive (../evidence/05-gate-collision.md, C4)
+- [x] `grep -q "sanctioned stop" antigravity/.agents/skills/gate/reference.md` → exit 0 (mirror)
+  — verifier: exit 0; mirror adapted to Antigravity hook JSON (../evidence/05-gate-collision.md, C5)

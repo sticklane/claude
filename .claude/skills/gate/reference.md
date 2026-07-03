@@ -17,7 +17,16 @@ Setup rules that silently break gates when skipped:
 ## Stop gate (blocks "done" until checks pass)
 
 `.claude/hooks/stop-gate.sh` — replace `npm test` with the project's check;
-note the exit status is captured from the check itself, never from a pipe:
+note the exit status is captured from the check itself, never from a pipe.
+Before exiting 2, the hook checks for a **sanctioned stop**: unattended
+workers (drain/autopilot dispatch, and the verifier) are contractually
+REQUIRED to stop mid-red with a final message beginning with a verdict line
+— `DEFERRED`, `BLOCKED`, or `INCOMPLETE`. Without the bypass the gate would
+trap them in a block loop they can never satisfy. The hook's stdin JSON
+carries `transcript_path`; the installed hook reads the last assistant
+message from the transcript tail and runs exactly
+`grep -qE '^(DEFERRED|BLOCKED|INCOMPLETE)\b'` on its first line — a match
+exits 0:
 
 ```bash
 #!/bin/bash
@@ -26,6 +35,21 @@ note the exit status is captured from the check itself, never from a pipe:
 # Loop safety comes from Claude Code's cap: after 8 consecutive blocks
 # without progress it force-ends the turn (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
 # raises that if a gate legitimately needs more rounds).
+INPUT=$(cat)
+
+# Sanctioned stop: a final message beginning with a verdict line is an
+# unattended worker's contractual mid-red stop — let it through.
+TRANSCRIPT=$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty')
+if [ -n "$TRANSCRIPT" ] && [ -r "$TRANSCRIPT" ]; then
+  LAST=$(tail -50 "$TRANSCRIPT" \
+    | jq -rs '[.[] | select(.type == "assistant")] | last
+              | .message.content[]? | select(.type == "text") | .text' \
+    2>/dev/null)
+  if printf '%s' "$LAST" | head -1 | grep -qE '^(DEFERRED|BLOCKED|INCOMPLETE)\b'; then
+    exit 0
+  fi
+fi
+
 if ! RESULT=$(npm test 2>&1); then
   echo "Checks failing — keep working. Output (last 20 lines):" >&2
   printf '%s\n' "$RESULT" | tail -20 >&2
@@ -61,7 +85,7 @@ turn. If the check is too slow to re-run each round, use the
 but then describe the gate honestly as "one retry", not "until green":
 
 ```bash
-INPUT=$(cat)
+# $INPUT already captured at the top of the script
 if [ "$(printf '%s' "$INPUT" | jq -r '.stop_hook_active')" = "true" ]; then
   exit 0
 fi

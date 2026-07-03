@@ -83,6 +83,13 @@ path, resolved at dispatch:
 > files changed. If BLOCKED, one paragraph on why. If DEFERRED, the
 > question(s) verbatim — they are all the orchestrator will ever see.
 
+Gate interaction: in a repo with gate's Stop hook installed, worker
+verdicts DEFERRED/BLOCKED (and the verifier's INCOMPLETE) pass the gate
+hook via its sanctioned stop bypass — a final message beginning with the
+verdict line exits the hook 0 even while checks are red, so contractual
+mid-red stops reach drain instead of looping (mechanism in the gate
+skill's reference).
+
 ## Deferred question format (written by drain, from the verdict)
 
 ```markdown
