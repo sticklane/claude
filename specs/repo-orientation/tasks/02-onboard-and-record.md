@@ -1,6 +1,6 @@
 # Task 02: Onboard encodes the practices; research record; mirror
 
-Status: in-progress
+Status: done
 Depends on: 01, ../../chaining-antipatterns/tasks/02-chain-implementation.md, ../../context-management/tasks/04-reference-tocs-research-record.md, ../../code-vs-llm/tasks/01-ladder.md
 Priority: P2
 Budget: 25 turns
@@ -29,6 +29,6 @@ antigravity port. Spec R4-R6 carry the exact content and sources.
 
 ## Acceptance
 
-- [ ] `grep -qi "repo map" .claude/skills/onboard/SKILL.md && grep -q "per-directory CLAUDE.md" .claude/skills/onboard/SKILL.md && grep -q "AGENTS.md" .claude/skills/onboard/SKILL.md && grep -qi "open work" .claude/skills/onboard/SKILL.md` -> exit 0 (R4)
-- [ ] `sed -n '/[Rr]epo orientation for agents/,/^## /p' docs/external-playbooks.md | grep -qi "agents.md" && sed -n '/[Rr]epo orientation for agents/,/^## /p' docs/external-playbooks.md | grep -qi "kiro" && sed -n '/[Rr]epo orientation for agents/,/^## /p' docs/external-playbooks.md | grep -qi "llms.txt"` -> exit 0 (R5)
-- [ ] `grep -qi "repo map" antigravity/.agents/skills/onboard/SKILL.md && grep -q "per-directory" antigravity/.agents/skills/onboard/SKILL.md` -> exit 0 (R6)
+- [x] `grep -qi "repo map" .claude/skills/onboard/SKILL.md && grep -q "per-directory CLAUDE.md" .claude/skills/onboard/SKILL.md && grep -q "AGENTS.md" .claude/skills/onboard/SKILL.md && grep -qi "open work" .claude/skills/onboard/SKILL.md` -> exit 0 (R4) — verifier ran it, exit 0; ../evidence/02-onboard-and-record.md
+- [x] `sed -n '/[Rr]epo orientation for agents/,/^## /p' docs/external-playbooks.md | grep -qi "agents.md" && sed -n '/[Rr]epo orientation for agents/,/^## /p' docs/external-playbooks.md | grep -qi "kiro" && sed -n '/[Rr]epo orientation for agents/,/^## /p' docs/external-playbooks.md | grep -qi "llms.txt"` -> exit 0 (R5) — verifier ran it, exit 0; ../evidence/02-onboard-and-record.md
+- [x] `grep -qi "repo map" antigravity/.agents/skills/onboard/SKILL.md && grep -q "per-directory" antigravity/.agents/skills/onboard/SKILL.md` -> exit 0 (R6) — verifier ran it, exit 0; ../evidence/02-onboard-and-record.md

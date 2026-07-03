@@ -227,3 +227,41 @@ entry is the research record.
    primary) leans multi-agent earlier than Anthropic/OpenAI guidance;
    rejected in the code-vs-LLM ladder — rung 4 stays
    breadth-first-only.
+
+## Repo orientation for agents
+
+How a fresh agent finds the map, the state, and the commands → this
+repo's root `AGENTS.md` (+ CLAUDE.md's `@AGENTS.md` import),
+`specs/status.sh`, and /onboard's repo-map / per-directory /
+work-state / interop guidance. Those artifacts apply the practices;
+the research stays here.
+
+- **Convergence: small always-on root context file.** Anthropic's
+  memory docs target under 200 lines
+  ([memory](https://code.claude.com/docs/en/memory)); OpenAI Codex
+  hard-caps project docs at 32 KiB via `project_doc_max_bytes`
+  ([Codex AGENTS.md guide](https://developers.openai.com/codex/guides/agents-md)).
+- **Convergence: pointers and JIT retrieval over content dumps.**
+  Anthropic's best practices exclude "file-by-file descriptions"; the
+  context-engineering post keeps "lightweight identifiers" in context
+  and retrieves the rest on demand
+  ([context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)).
+- **Convergence: nearest-file-wins hierarchy for depth.** Nested
+  AGENTS.md ([agents.md](https://agents.md)); gemini-cli's GEMINI.md
+  hierarchy; Claude Code's on-demand subdirectory CLAUDE.md
+  ([large codebases](https://code.claude.com/docs/en/large-codebases)).
+- **Convergence: structured work-state files.** Kiro specs split work
+  into requirements/design/tasks with checkbox state
+  ([Kiro specs](https://kiro.dev/docs/specs)); its steering files
+  split standing context into product/tech/structure
+  ([Kiro steering](https://kiro.dev/docs/steering)) — validating this
+  repo's specs/ + `Status:` headers.
+- **Convergence: AGENTS.md as the cross-tool interop standard.** Linux
+  Foundation stewarded; read natively by Codex, Jules, Kiro CLI, and
+  Android Studio; gemini-cli only via `context.fileName`; Claude Code
+  via `@AGENTS.md` import or symlink.
+- **Divergences.** Inclusion modes: Kiro steering offers
+  always/fileMatch/manual inclusion vs Claude Code's `paths:` rules.
+  AGENTS.md-by-default is not honored by gemini-cli (config required).
+- **llms.txt**: published by vendors for their own doc sites; no coding
+  tool consumes a repo's llms.txt — skipped here.
