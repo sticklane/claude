@@ -36,4 +36,6 @@ skill teaches, and cite it rather than restating it.
 Test a skill by running it in a fresh session against a real repo and
 watching where it stalls or over-reads — not by rereading the prose. For
 description changes, check both that it triggers on its listed phrases and
-does NOT trigger on neighbors' phrases.
+does NOT trigger on neighbors' phrases. For skills with a stored evalset,
+/evals (runner: `evals/run.sh`) is the repeatable complement — run it
+before committing any skill change.
