@@ -4,7 +4,10 @@ description: Renders a cross-repo dashboard of ALL open work on this machine - s
 ---
 
 Show the user every piece of open work on this machine and what needs a
-human decision. Read-only: the scanner never mutates the state it reports.
+human decision. Read-only: the scanner never mutates the state it reports —
+the one explicit exception is `--abandon` / `--abandon-stale`, which write a
+`.workboard-abandoned` skip-marker into an Antigravity conversation dir
+(Antigravity's own artifacts are never touched).
 Design rationale and sources: [docs/agent-dashboards.md](../../../docs/agent-dashboards.md).
 
 ## 1. Scan
@@ -20,6 +23,10 @@ python3 <this skill dir>/workboard.py [ROOTS ...] --out <scratchpad>/workboard.h
   records' `cwd`). Pass explicit roots when the user names directories.
 - `--json` emits the same data as JSON if you need to reason over it instead
   of rendering; `--stale-days N` tunes the staleness threshold (default 7).
+- `--abandon <conv-id> ...` marks Antigravity conversation(s) abandoned;
+  `--abandon-stale` abandons everything currently stale. Both then rescan,
+  so one command marks and refreshes the board. The dashboard prints these
+  exact commands next to each stale Antigravity inbox item.
 - Data sources and the state model are documented in
   [reference.md](reference.md) — load it only if the scan misbehaves or the
   user asks what a state means.
@@ -45,7 +52,9 @@ For each inbox item the suggested action column already names the move:
   spec dir. Dirty/unpushed repo → commit, stash, or push.
 - `stale` open spec → resume, defer (`Status: deferred`), or delete — open
   work decays; deciding is the point.
+- `stale` Antigravity conversation → resume it in Antigravity, or run the
+  `--abandon` command the inbox row shows (or `--abandon-stale` for all).
 
 The dashboard is a point-in-time snapshot; refreshing means re-running the
 scanner. Next pipeline step: none — items route back into /build, /drain,
-/handoff, or /verify as triaged above.
+/handoff, or the verifier agent as triaged above.
