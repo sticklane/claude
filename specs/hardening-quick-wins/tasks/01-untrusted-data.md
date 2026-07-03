@@ -1,6 +1,6 @@
 # Task 01: Untrusted-data rule and worker-prompt hardening
 
-Status: pending
+Status: in-progress
 Depends on: none
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R1, R2, R7, R8 untrusted-data parts)

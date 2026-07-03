@@ -1,6 +1,6 @@
 # Task 04: Scout early-stop, /idea deterministic gate, version bump
 
-Status: pending
+Status: in-progress
 Depends on: none
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R5, R6, R9, R8 scout + idea parts)
