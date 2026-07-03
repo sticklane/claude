@@ -8,5 +8,9 @@
   },
   "homepage": "https://github.com/sticklane/claude",
   "skills": "./.claude/skills",
-  "agents": "./.claude/agents"
+  "agents": [
+    "./.claude/agents/scout.md",
+    "./.claude/agents/critic.md",
+    "./.claude/agents/verifier.md"
+  ]
 }
