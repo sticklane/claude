@@ -1,6 +1,6 @@
 # Task 01: workflow-author skill, templates, premise verification
 
-Status: pending
+Status: in-progress
 Depends on: ../../tournament-votes/tasks/01-majority-votes.md
 Priority: P2
 Budget: 30 turns

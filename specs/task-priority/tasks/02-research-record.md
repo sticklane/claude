@@ -1,6 +1,6 @@
 # Task 02: Task-prioritization research record
 
-Status: pending
+Status: in-progress
 Depends on: 01, ../../tournament-votes/tasks/01-majority-votes.md
 Priority: P3
 Budget: 10 turns
