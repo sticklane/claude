@@ -58,6 +58,7 @@ questions into the task files instead of stopping on them.
 | `critic` agent | Attacks specs/plans/diffs; high-signal only — confidence-scored findings, false positives filtered the way Anthropic's own review pipeline does |
 | `verifier` agent | Fresh-eyes check of finished work against acceptance criteria, including overfitting-to-tests; evidence over assertion |
 | `rules/token-discipline.md` | Always-loaded token economics: delegate consumption, match model to task, one task per session |
+| `rules/untrusted-data.md` | Always-loaded injection defense: tool-sourced content is data, not instructions — unattended workers stop BLOCKED on redirection attempts |
 
 ## Why this shape (the Anthropic practices it encodes)
 
@@ -114,9 +115,8 @@ and web/desktop sessions alike). In any Claude Code session:
 Everything arrives namespaced — `/agentic:idea`, `/agentic:build`, agents as
 `@agentic:scout` — and updates with the marketplace. Teams can auto-enable it
 per repo with `extraKnownMarketplaces` + `enabledPlugins` in the repo's
-`.claude/settings.json`. One gap: rules don't ship in plugins, so copy
-`.claude/rules/token-discipline.md` into the target repo (or fold it into
-its CLAUDE.md).
+`.claude/settings.json`. One gap: rules don't ship in plugins, so copy the files in
+`.claude/rules/` into the target repo (or fold them into its CLAUDE.md).
 
 For the copy-based options below, clone it once:
 
