@@ -128,9 +128,10 @@ were fetched live — workflow-agents, loop-agents, runtime/resume,
 multi-agents, a2a/intro, custom-agents — but **zero claims about
 SequentialAgent/ParallelAgent/LoopAgent, deterministic-vs-model-driven
 placement, verification/judging, budgets, resumability, or A2A survived
-3-vote verification**. After two attempts the leg remains open: this report
-still cannot make cited statements about Google's orchestration approach,
-and the Anthropic-vs-OpenAI framing stands as-is.
+3-vote verification** in that run. The leg (leg C) has since been closed via
+targeted per-leg research that quotes a primary source for every claim — see
+"Second follow-up (2026-07-03)" below; the Anthropic-vs-OpenAI framing of the
+main findings stands as-is, now supplemented by cited Google ADK material.
 
 Indirectly relevant corroboration from the same run's context-management leg
 (see docs/context-management-research-2026-07.md, "Follow-up findings"):
@@ -143,9 +144,72 @@ the adopt-list's file-based resume-from-checkpoint state and the
 fresh-relaunch-from-durable-artifacts doctrine. Nothing on the adopt-list
 changes.
 
+### Second follow-up (2026-07-03): legs B and C closed via targeted primary-source research
+
+Leg C (the Google DeepMind ADK/A2A orchestration leg that produced zero
+surviving claims across the two deep-research attempts) has now been closed
+via focused per-leg research that quotes a primary source for every claim.
+Leg B (Anthropic context-management re-verification) was closed in the same
+effort — its findings live in the companion doc,
+docs/context-management-research-2026-07.md. The leg-C findings:
+
+1. **SequentialAgent / ParallelAgent / LoopAgent draw the
+   deterministic-vs-model-driven boundary.** ADK's workflow agents execute
+   sub-agents by type, without consulting a model for orchestration.
+   Confidence: high.
+   - "Executes sub-agents one after another, in sequence."; "Executes
+     multiple sub-agents in parallel."; "Repeatedly executes its sub-agents
+     until a specific termination condition is met."; "they determine the
+     execution sequence according to their type... without consulting an AI
+     model for assistance with the orchestration. This approach results in
+     deterministic and predictable execution patterns."
+     https://adk.dev/agents/workflow-agents/
+   - "interweave the non-deterministic functionality of AI models with
+     deterministic code, rather than relying on non-deterministic AI models
+     to manage the full execution of a task."
+     https://adk.dev/agents/
+   - (Note: google.github.io/adk-docs now 301-redirects to adk.dev — same
+     official docs.)
+
+2. **Bounded loops + eval tooling.** LoopAgent supports max_iterations AND
+   escalation (`tool_context.actions.escalate = True`); the loop will not
+   stop on its own. ADK ships eval tooling (AgentEvaluator, evalset files,
+   `adk eval`). Confidence: high.
+   - "Max Iterations: Set a maximum number of iterations in the LoopAgent.
+     The loop will terminate after that many iterations."; "the LoopAgent
+     itself does not inherently decide when to stop looping. You must
+     implement a termination mechanism"
+     https://adk.dev/agents/workflow-agents/loop-agents/
+   - "An evalset file contains multiple 'evals,' each representing a distinct
+     session." https://adk.dev/evaluate/
+
+3. **Resumability / session + state persistence via SessionService.** Three
+   tiers — InMemory (ephemeral), Database (survives restart), VertexAi
+   (managed); session.state is a scratchpad; state persists via
+   append_event. Confidence: high.
+   - InMemory: "All conversation data is lost if the application restarts.";
+     DatabaseSessionService: "Data survives application restarts."; state:
+     "This acts as a scratchpad for the agent during the interaction."
+     https://adk.dev/sessions/session/
+
+4. **A2A is an interop protocol between separate opaque agents; it adds
+   nothing for a solo single-process toolkit.** Confidence: high (the
+   "no benefit for solo in-process" is a direct inference from the stated
+   cross-agent purpose).
+   - "An open protocol enabling communication and interoperability between
+     opaque agentic applications."; "Connect agents built on different
+     platforms (LangGraph, CrewAI, Semantic Kernel, custom solutions)..."
+     https://a2a-protocol.org/latest/
+
+**Changes anything?** Leg C CORROBORATES the orchestration adopt-list (codify
+deterministic control flow — sequential/parallel/loop with bounded iterations
+plus escalation; keep judging/verification; externalize session state) and
+confirms A2A is out of scope for this solo single-machine toolkit. Nothing
+overturned.
+
 ## Caveats
 
-The Google DeepMind leg of the comparison is still missing after two attempts: no claims about ADK workflow agents (Sequential/Parallel/Loop), the A2A protocol, or Gemini Enterprise orchestration survived 3-vote verification in either the original 2026-07-03 run or the same-day follow-up re-attempt (which fetched the primary ADK workflow-agent and A2A pages but confirmed nothing), so this report cannot make cited statements about Google's approach — the deterministic-vs-model-driven comparison here is effectively Anthropic vs OpenAI, and the ADK leg remains an open question. Two Anthropic claims were refuted (the Hooks/CLAUDE.md/MCP responsibility mapping, and a sequential/hierarchical two-pattern taxonomy), so those framings should not be repeated. Anthropic's token-overhead figures are internally inconsistent across publications (15x vs chat in the June 2025 engineering blog; 10-15x vs single agents in the Dec 2025 whitepaper) and are self-reported internal data, as is the 90.2% eval improvement. The March 2026 three-modes guidance comes from a webinar slide deck (Agent Teams was in research preview), not formal documentation. OpenAI's docs frame code-vs-LLM orchestration as tradeoffs to mix and match, slightly softer than 'recommends.' Time-sensitivity: SDK surfaces (Agent tool naming, Workflow tool, hooks list) reflect docs as fetched 2026-07-03 and change quickly; the 'typically 2-4 cycles' evaluator bound comes from a worked example, not a universal prescription. The final what-to-adopt finding is interpretive synthesis, not vendor-attributed guidance.
+The Google DeepMind leg (leg C) is now closed against primary sources: ADK's workflow agents (Sequential/Parallel/Loop), bounded loops + eval tooling, SessionService state tiers, and the A2A protocol's scope were all verified with primary-source URLs and verbatim quotes in the targeted per-leg research (see "Second follow-up" above), after producing zero surviving claims in the original 2026-07-03 run and its same-day follow-up. So legs A (Anthropic), B (Anthropic context-management re-verification, in the companion doc), and C (Google ADK) are all now closed, and the deterministic-vs-model-driven comparison spans Anthropic, OpenAI, and Google. Two Anthropic claims were refuted in the original run (the Hooks/CLAUDE.md/MCP responsibility mapping, and a sequential/hierarchical two-pattern taxonomy), so those framings should not be repeated. Anthropic's token-overhead figures are internally inconsistent across publications (15x vs chat in the June 2025 engineering blog; 10-15x vs single agents in the Dec 2025 whitepaper) and are self-reported internal data, as is the 90.2% eval improvement. The March 2026 three-modes guidance comes from a webinar slide deck (Agent Teams was in research preview), not formal documentation. OpenAI's docs frame code-vs-LLM orchestration as tradeoffs to mix and match, slightly softer than 'recommends.' Time-sensitivity: SDK surfaces (Agent tool naming, Workflow tool, hooks list) reflect docs as fetched 2026-07-03 and change quickly; the 'typically 2-4 cycles' evaluator bound comes from a worked example, not a universal prescription. URL note: docs.claude.com now redirects to platform.claude.com / code.claude.com, and google.github.io/adk-docs now 301-redirects to adk.dev — same official docs in each case. The one item that remains UNVERIFIED across both docs is the exact numeric Claude Code auto-compact threshold (no published percentage; the "95%" figure is unverified — see the companion doc). The final what-to-adopt finding is interpretive synthesis, not vendor-attributed guidance.
 
 ## Open questions
 

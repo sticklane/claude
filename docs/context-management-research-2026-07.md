@@ -5,7 +5,9 @@
 > findings below are Anthropic primary sources, 3-vote verified). Commissioned
 > for `specs/orchestrator-context/SPEC.md` (drain & co. self-managing context).
 > The OpenAI/Google leg was closed by a same-day follow-up run — see
-> "Follow-up findings (2026-07-03)" below.
+> "Follow-up findings (2026-07-03)" below. The Anthropic re-verification leg
+> (leg B) was subsequently closed via targeted primary-source research — see
+> "Second follow-up (2026-07-03)".
 
 ## Summary
 
@@ -101,8 +103,9 @@ Evidence: Derived recommendation, but every element maps to a 3-0 confirmed clai
 A same-day follow-up deep-research run (106 agents; 24 claims confirmed 3-0,
 1 refuted, 0 unverified) closed the OpenAI/Google leg with primary sources
 only, all fetched live 2026-07-03. The Anthropic re-verification leg (leg B)
-produced zero surviving claims for the second time — see the rewritten
-Caveats. This section answers the first open question below.
+produced zero surviving claims for the second time in that run; it has since
+been closed via targeted per-leg research (see "Second follow-up" below).
+This section answers the first open question below.
 
 ### OpenAI (Agents SDK + Cookbook)
 
@@ -183,12 +186,92 @@ implicit; irrelevant while the toolkit targets Claude.
 ### What did not close
 
 Leg B (the six Anthropic re-verification targets) produced zero surviving
-claims on this second attempt; Meta and xAI produced nothing at all, leaving
-it unresolved whether they publish first-party guidance.
+claims on this second deep-research attempt, but has since been closed via
+targeted primary-source research — see "Second follow-up" below. Meta and xAI
+produced nothing at all, leaving it unresolved whether they publish
+first-party guidance.
+
+### Second follow-up (2026-07-03): legs B and C closed via targeted primary-source research
+
+Leg B (the Anthropic context-management re-verification targets that produced
+zero surviving claims across the two deep-research attempts) has now been
+closed via focused per-leg research that quotes a primary source for every
+claim. Leg C (Google ADK orchestration) was closed in the same effort — its
+findings live in the companion doc, docs/orchestration-research-2026-07.md.
+The leg-B findings:
+
+1. **Server-side compaction vs API context editing are BOTH distinct
+   server-side features.** Context editing (`clear_tool_uses_20250919`)
+   REMOVES old tool results (leaving placeholders); compaction SUMMARIZES
+   older context. Confidence: high.
+   - "The `clear_tool_uses_20250919` strategy clears tool results when
+     conversation context grows beyond your configured threshold"; "Context
+     editing is applied server-side before the prompt reaches Claude."
+     https://platform.claude.com/docs/en/build-with-claude/context-editing
+   - "Server-side context compaction for managing long conversations";
+     "automatically summarizing older context when approaching the context
+     window limit."
+     https://platform.claude.com/docs/en/build-with-claude/compaction
+
+2. **Orchestrator-worker + failure handling: resume, don't restart.** A lead
+   agent coordinates and delegates to parallel subagents; on failure the
+   system resumes from where the agent was, via retries and checkpoints.
+   Confidence: high.
+   - "a lead agent coordinates the process while delegating to specialized
+     subagents that operate in parallel"; "we can't just restart from the
+     beginning... we built systems that can resume from where the agent was
+     when the errors occurred"; "deterministic safeguards like retry logic
+     and regular checkpoints."
+     https://www.anthropic.com/engineering/multi-agent-research-system
+
+3. **Anthropic warns against irreversible context loss and prescribes
+   externalizing state first.** Confidence: high.
+   - "the LeadResearcher begins by... saving its plan to Memory to persist
+     the context, since if the context window exceeds 200,000 tokens it will
+     be truncated and it is important to retain the plan."
+     https://www.anthropic.com/engineering/multi-agent-research-system
+   - "detailed instructions from early in the conversation may be lost. Put
+     persistent rules in CLAUDE.md rather than relying on conversation
+     history."
+     https://code.claude.com/docs/en/how-claude-code-works
+
+4. **Context editing combines with the memory tool, with an automatic
+   pre-clear warning.** Claude is warned before tool results are cleared and
+   can save information to memory files first. Confidence: high.
+   - "Context editing can be combined with the memory tool... Claude receives
+     an automatic warning to preserve important information. This enables
+     Claude to save tool results or context to its memory files before
+     they're cleared from the conversation history."
+     https://platform.claude.com/docs/en/build-with-claude/context-editing
+
+5. **Claude Code auto-compact threshold + /clear vs /compact: behavior
+   confirmed, exact percentage UNVERIFIED.** The docs describe the trigger
+   only qualitatively ("as you approach the limit"); NO primary source states
+   a numeric percentage, so the commonly-cited "95%" figure is unverified.
+   Behavior confidence: high; exact %: UNVERIFIED.
+   - "Claude Code manages context automatically as you approach the limit. It
+     clears older tool outputs first, then summarizes the conversation if
+     needed."
+     https://code.claude.com/docs/en/how-claude-code-works
+   - "Use `/clear` to start fresh when switching to unrelated work."
+     https://code.claude.com/docs/en/costs
+
+6. **Clear-vs-continue rule of thumb.** `/clear` for unrelated new work;
+   `/compact` when a phase is done but context should carry over ("run it
+   when context starts affecting performance or before a long new task").
+   Confidence: high.
+   - https://code.claude.com/docs/en/context-window
+   - https://code.claude.com/docs/en/costs
+
+**Changes anything?** Leg B CORROBORATES the existing adopt-list
+(fresh-relaunch-from-durable-artifacts, externalize-state-before-clearing,
+resume-not-restart) with primary Anthropic sources; the only correction is
+that no numeric auto-compact threshold is published (the "95%" figure is
+unverified).
 
 ## Caveats
 
-1) Vendor coverage for context management is now Anthropic + OpenAI + Google: the 2026-07-03 follow-up run closed the OpenAI (Agents SDK sessions/trimming/compaction/checkpointing) and Google (ADK compaction/session-state/memory, Gemini caching) legs with 24 unanimous primary-source claims. Meta and xAI remain uncovered — no surviving claims in either run, and it is unresolved whether they publish first-party agent context-management guidance at all. 2) The leg-B Anthropic items remain unverified after TWO attempts (infrastructure errors in the first run, zero surviving claims in the second): Claude Code's context-degradation symptoms and the '/clear after more than two failed corrections' threshold; auto-compact customization via CLAUDE.md and /compact <instructions>; the memory-tool warning-before-clear integration; compaction-as-primary vs context-editing positioning; and the Managed Agents checkpoint-and-relaunch pattern (wake(sessionId), getEvents(), durable session log, warning against irreversible pruning). Treat those as plausible but uncited. 3) One claim was formally refuted in the follow-up (call_model_input_filter as OpenAI's trimming mechanism / no built-in OpenAI compaction) — do not repeat that framing; also note OpenAI's trim/summarize strategies are official Cookbook example patterns, not SDK API parameters (the built-in equivalents are SessionSettings and OpenAIResponsesCompactionSession), and ADK's token_threshold is Python-specific with docs mid-migration from google.github.io/adk-docs to adk.dev. 4) Time-sensitivity: 'public beta' descriptors reflect launch-time status (Sonnet 4.5, Sept 2025); the memory tool is now GA and context editing uses beta headers that may change. All docs were verified live as of 2026-07-03; the cookbook page is dated 2026-03-20; Gemini pricing and minimum cache-token thresholds already changed across the 2.5→3.x lineup and will change again. 5) No confirmed source gives a numeric threshold for when an ORCHESTRATOR specifically should hand off to a fresh instance — the 100k default is for tool-result clearing, OpenAI's trim-vs-summarize criterion is qualitative, and the harness guidance prescribes task/feature boundaries rather than token counts; the adoption finding's trigger guidance is an inference. 6) Prompt-cache TTL economics for the Anthropic relaunch-vs-compact trade-off (5-minute vs 1-hour cache, cost of full re-read on relaunch) remain unquantified; only the clear_at_least invalidation rule is confirmed, and the new Gemini numbers are vendor-specific (implicit-cache savings are best-effort; the all-in explicit-cache discount is below 90% once storage is counted).
+1) Leg status: legs A (the Anthropic context-management doctrine — the main verified findings), B (the Anthropic re-verification targets: context editing vs compaction, orchestrator-worker failure handling, warnings against irreversible context loss, context-editing+memory integration, Claude Code auto-compact and clear-vs-compact), and C (Google ADK orchestration, in the companion doc) are all now closed against primary sources, each surviving claim carrying a primary-source URL and verbatim quote. The OpenAI and Google context legs were closed in the first follow-up. Meta and xAI remain uncovered — no surviving claims in either deep-research run, and it is unresolved whether they publish first-party agent context-management guidance at all. 2) The one remaining UNVERIFIED item is the exact numeric Claude Code auto-compact threshold: the docs describe the trigger only qualitatively ("as you approach the limit") and no primary source states a numeric percentage — the commonly-cited "95%" figure is unverified. The auto-compact/clear-first-then-summarize behavior itself is confirmed; only the number is not. 3) One claim was formally refuted in the first follow-up (call_model_input_filter as OpenAI's trimming mechanism / no built-in OpenAI compaction) — do not repeat that framing; also note OpenAI's trim/summarize strategies are official Cookbook example patterns, not SDK API parameters (the built-in equivalents are SessionSettings and OpenAIResponsesCompactionSession). 4) Time-sensitivity: 'public beta' descriptors reflect launch-time status (Sonnet 4.5, Sept 2025); the memory tool is now GA and context editing uses beta headers that may change. All docs were verified live as of 2026-07-03; the cookbook page is dated 2026-03-20; Gemini pricing and minimum cache-token thresholds already changed across the 2.5→3.x lineup and will change again. URL note: docs.claude.com now redirects to platform.claude.com / code.claude.com, and google.github.io/adk-docs now 301-redirects to adk.dev — same official docs in each case. 5) No confirmed source gives a numeric threshold for when an ORCHESTRATOR specifically should hand off to a fresh instance — the 100k default is for tool-result clearing, OpenAI's trim-vs-summarize criterion is qualitative, and the harness guidance prescribes task/feature boundaries rather than token counts; the adoption finding's trigger guidance is an inference. 6) Prompt-cache TTL economics for the Anthropic relaunch-vs-compact trade-off (5-minute vs 1-hour cache, cost of full re-read on relaunch) remain unquantified; only the clear_at_least invalidation rule is confirmed, and the new Gemini numbers are vendor-specific (implicit-cache savings are best-effort; the all-in explicit-cache discount is below 90% once storage is counted).
 
 ## Open questions
 
