@@ -1,0 +1,527 @@
+#!/usr/bin/env bash
+# install-gates — detect a repo's stack and tier, and install the two-layer
+# quality-gate system (specs/quality-gates-rollout: R1, R2, R5, R7).
+#
+# Task-02 scope: the clean-install path. Pre-existing foreign managed files
+# (.claude/settings.json, scripts/check.sh, .git/hooks/pre-commit not written
+# by install-gates) abort the run — merging and archival land in task 03.
+# All generation is deterministic: no timestamps, and the pre-commit
+# typecheck timing decision is recorded as a marker and reused on re-runs
+# (re-measured only under --remeasure).
+set -u
+
+TOOLKIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+TEMPLATES="$TOOLKIT_DIR/templates"
+
+usage() {
+  echo "usage: install-gates [--dry-run] [--remeasure] <repo-path>" >&2
+  exit 64
+}
+
+err() { printf 'install-gates: %s\n' "$1" >&2; }
+
+DRY_RUN=0
+REMEASURE=0
+REPO_ARG=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) DRY_RUN=1 ;;
+    --remeasure) REMEASURE=1 ;;
+    -*) usage ;;
+    *)
+      [ -n "$REPO_ARG" ] && usage
+      REPO_ARG="$1"
+      ;;
+  esac
+  shift
+done
+[ -n "$REPO_ARG" ] || usage
+
+REPO="$(cd "$REPO_ARG" 2>/dev/null && pwd)" || { err "$REPO_ARG is not a directory"; exit 1; }
+git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+  err "$REPO is not a git work tree"
+  exit 1
+}
+command -v jq >/dev/null 2>&1 || { err "jq is required"; exit 1; }
+
+hooks_dir="$(git -C "$REPO" rev-parse --git-path hooks)"
+case "$hooks_dir" in
+  /*) : ;;
+  *) hooks_dir="$REPO/$hooks_dir" ;;
+esac
+PRECOMMIT_PATH="$hooks_dir/pre-commit"
+
+# ---------------------------------------------------------------------------
+# Detection (R2). Sets:
+#   STACK, TIER, EXT (case pattern of gated extensions)
+#   CHECK_STAGES        run_stage lines for scripts/check.sh
+#   STAGE_DESC          human list of check.sh stages (CLAUDE.md stamp)
+#   STAGED_STAGES       staged-file stage lines for the pre-commit hook
+#   STAGED_DESC         human list of staged stages (CLAUDE.md stamp)
+#   TYPECHECK_CMD       whole-project typecheck command ("" = none)
+# ---------------------------------------------------------------------------
+
+STACK=generic
+TIER=generic
+EXT=""
+CHECK_STAGES=""
+STAGE_DESC=""
+STAGED_STAGES=""
+STAGED_DESC=""
+TYPECHECK_CMD=""
+tests_present=0
+
+add_check_stage() { # add_check_stage <name> <line>
+  CHECK_STAGES="${CHECK_STAGES}${CHECK_STAGES:+
+}$2"
+  STAGE_DESC="${STAGE_DESC}${STAGE_DESC:+, }$1"
+}
+
+add_staged_stage() { # add_staged_stage <name> <line(s)>
+  STAGED_STAGES="${STAGED_STAGES}${STAGED_STAGES:+
+}$2"
+  STAGED_DESC="${STAGED_DESC}${STAGED_DESC:+ + }$1"
+}
+
+pyproject_has() { # pyproject_has <section-prefix regex>
+  [ -f "$REPO/pyproject.toml" ] && grep -q "$1" "$REPO/pyproject.toml"
+}
+
+detect_python() {
+  STACK=python
+  EXT='*.py'
+
+  local ruff_cmd=""
+  if command -v ruff >/dev/null 2>&1; then
+    ruff_cmd="ruff"
+  elif command -v uvx >/dev/null 2>&1; then
+    ruff_cmd="uvx ruff"
+  fi
+
+  local fmt_cfg=0
+  if [ -f "$REPO/ruff.toml" ] || [ -f "$REPO/.ruff.toml" ] || pyproject_has '^\[tool\.ruff'; then
+    fmt_cfg=1
+  fi
+
+  if [ -n "$ruff_cmd" ]; then
+    if [ "$fmt_cfg" -eq 1 ]; then
+      add_check_stage "format-check" "run_stage \"format-check\" $ruff_cmd format --check ."
+      add_staged_stage "format-check" \
+        "  out=\"\$($ruff_cmd format --check \"\${staged[@]}\" 2>&1)\" || fail \"format-check\" \"\$out\""
+    fi
+    add_check_stage "lint" "run_stage \"lint\" $ruff_cmd check ."
+    add_staged_stage "lint" \
+      "  out=\"\$($ruff_cmd check \"\${staged[@]}\" 2>&1)\" || fail \"lint\" \"\$out\""
+  fi
+
+  if [ -f "$REPO/mypy.ini" ] || [ -f "$REPO/.mypy.ini" ] || pyproject_has '^\[tool\.mypy' \
+     || { [ -f "$REPO/setup.cfg" ] && grep -q '^\[mypy\]' "$REPO/setup.cfg"; }; then
+    if command -v mypy >/dev/null 2>&1; then TYPECHECK_CMD="mypy ."; else TYPECHECK_CMD="uvx mypy ."; fi
+  elif [ -f "$REPO/pyrightconfig.json" ] || pyproject_has '^\[tool\.pyright'; then
+    if command -v pyright >/dev/null 2>&1; then TYPECHECK_CMD="pyright"; else TYPECHECK_CMD="uvx pyright"; fi
+  fi
+  if [ -n "$TYPECHECK_CMD" ]; then
+    add_check_stage "typecheck" "run_stage \"typecheck\" $TYPECHECK_CMD"
+  fi
+
+  if [ -d "$REPO/tests" ] || [ -n "$(find "$REPO" \( -name .git -o -name .venv -o -name node_modules \) -prune -o \( -name 'test_*.py' -o -name '*_test.py' \) -type f -print 2>/dev/null | head -1)" ]; then
+    tests_present=1
+    local pytest_cmd
+    if command -v pytest >/dev/null 2>&1; then
+      pytest_cmd="pytest"
+    elif [ -f "$REPO/pyproject.toml" ] && command -v uv >/dev/null 2>&1; then
+      pytest_cmd="uv run pytest"
+    else
+      pytest_cmd="python3 -m pytest"
+    fi
+    add_check_stage "tests" "run_stage \"tests\" $pytest_cmd"
+  fi
+}
+
+detect_node() {
+  STACK=node
+  EXT='*.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs'
+
+  local pm=npm
+  [ -f "$REPO/pnpm-lock.yaml" ] && pm=pnpm
+  [ -f "$REPO/yarn.lock" ] && pm=yarn
+
+  local pkg="$REPO/package.json"
+  local check_script format_script lint_script typecheck_script test_script
+  check_script="$(jq -r '.scripts.check // empty' "$pkg" 2>/dev/null)"
+  format_script="$(jq -r '.scripts.format // empty' "$pkg" 2>/dev/null)"
+  lint_script="$(jq -r '.scripts.lint // empty' "$pkg" 2>/dev/null)"
+  typecheck_script="$(jq -r '.scripts.typecheck // empty' "$pkg" 2>/dev/null)"
+  test_script="$(jq -r '.scripts.test // empty' "$pkg" 2>/dev/null)"
+  case "$test_script" in *"no test specified"*) test_script="" ;; esac
+
+  # A `lint` script that is actually a typechecker is classified as the
+  # typecheck stage, never lint and never per-file (R7).
+  local lint_is_typecheck=0
+  case "$lint_script" in
+    *tsc*--noEmit*|*mypy*|*pyright*) lint_is_typecheck=1 ;;
+  esac
+
+  # Formatter (prettier) — stage exists only if a formatter config or format
+  # script exists AND the tool resolves per the provisioning rules (never
+  # bare npx).
+  local prettier_cfg=0 prettier_bin=""
+  if [ -n "$format_script" ] || jq -e '.prettier' "$pkg" >/dev/null 2>&1; then
+    prettier_cfg=1
+  else
+    local f
+    for f in "$REPO"/.prettierrc "$REPO"/.prettierrc.* "$REPO"/prettier.config.*; do
+      [ -e "$f" ] && prettier_cfg=1 && break
+    done
+  fi
+  if [ -x "$REPO/node_modules/.bin/prettier" ]; then
+    prettier_bin="node_modules/.bin/prettier"
+  elif (cd "$REPO" && npx --no-install prettier --version >/dev/null 2>&1); then
+    prettier_bin="npx --no-install prettier"
+  fi
+
+  # Typecheck: repo's typecheck script > lint-script-as-typechecker >
+  # tsc --noEmit when tsconfig.json exists and tsc resolves.
+  if [ -n "$typecheck_script" ]; then
+    TYPECHECK_CMD="$pm run typecheck"
+  elif [ "$lint_is_typecheck" -eq 1 ]; then
+    TYPECHECK_CMD="$pm run lint"
+  elif [ -f "$REPO/tsconfig.json" ]; then
+    if [ -x "$REPO/node_modules/.bin/tsc" ]; then
+      TYPECHECK_CMD="node_modules/.bin/tsc --noEmit"
+    elif (cd "$REPO" && npx --no-install tsc --version >/dev/null 2>&1); then
+      TYPECHECK_CMD="npx --no-install tsc --noEmit"
+    fi
+  fi
+
+  if [ -n "$check_script" ]; then
+    # Never synthesize a weaker check beside a repo's own canonical one (R2).
+    add_check_stage "check" "run_stage \"check\" $pm run check"
+    STAGE_DESC="delegates to \`$pm run check\`"
+    case "$check_script" in *test*) tests_present=1 ;; esac
+  else
+    if [ "$prettier_cfg" -eq 1 ] && [ -n "$prettier_bin" ]; then
+      add_check_stage "format-check" "run_stage \"format-check\" $prettier_bin --check ."
+    fi
+    if [ -n "$lint_script" ] && [ "$lint_is_typecheck" -eq 0 ]; then
+      add_check_stage "lint" "run_stage \"lint\" $pm run lint"
+    fi
+    if [ -n "$TYPECHECK_CMD" ]; then
+      add_check_stage "typecheck" "run_stage \"typecheck\" $TYPECHECK_CMD"
+    fi
+    if [ -n "$test_script" ]; then
+      tests_present=1
+      add_check_stage "tests" "run_stage \"tests\" $pm run test"
+    fi
+  fi
+
+  # Staged-file stages (pre-commit): formatter check + per-file-safe lint
+  # invoked as the underlying binary directly (never the whole-repo script).
+  if [ "$prettier_cfg" -eq 1 ] && [ -n "$prettier_bin" ]; then
+    add_staged_stage "format-check" \
+      "  out=\"\$($prettier_bin --check \"\${staged[@]}\" 2>&1)\" || fail \"format-check\" \"\$out\""
+  fi
+  if [ "$lint_is_typecheck" -eq 0 ] && [ -x "$REPO/node_modules/.bin/eslint" ]; then
+    case "$lint_script" in
+      *eslint*)
+        add_staged_stage "lint" \
+          "  out=\"\$(node_modules/.bin/eslint \"\${staged[@]}\" 2>&1)\" || fail \"lint\" \"\$out\""
+        ;;
+    esac
+  fi
+}
+
+detect_go() {
+  STACK=go
+  EXT='*.go'
+
+  # go.mod is the formatter config; gofmt is configless and universal.
+  if command -v gofmt >/dev/null 2>&1; then
+    add_check_stage "format-check" \
+      "run_stage \"format-check\" bash -c 'files=\"\$(gofmt -l .)\"; [ -z \"\$files\" ] || { printf \"%s\\n\" \"\$files\"; exit 1; }'"
+    add_staged_stage "format-check" \
+      "  out=\"\$(gofmt -l \"\${staged[@]}\" 2>&1)\"
+  [ -z \"\$out\" ] || fail \"format-check (gofmt -l)\" \"\$out\""
+  fi
+
+  local vet_cmd="go vet ./..." test_cmd="go test ./..."
+  if [ -f "$REPO/Makefile" ]; then
+    grep -q '^vet:' "$REPO/Makefile" && vet_cmd="make vet"
+    grep -q '^test:' "$REPO/Makefile" && test_cmd="make test"
+  fi
+  # go vet is package-level: check.sh/Stop only, never per-file.
+  add_check_stage "lint" "run_stage \"lint\" $vet_cmd"
+
+  if [ -n "$(find "$REPO" -name .git -prune -o -name '*_test.go' -type f -print 2>/dev/null | head -1)" ]; then
+    tests_present=1
+    add_check_stage "tests" "run_stage \"tests\" $test_cmd"
+  fi
+}
+
+if [ -f "$REPO/pyproject.toml" ] || [ -f "$REPO/setup.py" ] || [ -f "$REPO/requirements.txt" ]; then
+  detect_python
+elif [ -f "$REPO/package.json" ]; then
+  detect_node
+elif [ -f "$REPO/go.mod" ]; then
+  detect_go
+fi
+
+if [ "$STACK" = generic ]; then
+  TIER=generic
+elif [ "$tests_present" -eq 1 ]; then
+  TIER=full
+else
+  TIER=no-test-stage
+fi
+
+printf 'install-gates: %s\n' "$REPO"
+printf 'stack: %s\n' "$STACK"
+printf 'tier: %s\n' "$TIER"
+
+# ---------------------------------------------------------------------------
+# Existing managed files (clean-install guards; merging/archival = task 03)
+# ---------------------------------------------------------------------------
+
+ours() { # ours <file> — file was generated by install-gates
+  grep -q 'Generated by install-gates' "$1" 2>/dev/null
+}
+
+precommit_state=none
+if [ -e "$PRECOMMIT_PATH" ]; then
+  if ours "$PRECOMMIT_PATH"; then
+    precommit_state="install-gates (will regenerate)"
+  else
+    precommit_state="foreign (unsupported until task 03)"
+  fi
+fi
+printf 'existing pre-commit: %s\n' "$precommit_state"
+
+SETTINGS_PATH="$REPO/.claude/settings.json"
+settings_state=none
+[ -e "$SETTINGS_PATH" ] && settings_state="present"
+printf 'existing settings: %s\n' "$settings_state"
+
+# ---------------------------------------------------------------------------
+# Generated content
+# ---------------------------------------------------------------------------
+
+if [ "$TIER" = generic ]; then
+  SETTINGS_CONTENT="$(cat <<'EOF'
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-protect.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-tool-format.sh" }
+        ]
+      }
+    ]
+  }
+}
+EOF
+)"
+  HOOK_TEMPLATES="post-tool-format pre-tool-protect"
+else
+  SETTINGS_CONTENT="$(cat <<'EOF'
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-protect.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-tool-format.sh" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-gate.sh" }
+        ]
+      }
+    ]
+  }
+}
+EOF
+)"
+  HOOK_TEMPLATES="post-tool-format pre-tool-protect stop-gate"
+fi
+
+# Pre-commit typecheck decision (R7): whole-project typecheck is included
+# only if measured < 5s at install time; the decision is recorded as a
+# marker in the generated hook and reused on re-runs (idempotence, R3).
+TC_DECISION=none
+if [ "$TIER" != generic ] && [ -n "$TYPECHECK_CMD" ]; then
+  TC_DECISION=""
+  if [ "$REMEASURE" -eq 0 ] && [ -e "$PRECOMMIT_PATH" ] && ours "$PRECOMMIT_PATH"; then
+    prev="$(sed -n 's/^# install-gates-typecheck: //p' "$PRECOMMIT_PATH" | head -1)"
+    case "$prev" in included|excluded) TC_DECISION="$prev" ;; esac
+  fi
+  if [ -z "$TC_DECISION" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+      TC_DECISION="would measure at install"
+    else
+      # Included only when the measured run SUCCEEDS in < 5s: a non-zero
+      # exit (missing tool or currently-red typecheck) in pre-commit would
+      # block every commit at install time.
+      tc_start="$(date +%s)"
+      (cd "$REPO" && eval "$TYPECHECK_CMD" >/dev/null 2>&1)
+      tc_status=$?
+      tc_dur=$(( $(date +%s) - tc_start ))
+      if [ "$tc_status" -eq 0 ] && [ "$tc_dur" -lt 5 ]; then
+        TC_DECISION=included
+      else
+        TC_DECISION=excluded
+      fi
+    fi
+  fi
+fi
+
+case "$TC_DECISION" in
+  included)
+    TYPECHECK_STAGE="out=\"\$($TYPECHECK_CMD 2>&1)\" || fail \"typecheck\" \"\$out\""
+    ;;
+  excluded)
+    TYPECHECK_STAGE="# typecheck excluded from pre-commit (measured >= 5s or tool unavailable); it runs in scripts/check.sh"
+    ;;
+  *)
+    TYPECHECK_STAGE="# no whole-project typecheck configured"
+    ;;
+esac
+
+MATCHES_STACK="matches_stack() { # gated file extensions for the detected stack
+  case \"\$1\" in
+    $EXT) return 0 ;;
+  esac
+  return 1
+}"
+
+render_template() { # render_template <template-file>
+  local line
+  while IFS= read -r line; do
+    case "$line" in
+      '@STAGES@') printf '%s\n' "$CHECK_STAGES" ;;
+      '@MATCHES_STACK@') printf '%s\n' "$MATCHES_STACK" ;;
+      '@STAGED_STAGES@') printf '%s\n' "$STAGED_STAGES" ;;
+      '@TYPECHECK_MARKER@') printf '# install-gates-typecheck: %s\n' "$TC_DECISION" ;;
+      '@TYPECHECK_STAGE@') printf '%s\n' "$TYPECHECK_STAGE" ;;
+      *) printf '%s\n' "$line" ;;
+    esac
+  done < "$1"
+}
+
+[ -n "$STAGED_DESC" ] || STAGED_DESC="staged-file checks"
+CLAUDE_STAMP="<!-- install-gates:checks -->
+## Checks
+
+- \`bash scripts/check.sh\` — canonical check ($STAGE_DESC). Run it green
+  before calling work done; the Stop hook enforces it.
+- The pre-commit hook runs $STAGED_DESC on staged files only
+  (\`git commit --no-verify\` is the escape hatch).
+<!-- /install-gates:checks -->"
+
+# ---------------------------------------------------------------------------
+# Plan
+# ---------------------------------------------------------------------------
+
+plan() { # plan <relative-path>
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf 'plan: write %s\n' "$1"
+  else
+    printf 'wrote: %s\n' "$1"
+  fi
+}
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  for h in $HOOK_TEMPLATES; do
+    plan ".claude/hooks/$h.sh"
+  done
+  plan ".claude/settings.json"
+  if [ "$TIER" != generic ]; then
+    plan "scripts/check.sh"
+    plan "${PRECOMMIT_PATH#"$REPO/"}"
+    if [ -f "$REPO/CLAUDE.md" ]; then
+      plan "CLAUDE.md (stamp check-commands section)"
+    else
+      plan "CLAUDE.md (create with check-commands section)"
+    fi
+  fi
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Write (real run). Guards first, so an abort mutates nothing.
+# ---------------------------------------------------------------------------
+
+case "$precommit_state" in
+  foreign*)
+    err "existing $PRECOMMIT_PATH was not installed by install-gates; merging/archival is task 03 — aborting"
+    exit 1
+    ;;
+esac
+if [ -e "$REPO/scripts/check.sh" ] && ! ours "$REPO/scripts/check.sh"; then
+  err "existing scripts/check.sh was not generated by install-gates; merging is task 03 — aborting"
+  exit 1
+fi
+if [ -e "$SETTINGS_PATH" ] && [ "$(cat "$SETTINGS_PATH")" != "$SETTINGS_CONTENT" ]; then
+  err "existing .claude/settings.json differs from the generated content; merging is task 03 — aborting"
+  exit 1
+fi
+
+mkdir -p "$REPO/.claude/hooks"
+for h in $HOOK_TEMPLATES; do
+  cp "$TEMPLATES/$h.sh" "$REPO/.claude/hooks/$h.sh"
+  chmod 755 "$REPO/.claude/hooks/$h.sh"
+  plan ".claude/hooks/$h.sh"
+done
+
+printf '%s\n' "$SETTINGS_CONTENT" > "$SETTINGS_PATH"
+plan ".claude/settings.json"
+
+if [ "$TIER" != generic ]; then
+  mkdir -p "$REPO/scripts"
+  render_template "$TEMPLATES/check.sh.tmpl" > "$REPO/scripts/check.sh"
+  chmod 755 "$REPO/scripts/check.sh"
+  plan "scripts/check.sh"
+
+  mkdir -p "$hooks_dir"
+  render_template "$TEMPLATES/pre-commit.sh.tmpl" > "$PRECOMMIT_PATH"
+  chmod 755 "$PRECOMMIT_PATH"
+  plan "${PRECOMMIT_PATH#"$REPO/"}"
+
+  # Marker-delimited CLAUDE.md stamp: replace a previous stamp or append;
+  # re-runs are byte-identical (block always lands at the end).
+  body=""
+  if [ -f "$REPO/CLAUDE.md" ]; then
+    body="$(awk '
+      /<!-- install-gates:checks -->/ { inblk=1; next }
+      /<!-- \/install-gates:checks -->/ { inblk=0; next }
+      !inblk { print }
+    ' "$REPO/CLAUDE.md")"
+  fi
+  if [ -n "$body" ]; then
+    printf '%s\n\n%s\n' "$body" "$CLAUDE_STAMP" > "$REPO/CLAUDE.md"
+  else
+    printf '%s\n' "$CLAUDE_STAMP" > "$REPO/CLAUDE.md"
+  fi
+  plan "CLAUDE.md"
+fi
+
+exit 0
