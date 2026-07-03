@@ -5,6 +5,7 @@ This repo IS the toolkit: skills in `.claude/skills/`, subagents in
 encodes is in `docs/anthropic-playbook.md` — read it before changing what a
 skill teaches, and cite it rather than restating it. Narrow per-topic
 lessons are indexed in `docs/memory.md`; check it when a task matches a topic.
+Orientation — repo map, live work state, verified commands — is in @AGENTS.md.
 
 ## Compact instructions
 
