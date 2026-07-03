@@ -1,6 +1,6 @@
 # Task 03: Evals runner parameterization (RUNNER_CMD / EVALS_ROOT)
 
-Status: in-progress
+Status: done
 Depends on: ../../review-fixes/tasks/06-evals-runner-robustness.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirement R6)
@@ -54,7 +54,7 @@ unset, behavior is byte-identical to today.
 
 ## Acceptance
 
-- [ ] `grep -q "RUNNER_CMD" evals/run.sh && grep -q "EVALS_ROOT" evals/run.sh && grep -q "ALLOWED_TOOLS" evals/run.sh && bash -n evals/run.sh` → exit 0 (R6)
-- [ ] `test -x evals/stub-cli.sh && test -x evals/runner-selftest.sh && bash -n evals/stub-cli.sh && bash -n evals/runner-selftest.sh` → exit 0 (R6)
-- [ ] `./evals/runner-selftest.sh` → exits 0 on a machine with no model access (uses the shipped stub by default; both the PASS and FAIL plumbing paths asserted) (R6 end-to-end)
-- [ ] End to end: `./evals/run.sh breakdown` → still passes with both env vars unset (no behavior change for the Claude default), and `./evals/runner-selftest.sh` → proves a non-Claude command drives the same harness without touching the committed evalsets
+- [x] `grep -q "RUNNER_CMD" evals/run.sh && grep -q "EVALS_ROOT" evals/run.sh && grep -q "ALLOWED_TOOLS" evals/run.sh && bash -n evals/run.sh` → exit 0 (R6) — verifier: exit 0 (evidence/03-evals-runner-params.md, C1)
+- [x] `test -x evals/stub-cli.sh && test -x evals/runner-selftest.sh && bash -n evals/stub-cli.sh && bash -n evals/runner-selftest.sh` → exit 0 (R6) — verifier: exit 0 (evidence/03-evals-runner-params.md, C2)
+- [x] `./evals/runner-selftest.sh` → exits 0 on a machine with no model access (uses the shipped stub by default; both the PASS and FAIL plumbing paths asserted) (R6 end-to-end) — verifier: exit 0, "runner selftest: OK" with shipped stub (evidence/03-evals-runner-params.md, C3)
+- [x] End to end: `./evals/run.sh breakdown` → still passes with both env vars unset (no behavior change for the Claude default), and `./evals/runner-selftest.sh` → proves a non-Claude command drives the same harness without touching the committed evalsets — verifier: 1/1 scenarios passed with vars unset; claude line byte-identical to main; selftest tree only under mktemp -d (evidence/03-evals-runner-params.md, C4)
