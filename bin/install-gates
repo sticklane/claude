@@ -393,9 +393,14 @@ esac
 
 SETTINGS_PATH="$REPO/.claude/settings.json"
 settings_state=none
+settings_valid=1
 if [ -e "$SETTINGS_PATH" ]; then
-  settings_state="present (will merge)"
-  jq -e . "$SETTINGS_PATH" >/dev/null 2>&1 || settings_state="present (INVALID JSON)"
+  if jq -e . "$SETTINGS_PATH" >/dev/null 2>&1; then
+    settings_state="present (will merge)"
+  else
+    settings_state="present (INVALID JSON)"
+    settings_valid=0
+  fi
 fi
 printf 'existing settings: %s\n' "$settings_state"
 
@@ -420,7 +425,7 @@ if [ "$HOOK_HANDLING" = abort ]; then
   err "cannot archive existing $PRECOMMIT_REL: $ARCHIVE_REL is occupied and is never overwritten — resolve it manually; aborting"
   exit 1
 fi
-if [ "$DRY_RUN" -eq 0 ] && [ -e "$SETTINGS_PATH" ] && ! jq -e . "$SETTINGS_PATH" >/dev/null 2>&1; then
+if [ "$DRY_RUN" -eq 0 ] && [ "$settings_valid" -eq 0 ]; then
   err "existing $SETTINGS_PATH is not valid JSON; refusing to merge — aborting"
   exit 1
 fi
