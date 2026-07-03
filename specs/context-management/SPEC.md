@@ -57,7 +57,10 @@ wave, not this spec (coordination note in Out of scope). Marker phrases
   demand, never at session start; /distill prunes stale entries when it
   writes (semantic decay, manual-trigger version). The skill states the
   artifact locations and that CLAUDE.md remains the home for always-on
-  rules.
+  rules. So the layer is ever READ: CLAUDE.md gains one always-on
+  pointer line — "narrow per-topic lessons are indexed in
+  `docs/memory.md`; check it when a task matches a topic" — within R1's
+  line budget.
 - R4 (cache economics): `.claude/rules/token-discipline.md` gains a
   short "Cache economics" section containing the phrase "static-first":
   stable content (rules, skill text, unchanged files) belongs at the
@@ -68,10 +71,13 @@ wave, not this spec (coordination note in Out of scope). Marker phrases
   agent tool grants stay fixed for a session.
 - R5 (tool-call ceilings): `.claude/agents/critic.md` and
   `.claude/agents/verifier.md` gain a numeric tool-call ceiling line
-  (the phrase "tool-call ceiling", value ~25 for critic, ~20 for
-  verifier — generous enough for their verification duties, present so
-  runaway exploration has a stop), mirroring scout's existing ~15-call
-  rule with best-effort reporting on hitting it.
+  (the phrase "tool-call ceiling"; ~25 for critic with scout-style
+  best-effort reporting). The verifier's ceiling (~20) EXEMPTS
+  per-criterion acceptance commands from the count (it must exercise
+  every criterion), and on hitting the ceiling its verdict is
+  INCOMPLETE — never PASS — listing the unexercised criteria; callers
+  treat INCOMPLETE as non-PASS. Runaway exploration gets a stop without
+  ever letting partial evidence pass a gate.
 - R6 (machine-state convention): CLAUDE.md's authoring conventions gain
   one bullet: fields any skill reads programmatically (Status, Depends
   on, Budget, and — after the review fix wave — Touch) are single-line
