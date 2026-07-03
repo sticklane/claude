@@ -21,6 +21,7 @@ Scan THIS conversation for:
 | Finding | Destination |
 |---|---|
 | Broadly applicable fact/command an agent can't infer from code | `AGENTS.md` (one terse line) |
+| Too narrow or too long for AGENTS.md, but worth keeping | Topic file under `docs/memory/`, indexed in `docs/memory.md` |
 | Convention scoped to part of the tree | nested `AGENTS.md` in that subdirectory |
 | Multi-step procedure likely to recur | New skill in `.agents/skills/<name>/SKILL.md` |
 | A procedure only humans should trigger | New workflow in `.agents/workflows/<name>.md` |
@@ -33,7 +34,19 @@ gets ignored and costs tokens every conversation.
 ## 3. Write
 
 - AGENTS.md: append the terse line under the right heading; if the file
-  nears 200 lines, prune something weaker in the same edit.
+  nears 200 lines, prune something weaker in the same edit. Batch all
+  AGENTS.md writes into one edit at conversation end — mid-conversation
+  AGENTS.md churn invalidates the cached prompt prefix (see the Cache
+  economics section of AGENTS.md).
+- Memory layer: AGENTS.md remains the home for always-on rules; lessons
+  too narrow or too long for it go to a topic file under `docs/memory/`,
+  with one line per topic file in the `docs/memory.md` index: path +
+  a when-to-read trigger phrase. The index stays ≤200 lines and is
+  loaded on demand (when a task matches a topic), never at conversation
+  start. Each time distill writes to the index, prune stale entries in
+  the same edit — topics whose code or convention no longer exists, or
+  that AGENTS.md now covers (this manual pass is the layer's only decay
+  mechanism).
 - New skills: `description` in third person stating what it does AND when
   to use it (concrete trigger phrases); body under 500 lines; heavy
   reference material in a separate file in the skill directory.

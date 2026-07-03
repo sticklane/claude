@@ -27,7 +27,24 @@ Context is the scarce resource; spend it on decisions, not raw material.
   from it. A clean start with a better brief beats a long session of
   accumulated corrections.
 
+## Cache economics
+
+- Prompts are cached static-first: stable content (rules, skill text,
+  unchanged files) belongs at the front of prompts and must not churn
+  mid-conversation.
+- Editing AGENTS.md mid-conversation invalidates the cached prefix for
+  every later turn — batch such writes at conversation end (as the
+  distill skill does).
+- Tool-set changes bust caches: don't add/remove MCP servers or change
+  an agent's tool configuration mid-run. Harness-managed deferred tool
+  loading is exempt — it's designed for this.
+
 ## Quality discipline
+
+- Fields any skill reads programmatically (Status, Depends on, Budget,
+  and — after the review fix wave — Touch) are single-line `Key: value`
+  headers above the first `##` heading of the file; body sections are
+  for humans and workers, never for orchestrator parsing.
 
 - Every requirement needs a runnable acceptance check. Evidence over
   assertion: show the test output, the command run, or a screenshot in the

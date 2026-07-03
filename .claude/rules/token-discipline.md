@@ -51,6 +51,18 @@ templates run their profile's default in v1.
 - Don't re-run searches or re-read files already established this session;
   don't paste large command output back into the conversation — summarize it.
 
+## Cache economics
+
+- Prompts are cached static-first: stable content (rules, skill text,
+  unchanged files) belongs at the front of prompts and must not churn
+  mid-session.
+- Editing CLAUDE.md or `.claude/rules/` mid-session invalidates the
+  cached prefix for every later turn — batch such writes at session end
+  (as /distill does).
+- Tool-set changes bust caches: don't add/remove MCP servers or edit an
+  agent's `tools:` list mid-run. Harness-managed deferred tool loading
+  is exempt — it's designed for this.
+
 ## Cheap before expensive
 
 - Critique the spec before implementing it (a `critic` pass costs ~1% of a
