@@ -1,11 +1,13 @@
 {
   "name": "agentic-toolkit",
-  "owner": { "name": "sticklane" },
+  "owner": {
+    "name": "sticklane"
+  },
   "plugins": [
     {
       "name": "agentic",
       "source": "./",
-      "description": "The full toolkit as one plugin: pipeline skills (idea, design, breakdown, build, parallel, autopilot, gate, critique, distill, handoff, onboard), the scout/critic/verifier agents, and the /fleet open-agents dashboard."
+      "description": "The full toolkit as one plugin: the spec-driven pipeline skills, the cheap scout/review subagents, and the /fleet open-agents dashboard."
     }
   ]
 }
