@@ -1,6 +1,6 @@
 # Task 02: Work-tracking research record
 
-Status: pending
+Status: in-progress
 Depends on: 01, ../../workflow-author/tasks/02-record-and-port-row.md
 Priority: P3
 Budget: 10 turns
