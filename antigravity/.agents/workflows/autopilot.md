@@ -20,7 +20,9 @@ Autonomy is earned by verification, not granted by optimism.
    - Gates installed (/gate hooks) so edits are checked deterministically.
    - Terminal Execution Policy: deny list covers `git push`, deploys, and
      destructive commands (Settings → Antigravity → Terminal Execution
-     Policy). Turbo mode ONLY with the deny list in place; never disable
+     Policy). Risk-rate each tool by reversibility and blast radius when
+     scoping the policy — auto-allow only what discarding the branch fully
+     undoes. Turbo mode ONLY with the deny list in place; never disable
      review policies for core work.
 
 3. **Launch shape.** Confirm with the user, then either:
@@ -38,7 +40,11 @@ Autonomy is earned by verification, not granted by optimism.
 4. **The walk-away contract.** Before launching, state: what's running,
    where (branch/worktree), the gate that decides success, and the evidence
    the run must produce (acceptance-command output in the walkthrough —
-   claims don't count). On completion: PASS → present evidence and the diff
+   claims don't count). Two triggers escalate to a human instead of
+   pressing on: the same step failing twice (a third attempt in a degraded
+   context won't do better), and reaching a high-risk action —
+   push, deploy, data deletion, publishing, spending — which the run must
+   never take on its own. On completion: PASS → present evidence and the diff
    for human review (a human still approves). FAIL → report, discard or
    re-scope, relaunch clean. Either way, if the run exposed a task-file or
    gate problem, apply the distill skill so the next launch doesn't repay
