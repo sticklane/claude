@@ -21,11 +21,18 @@ prepares the dispatch and gives the user everything to launch.
    Each parallel agent gets its own checkout so edits don't collide.
 
 3. **Hand the user the launch list.** For each task, one Agent Manager
-   agent opened on that worktree's folder, with this prompt (fill in):
+   agent opened on that worktree's folder, with this prompt (fill in;
+   resolve the build workflow to a concrete path, resolved at dispatch —
+   `.agents/workflows/build.md` in the repo — and substitute it for
+   <build-workflow-path>):
 
-   > Run /build <task-file path>. Work only in this worktree, commit to
-   > task/NN-<slug>, do not push. Final message: verdict (DONE/BLOCKED),
-   > acceptance evidence per criterion, files changed.
+   > Execute the task in <task-file path> following the build workflow's
+   > procedure exactly, as written in <build-workflow-path>. Work only
+   > in this worktree, commit to task/NN-<slug>, do not push. The task
+   > file's Budget: line is a ceiling, not a target: when remaining work
+   > clearly exceeds the remaining budget, stop with verdict BLOCKED
+   > "over budget" rather than grind on. Final message: verdict
+   > (DONE/BLOCKED), acceptance evidence per criterion, files changed.
 
    Suggest the session model for judgment-heavy tasks and a Flash-class
    model for mechanical ones.

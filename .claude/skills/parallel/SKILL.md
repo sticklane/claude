@@ -26,15 +26,22 @@ Before dispatching, ensure `.claude/worktrees/` is gitignored —
 harness-managed worker worktrees land there and trip git-cleanliness
 hooks otherwise.
 
-For each task in the group, launch a background `general-purpose` agent with
+At dispatch time, resolve build's SKILL.md to a concrete path —
+`.claude/skills/build/SKILL.md` when the toolkit is in-repo, otherwise the
+plugin cache path found at dispatch — and substitute it for
+`<build-skill-path>` (workers cannot invoke `disable-model-invocation`
+skills, so the prompt must carry a readable path). For each task in the
+group, launch a background `general-purpose` agent with
 `isolation: worktree`, prompted with:
 
 > Execute the task in <task-file> following the build skill's procedure
-> exactly (in-repo: .claude/skills/build/SKILL.md; plugin install: invoke
-> /agentic:build or read build's SKILL.md from the plugin's skills
-> directory): scouts for exploration, tests first
+> exactly, as written in <build-skill-path> (resolved at dispatch):
+> scouts for exploration, tests first
 > where criteria are test-shaped, run every acceptance command, standard
-> gates, then commit to a branch named task/NN-<slug>. Your final message
+> gates, then commit to a branch named task/NN-<slug>. The task file's
+> `Budget:` line is a ceiling, not a target: when remaining work clearly
+> exceeds the remaining budget, stop with verdict BLOCKED "over budget"
+> rather than grind on. Your final message
 > must be: verdict (DONE/BLOCKED), acceptance evidence per criterion (command
 > + result), branch name, and files changed. If blocked, say why and stop —
 > do not improvise around the task's scope.

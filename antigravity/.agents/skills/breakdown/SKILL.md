@@ -13,7 +13,9 @@ One task = one conversation = one reviewable commit. If you can't describe
 a task's diff in a paragraph, split it. If a task is a one-sentence diff,
 merge it into a neighbor. Most specs yield 2–6 tasks.
 Set each task's `Budget:` at roughly 2× the honest turn estimate — it's a
-stop line, not a target; workers stop over budget rather than grind.
+stop line, not a target; workers stop over budget rather than grind. Write
+it exactly as `Budget: <N> turns` (integer N — no ranges, no prose):
+dispatchers parse it for the over-budget stop and headless `--max-turns`.
 
 ## Procedure
 
@@ -28,7 +30,7 @@ stop line, not a target; workers stop over budget rather than grind.
 
 Status: pending
 Depends on: <task numbers, or "none">
-Budget: <rough ceiling, e.g. "40 turns">
+Budget: <N> turns
 Spec: ../SPEC.md (requirements R2, R3)
 Touch: <comma-separated paths this task may change>
 
