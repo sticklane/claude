@@ -47,6 +47,11 @@ rather than restating it. Verified against primary sources, July 2026.
   tournament: on a second failure, three parallel attempts from different
   angles, drain ranks the survivors mechanically.
   [AlphaCode 2 report](https://storage.googleapis.com/deepmind-media/AlphaCode2/AlphaCode2_Tech_Report.pdf)
+  Follow-on: N-vote adjudication — multiple independent verifier votes
+  with majority rule — is the standard cure for single-judge error in
+  generate–filter–rank pipelines (harness-observed Workflow quality
+  pattern: adversarial verify votes; adopted here for the tournament
+  filter). Harness-observed; no public URL.
 - **Evidence artifacts.** Antigravity agents persist screenshots and
   walkthroughs of their own testing. → the verifier writes its report to
   `specs/<slug>/evidence/`, and /build commits it.

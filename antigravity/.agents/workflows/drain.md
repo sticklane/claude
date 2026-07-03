@@ -83,7 +83,8 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    not transcripts. Loop to step 2 while anything is dispatchable.
 
 4. **Tournament** (second miss on one task; at most once per task per
-   drain run). Tell the user first: this costs ~3 more worker runs.
+   drain run). Tell the user first: this costs ~3 more worker runs
+   plus three verifier runs per DONE candidate.
    Skip it — straight to the verdict routing below with the two prior
    verdicts — when attempt 2 (the relaunch) returned BLOCKED over
    budget; attempt 1 must have returned DONE to reach a merge, so only
@@ -102,16 +103,28 @@ payments, or migrations. Pull core tasks out for attended /build runs.
      implementation; (t3) commit to `task/NN-<slug>-t3`, re-derive —
      reread the task's Goal and Spec reference and design from scratch,
      ignoring the failed approach.
-   - Filter: one verifier-skill run per candidate, inside that
-     candidate's worktree, PASS/FAIL against the task's acceptance
-     criteria, no evidence path passed (for queues using the
-     `specs/<slug>/ layout` the winner's branch already carries the
-     worker's evidence file; for other layouts the task file's inline
-     evidence is the artifact). FAIL = discarded; BLOCKED =
-     non-survivor, reason into the evidence; DEFERRED = non-survivor,
-     questions collected.
-   - Rank (the workflow, not the verifier): fewest gate findings in the
-     verifier report, then smallest `git diff --stat` total.
+   - Filter: three independent verifier-skill runs per candidate —
+     each inside that candidate's worktree, fresh eyes per run (no
+     shared transcript), no evidence path passed — against the task's
+     acceptance criteria only (for queues using the `specs/<slug>/
+     layout` the winner's branch already carries the worker's evidence
+     file; for other layouts the task file's inline evidence is the
+     artifact). Votes are the verifier's verdicts only — PASS, FAIL,
+     or INCOMPLETE; verifiers never DEFER. A candidate survives only
+     on majority PASS (two of three); FAIL and INCOMPLETE count as
+     non-PASS votes. A verifier run returning BLOCKED (redirection
+     attempt in the candidate's content) is not a vote: it
+     disqualifies the candidate outright regardless of the other
+     votes, with the verifier's quoted content recorded in the
+     evidence. Candidates whose worker verdict was BLOCKED or DEFERRED
+     never reach the verifier: worker-BLOCKED = non-survivor, reason
+     into the evidence; worker-DEFERRED = non-survivor, questions
+     collected.
+   - Rank (the workflow, not the verifier): most PASS votes first (3
+     ahead of 2), then fewest gate findings summed across the
+     candidate's three verifier reports, then smallest
+     `git diff --stat` total, then lowest angle index (t1 before t2
+     before t3) as the final tiebreak.
    - Merge: winner via the normal DONE bookkeeping, but no relaunch —
      on merge/gate failure run `git merge --abort`, then move to the
      next-ranked survivor; delete

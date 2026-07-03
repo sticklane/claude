@@ -1,6 +1,6 @@
 # Task 01: Majority-PASS verifier votes in the tournament
 
-Status: in-progress
+Status: done
 Depends on: ../../review-fixes/tasks/02-drain-state-machine.md, ../../model-agnostic/tasks/02-core-tier-language.md, ../../repo-orientation/tasks/02-onboard-and-record.md, ../../task-priority/tasks/01-priority-and-tiebreak.md
 Priority: P1
 Budget: 25 turns
@@ -32,10 +32,10 @@ to the AlphaCode 2 entry. Spec R1/R2/R3/R4/R6 are exact.
 
 ## Acceptance
 
-- [ ] `grep -q "majority PASS" .claude/skills/drain/reference.md && grep -q "three independent verifier" .claude/skills/drain/reference.md` -> exit 0 (R1)
-- [ ] `sed -n '/^\*\*Rank\./,/^$/p' .claude/skills/drain/reference.md | grep -q "PASS votes" && grep -q "Drain, not the verifier" .claude/skills/drain/reference.md && sed -n '/^\*\*Rank\./,/^$/p' .claude/skills/drain/reference.md | grep -q "t1 before t2"` -> exit 0 (R2)
-- [ ] `! grep -qi "one verifier run per candidate" .claude/skills/drain/reference.md` -> exit 0 (R1)
-- [ ] `sed -n '/^## Tournament/,/^## /p' .claude/skills/drain/reference.md | grep -qi "human-gates"` -> exit 0 (R3)
-- [ ] `grep -q "majority PASS" antigravity/.agents/workflows/drain.md && grep -q "PASS votes" antigravity/.agents/workflows/drain.md && ! grep -qi "one verifier-skill run per candidate" antigravity/.agents/workflows/drain.md` -> exit 0 (R4)
-- [ ] `grep -q "N-vote" docs/external-playbooks.md` -> exit 0 (R6)
-- [ ] Manual paper dry-run per the spec's end-to-end criterion: 3/2/1 PASS votes filter and rank correctly, 2-2 tie falls to summed gate findings, full tie to angle index, and a 2-PASS+1-BLOCKED candidate is DISQUALIFIED with the quote recorded
+- [x] `grep -q "majority PASS" .claude/skills/drain/reference.md && grep -q "three independent verifier" .claude/skills/drain/reference.md` -> exit 0 (R1) — verified exit 0, ../evidence/01-majority-votes.md
+- [x] `sed -n '/^\*\*Rank\./,/^$/p' .claude/skills/drain/reference.md | grep -q "PASS votes" && grep -q "Drain, not the verifier" .claude/skills/drain/reference.md && sed -n '/^\*\*Rank\./,/^$/p' .claude/skills/drain/reference.md | grep -q "t1 before t2"` -> exit 0 (R2) — verified exit 0, ../evidence/01-majority-votes.md
+- [x] `! grep -qi "one verifier run per candidate" .claude/skills/drain/reference.md` -> exit 0 (R1) — verified exit 0 (old sentence replaced in place), ../evidence/01-majority-votes.md
+- [x] `sed -n '/^## Tournament/,/^## /p' .claude/skills/drain/reference.md | grep -qi "human-gates"` -> exit 0 (R3) — verified exit 0, one sentence in the Tournament intro, ../evidence/01-majority-votes.md
+- [x] `grep -q "majority PASS" antigravity/.agents/workflows/drain.md && grep -q "PASS votes" antigravity/.agents/workflows/drain.md && ! grep -qi "one verifier-skill run per candidate" antigravity/.agents/workflows/drain.md` -> exit 0 (R4) — verified exit 0, full semantics mirrored, ../evidence/01-majority-votes.md
+- [x] `grep -q "N-vote" docs/external-playbooks.md` -> exit 0 (R6) — verified exit 0, follow-on line under the AlphaCode 2 entry, ../evidence/01-majority-votes.md
+- [x] Manual paper dry-run per the spec's end-to-end criterion: 3/2/1 PASS votes filter and rank correctly, 2-2 tie falls to summed gate findings, full tie to angle index, and a 2-PASS+1-BLOCKED candidate is DISQUALIFIED with the quote recorded — verifier confirmed all four scenarios decided unambiguously by the prose, ../evidence/01-majority-votes.md
