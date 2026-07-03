@@ -193,6 +193,33 @@ assert_not "py-nofmt: no format stage in pre-commit" \
   grep -q 'format --check' "$PYNF/.git/hooks/pre-commit"
 
 # ---------------------------------------------------------------------------
+# Python repo with a local .venv/bin/pytest: check.sh must use the hermetic
+# venv pytest, never `uv run pytest` (which depends on uv's global cache and
+# breaks when that cache lives on an unwritable external volume).
+# ---------------------------------------------------------------------------
+
+PYV="$TMP/pyvenv"
+mkrepo "$PYV"
+cat > "$PYV/pyproject.toml" <<'EOF'
+[project]
+name = "pyvenv"
+version = "0.0.1"
+
+[tool.ruff]
+line-length = 100
+EOF
+mkdir -p "$PYV/tests" "$PYV/.venv/bin"
+printf 'def test_ok():\n    assert True\n' > "$PYV/tests/test_sample.py"
+printf '#!/bin/sh\nexit 0\n' > "$PYV/.venv/bin/pytest"
+chmod 755 "$PYV/.venv/bin/pytest"
+run_install "$PYV"
+assert_eq "py-venv: exits 0" 0 "$RI_EXIT"
+assert "py-venv: tests stage uses .venv/bin/pytest" \
+  grep -q 'run_stage "tests" \.venv/bin/pytest' "$PYV/scripts/check.sh"
+assert_not "py-venv: tests stage does NOT use uv run pytest" \
+  grep -q 'uv run pytest' "$PYV/scripts/check.sh"
+
+# ---------------------------------------------------------------------------
 # Node with a `check` script that runs tests: check.sh delegates, tier full.
 # ---------------------------------------------------------------------------
 

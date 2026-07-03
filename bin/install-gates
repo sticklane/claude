@@ -190,7 +190,11 @@ detect_python() {
   if [ -d "$REPO/tests" ] || [ -n "$(find "$REPO" \( -name .git -o -name .venv -o -name node_modules \) -prune -o \( -name 'test_*.py' -o -name '*_test.py' \) -type f -print 2>/dev/null | head -1)" ]; then
     tests_present=1
     local pytest_cmd
-    if command -v pytest >/dev/null 2>&1; then
+    if [ -x "$REPO/.venv/bin/pytest" ]; then
+      # Repo-local venv is hermetic — avoids uv's global cache (which can
+      # live on an unwritable external volume) and needs no PATH setup.
+      pytest_cmd=".venv/bin/pytest"
+    elif command -v pytest >/dev/null 2>&1; then
       pytest_cmd="pytest"
     elif [ -f "$REPO/pyproject.toml" ] && command -v uv >/dev/null 2>&1; then
       pytest_cmd="uv run pytest"
