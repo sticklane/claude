@@ -30,7 +30,7 @@ on incidental wording; runner must not eat failures (no set -e around the
 per-scenario body; count failures explicitly).
 -->
 
-Status: in-progress
+Status: done
 Depends on: ../../hardening-quick-wins/tasks/01-untrusted-data.md (README.md overlap; cross-spec waves in ../SPEC.md)
 Budget: 50 turns
 Spec: ../SPEC.md (requirements R1–R8)
@@ -74,11 +74,19 @@ an antigravity workflow ports the flow.
 
 ## Acceptance
 
-- [ ] `grep -q "disable-model-invocation: true" .claude/skills/evals/SKILL.md` → pass
-- [ ] `test -x evals/run.sh && bash -n evals/run.sh && grep -q "timeout" evals/run.sh && grep -q "\.claude" evals/run.sh` → pass
-- [ ] `test -f evals/breakdown/01-small-spec/setup.sh && test -f evals/breakdown/01-small-spec/prompt.txt && test -f evals/breakdown/01-small-spec/assert.sh && grep -q "Task" evals/breakdown/01-small-spec/allowed-tools.txt` → pass
-- [ ] `bash -n evals/breakdown/01-small-spec/setup.sh && bash -n evals/breakdown/01-small-spec/assert.sh && grep -q "specs/demo" evals/breakdown/01-small-spec/prompt.txt` → pass
-- [ ] `grep -q "evals/run.sh" .claude/skills/evals/reference.md` → pass
-- [ ] `grep -qi "evals" CLAUDE.md && grep -q "/evals" README.md` → pass
-- [ ] `test -f antigravity/.agents/workflows/evals.md` → pass
-- [ ] `./evals/run.sh breakdown` → all scenarios pass (requires authenticated `claude` CLI; run locally — this is the gate for calling the harness done)
+- [x] `grep -q "disable-model-invocation: true" .claude/skills/evals/SKILL.md` → pass
+      (verifier: pass; SKILL.md also carries argument-hint "[skill-name]" and scaffold/run/interpret sections)
+- [x] `test -x evals/run.sh && bash -n evals/run.sh && grep -q "timeout" evals/run.sh && grep -q "\.claude" evals/run.sh` → pass
+      (verifier: pass — mode -rwxr-xr-x, syntax clean, timeout 900 and provisioning copy present)
+- [x] `test -f evals/breakdown/01-small-spec/setup.sh && test -f evals/breakdown/01-small-spec/prompt.txt && test -f evals/breakdown/01-small-spec/assert.sh && grep -q "Task" evals/breakdown/01-small-spec/allowed-tools.txt` → pass
+      (verifier: pass; allowlist line is Read,Edit,Write,Glob,Grep,Bash(git *),Task)
+- [x] `bash -n evals/breakdown/01-small-spec/setup.sh && bash -n evals/breakdown/01-small-spec/assert.sh && grep -q "specs/demo" evals/breakdown/01-small-spec/prompt.txt` → pass
+      (verifier: pass; prompt is exactly "/breakdown specs/demo/SPEC.md")
+- [x] `grep -q "evals/run.sh" .claude/skills/evals/reference.md` → pass
+      (verifier: pass; links ../../../evals/run.sh, runner not duplicated; scenario blocks diff byte-identical to shipped files)
+- [x] `grep -qi "evals" CLAUDE.md && grep -q "/evals" README.md` → pass
+      (verifier: pass; one sentence in Testing changes, one What's-in-the-box row)
+- [x] `test -f antigravity/.agents/workflows/evals.md` → pass
+      (verifier: pass; Agent Manager launches replace headless CLI, provisioning into the fixture's .agents/)
+- [x] `./evals/run.sh breakdown` → all scenarios pass (requires authenticated `claude` CLI; run locally — this is the gate for calling the harness done)
+      (real run 2026-07-03 on claude 2.1.199: "assert: all checks passed (2 task files)", "PASS breakdown/01-small-spec", "1/1 scenarios passed", runner exit 0; verifier confirmed from the run log)
