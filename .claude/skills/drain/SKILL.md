@@ -53,7 +53,8 @@ has the headless fallback — a different, self-contained prompt.)
 ## 3. Collect the verdict
 
 - **DONE** — merge the task branch (it carries the task file with
-  `Status: done` and ticked boxes, per /build) and run the project gates.
+  `Status: done`, ticked boxes, and the verifier's `evidence/` file, per
+  /build) and run the project gates.
   If the merge or gates fail: slot machine — discard the branch, relaunch
   once with the failure evidence in the prompt; on a second failure write
   `Status: failed` with the evidence and commit.

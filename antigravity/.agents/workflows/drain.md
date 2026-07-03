@@ -47,7 +47,8 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    > files changed.
 
 3. **Collect.** DONE → merge the branch (it carries the task file's
-   `Status: done` from /build) and run the project gates; on merge/gate
+   `Status: done` and the verifier's `evidence/` file from /build) and run
+   the project gates; on merge/gate
    failure discard the branch and relaunch once with the failure
    evidence in the prompt, then write `Status: failed` + evidence and
    commit on a second miss. DEFERRED → write the verdict's question into
