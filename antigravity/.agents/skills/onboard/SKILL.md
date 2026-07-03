@@ -31,15 +31,26 @@ Target well under 200 lines; it's loaded every conversation. Include only
 what passes "would removing this line cause an agent to make a mistake?":
 
 - Verified commands (with the quirks discovered above).
+- A short repo map: one pointer line per top-level area — path plus one
+  clause on what lives there. Pointers only; the file-by-file exclusion
+  below still applies to the map.
 - Conventions an agent can't infer from the code.
 - Architecture facts that prevent wrong-place edits ("API handlers live in
   X; generated code in Y — never edit").
+- Where open work lives, if the repo uses the spec pipeline: specs/, task
+  `Status:` headers, and the status script if present.
 - Known gotchas.
 
 Exclude: standard language conventions, anything readable from the code,
 file-by-file tours, platitudes. If a section is becoming a procedure, it
 should be a skill instead. Merge with any existing AGENTS.md rather than
-overwriting; put subtree-specific rules in nested AGENTS.md files.
+overwriting.
+
+Monorepos and large repos: subsystem detail belongs in per-directory
+(nested) AGENTS.md files, read nearest-file-wins when an agent works
+there — the root map stays small. No separate interop file is needed:
+AGENTS.md is already the cross-tool standard and Antigravity's native
+context file.
 
 ## 4. Guardrails
 
