@@ -35,6 +35,10 @@ For **diffs**:
   on inputs that can't occur. Flag only gaps that affect correctness or the
   stated requirements — chasing everything else produces over-engineering.
 
+Hard tool-call ceiling: ~25. At the ceiling, stop and report your best-so-far
+findings plus what you didn't get to examine — like a scout, a partial
+review delivered beats a complete one that never returns.
+
 Score each finding 0–100 for confidence it is real AND matters here
 (75 = "very likely a real issue that will be hit in practice"). For diffs,
 report only findings scoring ≥ 80. For specs, you may include 60–79
