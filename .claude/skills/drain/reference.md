@@ -46,15 +46,18 @@ crashed run left behind.
 ## Worker prompt (verbatim, fill the <>)
 
 For background agents with `isolation: worktree` (the worktree is cut from
-the commit drain just made):
+the commit drain just made). At dispatch time, resolve build's SKILL.md to
+a concrete path — `.claude/skills/build/SKILL.md` when the toolkit is
+in-repo, otherwise the plugin cache path found at dispatch — and
+substitute it for `<build-skill-path>` below. Workers cannot invoke
+`disable-model-invocation` skills, so the prompt must carry a readable
+path, resolved at dispatch:
 
 > Execute the task in <task-file> following the build skill's procedure
-> exactly (in-repo: .claude/skills/build/SKILL.md; plugin install: invoke
-> /agentic:build or read build's SKILL.md from the plugin's skills
-> directory): scouts for exploration, tests first where criteria are
-> test-shaped, run every acceptance command, standard gates, then commit
-> to a branch named task/NN-<slug>. Work only in your worktree; do not
-> push.
+> exactly, as written in <build-skill-path> (resolved at dispatch):
+> scouts for exploration, tests first where criteria are test-shaped,
+> run every acceptance command, standard gates, then commit to a branch
+> named task/NN-<slug>. Work only in your worktree; do not push.
 >
 > The task file's `Budget:` line is a ceiling, not a target: when
 > remaining work clearly exceeds the remaining budget, stop with verdict
@@ -190,13 +193,14 @@ verdict DEFERRED with the exact question. Final output: verdict
 (DONE/BLOCKED/DEFERRED), acceptance evidence per criterion (command +
 result), files changed." \
   --allowedTools "Read,Edit,Write,Glob,Grep,Bash(<verified test/lint/build cmds>),Bash(git add *),Bash(git commit *)" \
-  --permission-mode dontAsk --max-turns <task Budget: turn count, else 80>
+  --permission-mode dontAsk --max-turns <N from the task's Budget header, else 80>
 ```
 
 `dontAsk` makes unapproved tools abort instead of hanging — the CI
-baseline from the playbook's mechanism ladder. `--max-turns` is the
-task's `Budget:` turn count when present (else 80) — the hard cap
-behind the prompt's soft stop. Because no independent
+baseline from the playbook's mechanism ladder. `--max-turns` is N from
+the task's pinned `Budget: <N> turns` header (integer N, the format
+/breakdown writes) when present, else 80 — the hard cap behind the
+prompt's soft stop. Because no independent
 verifier ran inside the worker, re-run the task's acceptance commands
 from the main checkout after merging, before flipping anything to `done`.
 Headless merges carry no evidence file — that post-merge re-run is the

@@ -1,6 +1,6 @@
 # Task 04: Worker prompts — resolve build skill path at dispatch, forward Budget, pin format
 
-Status: pending
+Status: done
 Depends on: 03
 Budget: 40 turns
 Spec: ../SPEC.md (cluster 04)
@@ -56,9 +56,9 @@ drain files.)
 
 ## Acceptance
 
-- [ ] `! grep -rq "plugin's skills\|plugin's build skill" .claude/skills/drain/reference.md .claude/skills/parallel/SKILL.md .claude/skills/autopilot/SKILL.md .claude/skills/autopilot/reference.md` → exit 0 (dead branch gone)
-- [ ] `grep -q "resolved at dispatch" .claude/skills/drain/reference.md && grep -q "resolved at dispatch" .claude/skills/parallel/SKILL.md && grep -qr "resolved at dispatch" .claude/skills/autopilot/` → exit 0 (concrete-path substitution instruction present)
-- [ ] `grep -q "over budget" .claude/skills/parallel/SKILL.md && grep -qr "over budget" .claude/skills/autopilot/` → exit 0 (Budget stop forwarded)
-- [ ] `grep -q "Budget: <N> turns" .claude/skills/breakdown/SKILL.md` → exit 0 (integer format pinned)
-- [ ] `grep -q "<N> turns" .claude/skills/drain/reference.md` → exit 0 (headless --max-turns cites the pinned format)
-- [ ] `grep -q "resolved at dispatch" antigravity/.agents/workflows/drain.md && grep -q "over budget" antigravity/.agents/workflows/parallel.md && grep -q "over budget" antigravity/.agents/workflows/autopilot.md && grep -q "Budget: <N> turns" antigravity/.agents/skills/breakdown/SKILL.md` → exit 0 (mirrors)
+- [x] `! grep -rq "plugin's skills\|plugin's build skill" .claude/skills/drain/reference.md .claude/skills/parallel/SKILL.md .claude/skills/autopilot/SKILL.md .claude/skills/autopilot/reference.md` → exit 0 (dead branch gone) — verified exit 0, see ../evidence/04-worker-prompt-resolution.md (C1)
+- [x] `grep -q "resolved at dispatch" .claude/skills/drain/reference.md && grep -q "resolved at dispatch" .claude/skills/parallel/SKILL.md && grep -qr "resolved at dispatch" .claude/skills/autopilot/` → exit 0 (concrete-path substitution instruction present) — verified exit 0, see ../evidence/04-worker-prompt-resolution.md (C2)
+- [x] `grep -q "over budget" .claude/skills/parallel/SKILL.md && grep -qr "over budget" .claude/skills/autopilot/` → exit 0 (Budget stop forwarded) — verified exit 0, see ../evidence/04-worker-prompt-resolution.md (C3)
+- [x] `grep -q "Budget: <N> turns" .claude/skills/breakdown/SKILL.md` → exit 0 (integer format pinned) — verified exit 0, see ../evidence/04-worker-prompt-resolution.md (C4)
+- [x] `grep -q "<N> turns" .claude/skills/drain/reference.md` → exit 0 (headless --max-turns cites the pinned format) — verified exit 0, see ../evidence/04-worker-prompt-resolution.md (C5)
+- [x] `grep -q "resolved at dispatch" antigravity/.agents/workflows/drain.md && grep -q "over budget" antigravity/.agents/workflows/parallel.md && grep -q "over budget" antigravity/.agents/workflows/autopilot.md && grep -q "Budget: <N> turns" antigravity/.agents/skills/breakdown/SKILL.md` → exit 0 (mirrors) — verified exit 0, see ../evidence/04-worker-prompt-resolution.md (C6)

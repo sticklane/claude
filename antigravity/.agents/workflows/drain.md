@@ -28,9 +28,13 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    `## Answers`. Create the worktree
    (`git worktree add -b task/NN-<slug> ../<repo>-task-NN`), then give
    the user one Agent Manager launch — a fresh agent on that worktree
-   with this prompt (fill the <>):
+   with this prompt (fill the <>; resolve the build workflow to a
+   concrete path, resolved at dispatch — `.agents/workflows/build.md` in
+   the repo — and substitute it for <build-workflow-path>):
 
-   > Run /build <task-file>. Work only in this worktree, commit to
+   > Execute the task in <task-file> following the build workflow's
+   > procedure exactly, as written in <build-workflow-path>. Work only
+   > in this worktree, commit to
    > task/NN-<slug>, do not push. The task file's Budget: line is a
    > ceiling, not a target: when remaining work clearly exceeds the
    > remaining budget, stop with verdict BLOCKED "over budget" rather
