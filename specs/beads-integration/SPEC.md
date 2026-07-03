@@ -1,5 +1,19 @@
 # Discovered-work capture now, optional beads-backed queue for /drain
 
+Status: superseded
+
+> **Superseded 2026-07-03 — beads exited.** `~/specs/work-tracking-consolidation/`
+> and `~/specs/beads-full-exit/` completed the full exit from beads (kept only
+> in `fooszone` + `interview-prep`, not as a /drain queue backend). See the
+> decision addendum in `docs/decisions/work-tracking.md` ("Addendum 2026-07-03:
+> full exit — hybrid retired"). Consequently **task 02 (optional beads queue
+> backend) is withdrawn** — its premise (industrialize the drain queue layer
+> with beads) is contradicted by the exit.
+>
+> **Preserved:** task 01 (discovered-work capture) is zero-dependency and
+> independent of beads — the `discovered-from` concept still earns its place.
+> Re-home it as its own standalone spec rather than losing it with this one.
+
 ## Problem
 
 Two gaps surfaced by the beads research (Steve Yegge's git-backed agent

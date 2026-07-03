@@ -1,6 +1,6 @@
 # Task 02: Optional beads queue backend for /drain (feature-detect + lifecycle mapping)
 
-Status: pending
+Status: withdrawn — 2026-07-03: premise contradicted by the full beads exit (see ../SPEC.md banner + docs/decisions/work-tracking.md addendum)
 Depends on: 01
 Budget: 50 turns
 Spec: ../SPEC.md (requirements R4, R5, R6 backend paragraph)

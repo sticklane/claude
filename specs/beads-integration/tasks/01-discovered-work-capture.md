@@ -1,6 +1,6 @@
 # Task 01: Discovered-work capture in /drain (verdict contract, collect, draft status)
 
-Status: pending
+Status: pending — SURVIVES the 2026-07-03 beads exit; decoupled from withdrawn task 02. Re-home as a standalone spec (see ../SPEC.md banner). Ignore any beads-backend references in this file's body.
 Depends on: ../../chaining-antipatterns/tasks/01-authority-layer.md, ../../chaining-antipatterns/tasks/03-antipattern-guards.md
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R1, R2, R3, R6 R1–R3 mirror, R7)
