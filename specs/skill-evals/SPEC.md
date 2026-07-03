@@ -15,9 +15,13 @@ the maintainer's scope decision; trajectory checks are a later extension.
 A new human-only skill `.claude/skills/evals/` that scaffolds and runs
 stored eval scenarios, plus a committed runner script `evals/run.sh` and
 one working evalset for /breakdown as the reference example. A scenario
-is three files: a fixture builder, a prompt, and an assertion script; the
-runner executes the skill headlessly against the fixture and the
-assertions grade the artifacts.
+is three files: a fixture builder, a prompt, and an assertion script.
+The runner **provisions the skill under test into the fixture** (copies
+`.claude/skills/<skill>/` and `.claude/agents/` from the toolkit checkout
+into `$EVAL_DIR/.claude/`), cd's into `$EVAL_DIR`, and runs the session
+there — a deliberate, documented exception to the toolkit's
+"self-contained headless prompt" rule, because exercising the real skill
+text is the entire point of an eval.
 
 ## Requirements
 
@@ -30,44 +34,55 @@ assertions grade the artifacts.
   the same commit as the skill change).
 - R2: scenario layout is `evals/<skill>/<NN-name>/` containing exactly:
   `setup.sh` (builds a fixture repo in `$EVAL_DIR`, an empty directory
-  the runner provides), `prompt.txt` (the user turn, may reference
-  fixture paths), `assert.sh` (runs inside `$EVAL_DIR` after the session;
-  exit 0 = pass, non-zero output explains what failed). An optional
-  `allowed-tools.txt` overrides the runner's default allowlist.
-- R3: `evals/run.sh` (committed, `bash -n`-clean) takes an optional skill
-  name filter; for each matching scenario it creates a fresh temp
-  `$EVAL_DIR`, runs `setup.sh`, invokes
-  `claude -p "$(cat prompt.txt)" --permission-mode dontAsk --max-turns 40`
-  with the scenario's allowlist (default:
-  `Read,Edit,Write,Glob,Grep,Bash(git *)` plus Task for skills that fan
-  out), runs `assert.sh`, and prints a one-line pass/fail per scenario
-  plus a summary; exits non-zero if any scenario failed.
+  the runner provides), `prompt.txt` (the user turn; invokes the skill
+  as a slash command with fixture-relative paths, e.g.
+  `/breakdown specs/demo/SPEC.md` — no `$EVAL_DIR` variables, since the
+  runner does not expand them), `assert.sh` (runs with CWD `$EVAL_DIR`
+  after the session; exit 0 = pass, non-zero with output explaining what
+  failed). An optional `allowed-tools.txt` (one flag value on one line)
+  replaces the runner's default allowlist for that scenario.
+- R3: `evals/run.sh` (committed, `bash -n`-clean) takes an optional
+  skill-name filter; for each matching scenario it: creates a fresh temp
+  `$EVAL_DIR`; runs `setup.sh`; copies `.claude/skills/<skill>/` and the
+  whole `.claude/agents/` directory from the toolkit checkout into
+  `$EVAL_DIR/.claude/`; cd's into `$EVAL_DIR`; runs
+  `timeout 900 claude -p "$(cat prompt.txt)" --permission-mode dontAsk
+  --max-turns 40` with the scenario's allowlist (default, a fixed list:
+  `Read,Edit,Write,Glob,Grep,Bash(git *)` — no Task; fan-out skills add
+  Task via their scenario's `allowed-tools.txt`); then runs `assert.sh`.
+  A timeout or non-zero assert is a scenario failure. It prints one
+  pass/fail line per scenario plus a summary and exits non-zero if any
+  scenario failed.
 - R4: one working evalset ships: `evals/breakdown/01-small-spec/` whose
-  fixture contains a 2-requirement SPEC.md; assertions check that
-  `tasks/NN-*.md` files were created, each has `Status:`, `Depends on:`,
-  and an `## Acceptance` section containing at least one backticked
-  command, and the SPEC.md gained a `Parallelization` section.
-- R5: exact runner script and example scenario contents live in
-  `.claude/skills/evals/reference.md` (config JSON/scripts stay out of
-  SKILL.md bodies per CLAUDE.md conventions); the committed
-  `evals/run.sh` and the reference copy must not drift — the reference
-  points at the file rather than duplicating it in full.
+  `setup.sh` writes a 2-requirement spec at `specs/demo/SPEC.md` (no
+  open questions), whose `prompt.txt` is `/breakdown specs/demo/SPEC.md`,
+  whose `allowed-tools.txt` includes `Task` (breakdown fans out to
+  scout/critic agents, which the runner provisioned in R3), and whose
+  `assert.sh` checks: `specs/demo/tasks/` contains at least two
+  `NN-*.md` files; each has `Status:`, `Depends on:`, and an
+  `## Acceptance` section containing at least one backticked command;
+  and `specs/demo/SPEC.md` gained a `Parallelization` section.
+- R5: `.claude/skills/evals/reference.md` contains the example scenario
+  files verbatim (setup.sh / prompt.txt / assert.sh / allowed-tools.txt
+  for the breakdown evalset) and links to `evals/run.sh` by path instead
+  of duplicating the runner's contents.
 - R6: CLAUDE.md's Testing changes section gains one sentence pointing to
   /evals as the repeatable complement to fresh-session testing; README's
-  table gains an /evals row.
+  "What's in the box" table gains an /evals row.
 - R7: the skill states where artifacts go (`evals/<skill>/…`, committed)
   and the next pipeline step (run before committing any skill change;
   /distill a failure's lesson if it exposed a skill-authoring gap).
 - R8: antigravity port: `antigravity/.agents/workflows/evals.md` — same
   scenario layout and assertions, but the run step hands the user Agent
   Manager launches instead of headless `claude -p` (Antigravity has no
-  headless CLI).
+  headless CLI), with the skill/agents provisioning done by copying into
+  the fixture's `.agents/` instead.
 
 ## Out of scope
 
 - Trajectory assertions (transcript greps) — v2, per scope decision.
-- CI wiring (GitHub Actions) — the runner is CI-ready but wiring is the
-  consuming repo's business.
+- CI wiring (GitHub Actions) — the runner is CI-ready (bounded by
+  `timeout`) but wiring is the consuming repo's business.
 - Evalsets for every skill — one reference evalset (/breakdown) ships;
   others accrete via /distill when regressions bite.
 - plugin.json version (owned by the hardening-quick-wins spec).
@@ -76,11 +91,13 @@ assertions grade the artifacts.
 
 - [ ] `grep -q "disable-model-invocation: true" .claude/skills/evals/SKILL.md` (R1)
 - [ ] `test -x evals/run.sh && bash -n evals/run.sh` (R3)
-- [ ] `test -f evals/breakdown/01-small-spec/setup.sh && test -f evals/breakdown/01-small-spec/prompt.txt && test -f evals/breakdown/01-small-spec/assert.sh` (R2, R4)
-- [ ] `bash -n evals/breakdown/01-small-spec/setup.sh && bash -n evals/breakdown/01-small-spec/assert.sh` (R4)
-- [ ] `grep -q "evals" CLAUDE.md && grep -q "/evals" README.md` (R6)
-- [ ] `grep -qi "evals" .claude/skills/evals/reference.md` and it references `evals/run.sh` rather than duplicating it (R5)
+- [ ] `grep -q "\.claude" evals/run.sh && grep -q "timeout" evals/run.sh` — provisioning copy and wall-clock bound present (R3)
+- [ ] `test -f evals/breakdown/01-small-spec/setup.sh && test -f evals/breakdown/01-small-spec/prompt.txt && test -f evals/breakdown/01-small-spec/assert.sh && grep -q "Task" evals/breakdown/01-small-spec/allowed-tools.txt` (R2, R4)
+- [ ] `bash -n evals/breakdown/01-small-spec/setup.sh && bash -n evals/breakdown/01-small-spec/assert.sh && grep -q "specs/demo" evals/breakdown/01-small-spec/prompt.txt` (R4)
+- [ ] `grep -q "evals/run.sh" .claude/skills/evals/reference.md` (R5)
+- [ ] `grep -qi "evals" CLAUDE.md && grep -q "/evals" README.md` (R6)
 - [ ] `test -f antigravity/.agents/workflows/evals.md` (R8)
+- [ ] Scaffold branch: in a fresh session, `/evals handoff` (a skill with no evalset) produces `evals/handoff/01-*/setup.sh`, `prompt.txt`, and `assert.sh` (manual check of R1's scaffold path).
 - [ ] End to end: `./evals/run.sh breakdown` completes with a pass verdict on a machine with the `claude` CLI authenticated (requires a real headless run; this is the check that gates calling the harness done).
 
 ## Open questions
