@@ -74,3 +74,18 @@ templates run their profile's default in v1.
   wrong implementation).
 - Make acceptance checks runnable commands, so verification is one cheap
   subagent instead of an interactive debugging spiral.
+
+## Match the research tool to the question
+
+- `deep-research` (fan-out → adversarial 3-vote verify → synthesize) earns
+  its ~100-agent cost only for open-ended, multi-source questions where the
+  claims are contestable. For closing a *known-source factual gap* (the
+  answer lives in specific official docs), dispatch a few targeted
+  general-purpose agents told which URLs to hit and required to back every
+  claim with a verbatim quote + URL or mark it UNVERIFIED — verification
+  baked into one cheap agent. The adversarial verifier over-refutes plain
+  documentation facts, so it can return nothing while the answer sat in the
+  first doc.
+- Keep `deep-research` args short. Long multi-line, quote-laden args have
+  broken its Scope agent's structured output (retry-cap failure before any
+  search runs).
