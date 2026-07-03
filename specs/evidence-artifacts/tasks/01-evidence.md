@@ -1,6 +1,6 @@
 # Task 01: Caller-directed evidence files from the verifier
 
-Status: pending
+Status: in-progress
 Depends on: ../../hardening-quick-wins/tasks/03-task-budgets.md (drain reference.md overlap; cross-spec waves in ../SPEC.md)
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R1–R6)
