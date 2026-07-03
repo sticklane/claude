@@ -1,6 +1,6 @@
 # Task 08: Mirror and docs fixes — ag evals/build, external-playbooks, README, tournament SPEC grep
 
-Status: in-progress
+Status: done
 Depends on: 07
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 08)
@@ -49,8 +49,8 @@ apply on top.)
 
 ## Acceptance
 
-- [ ] `grep -qE "cp .*assert|absolute path" antigravity/.agents/workflows/evals.md` → exit 0 (assert.sh provisioned)
-- [ ] `grep -q "unless launched unattended" antigravity/.agents/workflows/build.md && ! grep -q "restart fresh" antigravity/.agents/workflows/build.md && grep -qi "verdict" antigravity/.agents/workflows/build.md` → exit 0
-- [ ] `grep -q "drain ranks the survivors mechanically" docs/external-playbooks.md && ! grep -q "verifier ranks the survivors" docs/external-playbooks.md` → exit 0
-- [ ] `grep -q "agentic-toolkit/.claude/rules" README.md && sed -n '/Option C/,/Option D/p' README.md | grep -q "untrusted-data"` → exit 0 (rules copied; caveat names both rules)
-- [ ] `! grep -qF '\-t1\|t1' specs/drain-tournament/SPEC.md && grep -qF -- "-t1" specs/drain-tournament/SPEC.md` → exit 0 (broken escape replaced with a portable form that still checks tournament naming)
+- [x] `grep -qE "cp .*assert|absolute path" antigravity/.agents/workflows/evals.md` → exit 0 (assert.sh provisioned) — exit 0; grade step invokes assert.sh by absolute path (evidence/08-mirrors-and-docs.md C1)
+- [x] `grep -q "unless launched unattended" antigravity/.agents/workflows/build.md && ! grep -q "restart fresh" antigravity/.agents/workflows/build.md && grep -qi "verdict" antigravity/.agents/workflows/build.md` → exit 0 — exit 0; unattended exception in step 2, step 4 ends with a DONE/DEFERRED/BLOCKED verdict (evidence/08-mirrors-and-docs.md C2)
+- [x] `grep -q "drain ranks the survivors mechanically" docs/external-playbooks.md && ! grep -q "verifier ranks the survivors" docs/external-playbooks.md` → exit 0 — exit 0 (evidence/08-mirrors-and-docs.md C3)
+- [x] `grep -q "agentic-toolkit/.claude/rules" README.md && sed -n '/Option C/,/Option D/p' README.md | grep -q "untrusted-data"` → exit 0 (rules copied; caveat names both rules) — exit 0 (evidence/08-mirrors-and-docs.md C4)
+- [x] `! grep -qF '\-t1\|t1' specs/drain-tournament/SPEC.md && grep -qF -- "-t1" specs/drain-tournament/SPEC.md` → exit 0 (broken escape replaced with a portable form that still checks tournament naming) — exit 0 at the file's actual location `specs/archive/drain-tournament/SPEC.md` (spec archived in 7504280 after this task was written; the literal path no longer exists) (evidence/08-mirrors-and-docs.md C5)

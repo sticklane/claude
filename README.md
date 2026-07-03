@@ -141,18 +141,21 @@ If the project already has a `.claude/` directory, copy the subdirectories
 **Option C — global** (available in every repo, just for you):
 
 ```bash
-mkdir -p ~/.claude/skills ~/.claude/agents
+mkdir -p ~/.claude/skills ~/.claude/agents ~/.claude/rules
 cp -r ~/agentic-toolkit/.claude/skills/* ~/.claude/skills/
 cp -r ~/agentic-toolkit/.claude/agents/* ~/.claude/agents/
+cp -r ~/agentic-toolkit/.claude/rules/* ~/.claude/rules/
 ```
 
 Symlink instead of `cp` if you want `git pull` in `~/agentic-toolkit` to
 update everything in place: run `~/agentic-toolkit/bin/sync-skills` — the
 standard post-`git pull` step — to idempotently symlink every toolkit skill
 into `~/.claude/skills/` (new skills linked, removed ones cleaned up, local
-non-symlink skills never touched). Note the token-discipline rule is
-project-scoped (`.claude/rules/` has no user-level equivalent) — for global
-use, fold its points into `~/.claude/CLAUDE.md`.
+non-symlink skills never touched). Note the two rules (token-discipline
+and untrusted-data) are project-scoped — `.claude/rules/` has no
+user-level equivalent, so the copy above only stages the files under
+`~/.claude/rules/` for reference; for global use, fold both rules'
+points into `~/.claude/CLAUDE.md`, which every session loads.
 
 **Verify**: start a new Claude Code session (skills load at session start)
 and type `/` — you should see `idea`, `breakdown`, `build`, `gate`, and the

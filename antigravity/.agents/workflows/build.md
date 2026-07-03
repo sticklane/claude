@@ -19,7 +19,8 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    what order, what could go wrong) as a comment block in the task file,
    placed below the header lines (never between them — dispatchers parse
    the headers and the block must not break them), and pause for review
-   before executing.
+   before executing — unless launched unattended by a workflow, in which
+   case plan as a comment block and proceed.
    If the plan contradicts the task or reveals a missing decision, surface
    it rather than guessing.
 
@@ -40,9 +41,11 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    report goes in that file; a re-verify overwrites it. Put the actual
    command output in the walkthrough artifact too — the native walkthrough
    complements the committed file, it doesn't replace it. On FAIL: fix and
-   re-verify. After two failed fix attempts on the same issue, stop and
-   report — write findings into the task file and restart fresh rather
-   than thrashing.
+   re-verify. After two failed fix attempts on the same issue, stop:
+   write findings into the task file and end with a verdict — DONE
+   (all acceptance passing), DEFERRED (a question a human must
+   answer), or BLOCKED (stuck after the fix attempts) — rather than
+   thrashing.
 
 5. **Close out.** Simplification pass over the code touched: never change
    what the code does, only how; remove comments describing obvious code,

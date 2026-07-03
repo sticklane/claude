@@ -45,7 +45,7 @@ rather than restating it. Verified against primary sources, July 2026.
 - **Generate–filter–rank.** AlphaCode 2: sample diverse candidates,
   filter on tests, submit the best (~2× solve rate). → /drain's
   tournament: on a second failure, three parallel attempts from different
-  angles, verifier ranks the survivors.
+  angles, drain ranks the survivors mechanically.
   [AlphaCode 2 report](https://storage.googleapis.com/deepmind-media/AlphaCode2/AlphaCode2_Tech_Report.pdf)
 - **Evidence artifacts.** Antigravity agents persist screenshots and
   walkthroughs of their own testing. → the verifier writes its report to
