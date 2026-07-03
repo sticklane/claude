@@ -1,6 +1,6 @@
 # Task 02: Escalation triggers and tool risk-rating in /autopilot
 
-Status: in-progress
+Status: done
 Depends on: none
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R3, R8 autopilot part)
@@ -31,5 +31,5 @@ allowlist. The antigravity autopilot workflow mirrors both.
 
 ## Acceptance
 
-- [ ] `grep -q "blast radius" .claude/skills/autopilot/SKILL.md && grep -qi "failing twice\|fails twice\|failed twice" .claude/skills/autopilot/SKILL.md` → pass
-- [ ] `grep -q "blast radius" antigravity/.agents/workflows/autopilot.md` → pass
+- [x] `grep -q "blast radius" .claude/skills/autopilot/SKILL.md && grep -qi "failing twice\|fails twice\|failed twice" .claude/skills/autopilot/SKILL.md` → pass (exit 0; verifier PASS)
+- [x] `grep -q "blast radius" antigravity/.agents/workflows/autopilot.md` → pass (exit 0; verifier PASS)
