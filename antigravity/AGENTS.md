@@ -21,9 +21,26 @@ Context is the scarce resource; spend it on decisions, not raw material.
 - Don't read files just to "look around." Apply the scout skill's
   discipline: search first (grep/glob), read the relevant slice, keep
   `path:line` conclusions rather than file contents. For big recon, use a
-  separate Agent Manager conversation on a fast/cheap model and bring back
-  only the summary.
+  separate Agent Manager conversation on a scout-tier model (Antigravity
+  default: a Flash-class model) and bring back only the summary.
 - Read a file in full only when about to edit it.
+- Match the model to the work — four rungs, cheapest first; don't pay
+  frontier-model rates to run `grep`:
+  - scout-tier → mechanical or lookup work (Antigravity default: a
+    Flash-class model, picked in the Agent Manager model picker).
+  - session-tier → ordinary judgment work (specs, review, tricky
+    implementation): the conversation's own model.
+  - deep-tier (Antigravity: the strongest model available in the model
+    picker) → heavy judgment above the session default: final review of a
+    large diff, subtle-bug hunts, architecture critique.
+  - frontier-tier (Antigravity: no distinct mapping — the strongest
+    available model, same as deep-tier) → ONLY work that truly needs the
+    strongest model: novel architecture decisions, security-critical
+    review, or a retry after a deep-tier attempt failed.
+
+  Model choice here is a human selection in the Agent Manager model
+  picker — the deep tiers are opt-in recommendations, not active
+  defaults.
 - One agent is the default; scale the fleet only for genuinely divisible
   groups (the decision-coupling test in the breakdown skill), and size
   it by the task map, never a default maximum. Multi-agent work costs

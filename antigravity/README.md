@@ -35,6 +35,7 @@ be listed. Type `/idea` in the agent input to test a workflow.
 | `/fleet` open-agents dashboard | Not ported — Antigravity's Agent Manager is this surface natively |
 | `/workboard` cross-repo work dashboard | Ported as-is — it also reads Antigravity's own `brain/` artifacts, covering what the Agent Manager can't see (other tools, specs, git, Claude Code sessions) |
 | Skill self-chaining (/idea invokes /breakdown via the Skill tool) | Not ported — workflows are human-launched in the Agent Manager, so the port keeps printed pointers between stages |
+| Tier language (scout/session/deep/frontier-tier) + `.claude/runtime.md` tier pins | Same tier vocabulary in `AGENTS.md`; the tier→model mapping is recorded in `runtimes/antigravity.md` (model choice is a human selection in the Agent Manager model picker, not a pinnable flag) |
 
 The human-launch gates and their rationale: the toolkit repo's
 docs/human-gates.md — in Antigravity every workflow is human-launched
