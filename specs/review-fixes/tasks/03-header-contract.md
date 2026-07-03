@@ -1,6 +1,6 @@
 # Task 03: Task-file header contract — Touch header line, drain inventory, plan-block placement
 
-Status: in-progress
+Status: done
 Depends on: 02
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 03)
@@ -47,9 +47,9 @@ edit the drain files — apply on top of its wording.)
 
 ## Acceptance
 
-- [ ] `grep -q "^Touch:" .claude/skills/breakdown/SKILL.md` → exit 0 (template header line)
-- [ ] `grep -q "## Touch" .claude/skills/breakdown/SKILL.md` → exit 0 (optional body section retained)
-- [ ] `grep -q "Budget" .claude/skills/drain/SKILL.md && grep -qE '\(.?Status.?, .?Depends on.?, .?Priority.?, .?Budget.?, .?Touch.?\)' .claude/skills/drain/SKILL.md` → exit 0 (inventory lists all five headers)
-- [ ] `grep -qi "below the header lines" .claude/skills/build/SKILL.md` → exit 0 (plan-block placement pinned)
-- [ ] `grep -qi "delete" .claude/skills/build/SKILL.md` → exit 0 (close-out deletes the plan block; confirm the sentence is in close-out, not elsewhere)
-- [ ] `grep -q "^Touch:" antigravity/.agents/skills/breakdown/SKILL.md && grep -q "Budget" antigravity/.agents/workflows/drain.md && grep -qi "below the header lines" antigravity/.agents/workflows/build.md` → exit 0 (mirrors)
+- [x] `grep -q "^Touch:" .claude/skills/breakdown/SKILL.md` → exit 0 (template header line) — verified, see ../evidence/03-header-contract.md
+- [x] `grep -q "## Touch" .claude/skills/breakdown/SKILL.md` → exit 0 (optional body section retained) — verified, see ../evidence/03-header-contract.md
+- [x] `grep -q "Budget" .claude/skills/drain/SKILL.md && grep -qE '\(.?Status.?, .?Depends on.?, .?Priority.?, .?Budget.?, .?Touch.?\)' .claude/skills/drain/SKILL.md` → exit 0 (inventory lists all five headers) — verified, see ../evidence/03-header-contract.md
+- [x] `grep -qi "below the header lines" .claude/skills/build/SKILL.md` → exit 0 (plan-block placement pinned) — verified, see ../evidence/03-header-contract.md
+- [x] `grep -qi "delete" .claude/skills/build/SKILL.md` → exit 0 (close-out deletes the plan block; confirm the sentence is in close-out, not elsewhere) — verified in ## 4. Close out only, see ../evidence/03-header-contract.md
+- [x] `grep -q "^Touch:" antigravity/.agents/skills/breakdown/SKILL.md && grep -q "Budget" antigravity/.agents/workflows/drain.md && grep -qi "below the header lines" antigravity/.agents/workflows/build.md` → exit 0 (mirrors) — verified, see ../evidence/03-header-contract.md
