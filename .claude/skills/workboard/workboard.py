@@ -28,12 +28,14 @@ import html
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+SCRIPT = Path(__file__).resolve()
 STALE_DAYS_DEFAULT = 7
 RECENT_HOURS = 48
 SKIP_DIRS = {
@@ -504,7 +506,7 @@ def attention_items(repos, sessions, antigravity, stale_days):
             items.append({
                 "severity": "serious", "state": "blocked",
                 "repo": r["name"], "what": f"Handoff parked: {h['title']}",
-                "why": f"{h['path']} — resume it in a fresh session, then delete the file",
+                "why": f"{h['path']} — resume it in a fresh session from the handoff file, then delete the file (/handoff wrote it)",
                 "age_ts": h["mtime"],
             })
         for s in r["specs"]:
@@ -514,7 +516,8 @@ def attention_items(repos, sessions, antigravity, stale_days):
                     "severity": "serious", "state": "blocked",
                     "repo": r["name"],
                     "what": f"Spec {s['slug']}: task(s) blocked",
-                    "why": ", ".join(s["tasks_blocked"][:3]),
+                    "why": ", ".join(s["tasks_blocked"][:3])
+                           + " — answer its open question, flip its Status: line, re-dispatch via /build or /drain",
                     "age_ts": s["last_touched"],
                 })
             elif s["tasks_total"] > 0 and open_tasks == 0:
@@ -522,7 +525,7 @@ def attention_items(repos, sessions, antigravity, stale_days):
                     "severity": "warning", "state": "needs-review",
                     "repo": r["name"],
                     "what": f"Spec {s['slug']}: all {s['tasks_total']} task(s) done",
-                    "why": "verify and close it, or archive the spec dir",
+                    "why": "run the verifier agent against the spec, then archive the spec dir",
                     "age_ts": s["last_touched"],
                 })
             elif open_tasks > 0 and (now_ts() - s["last_touched"]) > stale_days * 86400:
@@ -530,7 +533,7 @@ def attention_items(repos, sessions, antigravity, stale_days):
                     "severity": "warning", "state": "stale",
                     "repo": r["name"],
                     "what": f"Spec {s['slug']}: {open_tasks} open task(s), idle {age_str(s['last_touched'])}",
-                    "why": "resume it, defer it, or delete it — open work decays",
+                    "why": "resume it, defer it (Status: deferred), or delete it — open work decays; deciding is the point",
                     "age_ts": s["last_touched"],
                 })
         if r["git"]["dirty"] and not covered_by_active:
@@ -538,7 +541,7 @@ def attention_items(repos, sessions, antigravity, stale_days):
                 "severity": "warning", "state": "needs-review",
                 "repo": r["name"],
                 "what": f"{r['git']['dirty']} uncommitted change(s), no live session",
-                "why": f"on branch {r['git']['branch']} — commit, stash, or discard",
+                "why": f"on branch {r['git']['branch']} — commit (then push) or stash; small focused commits",
                 "age_ts": r["git"]["last_commit_ts"],
             })
         if r["git"]["ahead"]:
@@ -556,7 +559,8 @@ def attention_items(repos, sessions, antigravity, stale_days):
                 "severity": "warning", "state": "stale",
                 "repo": f"antigravity:{c['store']}",
                 "what": f"{c['open']} open checklist item(s): {c['summary'][:60]}",
-                "why": "stale Antigravity conversation — resume or abandon",
+                "why": "stale Antigravity conversation — resume it, or abandon:",
+                "cmd": f"python3 {shlex.quote(str(SCRIPT))} --abandon {shlex.quote(c['id'])}",
                 "age_ts": c["last_ts"],
             })
 
@@ -681,8 +685,9 @@ def render_html(data):
             f"<tr><td>{badge(i['state'])}</td>"
             f"<td class='strong'>{esc(i['what'])}</td>"
             f"<td>{esc(i['repo'])}</td>"
-            f"<td>{esc(i['why'])}</td>"
-            f"<td class='num'>{esc(age_str(i['age_ts']))}</td></tr>"
+            f"<td>{esc(i['why'])}"
+            + (f" <code>{esc(i['cmd'])}</code>" if i.get("cmd") else "")
+            + f"</td><td class='num'>{esc(age_str(i['age_ts']))}</td></tr>"
             for i in data["inbox"]
         )
         inbox_html = (
@@ -750,8 +755,17 @@ def render_html(data):
             f"<td class='num'>{esc(age_str(c['last_ts']))}</td></tr>"
             for c in data["antigravity"][:20]
         )
+        any_stale = any(c["open"] and (now_ts() - c["last_ts"]) > data["stale_days"] * 86400
+                        for c in data["antigravity"])
+        abandon_hint = (
+            f'<p class="muted-text">abandon everything stale at once: '
+            f'<code>python3 {esc(shlex.quote(str(SCRIPT)))} --abandon-stale</code> '
+            f'(writes a skip-marker per conversation; Antigravity state itself is untouched)</p>'
+            if any_stale else ""
+        )
         ag_html = (
             "<section><h2>Antigravity conversations</h2>"
+            f"{abandon_hint}"
             "<table><thead><tr><th>state</th><th>summary</th><th>checklist</th>"
             f"<th>updated</th></tr></thead><tbody>{ag_rows}</tbody></table></section>"
         )
@@ -900,7 +914,23 @@ def main():
     ap.add_argument("--stale-days", type=int, default=STALE_DAYS_DEFAULT)
     ap.add_argument("--max-depth", type=int, default=3)
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--abandon", nargs="+", metavar="CONV_ID", default=[],
+                    help="mark Antigravity conversation(s) abandoned (skip-marker only), then rescan")
+    ap.add_argument("--abandon-stale", action="store_true",
+                    help="abandon every stale Antigravity conversation, then rescan")
     args = ap.parse_args()
+
+    if args.abandon:
+        marked, missing = abandon_conversations(args.abandon)
+        for cid in marked:
+            print(f"abandoned: {cid}", file=sys.stderr)
+        for cid in missing:
+            print(f"not found: {cid}", file=sys.stderr)
+        if missing:
+            sys.exit(1)
+    if args.abandon_stale:
+        for cid in abandon_stale(args.stale_days):
+            print(f"abandoned (stale): {cid}", file=sys.stderr)
 
     roots = [Path(r) for r in args.roots] if args.roots else default_roots()
     data = assemble(roots, args.max_depth, args.stale_days, args.quiet)

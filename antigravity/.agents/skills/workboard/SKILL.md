@@ -4,7 +4,10 @@ description: Renders a cross-repo dashboard of ALL open work on this machine - s
 ---
 
 Show the user every piece of open work on this machine and what needs a
-human decision. Read-only: the scanner never mutates the state it reports.
+human decision. Read-only: the scanner never mutates the state it reports —
+the one explicit exception is `--abandon` / `--abandon-stale`, which write a
+`.workboard-abandoned` skip-marker into an Antigravity conversation dir
+(Antigravity's own artifacts are never touched).
 Design rationale and sources: the toolkit repo's docs/agent-dashboards.md —
 not shipped with installs.
 
@@ -23,6 +26,10 @@ python3 <this skill dir>/workboard.py [ROOTS ...] --out /tmp/workboard.html
 - `--json` emits the same data as JSON; `--stale-days N` tunes the
   staleness threshold (default 7). Data sources and the state model are in
   [reference.md](reference.md) — load only if the scan misbehaves.
+- `--abandon <conv-id> ...` marks Antigravity conversation(s) abandoned;
+  `--abandon-stale` abandons everything currently stale. Both then rescan,
+  so one command marks and refreshes the board. The dashboard prints these
+  exact commands next to each stale Antigravity inbox item.
 
 Write the HTML to a temp dir, never into a repo — it is a disposable
 snapshot, not a pipeline artifact.
@@ -44,6 +51,8 @@ For each inbox item the suggested-action column already names the move:
   Dirty/unpushed repo → commit, stash, or push.
 - `stale` open spec → resume, defer (`Status: deferred`), or delete — open
   work decays; deciding is the point.
+- `stale` Antigravity conversation → resume it in the Agent Manager, or run
+  the `--abandon` command the inbox row shows (or `--abandon-stale` for all).
 
 The dashboard is a point-in-time snapshot; refreshing means re-running the
 scanner. Next step: none — items route back into the build/drain/handoff
