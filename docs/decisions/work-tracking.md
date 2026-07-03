@@ -54,3 +54,22 @@ docs/TASKS.md proves insufficient in two or more repos.
 interview-prep was promoted to keeper on evidence (17 fresh open issues) during
 the critic pass — a departure from the original "fooszone only" framing.
 Confirmed by Steven 2026-07-03.
+
+## Addendum 2026-07-03: full exit — hybrid retired
+
+Later the same day, Steven chose **full exit** (explicitly declining a
+pre-conversion triage of fooszone's open issues), retiring the hybrid: the two
+keeper repos, **fooszone** and **interview-prep**, were decommissioned under
+`~/specs/beads-full-exit/SPEC.md`. Non-closed issues were converted as-is to
+`docs/TASKS.md` checkboxes in each repo.
+
+- Issue archives (verbatim JSONL): `<repo>/docs/beads-archive.jsonl` in each repo.
+- Full `.beads/` snapshots (Dolt DB, bd memories, interactions):
+  `~/.beads-repo-archives/<repo>-2026-07/`.
+- The `bd` binary is removed from the machine (`~/.local/bin/bd`); no daemon,
+  LaunchAgent, or prime hooks remain.
+
+**Single convention going forward:** markdown `docs/TASKS.md` checkboxes for
+small work, `specs/` + `/breakdown` for larger work — everywhere. The "Revisit
+trigger" above is obsolete; beads would be a fresh adoption decision, not a
+revert.
