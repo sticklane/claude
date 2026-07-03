@@ -26,6 +26,8 @@ wrong side, say so and recommend attended `/build` instead. Don't launch.
 - Runnable acceptance criteria in the task file (no criteria → no autonomy).
 - Quality gates installed (`/gate`) or a bounded goal set (below).
 - Permissions scoped: the run can build/test/commit but NOT push or deploy.
+  Risk-rate each tool by reversibility and blast radius when scoping the
+  allowlist — auto-allow only what discarding the branch fully undoes.
   Be honest about the limit — allowlists gate commands, not the filesystem;
   a worktree isolates the diff, not the machine. For hard isolation use the
   containment ladder in reference.md. Never `bypassPermissions` outside a
@@ -44,7 +46,11 @@ wrong side, say so and recommend attended `/build` instead. Don't launch.
 
 Before launching, state: what's running, where (branch/worktree), the gate
 that decides success, and the evidence the run must produce (test output,
-verifier verdict — claims don't count). On completion: PASS → present
+verifier verdict — claims don't count). Two triggers escalate to a human
+instead of pressing on: the same step failing twice (a third attempt in a
+degraded context won't do better), and reaching a high-risk
+action — push, deploy, data deletion, publishing, spending — which the run
+must never take on its own. On completion: PASS → present
 evidence and the diff for human review (a human still approves; the agent
 does the work). FAIL or gate-capped → report, discard or re-scope, and
 restart clean. Correcting a wandering autonomous run in-context is the
