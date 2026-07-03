@@ -165,7 +165,8 @@ def git_info(repo):
 
 STATUS_RE = re.compile(r"^Status:\s*\[?([A-Za-z_-]+)\]?", re.MULTILINE)
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
-OPEN_TASK_STATUSES = {"pending", "in-progress", "in_progress", "claimed"}
+OPEN_TASK_STATUSES = {"pending", "open", "todo", "ready",
+                      "in-progress", "in_progress", "claimed"}
 CLOSED_TASK_STATUSES = {"done", "deferred", "skipped"}
 
 
@@ -503,10 +504,13 @@ def attention_items(repos, sessions, antigravity, stale_days):
         covered_by_active = any(c and (c == rp or c.startswith(rp + os.sep))
                                 for c in active_cwds)
         for h in r["handoffs"]:
+            resume_prompt = (f"Resume the parked handoff in {h['path']}; "
+                             "delete the file once fully resumed")
             items.append({
                 "severity": "serious", "state": "blocked",
                 "repo": r["name"], "what": f"Handoff parked: {h['title']}",
-                "why": f"{h['path']} — resume it in a fresh session from the handoff file, then delete the file (/handoff wrote it)",
+                "why": f"{h['path']} — resume it in a fresh session, then delete the file (/handoff wrote it):",
+                "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(resume_prompt)}",
                 "age_ts": h["mtime"],
             })
         for s in r["specs"]:
@@ -521,11 +525,15 @@ def attention_items(repos, sessions, antigravity, stale_days):
                     "age_ts": s["last_touched"],
                 })
             elif s["tasks_total"] > 0 and open_tasks == 0:
+                verify_prompt = (f"Use the verifier agent to verify specs/{s['slug']} "
+                                 "against its acceptance criteria; if it passes, "
+                                 "archive the spec dir")
                 items.append({
                     "severity": "warning", "state": "needs-review",
                     "repo": r["name"],
                     "what": f"Spec {s['slug']}: all {s['tasks_total']} task(s) done",
-                    "why": "run the verifier agent against the spec, then archive the spec dir",
+                    "why": "run the verifier agent against the spec, then archive the spec dir:",
+                    "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(verify_prompt)}",
                     "age_ts": s["last_touched"],
                 })
             elif open_tasks > 0 and (now_ts() - s["last_touched"]) > stale_days * 86400:
@@ -549,7 +557,8 @@ def attention_items(repos, sessions, antigravity, stale_days):
                 "severity": "warning", "state": "needs-review",
                 "repo": r["name"],
                 "what": f"{r['git']['ahead']} unpushed commit(s) on {r['git']['branch']}",
-                "why": "push or open a PR — local-only work is invisible work",
+                "why": "push or open a PR — local-only work is invisible work:",
+                "cmd": f"git -C {shlex.quote(rp)} push",
                 "age_ts": r["git"]["last_commit_ts"],
             })
 
@@ -884,7 +893,17 @@ td {{ padding:6px 10px 6px 0; border-top:1px solid var(--grid);
   border:1px solid var(--border); border-radius:8px; background:var(--surface);
   color:var(--ink); font:inherit; }}
 footer {{ color:var(--muted); font-size:11px; margin-top:20px; }}
-</style></head><body>
+.legend {{ color:var(--muted); font-size:12px; margin:-4px 0 10px; }}
+td code, .legend code {{ font-size:12px; background:var(--grid);
+  padding:1px 6px; border-radius:5px; overflow-wrap:anywhere; }}
+td code {{ cursor:copy; }}
+td code.copied {{ outline:1px solid var(--good); }}
+</style></head><body
+ onclick="var c=event.target.closest('td code');if(!c)return;
+ (navigator.clipboard?navigator.clipboard.writeText(c.textContent):Promise.reject())
+ .catch(function(){{var r=document.createRange();r.selectNodeContents(c);
+ var s=getSelection();s.removeAllRanges();s.addRange(r);document.execCommand('copy')}});
+ c.classList.add('copied');setTimeout(function(){{c.classList.remove('copied')}},600)">
 <h1>Workboard</h1>
 <div class="sub">All open work across local repos, specs, and Claude Code
 sessions · snapshot {generated_at} · stale after {stale_days}d · re-run
@@ -892,15 +911,20 @@ sessions · snapshot {generated_at} · stale after {stale_days}d · re-run
 <div class="tiles">{tiles}</div>
 <input id="filter" type="search" placeholder="filter rows…"
  oninput="var q=this.value.toLowerCase();document.querySelectorAll('tbody tr, details.repo').forEach(function(el){{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none'}})">
-<section><h2>Needs attention</h2>{inbox}</section>
+<section><h2>Needs attention</h2>
+<p class="legend">⚑ blocked = waiting on a human decision · ▲ needs-review =
+verify or close finished/dirty work · ⏸ stale = open work idle past {stale_days}d.
+Most severe first. Click any <code>command</code> to copy it.</p>
+{inbox}</section>
 <section><h2>Repos</h2>{repos}</section>
 {antigravity}
 {todos}
 {orphans}
 <footer>Sources: specs/*/SPEC.md + tasks (Status: lines) · .kiro/specs/*/tasks.md
 checkboxes · HANDOFF.md files · ~/.claude/projects transcripts + live PIDs ·
-~/.gemini/antigravity*/brain artifacts · git status. Read-only snapshot;
-glyph + word carry state, never color alone.</footer>
+~/.gemini/antigravity*/brain artifacts · git status. Read-only snapshot
+(sole write: opt-in --abandon skip-markers); glyph + word carry state,
+never color alone.</footer>
 </body></html>
 """
 
