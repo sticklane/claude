@@ -34,6 +34,10 @@ be listed. Type `/idea` in the agent input to test a workflow.
 | `/goal`, Stop-hook gates | Artifact review: implementation plan pause + walkthrough evidence, plus PostToolUse hooks |
 | `/fleet` open-agents dashboard | Not ported — Antigravity's Agent Manager is this surface natively |
 
+The human-launch gates and their rationale: the toolkit repo's
+docs/human-gates.md — in Antigravity every workflow is human-launched
+natively, so the gates hold by construction.
+
 ## What degrades (be aware)
 
 - **No enforced cheap subagents.** Claude Code's scout is Haiku, read-only,
