@@ -25,8 +25,10 @@ deferred and why) before launching.
 For each task in the group, launch a background `general-purpose` agent with
 `isolation: worktree`, prompted with:
 
-> Execute the task in <task-file> following the procedure in
-> .claude/skills/build/SKILL.md exactly: scouts for exploration, tests first
+> Execute the task in <task-file> following the build skill's procedure
+> exactly (in-repo: .claude/skills/build/SKILL.md; plugin install: invoke
+> /agentic:build or read build's SKILL.md from the plugin's skills
+> directory): scouts for exploration, tests first
 > where criteria are test-shaped, run every acceptance command, standard
 > gates, then commit to a branch named task/NN-<slug>. Your final message
 > must be: verdict (DONE/BLOCKED), acceptance evidence per criterion (command

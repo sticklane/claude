@@ -35,13 +35,12 @@ One record per agent, already normalized by step 2:
   (`HH:MM:SS`, `11m 12s`) — no client-side JS, no external requests.
 - Escape `label`/`snippet`/`output` for HTML.
 
-## Palette provenance
+## Palette constraints
 
-Status colors, surfaces, and inks are the dataviz reference palette; the
-running/completed/failed trio was run through the dataviz skill's
-`validate_palette.js` (all checks pass, light and dark; worst pair
-red↔green ΔE 12.4 deutan — mitigated anyway by glyph+word chips). If you
-re-theme the template, re-run that validator; don't eyeball it.
+The template's status colors were validated for contrast and red/green CVD
+separation on both surfaces. If you re-theme: keep every bar and glyph
+color at >=3:1 contrast against both surfaces, and never let color carry
+status alone — each status keeps its glyph + word, with the word in ink.
 
 ## Template
 
