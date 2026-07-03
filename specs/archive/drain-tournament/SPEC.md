@@ -96,7 +96,7 @@ modified; ranking stays out of the verifier.
 - [ ] `awk '/^## Tournament/,0' .claude/skills/drain/reference.md | grep -qi "one verifier run per candidate\|per candidate"` and the same section shows drain doing the ranking (diff --stat) (R3)
 - [ ] `awk '/^## Tournament/,0' .claude/skills/drain/reference.md | grep -qi "DEFERRED"` — verdict routing present, deferred beats failed (R4)
 - [ ] `grep -qi "3 more worker runs\|three more" .claude/skills/drain/SKILL.md` cost gate keyed to prior BLOCKED-over-budget verdicts only (R5)
-- [ ] `grep -qi "tournament" antigravity/.agents/workflows/drain.md && grep -q "\-t1\|t1" antigravity/.agents/workflows/drain.md` (R6)
+- [ ] `grep -qi "tournament" antigravity/.agents/workflows/drain.md && grep -qF -- "-t1" antigravity/.agents/workflows/drain.md` (R6)
 - [ ] End to end: dry-read check — a fresh session asked to execute /drain step 3 against a mock "second failure" verdict describes: sweep `-t*`, dispatch 3 distinct-branch workers, filter by per-candidate verifier PASS/FAIL, rank mechanically, next-ranked on merge failure, DEFERRED-beats-failed routing (manual until the eval harness covers /drain).
 
 ## Open questions

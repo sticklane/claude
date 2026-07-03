@@ -27,9 +27,12 @@ has no Antigravity equivalent and is ignored here.
    a fresh conversation rooted at the fixture directory whose first
    message is the contents of `prompt.txt`. Wait for the user to report
    the session finished — do not grade a run that is still going.
-4. **Grade.** Run `bash assert.sh` from the fixture directory (CWD must
-   be the fixture). Report one pass/fail line per scenario and a
-   summary.
+4. **Grade.** With CWD the fixture directory, invoke the scenario's
+   assert.sh by absolute path from the toolkit repo — the fixture does
+   not contain it — e.g.
+   `(cd <fixture> && bash <toolkit>/evals/<skill>/<NN-name>/assert.sh)`,
+   the same shape the Claude Code runner uses. Report one pass/fail
+   line per scenario and a summary.
 5. **Interpret failures.** Skill regression → fix the skill, scenario
    untouched. Intentional behavior change → update the scenario in the
    same commit as the skill change. Never loosen an assertion just to go
