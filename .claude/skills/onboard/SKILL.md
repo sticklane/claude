@@ -55,7 +55,9 @@ profile.
 ## 5. Offer the next layer
 
 Ask which the user wants now (don't install unasked):
-- `/gate` — Stop-hook check gate, auto-format, protected files.
+- `/gate` — Stop-hook check gate, auto-format, protected files. It runs the
+  toolkit's `bin/install-gates` (hooks generated from `templates/`, merged
+  into existing settings, idempotent) rather than hand-writing hooks.
 - `REVIEW.md` — repo-specific code-review tuning (severity redefinitions,
   nit caps, skip rules like "anything CI already enforces"). Note the scope:
   it's read by the managed GitHub Code Review service; for the local
