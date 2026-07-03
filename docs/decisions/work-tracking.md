@@ -49,9 +49,8 @@ above are the primary sources.
 Reconsider if a keeper repo's bd breaks on a future bd upgrade, or if
 docs/TASKS.md proves insufficient in two or more repos.
 
-## Interview-prep promotion (Steven to confirm)
+## Interview-prep promotion
 
 interview-prep was promoted to keeper on evidence (17 fresh open issues) during
 the critic pass — a departure from the original "fooszone only" framing.
-**Steven should confirm** this promotion; if he prefers fooszone-only, revise
-the spec and run the Task 02 recipe against interview-prep.
+Confirmed by Steven 2026-07-03.
