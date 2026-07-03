@@ -1,5 +1,8 @@
 # Unattended-execution configs
 
+Contents: Scoped permissions · Bounded goals · Background worktree
+agent · Headless · Containment ladder · Failure recovery
+
 Verified against code.claude.com/docs (permissions, headless, goal,
 sandboxing) as of July 2026.
 

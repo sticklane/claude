@@ -1,6 +1,6 @@
 # Task 04: Reference-file TOCs + context-management research record
 
-Status: in-progress
+Status: done
 Depends on: ../../model-agnostic/tasks/02-core-tier-language.md, ../../code-vs-llm/tasks/01-ladder.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R2-impl, R7; R9 note)
@@ -52,5 +52,5 @@ task 99 in specs/review-fixes.
 
 ## Acceptance
 
-- [ ] `for f in .claude/skills/*/reference.md; do [ "$(wc -l < "$f")" -le 100 ] || head -5 "$f" | grep -qi "contents\|TOC" || exit 1; done` (R2 — every >100-line reference file opens with a TOC)
-- [ ] `grep -qi "context management" docs/external-playbooks.md && grep -qi "tool-result size" docs/external-playbooks.md` (R7)
+- [x] `for f in .claude/skills/*/reference.md; do [ "$(wc -l < "$f")" -le 100 ] || head -5 "$f" | grep -qi "contents\|TOC" || exit 1; done` (R2 — every >100-line reference file opens with a TOC) — exit 0; all five files carry a `Contents:` line at line 3 matching their real `##` headings (../evidence/04-reference-tocs-research-record.md)
+- [x] `grep -qi "context management" docs/external-playbooks.md && grep -qi "tool-result size" docs/external-playbooks.md` (R7) — exit 0; section covers adopted/already-covered/leads/skipped with source links (../evidence/04-reference-tocs-research-record.md)

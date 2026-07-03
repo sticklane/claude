@@ -1,5 +1,7 @@
 # /evals reference: the breakdown scenario, verbatim
 
+Contents: setup.sh · prompt.txt · assert.sh · allowed-tools.txt
+
 The runner is [evals/run.sh](../../../evals/run.sh) — read it there
 rather than duplicating it here. Runner and scenarios ship in the
 toolkit repo, not with installs — not usable from plugin installs. Below are the four files of the
