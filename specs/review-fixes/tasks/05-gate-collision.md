@@ -49,5 +49,5 @@ BLOCKED/DEFERRED bullets — apply on top.)
 - [ ] `grep -q "sanctioned stop" .claude/skills/gate/reference.md && grep -q "DEFERRED" .claude/skills/gate/reference.md && grep -q "INCOMPLETE" .claude/skills/gate/reference.md` → exit 0 (bypass contract documented)
 - [ ] `grep -q "transcript" .claude/skills/gate/reference.md` → exit 0 (mechanism named — hook reads the transcript tail before exiting 2)
 - [ ] `grep -qi "sanctioned" .claude/skills/gate/SKILL.md` → exit 0
-- [ ] `grep -qi "sanctioned stop\|gate.*hook" .claude/skills/autopilot/reference.md && grep -qi "sanctioned stop\|gate.*hook" .claude/skills/drain/reference.md` → exit 0 (interaction noted both places; confirm by reading, greps alone can pass on unrelated text)
+- [ ] `grep -qi "sanctioned stop" .claude/skills/autopilot/reference.md && grep -qi "sanctioned stop\|gate.*hook" .claude/skills/drain/reference.md` → exit 0 (interaction noted both places; confirm by reading, greps alone can pass on unrelated text)
 - [ ] `grep -q "sanctioned stop" antigravity/.agents/skills/gate/reference.md` → exit 0 (mirror)

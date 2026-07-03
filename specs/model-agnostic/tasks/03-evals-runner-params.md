@@ -54,7 +54,7 @@ unset, behavior is byte-identical to today.
 
 ## Acceptance
 
-- `grep -q "RUNNER_CMD" evals/run.sh && grep -q "EVALS_ROOT" evals/run.sh && grep -q "ALLOWED_TOOLS" evals/run.sh && bash -n evals/run.sh` → exit 0 (R6)
-- `test -x evals/stub-cli.sh && test -x evals/runner-selftest.sh && bash -n evals/stub-cli.sh && bash -n evals/runner-selftest.sh` → exit 0 (R6)
-- `./evals/runner-selftest.sh` → exits 0 on a machine with no model access (uses the shipped stub by default; both the PASS and FAIL plumbing paths asserted) (R6 end-to-end)
-- End to end: `./evals/run.sh breakdown` → still passes with both env vars unset (no behavior change for the Claude default), and `./evals/runner-selftest.sh` → proves a non-Claude command drives the same harness without touching the committed evalsets
+- [ ] `grep -q "RUNNER_CMD" evals/run.sh && grep -q "EVALS_ROOT" evals/run.sh && grep -q "ALLOWED_TOOLS" evals/run.sh && bash -n evals/run.sh` → exit 0 (R6)
+- [ ] `test -x evals/stub-cli.sh && test -x evals/runner-selftest.sh && bash -n evals/stub-cli.sh && bash -n evals/runner-selftest.sh` → exit 0 (R6)
+- [ ] `./evals/runner-selftest.sh` → exits 0 on a machine with no model access (uses the shipped stub by default; both the PASS and FAIL plumbing paths asserted) (R6 end-to-end)
+- [ ] End to end: `./evals/run.sh breakdown` → still passes with both env vars unset (no behavior change for the Claude default), and `./evals/runner-selftest.sh` → proves a non-Claude command drives the same harness without touching the committed evalsets
