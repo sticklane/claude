@@ -32,10 +32,10 @@ nothing.
 |---|---|---|
 | `pending` | dispatch when dependencies are done | /breakdown (initial) |
 | `in-progress` | a worker owns it (the lock; committed pre-dispatch) | /drain |
-| `done` | branch merged, project gates green | the merge (from /build) |
+| `done` | branch merged, project gates green | the merge (from /build); or drain, for headless workers |
 | `deferred` | waiting on a human answer in the file | /drain, from the verdict |
 | `blocked` | technical blocker; task needs amending | /drain, from the verdict |
-| `failed` | two failed attempts; evidence recorded | /drain |
+| `failed` | tournament exhausted or skipped per cost gate; evidence recorded | /drain |
 
 On startup, any `in-progress` with no live worker is a stale lock — reset
 it to `pending`, commit the flip, and discard the dead run's
@@ -111,7 +111,9 @@ The bounded third stage after the slot machine also fails
 tournament per task per drain run; the `-t*` sweeps (at startup and
 below) make re-entry across runs safe. Skip it entirely — go straight
 to the verdict routing at the end of this section, with the two prior
-verdicts — when either prior attempt returned BLOCKED over budget.
+verdicts — when attempt 2 (the relaunch) returned BLOCKED over budget.
+Attempt 1 necessarily returned DONE — a failed merge of its branch is
+what got here — so only attempt 2 can be BLOCKED over budget.
 
 **Generate.** Delete any existing `task/NN-<slug>-t*` branches and
 worktrees, then launch three concurrent background workers
@@ -149,7 +151,8 @@ smallest `git diff --stat` total. No new verifier output mode.
 
 **Merge.** The winner goes through the normal DONE bookkeeping, except
 the slot machine does not re-enter: if the winner's merge or post-merge
-gates fail, move to the next-ranked survivor. Delete survivor branches
+gates fail, run `git merge --abort`, then move to the next-ranked
+survivor. Delete survivor branches
 and worktrees only after some merge passes gates. All survivors failing
 to merge → `Status: failed`, no relaunch.
 
@@ -201,5 +204,7 @@ verifier ran inside the worker, re-run the task's acceptance commands
 from the main checkout after merging, before flipping anything to `done`.
 Headless merges carry no evidence file — that post-merge re-run is the
 record; paste it into `specs/<slug>/evidence/<name>.md` before the flip.
-Then collect the printed verdict, apply step 3's bookkeeping exactly as
-for a background worker, and `git worktree remove` the checkout.
+Then collect the printed verdict and apply step 3's bookkeeping — on
+DONE, that includes flipping the task's `Status: done` and committing
+the flip yourself (a headless worker, unlike /build, never writes it) —
+and `git worktree remove` the checkout.

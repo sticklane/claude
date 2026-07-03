@@ -1,6 +1,6 @@
 # Task 02: Drain state machine — headless done-flip, BLOCKED-over-budget routing, merge-abort
 
-Status: pending
+Status: done
 Depends on: none
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 02)
@@ -46,10 +46,17 @@ conflicted state before the branch is discarded.
 
 ## Acceptance
 
-- [ ] `grep -q "or drain, for headless workers" .claude/skills/drain/reference.md` → exit 0 (done row amended)
-- [ ] `grep -qi "flip" .claude/skills/drain/SKILL.md && grep -A3 -i "headless" .claude/skills/drain/SKILL.md | grep -qi "done"` → exit 0 (headless section instructs the done-flip; verify by reading the section, not just the grep)
-- [ ] `grep -q "routes per the tournament skip" .claude/skills/drain/SKILL.md` → exit 0
-- [ ] `! grep -rq "either prior attempt" .claude/skills/drain antigravity/.agents/workflows/drain.md` → exit 0 (half-dead branch killed in both repos)
-- [ ] `! grep -q "two failed attempts" .claude/skills/drain/reference.md && grep -q "tournament exhausted or skipped per cost gate" .claude/skills/drain/reference.md` → exit 0
-- [ ] `test "$(grep -c 'git merge --abort' .claude/skills/drain/SKILL.md)" -ge 2` → exit 0 (slot-machine + tournament next-ranked paths)
-- [ ] `grep -q "git merge --abort" antigravity/.agents/workflows/drain.md && grep -q "routes per the tournament skip" antigravity/.agents/workflows/drain.md` → exit 0 (mirrors)
+- [x] `grep -q "or drain, for headless workers" .claude/skills/drain/reference.md` → exit 0 (done row amended)
+  - Verifier: exit 0; done row reads "the merge (from /build); or drain, for headless workers" (../evidence/02-drain-state-machine.md, criterion 1).
+- [x] `grep -qi "flip" .claude/skills/drain/SKILL.md && grep -A3 -i "headless" .claude/skills/drain/SKILL.md | grep -qi "done"` → exit 0 (headless section instructs the done-flip; verify by reading the section, not just the grep)
+  - Verifier: exit 0, read-verified — SKILL.md's headless passage says drain itself flips `Status: done` and commits the flip (../evidence/02-drain-state-machine.md, criterion 2).
+- [x] `grep -q "routes per the tournament skip" .claude/skills/drain/SKILL.md` → exit 0
+  - Verifier: exit 0; BLOCKED bullet carries the real routing exception (../evidence/02-drain-state-machine.md, criterion 3).
+- [x] `! grep -rq "either prior attempt" .claude/skills/drain antigravity/.agents/workflows/drain.md` → exit 0 (half-dead branch killed in both repos)
+  - Verifier: exit 0; all three files reworded with attempt-2-only reasoning (../evidence/02-drain-state-machine.md, criterion 4).
+- [x] `! grep -q "two failed attempts" .claude/skills/drain/reference.md && grep -q "tournament exhausted or skipped per cost gate" .claude/skills/drain/reference.md` → exit 0
+  - Verifier: exit 0; failed row replaced (../evidence/02-drain-state-machine.md, criterion 5).
+- [x] `test "$(grep -c 'git merge --abort' .claude/skills/drain/SKILL.md)" -ge 2` → exit 0 (slot-machine + tournament next-ranked paths)
+  - Verifier: exit 0, read-verified one occurrence per path; reference.md's tournament Merge section also gained it (../evidence/02-drain-state-machine.md, criterion 6).
+- [x] `grep -q "git merge --abort" antigravity/.agents/workflows/drain.md && grep -q "routes per the tournament skip" antigravity/.agents/workflows/drain.md` → exit 0 (mirrors)
+  - Verifier: exit 0; both merge paths, BLOCKED routing, and attempt-2 rewording mirrored (../evidence/02-drain-state-machine.md, criterion 7).
