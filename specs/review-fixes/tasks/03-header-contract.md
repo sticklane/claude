@@ -1,6 +1,6 @@
 # Task 03: Task-file header contract — Touch header line, drain inventory, plan-block placement
 
-Status: pending
+Status: in-progress
 Depends on: 02
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 03)
