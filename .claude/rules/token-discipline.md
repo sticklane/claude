@@ -7,7 +7,8 @@ tokens on decisions; delegate consumption of raw material to subagents.
 ## Delegation defaults
 
 - **Never read files into main context to "look around."** Use the `scout`
-  agent (Haiku, read-only) for any where/how/what-exists question. Fan out
+  agent (scout-tier, read-only; Claude default: Haiku) for any
+  where/how/what-exists question. Fan out
   multiple scouts in parallel for independent questions; you keep the
   conclusions, not the file dumps.
 - Read a file directly only when you are about to edit it, and prefer reading
@@ -18,9 +19,27 @@ tokens on decisions; delegate consumption of raw material to subagents.
 
 ## Model and effort matching
 
-- Mechanical or lookup work → Haiku / `effort: low` (the `scout` default).
-- Judgment work (specs, review, tricky implementation) → session model.
-- Don't pay frontier-model rates to run `grep`.
+Four rungs, cheapest first — don't pay frontier-model rates to run `grep`:
+
+- scout-tier → mechanical or lookup work (Claude default: Haiku at low
+  effort; the `scout` default).
+- session-tier → ordinary judgment work (specs, review, tricky
+  implementation): the conversation's own model.
+- deep-tier (Claude default: Opus 4.8) → heavy judgment above the session
+  default: final review of a large diff, subtle-bug hunts, architecture
+  critique.
+- frontier-tier (Claude default: Fable) → ONLY work that truly needs the
+  strongest model: novel architecture decisions, security-critical review,
+  or a retry after a deep-tier attempt failed.
+
+Skills that spawn agents — at their actual spawn points: drain's tournament
+workers and per-candidate verifier runs, /design's candidate investigators,
+an on-demand verifier escalation — consult `.claude/runtime.md` tier pins
+and pass the mapped model through the harness's model parameter. No config,
+or no pin for the tier in question → inherit the session model (the deep
+tiers are opt-in: profile rows are recommended pin values, not active
+defaults). Pins bind Agent-tool dispatch only; the headless fallback
+templates run their profile's default in v1.
 
 ## Session hygiene
 

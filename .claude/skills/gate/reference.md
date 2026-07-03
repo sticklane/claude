@@ -175,8 +175,9 @@ applies — the committed failing tests are the tamper-evidence either way.
 ## Session-scoped alternatives
 
 - `/goal all tests in <dir> pass and lint is clean, or stop after 20 turns`
-  — a per-session prompt-based Stop hook (Haiku judges the transcript each
-  turn). Conditions must be demonstrable IN the transcript: have the agent
+  — a per-session prompt-based Stop hook; the runtime's
+  built-in transcript evaluator (Claude Code: Haiku) judges the transcript
+  each turn. Conditions must be demonstrable IN the transcript: have the agent
   run the command so the evaluator can see the output. Bound every goal
   with a turn or time clause.
 - Prompt-type hooks (`"type": "prompt"`) for judgment calls a script can't
