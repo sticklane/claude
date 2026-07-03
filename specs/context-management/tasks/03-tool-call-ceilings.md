@@ -1,6 +1,6 @@
 # Task 03: Tool-call ceilings for critic and verifier, INCOMPLETE verdict, both repos
 
-Status: in-progress
+Status: done
 Depends on: none
 Budget: 20 turns
 Spec: ../SPEC.md (requirements R5, R8-part; R9 note)
@@ -46,5 +46,5 @@ by global task 99 in specs/review-fixes.
 
 ## Acceptance
 
-- [ ] `grep -q "tool-call ceiling" .claude/agents/critic.md && grep -q "tool-call ceiling" .claude/agents/verifier.md && grep -q "INCOMPLETE" .claude/agents/verifier.md && grep -q "INCOMPLETE" antigravity/.agents/skills/verifier/SKILL.md` (R5)
-- [ ] `grep -q "tool-call ceiling" antigravity/.agents/skills/critic/SKILL.md && grep -q "tool-call ceiling" antigravity/.agents/skills/verifier/SKILL.md` (R8-part)
+- [x] `grep -q "tool-call ceiling" .claude/agents/critic.md && grep -q "tool-call ceiling" .claude/agents/verifier.md && grep -q "INCOMPLETE" .claude/agents/verifier.md && grep -q "INCOMPLETE" antigravity/.agents/skills/verifier/SKILL.md` (R5) — exit 0, verified independently in `../evidence/03-tool-call-ceilings.md`
+- [x] `grep -q "tool-call ceiling" antigravity/.agents/skills/critic/SKILL.md && grep -q "tool-call ceiling" antigravity/.agents/skills/verifier/SKILL.md` (R8-part) — exit 0, verified independently in `../evidence/03-tool-call-ceilings.md`

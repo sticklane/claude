@@ -30,6 +30,10 @@ For **diffs**:
   nitpicks a senior engineer wouldn't raise. Flag only gaps affecting
   correctness or stated requirements.
 
+Hard tool-call ceiling: ~25. At the ceiling, stop and report your best-so-far
+findings plus what you didn't get to examine — like a scout, a partial
+review delivered beats a complete one that never returns.
+
 Score each finding 0–100 for confidence it's real AND matters. For diffs,
 report only ≥ 80. For specs, 60–79 findings may be included, marked as such.
 

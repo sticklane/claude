@@ -82,27 +82,49 @@ only for the hardest verify/judge stages.
   `.claude/skills/autopilot/reference.md`,
   `.claude/skills/design/SKILL.md`, `.claude/skills/evals/SKILL.md`,
   `.claude/skills/evals/reference.md`, and
-  `.claude/workflows/deep-research.js`. Normative definitions — scan
-  lines OUTSIDE YAML frontmatter and skip table rows (lines starting
-  with `|`): a *dispatch line* word-bounded-matches
-  `/Task\(|agent\(|\b(spawn|dispatch|launch)\b.*\b(agent|worker|session)s?\b/i`
-  (so prose like "dispatchable" and frontmatter descriptions don't
-  count); each dispatch line must have a *tier token* (`haiku`,
-  `session model`, `opts.model`, or `effort`) within ±5 lines. An
-  *output-budget statement* is a line containing a numeric cap or budget
-  phrase (`≤`, `under N words`, `tokens`, `verdict + evidence`) — at
-  least one per file. A *loop line* word-bounded-matches
-  `/\b(retry|re-dispatch|relaunch|revise|iterate|cycle|tournament)\b/i`
-  and must have a bound within ±3 lines, where a bound is a numeral 1–4
-  OR a spelled-out cap (`once`, `twice`, `at most one/two/three/four`)
-  — drain's existing "relaunch once … at most one tournament per task"
-  wording must pass unmodified. Exact regexes live in the script; its
-  tests encode these definitions with fixture files, including one
-  copied from drain's retry paragraph (must pass) and one from a
-  frontmatter description (must not trigger). Tests first (`tests/`),
-  following the `bin/sync-skills` precedent (commits `05df3ef`/`0629fa7`,
-  entrypoint `tests/test_sync_skills.sh` — there is no aggregate runner;
-  add `tests/test_check_token_discipline.sh` alongside).
+  `.claude/workflows/deep-research.js`. The check operates on
+  **blank-line-separated paragraphs** (not single lines), skipping YAML
+  frontmatter and table rows (lines starting with `|`), so verb/noun
+  pairs split across wrapped lines are seen together. Three checks:
+
+  - *Dispatch → tier.* A paragraph is a dispatch instruction if it
+    contains `Task(`/`agent(` OR an imperative dispatch verb
+    (`spawn`/`dispatch`/`launch`) *adjacent to* (same clause/line, not
+    merely the same paragraph) an agent noun (`agent`/`worker`/
+    `session`) — so incidental co-occurrence like "dispatch order" and
+    "worker's lock" in one prose paragraph does not count — excluding
+    the adjectival forms (`dispatchable`) and pure prohibitions. Each
+    dispatch paragraph must carry a tier token (`haiku`, `session
+    model`, `opts.model`, or `effort`) in itself or an adjacent
+    paragraph.
+  - *Output budget.* Each file has ≥1 statement matching
+    `(≤|under|at most|no more than|cap(ped)?)\s.{0,20}(words|tokens|lines)`
+    OR the literal `verdict + evidence`. Bare cost commentary like
+    "3× the tokens" must NOT satisfy this.
+  - *Bounded loops.* A paragraph naming an iterative re-dispatch
+    (`retry`, `re-dispatch`, `revise`, `iterate`, `cycle`, or `relaunch`
+    used as a repeating action) must state a bound in itself or an
+    adjacent paragraph: a numeral 1–4 or a spelled-out cap (`once`,
+    `twice`, `at most one/two/three/four`). NOT a trigger: the term
+    preceded by `no`/`never`; hyphenated forms (`relaunch-with-evidence`);
+    and a one-shot reading where the term is immediately followed by a
+    non-bound benign modifier describing the state, not a repeat count
+    (e.g. `relaunch clean`) rather than by a count. `tournament` is not a
+    loop trigger (its bound is covered by drain's "at most one
+    tournament" prose and its dispatch by the dispatch check).
+
+  These prose definitions state intent; the **tests are the contract**.
+  Ship `tests/test_check_token_discipline.sh` with fixtures encoding at
+  minimum: drain's actual retry paragraph (must PASS the loop check
+  unmodified), the prose lines the check must NOT flag
+  (`drain/SKILL.md:32` tournament-cleanup, `drain/reference.md:154` "no
+  relaunch", `autopilot/reference.md:108` "relaunch clean",
+  `design/SKILL.md:47` "3× the tokens"), and the wrapped dispatches at
+  `drain/SKILL.md:68-69` and `design/SKILL.md:41-42` (must be SEEN as
+  dispatches). The implementer tunes the regexes until every fixture
+  passes; the spec does not freeze regex syntax. Tests first, following
+  the `bin/sync-skills` precedent (commits `05df3ef`/`0629fa7`,
+  entrypoint `tests/test_sync_skills.sh` — there is no aggregate runner).
 - R7: Each retrofitted skill's existing antigravity counterpart (mirrored
   under `antigravity/` — as a workflow file for the human-only skills, a
   skill file otherwise; follow whatever path each skill already mirrors
@@ -116,6 +138,10 @@ only for the hardest verify/judge stages.
 - Other user-level skills (`morning-brief`, `workboard`, `redacted`, …) and
   the `.claude/agents/*` definitions (scout's Haiku default and ≤300-word
   budget already comply).
+- The `/build` execution stage: although CLAUDE.md lists it among the
+  execution stages, it dispatches the `scout` and `verifier` agents,
+  which carry their own tier defaults — it is not in the retrofit set and
+  not in R6's file list.
 - Token-usage evals comparing spend before/after (decided against —
   cost/noise; conformance check only).
 - Any functional change to what a skill does: dispatch shape, worktree

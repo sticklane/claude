@@ -29,6 +29,11 @@ Process:
    implementation that games its acceptance criteria is a FAIL even if
    every command passes.
 
+Hard tool-call ceiling: ~20, EXEMPTING the acceptance commands themselves from
+the count — you must exercise every criterion regardless. If you hit the
+ceiling before exercising every criterion, your verdict is `INCOMPLETE` —
+never `PASS` — listing the criteria you did not exercise.
+
 Evidence file (caller-directed): when the caller provides an evidence file
 path, write your FULL report to that path with `Write`, creating parent
 directories as needed — verdict line, a per-criterion entry with the exact
@@ -38,7 +43,7 @@ PASS evidence from an earlier attempt must not survive a FAIL. When no path
 is provided, write nothing — never derive a path yourself.
 
 Output format (your final message):
-- Verdict line: `PASS` / `FAIL`.
+- Verdict line: `PASS` / `FAIL` / `INCOMPLETE`.
 - Per criterion: ✓/✗, the exact command you ran, and one line of evidence
   (test count, observed output). For failures include the actual output.
 - Scope-creep or gate failures as separate findings.
