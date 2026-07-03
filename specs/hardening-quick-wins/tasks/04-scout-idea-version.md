@@ -1,6 +1,6 @@
 # Task 04: Scout early-stop, /idea deterministic gate, version bump
 
-Status: in-progress
+Status: done
 Depends on: none
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R5, R6, R9, R8 scout + idea parts)
@@ -34,7 +34,15 @@ mirrors carry the same phrases, and the plugin version is bumped to
 
 ## Acceptance
 
-- [ ] `grep -q "stop as soon as findings converge" .claude/agents/scout.md` → pass
-- [ ] `grep -q "a script, not a spec" .claude/skills/idea/SKILL.md` → pass
-- [ ] `grep -q "stop as soon as findings converge" antigravity/.agents/skills/scout/SKILL.md && grep -q "a script, not a spec" antigravity/.agents/skills/idea/SKILL.md` → pass
-- [ ] `python3 -c "import json; assert json.load(open('.claude-plugin/plugin.json'))['version']=='0.3.0'"` → pass
+- [x] `grep -q "stop as soon as findings converge" .claude/agents/scout.md` → pass
+      (verifier: exit 0; rule includes the ~15 tool-call ceiling and
+      best-so-far plus unresolved reporting)
+- [x] `grep -q "a script, not a spec" .claude/skills/idea/SKILL.md` → pass
+      (verifier: exit 0; gate added inside the "Right-size first."
+      paragraph, not elsewhere)
+- [x] `grep -q "stop as soon as findings converge" antigravity/.agents/skills/scout/SKILL.md && grep -q "a script, not a spec" antigravity/.agents/skills/idea/SKILL.md` → pass
+      (verifier: exit 0; both mirrors carry the same wording; idea change
+      is in the skill file, not the workflow stub)
+- [x] `python3 -c "import json; assert json.load(open('.claude-plugin/plugin.json'))['version']=='0.3.0'"` → pass
+      (verifier: exit 0; single-line version change, valid JSON, no other
+      fields touched)
