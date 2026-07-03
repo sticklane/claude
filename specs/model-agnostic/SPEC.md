@@ -42,7 +42,7 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
 ## Requirements
 
 - R1: `runtimes/claude-code.md`, `runtimes/antigravity.md`, and
-  `runtimes/gemini-cli.md` exist, each with the same three sections:
+  `runtimes/gemini-cli.md` exist, each with the same four sections:
   `## Tiers` (all four tiers mapped to concrete models — Claude:
   scout-tier = Haiku + effort low, session-tier = inherit, deep-tier =
   Opus 4.8 (`claude-opus-4-8`; Agent-tool short name `opus`),
@@ -55,7 +55,17 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
   defaults), `## Headless`
   (the runtime's non-interactive command template with placeholders for
   prompt, allowlist, and turn/step cap — Antigravity: states none exists,
-  Agent Manager launches instead), and `## Notes` (config file locations,
+  Agent Manager launches instead), `## Orchestration` (the runtime's
+  multi-agent orchestration surface, recording five fields: primitive,
+  invocation surface, structured-output support, resume mechanism, and
+  effective parallelism cap — claude-code: the Workflow tool,
+  deterministic scripts in `.claude/workflows/` fired only on the human
+  "ultracode" opt-in (docs/human-gates.md reason 5), schema-validated
+  returns, journaled resume, per-run concurrency cap; antigravity: no
+  scripted fan-out — sequential markdown workflows plus human-dispatched
+  Agent Manager parallelism, so orchestrations degrade to a human launch
+  list; gemini-cli: none native — shell fan-out around headless calls
+  with JSON output), and `## Notes` (config file locations,
   permission-mode equivalents, and for gemini-cli a line recording how
   the command syntax was verified, or that it requires verification
   before first use).
@@ -207,7 +217,7 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
 
 ## Acceptance criteria
 
-- [ ] `test -f runtimes/claude-code.md && test -f runtimes/antigravity.md && test -f runtimes/gemini-cli.md && for f in runtimes/claude-code.md runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "^## Tiers" $f && grep -q "^## Headless" $f && grep -q "^## Notes" $f || exit 1; done` (R1)
+- [ ] `test -f runtimes/claude-code.md && test -f runtimes/antigravity.md && test -f runtimes/gemini-cli.md && for f in runtimes/claude-code.md runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "^## Tiers" $f && grep -q "^## Headless" $f && grep -q "^## Orchestration" $f && grep -q "^## Notes" $f || exit 1; done` (R1)
 - [ ] `grep -q "deep-tier" runtimes/claude-code.md && grep -q "claude-opus-4-8" runtimes/claude-code.md && grep -q "claude-fable-5" runtimes/claude-code.md && for f in runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "deep-tier" $f && grep -q "frontier-tier" $f || exit 1; done` (R1 — all four tiers mapped in every profile)
 - [ ] `grep -q "scout-tier" .claude/agents/scout.md && grep -q "model: haiku" .claude/agents/scout.md && grep -qi "absent in plugin installs" .claude/agents/scout.md` (R2)
 - [ ] `grep -q "scout-tier" .claude/rules/token-discipline.md && grep -q "scout-tier" README.md` (R3)
