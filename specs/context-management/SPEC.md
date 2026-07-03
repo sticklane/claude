@@ -45,10 +45,9 @@ wave, not this spec (coordination note in Out of scope). Marker phrases
   gain: SKILL.md files put execution-critical contracts in the first 30
   lines (skill bodies truncate when a session compacts; descriptions
   reload, bodies do not); reference files over 100 lines open with a
-  table of contents; references stay one level deep. The two largest
-  reference files (`.claude/skills/drain/reference.md`,
-  `.claude/skills/evals/reference.md` if over 100 lines) gain TOCs to
-  comply.
+  table of contents; references stay one level deep. Every reference
+  file currently over 100 lines gains a TOC to comply: drain (205),
+  fleet (182), gate (167), autopilot (110), evals (110).
 - R3 (agent-written memory): `.claude/skills/distill/SKILL.md` gains a
   memory-layer step: lessons that are too narrow or too long for
   CLAUDE.md go to a topic file under `docs/memory/`, indexed in
@@ -67,8 +66,10 @@ wave, not this spec (coordination note in Out of scope). Marker phrases
   front of prompts and must not churn mid-session; CLAUDE.md/rules edits
   invalidate the cached prefix — /distill therefore batches CLAUDE.md
   writes at session end (one matching sentence added to
-  `.claude/skills/distill/SKILL.md`); tool-set changes bust caches, so
-  agent tool grants stay fixed for a session.
+  `.claude/skills/distill/SKILL.md`); tool-set changes bust caches — don't
+  add/remove MCP servers or edit agent `tools:` lists mid-run
+  (harness-managed deferred tool loading is fine and outside this
+  rule).
 - R5 (tool-call ceilings): `.claude/agents/critic.md` and
   `.claude/agents/verifier.md` gain a numeric tool-call ceiling line
   (the phrase "tool-call ceiling"; ~25 for critic with scout-style
@@ -123,8 +124,8 @@ wave, not this spec (coordination note in Out of scope). Marker phrases
 
 - [ ] `grep -q "^## Compact instructions" CLAUDE.md && test "$(wc -l < CLAUDE.md)" -le 200` (R1)
 - [ ] `grep -qi "first 30 lines" CLAUDE.md && grep -qi "table of contents" CLAUDE.md` (R2 conventions)
-- [ ] `head -5 .claude/skills/drain/reference.md | grep -qi "contents\|TOC"` — largest reference file opens with a TOC (R2)
-- [ ] `grep -q "docs/memory.md" .claude/skills/distill/SKILL.md && grep -qi "prune" .claude/skills/distill/SKILL.md` (R3)
+- [ ] `for f in .claude/skills/*/reference.md; do [ "$(wc -l < "$f")" -le 100 ] || head -5 "$f" | grep -qi "contents\|TOC" || exit 1; done` — every >100-line reference file opens with a TOC (R2)
+- [ ] `grep -q "docs/memory.md" .claude/skills/distill/SKILL.md && grep -qi "stale" .claude/skills/distill/SKILL.md && grep -q "docs/memory.md" CLAUDE.md` (R3)
 - [ ] `grep -q "static-first" .claude/rules/token-discipline.md && grep -qi "session end" .claude/skills/distill/SKILL.md` (R4)
 - [ ] `grep -q "tool-call ceiling" .claude/agents/critic.md && grep -q "tool-call ceiling" .claude/agents/verifier.md` (R5)
 - [ ] `grep -qi "single-line" CLAUDE.md && grep -qi "header" .claude/skills/breakdown/SKILL.md` (R6)
