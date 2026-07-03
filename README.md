@@ -49,6 +49,7 @@ may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
 | `/critique` | Adversarial review of any spec, plan, or diff |
 | `/distill` | Compounding engineering: session learnings → CLAUDE.md lines, rules, or new skills |
 | `/handoff` | Writes a resume-from-scratch handoff file, then you `/clear` |
+| `/fleet` | Dashboard of this session's open agents — running/queued/completed/failed, status tiles + timeline, as a self-contained HTML snapshot |
 | `scout` agent | Haiku, read-only, low effort — answers "where/how does X work" so the main session never reads files to look around |
 | `critic` agent | Attacks specs/plans/diffs; high-signal only — confidence-scored findings, false positives filtered the way Anthropic's own review pipeline does |
 | `verifier` agent | Fresh-eyes check of finished work against acceptance criteria, including overfitting-to-tests; evidence over assertion |
@@ -98,13 +99,28 @@ may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
 
 ## Install
 
-Clone it once:
+**Option A — plugin** (recommended: one command, works in every repo, local
+and web/desktop sessions alike). In any Claude Code session:
+
+```
+/plugin marketplace add sticklane/claude
+/plugin install agentic@agentic-toolkit
+```
+
+Everything arrives namespaced — `/agentic:idea`, `/agentic:build`, agents as
+`@agentic:scout` — and updates with the marketplace. Teams can auto-enable it
+per repo with `extraKnownMarketplaces` + `enabledPlugins` in the repo's
+`.claude/settings.json`. One gap: rules don't ship in plugins, so copy
+`.claude/rules/token-discipline.md` into the target repo (or fold it into
+its CLAUDE.md).
+
+For the copy-based options below, clone it once:
 
 ```bash
 git clone https://github.com/sticklane/claude.git ~/agentic-toolkit
 ```
 
-**Option A — per project** (recommended: version-controlled, shared with
+**Option B — per project** (version-controlled, shared with
 your team). From your project's root:
 
 ```bash
@@ -115,7 +131,7 @@ git add .claude && git commit -m "Add agentic development toolkit"
 If the project already has a `.claude/` directory, copy the subdirectories
 (`skills/`, `agents/`, `rules/`) into it instead of overwriting.
 
-**Option B — global** (available in every repo, just for you):
+**Option C — global** (available in every repo, just for you):
 
 ```bash
 mkdir -p ~/.claude/skills ~/.claude/agents
@@ -130,10 +146,10 @@ use, fold its points into `~/.claude/CLAUDE.md`.
 
 **Verify**: start a new Claude Code session (skills load at session start)
 and type `/` — you should see `idea`, `breakdown`, `build`, `gate`, and the
-rest in the menu. Then point it at a real repo: `/onboard` first, `/idea`
-for your first feature.
+rest in the menu (prefixed `agentic:` if you installed the plugin). Then
+point it at a real repo: `/onboard` first, `/idea` for your first feature.
 
-**Option C — Google Antigravity** instead of the Claude Code CLI: the full
+**Option D — Google Antigravity** instead of the Claude Code CLI: the full
 port lives in [antigravity/](antigravity/README.md) — same skills (native
 Agent Skills support), the human-only commands as workflows, `AGENTS.md`
 replacing CLAUDE.md, and hooks in Antigravity's format. From your project

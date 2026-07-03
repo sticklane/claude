@@ -1,0 +1,9 @@
+{
+  "name": "agentic",
+  "description": "Spec-driven agentic development pipeline: /idea to spec, /breakdown to tasks, /build//parallel//autopilot to verified commits, with scout/critic/verifier subagents and a /fleet dashboard of open agents.",
+  "version": "0.1.0",
+  "author": { "name": "sticklane" },
+  "homepage": "https://github.com/sticklane/claude",
+  "skills": "./.claude/skills",
+  "agents": "./.claude/agents"
+}

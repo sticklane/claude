@@ -1,0 +1,183 @@
+# /fleet reference — dashboard template
+
+Loaded on demand by step 3 of the skill. Contains the data shape, the fill
+rules, and the full HTML template.
+
+## Data shape
+
+One record per agent, already normalized by step 2:
+
+```json
+{
+  "label": "build task/03-auth-routes",
+  "kind": "build-worker",
+  "status": "running",
+  "started": "14:21:07",
+  "elapsed": "11m 12s",
+  "snippet": "running acceptance: npm test -- auth",
+  "output": "~/.claude/…/tasks/a1b2c3.output"
+}
+```
+
+## Fill rules
+
+- Replace `{{GENERATED_AT}}`, the four `{{N_*}}` counts, and the three marked
+  blocks (`TILE ROW`, `TIMELINE ROWS`, `TABLE ROWS`) with generated markup.
+  Everything else ships verbatim.
+- Status is never color alone: every status renders glyph + word
+  (`▶ running`, `◌ queued`, `✓ completed`, `✕ failed`).
+- Timeline geometry: `t0 = min(started)`, `t1 = now`. Per bar,
+  `left = (started − t0) / (t1 − t0)`, `width = ((ended || now) − started) /
+  (t1 − t0)`, floored at 0.75% so short scouts stay visible. Order rows by
+  start time. Each bar carries a `title` tooltip:
+  `"<label> — <status>, started <started>, <elapsed>"`.
+- Times in table cells and axis labels are pre-formatted strings
+  (`HH:MM:SS`, `11m 12s`) — no client-side JS, no external requests.
+- Escape `label`/`snippet`/`output` for HTML.
+
+## Palette provenance
+
+Status colors, surfaces, and inks are the dataviz reference palette; the
+running/completed/failed trio was run through the dataviz skill's
+`validate_palette.js` (all checks pass, light and dark; worst pair
+red↔green ΔE 12.4 deutan — mitigated anyway by glyph+word chips). If you
+re-theme the template, re-run that validator; don't eyeball it.
+
+## Template
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fleet — open agents</title>
+<style>
+  :root {
+    --page: #f9f9f7; --surface: #fcfcfb;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --hairline: #e1e0d9; --ring: rgba(11,11,11,0.10);
+    --running: #2a78d6; --completed: #0ca30c;
+    --failed: #d03b3b; --queued: #898781;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d; --surface: #1a1a19;
+      --ink: #ffffff; --ink-2: #c3c2b7;
+      --hairline: #2c2c2a; --ring: rgba(255,255,255,0.10);
+      --running: #3987e5;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--page); color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px; max-width: 960px; margin-inline: auto;
+  }
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  h1 { font-size: 18px; font-weight: 600; }
+  .stamp { color: var(--muted); font-size: 12px; }
+  section {
+    background: var(--surface); border: 1px solid var(--ring);
+    border-radius: 8px; padding: 16px; margin-bottom: 16px;
+  }
+  h2 { font-size: 12px; font-weight: 600; color: var(--ink-2);
+       text-transform: uppercase; letter-spacing: .04em; margin-bottom: 12px; }
+
+  /* stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .tile { border: 1px solid var(--hairline); border-radius: 8px; padding: 12px 14px; }
+  .tile .n { font-size: 28px; font-weight: 600; }
+  .tile .l { color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+         margin-right: 6px; vertical-align: 1px; }
+
+  /* status chips — glyph carries the color, the word carries the meaning */
+  .chip { display: inline-flex; align-items: center; gap: 6px;
+          padding: 1px 8px; border-radius: 999px; font-size: 12px;
+          color: var(--ink-2); border: 1px solid var(--hairline); }
+  .chip b { font-weight: 600; font-size: 13px; }
+  .s-running   .dot { background: var(--running); }   .s-running   b { color: var(--running); }
+  .s-completed .dot { background: var(--completed); } .s-completed b { color: var(--completed); }
+  .s-failed    .dot { background: var(--failed); }    .s-failed    b { color: var(--failed); }
+  .s-queued    .dot { background: var(--queued); }    .s-queued    b { color: var(--queued); }
+
+  /* timeline */
+  .lane { display: grid; grid-template-columns: 180px 1fr; align-items: center;
+          gap: 10px; padding: 4px 0; }
+  .lane:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+  .lane .name { font-size: 12px; color: var(--ink-2); overflow: hidden;
+                text-overflow: ellipsis; white-space: nowrap; }
+  .track { position: relative; height: 10px; border-radius: 4px;
+           background: color-mix(in srgb, var(--hairline) 55%, transparent); }
+  .bar { position: absolute; top: 0; height: 10px; border-radius: 4px; min-width: 4px; }
+  .bar.running   { background: var(--running); }
+  .bar.completed { background: var(--completed); }
+  .bar.failed    { background: var(--failed); }
+  .bar.queued    { background: var(--queued); }
+  .axis { display: grid; grid-template-columns: 180px 1fr; gap: 10px; margin-top: 6px; }
+  .axis div { display: flex; justify-content: space-between; color: var(--muted);
+              font-size: 11px; font-variant-numeric: tabular-nums; }
+
+  /* table */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; color: var(--muted); font-weight: 500;
+       padding: 6px 10px; border-bottom: 1px solid var(--hairline); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--hairline);
+       vertical-align: top; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+  td.t { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink-2); }
+  td .snip { display: block; color: var(--muted); font-size: 12px;
+             font-family: ui-monospace, monospace; margin-top: 2px;
+             overflow-wrap: anywhere; }
+  td .path { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Fleet — open agents</h1>
+  <div class="stamp">snapshot {{GENERATED_AT}} · re-run /fleet to refresh</div>
+</header>
+
+<section>
+  <div class="tiles">
+    <!-- TILE ROW: one tile per status, in this fixed order -->
+    <div class="tile"><div class="n">{{N_RUNNING}}</div><div class="l"><span class="s-running"><span class="dot"></span></span>running</div></div>
+    <div class="tile"><div class="n">{{N_QUEUED}}</div><div class="l"><span class="s-queued"><span class="dot"></span></span>queued</div></div>
+    <div class="tile"><div class="n">{{N_COMPLETED}}</div><div class="l"><span class="s-completed"><span class="dot"></span></span>completed</div></div>
+    <div class="tile"><div class="n">{{N_FAILED}}</div><div class="l"><span class="s-failed"><span class="dot"></span></span>failed</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Timeline</h2>
+  <!-- TIMELINE ROWS: one .lane per agent, ordered by start time -->
+  <div class="lane">
+    <div class="name">build task/03-auth-routes</div>
+    <div class="track"><div class="bar running" style="left:12%;width:88%"
+      title="build task/03-auth-routes — running, started 14:21:07, 11m 12s"></div></div>
+  </div>
+  <div class="axis"><div></div><div><span>{{T0}}</span><span>now</span></div></div>
+</section>
+
+<section>
+  <h2>Agents</h2>
+  <table>
+    <thead><tr><th>Agent</th><th>Status</th><th>Started</th><th>Elapsed</th></tr></thead>
+    <tbody>
+    <!-- TABLE ROWS: one tr per agent, running first, then queued, failed, completed -->
+    <tr>
+      <td>build task/03-auth-routes
+        <span class="snip">running acceptance: npm test -- auth</span>
+        <span class="path">~/.claude/…/tasks/a1b2c3.output</span></td>
+      <td><span class="chip s-running"><b>▶</b>running</span></td>
+      <td class="t">14:21:07</td>
+      <td class="t">11m 12s</td>
+    </tr>
+    </tbody>
+  </table>
+</section>
+</body>
+</html>
+```
