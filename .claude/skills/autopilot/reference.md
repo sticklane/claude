@@ -43,8 +43,9 @@ order is deny → ask → allow.
 shown in this conversation, and lint is clean, or stop after 20 turns
 ```
 
-- The evaluator (Haiku) judges only the transcript — the agent must RUN the
-  commands so output is visible. It cannot call tools itself.
+- The runtime's built-in transcript evaluator (Claude Code: Haiku) judges
+  only the transcript — the agent must RUN the commands so output is
+  visible. It cannot call tools itself.
 - Always bound with "or stop after N turns" / a time clause.
 - Works headless: `claude -p "/goal <condition>"` runs the loop to
   completion in one invocation.
@@ -83,7 +84,11 @@ hook would block the very verdict message the orchestrator needs
 
 The headless worker gets a SELF-CONTAINED prompt — no skill references, no
 subagent fan-out (keep it single-agent), and `--allowedTools` derived from
-the task file's actual acceptance commands plus the tools the steps need:
+the task file's actual acceptance commands plus the tools the steps need.
+The template below is the active runtime profile's rendering — Claude
+Code's; other runtimes substitute their profile's `## Headless` template,
+selected per `runtimes/README.md` (toolkit repo; absent in plugin installs
+and eval fixtures, where the claude-code defaults apply):
 
 ```bash
 claude -p "Read specs/x/tasks/03-api.md. Implement it: write the failing

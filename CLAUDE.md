@@ -23,6 +23,10 @@ skill teaches, and cite it rather than restating it.
   `reference.md`, loaded on demand — never in the SKILL.md body.
 - Agents keep hard output budgets (scout ≤300 words) — they exist to protect
   the caller's context; a verbose agent defeats its purpose.
+- Concrete model names and CLI command templates appear in core files only
+  as the inline Claude default; the mappings for other runtimes live in
+  `runtimes/` profiles — new skills use tier language plus the inline
+  default, never a bare model name.
 - `.claude/` is the source of truth; `antigravity/` is a mirrored port
   (skills near-identical, agents→skills, human-only skills→workflows,
   hooks in Antigravity's JSON shape). When a skill changes here, mirror the

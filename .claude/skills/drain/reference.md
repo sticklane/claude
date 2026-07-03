@@ -182,8 +182,11 @@ recorded.
 The headless worker gets a SELF-CONTAINED single-agent prompt — no skill
 references, no subagent fan-out (the allowlist below has no Task tool, so
 scout/verifier calls would abort under `dontAsk`; this matches the
-autopilot reference's headless rule). One task at a time, from the repo
-root:
+autopilot reference's headless rule). The template below is the
+active runtime profile's rendering — Claude Code's; other runtimes substitute
+their profile's `## Headless` template, selected per `runtimes/README.md`
+(toolkit repo; absent in plugin installs and eval fixtures, where the
+claude-code defaults apply). One task at a time, from the repo root:
 
 ```bash
 git worktree add -b task/NN-<slug> ../<repo>-task-NN

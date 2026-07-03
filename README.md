@@ -56,7 +56,7 @@ questions into the task files instead of stopping on them.
 | `/handoff` | Writes a resume-from-scratch handoff file, then you `/clear` |
 | `/fleet` | Dashboard of this session's open agents — running/queued/completed/failed, status tiles + timeline, as a self-contained HTML snapshot |
 | `/workboard` | Cross-repo dashboard of ALL open work on the machine — specs, task files, handoffs, Kiro/Antigravity state, every Claude Code session — with a needs-attention inbox (blocked / needs-review / stale) |
-| `scout` agent | Haiku, read-only, low effort — answers "where/how does X work" so the main session never reads files to look around |
+| `scout` agent | scout-tier (Claude default: Haiku at low effort), read-only — answers "where/how does X work" so the main session never reads files to look around |
 | `critic` agent | Attacks specs/plans/diffs; high-signal only — confidence-scored findings, false positives filtered the way Anthropic's own review pipeline does |
 | `verifier` agent | Fresh-eyes check of finished work against acceptance criteria, including overfitting-to-tests; evidence over assertion |
 | `rules/token-discipline.md` | Always-loaded token economics: delegate consumption, match model to task, one task per session |
@@ -93,8 +93,8 @@ questions into the task files instead of stopping on them.
 
 ## Token-cost design
 
-- Scouts run **Haiku at low effort**; the expensive model only ever sees
-  their ~300-word reports.
+- Scouts run **scout-tier** (Claude default: Haiku at low effort); the
+  expensive model only ever sees their ~300-word reports.
 - Skills load **on demand** (only name+description cost anything at session
   start); exact hook/permission configs live in per-skill `reference.md`
   files read only when installing; heavy research stays in `docs/`.
@@ -175,6 +175,13 @@ cp ~/agentic-toolkit/antigravity/AGENTS.md .    # merge if you have one
 
 See [antigravity/README.md](antigravity/README.md) for the concept mapping
 and what degrades (notably: no enforced cheap subagents, softer stop gates).
+
+### Other runtimes and models
+
+Claude models are the default. To run the toolkit on another runtime or
+change which models the tiers map to, add a one-line `.claude/runtime.md`
+selecting a profile from [runtimes/](runtimes/README.md); the porting guide
+is [docs/porting.md](docs/porting.md).
 
 Notes:
 
