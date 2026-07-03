@@ -1,6 +1,6 @@
 # Task 02: Task-prioritization research record
 
-Status: in-progress
+Status: done
 Depends on: 01, ../../tournament-votes/tasks/01-majority-votes.md
 Priority: P3
 Budget: 10 turns
@@ -20,4 +20,4 @@ exact content and URLs.
 
 ## Acceptance
 
-- [ ] `grep -qi "task prioritization" docs/external-playbooks.md && sed -n '/[Tt]ask prioritization/,/^## /p' docs/external-playbooks.md | grep -qi "ready set"` -> exit 0 (R4)
+- [x] `grep -qi "task prioritization" docs/external-playbooks.md && sed -n '/[Tt]ask prioritization/,/^## /p' docs/external-playbooks.md | grep -qi "ready set"` -> exit 0 (R4) — verifier PASS, all six pinned URLs + gap + both adopted signals confirmed; see ../evidence/02-research-record.md

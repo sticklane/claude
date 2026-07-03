@@ -270,3 +270,40 @@ the research stays here.
   AGENTS.md-by-default is not honored by gemini-cli (config required).
 - **llms.txt**: published by vendors for their own doc sites; no coding
   tool consumes a repo's llms.txt — skipped here.
+
+## Task prioritization
+
+How the queue orders simultaneously-dispatchable tasks → the optional
+`Priority:` task header, /drain's deterministic tie-break, and
+/breakdown's priority rubric (the task-priority spec). Those artifacts
+apply the practices; the research stays here.
+
+- **Convergence: dependency graph → ready set → waves.** Every surveyed
+  vendor schedules exactly the mechanism this toolkit already has —
+  compute the ready set from the dependency graph, dispatch it in
+  waves. Kiro groups tasks into dependency-ordered waves
+  ([Kiro spec best practices](https://kiro.dev/docs/specs/best-practices));
+  Copilot CLI's fleet dispatches multiple agents a wave at a time
+  ([Copilot fleet](https://github.blog/ai-and-ml/github-copilot/run-multiple-agents-at-once-with-fleet-in-copilot-cli/));
+  ADK's workflow agents provide sequential/parallel/loop ordering
+  mechanisms, not ranking heuristics
+  ([ADK workflow agents](https://adk.dev/agents/workflow-agents/));
+  Jules ships concurrency caps only, with queue prioritization
+  "planned" ([Jules usage limits](https://jules.google/docs/usage-limits/)).
+- **The gap: within-ready-set ranking.** No vendor publishes a rule for
+  which ready task goes first — ordering inside the ready set is
+  universally unspecified. The toolkit's Priority → unblocking-power →
+  path tie-break is therefore ahead of published guidance, not adopted
+  from it.
+- **Adopted signal: pre-assigned priority, one task at a time.**
+  Anthropic's long-running-harness guidance: "choose the
+  highest-priority feature that's not yet done", one at a time, with
+  priority assigned ahead of the run — the agent honors the ordering,
+  it doesn't invent it. → the `Priority:` header (human-editable) and
+  drain's sequential dispatch.
+  [Effective harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
+- **Adopted signal: proof-of-concept milestones first.** OpenAI's
+  PLANS.md pattern for Codex sequences proof-of-concept milestones
+  before the rest — implicit risk-first ordering. → /breakdown's P0
+  rubric line: prove the spec's riskiest assumption first.
+  [Codex exec plans](https://developers.openai.com/cookbook/articles/codex_exec_plans)
