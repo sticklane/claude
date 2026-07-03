@@ -56,7 +56,9 @@ The mechanism, concretely: delegate with the **Agent tool** — subagent type
 run in background so the session stays free. Completion arrives as a
 notification in the main conversation; no polling. Prompt template:
 
-> Execute the task in <file> following .claude/skills/build/SKILL.md.
+> Execute the task in <file> following the build skill's procedure
+> (in-repo: .claude/skills/build/SKILL.md; plugin install: the agentic
+> plugin's build skill).
 > Work only in your worktree, commit to task/NN-<slug>, do not push.
 > Final message: verdict, per-criterion evidence, branch, files changed.
 

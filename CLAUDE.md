@@ -25,6 +25,11 @@ skill teaches, and cite it rather than restating it.
   (skills near-identical, agents→skills, human-only skills→workflows,
   hooks in Antigravity's JSON shape). When a skill changes here, mirror the
   change there in the same commit.
+- `.claude-plugin/` distributes the toolkit as plugin `agentic` (marketplace
+  `agentic-toolkit`); its manifests point at `.claude/` directories, so
+  adding a skill or agent needs no manifest edit (keep both manifest
+  descriptions non-enumerating so that stays true) — but bump `version` in
+  `plugin.json` whenever skill behavior changes.
 
 ## Testing changes
 

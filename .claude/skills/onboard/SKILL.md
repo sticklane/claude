@@ -45,7 +45,8 @@ a procedure, it should be a skill instead.
 
 `.claude/settings.json` allowlist covering exactly the verified commands
 (test/lint/build, git add/commit) with `deny` on `git push` — the autopilot
-reference (.claude/skills/autopilot/reference.md) has the template and
+skill's reference.md (in-repo at .claude/skills/autopilot/reference.md, or
+in the agentic plugin's install directory) has the template and
 syntax rules. Merge into any existing settings file rather than overwriting,
 and keep denies that would annoy attended sessions (like WebFetch) out of
 the shared file — those belong in a personal settings.local.json autonomy

@@ -4,7 +4,8 @@ description: Chooses technology and architecture through structured investigatio
 ---
 
 Resolve the open design/technology decision. Three principles govern
-everything here (see docs/anthropic-playbook.md, "How they choose tech"):
+everything here (see "How they choose tech" in the toolkit repo's
+docs/anthropic-playbook.md — not shipped with installs):
 
 - **Stay on distribution.** Prefer technology the model already knows
   deeply — popular, well-documented, boringly mainstream. An exotic choice
