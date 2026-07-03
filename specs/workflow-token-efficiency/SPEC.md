@@ -73,18 +73,33 @@ only for the hardest verify/judge stages.
   `SYNC_SKILLS_SRC`-style env overrides it already uses so tests never
   touch the real home directory.
 - R6: `bin/check-token-discipline [skills-root]` (default: repo root)
-  exits 0 iff every file in its in-scope list (the five SKILL.md files,
-  their reference.md where dispatch details live, and the deep-research
-  workflow script) passes three checks, and exits 1 with a per-file,
-  per-check report otherwise. Normative definitions: a *dispatch line*
-  matches `/Task\(|agent\(|spawn|dispatch|launch/i`; each dispatch line
-  must have a *tier token* (`haiku`, `session model`, `opts.model`, or
-  `effort`) within ±5 lines. An *output-budget statement* is a line
-  containing a numeric cap or budget word (`≤`, `under N words`, `tokens`,
-  `verdict + evidence`) — at least one per file. A *loop line* matches
-  `/retry|re-dispatch|revise|iterate|cycle/i` and must have a numeric
-  bound within ±3 lines. Exact regexes live in the script; its tests
-  encode these definitions with fixture files. Tests first (`tests/`),
+  exits 0 iff every file in its in-scope list passes three checks, and
+  exits 1 with a per-file, per-check report otherwise. The in-scope
+  list, exactly: `.claude/skills/drain/SKILL.md`,
+  `.claude/skills/drain/reference.md`,
+  `.claude/skills/parallel/SKILL.md`,
+  `.claude/skills/autopilot/SKILL.md`,
+  `.claude/skills/autopilot/reference.md`,
+  `.claude/skills/design/SKILL.md`, `.claude/skills/evals/SKILL.md`,
+  `.claude/skills/evals/reference.md`, and
+  `.claude/workflows/deep-research.js`. Normative definitions — scan
+  lines OUTSIDE YAML frontmatter and skip table rows (lines starting
+  with `|`): a *dispatch line* word-bounded-matches
+  `/Task\(|agent\(|\b(spawn|dispatch|launch)\b.*\b(agent|worker|session)s?\b/i`
+  (so prose like "dispatchable" and frontmatter descriptions don't
+  count); each dispatch line must have a *tier token* (`haiku`,
+  `session model`, `opts.model`, or `effort`) within ±5 lines. An
+  *output-budget statement* is a line containing a numeric cap or budget
+  phrase (`≤`, `under N words`, `tokens`, `verdict + evidence`) — at
+  least one per file. A *loop line* word-bounded-matches
+  `/\b(retry|re-dispatch|relaunch|revise|iterate|cycle|tournament)\b/i`
+  and must have a bound within ±3 lines, where a bound is a numeral 1–4
+  OR a spelled-out cap (`once`, `twice`, `at most one/two/three/four`)
+  — drain's existing "relaunch once … at most one tournament per task"
+  wording must pass unmodified. Exact regexes live in the script; its
+  tests encode these definitions with fixture files, including one
+  copied from drain's retry paragraph (must pass) and one from a
+  frontmatter description (must not trigger). Tests first (`tests/`),
   following the `bin/sync-skills` precedent (commits `05df3ef`/`0629fa7`,
   entrypoint `tests/test_sync_skills.sh` — there is no aggregate runner;
   add `tests/test_check_token_discipline.sh` alongside).
