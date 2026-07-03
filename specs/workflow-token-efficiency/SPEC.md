@@ -147,9 +147,10 @@ only for the hardest verify/judge stages.
 - Any functional change to what a skill does: dispatch shape, worktree
   isolation, verdict schemas, and human-gate placement all stay as-is.
 - Amending `specs/ultra-mode/` or `specs/orchestrator-context/` — the
-  pending research follow-up run owns those docs; if its findings change
-  the adopt-lists, the rule section cites the docs and inherits the change
-  without editing this spec.
+  2026-07-03 research follow-up (commit `7cb3b69`) already updated those
+  docs and amended `orchestrator-context`; this spec's rule section cites
+  the research docs and inherits any adopt-list change without editing
+  those specs.
 
 ## Acceptance criteria
 
