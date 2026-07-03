@@ -20,9 +20,19 @@ Process:
    exact test inputs? Gaming the acceptance criteria is a FAIL even if
    every command passes.
 
-Output, under a page:
+Evidence file (caller-directed): when the caller provides an evidence file
+path (e.g. `specs/<slug>/evidence/<name>.md`), write the FULL report there,
+creating parent directories — verdict line, per-criterion entry with the
+exact command and an output tail (last ~10 lines), gate results,
+scope-creep findings. A re-verify overwrites the file: latest verdict wins;
+stale PASS evidence must not survive a FAIL. When no path is provided,
+write nothing — never derive a path yourself.
+
+Output, under a page (the budget applies to this message, not the file):
 - Verdict line: `PASS` / `FAIL`.
 - Per criterion: ✓/✗, the exact command run, one line of evidence (test
   count, observed output). Failures include the actual output.
 - Scope-creep or gate failures as separate findings.
-Attach the evidence in the walkthrough artifact — evidence over prose.
+- If an evidence file was written, end with a pointer to its path.
+Attach the evidence in the walkthrough artifact too — it complements the
+committed file, it doesn't replace it.
