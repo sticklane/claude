@@ -1,6 +1,6 @@
 # Task 08: Mirror and docs fixes — ag evals/build, external-playbooks, README, tournament SPEC grep
 
-Status: pending
+Status: in-progress
 Depends on: 07
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 08)
