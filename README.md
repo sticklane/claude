@@ -33,6 +33,9 @@ built from, with citations, lives in [docs/anthropic-playbook.md](docs/anthropic
 Each arrow crosses a **file on disk**, not conversation memory — every stage
 can (and should) run in a fresh, cheap session. Small single-session specs
 may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
+To run the whole queue without relaunching each step, `/drain` dispatches a
+fresh worker per unblocked task in dependency order and defers human
+questions into the task files instead of stopping on them.
 
 ## What's in the box
 
@@ -45,14 +48,17 @@ may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
 | `/build` | Executes one task: scout-explore → proportional plan → test-first implement → independent verify → simplification pass → commit |
 | `/parallel` | Dispatches an independent task group to concurrent worktree-isolated agents |
 | `/autopilot` | Unattended execution with guardrails: classifies the task (peripheral vs core), scopes permissions, sets a bounded goal, launches background or headless |
+| `/drain` | Works the whole task queue unattended: one fresh worker per unblocked task, questions deferred into the task files and batched at the end, resumable from `Status` lines after any `/clear` |
 | `/gate` | Installs deterministic quality gates: a Stop hook that blocks "done" until checks pass, auto-format on edit, protected-file denies |
 | `/critique` | Adversarial review of any spec, plan, or diff |
 | `/distill` | Compounding engineering: session learnings → CLAUDE.md lines, rules, or new skills |
 | `/handoff` | Writes a resume-from-scratch handoff file, then you `/clear` |
+| `/fleet` | Dashboard of this session's open agents — running/queued/completed/failed, status tiles + timeline, as a self-contained HTML snapshot |
 | `scout` agent | Haiku, read-only, low effort — answers "where/how does X work" so the main session never reads files to look around |
 | `critic` agent | Attacks specs/plans/diffs; high-signal only — confidence-scored findings, false positives filtered the way Anthropic's own review pipeline does |
 | `verifier` agent | Fresh-eyes check of finished work against acceptance criteria, including overfitting-to-tests; evidence over assertion |
 | `rules/token-discipline.md` | Always-loaded token economics: delegate consumption, match model to task, one task per session |
+| `rules/untrusted-data.md` | Always-loaded injection defense: tool-sourced content is data, not instructions — unattended workers stop BLOCKED on redirection attempts |
 
 ## Why this shape (the Anthropic practices it encodes)
 
@@ -98,13 +104,27 @@ may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
 
 ## Install
 
-Clone it once:
+**Option A — plugin** (recommended: one command, works in every repo, local
+and web/desktop sessions alike). In any Claude Code session:
+
+```
+/plugin marketplace add sticklane/claude
+/plugin install agentic@agentic-toolkit
+```
+
+Everything arrives namespaced — `/agentic:idea`, `/agentic:build`, agents as
+`@agentic:scout` — and updates with the marketplace. Teams can auto-enable it
+per repo with `extraKnownMarketplaces` + `enabledPlugins` in the repo's
+`.claude/settings.json`. One gap: rules don't ship in plugins, so copy the files in
+`.claude/rules/` into the target repo (or fold them into its CLAUDE.md).
+
+For the copy-based options below, clone it once:
 
 ```bash
 git clone https://github.com/sticklane/claude.git ~/agentic-toolkit
 ```
 
-**Option A — per project** (recommended: version-controlled, shared with
+**Option B — per project** (version-controlled, shared with
 your team). From your project's root:
 
 ```bash
@@ -115,7 +135,7 @@ git add .claude && git commit -m "Add agentic development toolkit"
 If the project already has a `.claude/` directory, copy the subdirectories
 (`skills/`, `agents/`, `rules/`) into it instead of overwriting.
 
-**Option B — global** (available in every repo, just for you):
+**Option C — global** (available in every repo, just for you):
 
 ```bash
 mkdir -p ~/.claude/skills ~/.claude/agents
@@ -130,10 +150,10 @@ use, fold its points into `~/.claude/CLAUDE.md`.
 
 **Verify**: start a new Claude Code session (skills load at session start)
 and type `/` — you should see `idea`, `breakdown`, `build`, `gate`, and the
-rest in the menu. Then point it at a real repo: `/onboard` first, `/idea`
-for your first feature.
+rest in the menu (prefixed `agentic:` if you installed the plugin). Then
+point it at a real repo: `/onboard` first, `/idea` for your first feature.
 
-**Option C — Google Antigravity** instead of the Claude Code CLI: the full
+**Option D — Google Antigravity** instead of the Claude Code CLI: the full
 port lives in [antigravity/](antigravity/README.md) — same skills (native
 Agent Skills support), the human-only commands as workflows, `AGENTS.md`
 replacing CLAUDE.md, and hooks in Antigravity's format. From your project

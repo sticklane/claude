@@ -5,8 +5,8 @@ argument-hint: "[path/to/SPEC.md or the decision to make]"
 ---
 
 Resolve the open design/technology decision in $ARGUMENTS. Three principles
-govern everything here (see docs/anthropic-playbook.md, "How they choose
-tech"):
+govern everything here (see "How they choose tech" in the toolkit repo's
+docs/anthropic-playbook.md — not shipped with installs):
 
 - **Stay on distribution.** Prefer technology the model already knows deeply
   — popular, well-documented, boringly mainstream. Anthropic chose Claude

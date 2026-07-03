@@ -32,6 +32,7 @@ be listed. Type `/idea` in the agent input to test a workflow.
 | Hooks in `.claude/settings.json` | `.agents/hooks.json` (different JSON shape — the gate skill's reference has the port) |
 | Permission allowlists in settings.json | Terminal Execution Policy (Settings UI): Off/Auto/Turbo + deny list — not a checked-in file |
 | `/goal`, Stop-hook gates | Artifact review: implementation plan pause + walkthrough evidence, plus PostToolUse hooks |
+| `/fleet` open-agents dashboard | Not ported — Antigravity's Agent Manager is this surface natively |
 
 ## What degrades (be aware)
 
