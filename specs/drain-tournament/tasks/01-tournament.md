@@ -1,6 +1,6 @@
 # Task 01: Tournament stage in /drain
 
-Status: pending
+Status: in-progress
 Depends on: ../../evidence-artifacts/tasks/01-evidence.md (drain SKILL.md + reference.md overlap; cross-spec waves in ../SPEC.md)
 Budget: 50 turns
 Spec: ../SPEC.md (requirements R1–R6)
