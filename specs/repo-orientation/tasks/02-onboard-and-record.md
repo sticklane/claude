@@ -1,6 +1,6 @@
 # Task 02: Onboard encodes the practices; research record; mirror
 
-Status: pending
+Status: in-progress
 Depends on: 01, ../../chaining-antipatterns/tasks/02-chain-implementation.md, ../../context-management/tasks/04-reference-tocs-research-record.md, ../../code-vs-llm/tasks/01-ladder.md
 Priority: P2
 Budget: 25 turns
