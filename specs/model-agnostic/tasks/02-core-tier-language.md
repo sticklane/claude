@@ -1,6 +1,6 @@
 # Task 02: Core prose to tier language with fallback-safe citations
 
-Status: pending
+Status: in-progress
 Depends on: 01, ../../review-fixes/tasks/01-plugin-manifest.md, ../../review-fixes/tasks/08-mirrors-and-docs.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R2, R3, R4, R5 (citations), R9, R11)
