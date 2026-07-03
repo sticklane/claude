@@ -72,6 +72,13 @@ skills, so the prompt must carry a readable path). Prompt template:
 Requires Claude Code v2.1.172+ for the worker to spawn its own
 scouts/verifiers; on older versions use headless dispatch below.
 
+Gate interaction: in a repo with gate's Stop hook installed, walk-away
+sessions rely on the hook's sanctioned stop bypass — a worker's final
+message beginning with a verdict line (`DEFERRED`, `BLOCKED`,
+`INCOMPLETE`) passes the gate even while checks are red; without it the
+hook would block the very verdict message the orchestrator needs
+(mechanism in the gate skill's reference).
+
 ## Headless (CI, scripts, cron)
 
 The headless worker gets a SELF-CONTAINED prompt — no skill references, no

@@ -138,3 +138,15 @@ per-turn "block done until green" hook. The equivalent discipline:
 - Walkthrough artifacts must contain the acceptance commands' actual output
   (the verifier skill enforces this in review).
 - CI as the hard backstop: the same check commands run on push.
+
+Unattended workers are contractually REQUIRED to end mid-red with a final
+message beginning with a verdict line — `DEFERRED`, `BLOCKED`, or (from
+the verifier) `INCOMPLETE`. Such an ending is a **sanctioned stop**: the
+review-side gates above must not read it as a failed exit. This mirrors the Claude Code
+gate's Stop-hook bypass, which reads the last assistant message from the
+transcript tail and runs `grep -qE '^(DEFERRED|BLOCKED|INCOMPLETE)\b'` on
+its first line before exiting 2. Antigravity's hook stdin JSON
+(`hook_event_name`, `cwd`, `toolCall.args`) carries no transcript path, so
+any session-end script you add must read the final message from the
+walkthrough artifact instead — or leave the check review-side, where the
+verifier skill applies the same verdict-line rule.

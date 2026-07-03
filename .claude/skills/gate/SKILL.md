@@ -43,7 +43,11 @@ What it installs (semantics in reference.md):
    exits 2 with the failure output as reason, so Claude keeps working until
    green. Loop safety is Claude Code's built-in cap — it force-ends the
    turn after 8 consecutive blocks without progress
-   (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` raises it).
+   (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` raises it). A final message beginning
+   with a verdict line (`DEFERRED`, `BLOCKED`, or `INCOMPLETE`) is a
+   sanctioned stop the hook lets through — unattended workers stop mid-red
+   by contract, and blocking them would trap them in a loop (mechanism in
+   reference.md).
 2. **Auto-format**: `PostToolUse` on `Edit|Write` piping the edited file to
    the project's formatter — style stops consuming review attention.
 3. **Protected files**: `PreToolUse` on `Edit|Write` denying edits to

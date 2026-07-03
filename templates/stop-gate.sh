@@ -24,6 +24,21 @@ if [ "$active" = "true" ]; then
   exit 0  # loop protection: a previous Stop-hook rejection is already active
 fi
 
+# Sanctioned stop: unattended workers are contractually required to stop
+# mid-red with a final message beginning with a verdict line (DEFERRED,
+# BLOCKED, or the verifier's INCOMPLETE) — let such a stop through instead
+# of trapping the worker in a block loop.
+transcript="$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null || true)"
+if [ -n "$transcript" ] && [ -r "$transcript" ]; then
+  last="$(tail -50 "$transcript" \
+    | jq -rs '[.[] | select(.type == "assistant")] | last
+              | .message.content[]? | select(.type == "text") | .text' \
+    2>/dev/null || true)"
+  if printf '%s' "$last" | head -1 | grep -qE '^(DEFERRED|BLOCKED|INCOMPLETE)\b'; then
+    exit 0
+  fi
+fi
+
 # Resolve the repo root: hook JSON cwd if present, else current directory,
 # widened to the enclosing git toplevel when available.
 hook_cwd="$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null || true)"
