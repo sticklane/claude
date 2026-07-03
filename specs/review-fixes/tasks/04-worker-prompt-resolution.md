@@ -1,6 +1,6 @@
 # Task 04: Worker prompts — resolve build skill path at dispatch, forward Budget, pin format
 
-Status: pending
+Status: in-progress
 Depends on: 03
 Budget: 40 turns
 Spec: ../SPEC.md (cluster 04)
