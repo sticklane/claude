@@ -69,5 +69,6 @@ with the runner-up and the one scenario that would flip it. Then record:
   introduce Z") — only if the decision is repo-wide, and it passes the
   "would removing this cause mistakes?" test.
 
-Next step: `/breakdown specs/<slug>/SPEC.md` (or `/build specs/<slug>/SPEC.md`
-for small specs).
+Close with:
+`Next stage: /breakdown specs/<slug>/SPEC.md (human-launched; /build
+specs/<slug>/SPEC.md for small specs)`.

@@ -53,7 +53,11 @@ order cannot resolve are surfaced, not guessed.
   single-line `Key: value` headers above the file's first `##` heading;
   body sections are for humans and workers, never for orchestrator parsing.
 - Every skill that produces an artifact must say where the file goes and what
-  the next pipeline step is.
+  the next pipeline step is, and closes with a `Next stage:` line naming the
+  next skill and the artifact path, marked "(self-chains per conventions)"
+  or "(human-launched)". Terminal skills whose successor is genuinely a user
+  action write `Next stage: none — <user action>`; never invent a stage to
+  satisfy the format.
 - Exact config JSON (hooks, permissions, headless flags) lives in a skill's
   `reference.md`, loaded on demand — never in the SKILL.md body.
 - Agents keep hard output budgets (scout ≤300 words) — they exist to protect

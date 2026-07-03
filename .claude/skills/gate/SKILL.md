@@ -68,5 +68,6 @@ turn with a failing check (Stop hook blocks with the failure as reason).
 An uninstalled-but-described gate is the trust-then-verify gap in miniature.
 
 Files land in `.claude/settings.json` + `.claude/hooks/*.sh` — commit both
-so the whole team's agents get the same gates. Next step: with gates in
-place, tasks qualify for `/autopilot`.
+so the whole team's agents get the same gates; with gates in place, tasks
+qualify for `/autopilot`. Close with:
+`Next stage: /autopilot specs/<slug>/tasks/NN-*.md (human-launched)`.

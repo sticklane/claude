@@ -51,4 +51,5 @@ ignored and cost tokens every single session.
   lines, procedures as checklists. Heavy reference material goes in a
   separate file in the skill directory, loaded on demand.
 - Show the user a one-line summary per learning captured (or "nothing worth
-  keeping" — a valid outcome).
+  keeping" — a valid outcome), then close with:
+  `Next stage: none — lessons land in CLAUDE.md/rules`.

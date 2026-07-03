@@ -22,4 +22,5 @@ outperforms a long session with accumulated corrections.
 3. Run /distill first if there were corrections worth keeping — handoff
    preserves state, distill preserves lessons; they're different.
 4. Tell the user: `/clear`, then resume with
-   "Read <path>/HANDOFF.md and continue."
+   "Read <path>/HANDOFF.md and continue." Close with:
+   `Next stage: none — /clear and resume from the handoff file`.

@@ -49,6 +49,7 @@ rule, because exercising the real skill text is the entire point.
   as the skill change. Never loosen an assertion just to go green.
 
 Artifacts: scenarios live in `evals/<skill>/<NN-name>/`, committed; the
-runner is `evals/run.sh`. Next pipeline step: run the affected evalset
-before committing any skill change; if a failure exposed a
-skill-authoring gap, /distill the lesson.
+runner is `evals/run.sh`. If a failure exposed a skill-authoring gap,
+/distill the lesson. Close with:
+`Next stage: /evals <skill> before committing any change to that skill
+(human-launched)`.
