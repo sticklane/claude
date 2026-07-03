@@ -1,6 +1,6 @@
 # Task 01: Discovered work, append-only task files, stopping points
 
-Status: pending
+Status: in-progress
 Depends on: ../../review-fixes/tasks/07-evals-distribution-and-evidence.md, ../../context-management/tasks/03-tool-call-ceilings.md, ../../task-priority/tasks/01-priority-and-tiebreak.md, ../../tournament-votes/tasks/01-majority-votes.md
 Priority: P1
 Budget: 40 turns
