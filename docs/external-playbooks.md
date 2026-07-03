@@ -307,3 +307,25 @@ apply the practices; the research stays here.
   before the rest — implicit risk-first ordering. → /breakdown's P0
   rubric line: prove the spec's riskiest assumption first.
   [Codex exec plans](https://developers.openai.com/cookbook/articles/codex_exec_plans)
+
+## Workflow scripts (ultracode)
+
+How deterministic multi-agent orchestration ships → the
+workflow-author skill and its templates (the workflow-author spec).
+Those artifacts apply the practices; the research stays here.
+
+- **Plugins cannot ship workflows** (re-verified 2026-07-03 in
+  `specs/workflow-author/evidence/01.md`): the plugin schema has no
+  workflows component, and saved workflows load only from a repo's
+  `.claude/workflows/` or `~/.claude/workflows/`
+  ([workflows](https://code.claude.com/docs/en/workflows.md)). A
+  skill that writes the script into the consuming repo is therefore
+  the distribution path.
+- **The opt-in gate is a human trigger.** Running a workflow stays
+  behind the ultracode opt-in / named invocation — landing on the
+  same spend/blast-radius boundary as the five gated execution
+  stages; rationale in docs/human-gates.md (cited, not restated).
+- **Orchestration degradations for other runtimes** live in the
+  `runtimes/` profiles' `## Orchestration` sections (per the
+  model-agnostic spec, `specs/model-agnostic/SPEC.md`) — e.g.
+  Antigravity degrades to human-dispatched launch-list workflows.
