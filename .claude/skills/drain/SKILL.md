@@ -28,8 +28,10 @@ Read only the header fields of each task file (`Status`, `Depends on`,
 **dispatchable** when `Status: pending` and every dependency is `done`.
 Report the plan in one block: dispatch order, what's already done, what's
 deferred/blocked and why. Any `in-progress` with no live worker is a dead
-worker's lock: discard its branch/worktree if present (slot machine — never
-resume a dead run), flip it to `pending`, commit the flip.
+worker's lock: discard its branch/worktree if present, along with any
+`task/NN-<slug>-t*` tournament branches/worktrees a crashed run left behind
+(slot machine — never resume a dead run), flip it to `pending`, commit the
+flip.
 
 ## 2. Dispatch one worker
 
@@ -56,8 +58,18 @@ has the headless fallback — a different, self-contained prompt.)
   `Status: done`, ticked boxes, and the verifier's `evidence/` file, per
   /build) and run the project gates.
   If the merge or gates fail: slot machine — discard the branch, relaunch
-  once with the failure evidence in the prompt; on a second failure write
-  `Status: failed` with the evidence and commit.
+  once with the failure evidence in the prompt. A second failure routes
+  into one tournament (at most one per task per drain run; procedure in
+  reference.md "Tournament") instead of straight to `Status: failed`:
+  sweep any leftover `task/NN-<slug>-t*` branches/worktrees, then dispatch
+  three concurrent background workers, `isolation: worktree`, each on its
+  own `task/NN-<slug>-tN` branch with an angle-variant prompt carrying the
+  failure evidence from both prior attempts. Log one line before dispatch:
+  a tournament costs ~3 more worker runs. Skip it — straight to the
+  tournament's verdict routing with the two prior verdicts — when either
+  prior attempt returned BLOCKED over budget: budget is the one signal
+  drain already holds, and three more capped runs would buy three more
+  BLOCKEDs.
 - **DEFERRED** — the verdict message contains the question. Drain writes
   it into the main-checkout task file under `## Deferred questions`, sets
   `Status: deferred`, commits, and discards the worker's branch/worktree.
