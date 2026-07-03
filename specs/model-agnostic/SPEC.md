@@ -51,11 +51,12 @@ vacuously. Product-internal models the toolkit does not choose (the
   absent in plugin installs and eval fixtures, where the claude-code
   defaults above apply)". `critic.md` and `verifier.md` need no change
   (`model: inherit` is already tier-neutral).
-- R3: prose model mentions in exactly two files become tier language with
-  the Claude default in parentheses, using the phrase "scout-tier"
-  verbatim, covering every bare model mention in those files:
-  `.claude/rules/token-discipline.md` ("Mechanical or lookup work →
-  scout-tier (Claude default: Haiku at low effort)") and `README.md`'s
+- R3: prose model mentions in exactly two files become tier language
+  with the Claude default in parentheses, using the phrase "scout-tier"
+  verbatim — all four Haiku mentions, no others:
+  `.claude/rules/token-discipline.md` line ~10 (the scout definition)
+  and line ~21 ("Mechanical or lookup work → scout-tier (Claude default:
+  Haiku at low effort)"), and `README.md`'s scout table row and
   token-cost bullet. The autopilot and gate references' Haiku mentions
   are NOT tier vocabulary — they describe Claude Code's built-in `/goal`
   transcript evaluator, which no profile selects; reword those two lines
@@ -84,7 +85,9 @@ vacuously. Product-internal models the toolkit does not choose (the
     `timeout 900` wrapper, with the scenario's prompt appended as the
     final argument; the scenario's resolved allowlist is exported to the
     child as `ALLOWED_TOOLS` (custom runners consume or ignore it —
-    documented either way). When unset, behavior is byte-identical to
+    documented either way). Because execution happens inside the fixture
+    dir, `RUNNER_CMD`'s first word must be absolute or PATH-resolvable —
+    documented next to the override. When unset, behavior is byte-identical to
     today's `claude -p … --allowed-tools …` invocation.
   - `evals/run.sh` honors `EVALS_ROOT` (env): scenario discovery scans
     `$EVALS_ROOT/<skill>/<NN-name>/` instead of the toolkit's `evals/`;
@@ -96,7 +99,7 @@ vacuously. Product-internal models the toolkit does not choose (the
   - `evals/runner-selftest.sh` ships: builds a throwaway scenario tree
     under `mktemp -d` (naming a real, small toolkit skill — e.g.
     handoff — so provisioning succeeds), then invokes
-    `EVALS_ROOT=<tmp> RUNNER_CMD=${RUNNER_CMD:-./evals/stub-cli.sh}
+    `EVALS_ROOT=<tmp> RUNNER_CMD="${RUNNER_CMD:-$(pwd)/evals/stub-cli.sh}"
     ./evals/run.sh <skill>` and asserts the runner's pass/fail plumbing
     (PASS line, exit 0; then a deliberately failing assert → FAIL line,
     exit 1). The selftest scenario is never discoverable by a plain
