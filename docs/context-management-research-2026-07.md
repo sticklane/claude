@@ -4,6 +4,8 @@
 > failed on usage credits, so OpenAI/Google/Meta/xAI legs are UNVERIFIED — all
 > findings below are Anthropic primary sources, 3-vote verified). Commissioned
 > for `specs/orchestrator-context/SPEC.md` (drain & co. self-managing context).
+> The OpenAI/Google leg was closed by a same-day follow-up run — see
+> "Follow-up findings (2026-07-03)" below.
 
 ## Summary
 
@@ -94,9 +96,99 @@ Evidence: Derived recommendation, but every element maps to a 3-0 confirmed clai
 - https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
 - https://platform.claude.com/cookbook/tool-use-context-engineering-context-engineering-tools
 
+## Follow-up findings (2026-07-03)
+
+A same-day follow-up deep-research run (106 agents; 24 claims confirmed 3-0,
+1 refuted, 0 unverified) closed the OpenAI/Google leg with primary sources
+only, all fetched live 2026-07-03. The Anthropic re-verification leg (leg B)
+produced zero surviving claims for the second time — see the rewritten
+Caveats. This section answers the first open question below.
+
+### OpenAI (Agents SDK + Cookbook)
+
+- **Sessions are the sanctioned memory abstraction** (3-0 on three merged
+  claims): history is auto-retrieved/prepended before each run and stored
+  after, per session ID — "the session becomes the memory object."
+  https://openai.github.io/openai-agents-python/sessions/ ·
+  https://cookbook.openai.com/examples/agents_sdk/session_memory
+- **Trimming AND compaction are built in** (3-0; the contrary claim refuted
+  0-3): `SessionSettings(limit=N)` and `session_input_callback` for trimming;
+  `OpenAIResponsesCompactionSession` auto-compacts (clears and rewrites
+  history), with docs recommending disabling the auto trigger and calling
+  `run_compaction()` manually at idle points for latency-sensitive apps.
+  **This corrects the prior belief — carried in the follow-ups brief, though
+  never asserted in this doc's findings — that OpenAI lacks built-in
+  compaction; do not repeat the refuted call_model_input_filter framing.**
+  https://openai.github.io/openai-agents-python/sessions/
+- **An explicit trim-vs-summarize rule of thumb** (3-0 on three merged
+  claims): trim (keep last N turns, deterministic) when tasks are
+  local/independent; summarize (≤200-word synthetic summary with an
+  anti-hallucination instruction) only when decisions, IDs, and constraints
+  must survive — flagging summary drift, compounding errors, and context
+  poisoning as the costs. Cookbook example patterns, not SDK API parameters.
+  https://cookbook.openai.com/examples/agents_sdk/session_memory
+- **Checkpointing model** (3-0 on four merged claims): persistent session
+  backends (SQLite/SQLAlchemy/Redis/MongoDB/Dapr/hosted Conversations) carry
+  history across restarts; the JS SDK's `RunState` is a serializable
+  checkpoint (`toString()`/`fromString()`) taken at human-in-the-loop
+  interruption points; durable failure recovery is deferred to
+  Temporal/Dapr/Restate/DBOS rather than built into the SDK.
+  https://openai.github.io/openai-agents-python/running_agents/ ·
+  https://openai.github.io/openai-agents-js/openai/agents/classes/runstate/
+
+### Google (ADK + Gemini)
+
+- **ADK ships built-in compaction** (3-0 on two merged claims):
+  `EventsCompactionConfig` with `token_threshold` and `compaction_interval`
+  triggers; it summarizes-not-deletes, keeping `event_retention_size` recent
+  events raw and overlapping `overlap_size` prior events into each new
+  summary (Python; TypeScript uses TokenBasedContextCompactor, Java documents
+  only interval/overlap). https://google.github.io/adk-docs/context/compaction/
+- **Three-tier state architecture, all outside the context window** (3-0 on
+  six merged claims): SessionService owns session lifecycle with swappable
+  backends; `session.state` is a prefix-scoped scratchpad (`user:`, `app:`,
+  `temp:`); Memory is a searchable cross-session store populated by explicit
+  end-of-session ingestion (`add_session_to_memory`) — the sanctioned
+  external-memory/handoff pattern is a queried service, not compaction of the
+  live thread. https://google.github.io/adk-docs/sessions/ ·
+  https://google.github.io/adk-docs/sessions/state/ ·
+  https://google.github.io/adk-docs/sessions/memory/
+- **Gemini cache economics** (3-0 on four merged claims): implicit caching is
+  on by default for Gemini 2.5+ with stable-prefix ordering as the official
+  hit-maximizing pattern; cached input is ~10% of standard price; explicit
+  caches add a per-hour storage fee ($4.50/1M/hr Pro-tier, $1.00/1M/hr
+  Flash-tier) — an idle carrying cost, unlike Anthropic's one-time TTL-based
+  cache-write premium. https://ai.google.dev/gemini-api/docs/caching ·
+  https://ai.google.dev/gemini-api/docs/pricing
+
+### Does any of this change the adopt-list?
+
+No. Nothing in the "What to adopt for the /drain orchestrator" finding is
+overturned; the cross-vendor evidence independently corroborates the core
+doctrine (relaunch from durable external artifacts; state owned by services
+outside the window; summaries risk drift/poisoning). Three refinements:
+(1) the open item "no concrete clear-vs-continue rule of thumb" now has a
+vendor-explicit answer from OpenAI — trim/clear when turns are independent,
+compact/summarize only when decisions/IDs/constraints must persist — which
+maps directly onto /drain's relaunch-at-task-boundaries trigger and
+strengthens it (drain's decisions live in committed task files, so
+clear-and-relaunch is the right side of the criterion); (2) any residual
+belief that OpenAI lacks built-in compaction should be deleted, and OpenAI's
+disable-auto-compaction-run-manually-at-idle guidance parallels Anthropic's
+clear-in-large-batches cache advice; (3) the cache-economics item gains a
+Gemini footnote — implicit caching makes fresh-relaunch re-reads cheap
+automatically, but explicit caches carry idle cost, so on Gemini prefer
+implicit; irrelevant while the toolkit targets Claude.
+
+### What did not close
+
+Leg B (the six Anthropic re-verification targets) produced zero surviving
+claims on this second attempt; Meta and xAI produced nothing at all, leaving
+it unresolved whether they publish first-party guidance.
+
 ## Caveats
 
-1) Vendor coverage is Anthropic-only: every claim that survived 3-vote verification is from Anthropic primary sources. OpenAI (Agents SDK session/trimming/summarization), Google/DeepMind (ADK/Gemini context caching, session state), Meta, and xAI guidance either wasn't collected or didn't survive verification, so the report cannot compare vendors or confirm industry-wide consensus — only that Anthropic's guidance is internally consistent and well-documented. 2) Eight claims could not be verified due to infrastructure errors (all three verifier votes errored, neither confirmed nor refuted). These include several highly relevant items: Claude Code's stated context-degradation symptoms and the concrete '/clear after more than two failed corrections' threshold; auto-compact customization via CLAUDE.md and /compact <instructions>; the memory-tool warning-before-clear integration; compaction-as-primary vs context-editing positioning; and the entire Managed Agents checkpoint-and-relaunch pattern (wake(sessionId), getEvents(), durable session log, warning against irreversible pruning). Treat those as plausible but uncited. 3) Time-sensitivity: 'public beta' descriptors reflect launch-time status (Sonnet 4.5, Sept 2025); the memory tool is now GA and context editing uses beta headers that may change. Docs were verified live as of 2026-07-03; the cookbook page is dated 2026-03-20. 4) No confirmed source gives a numeric threshold for when an ORCHESTRATOR specifically should hand off to a fresh instance — the 100k default is for tool-result clearing, and the harness guidance prescribes session boundaries at task/feature boundaries rather than token counts; the adoption finding's trigger guidance is an inference. 5) Prompt-cache TTL economics (5-minute vs 1-hour cache, cost of full re-read on relaunch) were not among the verified claims; only the clear_at_least invalidation rule is confirmed.
+1) Vendor coverage for context management is now Anthropic + OpenAI + Google: the 2026-07-03 follow-up run closed the OpenAI (Agents SDK sessions/trimming/compaction/checkpointing) and Google (ADK compaction/session-state/memory, Gemini caching) legs with 24 unanimous primary-source claims. Meta and xAI remain uncovered — no surviving claims in either run, and it is unresolved whether they publish first-party agent context-management guidance at all. 2) The leg-B Anthropic items remain unverified after TWO attempts (infrastructure errors in the first run, zero surviving claims in the second): Claude Code's context-degradation symptoms and the '/clear after more than two failed corrections' threshold; auto-compact customization via CLAUDE.md and /compact <instructions>; the memory-tool warning-before-clear integration; compaction-as-primary vs context-editing positioning; and the Managed Agents checkpoint-and-relaunch pattern (wake(sessionId), getEvents(), durable session log, warning against irreversible pruning). Treat those as plausible but uncited. 3) One claim was formally refuted in the follow-up (call_model_input_filter as OpenAI's trimming mechanism / no built-in OpenAI compaction) — do not repeat that framing; also note OpenAI's trim/summarize strategies are official Cookbook example patterns, not SDK API parameters (the built-in equivalents are SessionSettings and OpenAIResponsesCompactionSession), and ADK's token_threshold is Python-specific with docs mid-migration from google.github.io/adk-docs to adk.dev. 4) Time-sensitivity: 'public beta' descriptors reflect launch-time status (Sonnet 4.5, Sept 2025); the memory tool is now GA and context editing uses beta headers that may change. All docs were verified live as of 2026-07-03; the cookbook page is dated 2026-03-20; Gemini pricing and minimum cache-token thresholds already changed across the 2.5→3.x lineup and will change again. 5) No confirmed source gives a numeric threshold for when an ORCHESTRATOR specifically should hand off to a fresh instance — the 100k default is for tool-result clearing, OpenAI's trim-vs-summarize criterion is qualitative, and the harness guidance prescribes task/feature boundaries rather than token counts; the adoption finding's trigger guidance is an inference. 6) Prompt-cache TTL economics for the Anthropic relaunch-vs-compact trade-off (5-minute vs 1-hour cache, cost of full re-read on relaunch) remain unquantified; only the clear_at_least invalidation rule is confirmed, and the new Gemini numbers are vendor-specific (implicit-cache savings are best-effort; the all-in explicit-cache discount is below 90% once storage is counted).
 
 ## Open questions
 

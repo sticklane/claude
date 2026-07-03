@@ -183,3 +183,17 @@ the queue.
 
 (none — trigger, mechanism, scope, and cap decided in interview; vendor
 comparison caveat is recorded, not blocking)
+
+## Amendments
+
+- **2026-07-03** — The OpenAI/Google context-management leg (see Out of
+  scope: "Cross-vendor calibration — blocked on the unverified OpenAI/Google
+  legs") has since verified (docs/context-management-research-2026-07.md,
+  "Follow-up findings (2026-07-03)"). No mechanism changes: OpenAI's explicit
+  criterion — trim/clear when turns are independent, summarize only when
+  decisions/IDs/constraints must survive — corroborates relaunching at task
+  boundaries, since drain's decisions live in committed task files, not in
+  context. R7's decisions doc should record cross-vendor corroboration
+  (Anthropic + OpenAI + Google) in place of the now-stale "Anthropic-only"
+  vendor-coverage caveat; the remaining gap is the leg-B Anthropic
+  re-verification items (still unverified after two attempts).
