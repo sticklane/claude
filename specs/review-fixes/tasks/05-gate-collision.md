@@ -1,6 +1,6 @@
 # Task 05: Gate Stop hook — verdict-line bypass for unattended workers' contractual stops
 
-Status: pending
+Status: in-progress
 Depends on: 02, 04
 Budget: 24 turns
 Spec: ../SPEC.md (cluster 05)
