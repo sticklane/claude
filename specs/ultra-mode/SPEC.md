@@ -55,14 +55,30 @@ Research-derived design rules baked into the templates:
 
 ## Requirements
 
+- R0 (sequencing/dependency): `runtimes/` does not exist yet — it is created
+  by `specs/model-agnostic/SPEC.md` (tasks queued in `specs/QUEUE.md`). Either
+  model-agnostic lands first, or this spec's implementer creates
+  `runtimes/claude-code.md` with model-agnostic R1's structure (`## Tiers` /
+  `## Headless` / `## Notes`) before adding the section below — the added
+  fourth section is a sanctioned superset of model-agnostic R1's
+  three-section minimum (cross-reference it there so a later model-agnostic
+  implementer doesn't "normalize" it away). Add ultra-mode to `specs/QUEUE.md`
+  with this dependency edge.
 - R1: `runtimes/claude-code.md` gains an `## Orchestration (ultra)` section
-  containing: the two-condition gate above; a workflow-script template per
-  ultra variant (critique panel, drain/parallel dispatch, verification votes,
-  idea fan-out) using the Workflow tool's real API (agent/parallel/pipeline/
-  phase/budget); the effort-tier prompt language; and resume instructions
+  containing: the two-condition gate above (including WHERE the ultracode
+  opt-in rules are defined: the Workflow tool's own tool description — the
+  profile section restates the opt-in forms: "ultracode" keyword, session
+  flag, or the user's own explicit ask); a workflow-script template per ultra
+  variant (critique panel, drain/parallel dispatch, verification votes, idea
+  fan-out); the effort-tier prompt language; and resume instructions
   (scriptPath + resumeFromRunId, plus the rule that task-file state is the
   durable checkpoint — a resumed run re-reads `Status:` lines before
-  dispatching).
+  dispatching). **API verification step (mandatory, first):** the API names
+  used here (agent/parallel/pipeline/phase/log/budget; scriptPath +
+  resumeFromRunId; budget.remaining()) were recorded from a live Workflow
+  tool schema on 2026-07-03, but the implementer MUST re-verify against the
+  live tool schema in-session before writing templates, and template
+  comments must note the schema-check date.
 - R2: **critique**: SKILL.md documents the ultra path — a panel of 3–5
   lens-diverse critics (correctness, security, verification-gaps, scope,
   cost-if-missed) run in parallel over the same artifact pointer, findings
@@ -72,7 +88,10 @@ Research-derived design rules baked into the templates:
   worth 10×+ tokens (pre-implementation specs, security-sensitive diffs, "be
   thorough" asks).
 - R3: **drain and parallel**: SKILL.md documents the ultra dispatch path — the
-  spec's `## Parallelization` groups compile into a workflow script: pipeline
+  dependency graph compiles **from the task files' `Depends on:` headers**
+  (the machine-readable source drain already uses; a spec's
+  `## Parallelization` section is a human view and, per QUEUE.md, often just a
+  pointer) into a workflow script: pipeline
   over groups (barrier only between dependency groups), one worker agent per
   task file (worktree isolation, same worker prompt as today with the
   effort-tier language added), verifier per completed task, and drain's
@@ -91,12 +110,16 @@ Research-derived design rules baked into the templates:
   plus a completeness critic before the interview, replacing the 2–4 ad-hoc
   scouts only when the gate is open and the idea spans multiple repos or
   subsystems.
-- R6: Every ultra reference in skill text is gated language ("when the active
-  runtime profile has an Orchestration section and the ultracode opt-in is
-  active…") so plugin installs and eval fixtures — which have no `runtimes/`
-  — read as today's skills verbatim. The evals suite gets a fixture assertion
-  that each touched SKILL.md mentions the gate alongside every ultra mention
-  (artifact-level check, no workflow execution in evals).
+- R6: Every ultra reference in skill text lives under a dedicated
+  `## Ultra path` heading and uses gated language containing the literal
+  marker phrase **"active runtime profile"** so plugin installs and eval
+  fixtures — which have no `runtimes/` — read as today's skills verbatim.
+  Enforcement is a standalone, model-free lint script
+  `evals/lint-ultra-gate.sh`: for each of the five touched SKILL.md files, a
+  case-insensitive match of "ultra" must have the literal string "active
+  runtime profile" within ±3 lines; exits non-zero listing violations. It is
+  NOT wired into `evals/run.sh` (which runs model sessions per scenario);
+  it's invoked directly and referenced from the testing section of CLAUDE.md.
 - R7: A decision record `docs/decisions/orchestration.md` captures: the
   adopt/leave-model-driven split, the effort tiers, the cost figures with
   their baseline ambiguity, the single-agent default, and links to
@@ -104,9 +127,20 @@ Research-derived design rules baked into the templates:
   two deliberate non-adoptions: no auto-ultra heuristics, and no multi-judge
   voting as the default verifier (single-call rubric judge instead), with the
   research citations.
-- R8: Toolkit hygiene: `bash tests/…` (existing suite) still passes; the four
-  touched SKILL.md files stay within their current length discipline (the
-  ultra sections are ≤ 25 lines each, detail lives in the runtime profile).
+- R8: Toolkit hygiene: `bash evals/lint-ultra-gate.sh` passes (there is no
+  `tests/` dir in this repo; the model-driven suite `evals/run.sh` requires
+  model access and is run per changed skill only where an evalset exists —
+  not a gate for this spec); each of the **five** touched SKILL.md files
+  (critique, drain, parallel, build, idea) keeps its `## Ultra path` section
+  ≤ 25 lines, detail in the runtime profile.
+- R9: Repo authoring conventions (CLAUDE.md) are honored: the antigravity/
+  mirror gets the corresponding skill-text changes in the same commit (the
+  gate reads as permanently closed there — Antigravity has no Workflow tool
+  or runtimes/, so mirrored text must degrade to a no-op mention or be
+  adapted per the mirror's existing porting pattern), and
+  `.claude-plugin/plugin.json` `version` is bumped since skill behavior
+  changes. Note the plugin install ships without `runtimes/`, so plugin
+  users always see the closed-gate path — by design.
 
 ## Out of scope
 
@@ -124,28 +158,34 @@ Research-derived design rules baked into the templates:
 
 ## Acceptance criteria
 
-- [ ] `grep -n "Orchestration (ultra)" runtimes/claude-code.md` hits, and the
-      section contains all four templates, the effort-tier language
-      ("3–10 tool calls"), and resume instructions (covers R1)
-- [ ] For each of critique, drain, parallel, build, idea SKILL.md:
-      `grep -q "ultra" <file>` hits AND every hit is within 3 lines of gate
-      language referencing the runtime profile (script the check) (covers
-      R2–R6)
+- [ ] `grep -n "Orchestration (ultra)" runtimes/claude-code.md` hits (the file
+      created per R0 if model-agnostic hasn't landed), the section contains
+      all four templates, the effort-tier language ("3–10 tool calls"),
+      resume instructions, and a schema-check date comment; `specs/QUEUE.md`
+      lists ultra-mode with its dependency (covers R0, R1)
+- [ ] `bash evals/lint-ultra-gate.sh` exits 0 (every case-insensitive "ultra"
+      in the five SKILL.md files has the literal "active runtime profile"
+      within ±3 lines, each under a `## Ultra path` heading); deleting the
+      marker phrase from one file makes it exit non-zero naming that file
+      (covers R2–R6)
 - [ ] `grep -rn "ultra" .claude/skills/breakdown/ .claude/skills/autopilot/`
       returns nothing (covers Out of scope)
-- [ ] The evals fixture assertion for gated ultra mentions passes as part of
-      the evals suite run (covers R6)
 - [ ] `test -f docs/decisions/orchestration.md` and it names both
       non-adoptions and links the research doc (covers R7)
-- [ ] Existing toolkit tests pass; `wc -l` of each ultra section (between its
-      heading and the next) ≤ 25 (covers R8)
+- [ ] `wc -l` of each `## Ultra path` section (between its heading and the
+      next heading) ≤ 25 in all five files (covers R8)
+- [ ] `git show --stat HEAD` for the implementing commit(s) touches the
+      antigravity mirror alongside each changed skill, and
+      `.claude-plugin/plugin.json` version is bumped (covers R9)
 - [ ] **End-to-end:** in a Claude Code session with ultracode active, run
-      /critique against a fixture spec containing a planted contradiction and
-      a planted un-runnable acceptance check — the panel path launches (a
-      Workflow run is observable), both plants are found, and at least one
-      spurious finding is killed by the verify vote; then run /critique in a
-      fixture install with no runtimes/ dir — the single-critic path runs with
-      no ultra mention in its output.
+      /critique against a fixture spec containing a planted contradiction, a
+      planted un-runnable acceptance check, AND a planted plausible-but-false
+      "bug" designed to bait a refutable finding — the panel path launches (a
+      Workflow run is observable), both real plants are found, and the run
+      log shows the verify-vote phase executed with any refuted finding
+      dropped from the relayed set; then run /critique in a fixture install
+      with no runtimes/ dir — the single-critic path runs with no ultra
+      mention in its output.
 
 ## Open questions
 
