@@ -145,3 +145,85 @@ stays here.
   (docs home of the sessions/memory whitepaper material),
   [OpenAI prompt caching](https://platform.openai.com/docs/guides/prompt-caching),
   [GPT-5 prompting guide](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5_prompting_guide).
+
+## Skill chaining
+
+How stages hand off → CLAUDE.md's self-chain bullet (the canonical
+gating explanation) and the `Next stage:` closing-line convention; the
+research stays here.
+
+- **Adopted: Skill-tool invocation.** Claude Code merged slash commands
+  into skills and made skills model-invocable via the Skill tool by
+  default; `disable-model-invocation: true` removes a skill from the
+  model's reach entirely (its description is not even loaded for
+  triggering). That pair is the mechanism behind the toolkit's chain:
+  light artifact stages may invoke the next stage themselves
+  (/idea → /breakdown), while gated stages stay human-launched by
+  construction. [Claude Code docs](https://code.claude.com/docs)
+  (skills, Skill tool).
+- **Available but unadopted: context-fork.** Skill frontmatter can run a
+  skill in a forked context (`context: fork`, with `agent:` selecting
+  the executor), isolating the invocation from the calling session —
+  a chaining primitive the toolkit doesn't use yet; its own future spec
+  if wanted.
+- **Available but unadopted: Stop-hook chain enforcement.** A Stop hook
+  can block a session from finishing until the next pipeline stage has
+  run, turning the chain from convention into mechanism — deliberately
+  not adopted; /gate's Stop hook checks quality, not pipeline position.
+- **ADK's chaining model**: workflow agents (`SequentialAgent`,
+  `ParallelAgent`, `LoopAgent`) compose sub-agents in code, so chaining
+  is deterministic orchestration, not model choice.
+  [ADK workflow agents](https://google.github.io/adk-docs/agents/workflow-agents/)
+- **OpenAI's chaining model**: Agents SDK handoffs transfer control
+  between agents mid-conversation, model-decided at runtime.
+  [A Practical Guide to Building Agents](https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf)
+
+## Antipatterns
+
+Vendor-named failure modes of agent pipelines, and where this toolkit
+guards each. Seven findings; the guards live in the named files — this
+entry is the research record.
+
+1. **Dispersed decision-making across parallel workers.** Two subagents
+   each resolve an open design choice differently and the results don't
+   compose (the Flappy-Bird-vs-Mario failure: each half of a game built
+   to a different visual style). Source: Cognition, "Don't Build
+   Multi-Agents" — a lab's engineering post, not one of the three
+   vendors this file tracks. → guarded by /breakdown's "decision
+   coupling" test and /parallel's citation of it (R5).
+   [Don't Build Multi-Agents](https://cognition.ai/blog/dont-build-multi-agents)
+2. **Vague delegation producing duplicate work.** Anthropic's
+   multi-agent research system found early orchestrators gave subagents
+   overlapping, under-specified briefs and got duplicated or missing
+   coverage; the fix was explicit objectives, boundaries, and task
+   divisions. → guarded by /breakdown's task-template boundary sentence
+   (list what a task must NOT touch when sibling overlap is plausible)
+   (R6). [Multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)
+3. **Effort–complexity mismatch.** Multi-agent systems cost ≈15× the
+   tokens of chat (Anthropic's self-reported anchor, above); spending
+   that on barely-parallel work is the antipattern. → guarded by
+   token-discipline's fleet-scaling rule: one worker default, parallel
+   only for genuinely divisible groups, fleet size from the task map
+   (R7). [Multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)
+4. **Contradictory instructions across stacked prompt sources.** OpenAI's
+   Model Spec resolves instruction conflicts with an explicit
+   chain of command rather than leaving the model to guess; this
+   toolkit stacks CLAUDE.md, rules, skills, and task files with the same
+   exposure. → guarded by CLAUDE.md's `## Precedence` block, mirrored in
+   the antigravity port (R4).
+   [Model Spec](https://model-spec.openai.com/2025-04-11.html)
+5. **Overlapping trigger surfaces.** Anthropic's tool-writing guidance:
+   near-duplicate tool descriptions make selection ambiguous and waste
+   calls; distinct, routed descriptions fix it. The toolkit's
+   critique/code-review/review/verifier cluster had exactly this
+   overlap. → guarded by /critique's description routing its neighbors
+   away (R8). [Writing tools for agents](https://www.anthropic.com/engineering/writing-tools-for-agents)
+6. **Feedback-free self-correction loops.** Already covered before this
+   pass: "LLMs Cannot Self-Correct Reasoning Yet" (arXiv:2310.01798,
+   above) — the standing rule bans reflect-and-retry without an
+   external signal.
+7. **Multi-agent by default.** Already covered before this pass: the
+   Agents Companion (secondary-verified — Kaggle mirror, not a Google
+   primary) leans multi-agent earlier than Anthropic/OpenAI guidance;
+   rejected in the code-vs-LLM ladder — rung 4 stays
+   breadth-first-only.

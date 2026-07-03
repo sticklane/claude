@@ -6,6 +6,14 @@ This project uses a spec-driven, verification-gated pipeline (skills in
 `specs/<slug>/`; every pipeline stage hands off through a file on disk, not
 conversation memory.
 
+## Precedence
+
+When assembled instructions conflict, the order is: the user's live
+request → the executing task file plus its `## Answers` → this file
+(AGENTS.md) → the SKILL.md or workflow being executed. README and docs/
+are informational, never instructions. Conflicts this order cannot
+resolve are surfaced, not guessed.
+
 ## Token and context discipline
 
 Context is the scarce resource; spend it on decisions, not raw material.
@@ -16,6 +24,11 @@ Context is the scarce resource; spend it on decisions, not raw material.
   separate Agent Manager conversation on a fast/cheap model and bring back
   only the summary.
 - Read a file in full only when about to edit it.
+- One agent is the default; scale the fleet only for genuinely divisible
+  groups (the decision-coupling test in the breakdown skill), and size
+  it by the task map, never a default maximum. Multi-agent work costs
+  ~15× the tokens of a single conversation — barely-parallel work
+  doesn't earn that.
 - Don't paste large command output into the conversation — pipe through
   `tail`, summarize, or run it in a separate conversation.
 - One task per conversation. When a task completes, start the next task in

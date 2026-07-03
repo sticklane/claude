@@ -10,7 +10,10 @@ prepares the dispatch and gives the user everything to launch.
 1. **Verify independence.** Read the task files and the spec's
    Parallelization section (if absent, derive independence from `Depends
    on` and `Touch`). A group is dispatchable only if: no dependency edges,
-   disjoint `Touch` lists, runnable acceptance criteria everywhere. Tasks
+   disjoint `Touch` lists, runnable acceptance criteria everywhere. The
+   group must also pass the breakdown skill's "decision coupling" test —
+   members sharing an undecided design choice serialize even with
+   disjoint `Touch` lists. Tasks
    sharing files run sequentially instead — merge conflicts cost more than
    parallelism saves. Present the dispatch plan (which tasks, which
    deferred and why).
