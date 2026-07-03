@@ -9,11 +9,14 @@ whether a candidate survives, and the rank stage then orders survivors
 by that lone report's gate findings. A tournament only runs after two
 failed attempts — precisely when the task has proven tricky and a
 plausible-but-wrong candidate is most likely — yet that is where a
-single verifier's false PASS or false FAIL is decisive. The ultracode
-research (docs/external-playbooks.md, Workflow patterns) found
-N-vote adversarial verification is the standard cure, and the
-toolkit's own verifier already returns independent per-run verdicts;
-nothing aggregates them.
+single verifier's false PASS or false FAIL is decisive. The
+generate–filter–rank shape came from the AlphaCode 2 entry in
+docs/external-playbooks.md; this session's ultracode research
+surfaced N-vote adversarial verification (independent skeptics,
+majority decides) as the standard cure for single-judge error — a
+harness-observed Workflow quality pattern, recorded by this spec in
+docs/external-playbooks.md (R6). The toolkit's verifier already
+returns independent per-run verdicts; nothing aggregates them.
 
 ## Solution
 
@@ -22,10 +25,12 @@ each reversible before implementation): (1) three independent verifier
 runs per DONE candidate — not five; a tournament already triples
 worker spend, and votes triple verifier spend only inside tournaments
 (at most one per task per drain run), keeping the cost bounded; (2) a
-candidate survives the filter only on majority PASS (two of three);
-INCOMPLETE, FAIL, BLOCKED, and DEFERRED each count as a non-PASS vote —
-no new verifier output mode, consistent with the context-management
-spec's R5 (INCOMPLETE is non-PASS by construction); (3) aggregation
+candidate survives the filter only on majority PASS (two of three)
+over verifier verdicts — FAIL and INCOMPLETE are non-PASS votes, a
+verifier-BLOCKED run disqualifies outright with its quote recorded,
+and verifiers never DEFER — no new verifier output mode, consistent
+with the context-management spec's R5 (INCOMPLETE is non-PASS by
+construction); (3) aggregation
 stays drain's mechanical job ("Drain, not the verifier"): PASS-vote
 count becomes the first rank key, ahead of the existing keys. The
 tournament template in specs/workflow-author (R4 there) cites this
@@ -39,17 +44,27 @@ acceptance greps cannot pass vacuously.
   replaces the single run with three independent verifier runs per
   DONE candidate — same verifier agent, same no-evidence-path rule,
   each inside that candidate's worktree, fresh eyes per run (no shared
-  transcript). A candidate survives only on majority PASS (contains
-  the phrase "majority PASS"); any non-PASS verdict (FAIL, INCOMPLETE,
-  BLOCKED, DEFERRED) counts as a non-PASS vote. BLOCKED and DEFERRED
-  handling is otherwise unchanged (reasons into evidence; questions
-  collected for verdict routing).
+  transcript). Vote values are the VERIFIER's verdicts only —
+  PASS/FAIL (plus INCOMPLETE once the context-management spec lands);
+  verifiers never DEFER. A candidate survives only on majority PASS
+  (contains the phrase "majority PASS"); FAIL and INCOMPLETE count as
+  non-PASS votes. A verifier run returning BLOCKED (the untrusted-data
+  rule on a redirection attempt in the candidate's content) is NOT a
+  vote: it DISQUALIFIES the candidate outright regardless of other
+  votes, and the verifier's quoted content goes into the recorded
+  evidence — survivors must be injection-clean, and the quote must
+  never be droppable by two PASS votes. Candidates whose WORKER
+  verdict was BLOCKED or DEFERRED never reach the verifier at all —
+  that handling (reasons into evidence, questions collected for
+  verdict routing) is unchanged.
 - R2 (rank): the Rank paragraph keeps "Drain, not the verifier ...
   mechanically" and its existing keys, but PASS-vote count (3 ahead
-  of 2) becomes the FIRST key (contains the phrase "PASS votes");
-  gate-finding counts are summed across the candidate's three verifier
-  reports for the second key; smallest `git diff --stat` total stays
-  last. Still no new verifier output mode.
+  of 2) becomes the FIRST key (the phrase "PASS votes" appears in the
+  Rank paragraph itself); gate-finding counts are summed across the
+  candidate's three verifier reports for the second key; smallest
+  `git diff --stat` total third; and a NEW final tiebreak — lowest
+  angle index (t1 before t2 before t3) — so the mechanical ranker
+  always terminates with an order. Still no new verifier output mode.
 - R3 (cost note): one sentence in the Tournament section states the
   spend shape: votes triple verifier cost inside tournaments only —
   bounded by the at-most-one-tournament-per-task rule — and the
@@ -62,6 +77,14 @@ acceptance greps cannot pass vacuously.
 - R5 (versioning): the implementing change bumps `plugin.json`'s minor
   version by one from the value it finds, unless landing in a
   commit-set whose other specs already carry a single combined bump.
+- R6 (research record): the AlphaCode 2 entry in
+  `docs/external-playbooks.md` gains a follow-on line (or adjacent
+  bullet) containing "N-vote": N-vote adjudication — multiple
+  independent verifier votes with majority rule — is the standard
+  cure for single-judge error in generate–filter–rank pipelines
+  (harness-observed Workflow quality pattern: adversarial verify
+  votes; adopted here for the tournament filter). Marked
+  harness-observed, no public URL.
 
 ## Out of scope
 
@@ -80,12 +103,13 @@ acceptance greps cannot pass vacuously.
 ## Acceptance criteria
 
 - [ ] `grep -q "majority PASS" .claude/skills/drain/reference.md && grep -q "three independent verifier" .claude/skills/drain/reference.md` (R1)
-- [ ] `grep -q "PASS votes" .claude/skills/drain/reference.md && grep -q "Drain, not the verifier" .claude/skills/drain/reference.md` (R2 — vote key added, mechanical-rank sentence intact)
+- [ ] `sed -n '/^\*\*Rank\./,/^$/p' .claude/skills/drain/reference.md | grep -q "PASS votes" && grep -q "Drain, not the verifier" .claude/skills/drain/reference.md && sed -n '/^\*\*Rank\./,/^$/p' .claude/skills/drain/reference.md | grep -q "t1 before t2"` (R2 — vote key and final tiebreak in the Rank paragraph itself, mechanical-rank sentence intact; scoped so R1's Filter wording cannot satisfy it)
 - [ ] `! grep -qi "one verifier run per candidate" .claude/skills/drain/reference.md` (R1 — the single-run sentence is actually replaced)
 - [ ] `sed -n '/^## Tournament/,/^## /p' .claude/skills/drain/reference.md | grep -qi "human-gates"` (R3, scoped to the Tournament section)
-- [ ] `grep -q "majority PASS" antigravity/.agents/workflows/drain.md || grep -rq "majority PASS" antigravity/.agents/workflows/` (R4 — locate the port's drain workflow at implementation time)
+- [ ] `grep -q "majority PASS" antigravity/.agents/workflows/drain.md && grep -q "PASS votes" antigravity/.agents/workflows/drain.md && ! grep -qi "one verifier-skill run per candidate" antigravity/.agents/workflows/drain.md` (R4 — mirror adopts both changes AND the old single-run line is actually replaced, not appended-around)
 - [ ] plugin.json minor version strictly greater than the pre-implementation value, verified in the implementing task's evidence (R5)
-- [ ] End to end: dry-run the tournament procedure on paper against a 3-candidate example (votes 3/2/1 PASS) — the 1-PASS candidate is filtered, the 3-PASS candidate outranks the 2-PASS one regardless of gate-finding counts, and a 2-2 tie on votes falls through to summed gate findings (manual dry-read until the eval harness covers /drain).
+- [ ] `grep -q "N-vote" docs/external-playbooks.md` (R6)
+- [ ] End to end: dry-run the tournament procedure on paper against a 3-candidate example (votes 3/2/1 PASS) — the 1-PASS candidate is filtered, the 3-PASS candidate outranks the 2-PASS one regardless of gate-finding counts, a 2-2 tie on votes falls through to summed gate findings, and a full tie on all three keys resolves by angle index (t1 first); separately, a 2-PASS+1-BLOCKED candidate is DISQUALIFIED with the quote recorded (manual dry-read until the eval harness covers /drain).
 
 ## Open questions
 
