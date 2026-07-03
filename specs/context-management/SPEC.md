@@ -145,3 +145,9 @@ wave, not this spec (coordination note in Out of scope). Marker phrases
 (none — the four decisions are recorded in Solution; recommended
 options adopted per the non-interactive fallback, reversible before
 implementation.)
+
+## Parallelization
+
+See [specs/QUEUE.md](../QUEUE.md) — the combined-queue wave plan is
+kept in one copy there; this spec's tasks and their `Depends on:`
+headers carry the machine-readable graph.

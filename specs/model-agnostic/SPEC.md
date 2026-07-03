@@ -166,3 +166,9 @@ vacuously. Product-internal models the toolkit does not choose (the
 (none — the four interview decisions are recorded in Solution; the
 maintainer approved the recommended option for each and may flip any
 before implementation.)
+
+## Parallelization
+
+See [specs/QUEUE.md](../QUEUE.md) — the combined-queue wave plan is
+kept in one copy there; this spec's tasks and their `Depends on:`
+headers carry the machine-readable graph.

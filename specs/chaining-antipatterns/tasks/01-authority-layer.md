@@ -1,7 +1,7 @@
 # Task 01: Authority layer — self-chain bullet, Precedence block, binding-list unification
 
 Status: pending
-Depends on: none
+Depends on: ../../context-management/tasks/01-claude-md-and-breakdown-note.md, ../../context-management/tasks/02-distill-memory-cache-economics.md, ../../context-management/tasks/04-reference-tocs-research-record.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R1, R4, R2's token-discipline exception clause)
 

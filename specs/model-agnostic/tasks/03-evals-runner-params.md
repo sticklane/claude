@@ -1,7 +1,7 @@
 # Task 03: Evals runner parameterization (RUNNER_CMD / EVALS_ROOT)
 
 Status: pending
-Depends on: none
+Depends on: ../../review-fixes/tasks/06-evals-runner-robustness.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirement R6)
 

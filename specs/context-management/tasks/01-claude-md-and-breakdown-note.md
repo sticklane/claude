@@ -1,7 +1,7 @@
 # Task 01: CLAUDE.md compaction, conventions, memory pointer; breakdown header note
 
 Status: pending
-Depends on: none
+Depends on: ../../model-agnostic/tasks/02-core-tier-language.md, ../../review-fixes/tasks/04-worker-prompt-resolution.md
 Budget: 25 turns
 Spec: ../SPEC.md (requirements R1, R2-conventions, R3-pointer, R6; R9 note)
 

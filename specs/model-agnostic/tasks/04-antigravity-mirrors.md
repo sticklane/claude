@@ -1,7 +1,7 @@
 # Task 04: Antigravity mirrors of the tier language
 
 Status: pending
-Depends on: 01, 02
+Depends on: 01, 02, ../../chaining-antipatterns/tasks/03-antipattern-guards.md
 Budget: 10 turns
 Spec: ../SPEC.md (requirement R8)
 

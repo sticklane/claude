@@ -168,3 +168,9 @@ task file (or a `discovered-from` edge when beads is active). Files:
 
 (none — the three interview decisions are recorded in Solution;
 recommended options adopted, reversible before implementation.)
+
+## Parallelization
+
+See [specs/QUEUE.md](../QUEUE.md) — the combined-queue wave plan is
+kept in one copy there; this spec's tasks and their `Depends on:`
+headers carry the machine-readable graph.
