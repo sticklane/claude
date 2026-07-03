@@ -1,6 +1,6 @@
 # Task 03: Tool-call ceilings for critic and verifier, INCOMPLETE verdict, both repos
 
-Status: pending
+Status: in-progress
 Depends on: none
 Budget: 20 turns
 Spec: ../SPEC.md (requirements R5, R8-part; R9 note)

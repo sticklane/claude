@@ -1,6 +1,6 @@
 # Task 06: Evals runner robustness — nullglob, guards, git isolation, cleanup trap, FAIL forensics
 
-Status: pending
+Status: in-progress
 Depends on: none
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 06)

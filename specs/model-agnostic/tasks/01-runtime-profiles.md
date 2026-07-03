@@ -1,6 +1,6 @@
 # Task 01: Runtime profiles and porting guide (new files only)
 
-Status: pending
+Status: in-progress
 Depends on: none
 Budget: 25 turns
 Spec: ../SPEC.md (requirements R1, R5 (runtimes/README.md), R7, R12)

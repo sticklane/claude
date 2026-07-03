@@ -1,6 +1,6 @@
 # Task 01: Plugin manifest validates — agents array, marketplace description, CLAUDE.md caveat
 
-Status: pending
+Status: in-progress
 Depends on: none
 Budget: 16 turns
 Spec: ../SPEC.md (cluster 01)

@@ -1,6 +1,6 @@
 # Task 02: Drain state machine — headless done-flip, BLOCKED-over-budget routing, merge-abort
 
-Status: pending
+Status: in-progress
 Depends on: none
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 02)
