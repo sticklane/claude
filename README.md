@@ -82,7 +82,8 @@ questions into the task files instead of stopping on them.
 - **Autonomy is classified, not assumed** — auto-accept for peripheral work,
   synchronous supervision for core logic; unattended runs get scoped
   permissions, bounded goals, branch isolation, and a discard-and-relaunch
-  recovery rule (the "slot machine").
+  recovery rule (the "slot machine"). Why the execution stages are
+  human-launched: [docs/human-gates.md](docs/human-gates.md).
 - **Subagents protect the context window** — exploration, test noise, and
   review happen in disposable contexts; only conclusions return.
 - **One task, one session, one commit** — after two failed corrections,
