@@ -111,5 +111,72 @@ class TestAbandonStale(AbandonTestCase):
         self.assertEqual(inbox, [])
 
 
+def make_repo_record(path="/r/demo", **git):
+    g = {"branch": "main", "dirty": 0, "ahead": 0, "behind": 0,
+         "worktrees": [], "last_commit_ts": 1.0}
+    g.update(git)
+    return {"path": path, "name": Path(path).name, "git": g,
+            "specs": [], "handoffs": [], "sessions": []}
+
+
+class TestOpenStatusNotBlocked(unittest.TestCase):
+    def test_status_open_counts_as_open_not_blocked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = Path(tmp) / "specs" / "demo"
+            (spec / "tasks").mkdir(parents=True)
+            (spec / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+            (spec / "tasks" / "01-a.md").write_text(
+                "# A\nStatus: open\n", encoding="utf-8")
+
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+
+            self.assertEqual(specs[0]["tasks_blocked"], [])
+
+    def test_status_failed_still_flags_as_blocked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = Path(tmp) / "specs" / "demo"
+            (spec / "tasks").mkdir(parents=True)
+            (spec / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+            (spec / "tasks" / "01-a.md").write_text(
+                "# A\nStatus: failed\n", encoding="utf-8")
+
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+
+            self.assertEqual(len(specs[0]["tasks_blocked"]), 1)
+
+
+class TestSimpleCommandsInInbox(unittest.TestCase):
+    def test_unpushed_commits_item_carries_git_push_command(self):
+        repo = make_repo_record(ahead=2)
+
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        push_items = [i for i in inbox if "unpushed" in i["what"]]
+        self.assertEqual(len(push_items), 1)
+        self.assertIn("git -C /r/demo push", push_items[0].get("cmd", ""))
+
+    def test_parked_handoff_item_carries_resume_command(self):
+        repo = make_repo_record()
+        repo["handoffs"] = [{"path": "docs/HANDOFF.md", "title": "t", "mtime": 1.0}]
+
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        self.assertIn("claude", inbox[0].get("cmd", ""))
+        self.assertIn("docs/HANDOFF.md", inbox[0]["cmd"])
+
+    def test_all_tasks_done_spec_carries_verifier_command(self):
+        repo = make_repo_record()
+        repo["specs"] = [{"kind": "toolkit", "slug": "demo", "title": "Demo",
+                          "path": "specs/demo/SPEC.md", "tasks_total": 2,
+                          "tasks_done": 2, "tasks_doing": 0,
+                          "tasks_blocked": [], "tasks": [],
+                          "last_touched": 1.0}]
+
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        self.assertIn("claude", inbox[0].get("cmd", ""))
+        self.assertIn("demo", inbox[0]["cmd"])
+
+
 if __name__ == "__main__":
     unittest.main()
