@@ -15,8 +15,8 @@ trust possible.
 Evidence-writing is caller-directed: the verifier agent gains the `Write`
 tool and writes its full report to a file **only when the invoking skill
 passes an evidence path**; /build derives that path and commits the file
-with the code. Invocations without a path (ad-hoc checks, ranking duty in
-drain tournaments) never write. Files touched:
+with the code. Invocations without a path (ad-hoc checks, per-candidate
+filter runs in drain tournaments) never write. Files touched:
 `.claude/agents/verifier.md`, `.claude/skills/build/SKILL.md`,
 `.claude/skills/drain/SKILL.md`, `.claude/skills/drain/reference.md`,
 and the antigravity mirrors `antigravity/.agents/skills/verifier/SKILL.md`,
@@ -70,8 +70,8 @@ and the antigravity mirrors `antigravity/.agents/skills/verifier/SKILL.md`,
 - Evidence retention/pruning policy — files accumulate with the spec and
   are cleaned up when the spec directory is.
 - Verifier-side path derivation of any kind (the caller decides; this
-  is what keeps tournament-ranking invocations from clobbering evidence
-  in the main checkout).
+  is what keeps tournaments' per-candidate filter runs from clobbering
+  evidence in the main checkout).
 - plugin.json version (owned by the hardening-quick-wins spec).
 
 ## Acceptance criteria
