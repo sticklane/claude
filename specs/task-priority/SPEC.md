@@ -57,10 +57,17 @@ pass vacuously.
   when several tasks are dispatchable at once, dispatch lowest
   Priority value first (absent = P2), then greatest unblocking-power —
   the count of still-`pending` tasks whose `Depends on:` names this
-  task, computed from headers — then lexicographic task-file path.
-  Deterministic and drain-computed; the model never reorders the
-  queue mid-run. Sequential one-at-a-time dispatch stays the default
-  (unchanged).
+  task, counted over the task files inventoried this run and resolving
+  `Depends on:` exactly as the dispatchability check does (numbers
+  within a spec, task-file-relative paths across specs) — then
+  lexicographic task-file path. Deterministic and drain-computed; the
+  model never reorders the queue mid-run. Sequential one-at-a-time
+  dispatch stays the default (unchanged). Drain's inventory header
+  list must include `Priority` — this spec already amended
+  review-fixes 03 (which owns that list) and context-management 01
+  (the CLAUDE.md machine-state bullet) to the five-field form, so
+  whichever lands first, the contract agrees and review-fixes 99's
+  acceptance sweep stays green.
 - R3 (breakdown rubric): `.claude/skills/breakdown/SKILL.md`'s
   ordering step gains the four-line rubric containing "unblocking"
   and "P0": P0 = repairs/unblocks files other tasks edit, or proves
@@ -72,9 +79,12 @@ pass vacuously.
   prioritization" entry containing "ready set": the convergence
   (dependency graph → ready set → waves: Kiro dependency-grouped
   waves, kiro.dev/docs/specs/best-practices; Copilot fleet
-  wave-dispatch, github.blog fleet post; ADK provides ordering
-  mechanisms not heuristics; Jules concurrency caps only, queue
-  prioritization "planned"); the gap — no vendor publishes
+  wave-dispatch,
+  github.blog/ai-and-ml/github-copilot/run-multiple-agents-at-once-with-fleet-in-copilot-cli/;
+  ADK provides ordering mechanisms not heuristics,
+  adk.dev/agents/workflow-agents/; Jules concurrency caps only, queue
+  prioritization "planned", jules.google/docs/usage-limits/); the gap
+  — no vendor publishes
   within-ready-set ranking, this toolkit's tie-break is ahead of
   published guidance; the two vendor signals adopted (Anthropic
   effective-harnesses "highest-priority not yet done, one at a time",
@@ -82,9 +92,11 @@ pass vacuously.
   OpenAI PLANS.md PoC-milestones-first as risk-first ordering,
   developers.openai.com/cookbook/articles/codex_exec_plans), with
   source links.
-- R5 (mirrors): `antigravity/.agents/workflows/breakdown.md` mirrors
-  R1+R3 (Priority line and rubric); `antigravity/.agents/workflows/
-  drain.md` mirrors R2's tie-break sentence.
+- R5 (mirrors): `antigravity/.agents/skills/breakdown/SKILL.md`
+  mirrors R1+R3 (Priority line and rubric — the template lives in the
+  SKILL; `antigravity/.agents/workflows/breakdown.md` is a 5-line
+  shim and is NOT edited); `antigravity/.agents/workflows/drain.md`
+  mirrors R2's tie-break sentence.
 - R6 (versioning): the implementing change bumps `plugin.json`'s minor
   version by one from the value it finds, unless landing in a
   commit-set whose other specs already carry a single combined bump.
@@ -114,7 +126,7 @@ pass vacuously.
 - [ ] `grep -q "Priority: P2" .claude/skills/breakdown/SKILL.md && grep -q "P0" .claude/skills/breakdown/SKILL.md && grep -qi "unblocking" .claude/skills/breakdown/SKILL.md` (R1+R3)
 - [ ] `grep -q "tie-break" .claude/skills/drain/SKILL.md && grep -q "Priority" .claude/skills/drain/SKILL.md && grep -qi "unblocking" .claude/skills/drain/SKILL.md` (R2)
 - [ ] `grep -qi "task prioritization" docs/external-playbooks.md && sed -n '/[Tt]ask prioritization/,/^## /p' docs/external-playbooks.md | grep -qi "ready set"` (R4, scoped to the entry)
-- [ ] `grep -q "Priority" antigravity/.agents/workflows/breakdown.md && grep -qi "tie-break" antigravity/.agents/workflows/drain.md` (R5)
+- [ ] `grep -q "Priority" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "tie-break" antigravity/.agents/workflows/drain.md` (R5)
 - [ ] plugin.json minor version strictly greater than the pre-implementation value, verified in the implementing task's evidence (R6)
 - [ ] End to end: paper dry-run — three simultaneously dispatchable tasks: A (P1, 0 dependents), B (no Priority header, 3 pending dependents), C (no Priority header, 0 dependents, path sorts first). Order must be A (P1 beats default P2), then B (more unblocking-power), then C; and with A absent, B beats C despite C's earlier path (manual until the eval harness covers /drain).
 
@@ -130,7 +142,11 @@ Not yet decomposed — when /breakdown runs, its tasks join
 [specs/QUEUE.md](../QUEUE.md) (update its count and wave table then).
 Known serial chains to wire as `Depends on:` lines:
 `.claude/skills/drain/SKILL.md` is also edited by review-fixes 02 and
-03; `.claude/skills/breakdown/SKILL.md` by review-fixes 03 and
-context-management 01; `docs/external-playbooks.md` appenders
-serialize (QUEUE.md); the antigravity drain-workflow mirror rides the
-same chain as tournament-votes R4 and review-fixes 02's mirror edits.
+03 — the R2 edit lands AFTER review-fixes 03 (whose five-field
+inventory tuple this spec pre-amended); `.claude/skills/breakdown/
+SKILL.md` by review-fixes 03 and context-management 01;
+`antigravity/.agents/skills/breakdown/SKILL.md` (the R5 mirror) is
+also edited by review-fixes 03 and context-management 01;
+`docs/external-playbooks.md` appenders serialize (QUEUE.md); the
+antigravity drain-workflow mirror rides the same chain as
+tournament-votes R4 and review-fixes 02's mirror edits.
