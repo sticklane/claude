@@ -147,7 +147,10 @@ cp -r ~/agentic-toolkit/.claude/agents/* ~/.claude/agents/
 ```
 
 Symlink instead of `cp` if you want `git pull` in `~/agentic-toolkit` to
-update everything in place. Note the token-discipline rule is
+update everything in place: run `~/agentic-toolkit/bin/sync-skills` — the
+standard post-`git pull` step — to idempotently symlink every toolkit skill
+into `~/.claude/skills/` (new skills linked, removed ones cleaned up, local
+non-symlink skills never touched). Note the token-discipline rule is
 project-scoped (`.claude/rules/` has no user-level equivalent) — for global
 use, fold its points into `~/.claude/CLAUDE.md`.
 
