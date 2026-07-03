@@ -1,7 +1,7 @@
 # Combined queue — wave plan (canonical, single copy)
 
 Drain reads each task's `Depends on:` header (numbers within a spec,
-repo-relative paths across specs); this file is the human view of the
+across specs, paths relative to the task file (../../<spec>/tasks/...)); this file is the human view of the
 same graph. Per-spec Parallelization sections point here instead of
 duplicating it.
 

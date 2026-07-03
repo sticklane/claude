@@ -33,6 +33,10 @@ unchanged — profiles describe it, they don't replace it.
 4. Do NOT bump `.claude-plugin/plugin.json` — the single batch version
    bump (R10) is owned by global task 99 in specs/review-fixes.
 
+Note (R10): do NOT bump plugin.json here — specs/review-fixes task 99
+owns the single combined batch bump; record the pre-implementation
+version as evidence.
+
 ## Acceptance
 
-- `grep -q "scout-tier" antigravity/AGENTS.md && grep -q "runtimes/antigravity.md" antigravity/README.md` → exit 0 (R8)
+- [ ] `grep -q "scout-tier" antigravity/AGENTS.md && grep -q "runtimes/antigravity.md" antigravity/README.md` → exit 0 (R8)

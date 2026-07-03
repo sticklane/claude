@@ -1,7 +1,7 @@
 # Task 02: Core prose to tier language with fallback-safe citations
 
 Status: pending
-Depends on: 01, ../../review-fixes/tasks/08-mirrors-and-docs.md
+Depends on: 01, ../../review-fixes/tasks/01-plugin-manifest.md, ../../review-fixes/tasks/08-mirrors-and-docs.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R2, R3, R4, R5 (citations), R9)
 
@@ -69,9 +69,9 @@ installs and eval fixtures → claude-code defaults apply).
 
 ## Acceptance
 
-- `grep -q "scout-tier" .claude/agents/scout.md && grep -q "model: haiku" .claude/agents/scout.md && grep -qi "absent in plugin installs" .claude/agents/scout.md` → exit 0 (R2)
-- `grep -q "scout-tier" .claude/rules/token-discipline.md && grep -q "scout-tier" README.md` → exit 0 (R3)
-- `grep -qi "built-in transcript evaluator" .claude/skills/autopilot/reference.md && grep -qi "built-in transcript evaluator" .claude/skills/gate/reference.md && ! grep -qi "scout-tier" .claude/skills/autopilot/reference.md && ! grep -qi "scout-tier" .claude/skills/gate/reference.md` → exit 0 (R3 — evaluator lines reworded, no tier mislabel)
-- `grep -q "active runtime profile" .claude/skills/drain/reference.md && grep -q "active runtime profile" .claude/skills/autopilot/reference.md && grep -q "claude -p" .claude/skills/drain/reference.md` → exit 0 (R4)
-- `grep -q "absent in plugin installs" .claude/skills/drain/reference.md && grep -q "absent in plugin installs" .claude/skills/autopilot/reference.md` → exit 0 (R5 fallback clauses in the plugin-shipped citers)
-- `grep -qi "Other runtimes" README.md && grep -q "runtimes/" CLAUDE.md` → exit 0 (R9)
+- [ ] `grep -q "scout-tier" .claude/agents/scout.md && grep -q "model: haiku" .claude/agents/scout.md && grep -qi "absent in plugin installs" .claude/agents/scout.md` → exit 0 (R2)
+- [ ] `grep -q "scout-tier" .claude/rules/token-discipline.md && grep -q "scout-tier" README.md` → exit 0 (R3)
+- [ ] `grep -qi "built-in transcript evaluator" .claude/skills/autopilot/reference.md && grep -qi "built-in transcript evaluator" .claude/skills/gate/reference.md && ! grep -qi "scout-tier" .claude/skills/autopilot/reference.md && ! grep -qi "scout-tier" .claude/skills/gate/reference.md` → exit 0 (R3 — evaluator lines reworded, no tier mislabel)
+- [ ] `grep -q "active runtime profile" .claude/skills/drain/reference.md && grep -q "active runtime profile" .claude/skills/autopilot/reference.md && grep -q "claude -p" .claude/skills/drain/reference.md` → exit 0 (R4)
+- [ ] `grep -q "absent in plugin installs" .claude/skills/drain/reference.md && grep -q "absent in plugin installs" .claude/skills/autopilot/reference.md` → exit 0 (R5 fallback clauses in the plugin-shipped citers)
+- [ ] `grep -qi "Other runtimes" README.md && grep -q "runtimes/" CLAUDE.md` → exit 0 (R9)

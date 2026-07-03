@@ -50,6 +50,10 @@ by global task 99 in specs/review-fixes.
 4. Mirror the memory step into
    `antigravity/.agents/skills/distill/SKILL.md`.
 
+Note: for the antigravity AGENTS.md R6-convention mirror, the SPEC's R6
+wording is authoritative — do not wait for or guess task 01's CLAUDE.md
+phrasing (decision de-coupled so wave 9 stays parallel).
+
 ## Acceptance
 
 - [ ] `grep -q "docs/memory.md" .claude/skills/distill/SKILL.md && grep -qi "stale" .claude/skills/distill/SKILL.md` (R3, distill half — CLAUDE.md half lives in task 01)
