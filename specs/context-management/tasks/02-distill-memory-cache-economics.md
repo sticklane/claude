@@ -1,6 +1,6 @@
 # Task 02: Distill memory layer + cache economics, with antigravity mirrors
 
-Status: in-progress
+Status: done
 Depends on: ../../model-agnostic/tasks/02-core-tier-language.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R3, R4, R8-part; R9 note)
@@ -56,9 +56,9 @@ phrasing (decision de-coupled so wave 9 stays parallel).
 
 ## Acceptance
 
-- [ ] `grep -q "docs/memory.md" .claude/skills/distill/SKILL.md && grep -qi "stale" .claude/skills/distill/SKILL.md` (R3, distill half — CLAUDE.md half lives in task 01)
-- [ ] `grep -q "static-first" .claude/rules/token-discipline.md && grep -qi "session end" .claude/skills/distill/SKILL.md` (R4)
-- [ ] `grep -q "static-first" antigravity/AGENTS.md && grep -q "docs/memory.md" antigravity/.agents/skills/distill/SKILL.md` (R8-part)
+- [x] `grep -q "docs/memory.md" .claude/skills/distill/SKILL.md && grep -qi "stale" .claude/skills/distill/SKILL.md` (R3, distill half — CLAUDE.md half lives in task 01) — exit 0; full memory step verified in ../evidence/02-distill-memory-cache-economics.md
+- [x] `grep -q "static-first" .claude/rules/token-discipline.md && grep -qi "session end" .claude/skills/distill/SKILL.md` (R4) — exit 0; all four cache-economics elements verified in ../evidence/02-distill-memory-cache-economics.md
+- [x] `grep -q "static-first" antigravity/AGENTS.md && grep -q "docs/memory.md" antigravity/.agents/skills/distill/SKILL.md` (R8-part) — exit 0; mirrors + R6 convention verified in ../evidence/02-distill-memory-cache-economics.md
 - [ ] End to end (manual, until the eval harness covers /distill): in a
       fresh session, run /distill after a session that produced one
       narrow lesson; verify it lands as a `docs/memory/` topic file plus
