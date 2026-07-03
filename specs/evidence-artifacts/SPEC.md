@@ -12,39 +12,56 @@ trust possible.
 
 ## Solution
 
-The verifier agent writes its full report to a committed evidence file
-next to the spec, and /build's close-out commits it with the code. Files
-touched: `.claude/agents/verifier.md`, `.claude/skills/build/SKILL.md`,
-plus the antigravity verifier skill and build workflow mirrors.
+Evidence-writing is caller-directed: the verifier agent gains the `Write`
+tool and writes its full report to a file **only when the invoking skill
+passes an evidence path**; /build derives that path and commits the file
+with the code. Invocations without a path (ad-hoc checks, ranking duty in
+drain tournaments) never write. Files touched:
+`.claude/agents/verifier.md`, `.claude/skills/build/SKILL.md`,
+`.claude/skills/drain/SKILL.md`, `.claude/skills/drain/reference.md`,
+and the antigravity mirrors `antigravity/.agents/skills/verifier/SKILL.md`,
+`antigravity/.agents/workflows/build.md`,
+`antigravity/.agents/workflows/drain.md`.
 
 ## Requirements
 
-- R1: `.claude/agents/verifier.md` instructs the agent to write its full
-  report to `specs/<slug>/evidence/<task-file-basename>.md` (e.g. task
-  `specs/x/tasks/03-auth.md` → `specs/x/evidence/03-auth.md`), creating
-  the directory if needed. When verifying a bare SPEC.md (no task file),
-  the path is `specs/<slug>/evidence/spec.md`. When no spec directory is
-  derivable (ad-hoc invocation), skip the file and say so in the report.
-- R2: the evidence file contains: verdict line, per-criterion entry with
-  the exact command and an output tail (last ~10 lines, enough to show
-  the result), gate results, and scope-creep findings — the same content
-  as the message, not a second format. The chat message remains the
-  summary; the file is the durable record.
-- R3: `.claude/skills/build/SKILL.md` close-out commits the evidence file
-  together with the code and task file, and the task file's per-criterion
-  evidence lines cite the evidence file rather than duplicating output.
+- R1: `.claude/agents/verifier.md` frontmatter `tools:` gains `Write`,
+  and the body states: when the caller provides an evidence file path,
+  write the full report to it, creating parent directories; when no path
+  is provided, write nothing and do not derive one yourself.
+- R2: the evidence FILE is the full record — verdict line, per-criterion
+  entry with the exact command and an output tail (last ~10 lines), gate
+  results, scope-creep findings. The chat MESSAGE keeps the existing
+  under-a-page summary format and ends with a pointer to the evidence
+  path (the file and the message are explicitly different lengths; the
+  agent's output budget applies to the message only).
+- R3: `.claude/skills/build/SKILL.md` step 3 passes the evidence path
+  when spawning the verifier, derived as: task file matching
+  `specs/<slug>/tasks/<name>.md` → `specs/<slug>/evidence/<name>.md`;
+  bare spec at `specs/<slug>/SPEC.md` → `specs/<slug>/evidence/spec.md`;
+  any other layout → no path (verifier writes nothing; close-out notes
+  evidence was not persisted). Close-out commits the evidence file with
+  the code and task file, and the task file's per-criterion evidence
+  lines cite the `evidence/` file rather than duplicating output.
 - R4: a re-verify overwrites the evidence file (latest verdict wins);
-  stale PASS evidence from a failed earlier attempt must not survive a
-  FAIL.
-- R5: antigravity mirrors: the antigravity verifier skill writes the same
-  file, and the build workflow commits it; the workflow notes that
-  Antigravity's native walkthrough artifacts complement but don't replace
-  the committed file (walkthroughs live in the Antigravity UI, not the
-  repo).
-- R6: under /drain, no drain-side change is required — the evidence file
-  is committed on the worker's branch by /build's close-out and arrives
-  via the merge; drain's SKILL.md gains one clause noting DONE merges
-  carry the evidence file.
+  stale PASS evidence from an earlier attempt must not survive a FAIL.
+- R5: antigravity mirrors: `antigravity/.agents/skills/verifier/SKILL.md`
+  adopts the same caller-provided-path rule and file/message split;
+  `antigravity/.agents/workflows/build.md` passes the path and commits
+  the file; both mention the `evidence/` directory by that literal name.
+  The workflow notes Antigravity's native walkthrough artifacts
+  complement but don't replace the committed file.
+- R6: /drain needs no dispatch-side change for background workers — the
+  evidence file is committed on the worker's branch by /build's
+  close-out and arrives via the merge. `.claude/skills/drain/SKILL.md`
+  gains one clause: DONE merges from background workers carry the
+  `evidence/` file. `.claude/skills/drain/reference.md`'s headless
+  fallback gains one line: headless merges carry no evidence file (no
+  verifier ran inside the worker; the orchestrator's post-merge
+  acceptance re-run is the record, and it should be pasted into
+  `specs/<slug>/evidence/<name>.md` by the orchestrator before flipping
+  to done). `antigravity/.agents/workflows/drain.md` mirrors the
+  background-worker clause.
 
 ## Out of scope
 
@@ -52,17 +69,20 @@ plus the antigravity verifier skill and build workflow mirrors.
   command output only).
 - Evidence retention/pruning policy — files accumulate with the spec and
   are cleaned up when the spec directory is.
+- Verifier-side path derivation of any kind (the caller decides; this
+  is what keeps tournament-ranking invocations from clobbering evidence
+  in the main checkout).
 - plugin.json version (owned by the hardening-quick-wins spec).
 
 ## Acceptance criteria
 
-- [ ] `grep -q "evidence/" .claude/agents/verifier.md` with the path rule and the ad-hoc skip rule present (R1)
-- [ ] verifier.md names the required file contents: verdict, per-criterion command + output tail, gates, scope creep (R2)
-- [ ] `grep -qi "evidence" .claude/skills/build/SKILL.md` in the close-out step, including the commit instruction (R3)
-- [ ] verifier.md states re-verification overwrites the file (R4)
-- [ ] `grep -qi "evidence" antigravity/.agents/skills/verifier/SKILL.md && grep -qi "evidence" antigravity/.agents/workflows/build.md` (R5)
-- [ ] `grep -qi "evidence" .claude/skills/drain/SKILL.md` — one clause on merges carrying evidence (R6)
-- [ ] End to end: run /build on a toy task in a scratch repo; after close-out, `ls specs/*/evidence/` shows the report and `git log --stat -1` shows it committed (manual until the eval harness covers /build).
+- [ ] `grep -q "tools:.*Write" .claude/agents/verifier.md && grep -qi "when the caller provides" .claude/agents/verifier.md` (R1)
+- [ ] verifier.md names the file contents (verdict, command + output tail, gates, scope creep) and states the message stays under a page with a pointer to the file: `grep -q "evidence" .claude/agents/verifier.md && grep -qi "output tail" .claude/agents/verifier.md` (R2)
+- [ ] `grep -q "evidence/" .claude/skills/build/SKILL.md` — path derivation in step 3 and the commit instruction in close-out both present (R3)
+- [ ] `grep -qi "overwrit" .claude/agents/verifier.md` (R4)
+- [ ] `grep -q "evidence/" antigravity/.agents/skills/verifier/SKILL.md && grep -q "evidence/" antigravity/.agents/workflows/build.md` (R5)
+- [ ] `grep -q "evidence/" .claude/skills/drain/SKILL.md && grep -q "evidence/" .claude/skills/drain/reference.md && grep -q "evidence/" antigravity/.agents/workflows/drain.md` (R6)
+- [ ] End to end: run /build on a toy task at `specs/demo/tasks/01-toy.md` in a scratch repo; after close-out, `test -f specs/demo/evidence/01-toy.md` and `git log --stat -1` shows it committed (manual until the eval harness covers /build).
 
 ## Open questions
 
