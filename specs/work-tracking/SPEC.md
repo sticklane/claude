@@ -37,11 +37,12 @@ existing title lines first; `draft` is never dispatchable — only a
 human promotes it to `pending`, after vetting the quoted Goal, keeping
 new-work spend behind the human gate (docs/human-gates.md reason 1);
 (2) task files become append-only for workers: a worker may flip only
-its own task's `Status:` line, tick checkboxes, keep its plan block,
-and append to designated sections (`## Progress`, `## Deferred
-questions`) — never edit Goal/Steps/criterion text of any task —
-enforced mechanically by the verifier via `git diff` against a defined
-base, not just by prose; (3) non-done stopping points get recorded: drain appends a
+its own task's `Status:` line, tick checkboxes, and keep its plan
+block — never edit Goal/Steps/criterion text of any task, and never
+write `## Progress` / `## Deferred questions` (those are drain's,
+single-writer; workers report the content instead) — enforced
+mechanically by a verifier `git diff` over ALL task files against a
+defined base, re-run by drain before every merge; (3) non-done stopping points get recorded: drain appends a
 `## Progress` entry (done vs remaining, from the worker's report) to
 the task file before relaunch/tournament, so the next attempt starts
 from evidence instead of zero; (4) done-item archiving is explicitly
@@ -78,8 +79,10 @@ cannot pass vacuously.
   draft`, `Depends on: none`, `Spec: ../SPEC.md`, a `Discovered-by:`
   line naming the reporting task, and one Goal paragraph quoting the
   worker's line verbatim under a fixed label: "verbatim worker
-  report — vet/rewrite before promoting". Committed with the same
-  commit as the status flip. Drafts are NEVER dispatchable, and drain
+  report — vet/rewrite before promoting". Committed with drain's next
+  bookkeeping commit for that task — the verdict flip, or for DONE
+  workers (whose `Status: done` arrives via the branch merge) a
+  commit immediately after the merge. Drafts are NEVER dispatchable, and drain
   never writes a draft's `Status:` — not even on an interview yes:
   only a human edits `draft` → `pending`, after vetting or rewriting
   the quoted Goal (it becomes binding worker instructions once
@@ -93,20 +96,27 @@ cannot pass vacuously.
 - R4 (append-only task files): `/breakdown`'s template note and the
   drain worker prompt both gain the rule, phrased with "may flip
   only": a worker may flip only its own task's `Status:` line, tick
-  acceptance CHECKBOXES and add evidence-citation lines, maintain the
-  plan comment block build step 1 mandates, and append to
-  `## Progress` / `## Deferred questions`; the TEXT of Goal, Steps,
-  Touch, Budget, and every acceptance CRITERION is read-only to
-  workers, in every task file. The verifier (`.claude/agents/
-  verifier.md`) gains one mechanical check: `git diff <base> --
-  <task-file>` shows changes only in that allowed set — checkbox
-  ticks, evidence lines, the plan block, the Status line, appended
-  sections; any edit to criterion text or other tasks' files is an
-  automatic FAIL finding (overfitting guard made deterministic). The
-  base is defined, not guessed: in a drain/tournament worktree it is
-  the worktree's merge-base with the default branch; in attended
-  /build, build records `git rev-parse HEAD` at step 0 and passes it
-  to the verifier alongside the evidence path.
+  acceptance CHECKBOXES and add evidence-citation lines, and maintain
+  the plan comment block build step 1 mandates; the TEXT of Goal,
+  Steps, Touch, Budget, and every acceptance CRITERION is read-only
+  to workers, in every task file — and `## Progress` / `## Deferred
+  questions` are DRAIN-written sections (single writer, main
+  checkout): workers put that content in their REPORT (R1), never in
+  files. The verifier (`.claude/agents/verifier.md`) gains one
+  mechanical check: `git diff <base> -- '*/tasks/*.md'` (path-scoped
+  to every spec's tasks/ dir, so edits to OTHER tasks' files are
+  visible) shows changes only in the worker's own task file and only
+  in the allowed set — the Status line, checkbox ticks, evidence
+  lines, the plan block; anything else — criterion text, another
+  task's file, a worker-written Progress section — is an automatic
+  FAIL finding (overfitting guard made deterministic). Because the
+  verifier runs before build's close-out edits, drain re-runs the
+  SAME whitelist diff over `merge-base..branch` at DONE collection,
+  before merging — post-verification edits cannot ride in. The base
+  is defined, not guessed: in a drain/tournament worktree it is the
+  worktree's merge-base with the default branch; in attended /build,
+  build records `git rev-parse HEAD` at step 0 and passes it to the
+  verifier alongside the evidence path.
 - R5 (stopping points): at each of drain's actual non-done events —
   worker verdict BLOCKED (including over budget) or DEFERRED, a DONE
   candidate failing verification (slot-machine relaunch), tournament
