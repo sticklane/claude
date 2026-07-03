@@ -21,9 +21,9 @@ tiers): core skills/agents speak four abstract tiers — `scout-tier`
 conversation's model), `deep-tier` (heavy judgment above the session
 default; Claude default: Opus 4.8, `claude-opus-4-8`), and
 `frontier-tier` (work that truly needs the strongest model; Claude
-default: Fable, `claude-fable-5`) — and defer concrete model names and
-headless command templates to one profile file per runtime under
-`runtimes/`. Tier-to-model mappings are per-repo overridable in
+default: Fable, `claude-fable-5`) — and defer concrete model names,
+headless command templates, and orchestration surfaces to one profile
+file per runtime under `runtimes/`. Tier-to-model mappings are per-repo overridable in
 `.claude/runtime.md`, and an always-on routing rule tells dispatchers
 when to pin deep/frontier tiers.
 `runtimes/claude-code.md` ships as the default and reproduces today's
@@ -138,7 +138,8 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
     exit 1). The selftest scenario is never discoverable by a plain
     `./evals/run.sh` (it lives only in the temp tree).
 - R7: `docs/porting.md` exists: a concept-mapping table (skills, agents,
-  rules, hooks, headless, permission modes) with columns for Claude Code,
+  rules, hooks, headless, orchestration — workflows/fan-out — and
+  permission modes) with columns for Claude Code,
   Antigravity (citing the existing `antigravity/` port), and gemini-cli
   (citing its extension/GEMINI.md equivalents), plus a short "to add a
   runtime" checklist: write `runtimes/<name>.md`, port or map each

@@ -9,8 +9,9 @@ Spec: ../SPEC.md (requirements R1, R5 (runtimes/README.md), R7, R12)
 
 Create the runtime-profile layer as new files: three profiles under
 `runtimes/` mapping the abstract tiers (scout-tier, session-tier,
-deep-tier, frontier-tier) and headless command templates onto concrete
-runtimes, a `runtimes/README.md` that is the single home of the
+deep-tier, frontier-tier), headless command templates, and
+orchestration surfaces onto concrete runtimes, a `runtimes/README.md`
+that is the single home of the
 `.claude/runtime.md` selection convention and the tier-override line
 format, and `docs/porting.md` mapping toolkit concepts onto other
 runtimes. No existing file is touched; the claude-code profile must
@@ -37,10 +38,11 @@ reproduce today's exact behavior.
    prompt, allowlist, and turn cap — copy the existing contract from
    `.claude/skills/drain/reference.md` without changing it),
    `## Orchestration` (five fields per the spec's R1: primitive = the
-   Workflow tool — deterministic scripts in `.claude/workflows/`, fired
-   only on the human "ultracode" opt-in, cite docs/human-gates.md
-   reason 5; invocation surface; schema-validated structured returns;
-   journaled resume; per-run concurrency cap), `## Notes`
+   Workflow tool; invocation surface = named deterministic scripts in
+   `.claude/workflows/` behind the human "ultracode" opt-in (cite
+   docs/human-gates.md reason 5); structured output = schema-validated
+   returns; resume = journaled, cached-prefix; parallelism cap =
+   per-run concurrency cap), `## Notes`
    (config file locations, permission-mode equivalents).
 2. Write `runtimes/antigravity.md`: `## Tiers` (scout-tier → Flash-class;
    session-tier → session model, matching the existing `antigravity/`
@@ -72,7 +74,8 @@ reproduce today's exact behavior.
    (skills that spawn agents via the harness), not the interactive
    session's own model and not the headless fallback path in v1.
 5. Write `docs/porting.md`: a concept-mapping table (skills, agents,
-   rules, hooks, headless, permission modes) with columns Claude Code /
+   rules, hooks, headless, orchestration — workflows/fan-out — and
+   permission modes) with columns Claude Code /
    Antigravity (citing the existing `antigravity/` port) / gemini-cli
    (citing its extension/GEMINI.md equivalents), plus a short "to add a
    runtime" checklist: write `runtimes/<name>.md`, port or map each
