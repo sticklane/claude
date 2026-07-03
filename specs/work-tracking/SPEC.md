@@ -110,9 +110,11 @@ cannot pass vacuously.
   lines, the plan block; anything else — criterion text, another
   task's file, a worker-written Progress section — is an automatic
   FAIL finding (overfitting guard made deterministic). Because the
-  verifier runs before build's close-out edits, drain re-runs the
-  SAME whitelist diff over `merge-base..branch` at DONE collection,
-  before merging — post-verification edits cannot ride in. The base
+  verifier runs before build's close-out edits, drain's DONE
+  collection step (`.claude/skills/drain/SKILL.md`, the merge step)
+  re-runs the SAME whitelist diff over `merge-base..branch` before
+  merging — post-verification edits cannot ride in (the phrase
+  "merge-base" lands in drain's SKILL.md and is greppable below). The base
   is defined, not guessed: in a drain/tournament worktree it is the
   worktree's merge-base with the default branch; in attended /build,
   build records `git rev-parse HEAD` at step 0 and passes it to the
@@ -144,9 +146,11 @@ cannot pass vacuously.
   (spec-regeneration model, not ours), harness task tools as the
   tracker (session-scoped; our tracker is the committed repo). Source
   links throughout.
-- R7 (mirrors): the antigravity drain workflow mirrors R1/R2/R5, the
-  build workflow mirrors R1/R3, and the breakdown workflow mirrors
-  R4's template note; the verifier skill mirror
+- R7 (mirrors): the antigravity drain workflow mirrors R1/R2/R5 AND
+  R4's merge-time re-check (it merges DONE branches the same way —
+  the hole must close on both sides), the build workflow mirrors
+  R1/R3, and the breakdown workflow mirrors R4's template note; the
+  verifier skill mirror
   (`antigravity/.agents/skills/verifier/SKILL.md`) gains R4's
   mechanical diff check.
 - R8 (versioning): the implementing change bumps `plugin.json`'s minor
@@ -176,7 +180,7 @@ cannot pass vacuously.
 - [ ] `grep -q "Discovered:" .claude/skills/drain/reference.md && grep -q "Discovered:" .claude/skills/build/SKILL.md` (R1)
 - [ ] `grep -q "Status: draft" .claude/skills/drain/SKILL.md && grep -qi "dedup" .claude/skills/drain/SKILL.md && grep -q "Discovered-by:" .claude/skills/drain/SKILL.md && grep -q "only a human" .claude/skills/drain/SKILL.md && grep -qi "never dispatchable" .claude/skills/drain/SKILL.md && grep -qi "vet" .claude/skills/drain/SKILL.md` (R2 — distinctive phrases; "human" alone pre-exists in the file and proves nothing)
 - [ ] `grep -q "only on the user's yes" .claude/skills/build/SKILL.md` (R3 — attended capture is offered, not silent; literal phrase, immune to the "task"-contains-"ask" trap)
-- [ ] `grep -q "may flip only" .claude/skills/drain/reference.md && grep -q "may flip only" .claude/skills/breakdown/SKILL.md && grep -qi "git diff" .claude/agents/verifier.md` (R4)
+- [ ] `grep -q "may flip only" .claude/skills/drain/reference.md && grep -q "may flip only" .claude/skills/breakdown/SKILL.md && grep -qi "git diff" .claude/agents/verifier.md && grep -q "merge-base" .claude/skills/drain/SKILL.md` (R4 — including the merge-time re-check in drain's DONE collection)
 - [ ] `grep -q "## Progress" .claude/skills/drain/SKILL.md && grep -qi "done vs remaining" .claude/skills/drain/SKILL.md` (R5)
 - [ ] `grep -qi "work tracking" docs/external-playbooks.md && sed -n '/[Ww]ork tracking/,/^## /p' docs/external-playbooks.md | grep -qi "append-only\|passes-only"` (R6, scoped to the entry)
 - [ ] `grep -q "Discovered:" antigravity/.agents/workflows/drain.md && grep -q "may flip only" antigravity/.agents/workflows/breakdown.md && grep -qi "git diff" antigravity/.agents/skills/verifier/SKILL.md` (R7)
