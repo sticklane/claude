@@ -1,7 +1,8 @@
 # /drain reference
 
 Loaded on demand. Contains the classification checklist, status semantics,
-the exact worker prompt, and the headless fallback.
+the exact worker prompt, the tournament procedure, and the headless
+fallback.
 
 ## When NOT to drain (the peripheral/core gate)
 
@@ -38,7 +39,9 @@ nothing.
 
 On startup, any `in-progress` with no live worker is a stale lock — reset
 it to `pending`, commit the flip, and discard the dead run's
-worktree/branch first (slot-machine recovery, never resumed).
+worktree/branch first (slot-machine recovery, never resumed). The sweep
+also removes any `task/NN-<slug>-t*` tournament branches/worktrees a
+crashed run left behind.
 
 ## Worker prompt (verbatim, fill the <>)
 
@@ -100,6 +103,64 @@ Append to the worker prompt:
 > A previous attempt failed after implementation: <merge conflict on
 > <files> | gate failure: <command + output tail>>. Its branch was
 > discarded; do not look for it. Avoid the recorded failure.
+
+## Tournament
+
+The bounded third stage after the slot machine also fails
+(generate–filter–rank; see docs/external-playbooks.md). At most one
+tournament per task per drain run; the `-t*` sweeps (at startup and
+below) make re-entry across runs safe. Skip it entirely — go straight
+to the verdict routing at the end of this section, with the two prior
+verdicts — when either prior attempt returned BLOCKED over budget.
+
+**Generate.** Delete any existing `task/NN-<slug>-t*` branches and
+worktrees, then launch three concurrent background workers
+(`isolation: worktree`), each given the standard worker prompt plus the
+relaunch-with-evidence append (covering both prior failures) plus one
+angle suffix. Each suffix also overrides the branch name set by the
+base prompt:
+
+> Override the branch name: commit to `task/NN-<slug>-t1`. Angle:
+> minimal diff — make the smallest change that passes the acceptance
+> commands; prefer fewer files touched over elegance.
+
+> Override the branch name: commit to `task/NN-<slug>-t2`. Angle:
+> strict test-first — write ALL acceptance-shaped tests before any
+> implementation, confirm each fails, then implement to green without
+> touching the tests.
+
+> Override the branch name: commit to `task/NN-<slug>-t3`. Angle:
+> re-derive — reread the task's Goal and its Spec reference and design
+> from scratch, deliberately ignoring the failed approach described in
+> the evidence.
+
+**Filter.** Each DONE candidate gets one verifier run per candidate,
+inside that candidate's worktree, exactly as in /build except that NO
+evidence path is passed — PASS/FAIL against the task's acceptance
+criteria only (the winner's branch already carries the worker's
+committed evidence file). FAIL = discarded. BLOCKED candidates are
+non-survivors — their reason goes into the recorded evidence. DEFERRED
+candidates are non-survivors — collect their questions for the routing
+below.
+
+**Rank.** Drain, not the verifier, orders the PASSing survivors
+mechanically: fewest gate findings in the verifier report, then
+smallest `git diff --stat` total. No new verifier output mode.
+
+**Merge.** The winner goes through the normal DONE bookkeeping, except
+the slot machine does not re-enter: if the winner's merge or post-merge
+gates fail, move to the next-ranked survivor. Delete survivor branches
+and worktrees only after some merge passes gates. All survivors failing
+to merge → `Status: failed`, no relaunch.
+
+**Verdict routing** (also the landing point when the tournament is
+skipped): if a DONE candidate merged, the other candidates' DEFERRED
+questions are dropped — the task shipped without needing them. If no
+candidate survives and at least one returned DEFERRED, take the normal
+DEFERRED path — write ALL collected questions under `## Deferred
+questions`, set `Status: deferred` — in preference to `failed`.
+Otherwise write `Status: failed` with every verdict's evidence
+recorded.
 
 ## Headless fallback (no background agents / older CLI)
 
