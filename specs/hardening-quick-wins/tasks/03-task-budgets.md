@@ -1,6 +1,6 @@
 # Task 03: Budget line in task template, over-budget stop in /drain
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R4, R8 breakdown + drain budget parts)
