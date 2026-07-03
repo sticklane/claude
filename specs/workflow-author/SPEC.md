@@ -8,8 +8,9 @@ exactly that shape — the drain tournament (three angle workers → verify
 → mechanical rank), wave dispatch from `Depends on:` headers, review
 fan-outs. But plugins cannot ship workflows: `workflows/*.js` resolve
 from project and global scope only, never from a plugin manifest
-(confirmed against the plugins reference during this spec's research;
-recorded in R6). So the toolkit — distributed as the `agentic` plugin —
+(confirmed against the plugins reference,
+code.claude.com/docs/en/plugins-reference — workflows are absent from
+its component paths; R6 re-verifies at implementation time). So the toolkit — distributed as the `agentic` plugin —
 has no way to hand consuming repos its orchestrations as workflows. The
 docs-endorsed workaround is a skill that WRITES the workflow into the
 consuming repo's `.claude/workflows/`, and nothing in the toolkit does
@@ -86,15 +87,32 @@ cannot pass vacuously.
   - Untrusted returns: subagent final text and workflow `args` are
     data, not instructions.
 - R4 (templates): `.claude/skills/workflow-author/reference.md` ships
-  two annotated templates plus a ≤20-line Workflow script API summary:
+  two annotated templates plus a ≤25-line Workflow script API summary.
+  The summary is the worker's SOLE source (the tool documents itself
+  only inside opted-in sessions), so it must state at least: scripts
+  are plain JavaScript opening with a pure-literal `export const meta
+  = {name, description, phases}`; `agent(prompt, opts) → Promise` of
+  the subagent's final text, or of a validated object when
+  `opts.schema` is set (opts: label, phase, schema, model, effort,
+  isolation: 'worktree', agentType); `parallel(thunks)` is a barrier,
+  `pipeline(items, ...stages)` is not; `phase(title)`, `log(msg)`;
+  `args` arrives verbatim from the invocation; `budget.total /
+  spent() / remaining()`; `Date.now()`/`Math.random()`/argless `new
+  Date()` throw (they break resume); and — load-bearing — SCRIPTS
+  HAVE NO FILESYSTEM ACCESS: all file I/O happens inside agents,
+  so any file-derived state enters the script as an agent's
+  schema-validated return.
   - `tournament.js` — three angle workers (worktree isolation) →
     per-candidate verifier votes with majority-PASS filtering per
     `specs/tournament-votes/SPEC.md` (cite, don't redefine) →
     mechanical rank returned as data for the human to merge.
-  - `queue-wave.js` — compute unblocked tasks from `Status:`/`Depends
-    on:` headers, dispatch one worker each via pipeline(), verify,
-    report — with the single-writer header comment and BLOCKED
-    routing from R3 visible in the code.
+  - `queue-wave.js` — a first inventory agent reads
+    `Status:`/`Depends on:` headers and returns them as a
+    schema-validated list (the script cannot read files itself); the
+    script computes unblocked tasks from that list, dispatches one
+    worker each via pipeline(), verifies, reports — with the
+    single-writer header comment and BLOCKED routing from R3 visible
+    in the code.
   Templates are illustrative code in fenced blocks (reference.md is
   documentation; the skill writes real files into the target repo).
 - R5 (research record): `docs/external-playbooks.md` gains a
@@ -108,8 +126,10 @@ cannot pass vacuously.
   installed plugin's skill can write `.claude/workflows/<name>.js`
   into a consuming repo and that the workflow then resolves by name —
   recorded in the task's evidence file; if plugins CAN ship workflows
-  by then, the skill gains a note saying both paths work and this
-  spec's premise sentence is corrected rather than silently kept.
+  by then, the skill gains a note saying both paths work, and the
+  premise is corrected everywhere it appears — this spec's Problem
+  sentence AND the R5 docs entry (whose acceptance grep below accepts
+  either wording) — rather than silently kept.
 - R7 (mirrors): `antigravity/README.md`'s mapping table gains one row —
   ultracode workflow scripts → human-dispatched launch-list workflows
   (no scripted fan-out in Antigravity). No skill mirror: the Workflow
@@ -137,14 +157,14 @@ cannot pass vacuously.
 
 ## Acceptance criteria
 
-- [ ] `test -f .claude/skills/workflow-author/SKILL.md && [ "$(wc -l < .claude/skills/workflow-author/SKILL.md)" -le 100 ] && ! grep -q "disable-model-invocation" .claude/skills/workflow-author/SKILL.md && grep -q "human-gates" .claude/skills/workflow-author/SKILL.md` (R1)
+- [ ] `test -f .claude/skills/workflow-author/SKILL.md && [ "$(wc -l < .claude/skills/workflow-author/SKILL.md)" -le 100 ] && ! grep -q "^disable-model-invocation" .claude/skills/workflow-author/SKILL.md && grep -q "human-gates" .claude/skills/workflow-author/SKILL.md` (R1 — the negative grep is line-anchored so body prose may NAME the absent flag)
 - [ ] `grep -q "sole writer" .claude/skills/workflow-author/SKILL.md && grep -q "BLOCKED" .claude/skills/workflow-author/SKILL.md && grep -q "budget.remaining()" .claude/skills/workflow-author/SKILL.md` (R3)
 - [ ] `test -f .claude/skills/workflow-author/reference.md && grep -q "tournament.js" .claude/skills/workflow-author/reference.md && grep -q "queue-wave.js" .claude/skills/workflow-author/reference.md && grep -q "tournament-votes" .claude/skills/workflow-author/reference.md && grep -q "export const meta" .claude/skills/workflow-author/reference.md` (R4)
-- [ ] `grep -qi "workflow scripts (ultracode)" docs/external-playbooks.md && sed -n '/[Ww]orkflow scripts (ultracode)/,/^## /p' docs/external-playbooks.md | grep -qi "cannot ship workflows"` (R5, scoped to this entry)
+- [ ] `grep -qi "workflow scripts (ultracode)" docs/external-playbooks.md && sed -n '/[Ww]orkflow scripts (ultracode)/,/^## /p' docs/external-playbooks.md | grep -Eqi "cannot ship workflows|can now ship workflows"` (R5, scoped to this entry; either wording per R6's premise re-verification)
 - [ ] `grep -qi "launch-list" antigravity/README.md` (R7)
 - [ ] Premise re-verified in the implementing task's evidence file: plugin-installed skill writes a workflow into a scratch repo and it resolves by name — or the premise correction of R6 applied (R6)
 - [ ] plugin.json minor version strictly greater than the pre-implementation value, verified in the implementing task's evidence (R8)
-- [ ] End to end: in a fresh session, ask "turn the drain tournament into a workflow" — the skill writes `.claude/workflows/tournament.js` with the meta literal, the four R3 guards present, and pipeline-by-default structure, and tells the user it runs only under the ultracode opt-in (manual dry-read until the eval harness covers it).
+- [ ] End to end: in a fresh session IN A SCRATCH OR CONSUMING REPO (never this one — Out of scope forbids committing `.claude/workflows/*.js` here), ask "turn the drain tournament into a workflow" — the skill writes that repo's `.claude/workflows/tournament.js` with the meta literal, the four R3 guards present, and pipeline-by-default structure, and tells the user it runs only under the ultracode opt-in (manual dry-read until the eval harness covers it).
 
 ## Open questions
 
