@@ -15,10 +15,17 @@ ability to select other models/runtimes per repo.
 ## Solution
 
 A runtime-profile layer, decided with the maintainer (all four interview
-recommendations adopted): core skills/agents speak two abstract tiers —
-`scout-tier` (cheap, fast, read-only reconnaissance) and `session-tier`
-(the conversation's model) — and defer concrete model names and headless
-command templates to one profile file per runtime under `runtimes/`.
+recommendations adopted, plus a maintainer amendment adding deep-work
+tiers): core skills/agents speak four abstract tiers — `scout-tier`
+(cheap, fast, read-only reconnaissance), `session-tier` (the
+conversation's model), `deep-tier` (heavy judgment above the session
+default; Claude default: Opus 4.8, `claude-opus-4-8`), and
+`frontier-tier` (work that truly needs the strongest model; Claude
+default: Fable, `claude-fable-5`) — and defer concrete model names and
+headless command templates to one profile file per runtime under
+`runtimes/`. Tier-to-model mappings are per-repo overridable in
+`.claude/runtime.md`, and an always-on routing rule tells dispatchers
+when to pin deep/frontier tiers.
 `runtimes/claude-code.md` ships as the default and reproduces today's
 exact behavior; consuming repos select another profile with a one-line
 `.claude/runtime.md`; `evals/run.sh` gains two environment overrides
@@ -27,18 +34,23 @@ discovery) so portability is testable with a stub CLI and a throwaway
 scenario tree, never touching the real evalsets. Core prose is de-Clauded
 to tier language with the Claude default named inline; a `docs/porting.md`
 guide maps toolkit concepts onto other runtimes. New marker phrases
-("scout-tier", "active runtime profile", "RUNNER_CMD", "EVALS_ROOT") do
-not exist in the repo today, so the acceptance greps below cannot pass
-vacuously. Product-internal models the toolkit does not choose (the
+("scout-tier", "deep-tier", "frontier-tier", "tier pin", "active runtime
+profile", "RUNNER_CMD", "EVALS_ROOT") do not exist in the repo today, so
+the acceptance greps below cannot pass vacuously. Product-internal models the toolkit does not choose (the
 `/goal` transcript evaluator) are explicitly NOT tier vocabulary.
 
 ## Requirements
 
 - R1: `runtimes/claude-code.md`, `runtimes/antigravity.md`, and
   `runtimes/gemini-cli.md` exist, each with the same three sections:
-  `## Tiers` (scout-tier and session-tier mapped to concrete models —
-  Claude: Haiku + effort low / inherit; Antigravity: Flash-class /
-  session model; gemini-cli: its flash / pro equivalents), `## Headless`
+  `## Tiers` (all four tiers mapped to concrete models — Claude:
+  scout-tier = Haiku + effort low, session-tier = inherit, deep-tier =
+  Opus 4.8 (`claude-opus-4-8`; Agent-tool short name `opus`),
+  frontier-tier = Fable (`claude-fable-5`; short name `fable`);
+  Antigravity: Flash-class / session model, and for the two deep tiers
+  its strongest available model or an explicit "no distinct mapping —
+  session model" line; gemini-cli: its flash / pro equivalents, same
+  rule for the deep tiers), `## Headless`
   (the runtime's non-interactive command template with placeholders for
   prompt, allowlist, and turn/step cap — Antigravity: states none exists,
   Agent Manager launches instead), and `## Notes` (config file locations,
@@ -72,7 +84,11 @@ vacuously. Product-internal models the toolkit does not choose (the
   the default profile's rendering).
 - R5: runtime selection: a consuming repo may create `.claude/runtime.md`
   whose first non-comment line is `runtime: <profile-name>`; absent file
-  means `claude-code`. The convention is documented in one place —
+  means `claude-code`. Subsequent lines may override individual tier
+  mappings — `<tier-name>: <model>` (e.g. `frontier-tier:
+  claude-opus-4-8` to cap spend, or a self-hosted model id) — and any
+  unlisted tier keeps the active profile's default.
+  The convention is documented in one place —
   `runtimes/README.md` — and cited (not restated) by the drain and
   autopilot references. Every citation of `runtimes/` from files that
   ship in the plugin (scout.md, the two skill references) must carry the
@@ -123,6 +139,27 @@ vacuously. Product-internal models the toolkit does not choose (the
   in core files only as the inline Claude default; the mappings for
   other runtimes live in `runtimes/` profiles — new skills use tier
   language plus the inline default, never a bare model name."
+- R11 (tier routing rule): `.claude/rules/token-discipline.md`'s "Model
+  and effort matching" section becomes a four-rung ladder containing the
+  phrase "tier pin": scout-tier for mechanical or lookup work;
+  session-tier for ordinary judgment work; deep-tier (Claude default:
+  Opus 4.8) for heavy judgment above the session default — final review
+  of a large diff, subtle-bug hunts, architecture critique; and
+  frontier-tier (Claude default: Fable) ONLY for work that truly needs
+  the strongest model — novel architecture decisions, security-critical
+  review, or a retry after a deep-tier attempt failed. The rule tells
+  dispatching skills (drain's tournament ranking, /design's judging,
+  an on-demand verifier escalation) to consult `.claude/runtime.md`
+  tier pins and pass the mapped model through the harness's model
+  parameter when spawning; with no config present they inherit the
+  session model — today's behavior, zero new cost. (This rewrite
+  subsumes R3's line-~21 edit to the same section; R3's other targets
+  are untouched by it.)
+- R12: `runtimes/README.md` (R5's file) also documents the four-rung
+  ladder and the tier-override line format, with one worked example
+  block pinning `deep-tier: claude-opus-4-8` and `frontier-tier:
+  claude-fable-5`, and states that tier pins bind dispatchers (skills
+  that spawn agents), not the interactive session's own model.
 - R10: `.claude-plugin/plugin.json` version bumped (0.3.x → 0.4.0) by
   this spec — it owns the bump for this change.
 
@@ -146,11 +183,14 @@ vacuously. Product-internal models the toolkit does not choose (the
 ## Acceptance criteria
 
 - [ ] `test -f runtimes/claude-code.md && test -f runtimes/antigravity.md && test -f runtimes/gemini-cli.md && for f in runtimes/claude-code.md runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "^## Tiers" $f && grep -q "^## Headless" $f && grep -q "^## Notes" $f || exit 1; done` (R1)
+- [ ] `grep -q "deep-tier" runtimes/claude-code.md && grep -q "claude-opus-4-8" runtimes/claude-code.md && grep -q "claude-fable-5" runtimes/claude-code.md && for f in runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "deep-tier" $f && grep -q "frontier-tier" $f || exit 1; done` (R1 — all four tiers mapped in every profile)
 - [ ] `grep -q "scout-tier" .claude/agents/scout.md && grep -q "model: haiku" .claude/agents/scout.md && grep -qi "absent in plugin installs" .claude/agents/scout.md` (R2)
 - [ ] `grep -q "scout-tier" .claude/rules/token-discipline.md && grep -q "scout-tier" README.md` (R3)
 - [ ] `grep -qi "built-in transcript evaluator" .claude/skills/autopilot/reference.md && grep -qi "built-in transcript evaluator" .claude/skills/gate/reference.md && ! grep -qi "scout-tier" .claude/skills/autopilot/reference.md && ! grep -qi "scout-tier" .claude/skills/gate/reference.md` (R3 — evaluator lines reworded, no tier mislabel)
 - [ ] `grep -q "active runtime profile" .claude/skills/drain/reference.md && grep -q "active runtime profile" .claude/skills/autopilot/reference.md && grep -q "claude -p" .claude/skills/drain/reference.md` (R4)
 - [ ] `test -f runtimes/README.md && grep -q "runtime:" runtimes/README.md && grep -q ".claude/runtime.md" runtimes/README.md` (R5)
+- [ ] `grep -q "deep-tier: claude-opus-4-8" runtimes/README.md && grep -q "frontier-tier: claude-fable-5" runtimes/README.md` (R12 — override format documented with the worked example)
+- [ ] `grep -q "tier pin" .claude/rules/token-discipline.md && grep -q "frontier-tier" .claude/rules/token-discipline.md && grep -q "deep-tier" .claude/rules/token-discipline.md` (R11 — routing ladder in the always-on rule)
 - [ ] `grep -q "absent in plugin installs" .claude/skills/drain/reference.md && grep -q "absent in plugin installs" .claude/skills/autopilot/reference.md` (R5 fallback clauses in the plugin-shipped citers; scout.md's is checked under R2)
 - [ ] `grep -q "RUNNER_CMD" evals/run.sh && grep -q "EVALS_ROOT" evals/run.sh && grep -q "ALLOWED_TOOLS" evals/run.sh && bash -n evals/run.sh` (R6)
 - [ ] `test -x evals/stub-cli.sh && test -x evals/runner-selftest.sh && bash -n evals/stub-cli.sh && bash -n evals/runner-selftest.sh` (R6)
