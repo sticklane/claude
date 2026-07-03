@@ -40,3 +40,4 @@ command listed in `## Commands` (rf-01 has landed, so
 - [ ] `test -x specs/status.sh && bash -n specs/status.sh && [ "$(wc -l < specs/status.sh)" -le 40 ]` -> exit 0 (R3)
 - [ ] `out=$(mktemp) && ./specs/status.sh > "$out" && grep -q "TOTAL" "$out" && for f in specs/*/tasks/*.md; do grep -q "$f" "$out" || exit 1; done` -> exit 0 (R3)
 - [ ] `d=$(mktemp -d) && mkdir -p "$d/specs" && (cd "$d" && bash "$OLDPWD/specs/status.sh")` -> exit 0 (R3 empty-queue; run from repo root)
+- [ ] Manual dry-read per the spec's end-to-end criterion: opening ONLY AGENTS.md and running ./specs/status.sh answers what the repo is, where things live, which commands are verified, what work is open, and where a handoff would be

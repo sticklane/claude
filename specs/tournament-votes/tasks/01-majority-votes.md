@@ -1,7 +1,7 @@
 # Task 01: Majority-PASS verifier votes in the tournament
 
 Status: pending
-Depends on: ../../review-fixes/tasks/02-drain-state-machine.md, ../../model-agnostic/tasks/02-core-tier-language.md, ../../repo-orientation/tasks/02-onboard-and-record.md
+Depends on: ../../review-fixes/tasks/02-drain-state-machine.md, ../../model-agnostic/tasks/02-core-tier-language.md, ../../repo-orientation/tasks/02-onboard-and-record.md, ../../task-priority/tasks/01-priority-and-tiebreak.md
 Priority: P1
 Budget: 25 turns
 Spec: ../SPEC.md (requirements R1, R2, R3, R4, R6)
@@ -38,3 +38,4 @@ to the AlphaCode 2 entry. Spec R1/R2/R3/R4/R6 are exact.
 - [ ] `sed -n '/^## Tournament/,/^## /p' .claude/skills/drain/reference.md | grep -qi "human-gates"` -> exit 0 (R3)
 - [ ] `grep -q "majority PASS" antigravity/.agents/workflows/drain.md && grep -q "PASS votes" antigravity/.agents/workflows/drain.md && ! grep -qi "one verifier-skill run per candidate" antigravity/.agents/workflows/drain.md` -> exit 0 (R4)
 - [ ] `grep -q "N-vote" docs/external-playbooks.md` -> exit 0 (R6)
+- [ ] Manual paper dry-run per the spec's end-to-end criterion: 3/2/1 PASS votes filter and rank correctly, 2-2 tie falls to summed gate findings, full tie to angle index, and a 2-PASS+1-BLOCKED candidate is DISQUALIFIED with the quote recorded
