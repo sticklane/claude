@@ -18,7 +18,8 @@ open with a table of contents; references stay one level deep); the
 always-on memory pointer line ("narrow per-topic lessons are indexed in
 `docs/memory.md`; check it when a task matches a topic"); and the
 machine-state bullet (fields skills read programmatically — Status,
-Depends on, Budget, and post-review-fix-wave Touch — are single-line
+Depends on, Priority (optional, absent = P2), Budget, and
+post-review-fix-wave Touch — are single-line
 `Key: value` headers above the file's first `##`; body sections are for
 humans and workers, never orchestrator parsing). /breakdown's task
 template gains a one-line comment stating that same header convention,

@@ -33,7 +33,7 @@ task 99 in specs/review-fixes.
 - `.claude/skills/autopilot/reference.md`
 - `.claude/skills/evals/reference.md`
   - Cross-spec (all five reference files): also edited by review-fixes,
-    model-agnostic, beads-integration, chaining-antipatterns — see
+    model-agnostic, chaining-antipatterns — see
     specs/QUEUE.md
 - `docs/external-playbooks.md` — Cross-spec: also edited by all other
   feature queues — see specs/QUEUE.md

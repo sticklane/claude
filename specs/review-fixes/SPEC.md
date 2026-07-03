@@ -46,8 +46,7 @@ fixes in full.
 
 ## Out of scope
 
-- The five feature specs in sibling dirs — `specs/beads-integration/`,
-  `specs/chaining-antipatterns/`, `specs/code-vs-llm/`,
+- The feature specs in sibling dirs — `specs/chaining-antipatterns/`, `specs/code-vs-llm/`,
   `specs/context-management/`, `specs/model-agnostic/` — own their features
   and versioning clauses; nothing here implements or edits them.
 
