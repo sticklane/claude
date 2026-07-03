@@ -1,6 +1,6 @@
 # Task 06: Evals runner robustness — nullglob, guards, git isolation, cleanup trap, FAIL forensics
 
-Status: in-progress
+Status: done
 Depends on: none
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 06)
@@ -40,11 +40,11 @@ grants, so scout fan-out prompts for permission mid-eval.
 
 ## Acceptance
 
-- [ ] `bash -n evals/run.sh` → exit 0
-- [ ] `grep -q "shopt -s nullglob" evals/run.sh` → exit 0
-- [ ] `grep -q "unknown skill" evals/run.sh && grep -qF '.claude/skills/$skill' evals/run.sh` → exit 0 (guard present)
-- [ ] `grep -q "GIT_CONFIG_GLOBAL=/dev/null" evals/run.sh && grep -q "commit.gpgsign=false" evals/run.sh` → exit 0
-- [ ] `grep -qE "trap .rm -rf .\\\$EVAL_DIR" evals/run.sh` → exit 0 (cleanup trap installed)
-- [ ] `grep -q "tee" evals/run.sh` → exit 0 (per-scenario session log)
-- [ ] `grep -qF "Bash(ls *)" evals/breakdown/01-small-spec/allowed-tools.txt && grep -qF "Bash(wc *)" evals/breakdown/01-small-spec/allowed-tools.txt` → exit 0
-- [ ] `bash evals/run.sh no-such-skill 2>&1 | grep -qi "unknown skill"` → exit 0 (FAIL path exercised; adjust invocation to the runner's actual CLI)
+- [x] `bash -n evals/run.sh` → exit 0 — verified, evidence/06-evals-runner-robustness.md
+- [x] `grep -q "shopt -s nullglob" evals/run.sh` → exit 0 — line 12, evidence/06-evals-runner-robustness.md
+- [x] `grep -q "unknown skill" evals/run.sh && grep -qF '.claude/skills/$skill' evals/run.sh` → exit 0 (guard present) — pre-loop arg guard + per-scenario check, evidence/06-evals-runner-robustness.md
+- [x] `grep -q "GIT_CONFIG_GLOBAL=/dev/null" evals/run.sh && grep -q "commit.gpgsign=false" evals/run.sh` → exit 0 — exported env forced an unsigned commit under gpgsign=true in verifier's end-to-end test, evidence/06-evals-runner-robustness.md
+- [x] `grep -qE "trap .rm -rf .\\\$EVAL_DIR" evals/run.sh` → exit 0 (cleanup trap installed) — interrupt cleanup and kept-on-FAIL survival behaviorally verified, evidence/06-evals-runner-robustness.md
+- [x] `grep -q "tee" evals/run.sh` → exit 0 (per-scenario session log) — teed to $EVAL_DIR/session.log with pipefail, evidence/06-evals-runner-robustness.md
+- [x] `grep -qF "Bash(ls *)" evals/breakdown/01-small-spec/allowed-tools.txt && grep -qF "Bash(wc *)" evals/breakdown/01-small-spec/allowed-tools.txt` → exit 0 — evidence/06-evals-runner-robustness.md
+- [x] `bash evals/run.sh no-such-skill 2>&1 | grep -qi "unknown skill"` → exit 0 (FAIL path exercised) — prints "unknown skill: no-such-skill", exit 1, no fixture created, evidence/06-evals-runner-robustness.md

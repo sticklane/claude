@@ -1,1 +1,1 @@
-Read,Edit,Write,Glob,Grep,Bash(git *),Task
+Read,Edit,Write,Glob,Grep,Bash(git *),Bash(ls *),Bash(wc *),Task
