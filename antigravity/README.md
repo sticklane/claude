@@ -35,6 +35,10 @@ be listed. Type `/idea` in the agent input to test a workflow.
 | `/fleet` open-agents dashboard | Not ported — Antigravity's Agent Manager is this surface natively |
 | `/workboard` cross-repo work dashboard | Ported as-is — it also reads Antigravity's own `brain/` artifacts, covering what the Agent Manager can't see (other tools, specs, git, Claude Code sessions) |
 
+The human-launch gates and their rationale: the toolkit repo's
+docs/human-gates.md — in Antigravity every workflow is human-launched
+natively, so the gates hold by construction.
+
 ## What degrades (be aware)
 
 - **No enforced cheap subagents.** Claude Code's scout is Haiku, read-only,
