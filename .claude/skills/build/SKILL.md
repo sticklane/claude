@@ -72,11 +72,14 @@ replaces "is done".
   code, redundant abstractions, and defensive handling for cases that can't
   happen. Re-run the acceptance commands after.
 - Update the task file: Status `done`, tick acceptance boxes, one line of
-  evidence each citing the `evidence/` file (from the verifier's report,
-  not your own claim) rather than duplicating output; delete the plan
-  comment block from step 1.
-- Commit code + task file + the verifier's `evidence/` file with a message
-  referencing the task. Push / open a PR only if the user asked.
+  evidence each (from the verifier's report, not your own claim) rather
+  than duplicating output — citing the `evidence/` file when an evidence
+  path was passed in step 3; delete the plan comment block from step 1.
+- Commit code + task file with a message referencing the task — plus the
+  verifier's `evidence/` file when an evidence path was passed; otherwise
+  note that evidence was not persisted and keep the one-line evidence
+  inline in the task file as the artifact. Push / open a PR only if the
+  user asked.
 - Report: what shipped, evidence summary, anything learned the hard way — and
   if there WAS such a learning, run /distill before ending.
 - Tell the user to `/clear` before starting the next task.

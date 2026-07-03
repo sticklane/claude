@@ -1,7 +1,8 @@
 # /evals reference: the breakdown scenario, verbatim
 
 The runner is [evals/run.sh](../../../evals/run.sh) — read it there
-rather than duplicating it here. Below are the four files of the
+rather than duplicating it here. Runner and scenarios ship in the
+toolkit repo, not with installs — not usable from plugin installs. Below are the four files of the
 reference evalset `evals/breakdown/01-small-spec/`, verbatim, as the
 template for scaffolding a new scenario.
 

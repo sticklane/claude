@@ -6,8 +6,11 @@ disable-model-invocation: true
 ---
 
 Run (or first scaffold) the stored evalset for the skill named in
-$ARGUMENTS. v1 grades artifacts only — what a run produced, not the
-trajectory it took (specs/skill-evals/SPEC.md). A scenario is a directory
+$ARGUMENTS. The runner (`evals/run.sh`) and the fixture scenarios it
+consumes ship in the toolkit repo, not with installs — /evals is not
+usable from plugin installs. v1 grades artifacts only — what a run
+produced, not the trajectory it took (specs/skill-evals/SPEC.md). A
+scenario is a directory
 `evals/<skill>/<NN-name>/` containing exactly:
 
 - `setup.sh` — builds a fixture repo in `$EVAL_DIR`, an empty directory

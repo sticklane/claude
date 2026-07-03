@@ -48,9 +48,12 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    what the code does, only how; remove comments describing obvious code,
    redundant abstractions, and defensive handling for impossible cases;
    re-run the acceptance commands after. Update the task file (Status
-   `done`, ticked boxes, one line of evidence each citing the `evidence/`
-   file rather than duplicating output; delete the plan comment block
-   from step 2). Commit code + task file + the
-   `evidence/` file referencing the task; push/PR only if asked. If anything was
+   `done`, ticked boxes, one line of evidence each rather than
+   duplicating output — citing the `evidence/` file when an evidence
+   path was passed in step 4; delete the plan comment block from
+   step 2). Commit code + task file referencing the task — plus the
+   `evidence/` file when an evidence path was passed; otherwise note
+   that evidence was not persisted and keep the one-line evidence
+   inline in the task file as the artifact. Push/PR only if asked. If anything was
    learned the hard way, apply the distill skill. Tell the user to start
    the next task in a NEW conversation.

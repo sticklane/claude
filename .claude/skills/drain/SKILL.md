@@ -65,8 +65,10 @@ itself flips the status to `done` and commits the flip.)
 ## 3. Collect the verdict
 
 - **DONE** — merge the task branch (it carries the task file with
-  `Status: done`, ticked boxes, and the verifier's `evidence/` file, per
-  /build) and run the project gates.
+  `Status: done` and ticked boxes, per /build; for queues using the
+  `specs/<slug>/ layout` it also carries the verifier's `evidence/`
+  file — for other layouts the task file's inline evidence is the
+  artifact) and run the project gates.
   If the merge or gates fail: run `git merge --abort` first (a failed
   merge leaves the checkout wedged in a conflicted state), then slot
   machine — discard the branch, relaunch once with the failure evidence

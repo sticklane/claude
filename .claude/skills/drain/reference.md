@@ -149,8 +149,10 @@ base prompt:
 **Filter.** Each DONE candidate gets one verifier run per candidate,
 inside that candidate's worktree, exactly as in /build except that NO
 evidence path is passed — PASS/FAIL against the task's acceptance
-criteria only (the winner's branch already carries the worker's
-committed evidence file). FAIL = discarded. BLOCKED candidates are
+criteria only (for queues using the `specs/<slug>/ layout` the winner's
+branch already carries the worker's committed evidence file; for other
+layouts the task file's inline evidence is the artifact). FAIL =
+discarded. BLOCKED candidates are
 non-survivors — their reason goes into the recorded evidence. DEFERRED
 candidates are non-survivors — collect their questions for the routing
 below.

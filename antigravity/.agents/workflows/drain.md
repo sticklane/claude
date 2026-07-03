@@ -55,7 +55,10 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    > files changed.
 
 3. **Collect.** DONE → merge the branch (it carries the task file's
-   `Status: done` and the verifier's `evidence/` file from /build) and run
+   `Status: done` from /build; for queues using the
+   `specs/<slug>/ layout` it also carries the verifier's `evidence/`
+   file — for other layouts the task file's inline evidence is the
+   artifact) and run
    the project gates; on merge/gate
    failure run `git merge --abort` (a failed merge leaves the checkout
    wedged in a conflicted state), discard the branch, and relaunch once
@@ -91,8 +94,10 @@ payments, or migrations. Pull core tasks out for attended /build runs.
      ignoring the failed approach.
    - Filter: one verifier-skill run per candidate, inside that
      candidate's worktree, PASS/FAIL against the task's acceptance
-     criteria, no evidence path passed (the winner's branch already
-     carries the worker's evidence file). FAIL = discarded; BLOCKED =
+     criteria, no evidence path passed (for queues using the
+     `specs/<slug>/ layout` the winner's branch already carries the
+     worker's evidence file; for other layouts the task file's inline
+     evidence is the artifact). FAIL = discarded; BLOCKED =
      non-survivor, reason into the evidence; DEFERRED = non-survivor,
      questions collected.
    - Rank (the workflow, not the verifier): fewest gate findings in the
