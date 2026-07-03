@@ -148,8 +148,12 @@ cannot pass vacuously.
   links throughout.
 - R7 (mirrors): the antigravity drain workflow mirrors R1/R2/R5 AND
   R4's merge-time re-check (it merges DONE branches the same way —
-  the hole must close on both sides), the build workflow mirrors
-  R1/R3, and the breakdown workflow mirrors R4's template note; the
+  the hole must close on both sides; the phrase "merge-base" lands
+  there too and is greppable below), the build workflow mirrors
+  R1/R3, and `antigravity/.agents/skills/breakdown/SKILL.md` mirrors
+  R4's template note (the template lives in the SKILL; the workflows/
+  breakdown.md file is a 5-line shim and is NOT edited — same finding
+  as task-priority R5); the
   verifier skill mirror
   (`antigravity/.agents/skills/verifier/SKILL.md`) gains R4's
   mechanical diff check.
@@ -183,7 +187,7 @@ cannot pass vacuously.
 - [ ] `grep -q "may flip only" .claude/skills/drain/reference.md && grep -q "may flip only" .claude/skills/breakdown/SKILL.md && grep -qi "git diff" .claude/agents/verifier.md && grep -q "merge-base" .claude/skills/drain/SKILL.md` (R4 — including the merge-time re-check in drain's DONE collection)
 - [ ] `grep -q "## Progress" .claude/skills/drain/SKILL.md && grep -qi "done vs remaining" .claude/skills/drain/SKILL.md` (R5)
 - [ ] `grep -qi "work tracking" docs/external-playbooks.md && sed -n '/[Ww]ork tracking/,/^## /p' docs/external-playbooks.md | grep -qi "append-only\|passes-only"` (R6, scoped to the entry)
-- [ ] `grep -q "Discovered:" antigravity/.agents/workflows/drain.md && grep -q "may flip only" antigravity/.agents/workflows/breakdown.md && grep -qi "git diff" antigravity/.agents/skills/verifier/SKILL.md` (R7)
+- [ ] `grep -q "Discovered:" antigravity/.agents/workflows/drain.md && grep -q "merge-base" antigravity/.agents/workflows/drain.md && grep -q "may flip only" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "git diff" antigravity/.agents/skills/verifier/SKILL.md` (R7 — including the mirrored merge-time re-check; breakdown mirror targets the SKILL, not the 5-line workflow shim)
 - [ ] plugin.json minor version strictly greater than the pre-implementation value, verified in the implementing task's evidence (R8)
 - [ ] End to end: paper dry-run — a worker report contains one Discovered item, a BLOCKED verdict, and a `Done vs remaining:` line: drain writes exactly one `Status: draft` stub (quoting the line verbatim under the vet/rewrite label), appends one `## Progress` done-vs-remaining entry to the task file, commits both with the status flip; a second identical discovery from a later worker creates NO second stub (title-line dedupe); the draft never appears in the dispatchable set, and drain does not flip it even when the batch interview answers yes — the human edits the file (manual until the eval harness covers /drain).
 
