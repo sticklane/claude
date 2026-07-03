@@ -1,6 +1,6 @@
 # Task 07: Evals distribution caveat + conditional evidence commits
 
-Status: in-progress
+Status: done
 Depends on: 02, 05
 Budget: 30 turns
 Spec: ../SPEC.md (cluster 07)
@@ -45,8 +45,13 @@ reference — apply on top.)
 
 ## Acceptance
 
-- [ ] `grep -q "toolkit repo" .claude/skills/evals/SKILL.md && grep -qi "not usable from plugin installs\|not with installs" .claude/skills/evals/SKILL.md` → exit 0
-- [ ] `grep -qi "not usable from plugin installs\|not with installs" .claude/skills/evals/reference.md` → exit 0
-- [ ] `grep -q "inline in the task file" .claude/skills/build/SKILL.md` → exit 0 (conditional evidence with inline fallback)
-- [ ] `grep -q "specs/<slug>/ layout" .claude/skills/drain/SKILL.md && grep -q "specs/<slug>/ layout" .claude/skills/drain/reference.md` → exit 0 (assertions scoped)
-- [ ] `grep -q "inline in the task file" antigravity/.agents/workflows/build.md && grep -q "specs/<slug>/ layout" antigravity/.agents/workflows/drain.md` → exit 0 (mirrors)
+- [x] `grep -q "toolkit repo" .claude/skills/evals/SKILL.md && grep -qi "not usable from plugin installs\|not with installs" .claude/skills/evals/SKILL.md` → exit 0
+  — verified exit 0; caveat in first body paragraph, drain's wording (evidence/07-evals-distribution-and-evidence.md, AC1)
+- [x] `grep -qi "not usable from plugin installs\|not with installs" .claude/skills/evals/reference.md` → exit 0
+  — verified exit 0; caveat beside the runner pointer (evidence/07-evals-distribution-and-evidence.md, AC2)
+- [x] `grep -q "inline in the task file" .claude/skills/build/SKILL.md` → exit 0 (conditional evidence with inline fallback)
+  — verified exit 0; close-out commit conditional on an evidence path, inline fallback (evidence/07-evals-distribution-and-evidence.md, AC3)
+- [x] `grep -q "specs/<slug>/ layout" .claude/skills/drain/SKILL.md && grep -q "specs/<slug>/ layout" .claude/skills/drain/reference.md` → exit 0 (assertions scoped)
+  — verified exit 0; DONE bullet and tournament filter both scoped, on top of task 02 (evidence/07-evals-distribution-and-evidence.md, AC4)
+- [x] `grep -q "inline in the task file" antigravity/.agents/workflows/build.md && grep -q "specs/<slug>/ layout" antigravity/.agents/workflows/drain.md` → exit 0 (mirrors)
+  — verified exit 0; mirrors carry both changes, drain in collect + tournament filter (evidence/07-evals-distribution-and-evidence.md, AC5)
