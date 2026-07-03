@@ -9,7 +9,9 @@
 > degradation override** as the trigger; scope = **drain, autopilot, parallel,
 > and the ultra-mode workflow templates**. Complements (does not modify)
 > `specs/context-management/SPEC.md`, which covers compaction steering, memory
-> indexing, and tool-call ceilings but explicitly not orchestrator relaunch.
+> indexing, and tool-call ceilings but not orchestrator relaunch. Both specs
+> edit the drain skill files — per QUEUE.md's serial-chain rule this spec is
+> sequenced AFTER context-management's drain-touching tasks.
 
 ## Problem
 
@@ -35,9 +37,10 @@ rule) — the handoff artifact is small because task files already checkpoint
 the queue.
 
 - **Trigger** (research-calibrated): a deterministic **generation budget** —
-  after N recorded verdicts in one session (default N=4, overridable per spec
-  via a `Relaunch-every:` header next to the queue's other machine-state
-  lines) — plus a **degradation override**: hand off early at the next
+  after N recorded verdicts in one session (default N=4, overridable via a
+  `Relaunch-every: N` header in the drained spec's SPEC.md header block — one
+  per-spec location; task files keep only their existing per-task headers) —
+  plus a **degradation override**: hand off early at the next
   boundary if the orchestrator notices itself re-reading files it already
   read, losing queue position, repeated failed corrections, or a compaction
   event. Proactive, never failure-triggered (degradation is a gradient; hand
@@ -49,10 +52,22 @@ the queue.
   format, minus what task files already record).
 - **Relaunch**: headless detached
   `claude -p "/drain <spec> (generation G+1, baton: <path>)"` in the repo,
-  with the same headless flag set drain's reference already documents
-  (permission mode, --max-turns). A **max-generations cap** (default 10)
-  prevents runaway relaunch loops; hitting it stops with the baton written
-  and a needs-attention note instead of respawning.
+  with a **new orchestrator flag set** defined by this spec (NOT drain's
+  existing headless-worker flags, which deliberately exclude the Task tool
+  and would abort the orchestrator's first dispatch): agent/Task dispatch
+  allowed, allowlist covering worktree merges and project gates, plus
+  --max-turns. **Mandatory verification step:** whether a headless `-p`
+  session supports background-agent dispatch with completion notifications
+  must be verified live before this ships — every existing headless template
+  in the toolkit is deliberately single-agent. If it does not, relaunched
+  generations dispatch workers via drain's documented headless-worker
+  fallback (sequential `claude -p` workers) instead — same queue semantics,
+  slower. A **max-generations cap** (default 10) prevents runaway relaunch
+  loops; hitting it stops with the baton written and a needs-attention note
+  instead of respawning. A headless generation that reaches drain's
+  batch-interview stage (queue drained to deferred-only) cannot interview:
+  it writes the deferred-questions summary into the baton as a
+  needs-attention section and stops — the workboard surfaces it (R6).
 - **Fresh-instance ritual** (research finding: read state, then verify):
   generation G+1 reads the baton + task-file `Status:` lines + `git log
   --oneline -15` FIRST, then runs one cheap verification (the project's check
@@ -63,16 +78,29 @@ the queue.
 ## Requirements
 
 - R1: **drain** SKILL.md gains the baton-pass step (trigger, artifact,
-  relaunch, cap) in ≤ 20 lines, with the exact relaunch command template and
-  headless flags in reference.md (per the exact-config-goes-in-reference
-  convention). The attended path stays available: when drain is running
-  attended and the trigger fires, it offers the baton + command to the user
-  instead of self-relaunching only if the user asked to stay attended;
-  default is self-relaunch.
-- R2: **autopilot**: on hitting `--max-turns` with the bounded goal unmet but
-  progressing (goal evaluator says advancing, not stuck), the run writes the
-  baton and relaunches (same cap); a stuck verdict still stops for spec
-  repair as today. Documented in autopilot SKILL.md + reference.md.
+  relaunch, cap, fresh-instance ritual) in ≤ 20 lines, with the exact
+  relaunch command template and the NEW orchestrator flag set in reference.md
+  (per the exact-config-goes-in-reference convention), including the recorded
+  result of the background-dispatch verification above. Attended opt-out:
+  generation 1 is always attended (drain is human-launched); passing the word
+  `attended` in the /drain invocation makes every trigger offer the baton +
+  relaunch command to the user instead of self-relaunching. Without it,
+  gen-1 self-relaunches by default and MUST end its own turn immediately
+  after spawning gen-2 with an explicit statement that this session is done
+  and will not touch the queue again (preserving the one-writer invariant).
+- R1a: **Fresh-instance ritual** (research: read state, then verify): a
+  relaunched generation's first acts are (1) read the baton, (2) read the
+  task files' `Status:` lines, (3) `git log --oneline -15`, (4) run one
+  cheap verification command (the project check or the last-flipped task's
+  acceptance command) — only then dispatch. In SKILL.md's ≤ 20 lines.
+- R2: **autopilot**: pre-emptive, not post-cap (hitting `--max-turns`
+  terminates the process — there is no after; and the /goal evaluator judges
+  only condition-met, not progress): the launched run is instructed to write
+  the baton and relaunch at its last safe boundary BEFORE the turn cap
+  (e.g. at ~80% of --max-turns), judging its own advancement by new commits
+  since launch; no new commits since the previous baton → stop for spec
+  repair as today instead of respawning. Documented in autopilot SKILL.md +
+  reference.md (same generations cap).
 - R3: **parallel**: the collect/merge phase gains the same boundary rule —
   if collection will outlive the session budget (many workers), merge what's
   verified, commit, write the baton listing unmerged branches, relaunch.
@@ -81,15 +109,19 @@ the queue.
   MAIN session should treat a long workflow as its own baton boundary — the
   workflow's resume (scriptPath + resumeFromRunId) plus committed task state
   make the main session disposable; the template comments include the
-  baton/relaunch pointer rather than duplicating the mechanism.
+  baton/relaunch pointer rather than duplicating the mechanism. If ultra-mode
+  is unimplemented when this lands, the pointer is recorded as an amendment
+  note in ultra-mode's SPEC.md itself (it has no tasks/ dir).
 - R5: The baton grammar and the `Relaunch-every:` header are documented in
   breakdown's task-file/queue conventions so specs can tune N; absence means
   the default (4).
-- R6: The workboard scanner treats a `DRAIN-BATON.md` like a handoff:
-  surfaced on the board with its generation number and relaunch command
-  (parses the file's header line; this rides on the scanner's existing
-  handoff detection — no new sanctioned scanner change beyond a filename
-  pattern).
+- R6: The workboard scanner surfaces `DRAIN-BATON.md` files: generation
+  number, relaunch command, and any needs-attention/deferred section, with
+  baton-appropriate card text (NOT the handoff card's "resume in a fresh
+  session then delete" prompt). This is a real, small scanner change
+  (scan_handoffs globs the literal HANDOFF.md and extracts only a title) —
+  it is the third sanctioned scanner change, after workboard-live R2a and
+  unblock-next-steps R5.
 - R7: Research + decisions recorded: `docs/decisions/orchestrator-context.md`
   captures the trigger design (N=4 + override), the cap, the
   Anthropic-verified basis (context rot, insufficient-compaction,
@@ -116,9 +148,12 @@ the queue.
 ## Acceptance criteria
 
 - [ ] drain SKILL.md: baton step present, ≤ 20 lines, names the default
-      (every 4 verdicts), the override signs, and the cap (10); reference.md
-      has the relaunch command template with headless flags
-      (`grep -n "baton\|Relaunch-every\|generation" <files>`) (covers R1)
+      (every 4 verdicts), the override signs, the cap (10), and the
+      read-state-then-verify ritual; reference.md has the relaunch command
+      template with the orchestrator flag set AND the recorded verdict of the
+      background-dispatch verification
+      (`grep -n "baton\|Relaunch-every\|generation\|verif" <files>`)
+      (covers R1, R1a)
 - [ ] autopilot + parallel SKILL.md each grep for "baton" with their
       respective boundary rules (covers R2, R3)
 - [ ] `runtimes/claude-code.md` orchestration templates reference the baton
@@ -132,11 +167,17 @@ the queue.
       the Anthropic-only caveat, links both docs (covers R7)
 - [ ] Mirror + version bump present in the implementing commit(s) (covers R8)
 - [ ] **End-to-end (fixture):** a drain run over a 6-task fixture spec with
-      `Relaunch-every: 2` — using a stub relaunch command recorder in place of
-      real claude — records 2 baton passes: each baton contains the done/next
-      log and generation number; the stub's recorded argv is the documented
-      relaunch command; after a simulated final generation, the baton file is
-      deleted and all 6 tasks are done.
+      `Relaunch-every: 2` in its SPEC.md header. Stub mechanism (defined, not
+      improvised): the relaunch step honors a `DRAIN_RELAUNCH_CMD` env
+      override — the fixture sets it to a recorder script; fixture workers
+      are also stubbed (task files carry trivial acceptance commands so
+      verdicts flip without real worker sessions). Assert: 2 baton passes
+      recorded; each baton contains the done/next log + generation number;
+      the recorder's argv matches the documented relaunch command; the
+      stubbed gen-2 log shows the ritual ran (baton read + verification
+      command executed) before any dispatch; after the final generation the
+      baton file is deleted and all 6 tasks are done (covers R1, R1a, R5,
+      e2e).
 
 ## Open questions
 
