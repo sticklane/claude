@@ -26,10 +26,22 @@ drain files, and breakdown SKILL.md form the other serial chains.
 | 12 | chaining-antipatterns 02 |
 | 13 | chaining-antipatterns 03 |
 | 14 | model-agnostic 04 |
-| 15 | review-fixes 99 (version bump + full-queue acceptance sweep) |
+| 15 | repo-orientation 01; task-priority 01 |
+| 16 | repo-orientation 02 |
+| 17 | tournament-votes 01 |
+| 18 | task-priority 02; workflow-author 01 |
+| 19 | workflow-author 02 |
+| 20 | work-tracking 01 |
+| 21 | work-tracking 02 |
+| 22 | review-fixes 99 (version bump + full-queue acceptance sweep) |
 
-21 tasks. Sequential drain follows this order automatically from the
-Depends-on graph; waves 1, 2, and 9 are the only sanctioned
-concurrent groups (disjoint Touch, decision-uncoupled).
+30 tasks. Sequential drain follows this order automatically from the
+Depends-on graph; waves 1, 2, 9, 15, and 18 are the only sanctioned
+concurrent groups (disjoint Touch, decision-uncoupled). The second
+block (waves 15-21) is the session-two specs: orientation artifacts
+first (new files), then the drain-file chain (tournament-votes →
+work-tracking, the long pole), research-record appends serialized
+throughout (repo-orientation 02 → tournament-votes 01 →
+task-priority 02 → workflow-author 02 → work-tracking 02).
 (beads-integration removed by maintainer decision — see
 docs/external-playbooks.md, Considered and rejected.)
