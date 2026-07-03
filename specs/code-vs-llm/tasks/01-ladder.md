@@ -1,6 +1,6 @@
 # Task 01: Code-vs-LLM ladder — design reference, framing/ranking gates, idea interview line, antigravity mirrors
 
-Status: in-progress
+Status: done
 Depends on: ../../review-fixes/tasks/08-mirrors-and-docs.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R1–R7; R8 noted under Acceptance)
@@ -80,14 +80,14 @@ antigravity design reference.md.
 
 ## Acceptance
 
-- [ ] `test -f .claude/skills/design/reference.md && grep -q "^## The ladder" .claude/skills/design/reference.md && grep -q "^## Per-part tests" .claude/skills/design/reference.md && grep -q "^## Seam rules" .claude/skills/design/reference.md` (R1)
-- [ ] `for n in 0 1 2 3 4; do grep -qi "rung $n" .claude/skills/design/reference.md || exit 1; done && grep -qi "evaluator-optimizer" .claude/skills/design/reference.md && grep -qi "validated in application code\|validate.*application code" .claude/skills/design/reference.md` (R1 — all five rungs present + seam rule)
-- [ ] `[ "$(wc -l < .claude/skills/design/reference.md)" -le 100 ] || head -5 .claude/skills/design/reference.md | grep -qi "contents\|TOC"` (R1 size/TOC)
-- [ ] `grep -q "code-vs-LLM" .claude/skills/design/SKILL.md` (R2)
-- [ ] `grep -q "lowest rung" .claude/skills/design/SKILL.md` (R3)
-- [ ] `grep -q "which parts are code" .claude/skills/idea/SKILL.md` (R4)
-- [ ] `grep -q "token-discipline" .claude/skills/design/reference.md && grep -qi "script, not a spec" .claude/skills/design/reference.md` (R5)
-- [ ] `grep -qi "code-vs-LLM ladder" docs/external-playbooks.md && sed -n '/[Cc]ode-vs-LLM ladder/,/^## /p' docs/external-playbooks.md | grep -qi "4×\|4x"` (R6 — scoped to this spec's entry so the sibling spec's 15× elsewhere in the file can't satisfy it)
-- [ ] `grep -q "code-vs-LLM" antigravity/.agents/skills/design/SKILL.md && test -f antigravity/.agents/skills/design/reference.md && grep -q "which parts are code" antigravity/.agents/skills/idea/SKILL.md` (R7)
-- [ ] R8 note (no command here): this task does NOT bump `plugin.json` — the single combined minor bump for the commit-set is owned by specs/review-fixes global task 99, which satisfies R8's "single combined bump" clause. Record the pre-implementation version in this task's evidence so the combined bump can be verified against it.
-- [ ] Manual (post-merge dry-read, from the SPEC): in a fresh session run /design on "add an email-triage feature: parse sender/date, categorize intent, draft replies" — the recorded decision classifies parsing as rung 0, categorization as rung 1, and names a failing test before any candidate proposes an agent.
+- [x] `test -f .claude/skills/design/reference.md && grep -q "^## The ladder" .claude/skills/design/reference.md && grep -q "^## Per-part tests" .claude/skills/design/reference.md && grep -q "^## Seam rules" .claude/skills/design/reference.md` (R1) — rc=0, verified in ../evidence/01-ladder.md
+- [x] `for n in 0 1 2 3 4; do grep -qi "rung $n" .claude/skills/design/reference.md || exit 1; done && grep -qi "evaluator-optimizer" .claude/skills/design/reference.md && grep -qi "validated in application code\|validate.*application code" .claude/skills/design/reference.md` (R1 — all five rungs present + seam rule) — rc=0, verified in ../evidence/01-ladder.md
+- [x] `[ "$(wc -l < .claude/skills/design/reference.md)" -le 100 ] || head -5 .claude/skills/design/reference.md | grep -qi "contents\|TOC"` (R1 size/TOC) — 65 lines, no TOC needed (../evidence/01-ladder.md)
+- [x] `grep -q "code-vs-LLM" .claude/skills/design/SKILL.md` (R2) — rc=0 (../evidence/01-ladder.md)
+- [x] `grep -q "lowest rung" .claude/skills/design/SKILL.md` (R3) — rc=0, appendix bullet extended too (../evidence/01-ladder.md)
+- [x] `grep -q "which parts are code" .claude/skills/idea/SKILL.md` (R4) — rc=0 (../evidence/01-ladder.md)
+- [x] `grep -q "token-discipline" .claude/skills/design/reference.md && grep -qi "script, not a spec" .claude/skills/design/reference.md` (R5) — rc=0, cross-references only (../evidence/01-ladder.md)
+- [x] `grep -qi "code-vs-LLM ladder" docs/external-playbooks.md && sed -n '/[Cc]ode-vs-LLM ladder/,/^## /p' docs/external-playbooks.md | grep -qi "4×\|4x"` (R6 — scoped to this spec's entry so the sibling spec's 15× elsewhere in the file can't satisfy it) — rc=0, entry complete per verifier (../evidence/01-ladder.md)
+- [x] `grep -q "code-vs-LLM" antigravity/.agents/skills/design/SKILL.md && test -f antigravity/.agents/skills/design/reference.md && grep -q "which parts are code" antigravity/.agents/skills/idea/SKILL.md` (R7) — rc=0, mirrors near-identical (../evidence/01-ladder.md)
+- [x] R8 note (no command here): this task does NOT bump `plugin.json` — the single combined minor bump for the commit-set is owned by specs/review-fixes global task 99, which satisfies R8's "single combined bump" clause. Pre-implementation version recorded: 0.6.2; plugin.json unchanged vs main (../evidence/01-ladder.md).
+- [ ] Manual (post-merge dry-read, from the SPEC): in a fresh session run /design on "add an email-triage feature: parse sender/date, categorize intent, draft replies" — the recorded decision classifies parsing as rung 0, categorization as rung 1, and names a failing test before any candidate proposes an agent. (Deferred to post-merge; not runnable pre-merge.)

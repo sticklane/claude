@@ -25,6 +25,12 @@ codebase already uses, existing patterns this must fit. The default answer
 to "what library should we add?" is **nothing new** — build on what's
 already in the codebase unless a requirement can't be met that way.
 
+When the decision embeds generative AI in the product, classify each part
+of the feature with the code-vs-LLM ladder in [reference.md](reference.md)
+BEFORE framing candidates: the lowest rung that meets the requirements is
+the default candidate, and any higher-rung candidate must name the failing
+per-part test that justifies the escalation.
+
 ## 2. Investigate candidates in parallel
 
 For a real contest (2–4 viable options), launch one agent per candidate in
@@ -50,13 +56,15 @@ a survey — worth it only when the decision is expensive to reverse.
 ## 3. Decide and record
 
 Pick using: requirements fit first, then verification story, then
-on-distribution, then simplicity. Present the decision with the runner-up
-and the one scenario that would flip it. Then record:
+on-distribution, then simplicity — for LLM-embedding decisions,
+"simplicity" means the lowest rung on the ladder. Present the decision
+with the runner-up and the one scenario that would flip it. Then record:
 
 - SPEC.md Solution section: the choice, in one paragraph.
 - SPEC.md Open questions: delete the entry this decision resolves —
   /breakdown refuses any spec with unresolved entries there.
-- SPEC.md appendix: rejected options and the reason, one line each.
+- SPEC.md appendix: rejected options and the reason, one line each — and,
+  when the ladder applied, the chosen rung per component.
 - CLAUDE.md: a single line constraining future agents ("Use X for Y; do not
   introduce Z") — only if the decision is repo-wide, and it passes the
   "would removing this cause mistakes?" test.

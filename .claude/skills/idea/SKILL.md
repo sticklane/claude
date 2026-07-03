@@ -32,6 +32,9 @@ rather than inventing answers). Cover, as relevant:
 - Behavior: happy path, then edge cases (empty, error, concurrent, permission).
 - Technical approach: integration points the scouts surfaced; tradeoffs where
   two designs are defensible — present options with your recommendation first.
+  For features involving generative AI, ask which parts are code — which
+  parts need model judgment and which are rules — defaulting per /design's
+  ladder, and record the split in the spec's Solution.
 - Scope: what is explicitly OUT. Push for at least one exclusion.
 - Verification: how will we know it works — what command, test, or observable
   behavior proves each requirement?
