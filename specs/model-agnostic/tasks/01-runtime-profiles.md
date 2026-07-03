@@ -1,6 +1,6 @@
 # Task 01: Runtime profiles and porting guide (new files only)
 
-Status: in-progress
+Status: done
 Depends on: none
 Budget: 25 turns
 Spec: ../SPEC.md (requirements R1, R5 (runtimes/README.md), R7, R12)
@@ -86,8 +86,8 @@ reproduce today's exact behavior.
 
 ## Acceptance
 
-- [ ] `test -f runtimes/claude-code.md && test -f runtimes/antigravity.md && test -f runtimes/gemini-cli.md && for f in runtimes/claude-code.md runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "^## Tiers" $f && grep -q "^## Headless" $f && grep -q "^## Orchestration" $f && grep -q "^## Notes" $f || exit 1; done` → exit 0 (R1)
-- [ ] `grep -q "deep-tier" runtimes/claude-code.md && grep -q "claude-opus-4-8" runtimes/claude-code.md && grep -q "claude-fable-5" runtimes/claude-code.md && for f in runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "deep-tier" $f && grep -q "frontier-tier" $f || exit 1; done` → exit 0 (R1 — all four tiers mapped in every profile)
-- [ ] `test -f runtimes/README.md && grep -q "runtime:" runtimes/README.md && grep -q ".claude/runtime.md" runtimes/README.md` → exit 0 (R5)
-- [ ] `grep -q "deep-tier: claude-opus-4-8" runtimes/README.md && grep -q "frontier-tier: claude-fable-5" runtimes/README.md` → exit 0 (R12 — override format with worked example)
-- [ ] `test -f docs/porting.md && grep -qi "gemini" docs/porting.md && grep -qi "antigravity" docs/porting.md && grep -q "runner-selftest" docs/porting.md` → exit 0 (R7)
+- [x] `test -f runtimes/claude-code.md && test -f runtimes/antigravity.md && test -f runtimes/gemini-cli.md && for f in runtimes/claude-code.md runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "^## Tiers" $f && grep -q "^## Headless" $f && grep -q "^## Orchestration" $f && grep -q "^## Notes" $f || exit 1; done` → exit 0 (R1) — verified exit 0, exactly four `##` sections per profile (evidence/01-runtime-profiles.md)
+- [x] `grep -q "deep-tier" runtimes/claude-code.md && grep -q "claude-opus-4-8" runtimes/claude-code.md && grep -q "claude-fable-5" runtimes/claude-code.md && for f in runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "deep-tier" $f && grep -q "frontier-tier" $f || exit 1; done` → exit 0 (R1 — all four tiers mapped in every profile) — verified exit 0, deep rows marked opt-in recommended pins in all three (evidence/01-runtime-profiles.md)
+- [x] `test -f runtimes/README.md && grep -q "runtime:" runtimes/README.md && grep -q ".claude/runtime.md" runtimes/README.md` → exit 0 (R5) — verified exit 0, single home confirmed by repo-wide grep (evidence/01-runtime-profiles.md)
+- [x] `grep -q "deep-tier: claude-opus-4-8" runtimes/README.md && grep -q "frontier-tier: claude-fable-5" runtimes/README.md` → exit 0 (R12 — override format with worked example) — verified exit 0, worked example framed as turning deep-work defaults ON (evidence/01-runtime-profiles.md)
+- [x] `test -f docs/porting.md && grep -qi "gemini" docs/porting.md && grep -qi "antigravity" docs/porting.md && grep -q "runner-selftest" docs/porting.md` → exit 0 (R7) — verified exit 0, seven concept rows × three runtime columns plus checklist (evidence/01-runtime-profiles.md)
