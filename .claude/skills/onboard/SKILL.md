@@ -63,5 +63,6 @@ Ask which the user wants now (don't install unasked):
   it's read by the managed GitHub Code Review service; for the local
   `/code-review` command, review rules belong in CLAUDE.md instead.
 
-Close by reporting what was created, each command's verification evidence,
-and the suggested first move: `/idea` for new work.
+Close by reporting what was created and each command's verification
+evidence, ending with:
+`Next stage: /idea <first feature> (human-launched)`.

@@ -1,6 +1,6 @@
 # Task 02: Chain implementation — idea→breakdown self-chain and Next-stage lines
 
-Status: in-progress
+Status: done
 Depends on: 01, ../../code-vs-llm/tasks/01-ladder.md
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R2, R3)
@@ -66,12 +66,18 @@ is task 03, critique only); `.claude/rules/`; antigravity files
 
 ## Acceptance
 
-- [ ] `grep -q "Next stage:" .claude/skills/idea/SKILL.md && grep -qi "Skill tool" .claude/skills/idea/SKILL.md` (R2, from SPEC)
-- [ ] `grep -qi "launch-gated\|human-launched" .claude/skills/breakdown/SKILL.md` (R2, from SPEC)
-- [ ] `for f in idea design breakdown gate onboard distill handoff evals; do grep -q 'Next stage:' .claude/skills/$f/SKILL.md || exit 1; done` (R3, from SPEC, enumerated)
+- [x] `grep -q "Next stage:" .claude/skills/idea/SKILL.md && grep -qi "Skill tool" .claude/skills/idea/SKILL.md` (R2, from SPEC)
+      — exit 0, verified independently: ../evidence/02-chain-implementation.md
+- [x] `grep -qi "launch-gated\|human-launched" .claude/skills/breakdown/SKILL.md` (R2, from SPEC)
+      — exit 0, verified independently: ../evidence/02-chain-implementation.md
+- [x] `for f in idea design breakdown gate onboard distill handoff evals; do grep -q 'Next stage:' .claude/skills/$f/SKILL.md || exit 1; done` (R3, from SPEC, enumerated)
+      — exit 0 for all eight; closing lines and verbatim terminal none-forms confirmed: ../evidence/02-chain-implementation.md
 - [ ] Manual (from SPEC, end-to-end): in a fresh session, run /idea on a
       small toy feature and answer its interview; after the critic
       returns READY, the session announces and invokes /breakdown
       without a human typing it, task files appear under the spec's
       directory, and the session STOPS with printed pointers to the
       gated stages (manual until the eval harness covers /idea).
+      — MANUAL-PENDING per the verifier: ../evidence/02-chain-implementation.md
+      R11 note: pre-implementation plugin.json version 0.6.2, left
+      unchanged (bump owned by specs/review-fixes global task 99).

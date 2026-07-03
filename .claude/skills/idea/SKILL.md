@@ -80,9 +80,21 @@ returns READY. This costs ~1% of what implementing an ambiguous spec costs.
 
 ## 5. Hand off
 
-Tell the user: if the spec leaves a technology or architecture choice open,
-run `/design specs/<slug>/SPEC.md` first; then `/breakdown
-specs/<slug>/SPEC.md` for multi-session work, or `/build
-specs/<slug>/SPEC.md` for single-session work — in a FRESH session
-(`/clear` first). The spec is the handoff artifact; this
-conversation's context should not be needed again.
+After READY, chain: announce it in one line, then invoke `/breakdown` on the
+spec via the Skill tool, per the self-chain bullet in CLAUDE.md's authoring
+conventions. Chaining into /breakdown in-session is the sanctioned exception
+to the fresh-session hand-off — it is a light artifact stage that works from
+the spec file, not from this conversation's context.
+
+Fall back to the printed pointer when the self-chain conditions fail — the
+user asked for the spec only, non-interactive doubt (answers you had to
+infer rather than get), or a technology/architecture choice is still open
+(run `/design specs/<slug>/SPEC.md` first; open /design choices stop the
+chain). The fallback keeps the `/clear`-first advice: tell the user to run
+`/breakdown specs/<slug>/SPEC.md` (or `/build specs/<slug>/SPEC.md` for
+single-session work) in a FRESH session — the spec is the handoff artifact.
+
+Close with:
+`Next stage: /breakdown specs/<slug>/SPEC.md (self-chains per conventions)`
+— or, on the /design fallback,
+`Next stage: /design specs/<slug>/SPEC.md (human-launched)`.
