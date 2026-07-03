@@ -9,8 +9,11 @@ that a fresh agent session can implement and verify it without you.
 
 **Right-size first.** If the change is describable as a one-sentence diff
 (typo, log line, rename, config tweak), say so and just do it — a spec
-pipeline for a trivial change wastes more tokens than it saves. Continue only
-for work with real uncertainty or multiple files.
+pipeline for a trivial change wastes more tokens than it saves. And if the
+change is a mechanical transform a deterministic tool can perform (codemod,
+bulk rename, formatting sweep), it gets a script, not a spec — write and run
+the script instead. Continue only for work with real uncertainty or multiple
+files.
 
 ## 1. Scout before you ask
 
