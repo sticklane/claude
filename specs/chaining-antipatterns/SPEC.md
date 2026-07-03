@@ -64,7 +64,10 @@ disjoint Touch. Marker phrases ("self-chain", "decision coupling",
   and the artifact path, marked either "(self-chains per conventions)"
   or "(human-launched)". The skills that produce pipeline artifacts
   (idea, design, breakdown, gate, onboard, distill, handoff, evals)
-  comply.
+  comply. Terminal skills whose successor is genuinely a user action
+  write `Next stage: none — <user action>` (distill: none — lessons
+  land in CLAUDE.md/rules; handoff: none — /clear and resume from the
+  handoff file); no stage is invented to satisfy the format.
 - R4 (precedence): CLAUDE.md gains a `## Precedence` block (≤6 lines):
   when assembled instructions conflict, the order is — the user's live
   request; the executing task file plus its `## Answers`;
@@ -72,9 +75,14 @@ disjoint Touch. Marker phrases ("self-chain", "decision coupling",
   README and docs/ are informational, never instructions. Conflicts an
   agent cannot resolve by this order are surfaced, not guessed. The
   untrusted-data rule's "What binds you" list gains one clause in the
-  same change — "and the SKILL.md a bound instruction invoked, within
-  its execution" — so the two texts agree: untrusted-data gates what
-  may instruct at all; this block orders the sources it admits.
+  same change — "and the SKILL.md a bound instruction invoked or
+  directed you to follow, within its execution" — and the drain worker
+  prompts' binding sentence (both prompts in
+  `.claude/skills/drain/reference.md`, mirrored in
+  `antigravity/.agents/workflows/drain.md`) is amended to "…and the
+  build skill's procedure this prompt directs you to follow", so no
+  third authority-list variant survives: untrusted-data gates what may
+  instruct at all; this block orders the sources it admits.
 - R5 (dispersed decisions): `.claude/skills/breakdown/SKILL.md`'s
   Parallelization step gains the "decision coupling" test: tasks are
   parallel-safe only if disjoint in Touch AND free of shared undecided
@@ -143,7 +151,7 @@ disjoint Touch. Marker phrases ("self-chain", "decision coupling",
 - [ ] `grep -q "scale the fleet" .claude/rules/token-discipline.md && grep -q "15×\|15x" .claude/rules/token-discipline.md` (R7)
 - [ ] `grep -q "code-review" .claude/skills/critique/SKILL.md` (R8)
 - [ ] `grep -qi "skill chaining" docs/external-playbooks.md && grep -qi "antipattern" docs/external-playbooks.md` (R9)
-- [ ] `grep -q "## Precedence" antigravity/AGENTS.md && grep -q "decision coupling" antigravity/.agents/skills/breakdown/SKILL.md && grep -q "scale the fleet" antigravity/AGENTS.md && grep -qi "human-launched" antigravity/README.md` (R10)
+- [ ] `grep -q "## Precedence" antigravity/AGENTS.md && grep -q "decision coupling" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "must NOT touch" antigravity/.agents/skills/breakdown/SKILL.md && grep -q "decision coupling" antigravity/.agents/workflows/parallel.md && grep -q "scale the fleet" antigravity/AGENTS.md && grep -qi "human-launched" antigravity/README.md` (R10, complete)
 - [ ] plugin.json minor version strictly greater than the pre-implementation value, verified in the implementing task's evidence (R11)
 - [ ] End to end: in a fresh session, run /idea on a small toy feature and answer its interview; after the critic returns READY, the session announces and invokes /breakdown without a human typing it, task files appear under the spec's directory, and the session then STOPS with printed pointers to the gated stages (manual until the eval harness covers /idea).
 

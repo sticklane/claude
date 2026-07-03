@@ -62,9 +62,9 @@ are code") do not exist in the repo today.
   escalation.
 - R3 (design ranking tiebreak): step 3's ranking sentence is extended:
   for LLM-embedding decisions, "simplicity" means the lowest rung —
-  contains the phrase "lowest rung". The decision record in the spec's
-  Solution appendix names the chosen rung per component when the ladder
-  applied.
+  contains the phrase "lowest rung". Step 3's SPEC.md-appendix bullet (the one recording
+  candidates considered and rationale) gains: "and, when the ladder
+  applied, the chosen rung per component".
 - R4 (idea interview): `.claude/skills/idea/SKILL.md`'s interview
   section (Technical approach bullet) gains one line containing "which
   parts are code": for features involving generative AI, ask which
@@ -106,13 +106,13 @@ are code") do not exist in the repo today.
 ## Acceptance criteria
 
 - [ ] `test -f .claude/skills/design/reference.md && grep -q "^## The ladder" .claude/skills/design/reference.md && grep -q "^## Per-part tests" .claude/skills/design/reference.md && grep -q "^## Seam rules" .claude/skills/design/reference.md` (R1)
-- [ ] `test "$(grep -c "rung" .claude/skills/design/reference.md)" -ge 5 && grep -qi "evaluator-optimizer" .claude/skills/design/reference.md && grep -qi "validated in application code\|validate.*application code" .claude/skills/design/reference.md` (R1 rungs + seam rule)
+- [ ] `for n in 0 1 2 3 4; do grep -qi "rung $n" .claude/skills/design/reference.md || exit 1; done && grep -qi "evaluator-optimizer" .claude/skills/design/reference.md && grep -qi "validated in application code\|validate.*application code" .claude/skills/design/reference.md` (R1 — all five rungs present + seam rule)
 - [ ] `[ "$(wc -l < .claude/skills/design/reference.md)" -le 100 ] || head -5 .claude/skills/design/reference.md | grep -qi "contents\|TOC"` (R1 size/TOC)
 - [ ] `grep -q "code-vs-LLM" .claude/skills/design/SKILL.md` (R2)
 - [ ] `grep -q "lowest rung" .claude/skills/design/SKILL.md` (R3)
 - [ ] `grep -q "which parts are code" .claude/skills/idea/SKILL.md` (R4)
 - [ ] `grep -q "token-discipline" .claude/skills/design/reference.md && grep -qi "script, not a spec" .claude/skills/design/reference.md` (R5)
-- [ ] `grep -qi "code-vs-LLM ladder" docs/external-playbooks.md && grep -qi "15×\|15x" docs/external-playbooks.md` (R6)
+- [ ] `grep -qi "code-vs-LLM ladder" docs/external-playbooks.md && sed -n '/[Cc]ode-vs-LLM ladder/,/^## /p' docs/external-playbooks.md | grep -qi "4×\|4x"` (R6 — scoped to this spec's entry so the sibling spec's 15× elsewhere in the file can't satisfy it)
 - [ ] `grep -q "code-vs-LLM" antigravity/.agents/skills/design/SKILL.md && test -f antigravity/.agents/skills/design/reference.md && grep -q "which parts are code" antigravity/.agents/skills/idea/SKILL.md` (R7)
 - [ ] plugin.json minor version strictly greater than the pre-implementation value, verified in the implementing task's evidence (R8)
 - [ ] End to end: in a fresh session, run /design on a toy decision "add an email-triage feature: parse sender/date, categorize intent, draft replies" — the recorded decision classifies parsing as code (rung 0), categorization as a single structured-output call (rung 1), and names a failing test before any candidate proposes an agent (manual dry-read until the eval harness covers /design).
