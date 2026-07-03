@@ -1,7 +1,7 @@
 # Task 01: Code-vs-LLM ladder — design reference, framing/ranking gates, idea interview line, antigravity mirrors
 
 Status: pending
-Depends on: none
+Depends on: ../../review-fixes/tasks/08-mirrors-and-docs.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R1–R7; R8 noted under Acceptance)
 

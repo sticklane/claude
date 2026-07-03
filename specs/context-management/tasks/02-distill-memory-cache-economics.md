@@ -1,7 +1,7 @@
 # Task 02: Distill memory layer + cache economics, with antigravity mirrors
 
 Status: pending
-Depends on: none
+Depends on: ../../model-agnostic/tasks/02-core-tier-language.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R3, R4, R8-part; R9 note)
 

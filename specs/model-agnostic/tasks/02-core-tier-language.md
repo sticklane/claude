@@ -1,7 +1,7 @@
 # Task 02: Core prose to tier language with fallback-safe citations
 
 Status: pending
-Depends on: 01
+Depends on: 01, ../../review-fixes/tasks/08-mirrors-and-docs.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R2, R3, R4, R5 (citations), R9)
 
