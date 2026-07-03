@@ -1,6 +1,6 @@
 # Task 04: Reference-file TOCs + context-management research record
 
-Status: pending
+Status: in-progress
 Depends on: ../../model-agnostic/tasks/02-core-tier-language.md, ../../code-vs-llm/tasks/01-ladder.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R2-impl, R7; R9 note)
