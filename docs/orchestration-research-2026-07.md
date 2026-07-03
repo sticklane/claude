@@ -120,9 +120,32 @@ Evidence: Synthesis finding: every element traces to a verified claim above (cha
 - https://resources.anthropic.com/hubfs/Building%20Effective%20AI%20Agents-%20Architecture%20Patterns%20and%20Implementation%20Frameworks.pdf
 - https://resources.anthropic.com/hubfs/Claude%20Code%20Advanced%20Patterns_%20Subagents,%20MCP,%20and%20Scaling%20to%20Real%20Codebases.pdf
 
+## Follow-up findings (2026-07-03)
+
+The missing Google DeepMind leg was re-attempted on 2026-07-03 in a follow-up
+deep-research run (106 agents, primary sources only). The relevant ADK pages
+were fetched live — workflow-agents, loop-agents, runtime/resume,
+multi-agents, a2a/intro, custom-agents — but **zero claims about
+SequentialAgent/ParallelAgent/LoopAgent, deterministic-vs-model-driven
+placement, verification/judging, budgets, resumability, or A2A survived
+3-vote verification**. After two attempts the leg remains open: this report
+still cannot make cited statements about Google's orchestration approach,
+and the Anthropic-vs-OpenAI framing stands as-is.
+
+Indirectly relevant corroboration from the same run's context-management leg
+(see docs/context-management-research-2026-07.md, "Follow-up findings"):
+both OpenAI and Google externalize agent state as first-class services
+outside the context window — OpenAI via persistent Sessions and serializable
+RunState with durable recovery deferred to Temporal/Dapr/Restate/DBOS,
+Google via ADK's SessionService/State/Memory tiers with explicit
+end-of-session ingestion. That cross-vendor pattern independently supports
+the adopt-list's file-based resume-from-checkpoint state and the
+fresh-relaunch-from-durable-artifacts doctrine. Nothing on the adopt-list
+changes.
+
 ## Caveats
 
-The Google DeepMind leg of the comparison is missing: no claims about ADK workflow agents (Sequential/Parallel/Loop), the A2A protocol, or Gemini Enterprise orchestration survived the 3-vote verification, so this report cannot make cited statements about Google's approach — the deterministic-vs-model-driven comparison here is effectively Anthropic vs OpenAI. Two Anthropic claims were refuted (the Hooks/CLAUDE.md/MCP responsibility mapping, and a sequential/hierarchical two-pattern taxonomy), so those framings should not be repeated. Anthropic's token-overhead figures are internally inconsistent across publications (15x vs chat in the June 2025 engineering blog; 10-15x vs single agents in the Dec 2025 whitepaper) and are self-reported internal data, as is the 90.2% eval improvement. The March 2026 three-modes guidance comes from a webinar slide deck (Agent Teams was in research preview), not formal documentation. OpenAI's docs frame code-vs-LLM orchestration as tradeoffs to mix and match, slightly softer than 'recommends.' Time-sensitivity: SDK surfaces (Agent tool naming, Workflow tool, hooks list) reflect docs as fetched 2026-07-03 and change quickly; the 'typically 2-4 cycles' evaluator bound comes from a worked example, not a universal prescription. The final what-to-adopt finding is interpretive synthesis, not vendor-attributed guidance.
+The Google DeepMind leg of the comparison is still missing after two attempts: no claims about ADK workflow agents (Sequential/Parallel/Loop), the A2A protocol, or Gemini Enterprise orchestration survived 3-vote verification in either the original 2026-07-03 run or the same-day follow-up re-attempt (which fetched the primary ADK workflow-agent and A2A pages but confirmed nothing), so this report cannot make cited statements about Google's approach — the deterministic-vs-model-driven comparison here is effectively Anthropic vs OpenAI, and the ADK leg remains an open question. Two Anthropic claims were refuted (the Hooks/CLAUDE.md/MCP responsibility mapping, and a sequential/hierarchical two-pattern taxonomy), so those framings should not be repeated. Anthropic's token-overhead figures are internally inconsistent across publications (15x vs chat in the June 2025 engineering blog; 10-15x vs single agents in the Dec 2025 whitepaper) and are self-reported internal data, as is the 90.2% eval improvement. The March 2026 three-modes guidance comes from a webinar slide deck (Agent Teams was in research preview), not formal documentation. OpenAI's docs frame code-vs-LLM orchestration as tradeoffs to mix and match, slightly softer than 'recommends.' Time-sensitivity: SDK surfaces (Agent tool naming, Workflow tool, hooks list) reflect docs as fetched 2026-07-03 and change quickly; the 'typically 2-4 cycles' evaluator bound comes from a worked example, not a universal prescription. The final what-to-adopt finding is interpretive synthesis, not vendor-attributed guidance.
 
 ## Open questions
 
