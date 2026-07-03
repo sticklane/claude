@@ -87,3 +87,19 @@ and the antigravity mirrors `antigravity/.agents/skills/verifier/SKILL.md`,
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Single task (01) — nothing to parallelize within this spec.
+
+### Cross-spec ordering (all four specs on one queue)
+
+Touch lists overlap ACROSS specs (the drain files and README), so when
+draining all four together, dispatch in waves:
+
+1. Wave 1 (concurrent): hardening 01, 02, 04
+2. Wave 2 (concurrent): hardening 03 (after 01: drain prompts),
+   skill-evals 01 (after hardening 01: README)
+3. Wave 3: evidence-artifacts 01 (after hardening 03: drain reference)
+4. Wave 4: drain-tournament 01 (after evidence: drain SKILL + reference
+   — its Tournament section builds on the final prompt wording)
