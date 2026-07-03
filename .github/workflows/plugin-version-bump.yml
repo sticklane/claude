@@ -1,0 +1,42 @@
+name: plugin-version-bump
+
+# CLAUDE.md rule: bump `version` in .claude-plugin/plugin.json whenever
+# skill behavior changes. This check enforces it on every PR.
+
+on:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require a plugin version bump when skills or agents change
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch origin "$BASE_REF"
+          changed=$(git diff --name-only "origin/$BASE_REF"...HEAD)
+
+          if ! grep -qE '^\.claude/(skills|agents)/' <<< "$changed"; then
+            echo "No skill or agent changes — version bump not required."
+            exit 0
+          fi
+
+          base_version=$(git show "origin/$BASE_REF:.claude-plugin/plugin.json" | jq -r .version)
+          head_version=$(jq -r .version .claude-plugin/plugin.json)
+
+          if [ "$base_version" = "$head_version" ]; then
+            echo "::error file=.claude-plugin/plugin.json::Skills or agents changed but plugin version is still $head_version — bump it (see CLAUDE.md: bump version whenever skill behavior changes)."
+            exit 1
+          fi
+
+          if [ "$(printf '%s\n%s\n' "$base_version" "$head_version" | sort -V | tail -n1)" != "$head_version" ]; then
+            echo "::error file=.claude-plugin/plugin.json::Plugin version went backwards: $base_version -> $head_version"
+            exit 1
+          fi
+
+          echo "Version bumped: $base_version -> $head_version"
