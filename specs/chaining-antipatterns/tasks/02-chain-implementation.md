@@ -1,6 +1,6 @@
 # Task 02: Chain implementation — idea→breakdown self-chain and Next-stage lines
 
-Status: pending
+Status: in-progress
 Depends on: 01, ../../code-vs-llm/tasks/01-ladder.md
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R2, R3)
