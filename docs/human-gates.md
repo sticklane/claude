@@ -44,7 +44,11 @@ restating it.
    without human approval or a sandbox"; the playbook's walk-away
    contract is signed by a human. The gated five are precisely the
    autonomous-loop launchers (external-playbooks.md, "Adopted from
-   OpenAI" and "Skill chaining").
+   OpenAI" and "Skill chaining"). Claude Code's Workflow tool draws
+   the identical line from the harness side: multi-agent orchestration
+   scripts fire only on an explicit human opt-in (the "ultracode"
+   keyword or equivalent), so a saved workflow is doubly human-gated —
+   once by that opt-in, once by whoever invokes it by name.
 
 ## What the gate is not
 
