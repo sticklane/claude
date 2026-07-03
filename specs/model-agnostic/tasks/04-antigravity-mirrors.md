@@ -1,6 +1,6 @@
 # Task 04: Antigravity mirrors of the tier language
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, ../../chaining-antipatterns/tasks/03-antipattern-guards.md
 Budget: 10 turns
 Spec: ../SPEC.md (requirement R8)
@@ -44,4 +44,4 @@ version as evidence.
 
 ## Acceptance
 
-- [ ] `grep -q "scout-tier" antigravity/AGENTS.md && grep -q "deep-tier" antigravity/AGENTS.md && grep -q "runtimes/antigravity.md" antigravity/README.md` → exit 0 (R8 — including the four-rung ladder mirror)
+- [x] `grep -q "scout-tier" antigravity/AGENTS.md && grep -q "deep-tier" antigravity/AGENTS.md && grep -q "runtimes/antigravity.md" antigravity/README.md` → exit 0 (R8 — including the four-rung ladder mirror) — verified exit 0, ladder/mapping/scope/version checks in ../evidence/04-antigravity-mirrors.md (pre-implementation plugin.json version: 0.6.2, not bumped per R10)
