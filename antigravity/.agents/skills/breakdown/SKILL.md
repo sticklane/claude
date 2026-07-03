@@ -39,9 +39,10 @@ Touch: <comma-separated paths this task may change>
 What exists when this task is done, in 2–4 sentences.
 
 ## Touch
-Optional prose on boundaries (why a path is in or out). Dispatchers parse
-the `Touch:` header line above, not this section; anything not listed
-there is scope creep.
+Optional prose on boundaries (why a path is in or out). When overlap with
+a sibling task is plausible, list the adjacent files/modules this task
+must NOT touch. Dispatchers parse the `Touch:` header line above, not
+this section; anything not listed there is scope creep.
 
 ## Steps
 Numbered, concrete. Include "write the failing test first" where the
@@ -55,8 +56,13 @@ Runnable commands only:
 4. Order tasks so each leaves the build green — no task may depend on a
    later one to compile or pass tests.
 5. Append a **Parallelization** section to SPEC.md: groups of tasks with
-   disjoint `Touch` lists and no dependency edges. Only these may run
-   concurrently.
+   disjoint `Touch` lists and no dependency edges. Apply the
+   "decision coupling" test before grouping: tasks are parallel-safe
+   only if they are disjoint in Touch AND free of shared undecided
+   design — naming, schema, interface, or architectural choices the
+   spec leaves open. If two tasks would each make the same open choice,
+   either the choice moves into the spec or the tasks serialize. Only
+   groups passing both checks may run concurrently.
 6. Sanity-check with the critic skill if the decomposition has nontrivial
    dependency structure.
 

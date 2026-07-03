@@ -16,6 +16,10 @@ tokens on decisions; delegate consumption of raw material to subagents.
 - Verification, review, and research that produce lots of intermediate output
   belong in subagents (`verifier`, `critic`, `Explore`) whose transcripts are
   discarded — only their final report costs you anything.
+- One worker is the default; scale the fleet only for genuinely divisible
+  groups (the decision-coupling test in /breakdown), and size it by the
+  task map, never a default maximum. Multi-agent work costs ~15× the
+  tokens of a single session — barely-parallel work doesn't earn that.
 
 ## Model and effort matching
 

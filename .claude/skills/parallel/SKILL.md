@@ -15,7 +15,9 @@ not efficiency. Use it when the user wants throughput; otherwise sequential
 Read the task files and the spec's Parallelization section (if there is no
 such section, derive independence yourself from the tasks' `Depends on` and
 `Touch` fields). A group is dispatchable only if: no `Depends on` edges between members, disjoint `Touch`
-lists, and every member has runnable acceptance criteria. If tasks share
+lists, and every member has runnable acceptance criteria. The group must
+also pass /breakdown's "decision coupling" test — members sharing an
+undecided design choice serialize even with disjoint `Touch` lists. If tasks share
 files, run them sequentially instead — merge conflicts cost more than the
 parallelism saves. Tell the user the dispatch plan (which tasks, which
 deferred and why) before launching.

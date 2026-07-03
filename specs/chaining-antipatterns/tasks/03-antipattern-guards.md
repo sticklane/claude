@@ -1,9 +1,22 @@
 # Task 03: Antipattern guards, antigravity mirrors, research record
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Budget: 50 turns
 Spec: ../SPEC.md (requirements R5, R6, R7, R8, R9, R10)
+
+<!-- Plan (build step 1): edit order — (1) breakdown SKILL.md step 5
+(decision-coupling test) + task-template Touch text (must-NOT-touch
+sentence); (2) parallel SKILL.md independence check (one-line citation);
+(3) token-discipline delegation bullet ("scale the fleet", ~15×);
+(4) critique description routing clause, then trigger-test check;
+(5) external-playbooks.md "Skill chaining" + "Antipatterns" entries;
+(6) antigravity mirrors (AGENTS.md Precedence + scaling rule, breakdown
+skill, parallel workflow, README mapping row). Risks: case-sensitive
+acceptance greps (keep "scale the fleet" lowercase in running text);
+critique clause must not swallow neighbors' triggers; breakdown evalset
+exists — run evals/run.sh as a gate. plugin.json stays at 0.6.2 (owned
+by review-fixes task 99). -->
 
 ## Goal
 
@@ -78,9 +91,12 @@ descriptions change); `.claude/skills/idea/SKILL.md`; `CLAUDE.md`;
 
 ## Acceptance
 
-- [ ] `grep -q "decision coupling" .claude/skills/breakdown/SKILL.md && grep -q "decision coupling" .claude/skills/parallel/SKILL.md` (R5, from SPEC)
-- [ ] `grep -qi "must NOT touch" .claude/skills/breakdown/SKILL.md` (R6, from SPEC)
-- [ ] `grep -q "scale the fleet" .claude/rules/token-discipline.md && grep -q "15×\|15x" .claude/rules/token-discipline.md` (R7, from SPEC)
-- [ ] `grep -q "code-review" .claude/skills/critique/SKILL.md` (R8, from SPEC; also verify the description still passes the trigger test — fires on its own phrases, not neighbors')
-- [ ] `grep -qi "skill chaining" docs/external-playbooks.md && grep -qi "antipattern" docs/external-playbooks.md` (R9, from SPEC)
-- [ ] `grep -q "## Precedence" antigravity/AGENTS.md && grep -q "decision coupling" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "must NOT touch" antigravity/.agents/skills/breakdown/SKILL.md && grep -q "decision coupling" antigravity/.agents/workflows/parallel.md && grep -q "scale the fleet" antigravity/AGENTS.md && grep -qi "human-launched" antigravity/README.md` (R10, from SPEC, complete)
+- [x] `grep -q "decision coupling" .claude/skills/breakdown/SKILL.md && grep -q "decision coupling" .claude/skills/parallel/SKILL.md` (R5, from SPEC) — exit 0, verified in evidence/03-antipattern-guards.md
+- [x] `grep -qi "must NOT touch" .claude/skills/breakdown/SKILL.md` (R6, from SPEC) — exit 0, "scope creep" sentence retained; evidence/03-antipattern-guards.md
+- [x] `grep -q "scale the fleet" .claude/rules/token-discipline.md && grep -q "15×\|15x" .claude/rules/token-discipline.md` (R7, from SPEC) — exit 0; evidence/03-antipattern-guards.md
+- [x] `grep -q "code-review" .claude/skills/critique/SKILL.md` (R8, from SPEC; also verify the description still passes the trigger test — fires on its own phrases, not neighbors') — exit 0; trigger test passed by static inspection (own phrases kept, neighbors negation-routed), no other description changed; evidence/03-antipattern-guards.md
+- [x] `grep -qi "skill chaining" docs/external-playbooks.md && grep -qi "antipattern" docs/external-playbooks.md` (R9, from SPEC) — exit 0, seven sourced findings mapped; evidence/03-antipattern-guards.md
+- [x] `grep -q "## Precedence" antigravity/AGENTS.md && grep -q "decision coupling" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "must NOT touch" antigravity/.agents/skills/breakdown/SKILL.md && grep -q "decision coupling" antigravity/.agents/workflows/parallel.md && grep -q "scale the fleet" antigravity/AGENTS.md && grep -qi "human-launched" antigravity/README.md` (R10, from SPEC, complete) — exit 0; evidence/03-antipattern-guards.md
+
+R11 note (evidence): plugin.json observed at version 0.6.2 pre- and
+post-implementation — no bump here, owned by specs/review-fixes task 99.

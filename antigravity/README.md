@@ -34,6 +34,7 @@ be listed. Type `/idea` in the agent input to test a workflow.
 | `/goal`, Stop-hook gates | Artifact review: implementation plan pause + walkthrough evidence, plus PostToolUse hooks |
 | `/fleet` open-agents dashboard | Not ported — Antigravity's Agent Manager is this surface natively |
 | `/workboard` cross-repo work dashboard | Ported as-is — it also reads Antigravity's own `brain/` artifacts, covering what the Agent Manager can't see (other tools, specs, git, Claude Code sessions) |
+| Skill self-chaining (/idea invokes /breakdown via the Skill tool) | Not ported — workflows are human-launched in the Agent Manager, so the port keeps printed pointers between stages |
 
 The human-launch gates and their rationale: the toolkit repo's
 docs/human-gates.md — in Antigravity every workflow is human-launched
