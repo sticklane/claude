@@ -70,10 +70,12 @@ acceptance greps cannot pass vacuously.
   bounded by the at-most-one-tournament-per-task rule — and the
   tournament remains inside the human-authorized /drain launch
   (cite docs/human-gates.md, don't restate).
-- R4 (mirrors): the antigravity port's drain workflow adopts the same
-  majority-PASS wording for its tournament step (its verifier runs are
-  launch-list dispatched, but the two-of-three rule and vote-count
-  rank key are runtime-neutral prose).
+- R4 (mirrors): the antigravity port's drain workflow adopts the FULL
+  new Filter and Rank semantics — majority PASS over three runs,
+  verifier-BLOCKED disqualification with the quote recorded, PASS-vote
+  first rank key, angle-index final tiebreak — replacing its
+  single-verifier-era sentences (its verifier runs are launch-list
+  dispatched, but the rules are runtime-neutral prose).
 - R5 (versioning): the implementing change bumps `plugin.json`'s minor
   version by one from the value it finds, unless landing in a
   commit-set whose other specs already carry a single combined bump.
