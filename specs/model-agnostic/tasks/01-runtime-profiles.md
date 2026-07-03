@@ -29,7 +29,9 @@ reproduce today's exact behavior.
 1. Write `runtimes/claude-code.md` with exactly three sections: `## Tiers`
    (scout-tier → Haiku + effort low; session-tier → inherit; deep-tier →
    Opus 4.8 (`claude-opus-4-8`; Agent-tool short name `opus`);
-   frontier-tier → Fable (`claude-fable-5`; short name `fable`)),
+   frontier-tier → Fable (`claude-fable-5`; short name `fable`); the two
+   deep-tier rows marked as recommended pin values — opt-in per R5, not
+   active defaults),
    `## Headless` (today's `claude -p` template with placeholders for
    prompt, allowlist, and turn cap — copy the existing contract from
    `.claude/skills/drain/reference.md` without changing it), `## Notes`
@@ -51,11 +53,14 @@ reproduce today's exact behavior.
    is the only place the convention is stated (drain/autopilot references
    cite it in task 02, they do not restate it). Per R12, it also
    documents the four-rung ladder and the tier-override line format
-   (`<tier-name>: <model>`, unlisted tiers keep the profile default)
-   with one worked example block pinning `deep-tier: claude-opus-4-8`
-   and `frontier-tier: claude-fable-5`, and states that tier pins bind
-   dispatchers (skills that spawn agents), not the interactive session's
-   own model.
+   (`<tier-name>: <model>` — an unlisted scout/session tier keeps the
+   profile default; the deep tiers are opt-in, their profile rows being
+   recommended pin values, not active defaults) with one worked example
+   block pinning `deep-tier: claude-opus-4-8` and `frontier-tier:
+   claude-fable-5`, presented as exactly how a repo turns the Claude
+   deep-work defaults ON, and states that tier pins bind dispatchers
+   (skills that spawn agents via the harness), not the interactive
+   session's own model and not the headless fallback path in v1.
 5. Write `docs/porting.md`: a concept-mapping table (skills, agents,
    rules, hooks, headless, permission modes) with columns Claude Code /
    Antigravity (citing the existing `antigravity/` port) / gemini-cli
