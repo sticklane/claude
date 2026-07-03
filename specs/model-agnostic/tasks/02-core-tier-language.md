@@ -26,7 +26,7 @@ installs and eval fixtures → claude-code defaults apply).
 - .claude/skills/gate/reference.md
 - .claude/skills/drain/reference.md
 - CLAUDE.md
-- Cross-spec: also edited by review-fixes, context-management, chaining-antipatterns, beads-integration — see specs/QUEUE.md
+- Cross-spec: also edited by review-fixes, context-management, chaining-antipatterns — see specs/QUEUE.md
 
 ## Steps
 
@@ -47,10 +47,17 @@ installs and eval fixtures → claude-code defaults apply).
    frontier-tier (Claude default: Fable) ONLY for work that truly needs
    the strongest model — novel architecture decisions, security-critical
    review, or a retry after a deep-tier attempt failed. State the
-   dispatch rule: skills that spawn agents (drain's tournament ranking,
-   /design's judging, an on-demand verifier escalation) consult
-   `.claude/runtime.md` tier pins and pass the mapped model through the
-   harness's model parameter; no config → inherit the session model.
+   dispatch rule: skills that spawn agents — at their actual spawn
+   points: drain's tournament workers and per-candidate verifier runs,
+   /design's candidate investigators, an on-demand verifier
+   escalation — consult `.claude/runtime.md` tier pins and pass the
+   mapped model through the harness's model parameter; no config, or no
+   pin for the tier, → inherit the session model (the deep tiers are
+   opt-in per R5 — profile rows are recommended pin values, not active
+   defaults). Pins bind Agent-tool dispatch only; the headless fallback
+   templates run their profile's default in v1. Do NOT restate drain's
+   ranking mechanics — ranking is mechanical and spawns nothing
+   (drain/reference.md "Rank"); the tier rule names spawn points only.
 3. `README.md`: convert the scout table row and the token-cost bullet to
    the same tier-plus-inline-default phrasing (these are the other two of
    the four Haiku mentions R3 covers — no others change).

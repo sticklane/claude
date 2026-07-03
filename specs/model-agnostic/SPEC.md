@@ -21,9 +21,9 @@ tiers): core skills/agents speak four abstract tiers — `scout-tier`
 conversation's model), `deep-tier` (heavy judgment above the session
 default; Claude default: Opus 4.8, `claude-opus-4-8`), and
 `frontier-tier` (work that truly needs the strongest model; Claude
-default: Fable, `claude-fable-5`) — and defer concrete model names and
-headless command templates to one profile file per runtime under
-`runtimes/`. Tier-to-model mappings are per-repo overridable in
+default: Fable, `claude-fable-5`) — and defer concrete model names,
+headless command templates, and orchestration surfaces to one profile
+file per runtime under `runtimes/`. Tier-to-model mappings are per-repo overridable in
 `.claude/runtime.md`, and an always-on routing rule tells dispatchers
 when to pin deep/frontier tiers.
 `runtimes/claude-code.md` ships as the default and reproduces today's
@@ -42,7 +42,7 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
 ## Requirements
 
 - R1: `runtimes/claude-code.md`, `runtimes/antigravity.md`, and
-  `runtimes/gemini-cli.md` exist, each with the same three sections:
+  `runtimes/gemini-cli.md` exist, each with the same four sections:
   `## Tiers` (all four tiers mapped to concrete models — Claude:
   scout-tier = Haiku + effort low, session-tier = inherit, deep-tier =
   Opus 4.8 (`claude-opus-4-8`; Agent-tool short name `opus`),
@@ -50,10 +50,22 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
   Antigravity: Flash-class / session model, and for the two deep tiers
   its strongest available model or an explicit "no distinct mapping —
   session model" line; gemini-cli: its flash / pro equivalents, same
-  rule for the deep tiers), `## Headless`
+  rule for the deep tiers; in every profile the two deep-tier rows are
+  marked as recommended pin values — opt-in per R5, not active
+  defaults), `## Headless`
   (the runtime's non-interactive command template with placeholders for
   prompt, allowlist, and turn/step cap — Antigravity: states none exists,
-  Agent Manager launches instead), and `## Notes` (config file locations,
+  Agent Manager launches instead), `## Orchestration` (the runtime's
+  multi-agent orchestration surface, recording five fields: primitive,
+  invocation surface, structured-output support, resume mechanism, and
+  effective parallelism cap — claude-code: the Workflow tool,
+  deterministic scripts in `.claude/workflows/` fired only on the human
+  "ultracode" opt-in (docs/human-gates.md reason 5), schema-validated
+  returns, journaled resume, per-run concurrency cap; antigravity: no
+  scripted fan-out — sequential markdown workflows plus human-dispatched
+  Agent Manager parallelism, so orchestrations degrade to a human launch
+  list; gemini-cli: none native — shell fan-out around headless calls
+  with JSON output), and `## Notes` (config file locations,
   permission-mode equivalents, and for gemini-cli a line recording how
   the command syntax was verified, or that it requires verification
   before first use).
@@ -86,8 +98,13 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
   whose first non-comment line is `runtime: <profile-name>`; absent file
   means `claude-code`. Subsequent lines may override individual tier
   mappings — `<tier-name>: <model>` (e.g. `frontier-tier:
-  claude-opus-4-8` to cap spend, or a self-hosted model id) — and any
-  unlisted tier keeps the active profile's default.
+  claude-opus-4-8` to cap spend, or a self-hosted model id) — and an
+  unlisted scout/session tier keeps the active profile's default. The
+  two deep tiers are opt-in: their profile `## Tiers` rows are
+  recommended pin values (what "deep work" means on that runtime), not
+  active defaults — dispatchers route deep-tier/frontier-tier work to a
+  distinct model only when an explicit pin names that tier, so a file
+  containing only `runtime: claude-code` changes nothing.
   The convention is documented in one place —
   `runtimes/README.md` — and cited (not restated) by the drain and
   autopilot references. Every citation of `runtimes/` from files that
@@ -121,16 +138,20 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
     exit 1). The selftest scenario is never discoverable by a plain
     `./evals/run.sh` (it lives only in the temp tree).
 - R7: `docs/porting.md` exists: a concept-mapping table (skills, agents,
-  rules, hooks, headless, permission modes) with columns for Claude Code,
+  rules, hooks, headless, orchestration — workflows/fan-out — and
+  permission modes) with columns for Claude Code,
   Antigravity (citing the existing `antigravity/` port), and gemini-cli
   (citing its extension/GEMINI.md equivalents), plus a short "to add a
   runtime" checklist: write `runtimes/<name>.md`, port or map each
   concept, run `evals/runner-selftest.sh` with the runtime's CLI in
   `RUNNER_CMD`.
 - R8: antigravity mirrors: `antigravity/AGENTS.md` adopts the same
-  tier phrasing for its token-discipline section ("scout-tier"), and
-  `antigravity/README.md`'s mapping table gains a row pointing at
-  `runtimes/antigravity.md`.
+  tier phrasing for its token-discipline section ("scout-tier") and
+  mirrors R11's four-rung ladder — its deep-tier/frontier-tier line
+  states Antigravity's mapping inline per `runtimes/antigravity.md`
+  (strongest available model, or "no distinct mapping — session
+  model") — and `antigravity/README.md`'s mapping table gains a row
+  pointing at `runtimes/antigravity.md`.
 - R9: README gains a short "Other runtimes and models" subsection under
   Install: Claude models are the default; select another runtime via
   `.claude/runtime.md` + `runtimes/`; porting guide at `docs/porting.md`.
@@ -148,18 +169,26 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
   frontier-tier (Claude default: Fable) ONLY for work that truly needs
   the strongest model — novel architecture decisions, security-critical
   review, or a retry after a deep-tier attempt failed. The rule tells
-  dispatching skills (drain's tournament ranking, /design's judging,
-  an on-demand verifier escalation) to consult `.claude/runtime.md`
-  tier pins and pass the mapped model through the harness's model
-  parameter when spawning; with no config present they inherit the
-  session model — today's behavior, zero new cost. (This rewrite
-  subsumes R3's line-~21 edit to the same section; R3's other targets
-  are untouched by it.)
+  dispatching skills — at their actual spawn points: drain's tournament
+  workers and per-candidate verifier runs, /design's candidate
+  investigators, an on-demand verifier escalation — to consult
+  `.claude/runtime.md` tier pins and pass the mapped model through the
+  harness's model parameter when spawning; with no config, or no pin
+  for the tier in question, they inherit the session model — today's
+  behavior, zero new cost (per R5, the deep tiers activate only by
+  explicit pin). Pins bind harness (Agent-tool) dispatch only; the
+  headless fallback templates are frozen by R4 and run their profile's
+  default in v1 (see Out of scope). (This rewrite subsumes R3's
+  line-~21 edit to the same section; R3's other targets are untouched
+  by it.)
 - R12: `runtimes/README.md` (R5's file) also documents the four-rung
   ladder and the tier-override line format, with one worked example
   block pinning `deep-tier: claude-opus-4-8` and `frontier-tier:
-  claude-fable-5`, and states that tier pins bind dispatchers (skills
-  that spawn agents), not the interactive session's own model.
+  claude-fable-5` — presented as exactly how a repo turns the Claude
+  deep-work defaults ON (the deep tiers are opt-in per R5) — and states
+  that tier pins bind dispatchers (skills that spawn agents via the
+  harness), not the interactive session's own model and not the
+  headless fallback path in v1.
 - R10: `.claude-plugin/plugin.json` version bumped (0.3.x → 0.4.0) by
   this spec — it owns the bump for this change.
 
@@ -179,10 +208,17 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
   --max-turns, allowlist coverage) — those are review findings with their
   own fix path; this spec only wraps the templates in profile language
   without changing their contracts.
+- Routing tier pins into the headless command templates (the drain and
+  autopilot fallback path) — a deliberate v1 boundary, not an oversight:
+  pins bind Agent-tool dispatch, which is drain's primary worker mode
+  and every judgment-agent spawn; the frozen templates run their
+  profile's default. An optional model placeholder in the `## Headless`
+  contract is a follow-up spec once the review-fix wave lands the
+  template fixes.
 
 ## Acceptance criteria
 
-- [ ] `test -f runtimes/claude-code.md && test -f runtimes/antigravity.md && test -f runtimes/gemini-cli.md && for f in runtimes/claude-code.md runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "^## Tiers" $f && grep -q "^## Headless" $f && grep -q "^## Notes" $f || exit 1; done` (R1)
+- [ ] `test -f runtimes/claude-code.md && test -f runtimes/antigravity.md && test -f runtimes/gemini-cli.md && for f in runtimes/claude-code.md runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "^## Tiers" $f && grep -q "^## Headless" $f && grep -q "^## Orchestration" $f && grep -q "^## Notes" $f || exit 1; done` (R1)
 - [ ] `grep -q "deep-tier" runtimes/claude-code.md && grep -q "claude-opus-4-8" runtimes/claude-code.md && grep -q "claude-fable-5" runtimes/claude-code.md && for f in runtimes/antigravity.md runtimes/gemini-cli.md; do grep -q "deep-tier" $f && grep -q "frontier-tier" $f || exit 1; done` (R1 — all four tiers mapped in every profile)
 - [ ] `grep -q "scout-tier" .claude/agents/scout.md && grep -q "model: haiku" .claude/agents/scout.md && grep -qi "absent in plugin installs" .claude/agents/scout.md` (R2)
 - [ ] `grep -q "scout-tier" .claude/rules/token-discipline.md && grep -q "scout-tier" README.md` (R3)
@@ -196,7 +232,7 @@ the acceptance greps below cannot pass vacuously. Product-internal models the to
 - [ ] `test -x evals/stub-cli.sh && test -x evals/runner-selftest.sh && bash -n evals/stub-cli.sh && bash -n evals/runner-selftest.sh` (R6)
 - [ ] `./evals/runner-selftest.sh` exits 0 on a machine with no model access (uses the shipped stub by default; both the PASS and FAIL plumbing paths asserted) (R6 end-to-end)
 - [ ] `test -f docs/porting.md && grep -qi "gemini" docs/porting.md && grep -qi "antigravity" docs/porting.md && grep -q "runner-selftest" docs/porting.md` (R7)
-- [ ] `grep -q "scout-tier" antigravity/AGENTS.md && grep -q "runtimes/antigravity.md" antigravity/README.md` (R8)
+- [ ] `grep -q "scout-tier" antigravity/AGENTS.md && grep -q "deep-tier" antigravity/AGENTS.md && grep -q "runtimes/antigravity.md" antigravity/README.md` (R8 — including the four-rung ladder mirror)
 - [ ] `grep -qi "Other runtimes" README.md && grep -q "runtimes/" CLAUDE.md` (R9)
 - [ ] `python3 -c "import json,sys; v=json.load(open('.claude-plugin/plugin.json'))['version']; sys.exit(0 if tuple(map(int,v.split('.')))>=(0,4,0) else 1)"` (R10)
 - [ ] End to end: `./evals/run.sh breakdown` still passes with both env vars unset (no behavior change for the Claude default), and `./evals/runner-selftest.sh` proves a non-Claude command drives the same harness without touching the committed evalsets.
