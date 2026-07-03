@@ -1,6 +1,6 @@
 # Task 01: Majority-PASS verifier votes in the tournament
 
-Status: pending
+Status: in-progress
 Depends on: ../../review-fixes/tasks/02-drain-state-machine.md, ../../model-agnostic/tasks/02-core-tier-language.md, ../../repo-orientation/tasks/02-onboard-and-record.md, ../../task-priority/tasks/01-priority-and-tiebreak.md
 Priority: P1
 Budget: 25 turns
