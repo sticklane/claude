@@ -1,6 +1,6 @@
 # Task 02: Ultracode research record and antigravity port row
 
-Status: pending
+Status: in-progress
 Depends on: 01, ../../model-agnostic/tasks/04-antigravity-mirrors.md, ../../task-priority/tasks/02-research-record.md
 Priority: P3
 Budget: 10 turns
