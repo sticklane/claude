@@ -1,0 +1,888 @@
+#!/usr/bin/env python3
+"""workboard — a cross-repo dashboard of specs, tasks, sessions, and agent state.
+
+Scans local git repos and Claude Code state on this machine and renders a
+single self-contained HTML snapshot of all open work:
+
+  - toolkit specs   specs/<slug>/SPEC.md + specs/<slug>/tasks/NN-*.md (Status: lines)
+  - Kiro specs      .kiro/specs/<name>/tasks.md checkbox state ([ ] [-] [x])
+  - Antigravity     ~/.gemini/antigravity*/brain/<id>/ artifacts (task.md + metadata)
+  - handoffs        HANDOFF.md files (blocked-on-human, resumable)
+  - sessions        ~/.claude/projects/<escaped>/<sessionId>.jsonl transcripts
+                    (repo, branch, first prompt, last activity, live PID)
+  - git             branch, dirty files, unpushed commits, worktrees
+
+Stdlib only. Read-only: it never mutates any of the state it reports on.
+
+Usage:
+  workboard.py [ROOTS ...] [--out workboard.html] [--json] [--stale-days 7]
+               [--max-depth 3] [--quiet]
+
+With no ROOTS it scans common code directories (~/code ~/src ~/projects
+~/dev ~/repos ~/work, plus the cwd) and every repo any Claude Code session
+has touched (derived from session records' cwd field).
+"""
+
+import argparse
+import html
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+STALE_DAYS_DEFAULT = 7
+RECENT_HOURS = 48
+SKIP_DIRS = {
+    ".git", "node_modules", ".venv", "venv", "__pycache__", ".tox",
+    "dist", "build", "target", ".next", ".cache", "vendor",
+}
+DEFAULT_ROOT_CANDIDATES = ["code", "src", "projects", "dev", "repos", "work"]
+
+# ---------------------------------------------------------------- utilities
+
+def now_ts():
+    return time.time()
+
+
+def age_str(ts):
+    """Human age like '3h' / '4d' for a unix timestamp, or '?' if unknown."""
+    if not ts:
+        return "?"
+    delta = max(0, now_ts() - ts)
+    if delta < 3600:
+        return f"{int(delta // 60)}m"
+    if delta < 86400:
+        return f"{int(delta // 3600)}h"
+    return f"{int(delta // 86400)}d"
+
+
+def iso_to_ts(s):
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
+    except (ValueError, AttributeError):
+        return None
+
+
+def run_git(repo, *args):
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(repo), *args],
+            capture_output=True, text=True, timeout=10,
+        )
+        return out.stdout.strip() if out.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
+def read_text(path, limit=200_000):
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            return f.read(limit)
+    except OSError:
+        return ""
+
+
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except (OSError, ValueError):
+        return False
+
+# ---------------------------------------------------------------- discovery
+
+def find_repos(roots, max_depth):
+    """Walk roots (depth-limited, pruned) and yield git repo toplevels."""
+    seen = set()
+    for root in roots:
+        root = Path(root).expanduser().resolve()
+        if not root.is_dir():
+            continue
+        base_depth = len(root.parts)
+        for dirpath, dirnames, _ in os.walk(root):
+            depth = len(Path(dirpath).parts) - base_depth
+            if (Path(dirpath) / ".git").exists():
+                p = str(Path(dirpath).resolve())
+                if p not in seen:
+                    seen.add(p)
+                    yield Path(p)
+                dirnames[:] = []  # don't descend into a repo for more repos
+                continue
+            if depth >= max_depth:
+                dirnames[:] = []
+                continue
+            dirnames[:] = [
+                d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")
+            ]
+
+
+def default_roots():
+    home = Path.home()
+    roots = [Path.cwd()]
+    roots += [home / d for d in DEFAULT_ROOT_CANDIDATES if (home / d).is_dir()]
+    return roots
+
+# ---------------------------------------------------------------- git state
+
+def git_info(repo):
+    branch = run_git(repo, "rev-parse", "--abbrev-ref", "HEAD") or "?"
+    porcelain = run_git(repo, "status", "--porcelain")
+    dirty = len(porcelain.splitlines()) if porcelain else 0
+    ahead = behind = 0
+    lr = run_git(repo, "rev-list", "--left-right", "--count", "@{u}...HEAD")
+    if lr and "\t" in lr:
+        b, a = lr.split("\t")
+        ahead, behind = int(a), int(b)
+    last_commit = run_git(repo, "log", "-1", "--format=%ct")
+    worktrees = []
+    wt = run_git(repo, "worktree", "list", "--porcelain") or ""
+    cur = {}
+    for line in wt.splitlines() + [""]:
+        if line.startswith("worktree "):
+            cur = {"path": line[9:]}
+        elif line.startswith("branch "):
+            cur["branch"] = line[7:].replace("refs/heads/", "")
+        elif not line and cur:
+            if Path(cur.get("path", "")).resolve() != Path(repo).resolve():
+                worktrees.append(cur)
+            cur = {}
+    return {
+        "branch": branch,
+        "dirty": dirty,
+        "ahead": ahead,
+        "behind": behind,
+        "last_commit_ts": float(last_commit) if last_commit else None,
+        "worktrees": worktrees,
+    }
+
+# ---------------------------------------------------------------- specs
+
+STATUS_RE = re.compile(r"^Status:\s*\[?([A-Za-z_-]+)\]?", re.MULTILINE)
+TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
+OPEN_TASK_STATUSES = {"pending", "in-progress", "in_progress", "claimed"}
+CLOSED_TASK_STATUSES = {"done", "deferred", "skipped"}
+
+
+def scan_toolkit_specs(repo):
+    """specs/<slug>/SPEC.md + tasks/NN-*.md with 'Status: <value>' lines."""
+    specs = []
+    specs_dir = repo / "specs"
+    if not specs_dir.is_dir():
+        return specs
+    for spec_dir in sorted(specs_dir.iterdir()):
+        spec_md = spec_dir / "SPEC.md"
+        if not spec_dir.is_dir() or not spec_md.is_file():
+            continue
+        text = read_text(spec_md, 20_000)
+        m = TITLE_RE.search(text)
+        tasks = []
+        tasks_dir = spec_dir / "tasks"
+        mtimes = [spec_md.stat().st_mtime]
+        if tasks_dir.is_dir():
+            for tf in sorted(tasks_dir.glob("*.md")):
+                t_text = read_text(tf, 10_000)
+                sm = STATUS_RE.search(t_text)
+                status = sm.group(1).lower() if sm else "pending"
+                tm = TITLE_RE.search(t_text)
+                tasks.append({
+                    "file": str(tf.relative_to(repo)),
+                    "title": tm.group(1).strip() if tm else tf.stem,
+                    "status": status,
+                })
+                mtimes.append(tf.stat().st_mtime)
+        done = sum(1 for t in tasks if t["status"] in CLOSED_TASK_STATUSES)
+        doing = sum(1 for t in tasks
+                    if t["status"] in ("in-progress", "in_progress", "claimed"))
+        blocked = [t for t in tasks
+                   if t["status"] not in CLOSED_TASK_STATUSES
+                   and t["status"] not in OPEN_TASK_STATUSES]
+        specs.append({
+            "kind": "toolkit",
+            "slug": spec_dir.name,
+            "title": (m.group(1).strip() if m else spec_dir.name),
+            "path": str(spec_md.relative_to(repo)),
+            "tasks_total": len(tasks),
+            "tasks_done": done,
+            "tasks_doing": doing,
+            "tasks_blocked": [t["file"] for t in blocked],
+            "tasks": tasks,
+            "last_touched": max(mtimes),
+        })
+    return specs
+
+
+CHECKBOX_RE = re.compile(r"^\s*-\s*\[([ x-])\]", re.MULTILINE)
+
+
+def scan_kiro_specs(repo):
+    """.kiro/specs/<name>/tasks.md — checkboxes [ ] todo, [-] doing, [x] done."""
+    specs = []
+    kiro = repo / ".kiro" / "specs"
+    if not kiro.is_dir():
+        return specs
+    for spec_dir in sorted(kiro.iterdir()):
+        tasks_md = spec_dir / "tasks.md"
+        if not spec_dir.is_dir():
+            continue
+        boxes = CHECKBOX_RE.findall(read_text(tasks_md)) if tasks_md.is_file() else []
+        total = len(boxes)
+        done = boxes.count("x")
+        doing = boxes.count("-")
+        phase = [f for f in ("requirements.md", "design.md", "tasks.md")
+                 if (spec_dir / f).is_file()]
+        mtime = max((f.stat().st_mtime for f in spec_dir.glob("*.md")),
+                    default=spec_dir.stat().st_mtime)
+        specs.append({
+            "kind": "kiro",
+            "slug": spec_dir.name,
+            "title": spec_dir.name,
+            "path": str(spec_dir.relative_to(repo)),
+            "tasks_total": total,
+            "tasks_done": done,
+            "tasks_doing": doing,
+            "phase": phase,
+            "last_touched": mtime,
+        })
+    return specs
+
+
+def scan_handoffs(repo):
+    """HANDOFF.md anywhere shallow in the repo = work parked for a human/next session."""
+    handoffs = []
+    for pattern in ("HANDOFF.md", "*/HANDOFF.md", "*/*/HANDOFF.md",
+                    ".claude/HANDOFF.md", "specs/*/HANDOFF.md"):
+        for f in repo.glob(pattern):
+            if any(part in SKIP_DIRS for part in f.parts):
+                continue
+            text = read_text(f, 4_000)
+            m = TITLE_RE.search(text)
+            handoffs.append({
+                "path": str(f.relative_to(repo)),
+                "title": m.group(1).strip() if m else "Handoff",
+                "mtime": f.stat().st_mtime,
+            })
+    # de-dup (patterns can overlap)
+    seen, out = set(), []
+    for h in handoffs:
+        if h["path"] not in seen:
+            seen.add(h["path"])
+            out.append(h)
+    return out
+
+# ---------------------------------------------------------------- sessions
+
+def _first_prompt_and_meta(path):
+    """First user prompt + cwd/branch from the head of a session transcript."""
+    prompt, cwd, branch = None, None, None
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for _ in range(50):
+                line = f.readline()
+                if not line:
+                    break
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                cwd = cwd or rec.get("cwd")
+                branch = branch or rec.get("gitBranch")
+                if prompt is None and rec.get("type") == "queue-operation":
+                    prompt = rec.get("content")
+                if prompt is None and rec.get("type") == "user":
+                    content = (rec.get("message") or {}).get("content")
+                    if isinstance(content, str):
+                        prompt = content
+                    elif isinstance(content, list):
+                        texts = [c.get("text", "") for c in content
+                                 if isinstance(c, dict) and c.get("type") == "text"]
+                        prompt = " ".join(texts).strip() or None
+                if prompt and cwd and branch:
+                    break
+    except OSError:
+        pass
+    if prompt:
+        prompt = re.sub(r"<[^>]+>", " ", prompt)  # strip system-reminder tags
+        prompt = re.sub(r"\s+", " ", prompt).strip()[:200]
+    return prompt, cwd, branch
+
+
+def _last_record_ts(path):
+    """Timestamp (+branch if present) of the last parseable record via a tail read."""
+    try:
+        size = path.stat().st_size
+        with open(path, "rb") as f:
+            f.seek(max(0, size - 65_536))
+            tail = f.read().decode("utf-8", errors="replace")
+    except OSError:
+        return None, None
+    ts, branch = None, None
+    for line in reversed(tail.splitlines()):
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        ts = ts or iso_to_ts(rec.get("timestamp", ""))
+        branch = branch or rec.get("gitBranch")
+        if ts:
+            break
+    return ts, branch
+
+
+def live_session_ids(claude_home):
+    """sessionIds with a live Claude Code process, from ~/.claude/sessions/*.json."""
+    live = {}
+    sess_dir = claude_home / "sessions"
+    if not sess_dir.is_dir():
+        return live
+    for f in sess_dir.glob("*.json"):
+        try:
+            rec = json.loads(read_text(f, 10_000))
+        except json.JSONDecodeError:
+            continue
+        pid = rec.get("pid")
+        sid = rec.get("sessionId")
+        if sid and pid and pid_alive(pid):
+            live[sid] = {"pid": pid, "kind": rec.get("kind", "?")}
+    return live
+
+
+def scan_sessions(claude_home, stale_days):
+    sessions = []
+    projects = claude_home / "projects"
+    if not projects.is_dir():
+        return sessions
+    live = live_session_ids(claude_home)
+    for proj_dir in projects.iterdir():
+        if not proj_dir.is_dir():
+            continue
+        for jl in proj_dir.glob("*.jsonl"):
+            sid = jl.stem
+            prompt, cwd, branch = _first_prompt_and_meta(jl)
+            last_ts, last_branch = _last_record_ts(jl)
+            last_ts = last_ts or jl.stat().st_mtime
+            age_days = (now_ts() - last_ts) / 86400
+            if sid in live:
+                state = "active"
+            elif age_days * 24 < RECENT_HOURS:
+                state = "recent"
+            elif age_days > stale_days:
+                state = "stale"
+            else:
+                state = "idle"
+            sessions.append({
+                "id": sid,
+                "cwd": cwd,
+                "branch": last_branch or branch,
+                "prompt": prompt or "(no prompt found)",
+                "last_ts": last_ts,
+                "bytes": jl.stat().st_size,
+                "state": state,
+            })
+    sessions.sort(key=lambda s: s["last_ts"], reverse=True)
+    return sessions
+
+
+def scan_todos(claude_home):
+    """~/.claude/todos/*.json — in-session todo lists, when the install has them."""
+    items = []
+    todos_dir = claude_home / "todos"
+    if not todos_dir.is_dir():
+        return items
+    for f in todos_dir.glob("*.json"):
+        try:
+            data = json.loads(read_text(f, 100_000))
+        except json.JSONDecodeError:
+            continue
+        todos = data.get("todos", data) if isinstance(data, dict) else data
+        if not isinstance(todos, list):
+            continue
+        open_items = [t for t in todos if isinstance(t, dict)
+                      and t.get("status") in ("pending", "in_progress")]
+        if open_items:
+            items.append({
+                "session": f.stem.split("-agent-")[0],
+                "open": len(open_items),
+                "total": len(todos),
+                "next": open_items[0].get("content", "")[:120],
+                "mtime": f.stat().st_mtime,
+            })
+    return items
+
+# ---------------------------------------------------------------- antigravity
+
+def scan_antigravity():
+    """~/.gemini/antigravity*/brain/<conversation>/ artifact dirs."""
+    convs = []
+    gemini = Path.home() / ".gemini"
+    if not gemini.is_dir():
+        return convs
+    for variant in gemini.glob("antigravity*"):
+        brain = variant / "brain"
+        if not brain.is_dir():
+            continue
+        for conv in brain.iterdir():
+            if not conv.is_dir():
+                continue
+            task_md = conv / "task.md"
+            boxes = CHECKBOX_RE.findall(read_text(task_md)) if task_md.is_file() else []
+            summary, updated = None, None
+            meta = conv / "task.md.metadata.json"
+            if meta.is_file():
+                try:
+                    md = json.loads(read_text(meta, 10_000))
+                    summary = md.get("summary")
+                    updated = iso_to_ts(md.get("updatedAt", ""))
+                except json.JSONDecodeError:
+                    pass
+            mtime = updated or conv.stat().st_mtime
+            done = boxes.count("x")
+            convs.append({
+                "id": conv.name,
+                "store": variant.name,
+                "summary": (summary or conv.name)[:160],
+                "tasks_total": len(boxes),
+                "tasks_done": done,
+                "open": len(boxes) - done,
+                "last_ts": mtime,
+            })
+    convs.sort(key=lambda c: c["last_ts"], reverse=True)
+    return convs
+
+# ---------------------------------------------------------------- assembly
+
+def attention_items(repos, sessions, antigravity, stale_days):
+    """The inbox: everything that needs a human decision, most severe first.
+
+    severity: critical > serious > warning  (rendered with icon + word, never
+    color alone)."""
+    items = []
+    active_cwds = {s["cwd"] for s in sessions if s["state"] == "active" and s["cwd"]}
+
+    for r in repos:
+        rp = r["path"]
+        covered_by_active = any(c and (c == rp or c.startswith(rp + os.sep))
+                                for c in active_cwds)
+        for h in r["handoffs"]:
+            items.append({
+                "severity": "serious", "state": "blocked",
+                "repo": r["name"], "what": f"Handoff parked: {h['title']}",
+                "why": f"{h['path']} — resume it in a fresh session, then delete the file",
+                "age_ts": h["mtime"],
+            })
+        for s in r["specs"]:
+            open_tasks = s["tasks_total"] - s["tasks_done"]
+            if s.get("tasks_blocked"):
+                items.append({
+                    "severity": "serious", "state": "blocked",
+                    "repo": r["name"],
+                    "what": f"Spec {s['slug']}: task(s) blocked",
+                    "why": ", ".join(s["tasks_blocked"][:3]),
+                    "age_ts": s["last_touched"],
+                })
+            elif s["tasks_total"] > 0 and open_tasks == 0:
+                items.append({
+                    "severity": "warning", "state": "needs-review",
+                    "repo": r["name"],
+                    "what": f"Spec {s['slug']}: all {s['tasks_total']} task(s) done",
+                    "why": "verify and close it, or archive the spec dir",
+                    "age_ts": s["last_touched"],
+                })
+            elif open_tasks > 0 and (now_ts() - s["last_touched"]) > stale_days * 86400:
+                items.append({
+                    "severity": "warning", "state": "stale",
+                    "repo": r["name"],
+                    "what": f"Spec {s['slug']}: {open_tasks} open task(s), idle {age_str(s['last_touched'])}",
+                    "why": "resume it, defer it, or delete it — open work decays",
+                    "age_ts": s["last_touched"],
+                })
+        if r["git"]["dirty"] and not covered_by_active:
+            items.append({
+                "severity": "warning", "state": "needs-review",
+                "repo": r["name"],
+                "what": f"{r['git']['dirty']} uncommitted change(s), no live session",
+                "why": f"on branch {r['git']['branch']} — commit, stash, or discard",
+                "age_ts": r["git"]["last_commit_ts"],
+            })
+        if r["git"]["ahead"]:
+            items.append({
+                "severity": "warning", "state": "needs-review",
+                "repo": r["name"],
+                "what": f"{r['git']['ahead']} unpushed commit(s) on {r['git']['branch']}",
+                "why": "push or open a PR — local-only work is invisible work",
+                "age_ts": r["git"]["last_commit_ts"],
+            })
+
+    for c in antigravity:
+        if c["open"] > 0 and (now_ts() - c["last_ts"]) > stale_days * 86400:
+            items.append({
+                "severity": "warning", "state": "stale",
+                "repo": f"antigravity:{c['store']}",
+                "what": f"{c['open']} open checklist item(s): {c['summary'][:60]}",
+                "why": "stale Antigravity conversation — resume or abandon",
+                "age_ts": c["last_ts"],
+            })
+
+    sev_rank = {"critical": 0, "serious": 1, "warning": 2}
+    items.sort(key=lambda i: (sev_rank.get(i["severity"], 3), -(i["age_ts"] or 0)))
+    return items
+
+
+def assemble(roots, max_depth, stale_days, quiet):
+    claude_home = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
+    sessions = scan_sessions(claude_home, stale_days)
+
+    # every repo a session touched joins the scan set
+    session_dirs = []
+    for s in sessions:
+        if s["cwd"] and Path(s["cwd"]).is_dir():
+            top = run_git(s["cwd"], "rev-parse", "--show-toplevel")
+            if top:
+                session_dirs.append(Path(top))
+
+    repo_paths = sorted({str(p) for p in
+                         list(find_repos(roots, max_depth)) + session_dirs})
+    repos = []
+    for rp in repo_paths:
+        p = Path(rp)
+        if not quiet:
+            print(f"  scanning {rp}", file=sys.stderr)
+        repos.append({
+            "path": rp,
+            "name": p.name,
+            "git": git_info(p),
+            "specs": scan_toolkit_specs(p) + scan_kiro_specs(p),
+            "handoffs": scan_handoffs(p),
+        })
+
+    # attach sessions to repos
+    for r in repos:
+        r["sessions"] = [s for s in sessions if s["cwd"]
+                         and (s["cwd"] == r["path"]
+                              or s["cwd"].startswith(r["path"] + os.sep))]
+    matched = {s["id"] for r in repos for s in r["sessions"]}
+    orphan_sessions = [s for s in sessions if s["id"] not in matched]
+
+    antigravity = scan_antigravity()
+    todos = scan_todos(claude_home)
+    inbox = attention_items(repos, sessions, antigravity, stale_days)
+
+    return {
+        "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+        "stale_days": stale_days,
+        "repos": repos,
+        "sessions": sessions,
+        "orphan_sessions": orphan_sessions,
+        "antigravity": antigravity,
+        "todos": todos,
+        "inbox": inbox,
+        "totals": {
+            "repos": len(repos),
+            "specs_open": sum(1 for r in repos for s in r["specs"]
+                              if s["tasks_total"] == 0
+                              or s["tasks_done"] < s["tasks_total"]),
+            "tasks_open": sum(s["tasks_total"] - s["tasks_done"]
+                              for r in repos for s in r["specs"]),
+            "sessions_active": sum(1 for s in sessions if s["state"] == "active"),
+            "attention": len(inbox),
+        },
+    }
+
+# ---------------------------------------------------------------- rendering
+
+def esc(x):
+    return html.escape(str(x if x is not None else ""))
+
+
+STATE_BADGE = {
+    # state → (glyph, css class); color never carries meaning alone
+    "active": ("●", "good"),
+    "recent": ("◐", "info"),
+    "idle": ("○", "muted"),
+    "stale": ("⏸", "warning"),
+    "blocked": ("⚑", "serious"),
+    "needs-review": ("▲", "warning"),
+    "done": ("✓", "good"),
+}
+
+
+def badge(state):
+    glyph, cls = STATE_BADGE.get(state, ("○", "muted"))
+    return f'<span class="badge {cls}">{glyph} {esc(state)}</span>'
+
+
+def progress_bar(done, total, doing=0):
+    if total == 0:
+        return '<span class="muted-text">no tasks yet</span>'
+    pct = round(100 * done / total)
+    doing_pct = round(100 * doing / total)
+    return (
+        f'<span class="bar" role="img" aria-label="{done} of {total} tasks done">'
+        f'<span class="bar-fill" style="width:{pct}%"></span>'
+        f'<span class="bar-doing" style="left:{pct}%;width:{doing_pct}%"></span></span>'
+        f'<span class="bar-label">{done}/{total}</span>'
+    )
+
+
+def render_html(data):
+    t = data["totals"]
+
+    tiles = "".join(
+        f'<div class="tile"><div class="tile-value">{esc(v)}</div>'
+        f'<div class="tile-label">{esc(label)}</div></div>'
+        for label, v in [
+            ("repos scanned", t["repos"]),
+            ("open specs", t["specs_open"]),
+            ("open tasks", t["tasks_open"]),
+            ("active sessions", t["sessions_active"]),
+            ("needs attention", t["attention"]),
+        ]
+    )
+
+    if data["inbox"]:
+        inbox_rows = "".join(
+            f"<tr><td>{badge(i['state'])}</td>"
+            f"<td class='strong'>{esc(i['what'])}</td>"
+            f"<td>{esc(i['repo'])}</td>"
+            f"<td>{esc(i['why'])}</td>"
+            f"<td class='num'>{esc(age_str(i['age_ts']))}</td></tr>"
+            for i in data["inbox"]
+        )
+        inbox_html = (
+            "<table><thead><tr><th>state</th><th>item</th><th>repo</th>"
+            "<th>suggested action</th><th>age</th></tr></thead>"
+            f"<tbody>{inbox_rows}</tbody></table>"
+        )
+    else:
+        inbox_html = '<p class="empty">Inbox zero — nothing is blocked, stale, or waiting on review. 🎉</p>'
+
+    repo_cards = []
+    for r in sorted(data["repos"],
+                    key=lambda r: r["git"]["last_commit_ts"] or 0, reverse=True):
+        g = r["git"]
+        chips = [f'<span class="chip">⎇ {esc(g["branch"])}</span>']
+        if g["dirty"]:
+            chips.append(f'<span class="chip warning">± {g["dirty"]} dirty</span>')
+        if g["ahead"]:
+            chips.append(f'<span class="chip warning">↑ {g["ahead"]} unpushed</span>')
+        if g["behind"]:
+            chips.append(f'<span class="chip">↓ {g["behind"]} behind</span>')
+        for wt in g["worktrees"]:
+            chips.append(f'<span class="chip">⌂ {esc(wt.get("branch", "worktree"))}</span>')
+
+        spec_rows = "".join(
+            f"<tr><td class='strong'>{esc(s['slug'])}"
+            f"<span class='muted-text'> · {esc(s['kind'])}</span></td>"
+            f"<td>{progress_bar(s['tasks_done'], s['tasks_total'], s.get('tasks_doing', 0))}</td>"
+            f"<td class='num'>{esc(age_str(s['last_touched']))}</td></tr>"
+            for s in r["specs"]
+        ) or "<tr><td colspan='3' class='muted-text'>no specs</td></tr>"
+
+        sess_rows = "".join(
+            f"<tr><td>{badge(s['state'])}</td>"
+            f"<td class='prompt'>{esc(s['prompt'])}</td>"
+            f"<td>{esc(s['branch'] or '?')}</td>"
+            f"<td class='num'>{esc(age_str(s['last_ts']))}</td></tr>"
+            for s in r["sessions"][:8]
+        )
+        sess_html = (
+            "<table><thead><tr><th>state</th><th>first prompt</th>"
+            f"<th>branch</th><th>last active</th></tr></thead><tbody>{sess_rows}</tbody></table>"
+            if sess_rows else '<p class="muted-text">no sessions recorded</p>'
+        )
+        handoff_html = "".join(
+            f'<p class="handoff">⚑ handoff: <code>{esc(h["path"])}</code> — {esc(h["title"])}</p>'
+            for h in r["handoffs"]
+        )
+        repo_cards.append(
+            f'<details class="repo" open><summary><span class="repo-name">{esc(r["name"])}</span>'
+            f'<span class="repo-path">{esc(r["path"])}</span>{"".join(chips)}</summary>'
+            f'{handoff_html}'
+            f'<div class="repo-grid"><div><h3>Specs</h3>'
+            f"<table><thead><tr><th>spec</th><th>tasks</th><th>touched</th></tr></thead>"
+            f"<tbody>{spec_rows}</tbody></table></div>"
+            f"<div><h3>Sessions</h3>{sess_html}</div></div></details>"
+        )
+
+    ag_html = ""
+    if data["antigravity"]:
+        ag_rows = "".join(
+            f"<tr><td>{badge('stale' if c['open'] and (now_ts() - c['last_ts']) > data['stale_days'] * 86400 else ('done' if c['tasks_total'] and not c['open'] else 'idle'))}</td>"
+            f"<td class='prompt'>{esc(c['summary'])}</td>"
+            f"<td>{progress_bar(c['tasks_done'], c['tasks_total'])}</td>"
+            f"<td class='num'>{esc(age_str(c['last_ts']))}</td></tr>"
+            for c in data["antigravity"][:20]
+        )
+        ag_html = (
+            "<section><h2>Antigravity conversations</h2>"
+            "<table><thead><tr><th>state</th><th>summary</th><th>checklist</th>"
+            f"<th>updated</th></tr></thead><tbody>{ag_rows}</tbody></table></section>"
+        )
+
+    todo_html = ""
+    if data["todos"]:
+        todo_rows = "".join(
+            f"<tr><td class='num'>{t['open']}/{t['total']}</td>"
+            f"<td class='prompt'>{esc(t['next'])}</td>"
+            f"<td class='num'>{esc(age_str(t['mtime']))}</td></tr>"
+            for t in sorted(data["todos"], key=lambda t: t["mtime"], reverse=True)[:15]
+        )
+        todo_html = (
+            "<section><h2>Open in-session todo lists</h2>"
+            "<table><thead><tr><th>open</th><th>next item</th><th>updated</th>"
+            f"</tr></thead><tbody>{todo_rows}</tbody></table></section>"
+        )
+
+    orphan_html = ""
+    if data["orphan_sessions"]:
+        rows = "".join(
+            f"<tr><td>{badge(s['state'])}</td><td class='prompt'>{esc(s['prompt'])}</td>"
+            f"<td>{esc(s['cwd'] or '?')}</td><td class='num'>{esc(age_str(s['last_ts']))}</td></tr>"
+            for s in data["orphan_sessions"][:20]
+        )
+        orphan_html = (
+            "<section><h2>Sessions outside scanned repos</h2>"
+            "<table><thead><tr><th>state</th><th>first prompt</th><th>cwd</th>"
+            f"<th>last active</th></tr></thead><tbody>{rows}</tbody></table></section>"
+        )
+
+    return TEMPLATE.format(
+        generated_at=esc(data["generated_at"]),
+        stale_days=data["stale_days"],
+        tiles=tiles,
+        inbox=inbox_html,
+        repos="".join(repo_cards) or '<p class="empty">No git repos found in the scanned roots.</p>',
+        antigravity=ag_html,
+        todos=todo_html,
+        orphans=orphan_html,
+    )
+
+
+# Palette: the toolkit's pre-validated reference set (light+dark selected, not
+# flipped). Status colors ship with a glyph + word — never color alone.
+TEMPLATE = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workboard</title>
+<style>
+:root {{
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e;
+  --muted:#898781; --grid:#e1e0d9; --border:rgba(11,11,11,.10);
+  --blue:#2a78d6; --blue-soft:#9ec5f4;
+  --good:#0ca30c; --warning:#a86e00; --serious:#c05a2e; --critical:#d03b3b;
+}}
+@media (prefers-color-scheme: dark) {{ :root {{
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7;
+  --muted:#898781; --grid:#2c2c2a; --border:rgba(255,255,255,.10);
+  --blue:#3987e5; --blue-soft:#1c5cab;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+}} }}
+* {{ box-sizing:border-box; }}
+body {{ margin:0; padding:24px; background:var(--page); color:var(--ink);
+  font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }}
+h1 {{ font-size:20px; margin:0 0 2px; }}
+h2 {{ font-size:15px; margin:0 0 10px; }}
+h3 {{ font-size:13px; margin:0 0 6px; color:var(--ink-2); }}
+.sub {{ color:var(--muted); font-size:12px; margin-bottom:20px; }}
+section {{ background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; padding:16px; margin-bottom:16px; }}
+.tiles {{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }}
+.tile {{ background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; padding:12px 18px; min-width:120px; }}
+.tile-value {{ font-size:26px; font-weight:650; }}
+.tile-label {{ font-size:12px; color:var(--ink-2); }}
+table {{ width:100%; border-collapse:collapse; font-size:13px; }}
+th {{ text-align:left; color:var(--muted); font-weight:500; font-size:11px;
+  text-transform:uppercase; letter-spacing:.04em; padding:4px 10px 6px 0; }}
+td {{ padding:6px 10px 6px 0; border-top:1px solid var(--grid);
+  vertical-align:top; }}
+.num {{ font-variant-numeric:tabular-nums; white-space:nowrap; }}
+.strong {{ font-weight:600; }}
+.prompt {{ color:var(--ink-2); max-width:560px; overflow-wrap:anywhere; }}
+.badge {{ white-space:nowrap; font-size:12px; font-weight:600; }}
+.badge.good {{ color:var(--good); }} .badge.warning {{ color:var(--warning); }}
+.badge.serious {{ color:var(--serious); }} .badge.critical {{ color:var(--critical); }}
+.badge.info {{ color:var(--blue); }} .badge.muted {{ color:var(--muted); }}
+.chip {{ display:inline-block; font-size:11px; padding:1px 8px; margin-left:6px;
+  border:1px solid var(--border); border-radius:999px; color:var(--ink-2); }}
+.chip.warning {{ color:var(--warning); border-color:var(--warning); }}
+.repo {{ background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; padding:12px 16px; margin-bottom:12px; }}
+.repo summary {{ cursor:pointer; list-style:none; display:flex; align-items:center;
+  flex-wrap:wrap; gap:2px; }}
+.repo summary::before {{ content:"▸"; color:var(--muted); margin-right:8px; }}
+.repo[open] summary::before {{ content:"▾"; }}
+.repo-name {{ font-weight:650; font-size:15px; }}
+.repo-path {{ color:var(--muted); font-size:12px; margin-left:10px; }}
+.repo-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:20px;
+  margin-top:12px; }}
+@media (max-width:800px) {{ .repo-grid {{ grid-template-columns:1fr; }} }}
+.bar {{ display:inline-block; position:relative; width:120px; height:8px;
+  background:var(--grid); border-radius:4px; overflow:hidden;
+  vertical-align:middle; }}
+.bar-fill {{ position:absolute; left:0; top:0; bottom:0;
+  background:var(--blue); border-radius:4px; }}
+.bar-doing {{ position:absolute; top:0; bottom:0; background:var(--blue-soft); }}
+.bar-label {{ font-size:12px; color:var(--ink-2); margin-left:8px;
+  font-variant-numeric:tabular-nums; }}
+.muted-text {{ color:var(--muted); }}
+.empty {{ color:var(--ink-2); }}
+.handoff {{ color:var(--serious); font-size:13px; margin:8px 0 0; }}
+.handoff code {{ font-size:12px; }}
+#filter {{ width:280px; padding:6px 10px; margin-bottom:14px;
+  border:1px solid var(--border); border-radius:8px; background:var(--surface);
+  color:var(--ink); font:inherit; }}
+footer {{ color:var(--muted); font-size:11px; margin-top:20px; }}
+</style></head><body>
+<h1>Workboard</h1>
+<div class="sub">All open work across local repos, specs, and Claude Code
+sessions · snapshot {generated_at} · stale after {stale_days}d · re-run
+<code>workboard.py</code> to refresh</div>
+<div class="tiles">{tiles}</div>
+<input id="filter" type="search" placeholder="filter rows…"
+ oninput="var q=this.value.toLowerCase();document.querySelectorAll('tbody tr, details.repo').forEach(function(el){{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none'}})">
+<section><h2>Needs attention</h2>{inbox}</section>
+<section><h2>Repos</h2>{repos}</section>
+{antigravity}
+{todos}
+{orphans}
+<footer>Sources: specs/*/SPEC.md + tasks (Status: lines) · .kiro/specs/*/tasks.md
+checkboxes · HANDOFF.md files · ~/.claude/projects transcripts + live PIDs ·
+~/.gemini/antigravity*/brain artifacts · git status. Read-only snapshot;
+glyph + word carry state, never color alone.</footer>
+</body></html>
+"""
+
+# ---------------------------------------------------------------- main
+
+def main():
+    ap = argparse.ArgumentParser(description="Cross-repo agent/spec/session workboard")
+    ap.add_argument("roots", nargs="*", help="directories to scan for git repos")
+    ap.add_argument("--out", default="workboard.html", help="output HTML path")
+    ap.add_argument("--json", action="store_true", help="print JSON to stdout instead")
+    ap.add_argument("--stale-days", type=int, default=STALE_DAYS_DEFAULT)
+    ap.add_argument("--max-depth", type=int, default=3)
+    ap.add_argument("--quiet", action="store_true")
+    args = ap.parse_args()
+
+    roots = [Path(r) for r in args.roots] if args.roots else default_roots()
+    data = assemble(roots, args.max_depth, args.stale_days, args.quiet)
+
+    if args.json:
+        json.dump(data, sys.stdout, indent=2, default=str)
+        print()
+        return
+
+    out = Path(args.out)
+    out.write_text(render_html(data), encoding="utf-8")
+    t = data["totals"]
+    print(f"workboard: {t['repos']} repos · {t['specs_open']} open specs · "
+          f"{t['tasks_open']} open tasks · {t['sessions_active']} active sessions · "
+          f"{t['attention']} need attention → {out}")
+
+
+if __name__ == "__main__":
+    main()
