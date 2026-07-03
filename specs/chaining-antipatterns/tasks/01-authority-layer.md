@@ -1,6 +1,6 @@
 # Task 01: Authority layer — self-chain bullet, Precedence block, binding-list unification
 
-Status: in-progress
+Status: done
 Depends on: ../../context-management/tasks/01-claude-md-and-breakdown-note.md, ../../context-management/tasks/02-distill-memory-cache-economics.md, ../../context-management/tasks/04-reference-tocs-research-record.md
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R1, R4, R2's token-discipline exception clause)
@@ -66,8 +66,10 @@ any other skill body (task 02); `docs/external-playbooks.md`,
 
 ## Acceptance
 
-- [ ] `grep -q "self-chain" CLAUDE.md` (R1, from SPEC)
-- [ ] `grep -q "^## Precedence" CLAUDE.md && test "$(wc -l < CLAUDE.md)" -le 200` (R4, from SPEC)
-- [ ] `grep -q "SKILL.md a bound instruction" .claude/rules/untrusted-data.md` (R4 untrusted-data clause)
-- [ ] `test "$(grep -c "build skill's procedure" .claude/skills/drain/reference.md)" -ge 2 && grep -q "build skill's procedure" antigravity/.agents/workflows/drain.md` (R4 drain binding sentence, both prompts + ag mirror)
-- [ ] `grep -q "self-chain" .claude/rules/token-discipline.md` (R2 exception clause)
+- [x] `grep -q "self-chain" CLAUDE.md` (R1, from SPEC) — exit 0, full R1 bullet in authoring conventions; see ../evidence/01-authority-layer.md
+- [x] `grep -q "^## Precedence" CLAUDE.md && test "$(wc -l < CLAUDE.md)" -le 200` (R4, from SPEC) — exit 0, 84 lines, block is heading + 5 lines; see ../evidence/01-authority-layer.md
+- [x] `grep -q "SKILL.md a bound instruction" .claude/rules/untrusted-data.md` (R4 untrusted-data clause) — exit 0, clause verbatim; see ../evidence/01-authority-layer.md
+- [x] `test "$(grep -c "build skill's procedure" .claude/skills/drain/reference.md)" -ge 2 && grep -q "build skill's procedure" antigravity/.agents/workflows/drain.md` (R4 drain binding sentence, both prompts + ag mirror) — exit 0, count 3 + ag mirror; see ../evidence/01-authority-layer.md
+- [x] `grep -q "self-chain" .claude/rules/token-discipline.md` (R2 exception clause) — exit 0, exception clause verbatim; see ../evidence/01-authority-layer.md
+
+R11 evidence: plugin.json untouched; pre-implementation version 0.6.2 recorded in ../evidence/01-authority-layer.md.

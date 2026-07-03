@@ -43,8 +43,9 @@ templates run their profile's default in v1.
 
 ## Session hygiene
 
-- One task per session. When a task completes, `/clear` and start the next
-  from its task file rather than carrying dead context forward.
+- One task per session — light artifact stages may self-chain per
+  CLAUDE.md's conventions. When a task completes, `/clear` and start the
+  next from its task file rather than carrying dead context forward.
 - Long-running work should be resumable from artifacts on disk (specs, task
   files, notes in `docs/`), never from conversation memory. If a session is
   getting heavy mid-task, write a handoff file and restart from it.
