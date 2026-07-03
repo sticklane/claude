@@ -64,7 +64,7 @@ task file (or a `discovered-from` edge when beads is active). Files:
   `draft` row: never dispatchable, excluded from the batch interview
   and from "queue empty" (a queue with only draft+done reports drained,
   listing drafts for human promotion; a `pending` task whose
-  dependencies are all drafts reports the same way — "drained pending
+  UNMET dependencies are all drafts reports the same way — "drained pending
   promotion" — rather than leaving step 4 without a terminal
   condition). Promotion is manual: a human (or
   an /idea / /breakdown pass) replaces the placeholder Acceptance with
@@ -80,8 +80,9 @@ task file (or a `discovered-from` edge when beads is active). Files:
   section defining the full lifecycle mapping, CLI-verified at
   implementation time (record the bd version checked, mirroring the
   gemini-cli verification-note pattern):
-  - first bd-mode run imports task files (see non-terminal coverage
-    below): one `bd create`
+  - each bd-mode inventory imports any non-terminal, unstamped task
+    file (not only the first run — files created by later /breakdown
+    passes or promoted drafts are picked up too): one `bd create`
     per task (title from the task header, description = repo-relative
     task-file path), dependency edges from `Depends on:` lines; each
     imported file is stamped `Status: tracked-in-beads` in one commit;
@@ -108,9 +109,11 @@ task file (or a `discovered-from` edge when beads is active). Files:
     bd version). A BLOCKED verdict maps to bd's blocked state with the
     reason, labeled distinctly from deferred so the two remain
     separable;
-  - first import covers every non-terminal task file (`pending`,
-    `deferred`, `blocked`), stamping each `tracked-in-beads`, so no
-    task is stranded half-markdown half-bd;
+  - import covers every non-terminal task file (`pending`, `deferred`,
+    `blocked`, and `draft` — drafts imported in the blocked state,
+    mirroring the discovered path, so the never-dispatchable invariant
+    holds for markdown-era drafts crossing into bd mode), stamping each
+    `tracked-in-beads`, so no task is stranded half-markdown half-bd;
   - stale claims: bd has no lease mechanism, so drain's stale-lock rule
     maps to "claimed issue, no live worker → clear the claim, discard
     the branch/worktree" — same slot-machine semantics;
@@ -152,7 +155,7 @@ task file (or a `discovered-from` edge when beads is active). Files:
 
 - [ ] `test "$(grep -c 'Discovered:' .claude/skills/drain/reference.md)" -ge 2` — both worker prompts carry the verdict block (R1)
 - [ ] `grep -q "## Discovered" .claude/skills/drain/SKILL.md && grep -q "Discovered-from:" .claude/skills/drain/reference.md` — collect mechanics + stub header defined (R2)
-- [ ] `grep -q '| \`draft\` |' .claude/skills/drain/reference.md && grep -qi "promotion" .claude/skills/drain/reference.md` (R3)
+- [ ] ``grep -qF '| `draft` |' .claude/skills/drain/reference.md && grep -qi "promotion" .claude/skills/drain/reference.md`` (R3)
 - [ ] `grep -q "queue backend" .claude/skills/drain/SKILL.md && grep -q "markdown queue" .claude/skills/drain/SKILL.md` — feature-detect + opt-out (R4)
 - [ ] `grep -q "^## Beads backend" .claude/skills/drain/reference.md && awk '/^## Beads backend/,0' .claude/skills/drain/reference.md | grep -q "bd ready" && awk '/^## Beads backend/,0' .claude/skills/drain/reference.md | grep -qi "discovered-from"` (R5)
 - [ ] `grep -q "Discovered" antigravity/.agents/workflows/drain.md && grep -qi "beads" antigravity/.agents/workflows/drain.md` (R6)
