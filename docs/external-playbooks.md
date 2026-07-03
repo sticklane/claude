@@ -56,6 +56,30 @@ rather than restating it. Verified against primary sources, July 2026.
   rule is **never add a feedback-free reflect-and-retry loop**.
   [arXiv:2310.01798](https://arxiv.org/abs/2310.01798)
 
+## Code-vs-LLM ladder
+
+Where the three vendors converge on architecting generative-AI features
+→ /design's classification gate and `.claude/skills/design/reference.md`.
+
+- **Agreement**: default deterministic; escalate incrementally (pure code
+  → single structured-output call → workflow patterns → single agent →
+  multi-agent); code owns orchestration, loop exits, and side effects;
+  structured output at every code/LLM seam; smallest capable model.
+- **Cost anchors**: Anthropic reports agents ≈4× the tokens of chat and
+  multi-agent systems ≈15× (self-reported internal data) — the economic
+  gradient behind the ladder's lowest-rung default.
+- **Named disagreements**: Google's Agents Companion leans multi-agent
+  earlier than Anthropic/OpenAI's single-agent-first default — rejected;
+  rung 4 stays breadth-first-only. OpenAI treats schema-enforced
+  structured outputs as sufficient; Gemini guidance says validate model
+  output in application code anyway — the toolkit sides with validation.
+- Sources: [Building effective agents](https://www.anthropic.com/research/building-effective-agents),
+  [multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)
+  (the 4×/15× anchors),
+  [A Practical Guide to Building Agents](https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf),
+  [Agents Companion](https://www.kaggle.com/whitepaper-agent-companion)
+  (secondary-verified — Kaggle mirror, not a Google primary).
+
 ## Considered and rejected
 
 - OpenAI handoffs / parallel guardrail classifiers — harness-level
