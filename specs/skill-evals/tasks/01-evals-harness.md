@@ -1,5 +1,35 @@
 # Task 01: /evals skill, runner, and the breakdown reference evalset
 
+<!-- Plan (build step 1):
+1. evals/run.sh (R3): resolve toolkit root from script path; optional skill
+   filter; per scenario dir evals/<skill>/NN-*: mktemp EVAL_DIR, run setup.sh
+   with EVAL_DIR exported, copy .claude/skills/<skill>/ + .claude/agents/
+   into $EVAL_DIR/.claude/, read allowed-tools.txt (default
+   Read,Edit,Write,Glob,Grep,Bash(git *)), cd $EVAL_DIR, timeout 900 claude
+   -p "$(cat prompt.txt)" --permission-mode dontAsk --max-turns 40
+   --allowed-tools "$allow"; then assert.sh with CWD $EVAL_DIR. Pass/fail
+   line per scenario, summary, non-zero exit on any failure. CLI flags
+   verified against claude 2.1.199 (--allowed-tools, dontAsk both valid).
+2. evals/breakdown/01-small-spec/ (R4): setup.sh git-inits a fixture with a
+   2-requirement specs/demo/SPEC.md; prompt.txt "/breakdown specs/demo/SPEC.md";
+   allowed-tools.txt adds Task; assert.sh checks >=2 specs/demo/tasks/NN-*.md
+   each with Status:, Depends on:, ## Acceptance containing a backticked
+   command, and SPEC.md gaining a Parallelization section (breakdown appends
+   it as bold text, so grep for the word, not a heading).
+3. .claude/skills/evals/SKILL.md (R1/R7, drain-style frontmatter order,
+   Artifacts: closing line) + reference.md (R5, scenario files verbatim,
+   link to evals/run.sh by path).
+4. CLAUDE.md: one sentence in Testing changes; README: one row in the
+   What's-in-the-box table (supplementary group, near /critique//distill).
+5. antigravity/.agents/workflows/evals.md (R8): description-only
+   frontmatter; run step hands the user Agent Manager launches; provisioning
+   copies .agents/skills/<skill>/ into the fixture's .agents/.
+Risks: real end-to-end run depends on breakdown's actual output matching
+asserts — keep asserts on the contract breakdown's SKILL.md promises, not
+on incidental wording; runner must not eat failures (no set -e around the
+per-scenario body; count failures explicitly).
+-->
+
 Status: in-progress
 Depends on: ../../hardening-quick-wins/tasks/01-untrusted-data.md (README.md overlap; cross-spec waves in ../SPEC.md)
 Budget: 50 turns
