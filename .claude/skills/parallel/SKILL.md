@@ -22,6 +22,10 @@ deferred and why) before launching.
 
 ## 2. Dispatch
 
+Before dispatching, ensure `.claude/worktrees/` is gitignored —
+harness-managed worker worktrees land there and trip git-cleanliness
+hooks otherwise.
+
 For each task in the group, launch a background `general-purpose` agent with
 `isolation: worktree`, prompted with:
 

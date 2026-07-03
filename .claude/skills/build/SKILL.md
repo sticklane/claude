@@ -53,7 +53,11 @@ replaces "is done".
    layout → pass no path (the verifier then writes nothing; note at
    close-out that evidence was not persisted). The verifier writes its full
    report there; a re-verify overwrites it.
-4. On FAIL: fix and re-verify. After two failed fix attempts on the same
+4. Collect every subagent's result within your current turn — ending a
+   turn while a verifier or monitor is still pending orphans its report
+   (the observed stall mode in drained runs). If a subagent goes silent,
+   respawn it once and continue.
+5. On FAIL: fix and re-verify. After two failed fix attempts on the same
    issue, stop and report — repeated correction in a degraded context is the
    known failure mode; a fresh session with a better task file beats a long
    session of thrashing.
