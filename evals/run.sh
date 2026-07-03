@@ -16,6 +16,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # via their scenario's allowed-tools.txt.
 DEFAULT_ALLOWED='Read,Edit,Write,Glob,Grep,Bash(git *)'
 
+# EVALS_ROOT override: scenario discovery scans
+# $EVALS_ROOT/<skill>/<NN-name>/ instead of this checkout's evals/.
+# Skill provisioning still sources from the toolkit checkout ($ROOT).
+EVALS_ROOT="${EVALS_ROOT:-$ROOT/evals}"
+
 # Isolate git from the user's global config (signing, hooks, templates)
 # for every setup.sh and claude invocation: null the global config and
 # inject commit.gpgsign=false via GIT_CONFIG_COUNT so git commands run
@@ -38,7 +43,7 @@ trap 'exit 130' INT TERM
 pass=0
 fail=0
 
-for scenario in "$ROOT"/evals/*/[0-9][0-9]-*/; do
+for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
   scenario="${scenario%/}"
   skill="$(basename "$(dirname "$scenario")")"
   name="$skill/$(basename "$scenario")"
@@ -60,9 +65,24 @@ for scenario in "$ROOT"/evals/*/[0-9][0-9]-*/; do
     allowed="$DEFAULT_ALLOWED"
     [ -f "$scenario/allowed-tools.txt" ] && allowed="$(head -n 1 "$scenario/allowed-tools.txt")"
 
-    if ! (cd "$EVAL_DIR" && timeout 900 claude -p "$(cat "$scenario/prompt.txt")" \
-        --permission-mode dontAsk --max-turns 40 --allowed-tools "$allowed" 2>&1 \
-        | tee "$EVAL_DIR/session.log"); then
+    # RUNNER_CMD override: run a non-Claude headless command instead,
+    # word-split, with the scenario prompt appended as the final
+    # argument. The resolved allowlist is exported as ALLOWED_TOOLS;
+    # custom runners may consume or ignore it. Execution happens inside
+    # the fixture dir, so RUNNER_CMD's first word must be absolute or
+    # PATH-resolvable.
+    session_rc=0
+    if [ -n "${RUNNER_CMD:-}" ]; then
+      read -r -a runner <<<"$RUNNER_CMD"
+      (cd "$EVAL_DIR" && ALLOWED_TOOLS="$allowed" timeout 900 "${runner[@]}" \
+          "$(cat "$scenario/prompt.txt")" 2>&1 \
+          | tee "$EVAL_DIR/session.log") || session_rc=$?
+    else
+      (cd "$EVAL_DIR" && timeout 900 claude -p "$(cat "$scenario/prompt.txt")" \
+          --permission-mode dontAsk --max-turns 40 --allowed-tools "$allowed" 2>&1 \
+          | tee "$EVAL_DIR/session.log") || session_rc=$?
+    fi
+    if [ "$session_rc" -ne 0 ]; then
       reason="session failed (timeout or non-zero exit)"
     elif ! (cd "$EVAL_DIR" && bash "$scenario/assert.sh"); then
       reason="assert.sh failed"
