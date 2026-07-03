@@ -1,6 +1,6 @@
 # Task 03: Antipattern guards, antigravity mirrors, research record
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02
 Budget: 50 turns
 Spec: ../SPEC.md (requirements R5, R6, R7, R8, R9, R10)
