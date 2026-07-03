@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# sync-skills — idempotently symlink toolkit skills into the user skills dir.
+#
+# Standard post-`git pull` step (SPEC quality-gates-rollout R24):
+#   - every directory under $SYNC_SKILLS_SRC is symlinked into $SYNC_SKILLS_DEST
+#   - a symlink whose readlink already equals the target is skipped (not
+#     re-linked), so a no-op run reports "linked 0"
+#   - entries that are not symlinks into the toolkit (local skills, foreign
+#     symlinks) are never touched; a name collision with one is skipped and
+#     reported as "conflict: <name>"
+#   - dangling symlinks into the toolkit (skill removed upstream) are deleted
+#   - prints a one-line summary: linked N, removed M, kept K local[, conflicts: ...]
+set -euo pipefail
+
+SRC="${SYNC_SKILLS_SRC:-$HOME/agentic-toolkit/.claude/skills}"
+DEST="${SYNC_SKILLS_DEST:-$HOME/.claude/skills}"
+
+if [ ! -d "$SRC" ]; then
+  echo "sync-skills: source dir not found: $SRC" >&2
+  exit 1
+fi
+mkdir -p "$DEST"
+
+# Normalize to absolute paths for readlink comparison / prefix matching.
+SRC="$(cd "$SRC" && pwd)"
+DEST="$(cd "$DEST" && pwd)"
+
+linked=0
+removed=0
+kept=0
+conflicts=""
+
+# Pass 1: link every skill directory in the toolkit.
+for dir in "$SRC"/*/; do
+  [ -d "$dir" ] || continue
+  name="$(basename "$dir")"
+  target="$SRC/$name"
+  entry="$DEST/$name"
+
+  if [ -L "$entry" ]; then
+    current="$(readlink "$entry")"
+    if [ "$current" = "$target" ]; then
+      continue # already correct — skip, do not re-link
+    fi
+    case "$current" in
+      "$SRC"/*)
+        # Toolkit symlink with a stale/wrong target: fix it.
+        ln -sfn "$target" "$entry"
+        linked=$((linked + 1))
+        ;;
+      *)
+        # Symlink owned by something else: never touch.
+        echo "conflict: $name" >&2
+        conflicts="$conflicts $name"
+        ;;
+    esac
+  elif [ -e "$entry" ]; then
+    # Non-symlink entry (local skill dir/file): never touch.
+    echo "conflict: $name" >&2
+    conflicts="$conflicts $name"
+  else
+    ln -s "$target" "$entry"
+    linked=$((linked + 1))
+  fi
+done
+
+# Pass 2: remove dangling toolkit symlinks; count everything else as kept local.
+for entry in "$DEST"/*; do
+  [ -e "$entry" ] || [ -L "$entry" ] || continue # unmatched glob
+  if [ -L "$entry" ]; then
+    current="$(readlink "$entry")"
+    case "$current" in
+      "$SRC"/*)
+        if [ ! -d "$current" ]; then
+          rm "$entry"
+          removed=$((removed + 1))
+        fi
+        ;;
+      *)
+        kept=$((kept + 1))
+        ;;
+    esac
+  else
+    kept=$((kept + 1))
+  fi
+done
+
+summary="linked $linked, removed $removed, kept $kept local"
+if [ -n "$conflicts" ]; then
+  summary="$summary, conflicts:$conflicts"
+fi
+echo "$summary"
