@@ -414,41 +414,75 @@ def scan_todos(claude_home):
 
 # ---------------------------------------------------------------- antigravity
 
-def scan_antigravity():
-    """~/.gemini/antigravity*/brain/<conversation>/ artifact dirs."""
-    convs = []
+# The one deliberate exception to "read-only": --abandon/--abandon-stale drop
+# this marker file into a conversation dir. The scanner then skips it forever.
+# Nothing of Antigravity's own state (task.md, metadata) is ever modified.
+ABANDON_MARKER = ".workboard-abandoned"
+
+
+def _brain_conversations():
+    """Yield (store_name, conversation_dir) across all Antigravity variants."""
     gemini = Path.home() / ".gemini"
     if not gemini.is_dir():
-        return convs
+        return
     for variant in gemini.glob("antigravity*"):
         brain = variant / "brain"
         if not brain.is_dir():
             continue
         for conv in brain.iterdir():
-            if not conv.is_dir():
-                continue
-            task_md = conv / "task.md"
-            boxes = CHECKBOX_RE.findall(read_text(task_md)) if task_md.is_file() else []
-            summary, updated = None, None
-            meta = conv / "task.md.metadata.json"
-            if meta.is_file():
-                try:
-                    md = json.loads(read_text(meta, 10_000))
-                    summary = md.get("summary")
-                    updated = iso_to_ts(md.get("updatedAt", ""))
-                except json.JSONDecodeError:
-                    pass
-            mtime = updated or conv.stat().st_mtime
-            done = boxes.count("x")
-            convs.append({
-                "id": conv.name,
-                "store": variant.name,
-                "summary": (summary or conv.name)[:160],
-                "tasks_total": len(boxes),
-                "tasks_done": done,
-                "open": len(boxes) - done,
-                "last_ts": mtime,
-            })
+            if conv.is_dir():
+                yield variant.name, conv
+
+
+def abandon_conversations(ids):
+    """Mark the named conversations abandoned. Returns (marked, missing)."""
+    wanted, marked = set(ids), []
+    for _, conv in _brain_conversations():
+        if conv.name in wanted:
+            (conv / ABANDON_MARKER).write_text(
+                f"abandoned via workboard {datetime.now(timezone.utc).isoformat(timespec='seconds')}\n",
+                encoding="utf-8")
+            marked.append(conv.name)
+            wanted.discard(conv.name)
+    return marked, sorted(wanted)
+
+
+def abandon_stale(stale_days):
+    """Mark every stale conversation (open items, idle past threshold)."""
+    stale = [c["id"] for c in scan_antigravity()
+             if c["open"] > 0 and (now_ts() - c["last_ts"]) > stale_days * 86400]
+    marked, _ = abandon_conversations(stale)
+    return marked
+
+
+def scan_antigravity():
+    """~/.gemini/antigravity*/brain/<conversation>/ artifact dirs."""
+    convs = []
+    for store, conv in _brain_conversations():
+        if (conv / ABANDON_MARKER).is_file():
+            continue
+        task_md = conv / "task.md"
+        boxes = CHECKBOX_RE.findall(read_text(task_md)) if task_md.is_file() else []
+        summary, updated = None, None
+        meta = conv / "task.md.metadata.json"
+        if meta.is_file():
+            try:
+                md = json.loads(read_text(meta, 10_000))
+                summary = md.get("summary")
+                updated = iso_to_ts(md.get("updatedAt", ""))
+            except json.JSONDecodeError:
+                pass
+        mtime = updated or conv.stat().st_mtime
+        done = boxes.count("x")
+        convs.append({
+            "id": conv.name,
+            "store": store,
+            "summary": (summary or conv.name)[:160],
+            "tasks_total": len(boxes),
+            "tasks_done": done,
+            "open": len(boxes) - done,
+            "last_ts": mtime,
+        })
     convs.sort(key=lambda c: c["last_ts"], reverse=True)
     return convs
 
