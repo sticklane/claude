@@ -1,6 +1,6 @@
 # Task 01: Discovered work, append-only task files, stopping points
 
-Status: in-progress
+Status: done
 Depends on: ../../review-fixes/tasks/07-evals-distribution-and-evidence.md, ../../context-management/tasks/03-tool-call-ceilings.md, ../../task-priority/tasks/01-priority-and-tiebreak.md, ../../tournament-votes/tasks/01-majority-votes.md
 Priority: P1
 Budget: 40 turns
@@ -28,10 +28,17 @@ are exact and were critic-hardened; follow them to the letter.
 
 ## Acceptance
 
-- [ ] `grep -q "Discovered:" .claude/skills/drain/reference.md && grep -q "Discovered:" .claude/skills/build/SKILL.md` -> exit 0 (R1)
-- [ ] `grep -q "Status: draft" .claude/skills/drain/SKILL.md && grep -qi "dedup" .claude/skills/drain/SKILL.md && grep -q "Discovered-by:" .claude/skills/drain/SKILL.md && grep -q "only a human" .claude/skills/drain/SKILL.md && grep -qi "never dispatchable" .claude/skills/drain/SKILL.md && grep -qi "vet" .claude/skills/drain/SKILL.md` -> exit 0 (R2)
-- [ ] `grep -q "only on the user's yes" .claude/skills/build/SKILL.md` -> exit 0 (R3)
-- [ ] `grep -q "may flip only" .claude/skills/drain/reference.md && grep -q "may flip only" .claude/skills/breakdown/SKILL.md && grep -qi "git diff" .claude/agents/verifier.md && grep -q "merge-base" .claude/skills/drain/SKILL.md` -> exit 0 (R4)
-- [ ] `grep -q "## Progress" .claude/skills/drain/SKILL.md && grep -qi "done vs remaining" .claude/skills/drain/SKILL.md` -> exit 0 (R5)
-- [ ] `grep -q "Discovered:" antigravity/.agents/workflows/drain.md && grep -q "merge-base" antigravity/.agents/workflows/drain.md && grep -q "may flip only" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "git diff" antigravity/.agents/skills/verifier/SKILL.md` -> exit 0 (R7)
-- [ ] Manual paper dry-run per the spec's end-to-end criterion: BLOCKED worker with one Discovered item -> one draft stub (vet label), one Progress entry, one commit; duplicate discovery -> no second stub; draft never dispatchable, never flipped by drain
+- [x] `grep -q "Discovered:" .claude/skills/drain/reference.md && grep -q "Discovered:" .claude/skills/build/SKILL.md` -> exit 0 (R1)
+  Evidence: verifier-run grep exited 0; see ../evidence/01-tracking-contract.md
+- [x] `grep -q "Status: draft" .claude/skills/drain/SKILL.md && grep -qi "dedup" .claude/skills/drain/SKILL.md && grep -q "Discovered-by:" .claude/skills/drain/SKILL.md && grep -q "only a human" .claude/skills/drain/SKILL.md && grep -qi "never dispatchable" .claude/skills/drain/SKILL.md && grep -qi "vet" .claude/skills/drain/SKILL.md` -> exit 0 (R2)
+  Evidence: verifier-run six-clause grep exited 0; see ../evidence/01-tracking-contract.md
+- [x] `grep -q "only on the user's yes" .claude/skills/build/SKILL.md` -> exit 0 (R3)
+  Evidence: verifier-run grep exited 0; see ../evidence/01-tracking-contract.md
+- [x] `grep -q "may flip only" .claude/skills/drain/reference.md && grep -q "may flip only" .claude/skills/breakdown/SKILL.md && grep -qi "git diff" .claude/agents/verifier.md && grep -q "merge-base" .claude/skills/drain/SKILL.md` -> exit 0 (R4)
+  Evidence: verifier-run four-clause grep exited 0; see ../evidence/01-tracking-contract.md
+- [x] `grep -q "## Progress" .claude/skills/drain/SKILL.md && grep -qi "done vs remaining" .claude/skills/drain/SKILL.md` -> exit 0 (R5)
+  Evidence: verifier-run grep exited 0; see ../evidence/01-tracking-contract.md
+- [x] `grep -q "Discovered:" antigravity/.agents/workflows/drain.md && grep -q "merge-base" antigravity/.agents/workflows/drain.md && grep -q "may flip only" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "git diff" antigravity/.agents/skills/verifier/SKILL.md` -> exit 0 (R7)
+  Evidence: verifier-run grep exited 0; see ../evidence/01-tracking-contract.md
+- [x] Manual paper dry-run per the spec's end-to-end criterion: BLOCKED worker with one Discovered item -> one draft stub (vet label), one Progress entry, one commit; duplicate discovery -> no second stub; draft never dispatchable, never flipped by drain
+  Evidence: verifier judged the dry-run against the edited texts — one deduped stub under the vet/rewrite label, one Progress entry, one commit, title-line dedupe blocks duplicates, draft never dispatchable/never flipped; see ../evidence/01-tracking-contract.md

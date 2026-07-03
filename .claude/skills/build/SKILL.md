@@ -13,7 +13,9 @@ designed to run in a fresh session.
 
 Read the task file (and its spec's Requirements section if referenced). Mark
 the task's Status as `in-progress` (a bare SPEC.md has no Status field — skip
-the bookkeeping steps for it and work from its acceptance criteria directly). Do NOT preload the codebase: for anything
+the bookkeeping steps for it and work from its acceptance criteria directly).
+Record `git rev-parse HEAD` now — it is the base the verifier's append-only
+task-file diff runs against in step 3. Do NOT preload the codebase: for anything
 unclear about existing code, fan out `scout` agents and work from their
 reports. Read a file directly only when you're about to edit it.
 
@@ -48,7 +50,8 @@ replaces "is done".
 2. Run the project's standard gates (build/lint/tests per CLAUDE.md).
 3. Spawn the `verifier` agent with the task file path and instruct it to
    verify the working tree against the acceptance criteria. It has no memory
-   of your implementation and won't rationalize shortcuts. Also pass it an
+   of your implementation and won't rationalize shortcuts. Pass it the base
+   commit recorded in step 0 for its append-only task-file diff, alongside an
    evidence file path derived from the task file's location:
    `specs/<slug>/tasks/<name>.md` → `specs/<slug>/evidence/<name>.md`; a
    bare `specs/<slug>/SPEC.md` → `specs/<slug>/evidence/spec.md`; any other
@@ -81,5 +84,13 @@ replaces "is done".
   inline in the task file as the artifact. Push / open a PR only if the
   user asked.
 - Report: what shipped, evidence summary, anything learned the hard way — and
-  if there WAS such a learning, run /distill before ending.
+  if there WAS such a learning, run /distill before ending. The report ends
+  with a fixed `Discovered:` section — zero or more single-line items, each
+  "what + where + why it matters", for work found but out of the task's scope
+  (an empty section means none; never create or edit task files for
+  discoveries as part of the report). For non-DONE outcomes it also carries
+  one fixed `Done vs remaining:` line summarizing partial progress.
+- For items in `Discovered:`, offer to write each as a header-only
+  `Status: draft` stub in the owning spec's tasks/ dir (the format in drain's
+  bookkeeping step) — written only on the user's yes; no silent queue writes.
 - Tell the user to `/clear` before starting the next task.

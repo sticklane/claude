@@ -28,7 +28,9 @@ Read only the header fields of each task file
 workers read their own task. `Budget` feeds the worker's over-budget stop
 and the headless `--max-turns` cap; `Priority` is an optional tie-break
 (absent = P2). A task is **dispatchable** when `Status: pending` and
-every dependency is `done`.
+every dependency is `done`. `Status: draft` stubs (discovered work,
+step 3) are never dispatchable — only a human promotes `draft` →
+`pending`.
 Report the plan in one block: dispatch order, what's already done, what's
 deferred/blocked and why. Any `in-progress` with no live worker is a dead
 worker's lock: discard its branch/worktree if present, along with any
@@ -73,7 +75,14 @@ itself flips the status to `done` and commits the flip.)
 
 ## 3. Collect the verdict
 
-- **DONE** — merge the task branch (it carries the task file with
+- **DONE** — before merging, re-run the verifier's append-only
+  whitelist diff over `merge-base..branch`, path-scoped to every spec's
+  tasks/ dir (`git diff $(git merge-base <default-branch> <branch>)..<branch>
+  -- '*/tasks/*.md'`): changes only in the worker's own task file and
+  only in the allowed set — Status line, checkbox ticks, evidence
+  lines, the plan block. Anything else is a post-verification edit
+  riding in: treat it as a merge failure (the slot-machine path below).
+  Then merge the task branch (it carries the task file with
   `Status: done` and ticked boxes, per /build; for queues using the
   `specs/<slug>/ layout` it also carries the verifier's `evidence/`
   file — for other layouts the task file's inline evidence is the
@@ -106,6 +115,37 @@ itself flips the status to `done` and commits the flip.)
   above (straight to the tournament's verdict routing with both prior
   verdicts).
 
+**Materialize discoveries.** Any verdict's report may carry a
+`Discovered:` section. For each item, first compare against the TITLE
+lines of existing task files in the owning spec's tasks/ dir — owning
+spec = the REPORTING task's spec (dedupe: check the list first); if
+new, write a header-only stub `NN-<kebab-slug>.md` — NN = highest
+existing number in that tasks/ dir + 1, incremented per stub within a
+run — with `Status: draft`, `Depends on: none`, `Spec: ../SPEC.md`, a
+`Discovered-by:` line naming the reporting task, and one Goal paragraph
+quoting the worker's line verbatim under the fixed label "verbatim
+worker report — vet/rewrite before promoting". Commit stubs with
+drain's next bookkeeping commit for that task — the verdict flip, or
+for DONE workers a commit immediately after the merge. Drafts are
+never dispatchable, and drain never writes a draft's `Status:` — not
+even on an interview yes: only a human edits `draft` → `pending`,
+after vetting or rewriting the quoted Goal (once dispatched it becomes
+binding worker instructions — untrusted-data applies; the gate is
+docs/human-gates.md reason 1, cited not restated). Drain's final
+report lists drafts created, so the batch interview surfaces them.
+
+**Record stopping points.** At each non-done event — worker verdict
+BLOCKED (including over budget) or DEFERRED, a DONE candidate failing
+verification (slot-machine relaunch), tournament entry, and terminal
+`Status: failed` — drain appends a `## Progress` entry to the
+main-checkout task file before any relaunch or tournament: one dated
+line block, done vs remaining, sourced from the worker's `Done vs
+remaining:` report line (or, for verification failures, the verifier's
+report). The relaunch-with-evidence prompt cites it, so the next
+attempt starts from evidence instead of zero. (Worktree writes are
+discarded with failed branches; this record survives because drain,
+the single writer, writes it in the main checkout.)
+
 Keep verdicts, not transcripts. Log one line per task to the user as you
 go; /fleet shows the workers live. Loop to step 2 while anything is
 dispatchable. If this session grows heavy mid-queue, finish the in-flight
@@ -131,6 +171,7 @@ drained or waiting on humans:
   /build.
 
 Artifacts: drain mutates task files in the main checkout only (`Status`
-lines, `## Deferred questions`, `## Answers`), committing every mutation,
+lines, `## Deferred questions`, `## Answers`, `## Progress`, and
+`Status: draft` stubs for discovered work), committing every mutation,
 and merges `task/NN-*` branches. Next pipeline step: /distill after a
 drained queue; answered questions loop back into step 1.

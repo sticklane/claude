@@ -57,6 +57,15 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    step 2). Commit code + task file referencing the task — plus the
    `evidence/` file when an evidence path was passed; otherwise note
    that evidence was not persisted and keep the one-line evidence
-   inline in the task file as the artifact. Push/PR only if asked. If anything was
+   inline in the task file as the artifact. Push/PR only if asked. The
+   close-out report ends with a fixed `Discovered:` section — zero or
+   more single-line items, each "what + where + why it matters", for
+   work found but out of the task's scope (an empty section means none;
+   never create or edit task files for discoveries as part of the
+   report) — and for non-DONE outcomes one fixed `Done vs remaining:`
+   line summarizing partial progress. For items in `Discovered:`, offer
+   to write each as a header-only `Status: draft` stub in the owning
+   spec's tasks/ dir (the format in the drain workflow's step 3) —
+   written only on the user's yes; no silent queue writes. If anything was
    learned the hard way, apply the distill skill. Tell the user to start
    the next task in a NEW conversation.

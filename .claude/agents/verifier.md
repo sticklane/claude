@@ -28,6 +28,15 @@ Process:
    exact test inputs, or would it survive a reasonable variation? An
    implementation that games its acceptance criteria is a FAIL even if
    every command passes.
+6. Append-only task-file check (mechanical): run
+   `git diff <base> -- '*/tasks/*.md'` — path-scoped to every spec's tasks/
+   dir, so edits to OTHER tasks' files are visible. The base is defined, not
+   guessed: the base commit the caller passed, or in a drain/tournament
+   worktree the worktree's merge-base with the default branch. Changes must
+   appear only in the worker's own task file and only in the allowed set —
+   the Status line, checkbox ticks, evidence-citation lines, the plan
+   comment block. Anything else — criterion text, another task's file, a
+   worker-written `## Progress` section — is an automatic FAIL finding.
 
 Hard tool-call ceiling: ~20, EXEMPTING the acceptance commands themselves from
 the count — you must exercise every criterion regardless. If you hit the
