@@ -33,6 +33,9 @@ built from, with citations, lives in [docs/anthropic-playbook.md](docs/anthropic
 Each arrow crosses a **file on disk**, not conversation memory — every stage
 can (and should) run in a fresh, cheap session. Small single-session specs
 may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
+To run the whole queue without relaunching each step, `/drain` dispatches a
+fresh worker per unblocked task in dependency order and defers human
+questions into the task files instead of stopping on them.
 
 ## What's in the box
 
@@ -45,6 +48,7 @@ may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
 | `/build` | Executes one task: scout-explore → proportional plan → test-first implement → independent verify → simplification pass → commit |
 | `/parallel` | Dispatches an independent task group to concurrent worktree-isolated agents |
 | `/autopilot` | Unattended execution with guardrails: classifies the task (peripheral vs core), scopes permissions, sets a bounded goal, launches background or headless |
+| `/drain` | Works the whole task queue unattended: one fresh worker per unblocked task, questions deferred into the task files and batched at the end, resumable from `Status` lines after any `/clear` |
 | `/gate` | Installs deterministic quality gates: a Stop hook that blocks "done" until checks pass, auto-format on edit, protected-file denies |
 | `/critique` | Adversarial review of any spec, plan, or diff |
 | `/distill` | Compounding engineering: session learnings → CLAUDE.md lines, rules, or new skills |
