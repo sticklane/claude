@@ -1,6 +1,6 @@
 # Task 01: Priority header, breakdown rubric, drain tie-break, mirrors
 
-Status: in-progress
+Status: done
 Depends on: ../../review-fixes/tasks/02-drain-state-machine.md, ../../review-fixes/tasks/03-header-contract.md, ../../context-management/tasks/01-claude-md-and-breakdown-note.md, ../../chaining-antipatterns/tasks/03-antipattern-guards.md
 Priority: P1
 Budget: 25 turns
@@ -32,7 +32,7 @@ and drain workflow. Spec R1/R2/R3/R5 are exact.
 
 ## Acceptance
 
-- [ ] `grep -q "Priority: P2" .claude/skills/breakdown/SKILL.md && grep -q "P0" .claude/skills/breakdown/SKILL.md && grep -qi "unblocking" .claude/skills/breakdown/SKILL.md` -> exit 0 (R1+R3)
-- [ ] `grep -q "tie-break" .claude/skills/drain/SKILL.md && grep -q "Priority" .claude/skills/drain/SKILL.md && grep -qi "unblocking" .claude/skills/drain/SKILL.md` -> exit 0 (R2)
-- [ ] `grep -q "Priority" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "tie-break" antigravity/.agents/workflows/drain.md` -> exit 0 (R5)
-- [ ] Manual paper dry-run per the spec's end-to-end criterion: tasks A (P1, 0 dependents) / B (no header, 3 pending dependents) / C (no header, 0 dependents, earliest path) order as A, B, C; with A absent, B beats C
+- [x] `grep -q "Priority: P2" .claude/skills/breakdown/SKILL.md && grep -q "P0" .claude/skills/breakdown/SKILL.md && grep -qi "unblocking" .claude/skills/breakdown/SKILL.md` -> exit 0 (R1+R3) — verifier: exit 0, see ../evidence/01-priority-and-tiebreak.md
+- [x] `grep -q "tie-break" .claude/skills/drain/SKILL.md && grep -q "Priority" .claude/skills/drain/SKILL.md && grep -qi "unblocking" .claude/skills/drain/SKILL.md` -> exit 0 (R2) — verifier: exit 0, see ../evidence/01-priority-and-tiebreak.md
+- [x] `grep -q "Priority" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "tie-break" antigravity/.agents/workflows/drain.md` -> exit 0 (R5) — verifier: exit 0 with substantive mirror edits, see ../evidence/01-priority-and-tiebreak.md
+- [x] Manual paper dry-run per the spec's end-to-end criterion: tasks A (P1, 0 dependents) / B (no header, 3 pending dependents) / C (no header, 0 dependents, earliest path) order as A, B, C; with A absent, B beats C — verifier: rule text yields A, B, C and B beats C without A, see ../evidence/01-priority-and-tiebreak.md

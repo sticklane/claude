@@ -25,7 +25,15 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    discard-and-relaunch, never resuming a dead run), flip it to
    `pending`, commit the flip. Present the dispatch order.
 
-2. **Hand the user the next launch.** One task at a time: set its
+2. **Hand the user the next launch.** When several tasks are dispatchable
+   at once, apply the deterministic tie-break: dispatch lowest `Priority`
+   value first (absent = P2), then greatest unblocking-power — the count
+   of still-`pending` tasks whose `Depends on:` names this task, counted
+   over the task files inventoried this run and resolving `Depends on:`
+   exactly as the dispatchability check does (numbers within a spec,
+   task-file-relative paths across specs) — then lexicographic task-file
+   path. The workflow computes the order; the model never reorders the
+   queue mid-run. One task at a time: set its
    `Status: in-progress` and **commit that edit** — the worktree is cut
    from this commit, so it must carry current statuses and any
    `## Answers`. Create the worktree

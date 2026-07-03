@@ -42,6 +42,15 @@ Before the first dispatch, ensure `.claude/worktrees/` is gitignored —
 harness-managed worker worktrees land there and trip git-cleanliness
 hooks otherwise.
 
+When several tasks are dispatchable at once, apply the deterministic
+tie-break: dispatch lowest `Priority` value first (absent = P2), then
+greatest unblocking-power — the count of still-`pending` tasks whose
+`Depends on:` names this task, counted over the task files inventoried
+this run and resolving `Depends on:` exactly as the dispatchability check
+does (numbers within a spec, task-file-relative paths across specs) —
+then lexicographic task-file path. Drain computes the order; the model
+never reorders the queue mid-run.
+
 Sequential by default — merges stay trivial and spend stays bounded. (If
 the user asked for throughput and a group passes /parallel's independence
 test, you may dispatch the group concurrently — but using drain's worker

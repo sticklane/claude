@@ -29,8 +29,10 @@ dispatchers parse it for the over-budget stop and headless `--max-turns`.
 # Task NN: <title>
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
+<!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 Status: pending
 Depends on: <task numbers, or "none">
+Priority: P2
 Budget: <N> turns
 Spec: ../SPEC.md (requirements R2, R3)
 Touch: <comma-separated paths this task may change>
@@ -54,7 +56,14 @@ Runnable commands only:
 ```
 
 4. Order tasks so each leaves the build green — no task may depend on a
-   later one to compile or pass tests.
+   later one to compile or pass tests. Assign each task's `Priority:` by
+   this rubric:
+   - P0 — repair or unblocking work: fixes or unblocks files other tasks
+     edit, or proves the spec's riskiest assumption.
+   - P1 — sits on the longest remaining dependency chain.
+   - P2 — the default.
+   - P3 — cleanup / nice-to-have.
+   The human may re-prioritize at any time by editing the headers.
 5. Append a **Parallelization** section to SPEC.md: groups of tasks with
    disjoint `Touch` lists and no dependency edges. Apply the
    "decision coupling" test before grouping: tasks are parallel-safe
