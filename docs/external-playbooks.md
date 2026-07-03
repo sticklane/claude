@@ -65,3 +65,9 @@ rather than restating it. Verified against primary sources, July 2026.
 - "Single-agent-first" as a default — the toolkit's fan-out is justified
   by context economics (see token-discipline); kept only as a caution
   against gratuitous parallelism.
+- Beads (Yegge's git-backed issue DAG) as the queue backend — evaluated
+  and specced, then removed by maintainer decision (2026-07): work
+  tracking stays in markdown task files with Status/Depends-on headers,
+  which every runtime can read and diff; the useful ideas that rode
+  with it (discovered-work capture, ready-work dispatch, priority
+  fields) are adopted natively by their own specs instead.

@@ -25,10 +25,11 @@ drain files, and breakdown SKILL.md form the other serial chains.
 | 11 | chaining-antipatterns 01 |
 | 12 | chaining-antipatterns 02 |
 | 13 | chaining-antipatterns 03 |
-| 14 | beads-integration 01; model-agnostic 04 |
-| 15 | beads-integration 02 |
-| 16 | review-fixes 99 (version bump + full-queue acceptance sweep) |
+| 14 | model-agnostic 04 |
+| 15 | review-fixes 99 (version bump + full-queue acceptance sweep) |
 
-23 tasks. Sequential drain follows this order automatically from the
-Depends-on graph; waves 1, 2, 9, and 14 are the only sanctioned
+21 tasks. Sequential drain follows this order automatically from the
+Depends-on graph; waves 1, 2, and 9 are the only sanctioned
 concurrent groups (disjoint Touch, decision-uncoupled).
+(beads-integration removed by maintainer decision — see
+docs/external-playbooks.md, Considered and rejected.)

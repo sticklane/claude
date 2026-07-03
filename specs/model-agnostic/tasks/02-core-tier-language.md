@@ -26,7 +26,7 @@ installs and eval fixtures → claude-code defaults apply).
 - .claude/skills/gate/reference.md
 - .claude/skills/drain/reference.md
 - CLAUDE.md
-- Cross-spec: also edited by review-fixes, context-management, chaining-antipatterns, beads-integration — see specs/QUEUE.md
+- Cross-spec: also edited by review-fixes, context-management, chaining-antipatterns — see specs/QUEUE.md
 
 ## Steps
 

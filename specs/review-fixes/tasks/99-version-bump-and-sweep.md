@@ -1,7 +1,7 @@
 # Task 99: Batch version bump + full acceptance sweep
 
 Status: pending
-Depends on: 01, 02, 03, 04, 05, 06, 07, 08, ../../model-agnostic/tasks/03-evals-runner-params.md, ../../model-agnostic/tasks/04-antigravity-mirrors.md, ../../context-management/tasks/03-tool-call-ceilings.md, ../../beads-integration/tasks/02-beads-backend.md
+Depends on: 01, 02, 03, 04, 05, 06, 07, 08, ../../model-agnostic/tasks/03-evals-runner-params.md, ../../model-agnostic/tasks/04-antigravity-mirrors.md, ../../context-management/tasks/03-tool-call-ceilings.md
 Budget: 40 turns
 Spec: ../SPEC.md (cluster 99)
 
