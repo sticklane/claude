@@ -113,31 +113,51 @@ depending on it).
 
 ## Acceptance criteria
 
-- [ ] `test -f .claude/skills/factcheck/SKILL.md` and it has no
-      `disable-model-invocation` line
-      (`! grep -q disable-model-invocation .claude/skills/factcheck/SKILL.md`) (R1)
-- [ ] Frontmatter has `name: factcheck` and a `description:`; body is
-      < 500 lines (`awk 'END{exit NR>=500}'`) (R1)
-- [ ] `description` contains both a claim-verification trigger and a
-      known-source-lookup trigger AND a "not for open-ended synthesis /
-      deep-research" clause (grep for the three) (R2)
-- [ ] First 30 lines contain the quote-or-UNVERIFIED contract and the
-      primary-vs-secondary rubric
-      (`head -30 SKILL.md | grep -qi "UNVERIFIED"` and `... grep -qi "primary"`) (R3)
-- [ ] Body names `general-purpose` as the worker and states a tier + an
-      output cap for it (grep `general-purpose`, and a tier token +
-      a word/`token` cap) (R4)
-- [ ] Body contains a `Next stage:` line (R6)
-- [ ] `diff .claude/skills/factcheck/SKILL.md
-      antigravity/.agents/skills/factcheck/SKILL.md` is empty, and
-      `git diff HEAD~1 -- .claude-plugin/plugin.json` shows a version bump (R7)
-- [ ] End-to-end in a FRESH session: invoke `/factcheck` on a known-source
-      factual question with an obviously-checkable answer AND one part with
-      no published answer; observe it (a) dispatches ≥1 `general-purpose`
-      web worker, (b) returns findings each carrying a verbatim quote + URL,
-      and (c) lists the unbackable part as UNVERIFIED rather than answering
-      it. Then confirm an open-ended "survey the landscape of X" prompt does
-      NOT trigger `/factcheck` (routing/anti-trigger check per R2).
+All commands run from the repo root (`/Users/sjaconette/claude`).
+
+- [ ] `test -f .claude/skills/factcheck/SKILL.md &&
+      ! grep -q disable-model-invocation .claude/skills/factcheck/SKILL.md` (R1)
+- [ ] `grep -q '^name: factcheck' .claude/skills/factcheck/SKILL.md &&
+      grep -q '^description:' .claude/skills/factcheck/SKILL.md` (R1)
+- [ ] File under 500 lines:
+      `awk 'END{exit NR>=500}' .claude/skills/factcheck/SKILL.md`
+      (frontmatter is ~5 lines, so this effectively bounds the body) (R1)
+- [ ] `description` (the frontmatter line) contains a claim-verification
+      trigger, a known-source-lookup trigger, AND a "not for open-ended
+      synthesis / deep-research" clause — verify by reading the line and
+      grepping for representative phrases of each (e.g. `fact-check` /
+      `official docs` / `deep-research`) (R2)
+- [ ] `head -30 .claude/skills/factcheck/SKILL.md | grep -qi UNVERIFIED &&
+      head -30 .claude/skills/factcheck/SKILL.md | grep -qi primary` (R3)
+- [ ] `grep -q general-purpose .claude/skills/factcheck/SKILL.md`, and the
+      body states a tier token (`haiku`/`effort`/`session model`/
+      `opts.model`) and an output cap (`words`/`tokens`/`≤`) near the
+      dispatch step (R4)
+- [ ] `grep -qi UNVERIFIED .claude/skills/factcheck/SKILL.md` and the body
+      instructs surfacing UNVERIFIED items as a distinct section, never
+      dropping them (R5 — static presence; distinctness confirmed in the
+      e2e below)
+- [ ] `grep -q 'Next stage:' .claude/skills/factcheck/SKILL.md` (matches
+      the backtick-wrapped convention other skills use) (R6)
+- [ ] `test -f .claude/skills/factcheck/reference.md` and it contains the
+      worker-prompt template; SKILL.md body does NOT inline that template
+      (R8)
+- [ ] Mirror exists and is a real port (NOT byte-identical):
+      `test -f antigravity/.agents/skills/factcheck/SKILL.md` and its
+      frontmatter `name:` matches (R7)
+- [ ] Version bumped, commit-order-independent:
+      `test "$(node -p "require('./.claude-plugin/plugin.json').version")"
+      != "$(git show origin/main:.claude-plugin/plugin.json |
+      node -pe "JSON.parse(require('fs').readFileSync(0)).version")"` (R7)
+- [ ] End-to-end in a FRESH session (the primary check for the behavioral
+      requirements R2 routing and R5 distinctness): invoke `/factcheck` on
+      a known-source factual question with an obviously-checkable answer
+      AND one part with no published answer; observe it (a) dispatches ≥1
+      `general-purpose` web worker, (b) returns findings each carrying a
+      verbatim quote + URL, and (c) surfaces the unbackable part in a
+      distinct UNVERIFIED list rather than answering it. Then confirm an
+      open-ended "survey the landscape of X" prompt does NOT trigger
+      `/factcheck` (routing/anti-trigger check per R2).
 
 ## Open questions
 
