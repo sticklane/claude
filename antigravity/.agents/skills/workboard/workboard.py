@@ -8,6 +8,7 @@ single self-contained HTML snapshot of all open work:
   - Kiro specs      .kiro/specs/<name>/tasks.md checkbox state ([ ] [-] [x])
   - Antigravity     ~/.gemini/antigravity*/brain/<id>/ artifacts (task.md + metadata)
   - handoffs        HANDOFF.md files (blocked-on-human, resumable)
+  - batons          specs/*/DRAIN-BATON.md (a parked drain generation to relaunch)
   - sessions        ~/.claude/projects/<escaped>/<sessionId>.jsonl transcripts
                     (repo, branch, first prompt, last activity, live PID)
   - git             branch, dirty files, unpushed commits, worktrees
@@ -395,6 +396,47 @@ def scan_handoffs(repo):
             out.append(h)
     return out
 
+
+BATON_GEN_RE = re.compile(r"generation[:\s]+(\d+)", re.IGNORECASE)
+BATON_CMD_RE = re.compile(r'claude\s+-p\s+"[^"]*"')
+
+
+def _section_body(text, *heading_patterns):
+    """Body of the first markdown section whose heading matches, '' if none."""
+    for pat in heading_patterns:
+        m = re.search(rf"^#+\s*{pat}[^\n]*\n(.*?)(?=\n#+\s|\Z)",
+                      text, re.IGNORECASE | re.DOTALL | re.MULTILINE)
+        if m and m.group(1).strip():
+            return m.group(1).strip()
+    return ""
+
+
+def scan_batons(repo):
+    """DRAIN-BATON.md = a parked drain generation to relaunch (self-managed,
+    not a human handoff — the final generation deletes it)."""
+    batons = []
+    for pattern in ("DRAIN-BATON.md", "specs/*/DRAIN-BATON.md"):
+        for f in repo.glob(pattern):
+            if any(part in SKIP_DIRS for part in f.parts):
+                continue
+            text = read_text(f, 8_000)
+            gm = BATON_GEN_RE.search(text)
+            cm = BATON_CMD_RE.search(text)
+            batons.append({
+                "path": str(f.relative_to(repo)),
+                "generation": int(gm.group(1)) if gm else None,
+                "command": cm.group(0) if cm else "",
+                "needs_attention": _section_body(text, "needs.?attention",
+                                                 "deferred"),
+                "mtime": f.stat().st_mtime,
+            })
+    seen, out = set(), []
+    for b in batons:
+        if b["path"] not in seen:
+            seen.add(b["path"])
+            out.append(b)
+    return out
+
 # ---------------------------------------------------------------- sessions
 
 def _first_prompt_and_meta(path):
@@ -722,6 +764,7 @@ def assemble(roots, max_depth, stale_days, quiet):
             "git": git_info(p),
             "specs": scan_toolkit_specs(p) + scan_kiro_specs(p),
             "handoffs": scan_handoffs(p),
+            "batons": scan_batons(p),
         })
 
     # attach sessions to repos
@@ -793,6 +836,25 @@ def progress_bar(done, total, doing=0):
         f'<span class="bar-doing" style="left:{pct}%;width:{doing_pct}%"></span></span>'
         f'<span class="bar-label">{done}/{total}</span>'
     )
+
+
+def render_batons(batons):
+    """Baton cards: a parked drain generation to relaunch. Deliberately NOT
+    the handoff card's resume-then-delete prompt — drain self-manages the
+    file, and the final generation deletes it on its own."""
+    out = []
+    for b in batons:
+        gen = b["generation"] if b["generation"] is not None else "?"
+        attn = (f'<span class="baton-attn"> · needs attention: '
+                f'{esc(b["needs_attention"])}</span>'
+                if b.get("needs_attention") else "")
+        cmd = f' <code>{esc(b["command"])}</code>' if b.get("command") else ""
+        out.append(
+            f'<p class="baton">🪧 drain baton · generation {esc(gen)} parked in '
+            f'<code>{esc(b["path"])}</code> — relaunch to continue the queue '
+            f'(drain self-manages; the final generation deletes it):{cmd}{attn}</p>'
+        )
+    return "".join(out)
 
 
 def render_ready(ready):
@@ -908,10 +970,11 @@ def render_html(data):
             f'<p class="handoff">⚑ handoff: <code>{esc(h["path"])}</code> — {esc(h["title"])}</p>'
             for h in r["handoffs"]
         )
+        baton_html = render_batons(r.get("batons", []))
         repo_cards.append(
             f'<details class="repo" open><summary><span class="repo-name">{esc(r["name"])}</span>'
             f'<span class="repo-path">{esc(r["path"])}</span>{"".join(chips)}</summary>'
-            f'{handoff_html}'
+            f'{baton_html}{handoff_html}'
             f'<div class="repo-grid"><div><h3>Specs</h3>'
             f"<table><thead><tr><th>spec</th><th>tasks</th><th>touched</th></tr></thead>"
             f"<tbody>{spec_rows}</tbody></table></div>"
@@ -1060,6 +1123,9 @@ section.ready h2 .count {{ display:inline-block; margin-left:6px;
   font-size:12px; }}
 .handoff {{ color:var(--serious); font-size:13px; margin:8px 0 0; }}
 .handoff code {{ font-size:12px; }}
+.baton {{ color:var(--ink-2); font-size:13px; margin:8px 0 0; }}
+.baton code {{ font-size:12px; }}
+.baton-attn {{ color:var(--serious); }}
 #filter {{ width:280px; padding:6px 10px; margin-bottom:14px;
   border:1px solid var(--border); border-radius:8px; background:var(--surface);
   color:var(--ink); font:inherit; }}
@@ -1093,7 +1159,7 @@ Most severe first. Click any <code>command</code> to copy it.</p>
 {todos}
 {orphans}
 <footer>Sources: specs/*/SPEC.md + tasks (Status: lines) · .kiro/specs/*/tasks.md
-checkboxes · HANDOFF.md files · ~/.claude/projects transcripts + live PIDs ·
+checkboxes · HANDOFF.md + DRAIN-BATON.md files · ~/.claude/projects transcripts + live PIDs ·
 ~/.gemini/antigravity*/brain artifacts · git status. Read-only snapshot
 (sole write: opt-in --abandon skip-markers); glyph + word carry state,
 never color alone.</footer>
