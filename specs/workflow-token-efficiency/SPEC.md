@@ -117,6 +117,13 @@ only for the hardest verify/judge stages.
     (e.g. `relaunch clean`) rather than by a count. `tournament` is not a
     loop trigger (its bound is covered by drain's "at most one
     tournament" prose and its dispatch by the dispatch check).
+    *Flag-when-unsure (wte-08,
+    tasks/08-loop-bound-residuals.md):* the loop-bound and dispatch
+    checks err toward flagging on a curated in-scope list — an ambiguous
+    or oddly-phrased bound flags, and the fix is to state the bound
+    adjacently (e.g. drain's baton "max-generations cap of 10"), never to
+    widen the regex; precision is bought only via enumerated,
+    fixture-locked carve-outs.
 
   These prose definitions state intent; the **tests are the contract**.
   Ship `tests/test_check_token_discipline.sh` with fixtures encoding at

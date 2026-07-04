@@ -247,6 +247,51 @@ Bound the evaluator-optimizer loop to 2-4 cycles before accepting the result.
 On failure, retry the worker with fresh evidence at most 3 times before routing to failed.
 EOF
 
+# ---------------------------------------------------------------------------
+# LOOP CHECK — wte-08 residual classes, flag-when-unsure verdict.
+# Three false-negative classes must be FLAGGED (the phantom bound is rejected):
+# glued/hyphenated compounds, quantifier+count on a NON-cycle noun, and a
+# temporal "once/twice" (a subordinating clause, not a repeat count).
+# ---------------------------------------------------------------------------
+i=0
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  F="$TMP/r8fn_$i.md"; printf '%s\n' "$line" > "$F"; i=$((i+1))
+  run_check "$F"
+  assert_marker "wte-08 residual false-negative is flagged: $(printf '%s' "$line" | cut -c1-45)" present "[loop]"
+done <<'EOF'
+On failure, retry the worker onetime and then move on.
+The critic will revise the draft one-pass before returning it.
+Relaunch the ingest worker twotime, then stop.
+Re-dispatch the crawler to pull up to four sources until they all resolve.
+Keep re-dispatching the fetcher for up to four shards, unbounded.
+Capped at two dashboards, the loader keeps retrying with no ceiling.
+Relaunch the orchestrator once a downstream check goes red.
+Relaunch once the gate flips red, and keep relaunching.
+EOF
+
+# ---------------------------------------------------------------------------
+# LOOP CHECK — wte-08 false-positive classes must PASS (the bound is seen):
+# a single interposed count-adjective, and the added noun/form vocabulary
+# (loop(s), hyphenated re-dispatches, ordinals). All must be ABSENT of [loop].
+# ---------------------------------------------------------------------------
+i=0
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  F="$TMP/r8fp_$i.md"; printf '%s\n' "$line" > "$F"; i=$((i+1))
+  run_check "$F"
+  assert_marker "wte-08 count-adjective/vocabulary bound is not flagged: $(printf '%s' "$line" | cut -c1-45)" absent "[loop]"
+done <<'EOF'
+On failure, retry the worker two additional attempts, then route to failed.
+The critic will revise the diff three further cycles before accepting it.
+Relaunch the worker two more times, then stop.
+Iterate two consecutive rounds and stop.
+Retry the step, capping the run at three loops total.
+Keep re-dispatching, but at most two re-dispatches in all.
+Relaunch the worker, stopping at the third attempt.
+Revise the draft, capped at the third pass.
+EOF
+
 # Un-tiered dispatch → dispatch check fires.
 F="$TMP/untiered_dispatch.md"
 cat > "$F" <<'EOF'

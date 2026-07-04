@@ -1,7 +1,7 @@
 # Task 08: residual loop-bound false-neg/false-pos classes in check-token-discipline
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Spec: ../SPEC.md
@@ -98,3 +98,16 @@ so real caps pass without reopening the FN classes.
   recorded where the checker's contract lives.
 
 Acceptance command: `bash tests/test_check_token_discipline.sh`
+
+Evidence (verifier PASS, full report in
+`../evidence/08-loop-bound-residuals.md`):
+- Five residual classes encoded as fixtures (`wte-08` block in
+  tests/test_check_token_discipline.sh): glued/hyphenated, quantifier+count
+  on non-cycle noun, and temporal once/twice FLAG; count-adjective and
+  missing-noun/form phrasings PASS. Discriminations confirmed on novel
+  wording (`up to four sources` flags vs `up to four rounds` passes).
+- No regression: `bash tests/test_check_token_discipline.sh` → `pass: 55
+  fail: 0`, exit 0.
+- `bin/check-token-discipline` exits 0 on the retrofitted tree (no output).
+- SPEC R6 bounded-loops prose carries the flag-when-unsure line citing
+  wte-08 (SPEC.md, R6 bullet).
