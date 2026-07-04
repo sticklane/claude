@@ -1,7 +1,7 @@
 # Task 01: "Dispatch authoring" rule section + CLAUDE.md bullet
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 25 turns
