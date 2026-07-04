@@ -132,6 +132,24 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    Keep verdicts,
    not transcripts. Loop to step 2 while anything is dispatchable.
 
+   **Baton pass (write the baton and stop).** At each safe boundary (a
+   verdict just recorded and committed) evaluate the same relaunch trigger
+   as `.claude`'s drain: a generation budget — every 4 recorded verdicts
+   this session (default; a `Relaunch-every: N` header in the drained
+   spec's SPEC.md header block overrides N) — or a degradation override on
+   re-reading files already read, losing queue position, repeated failed
+   corrections, or a compaction event. When it fires, write the baton
+   `specs/<slug>/DRAIN-BATON.md` (a done/next log of task ids + one-line
+   outcomes this generation, the generation number, and in-flight
+   anomalies) and **stop** — an Antigravity run cannot self-relaunch
+   `claude`, so the human re-launches /drain from the Agent Manager
+   pointing at the baton. The next generation's first acts are the
+   read-state-then-verify ritual: read the baton, read the task files'
+   `Status:` lines, `git log --oneline -15`, then run ONE cheap
+   verification (the project check or the last-flipped task's acceptance
+   command) before dispatching. Max-generations cap: 10. The final
+   generation deletes the baton when the queue completes.
+
 4. **Tournament** (second miss on one task; at most once per task per
    drain run). Tell the user first: this costs ~3 more worker runs
    plus three verifier runs per DONE candidate.

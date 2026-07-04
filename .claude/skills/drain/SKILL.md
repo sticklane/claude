@@ -148,8 +148,30 @@ the single writer, writes it in the main checkout.)
 
 Keep verdicts, not transcripts. Log one line per task to the user as you
 go; /fleet shows the workers live. Loop to step 2 while anything is
-dispatchable. If this session grows heavy mid-queue, finish the in-flight
-task, tell the user to `/clear` and re-run `/drain` — nothing is lost.
+dispatchable. This session growing heavy mid-queue is the degradation
+override in step 3a — hand off via the baton, don't wait for a human to
+notice.
+
+## 3a. Baton pass (self-relaunch)
+
+At each safe boundary (a verdict just recorded and committed) evaluate the relaunch **trigger**:
+a generation budget — hand off every 4 recorded verdicts this session (default; a
+`Relaunch-every: N` header in the drained spec's SPEC.md header block overrides N) — or a
+**degradation override** on re-reading files already read, losing queue position, repeated
+failed corrections, or a compaction event. On fire: write the baton
+`specs/<slug>/DRAIN-BATON.md` (grammar + relaunch command in [reference.md](reference.md): a
+done/next log, generation number, anomalies), spawn a fresh detached generation via that
+relaunch command + NEW orchestrator flag set (background Task dispatch verified supported;
+verdict recorded there), report the pass, and **end your turn at once, stating this session is
+done and will not touch the queue again** (one-writer invariant). A **max-generations cap of
+10** stops with the baton written + a needs-attention note instead of respawning. **Gen 1 is
+always attended**; passing `attended` in the /drain invocation makes every trigger OFFER the
+baton + relaunch command instead of self-relaunching. **Fresh-instance ritual (R1a), before any
+dispatch:** (1) read the baton, (2) read task files' `Status:` lines, (3) `git log --oneline
+-15`, (4) run ONE cheap verification (project check or last-flipped task's acceptance command)
+to catch drift — only then dispatch. A headless generation reaching the batch interview writes
+its deferred questions into the baton as a needs-attention section and stops; the final
+generation deletes the baton when the queue completes.
 
 ## 4. The batch interview
 

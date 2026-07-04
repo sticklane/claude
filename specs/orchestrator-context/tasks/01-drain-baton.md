@@ -1,7 +1,7 @@
 # Task 01: Drain baton-pass step + relaunch flag set
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: done
 Depends on: ../../drain-liveness-sweep/tasks/01-liveness-and-rescue.md
 Priority: P1
 Budget: 45 turns
@@ -54,9 +54,9 @@ touch: autopilot or parallel (task 02 owns them), breakdown or runtimes/
 
 ## Acceptance
 
-- [ ] `grep -n "baton" .claude/skills/drain/SKILL.md` → hits inside a step of ≤ 20 lines naming the default (every 4 verdicts), the override signs, the cap (10), and the read-state-then-verify ritual
-- [ ] `grep -n "Relaunch-every" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → hit(s); override location is the drained spec's SPEC.md header block
-- [ ] `grep -n "generation" .claude/skills/drain/reference.md` → relaunch command template present with the orchestrator flag set AND the recorded background-dispatch verification verdict
-- [ ] `grep -qi "attended" .claude/skills/drain/SKILL.md` → gen-1 attended rule + `attended` opt-out present
-- [ ] `grep -q "DRAIN_RELAUNCH_CMD" .claude/skills/drain/reference.md` → exit 0
-- [ ] `grep -qi "baton" antigravity/.agents/workflows/drain.md` → exit 0 ("write the baton and stop" adaptation)
+- [x] `grep -n "baton" .claude/skills/drain/SKILL.md` → hits inside a step of ≤ 20 lines naming the default (every 4 verdicts), the override signs, the cap (10), and the read-state-then-verify ritual — verifier PASS: `## 3a` block lines 155–174 = 20 lines incl. heading; names all four (evidence/01-drain-baton.md)
+- [x] `grep -n "Relaunch-every" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → hit(s); override location is the drained spec's SPEC.md header block — verifier PASS: SKILL.md:159, "drained spec's SPEC.md header block" (evidence/01-drain-baton.md)
+- [x] `grep -n "generation" .claude/skills/drain/reference.md` → relaunch command template present with the orchestrator flag set AND the recorded background-dispatch verification verdict — verifier PASS: template ref:292–306 (Task allowed + git/gate allowlist + --max-turns), verdict "SUPPORTED" ref:315–327 (evidence/01-drain-baton.md)
+- [x] `grep -qi "attended" .claude/skills/drain/SKILL.md` → gen-1 attended rule + `attended` opt-out present — verifier PASS (evidence/01-drain-baton.md)
+- [x] `grep -q "DRAIN_RELAUNCH_CMD" .claude/skills/drain/reference.md` → exit 0 — verifier PASS: env override ref:308 (evidence/01-drain-baton.md)
+- [x] `grep -qi "baton" antigravity/.agents/workflows/drain.md` → exit 0 ("write the baton and stop" adaptation) — verifier PASS: line 135 "write the baton and stop" + "cannot self-relaunch" (evidence/01-drain-baton.md)

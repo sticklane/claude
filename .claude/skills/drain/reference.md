@@ -2,7 +2,7 @@
 
 Contents: When NOT to drain · Status field semantics · Worker prompt ·
 Deferred question format · Relaunch-with-evidence prompt · Tournament ·
-Headless fallback
+Headless fallback · Baton pass (self-relaunch)
 
 Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt, the tournament procedure, and the headless
@@ -279,3 +279,49 @@ Then collect the printed verdict and apply step 3's bookkeeping — on
 DONE, that includes flipping the task's `Status: done` and committing
 the flip yourself (a headless worker, unlike /build, never writes it) —
 and `git worktree remove` the checkout.
+
+## Baton pass (self-relaunch)
+
+Drain's orchestrator session self-manages its own context: at a safe
+boundary (SKILL.md step 3a) it writes `specs/<slug>/DRAIN-BATON.md` and
+spawns a fresh detached generation of ITSELF, then ends its turn. The
+relaunch uses a NEW orchestrator flag set — NOT the Headless-fallback
+worker flags above, which deliberately exclude the Task tool and would
+abort the orchestrator's first worker dispatch.
+
+**Relaunch command template (generation G → G+1).** Detached, from the repo
+root:
+
+```bash
+nohup claude -p "/drain <spec> (generation G+1, baton: specs/<slug>/DRAIN-BATON.md)" \
+  --allowedTools "Task,Read,Edit,Write,Glob,Grep,Bash(git *),Bash(<project gate/test/lint cmds>)" \
+  --permission-mode dontAsk \
+  --max-turns <default 80, or the run's cap> \
+  >> specs/<slug>/.drain-gen.log 2>&1 &
+```
+
+The flag set differs from the headless worker in one decisive way: **`Task`
+is allowed** — the orchestrator's whole job is dispatching workers — plus a
+`git *` + project-gate allowlist for the merges and gate runs drain performs
+itself. `dontAsk` makes any unapproved tool abort rather than hang.
+
+**`DRAIN_RELAUNCH_CMD` override.** If the environment variable
+`DRAIN_RELAUNCH_CMD` is set, drain runs its value verbatim in place of the
+template above (still passing `<spec>`, the generation number, and the baton
+path as its argv tail). The e2e fixture (orchestrator-context task 05) points
+it at a recorder script to assert the relaunch argv without spawning a real
+session.
+
+**Background-dispatch verification (2026-07-03, recorded verbatim).** Mandatory
+pre-ship check per SPEC R1 — every existing headless template in the toolkit is
+deliberately single-agent, so whether a headless `claude -p` session supports
+background-agent dispatch with completion notifications had to be verified live.
+Probe: a headless `claude -p ... --permission-mode bypassPermissions
+--max-turns 20` session was told to launch ONE background general-purpose
+subagent via the Task tool and wait for its completion notification. Two runs,
+each printed `RECEIVED: <token>` echoing the subagent's returned token — the
+completion notification arrived in-session before the turn ended. **Verdict:
+SUPPORTED.** A relaunched generation therefore dispatches workers via drain's
+normal background-`Task` path (SKILL.md step 2); the sequential Headless-fallback
+path above is NOT required for orchestrator relaunch — it stays the documented
+degraded route for environments where background agents are unavailable.
