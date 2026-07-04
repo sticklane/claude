@@ -57,7 +57,8 @@ changing it):
 ```bash
 claude -p "<prompt>" \
   --allowedTools "<allowlist>" \
-  --permission-mode dontAsk --max-turns <turn cap>
+  --permission-mode dontAsk --max-turns <turn cap> \
+  --model <tier alias>
 ```
 
 - `<prompt>` — a self-contained single-agent prompt (no skill
@@ -67,6 +68,8 @@ claude -p "<prompt>" \
 test/lint/build cmds>),Bash(git add *),Bash(git commit *)"`.
 - `<turn cap>` — the task's `Budget:` turn count when present, else 80;
   the hard cap behind the prompt's soft stop.
+- `<tier alias>` — the Role pins ladder, same rungs as Task-tool
+  dispatch: `sonnet` attempt 1, `opus` relaunch, `fable` tournament.
 
 `dontAsk` makes unapproved tools abort instead of hanging — the CI
 baseline from the playbook's mechanism ladder.

@@ -42,8 +42,9 @@ an on-demand verifier escalation — consult `.claude/runtime.md` tier pins
 and pass the mapped model through the harness's model parameter. No config,
 or no pin for the tier in question → inherit the session model (the deep
 tiers are opt-in: profile rows are recommended pin values, not active
-defaults). Pins bind Agent-tool dispatch only; the headless fallback
-templates run their profile's default in v1.
+defaults). Pins bind Agent-tool dispatch and the headless fallback
+templates alike — headless workers pass the same tier alias through the
+template's `--model` flag.
 
 ## Dispatch authoring
 
@@ -106,7 +107,7 @@ of letting them default silently:
 
 - `deep-research` (fan-out → adversarial 3-vote verify → synthesize) earns
   its ~100-agent cost only for open-ended, multi-source questions where the
-  claims are contestable. For closing a *known-source factual gap* (the
+  claims are contestable. For closing a _known-source factual gap_ (the
   answer lives in specific official docs), dispatch a few targeted
   general-purpose agents told which URLs to hit and required to back every
   claim with a verbatim quote + URL or mark it UNVERIFIED — verification
