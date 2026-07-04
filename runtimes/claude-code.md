@@ -29,14 +29,22 @@ enforces the agent pins. Aliases only, never dated model ids, so pins
 survive model releases. The other profiles carry the same table in
 their runtime's vocabulary.
 
-| Role                                                       | Claude default                                                                       |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| session default                                            | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution |
-| implementation workers (drain/parallel dispatch)           | `sonnet`                                                                             |
-| explore / codebase-search (`scout`)                        | `haiku`                                                                              |
-| LLM reviewer, advisory lane (`critic`, `verifier`)         | `sonnet`                                                                             |
-| `/distill` (skill frontmatter)                             | `opus`                                                                               |
-| retry escalation (attempt 2+, verifier evidence in prompt) | one tier up: `sonnet` → `opus`                                                       |
+| Role                                                               | Claude default                                                                       |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| session default                                                    | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution |
+| implementation workers (drain/parallel dispatch)                   | `sonnet`                                                                             |
+| explore / codebase-search (`scout`)                                | `haiku`                                                                              |
+| LLM reviewer, advisory lane (`critic`, `verifier`)                 | `sonnet`                                                                             |
+| `/distill` (skill frontmatter)                                     | `opus`                                                                               |
+| retry escalation (attempt 2, verifier evidence in prompt)          | one tier up: `sonnet` → `opus`                                                       |
+| tournament escalation (attempts 3+, after the `opus` retry failed) | `fable` — the frontier-tier trigger of `.claude/rules/token-discipline.md`           |
+
+Frontier stays sparing beyond that one active rung: security-critical
+review and novel-architecture sessions are the other two sanctioned
+frontier uses (token-discipline.md), and both remain **manual** — `/model
+fable` for the session, or an explicit frontier-tier pin in
+`.claude/runtime.md` for a `critic` dispatch — never a heuristic
+auto-escalation (docs/decisions/orchestration.md).
 
 ## Headless
 

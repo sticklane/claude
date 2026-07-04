@@ -314,9 +314,11 @@ by the at-most-one-tournament-per-task rule — and the tournament
 remains inside the human-authorized /drain launch (docs/human-gates.md).
 
 **Generate.** Delete any existing `task/NN-<slug>-t*` branches and
-worktrees, then launch three concurrent background workers one tier up from
-the worker pin (Claude default: `opus` — tournament entrants are attempts
-3+; `isolation: worktree`), each given the standard worker prompt plus the
+worktrees, then launch three concurrent background workers a further tier
+up, at the frontier pin (Claude default: `fable` — tournament entrants are
+attempts 3+, retries after the deep-tier relaunch failed, which is the one
+dispatch point `.claude/rules/token-discipline.md` sanctions frontier for;
+`isolation: worktree`), each given the standard worker prompt plus the
 relaunch-with-evidence append (covering both prior failures) plus one
 angle suffix. Each suffix also overrides the branch name set by the
 base prompt:

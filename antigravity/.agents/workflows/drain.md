@@ -232,9 +232,10 @@ payments, or migrations. Pull core tasks out for attended /build runs.
      then create three fresh ones with
      `git worktree add -b task/NN-<slug>-t1 ../<repo>-task-NN-t1` (and
      likewise `-t2`, `-t3`).
-   - Generate: give the user three Agent Manager launches, each one tier
-     up from the worker tier in the model picker (tournament entrants are
-     attempts 3+) — step 2's
+   - Generate: give the user three Agent Manager launches, each on the
+     strongest model in the picker — the frontier rung; tournament
+     entrants are attempts 3+, after the Pro-class relaunch failed —
+     step 2's
      prompt plus the prior failure evidence plus one angle each, every
      angle overriding the branch name: (t1) commit to
      `task/NN-<slug>-t1`, minimal diff — smallest change that passes
