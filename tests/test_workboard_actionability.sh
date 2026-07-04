@@ -29,13 +29,27 @@ for d in "$tmp/tree"/*/; do
   roots+=("$d")
 done
 
+# pushable-repo: give it an upstream it is ahead of, so git_info reports
+# ahead>0 and the board emits a `git -C <repo> push` into the actions script.
+pushable="$tmp/tree/pushable-repo"
+git -C "$pushable" add -A
+git -C "$pushable" -c user.email=t@e -c user.name=t commit -qm base
+git -C "$pushable" branch -M main
+git init -q --bare "$tmp/remote.git"
+git -C "$pushable" remote add origin "$tmp/remote.git"
+git -C "$pushable" push -q -u origin main
+git -C "$pushable" -c user.email=t@e -c user.name=t commit -q --allow-empty -m ahead
+
 out="$tmp/wb.html"
 python3 "$wb" "${roots[@]}" --out "$out" --actions-out "$tmp/a.sh" \
   --quiet --stale-days 7
 
+asrc="$tmp/a.sh"
 fail=0
 has()    { grep -qF -- "$1" "$out" || { echo "MISSING: $1"; fail=1; }; }
 absent() { if grep -qF -- "$1" "$out"; then echo "UNEXPECTED: $1"; fail=1; fi; }
+shas()    { grep -qF -- "$1" "$asrc" || { echo "MISSING in script: $1"; fail=1; }; }
+sabsent() { if grep -qF -- "$1" "$asrc"; then echo "UNEXPECTED in script: $1"; fail=1; fi; }
 
 # R3 — the section always renders.
 has "Ready to start"
@@ -72,8 +86,38 @@ has '>88</code>'
 has '/build specs/shorthand-ready/tasks/01-uses-shorthand.md'
 has '/build specs/rooted-ready/tasks/01-uses-rooted.md'
 
+# ---------------------------------------------------------------- R4/R5
+# R4 — the actions script exists, is executable, and is valid shell.
+[ -x "$asrc" ] || { echo "actions script not executable"; fail=1; }
+bash -n "$asrc" || { echo "actions script failed bash -n"; fail=1; }
+
+# R4 — labeled, independently-runnable sections.
+shas '# === Pushes ==='
+shas '# === Verify done specs ==='
+
+# R4 — a repo ahead of its upstream ⇒ a `git -C <repo> push` line.
+shas 'pushable-repo push'
+
+# R4 — an all-done unarchived toolkit spec ⇒ a `cd <repo>` + verifier line.
+shas 'Use the verifier agent to verify specs/all-done against its acceptance criteria'
+
+# R4/S5 — a Kiro done-spec is excluded (no verifier-agent flow), even though the
+# inbox done-spec detector fires for it.
+sabsent 'specs/kiro-done'
+
+# R4 — the script never contains destructive/auto-launching actions.
+if grep -Eq 'git mv|push (--force|-f)|(^|[^[:alnum:]])rm |/build|/drain' "$asrc"; then
+  echo "FORBIDDEN token in actions script"; fail=1
+fi
+
+# R5 — the HTML links the script: path text + a `<td><code>` bash invocation
+# (so the existing closest('td code') copy handler applies).
+has "$asrc"
+has '<td><code'
+has "bash $asrc"
+
 if [ "$fail" -ne 0 ]; then
   echo "FAIL: workboard actionability assertions"
   exit 1
 fi
-echo "PASS: workboard actionability (R1-R3 subset)"
+echo "PASS: workboard actionability (R1-R5 subset)"

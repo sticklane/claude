@@ -1,6 +1,6 @@
 # Task 02: Companion actions script + HTML link
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
@@ -60,8 +60,8 @@ rather than reimplementing scans.
    `plugin.json` `version`.
 
 ## Acceptance
-- [ ] `bash tests/test_workboard_actionability.sh` → passes (R1–R5)
-- [ ] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0, then `bash -n /tmp/wb.actions.sh` → exits 0 and `test -x /tmp/wb.actions.sh` succeeds (R4, R8)
-- [ ] `grep -Eq 'git mv|push (--force|-f)|(^|[^[:alnum:]])rm |/build|/drain' /tmp/wb.actions.sh` → NO match (exit 1) (R4)
-- [ ] `/tmp/wb.html` contains the actions-script path and a `<td><code>...bash ...</code>` run invocation (R5)
-- [ ] `python3 -c "import ast; ast.parse(open('antigravity/.agents/skills/workboard/workboard.py').read())"` → exits 0, and the commit touches both workboard paths + `plugin.json` (R9)
+- [x] `bash tests/test_workboard_actionability.sh` → passes (R1–R5) — verifier: `PASS: workboard actionability (R1-R5 subset)`, exit 0 (evidence/02-actions-script-and-link.md)
+- [x] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0, then `bash -n /tmp/wb.actions.sh` → exits 0 and `test -x /tmp/wb.actions.sh` succeeds (R4, R8) — verifier: all three exit 0 (evidence/02-actions-script-and-link.md)
+- [x] `grep -Eq 'git mv|push (--force|-f)|(^|[^[:alnum:]])rm |/build|/drain' /tmp/wb.actions.sh` → NO match (exit 1) (R4) — verifier: exit 1, no unsafe commands (evidence/02-actions-script-and-link.md)
+- [x] `/tmp/wb.html` contains the actions-script path and a `<td><code>...bash ...</code>` run invocation (R5) — verifier: `<td><code class="cmd">bash …</code></td>`, `td code` copy handler applies (evidence/02-actions-script-and-link.md)
+- [x] `python3 -c "import ast; ast.parse(open('antigravity/.agents/skills/workboard/workboard.py').read())"` → exits 0, and the commit touches both workboard paths + `plugin.json` (R9) — verifier: ast ok, mirror byte-identical, plugin.json 0.7.9→0.7.10 (evidence/02-actions-script-and-link.md)
