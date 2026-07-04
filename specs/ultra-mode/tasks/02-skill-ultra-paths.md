@@ -1,32 +1,13 @@
 # Task 02: `## Ultra path` sections in five skills + gate lint
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: in-progress
+Status: done
 Depends on: 01, ../../orchestrator-context/tasks/02-autopilot-parallel-batons.md, ../../workflow-token-efficiency/tasks/01-dispatch-authoring-rule.md
 Priority: P1
 Budget: 50 turns
 Spec: ../SPEC.md (requirements R2–R6, R8, R9-mirror)
 Touch: .claude/skills/critique/SKILL.md, .claude/skills/drain/SKILL.md, .claude/skills/parallel/SKILL.md, .claude/skills/build/SKILL.md, .claude/skills/idea/SKILL.md, evals/lint-ultra-gate.sh, CLAUDE.md, antigravity/.agents/skills/critique/SKILL.md, antigravity/.agents/workflows/drain.md, antigravity/.agents/workflows/parallel.md, antigravity/.agents/workflows/build.md, antigravity/.agents/skills/idea/SKILL.md
 
-<!-- PLAN (delete at close-out):
-1. Write evals/lint-ultra-gate.sh (model-free awk: each case-insensitive
-   "ultra" in the five SKILL.md files must have literal "active runtime
-   profile" within ±3 lines; exits non-zero listing file:line). RED: prove
-   it fails on a marker-less section before adding the marker.
-2. Append a ≤25-line `## Ultra path` section to each of critique, drain,
-   parallel, build, idea — gated on "active runtime profile" marker, every
-   ultra mention within ±3 lines of it. R2/R3/R4/R5 substance.
-3. Add lint reference to CLAUDE.md testing section (grep -q lint-ultra-gate).
-4. Mirror closed-gate `## Ultra path` notes into antigravity: workflows/
-   critique.md, workflows/drain.md, workflows/parallel.md, workflows/build.md,
-   skills/idea/SKILL.md. (NOTE: critique's real mirror is workflows/critique.md,
-   not skills/critique — Touch line is stale; edit the file that exists.)
-5. Run acceptance: lint exit 0 + delete-marker fails naming file; grep
-   breakdown/autopilot empty; each section ≤25 lines; grep CLAUDE.md; git
-   show --stat has antigravity paths; evals/run.sh breakdown 1/1.
-   Do NOT touch: runtimes/claude-code.md (task 01), plugin.json + docs/
-   decisions (task 03).
--->
 
 
 ## Goal
@@ -64,9 +45,9 @@ Must NOT touch: breakdown or autopilot skills (spec Out of scope —
 
 ## Acceptance
 
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0; deleting the marker phrase from one file makes it exit non-zero naming that file (restore after)
-- [ ] `grep -rn "ultra" .claude/skills/breakdown/ .claude/skills/autopilot/` → no output
-- [ ] Each `## Ultra path` section (heading to next heading) ≤ 25 lines in all five files
-- [ ] `grep -q "lint-ultra-gate" CLAUDE.md` → exit 0
-- [ ] Antigravity mirrors changed in the same commit (`git show --stat` includes antigravity/ paths)
-- [ ] `./evals/run.sh breakdown` still 1/1 (regression; breakdown untouched but shares the queue's eval gate)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0; deleting the marker phrase from one file makes it exit non-zero naming that file (restore after) — verifier: exit 0; deleting marker in parallel/SKILL.md → exit 1 naming `.claude/skills/parallel/SKILL.md:72`/`:75`; restore → exit 0 (evidence/02-skill-ultra-paths.md)
+- [x] `grep -rn "ultra" .claude/skills/breakdown/ .claude/skills/autopilot/` → no output — verifier: no output (evidence/02-skill-ultra-paths.md)
+- [x] Each `## Ultra path` section (heading to next heading) ≤ 25 lines in all five files — verifier: critique/drain/parallel/build/idea all present, spans ≤17 lines each (evidence/02-skill-ultra-paths.md)
+- [x] `grep -q "lint-ultra-gate" CLAUDE.md` → exit 0 — verifier: exit 0 (evidence/02-skill-ultra-paths.md)
+- [x] Antigravity mirrors changed in the same commit (`git show --stat` includes antigravity/ paths) — verifier: `git show --stat HEAD` includes all five antigravity mirrors, each adding `## Ultra path` (evidence/02-skill-ultra-paths.md)
+- [x] `./evals/run.sh breakdown` still 1/1 (regression; breakdown untouched but shares the queue's eval gate) — `evals/run.sh breakdown` → "1/1 scenarios passed"; verifier confirmed `.claude/skills/breakdown/` unchanged vs base
