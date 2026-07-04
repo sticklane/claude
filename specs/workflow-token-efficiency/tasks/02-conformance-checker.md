@@ -1,7 +1,7 @@
 # Task 02: bin/check-token-discipline + fixture tests (TDD)
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 50 turns
@@ -45,6 +45,9 @@ plugin.json.
 
 ## Acceptance
 
-- [ ] `bash tests/test_check_token_discipline.sh` → exit 0, covering at minimum: drain's retry paragraph passes the loop check unmodified; the four spec-named prose lines are NOT flagged; the two spec-named wrapped dispatches ARE seen as dispatches
-- [ ] `bin/check-token-discipline` on the current (pre-retrofit) tree → exit 1 with a per-file, per-check report naming in-scope files
-- [ ] `bash -n bin/check-token-discipline` → exit 0; file is executable
+- [x] `bash tests/test_check_token_discipline.sh` → exit 0, covering at minimum: drain's retry paragraph passes the loop check unmodified; the four spec-named prose lines are NOT flagged; the two spec-named wrapped dispatches ARE seen as dispatches
+  - Evidence: verifier ran it → `pass: 23 fail: 0`, exit 0; fixtures assert per-check `[loop]`/`[dispatch]`/`[budget]` markers (not "runs without error"). See evidence/02-conformance-checker.md.
+- [x] `bin/check-token-discipline` on the current (pre-retrofit) tree → exit 1 with a per-file, per-check report naming in-scope files
+  - Evidence: verifier confirmed exit 1, 25 report lines naming all 9 in-scope files (`[budget] 7 / [dispatch] 14 / [loop] 3 / [missing] 1`; deep-research.js absent → `[missing]`). See evidence/02-conformance-checker.md.
+- [x] `bash -n bin/check-token-discipline` → exit 0; file is executable
+  - Evidence: verifier confirmed `bash -n` exit 0 and the file is executable. See evidence/02-conformance-checker.md.
