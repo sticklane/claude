@@ -1,7 +1,7 @@
 # Task 04: Workboard surfaces DRAIN-BATON.md files
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 30 turns
