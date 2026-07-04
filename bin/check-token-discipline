@@ -74,28 +74,44 @@ BUDGET_RE='(≤|under|at most|no more than|cap(ped)?)[[:space:]]?.{0,20}(words|t
 
 # Iterative re-dispatch triggers (lowercased before matching).
 LTRIG='(retry|retries|retried|re-dispatch|redispatch|revise|revises|revised|iterate|iterates|iterated|cycle|cycles|cycled|relaunch|relaunches|relaunched|relaunching)'
-# A stated bound. A count (digit 1-4 or spelled one/two/three/four/single) is a
-# bound only in a *counting* context — never a bare stray numeral (wte-07):
-#   quantifier + count           "at most 3", "up to four", "cap of three"
-#   count [range] + cycle noun   "3 cycles", "two rounds", "2-4 cycles",
-#                                "single relaunch"
-#   once / twice
+# A stated bound. A count (digit 1-4, spelled one-four/single, or an ordinal) is
+# a bound only in a *counting* context — never a bare stray numeral (wte-07):
+#   count [+adj] + cycle noun    "3 cycles", "two rounds", "2-4 cycles",
+#                                "single relaunch", "two more times",
+#                                "the third pass" (a quantifier may precede the
+#                                count via the left word-edge: "up to four rounds")
+#   once / twice (as a repeat count, not a temporal clause — see has_bound)
 #   a named generation cap       "max-generations", "generations cap"
 # The cycle nouns are word-anchored (spelled singular+plural) so a count must
 # actually name iterations — "2 timeouts" (time in timeouts), "fewer than 2
 # passing" (pass in passing), and "lines 2-4" / "days 2-4" (a range not naming a
-# cycle) no longer read as bounds. A generation cap may exceed 4 (relaunch
-# ceiling). Robust NL bound-detection is not fully regex-achievable (shown by two
-# adversarial passes); known residual classes — temporal "once a check goes red",
-# glued compounds ("onetime"), quantifier+count naming a non-cycle noun ("up to
-# four sources"), an adjective between count and noun ("two more times"), ordinals
-# ("third pass"), "loop(s)" as a noun — are tracked in
-# specs/workflow-token-efficiency/tasks/08-loop-bound-residuals.md.
-LNUM='([1-4]|one|two|three|four|single)'
-LNOUN='(times|rounds|cycles|iterations|attempts|retries|reruns|relaunches|revisions|passes|generations|redispatches|tries|time|round|cycle|iteration|attempt|retry|rerun|relaunch|revision|pass|generation|redispatch|try)'
-LQUANT='(at most|up to|no more than|maximum|max|≤|cap of|capped at|ceiling of|a cap of|a maximum of|a ceiling of)'
-LBOUND="${LQUANT}[^0-9a-z]{1,6}${LNUM}([^a-z0-9]|$)"
-LBOUND="${LBOUND}|(^|[^a-z0-9])${LNUM}([^0-9a-z]{0,4}(-|–|to)[^0-9a-z]{0,4}(${LNUM}|[0-9]+))?[^0-9a-z]{0,4}${LNOUN}([^a-z]|$)"
+# cycle) no longer read as bounds. The count->noun gap is whitespace-only, so a
+# glued/hyphenated compound ("onetime", "one-pass") has no word edge and flags;
+# a quantifier+count naming a NON-cycle noun ("up to four sources") flags because
+# there is no standalone quantifier branch. A generation cap may exceed 4
+# (relaunch ceiling). Robust NL bound-detection is not fully regex-achievable
+# (two adversarial passes); the wte-08 flag-when-unsure stance
+# (specs/workflow-token-efficiency/tasks/08-loop-bound-residuals.md) errs toward
+# flagging — a genuinely-capped paragraph states its bound adjacently rather than
+# widening these regexes.
+# A count: digits 1-4, spelled one-four/single, or an ordinal (first-fourth,
+# 1st-4th) — wte-08 added ordinals so "the third pass" reads as a bound.
+LNUM='([1-4]|one|two|three|four|single|first|second|third|fourth|1st|2nd|3rd|4th)'
+# Cycle nouns, word-anchored (singular+plural). wte-08 added loop(s) and the
+# hyphenated re-dispatch forms (only `redispatches` was present).
+LNOUN='(times|rounds|cycles|iterations|attempts|retries|reruns|relaunches|revisions|passes|generations|redispatches|re-dispatches|re-dispatch|re-dispatched|loops|tournaments|tries|time|round|cycle|iteration|attempt|retry|rerun|relaunch|revision|pass|generation|redispatch|loop|tournament|try)'
+# A single count-adjective may sit between the count and the cycle noun (wte-08)
+# — enumerated, not a general gap widening, so "two more times" reads as a bound
+# without reopening the "up to four sources" false-negative.
+LADJ='(additional|further|more|consecutive)'
+# A count [range] immediately followed (after whitespace, optionally one
+# count-adjective) by a cycle noun. The count->noun gap is whitespace-only so a
+# glued/hyphenated compound (`onetime`, `one-pass`, `twotime`) has no word edge
+# and never reads as a bound (wte-08). A bare quantifier+count with NO cycle
+# noun ("up to four sources") is deliberately NOT a branch — it must FLAG, per
+# the flag-when-unsure stance (wte-08); the quantifier is still accepted here
+# via the left word-edge when a cycle noun follows ("up to four rounds").
+LBOUND="(^|[^a-z0-9])${LNUM}([^0-9a-z]{0,4}(-|–|to)[^0-9a-z]{0,4}(${LNUM}|[0-9]+))?[[:space:]]{1,4}(${LADJ}[[:space:]]{1,4})?${LNOUN}([^a-z]|$)"
 LBOUND="${LBOUND}|(^|[^a-z])(once|twice)([^a-z]|$)"
 LBOUND="${LBOUND}|max-generations|generations cap"
 
@@ -123,15 +139,26 @@ is_live_loop() { # <paragraph> — true if a bound-requiring trigger survives
   local lp resid
   lp="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
   # Drop excluded occurrences: negated (`no relaunch`), hyphenated
-  # (`relaunch-with-evidence`), and benign one-shot state (`relaunch clean`).
+  # (`relaunch-with-evidence`), the reflexive `self-` compound naming a
+  # mechanism (`self-relaunch`, wte-08), and benign one-shot state
+  # (`relaunch clean`).
   resid="$(printf '%s' "$lp" | sed -E \
     -e "s/(no|never|not|cannot)[^a-z]+${LTRIG}//g" \
     -e "s/${LTRIG}-[a-z]//g" \
+    -e "s/self-${LTRIG}//g" \
     -e "s/${LTRIG}[^a-z]+(clean|cleanly|fresh|empty)([^a-z]|$)//g")"
   matches "(^|[^a-z])${LTRIG}" "$resid"
 }
 
-has_bound() { matches "$LBOUND" "$1"; }
+has_bound() { # <paragraph>
+  # A temporal "once/twice" (a subordinating clause: "once a check goes red")
+  # is not a repeat count — strip it before matching so it FLAGS, while a
+  # counting "once" ("relaunch once with evidence") still reads as a bound.
+  local b
+  b="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' \
+    | sed -E 's/(once|twice)[[:space:]]+(a|an|the)([^a-z]|$)/ /g')"
+  matches "$LBOUND" "$b"
+}
 
 snippet() { printf '%s' "$1" | cut -c1-60; }
 

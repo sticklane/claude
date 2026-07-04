@@ -298,10 +298,10 @@ if (confirmed.length === 0) {
   // Distinguish "refuted on merit" from "could not verify (infra error)". A run
   // where every verifier agent failed (rate-limit / API error) is an infra
   // failure, not a research finding — report it as such so the user knows to
-  // retry rather than concluding the research found nothing.
+  // run the research again rather than concluding it found nothing.
   let summary
   if (killed.length === 0 && unverified.length > 0) {
-    summary = "Could not verify any claims — all " + unverified.length + " verifier panels failed (likely rate-limiting or API errors). This is an infrastructure failure, not a research finding. Raw extracted claims returned below; retry or verify manually."
+    summary = "Could not verify any claims — all " + unverified.length + " verifier panels failed (likely rate-limiting or API errors). This is an infrastructure failure, not a research finding. Raw extracted claims returned below; run the research again or verify manually."
   } else if (unverified.length > 0) {
     summary = killed.length + " claims refuted by adversarial verification; " + unverified.length + " could not be verified (verifier agents failed). No claims survived. Research inconclusive."
   } else {

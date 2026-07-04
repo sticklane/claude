@@ -367,7 +367,10 @@ and `git worktree remove` the checkout.
 
 Drain's orchestrator session self-manages its own context: at a safe
 boundary (SKILL.md step 3a) it writes `specs/<slug>/DRAIN-BATON.md` and
-spawns a fresh detached generation of ITSELF, then ends its turn. The
+spawns a fresh detached generation of ITSELF, then ends its turn. This
+self-relaunch loop is bounded by a **max-generations cap of 10** (SKILL.md
+step 3a): on the 10th generation drain stops with the baton written and a
+needs-attention note instead of respawning. The
 relaunch uses a NEW orchestrator flag set — NOT the Headless-fallback
 worker flags above, which deliberately exclude the Task tool and would
 abort the orchestrator's first worker dispatch.
@@ -406,6 +409,7 @@ each printed `RECEIVED: <token>` echoing the subagent's returned token — the
 completion notification arrived in-session before the turn ended. **Verdict:
 SUPPORTED.** A relaunched generation therefore dispatches workers on the
 session model via drain's
-normal background-`Task` path (SKILL.md step 2); the sequential Headless-fallback
+normal background-`Task` path (SKILL.md step 2), still under the
+max-generations cap of 10; the sequential Headless-fallback
 path above is NOT required for orchestrator relaunch — it stays the documented
 degraded route for environments where background agents are unavailable.
