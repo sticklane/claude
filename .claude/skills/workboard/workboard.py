@@ -934,6 +934,9 @@ def main():
     ap = argparse.ArgumentParser(description="Cross-repo agent/spec/session workboard")
     ap.add_argument("roots", nargs="*", help="directories to scan for git repos")
     ap.add_argument("--out", default="workboard.html", help="output HTML path")
+    ap.add_argument("--actions-out", default=None,
+                    help="path for the companion actions script "
+                         "(default: --out stem + .actions.sh)")
     ap.add_argument("--json", action="store_true", help="print JSON to stdout instead")
     ap.add_argument("--stale-days", type=int, default=STALE_DAYS_DEFAULT)
     ap.add_argument("--max-depth", type=int, default=3)
