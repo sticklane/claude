@@ -65,7 +65,10 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    `Status: in-progress` and **commit that edit** — the worktree is cut
    from this commit, so it must carry current statuses and any
    `## Answers`. Create the worktree
-   (`git worktree add -b task/NN-<slug> ../<repo>-task-NN`), then give
+   (`git worktree add -b task/NN-<slug> ../<repo>-task-NN` — this cuts from
+   the current commit, so it is always fresh; if a runtime instead pins the
+   worktree base to a lagging tracking ref, force-sync it to the default
+   branch before working), then give
    the user one Agent Manager launch — a fresh agent on the session model
    on that worktree
    with this prompt (fill the <>; resolve the build workflow to a

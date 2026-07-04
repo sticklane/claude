@@ -28,9 +28,16 @@ The task file's `Status:` line in the MAIN checkout is the queue's only
 state store. Drain is its only writer (the one exception: a merged DONE
 branch carries `Status: done` written by the worker under /build's
 procedure — that arrives via the merge, not via a worktree edit). Every
-flip drain makes is committed immediately, so worker worktrees — always
-cut from the latest commit — see current state, and a `/clear` loses
-nothing.
+flip drain makes is committed immediately. Worker worktrees must reflect
+that committed state: a harness that cuts each worktree from the newest
+commit gives this for free, but one that pins the worktree base to a
+tracking ref (e.g. `origin/main`) can hand the worker a STALE base that
+hides just-merged dependencies. Two defenses, applied together: the worker
+prompt's first step force-syncs the worktree to the default branch (see
+Worker prompt), and — on a never-pushed local run — drain resyncs the
+tracking ref (`git update-ref refs/remotes/origin/main <default-branch>`)
+after each merge. Either way the worker sees current state, and a `/clear`
+loses nothing.
 
 | Status | Meaning | Written by |
 |---|---|---|
@@ -116,8 +123,11 @@ Out of scope).
 
 ## Worker prompt (verbatim, fill the <>)
 
-For background agents with `isolation: worktree` (the worktree is cut from
-the commit drain just made). At dispatch time, resolve build's SKILL.md to
+For background agents with `isolation: worktree`. The worktree SHOULD be cut
+from the commit drain just made; because some harnesses instead pin it to a
+tracking ref that can lag, the prompt's first step force-syncs the worktree
+to the default branch so the worker always builds on current state and its
+branch merges back cleanly. At dispatch time, resolve build's SKILL.md to
 a concrete path — `.claude/skills/build/SKILL.md` when the toolkit is
 in-repo, otherwise the plugin cache path found at dispatch — and
 substitute it for `<build-skill-path>` below. Workers cannot invoke
@@ -130,6 +140,13 @@ path, resolved at dispatch:
 > exploration, tests first where criteria are test-shaped,
 > run every acceptance command, standard gates, then commit to a branch
 > named task/NN-<slug>. Work only in your worktree; do not push.
+>
+> FIRST, sync your worktree to current state: some harnesses cut it from a
+> stale base (a pinned tracking ref), which would hide this task's merged
+> dependencies. Run `git reset --hard <default-branch>` — no work exists in
+> the worktree yet, so nothing is lost — then create `task/NN-<slug>` from
+> there. This both pulls in dependency work and makes your branch descend
+> from current <default-branch>, so the merge back is clean.
 >
 > Your worktree is cut from a git commit, so gitignored files (e.g.
 > `.dev.vars`, `.env`, local secrets) are ABSENT from it. If your task's

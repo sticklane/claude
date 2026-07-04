@@ -54,7 +54,12 @@ structured **verdict + evidence**, never its transcript
 
 Before the first dispatch, ensure `.claude/worktrees/` is gitignored —
 harness-managed worker worktrees land there and trip git-cleanliness
-hooks otherwise.
+hooks otherwise. If the harness pins each worktree's base to a tracking ref
+(e.g. `origin/main`) rather than cutting from the newest commit, that ref
+can lag behind drain's committed status flips and merges, handing workers a
+stale base; the worker prompt's first step force-syncs the worktree, and on
+a never-pushed local run drain also resyncs the ref after each merge (see
+reference.md's Worker prompt and Status field semantics).
 
 When several tasks are dispatchable at once, apply the deterministic
 tie-break: dispatch lowest `Priority` value first (absent = P2), then
