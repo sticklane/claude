@@ -7,18 +7,35 @@ replace it.
 
 ## Tiers
 
-| Tier | Model | Notes |
-|---|---|---|
-| scout-tier | Flash-class model | The port's own vocabulary (`antigravity/README.md`): "pick a Flash-class model for scouting". |
-| session-tier | the session model | Whatever model the Agent Manager conversation is running. |
-| deep-tier | the strongest model available in the model picker | Recommended pin value — opt-in, not an active default. |
-| frontier-tier | the strongest model available in the model picker | No distinct rung above deep-tier; recommended pin value — opt-in, not an active default. |
+| Tier          | Model                                             | Notes                                                                                         |
+| ------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| scout-tier    | Flash-class model                                 | The port's own vocabulary (`antigravity/README.md`): "pick a Flash-class model for scouting". |
+| session-tier  | the session model                                 | Whatever model the Agent Manager conversation is running.                                     |
+| deep-tier     | the strongest model available in the model picker | Recommended pin value — opt-in, not an active default.                                        |
+| frontier-tier | the strongest model available in the model picker | No distinct rung above deep-tier; recommended pin value — opt-in, not an active default.      |
 
 The two deep-tier rows are recommended pin values, not active defaults
 (selection and override convention in [README.md](README.md)).
 Antigravity has no stable CLI model id to pin: model choice is a
 human selection in the Agent Manager model picker, so a tier pin here
 is a convention for the human dispatcher, not a flag a script passes.
+
+## Role pins
+
+Gemini/Antigravity mapping of the routing defaults adopted in
+[claude-code.md](claude-code.md) "Role pins" (spec:
+model-routing-native-config). All rows are picker conventions for the
+human dispatcher — Antigravity has no flag or frontmatter to pin a
+model programmatically.
+
+| Role                                                       | Antigravity default (model picker)                                      |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------- |
+| session default                                            | the Agent Manager conversation's model (no plan/execution split exists) |
+| implementation workers                                     | Flash-class                                                             |
+| explore / codebase-search                                  | Flash-class — the cheapest Flash variant in the picker                  |
+| LLM reviewer, advisory lane                                | Flash-class                                                             |
+| distill workflow                                           | Pro-class / the strongest model in the picker                           |
+| retry escalation (attempt 2+, verifier evidence in prompt) | one step up in the picker: Flash-class → Pro-class                      |
 
 ## Headless
 

@@ -9,7 +9,7 @@ prepares the dispatch and gives the user everything to launch.
 
 1. **Verify independence.** Read the task files and the spec's
    Parallelization section (if absent, derive independence from `Depends
-   on` and `Touch`). A group is dispatchable only if: no dependency edges,
+on` and `Touch`). A group is dispatchable only if: no dependency edges,
    disjoint `Touch` lists, runnable acceptance criteria everywhere. The
    group must also pass the breakdown skill's "decision coupling" test —
    members sharing an undecided design choice serialize even with
@@ -38,8 +38,11 @@ prepares the dispatch and gives the user everything to launch.
    > "over budget" rather than grind on. Final message: verdict
    > (DONE/BLOCKED), acceptance evidence per criterion, files changed.
 
-   Suggest the session model for judgment-heavy tasks and a Flash-class
-   model for mechanical ones.
+   Suggest a Flash-class model for workers on attempt 1 (the worker tier
+   — Gemini mapping in the toolkit's `runtimes/antigravity.md` Role pins)
+   and a Flash-class scout for mechanical sweeps. A retry relaunches
+   once, one tier up in the model picker (Flash-class → Pro-class),
+   carrying the verifier's failure evidence, never the failed transcript.
 
 4. **Collect and integrate.** As agents finish, record verdict + evidence
    per task (not transcripts). Merge DONE branches in task order, running

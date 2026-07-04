@@ -46,10 +46,13 @@ Status field semantics.
 
 ## 2. Dispatch one worker
 
-Every worker drain dispatches runs on the **session model** — workers
-implement code, so they stay session-tier — and each is told to delegate its
-own mechanical scouting to Haiku (`effort: low`) scouts and to return only a
-structured **verdict + evidence**, never its transcript
+Every worker drain dispatches runs at the **implementation-worker tier pin**
+on attempt 1 (Claude default: `sonnet`; other runtimes map the pin in their
+`runtimes/` profile's Role pins table) — step 3's single relaunch and its
+one tournament escalate one tier up — and each is told to delegate its own
+mechanical scouting to Haiku
+(`effort: low`) scouts and to return only a structured **verdict +
+evidence**, never its transcript
 (`.claude/rules/token-discipline.md`, Dispatch authoring).
 
 Before the first dispatch, ensure `.claude/worktrees/` is gitignored —
@@ -79,7 +82,8 @@ the independence test and worktree mechanics carry over.)
 Set the task's `Status: in-progress` and **commit that edit** (e.g.
 `drain: task 03 in-progress`) — the worker's worktree is cut from this
 commit, so it must contain current statuses and any `## Answers`. Then
-launch ONE background `general-purpose` agent on the session model with
+launch ONE background `general-purpose` agent at the worker tier pin
+(Claude default: `sonnet`) with
 `isolation: worktree` using the worker prompt in [reference.md](reference.md) — the /build
 procedure plus the defer contract: **the worker never asks the human and
 never edits queue state; on ambiguity it stops with verdict DEFERRED and
@@ -95,7 +99,7 @@ itself flips the status to `done` and commits the flip.)
 - **DONE** — before merging, re-run the verifier's append-only
   whitelist diff over `merge-base..branch`, path-scoped to every spec's
   tasks/ dir (`git diff $(git merge-base <default-branch> <branch>)..<branch>
-  -- '*/tasks/*.md'`): changes only in the worker's own task file and
+-- '*/tasks/*.md'`): changes only in the worker's own task file and
   only in the allowed set — Status line, checkbox ticks, evidence
   lines, the plan block. Anything else is a post-verification edit
   riding in: treat it as a merge failure (the slot-machine path below).
@@ -119,12 +123,14 @@ itself flips the status to `done` and commits the flip.)
   merge to `main`.
   If the merge or gates fail: run `git merge --abort` first (a failed
   merge leaves the checkout wedged in a conflicted state), then slot
-  machine — discard the branch, relaunch once with the failure evidence
-  in the prompt. A second failure routes
+  machine — discard the branch, relaunch once, one tier up from the pin
+  (Claude default: `sonnet` → `opus`), with the verifier's failure
+  evidence — never the failed transcript — in the prompt. A second failure routes
   into one tournament (at most one per task per drain run; procedure in
   reference.md "Tournament") instead of straight to `Status: failed`:
   sweep any leftover `task/NN-<slug>-t*` branches/worktrees, then dispatch
-  three concurrent background workers on the session model, `isolation: worktree`, each on its
+  three concurrent background workers one tier up from the pin (Claude
+  default: `opus` — tournament entrants are attempts 3+), `isolation: worktree`, each on its
   own `task/NN-<slug>-tN` branch with an angle-variant prompt carrying the
   failure evidence from both prior attempts. If the tournament winner's
   merge fails, likewise run `git merge --abort` before moving to the
@@ -225,7 +231,7 @@ bounded zombie escalation is reported to the user and thereafter treated
 like `blocked` here. Once no parked tasks remain:
 
 - **Tasks with `Status: deferred` exist**: collect the `## Deferred
-  questions` blocks from those files only, and ask them all in one round
+questions` blocks from those files only, and ask them all in one round
   (AskUserQuestion where available, else a numbered list). Write each
   answer into the task file under `## Answers`, flip its status to
   `pending`, commit, and return to step 1. (Gating on the status — not on
