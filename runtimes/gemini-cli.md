@@ -6,17 +6,37 @@ is the v1 deliverable); this profile records what a port would target.
 
 ## Tiers
 
-| Tier | Model | Notes |
-|---|---|---|
-| scout-tier | Flash-class model (e.g. `gemini-3.5-flash`, via `-m`) | Cheap, fast reconnaissance. |
-| session-tier | the CLI's default model | Whatever the interactive session runs; no flag needed. |
-| deep-tier | Pro-class model (e.g. `gemini-3.1-pro-preview`, via `-m`) | Recommended pin value — opt-in, not an active default. |
-| frontier-tier | the same Pro-class model | No distinct rung above the Pro class exposed by the CLI; recommended pin value — opt-in, not an active default. |
+| Tier          | Model                                                     | Notes                                                                                                           |
+| ------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| scout-tier    | Flash-class model (e.g. `gemini-3.5-flash`, via `-m`)     | Cheap, fast reconnaissance.                                                                                     |
+| session-tier  | the CLI's default model                                   | Whatever the interactive session runs; no flag needed.                                                          |
+| deep-tier     | Pro-class model (e.g. `gemini-3.1-pro-preview`, via `-m`) | Recommended pin value — opt-in, not an active default.                                                          |
+| frontier-tier | the same Pro-class model                                  | No distinct rung above the Pro class exposed by the CLI; recommended pin value — opt-in, not an active default. |
 
 The two deep-tier rows are recommended pin values, not active defaults
 (selection and override convention in [README.md](README.md)). Model
 ids move fast; check `gemini --help` / release notes for the current
 Flash and Pro ids before pinning.
+
+## Role pins
+
+Gemini mapping of the routing defaults adopted in
+[claude-code.md](claude-code.md) "Role pins" (spec:
+model-routing-native-config). gemini-cli has no `opusplan`-style
+plan/execution split, so the session default stays the CLI's default
+model; per-role pins pass via `-m`. Same id caveat as above: re-verify
+the current Flash and Pro ids before pinning.
+
+| Role                                                                  | Gemini default                                                                        |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| session default                                                       | the CLI's default model (no plan/execution split exists)                              |
+| implementation workers                                                | Flash-class (e.g. `gemini-3.5-flash`, via `-m`)                                       |
+| explore / codebase-search                                             | Flash-class — the CLI's cheapest Flash variant where one is exposed                   |
+| verifier (acceptance evidence; advisory reviewer lane)                | Flash-class                                                                           |
+| spec/plan/diff critic                                                 | Pro-class — deep-tier work; a critic pass costs ~1% of a wrong implementation         |
+| distill workflow                                                      | Pro-class (e.g. `gemini-3.1-pro-preview`, via `-m`)                                   |
+| retry escalation (attempt 2, verifier evidence in prompt)             | one tier up: Flash-class → Pro-class                                                  |
+| tournament escalation (attempts 3+, after the Pro-class retry failed) | Pro-class — the CLI exposes no rung above Pro, so the frontier rung collapses onto it |
 
 ## Headless
 

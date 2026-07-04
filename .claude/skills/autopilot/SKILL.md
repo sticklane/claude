@@ -28,7 +28,7 @@ wrong side, say so and recommend attended `/build` instead. Don't launch.
 - Permissions scoped: the run can build/test/commit but NOT push or deploy.
   Risk-rate each tool by reversibility and blast radius when scoping the
   allowlist — auto-allow only what discarding the branch fully undoes.
-  The attended stages' push-on-completion (drain/build/parallel) is
+  The attended stages' push-on-completion (drain/build) is
   **intentionally not** adopted here: autopilot is unattended, so push
   stays human-escalated (the trigger below), never automatic.
   Be honest about the limit — allowlists gate commands, not the filesystem;
@@ -38,12 +38,12 @@ wrong side, say so and recommend attended `/build` instead. Don't launch.
 
 ## 3. Pick the mechanism (see reference.md for exact commands)
 
-| Situation | Mechanism |
-|---|---|
-| You stay at the keyboard, same session | `/goal "<criteria> pass, or stop after 20 turns"` |
-| Fire-and-forget, this machine | background agent in a worktree, prompted with the /build procedure |
-| CI / scripts / scheduled | `claude -p` headless with `--allowedTools`, `--max-turns`, `dontAsk` |
-| Exploratory bet, low confidence | slot machine: commit state, timebox one run — accept the result or DISCARD and restart fresh with a better task file; never debug a failed run in place |
+| Situation                              | Mechanism                                                                                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| You stay at the keyboard, same session | `/goal "<criteria> pass, or stop after 20 turns"`                                                                                                       |
+| Fire-and-forget, this machine          | background agent in a worktree, prompted with the /build procedure                                                                                      |
+| CI / scripts / scheduled               | `claude -p` headless with `--allowedTools`, `--max-turns`, `dontAsk`                                                                                    |
+| Exploratory bet, low confidence        | slot machine: commit state, timebox one run — accept the result or DISCARD and restart fresh with a better task file; never debug a failed run in place |
 
 ## 4. The walk-away contract
 
@@ -65,7 +65,7 @@ problem, run /distill so the next launch doesn't repay for it.
 
 `--max-turns` terminates the process — there is no "after the cap" to hand
 off from, and the /goal evaluator judges only whether the condition is met,
-not progress. So a long unattended run hands off *pre-emptively*: at its last
+not progress. So a long unattended run hands off _pre-emptively_: at its last
 safe boundary (a committed task verdict) BEFORE ~80% of `--max-turns`, it
 writes drain's baton artifact and relaunches a fresh generation — the same
 `DRAIN-BATON.md` grammar, fresh-instance ritual, and generations cap drain

@@ -39,15 +39,15 @@ tracking ref (`git update-ref refs/remotes/origin/main <default-branch>`)
 after each merge. Either way the worker sees current state, and a `/clear`
 loses nothing.
 
-| Status | Meaning | Written by |
-|---|---|---|
-| `pending` | dispatch when dependencies are done | /breakdown (initial) |
-| `in-progress` | a worker owns it (the lock; committed pre-dispatch) | /drain |
-| `done` | branch merged, project gates green | the merge (from /build); or drain, for headless workers |
-| `deferred` | waiting on a human answer in the file | /drain, from the verdict |
-| `blocked` | technical blocker; task needs amending | /drain, from the verdict |
-| `failed` | tournament exhausted or skipped per cost gate; evidence recorded | /drain |
-| `draft` | discovered-work stub; never dispatchable, promoted manually | /drain (from a routed verdict's `Discovered:`) |
+| Status        | Meaning                                                          | Written by                                              |
+| ------------- | ---------------------------------------------------------------- | ------------------------------------------------------- |
+| `pending`     | dispatch when dependencies are done                              | /breakdown (initial)                                    |
+| `in-progress` | a worker owns it (the lock; committed pre-dispatch)              | /drain                                                  |
+| `done`        | branch merged, project gates green                               | the merge (from /build); or drain, for headless workers |
+| `deferred`    | waiting on a human answer in the file                            | /drain, from the verdict                                |
+| `blocked`     | technical blocker; task needs amending                           | /drain, from the verdict                                |
+| `failed`      | tournament exhausted or skipped per cost gate; evidence recorded | /drain                                                  |
+| `draft`       | discovered-work stub; never dispatchable, promoted manually      | /drain (from a routed verdict's `Discovered:`)          |
 
 On startup, an `in-progress` task is a stale lock ONLY after the Stale-lock
 liveness check below confirms the worker dead — never on a bare "no live
@@ -142,7 +142,7 @@ The worktree lock's recorded pid is **not a liveness signal**: it is the
 pid of the session that started it — alive after a `/clear` orphaned the run,
 and this session's own pid for workers this session started. Ignore it.
 
-**Parked-task control flow.** A task still inside its window is *parked*:
+**Parked-task control flow.** A task still inside its window is _parked_:
 
 - It is left `in-progress`; drain keeps dispatching every other task whose
   dependencies are met. Log each park to the user in one line.
@@ -201,7 +201,7 @@ path, resolved at dispatch:
 > acceptance needs one — a token-gated e2e, a local config — and this
 > prompt or the task's "## Answers" says where the real file lives in the
 > main checkout, copy it into your worktree before running (e.g. `cp
-> <main-checkout>/apps/x/.dev.vars "$PWD/apps/x/.dev.vars"`). Never commit
+<main-checkout>/apps/x/.dev.vars "$PWD/apps/x/.dev.vars"`). Never commit
 > such a file; confirm `git status` shows it untracked before committing.
 >
 > If the build procedure spawns a simplification, cleanup, or review
@@ -314,8 +314,11 @@ by the at-most-one-tournament-per-task rule — and the tournament
 remains inside the human-authorized /drain launch (docs/human-gates.md).
 
 **Generate.** Delete any existing `task/NN-<slug>-t*` branches and
-worktrees, then launch three concurrent background workers on the session
-model (`isolation: worktree`), each given the standard worker prompt plus the
+worktrees, then launch three concurrent background workers a further tier
+up, at the frontier pin (Claude default: `fable` — tournament entrants are
+attempts 3+, retries after the deep-tier relaunch failed, which is the one
+dispatch point `.claude/rules/token-discipline.md` sanctions frontier for;
+`isolation: worktree`), each given the standard worker prompt plus the
 relaunch-with-evidence append (covering both prior failures) plus one
 angle suffix. Each suffix also overrides the branch name set by the
 base prompt:
@@ -411,9 +414,13 @@ result), files changed, a Discovered: section — single-line items of
 out-of-scope work found, empty means none, never create task files for
 them — and for non-DONE verdicts one Done vs remaining: line." \
   --allowedTools "Read,Edit,Write,Glob,Grep,Bash(<verified test/lint/build cmds>),Bash(git add *),Bash(git commit *)" \
-  --permission-mode dontAsk --max-turns <N from the task's Budget header, else 80>
+  --permission-mode dontAsk --max-turns <N from the task's Budget header, else 80> \
+  --model <tier alias>
 ```
 
+`--model` carries the same three-rung ladder as SKILL.md's Task-tool
+dispatch: `sonnet` on attempt 1, `opus` on the single relaunch, `fable`
+for tournament entrants (attempts 3+).
 `dontAsk` makes unapproved tools abort instead of hanging — the CI
 baseline from the playbook's mechanism ladder. `--max-turns` is N from
 the task's pinned `Budget: <N> turns` header (integer N, the format
@@ -472,8 +479,8 @@ Probe: a headless `claude -p ... --permission-mode bypassPermissions
 subagent via the Task tool and wait for its completion notification. Two runs,
 each printed `RECEIVED: <token>` echoing the subagent's returned token — the
 completion notification arrived in-session before the turn ended. **Verdict:
-SUPPORTED.** A relaunched generation therefore dispatches workers on the
-session model via drain's
+SUPPORTED.** A relaunched generation therefore dispatches workers at the
+worker tier pin via drain's
 normal background-`Task` path (SKILL.md step 2), still under the
 max-generations cap of 10; the sequential Headless-fallback
 path above is NOT required for orchestrator relaunch — it stays the documented

@@ -195,7 +195,7 @@ entry is the research record.
    to a different visual style). Source: Cognition, "Don't Build
    Multi-Agents" — a lab's engineering post, not one of the three
    vendors this file tracks. → guarded by /breakdown's "decision
-   coupling" test and /parallel's citation of it (R5).
+   coupling" test and drain's group-mode citation of it (R5).
    [Don't Build Multi-Agents](https://cognition.ai/blog/dont-build-multi-agents)
 2. **Vague delegation producing duplicate work.** Anthropic's
    multi-agent research system found early orchestrators gave subagents

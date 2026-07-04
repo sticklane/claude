@@ -57,8 +57,10 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    exactly as the dispatchability check does (numbers within a spec,
    task-file-relative paths across specs) — then lexicographic task-file
    path. The workflow computes the order; the model never reorders the
-   queue mid-run. Every worker runs on the **session model** — workers
-   implement code, so they stay session-tier — and each is told to
+   queue mid-run. Every worker runs at the **worker tier** on attempt 1
+   (a Flash-class model in the Agent Manager picker; Gemini mapping in
+   the toolkit's `runtimes/antigravity.md` Role pins) — retries escalate
+   one tier up, per step 4's relaunch and tournament — and each is told to
    delegate its own mechanical scouting to Haiku (`effort: low`) scouts and
    to return only a structured **verdict + evidence**, never its transcript
    (`.claude/rules/token-discipline.md`, Dispatch authoring). One task at a time: set its
@@ -69,7 +71,8 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    the current commit, so it is always fresh; if a runtime instead pins the
    worktree base to a lagging tracking ref, force-sync it to the default
    branch before working), then give
-   the user one Agent Manager launch — a fresh agent on the session model
+   the user one Agent Manager launch — a fresh agent at the worker tier
+   (Flash-class in the picker)
    on that worktree
    with this prompt (fill the <>; resolve the build workflow to a
    concrete path, resolved at dispatch — `.agents/workflows/build.md` in
@@ -114,10 +117,30 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    > verdict plus these two fixed sections are all the orchestrator
    > will ever see.
 
+   **Group throughput mode** (formerly the separate parallel workflow,
+   folded in here): when the user asks for throughput and a group is
+   independent — no `Depends on` edges between members, disjoint `Touch`
+   lists, runnable acceptance criteria per member, and the breakdown
+   workflow's decision-coupling test passes — create one worktree per
+   member and hand the user the whole launch list at once: one Agent
+   Manager agent per task at the worker tier (Flash-class in the picker),
+   each with step 2's prompt. Size the group by the task map, never a
+   default maximum — concurrency multiplies token spend. Group sequencing
+   overrides one-task-at-a-time: flip every member's
+   `Status: in-progress` and commit them in one commit (the workflow
+   session stays the single writer), cut all member worktrees from that
+   commit, then hand over the whole launch list. Collect verdicts
+   as agents finish (step 3 per verdict) and merge DONE branches in task
+   order, gates after each; on a cross-task merge conflict or a
+   post-merge gate failure during group integration — cross-task
+   interference is indistinguishable from the task's own failure at that
+   point — stop the remaining merges and report which merged cleanly.
+   Remove merged worktrees (`git worktree remove`).
+
 3. **Collect.** DONE → before merging, re-run the append-only
    whitelist diff over `merge-base..branch`, path-scoped to every
    spec's tasks/ dir (`git diff $(git merge-base <default-branch>
-   <branch>)..<branch> -- '*/tasks/*.md'`): changes only in the
+<branch>)..<branch> -- '*/tasks/*.md'`): changes only in the
    worker's own task file and only in the allowed set — Status line,
    checkbox ticks, evidence lines, the plan block; anything else is a
    post-verification edit riding in — treat it as a merge failure.
@@ -130,16 +153,18 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    branch for the task (the dead run's forensic branches are no longer
    needed once it has shipped). Then, per completed DONE task, **push
    `main` on completion** (`git push`) so the merged, verifier-PASSED work is backed
-   up the moment it lands. **Push guard (canonical; build and parallel
-   cite this):** push only if `main` has a configured upstream — if none,
+   up the moment it lands. **Push guard (canonical; build cites this, and drain's own group
+   mode follows it):** push only if `main` has a configured upstream — if none,
    skip silently; never `--force`; a rejected, non-fast-forward, or
    offline push warns and continues (the merge already landed locally, so
    a failed push never fails the task or aborts the run). The worker never
    pushes (its "do not push" clause is unchanged) — only the orchestrator,
    after the merge. On merge/gate
    failure run `git merge --abort` (a failed merge leaves the checkout
-   wedged in a conflicted state), discard the branch, and relaunch once
-   with the failure evidence in the prompt; a second miss routes into
+   wedged in a conflicted state), discard the branch, and relaunch once,
+   one tier up in the model picker (Flash-class → Pro-class), with the
+   verifier's failure evidence — never the failed transcript — in the
+   prompt; a second miss routes into
    step 4's tournament instead of straight to `Status: failed`. DEFERRED → write
    the verdict's question into
    the main-checkout task file under `## Deferred questions`, set
@@ -223,13 +248,14 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    verdicts — when attempt 2 (the relaunch) returned BLOCKED over
    budget; attempt 1 must have returned DONE to reach a merge, so only
    attempt 2 can be.
-
    - Sweep: delete any existing `task/NN-<slug>-t*` branches/worktrees,
      then create three fresh ones with
      `git worktree add -b task/NN-<slug>-t1 ../<repo>-task-NN-t1` (and
      likewise `-t2`, `-t3`).
    - Generate: give the user three Agent Manager launches, each on the
-     session model — step 2's
+     strongest model in the picker — the frontier rung; tournament
+     entrants are attempts 3+, after the Pro-class relaunch failed —
+     step 2's
      prompt plus the prior failure evidence plus one angle each, every
      angle overriding the branch name: (t1) commit to
      `task/NN-<slug>-t1`, minimal diff — smallest change that passes
@@ -242,7 +268,7 @@ payments, or migrations. Pull core tasks out for attended /build runs.
      each inside that candidate's worktree, fresh eyes per run (no
      shared transcript), no evidence path passed — against the task's
      acceptance criteria only (for queues using the `specs/<slug>/
-     layout` the winner's branch already carries the worker's evidence
+layout` the winner's branch already carries the worker's evidence
      file; for other layouts the task file's inline evidence is the
      artifact). Votes are the verifier's verdicts only — PASS, FAIL,
      or INCOMPLETE; verifiers never DEFER. A candidate survives only

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# check-agent-model-pins [agents-dir]
+#
+# Model-routing conformance (specs: model-routing-native-config, C2): every
+# agent definition in .claude/agents/ must pin a model ALIAS in its
+# frontmatter — one of {haiku, sonnet, opus}. Aliases only, never dated
+# model ids, so pins survive model releases. `inherit` fails: an unpinned
+# agent silently rides the session model, which is the leak this check
+# exists to catch.
+set -u
+
+DIR="${1:-$(cd "$(dirname "$0")/.." && pwd)/.claude/agents}"
+fail=0
+for f in "$DIR"/*.md; do
+  [ -f "$f" ] || { echo "$DIR: no agent files found"; exit 1; }
+  pin="$(awk '/^---$/{n++; next} n==1 && sub(/^model:[[:space:]]*/,""){print; exit}' "$f")"
+  case "$pin" in
+    haiku|sonnet|opus) ;;
+    *) echo "$f: frontmatter model pin '${pin:-<missing>}' not in {haiku, sonnet, opus}"; fail=1 ;;
+  esac
+done
+exit "$fail"

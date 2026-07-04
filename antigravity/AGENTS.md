@@ -2,7 +2,7 @@
 
 This project uses a spec-driven, verification-gated pipeline (skills in
 `.agents/skills/`, workflows in `.agents/workflows/`): idea → spec →
-(design) → breakdown → build/parallel → distill. Artifacts live in
+(design) → breakdown → build/drain → distill. Artifacts live in
 `specs/<slug>/`; every pipeline stage hands off through a file on disk, not
 conversation memory.
 
@@ -41,6 +41,7 @@ Context is the scarce resource; spend it on decisions, not raw material.
   Model choice here is a human selection in the Agent Manager model
   picker — the deep tiers are opt-in recommendations, not active
   defaults.
+
 - One agent is the default; scale the fleet only for genuinely divisible
   groups (the decision-coupling test in the breakdown skill), and size
   it by the task map, never a default maximum. Multi-agent work costs

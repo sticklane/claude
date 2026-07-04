@@ -30,7 +30,7 @@ Autonomy is earned by verification, not granted by optimism.
      review policy relaxed ("Always Proceed") — appropriate only because
      step 1 classified the task as peripheral; or
    - Background: a separate Agent Manager agent (or scheduled task) on the
-     worktree with the build prompt from the parallel workflow — including
+     worktree with the drain workflow's step-2 worker prompt — including
      its resolved build-workflow path and its over-budget stop (the worker
      stops with verdict BLOCKED "over budget" when remaining work clearly
      exceeds the task's `Budget:`). Note:
