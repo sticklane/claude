@@ -1,7 +1,7 @@
 # Task 02: Autopilot pre-cap baton + parallel collect-phase baton
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 30 turns
@@ -35,7 +35,7 @@ skill files, breakdown, runtimes/, the workboard scanner, plugin.json.
 
 ## Acceptance
 
-- [ ] `grep -qi "baton" .claude/skills/autopilot/SKILL.md` → exit 0 with the pre-cap (~80% of --max-turns) boundary and the no-new-commits → spec-repair rule
-- [ ] `grep -qi "baton" .claude/skills/parallel/SKILL.md` → exit 0 with the merge-verified/commit/list-unmerged-branches rule
-- [ ] Both files reference the generations cap rather than restating trigger mechanics (read-verified)
-- [ ] `grep -qi "baton" antigravity/.agents/workflows/autopilot.md && grep -qi "baton" antigravity/.agents/workflows/parallel.md` → exit 0
+- [x] `grep -qi "baton" .claude/skills/autopilot/SKILL.md` → exit 0 with the pre-cap (~80% of --max-turns) boundary and the no-new-commits → spec-repair rule — PASS: new §5 states the ~80% pre-cap boundary and no-new-commits→spec-repair (evidence/02-autopilot-parallel-batons.md, C1)
+- [x] `grep -qi "baton" .claude/skills/parallel/SKILL.md` → exit 0 with the merge-verified/commit/list-unmerged-branches rule — PASS: §3 para adds merge-verified/commit/list-unmerged-branches/relaunch (evidence, C2)
+- [x] Both files reference the generations cap rather than restating trigger mechanics (read-verified) — PASS: both cite drain's cap; no N=4/degradation/Relaunch-every restated (evidence, C3)
+- [x] `grep -qi "baton" antigravity/.agents/workflows/autopilot.md && grep -qi "baton" antigravity/.agents/workflows/parallel.md` → exit 0 — PASS: both mirror as write-baton-and-stop (evidence, C4)

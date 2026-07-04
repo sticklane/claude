@@ -1,7 +1,8 @@
 # Unattended-execution configs
 
 Contents: Scoped permissions · Bounded goals · Background worktree
-agent · Headless · Containment ladder · Failure recovery
+agent · Headless · Pre-cap baton boundary · Containment ladder ·
+Failure recovery
 
 Verified against code.claude.com/docs (permissions, headless, goal,
 sandboxing) as of July 2026.
@@ -113,6 +114,25 @@ criterion, files changed." \
 - Recurring: `/loop 30m <prompt>` locally (auto-expires after 7 days) or
   GitHub Actions `on: schedule` with `anthropics/claude-code-action@v1`
   plus `claude_args: --max-turns 10` and a workflow-level timeout.
+
+## Pre-cap baton boundary
+
+For long unattended runs (SKILL.md §5), the run hands the baton off BEFORE it
+hits `--max-turns`, not after — hitting the cap kills the process mid-thought.
+
+- **Boundary:** the last committed task verdict at or before ~80% of
+  `--max-turns` (e.g. turn 32 of a 40-turn cap). Once that boundary is
+  crossed, write the baton at the next safe point instead of starting more
+  work.
+- **Advancement test:** count commits since the run launched
+  (`git log <launch-sha>..HEAD --oneline`). New commits since the previous
+  baton → respawn a fresh generation. Zero new commits since the previous
+  baton → do NOT respawn (an identical generation just repeats the stall);
+  stop and leave the baton with a needs-attention note for spec repair.
+- **Artifact + relaunch:** reuse drain's `DRAIN-BATON.md` grammar,
+  fresh-instance ritual, relaunch command, and orchestrator flag set
+  (drain/reference.md) — autopilot does not define its own. The generations
+  cap (drain's default 10) bounds relaunch here too.
 
 ## Containment ladder
 

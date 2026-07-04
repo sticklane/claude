@@ -49,3 +49,10 @@ prepares the dispatch and gives the user everything to launch.
    report whether the task file needs amending or just a retry. Remove
    merged worktrees (`git worktree remove`). If any verdict exposed a
    decomposition problem, apply the distill skill before dispatching more.
+
+   When collection will outlive the session budget (many workers, a growing
+   merge queue), treat it as a baton boundary: merge what's verified, commit,
+   then write drain's baton artifact (`DRAIN-BATON.md`) listing the unmerged
+   branches and their verdicts, and STOP for the human to relaunch — an
+   Antigravity run can't self-relaunch claude. Same baton grammar and
+   generations cap as the drain workflow.

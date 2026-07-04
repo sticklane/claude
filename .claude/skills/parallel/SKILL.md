@@ -68,3 +68,11 @@ whether the task file needs amending (back to /breakdown) or just a retry.
 Dependent tasks unlocked by this group run next — sequentially via /build, or
 another /parallel group if independent. If any worker's verdict exposed a
 task-file or decomposition problem, run /distill before dispatching more.
+
+When the collect/merge phase itself will outlive the session budget — many
+workers, a merge queue that keeps growing as verdicts keep arriving — treat it
+as a baton boundary the way drain does: merge every branch already verified,
+commit, then write drain's baton artifact (`DRAIN-BATON.md`) listing the
+still-unmerged branches and their verdicts, and relaunch a fresh generation to
+finish collecting. Same baton grammar and generations cap as drain — this
+phase cites drain's mechanism rather than re-implementing the trigger.
