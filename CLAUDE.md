@@ -81,6 +81,10 @@ order cannot resolve are surfaced, not guessed.
   enumerated in plugin.json by schema requirement, so a new agent DOES need
   a manifest edit; only skills stay manifest-free. Bump `version` in
   `plugin.json` whenever skill behavior changes.
+- A task that will be drained/parallelized must not gate acceptance on the
+  `Workflow` tool or a `disable-model-invocation` skill — unattended workers
+  have neither. Make such a check orchestrator-resolvable or give the
+  criterion an explicit manual-pending path (docs/memory/unattended-worker-tool-limits.md).
 
 ## Testing changes
 
