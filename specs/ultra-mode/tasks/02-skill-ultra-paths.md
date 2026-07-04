@@ -1,7 +1,7 @@
 # Task 02: `## Ultra path` sections in five skills + gate lint
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: in-progress
 Depends on: 01, ../../orchestrator-context/tasks/02-autopilot-parallel-batons.md, ../../workflow-token-efficiency/tasks/01-dispatch-authoring-rule.md
 Priority: P1
 Budget: 50 turns
