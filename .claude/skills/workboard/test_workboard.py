@@ -394,6 +394,51 @@ class TestActiveCoverageReclassification(unittest.TestCase):
         self.assertEqual(workboard.attention_total([active, review, active]), 1)
 
 
+class TestBatonNeedsAttentionInbox(unittest.TestCase):
+    """oc-06: a baton carrying a needs-attention section is promoted into the
+    attention inbox so it ranks among blocked work, not just as a repo card."""
+
+    def _baton(self, needs_attention, command='claude -p "/drain specs/x (gen 4)"'):
+        return {"path": "specs/x/DRAIN-BATON.md", "generation": 3,
+                "command": command, "needs_attention": needs_attention,
+                "mtime": 5.0}
+
+    def test_needs_attention_baton_becomes_blocked_inbox_item(self):
+        repo = make_repo_record(path="/r/demo")
+        repo["batons"] = [self._baton("05-e deferred: which auth provider?")]
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        baton_items = [i for i in inbox if "baton" in i["what"].lower()]
+        self.assertEqual(len(baton_items), 1)
+        self.assertEqual(baton_items[0]["state"], "blocked")
+        self.assertEqual(baton_items[0]["severity"], "serious")
+        self.assertIn("auth provider", baton_items[0]["why"])
+
+    def test_needs_attention_baton_carries_relaunch_command(self):
+        repo = make_repo_record(path="/r/demo")
+        repo["batons"] = [self._baton("which provider?")]
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        baton_items = [i for i in inbox if "baton" in i["what"].lower()]
+        self.assertIn("/drain specs/x", baton_items[0].get("cmd", ""))
+
+    def test_baton_without_needs_attention_adds_no_inbox_item(self):
+        repo = make_repo_record(path="/r/demo")
+        repo["batons"] = [self._baton("")]
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        self.assertEqual([i for i in inbox if "baton" in i["what"].lower()], [])
+
+    def test_needs_attention_baton_ranks_among_blocked_before_warnings(self):
+        # a repo with both a needs-attention baton (serious) and dirty state
+        # (warning): the baton sorts ahead in the flat, severity-ranked list.
+        repo = make_repo_record(path="/r/demo", dirty=1)
+        repo["batons"] = [self._baton("blocking question")]
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        self.assertIn("baton", inbox[0]["what"].lower())
+
+
 class TestActiveRendering(unittest.TestCase):
     def _active(self):
         return {"state": "in-progress", "category": "active", "repo": "demo",

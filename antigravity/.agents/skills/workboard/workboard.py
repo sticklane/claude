@@ -804,6 +804,20 @@ def attention_items(repos, sessions, antigravity, stale_days,
                     "cmd": f"git -C {shlex.quote(rp)} push",
                     "age_ts": r["git"]["last_commit_ts"],
                 })
+        for b in r.get("batons", []):
+            # A parked baton with a needs-attention section carries deferred
+            # questions the human must answer; promote it into the inbox so it
+            # ranks among blocked work, not just as a repo card (oc-06).
+            if b.get("needs_attention"):
+                gen = b["generation"] if b["generation"] is not None else "?"
+                items.append({
+                    "severity": "serious", "state": "blocked",
+                    "repo": r["name"],
+                    "what": f"Drain baton (gen {gen}): needs attention",
+                    "why": f"{b['needs_attention']} — answer it, then relaunch the parked generation:",
+                    "cmd": b.get("command") or "",
+                    "age_ts": b.get("mtime"),
+                })
 
     for c in antigravity:
         if c["open"] > 0 and (now_ts() - c["last_ts"]) > stale_days * 86400:
