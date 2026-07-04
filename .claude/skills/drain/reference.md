@@ -63,6 +63,21 @@ path, resolved at dispatch:
 > run every acceptance command, standard gates, then commit to a branch
 > named task/NN-<slug>. Work only in your worktree; do not push.
 >
+> Your worktree is cut from a git commit, so gitignored files (e.g.
+> `.dev.vars`, `.env`, local secrets) are ABSENT from it. If your task's
+> acceptance needs one — a token-gated e2e, a local config — and this
+> prompt or the task's "## Answers" says where the real file lives in the
+> main checkout, copy it into your worktree before running (e.g. `cp
+> <main-checkout>/apps/x/.dev.vars "$PWD/apps/x/.dev.vars"`). Never commit
+> such a file; confirm `git status` shows it untracked before committing.
+>
+> If the build procedure spawns a simplification, cleanup, or review
+> sub-reviewer as a separate background agent, do NOT block waiting on a
+> notification from it — a sub-agent's result may not route back to you.
+> Run that pass inline, or if you fan it out, read its output directly
+> rather than awaiting a notification, then finish close-out and deliver
+> your verdict.
+>
 > The task file's `Budget:` line is a ceiling, not a target: when
 > remaining work clearly exceeds the remaining budget, stop with verdict
 > BLOCKED "over budget" rather than grind on.
