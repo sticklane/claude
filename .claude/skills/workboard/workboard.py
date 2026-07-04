@@ -808,6 +808,25 @@ def esc(x):
     return html.escape(str(x if x is not None else ""))
 
 
+def cmd_html(command):
+    """A copyable shell command: <code class="cmd"> plus an adjacent,
+    always-visible copy button. The click handler (see TEMPLATE) copies from
+    either element and always ends in visible feedback."""
+    return (
+        f'<span class="cmd-wrap"><code class="cmd">{esc(command)}</code>'
+        f'<button type="button" class="copy-btn" aria-label="Copy command">'
+        f'<span class="copy-glyph" aria-hidden="true">⧉</span> copy</button></span>'
+    )
+
+
+def handoff_pickup_cmd(repo_path, rel_handoff):
+    """Runnable pickup command for a repo-card handoff: cd into the repo and
+    hand the absolute handoff path to a fresh `claude`."""
+    abs_handoff = str(Path(repo_path) / rel_handoff)
+    prompt = f"Read {shlex.quote(abs_handoff)} and continue the work it describes"
+    return f'cd {shlex.quote(repo_path)} && claude "{prompt}"'
+
+
 STATE_BADGE = {
     # state → (glyph, css class); color never carries meaning alone
     "active": ("●", "good"),
@@ -865,7 +884,7 @@ def render_ready(ready):
             f"<tr><td>{esc(i['repo'])}</td>"
             f"<td class='strong'>{esc(i['slug'])}</td>"
             f"<td>{esc(i['task'])}</td>"
-            f"<td><code>{esc(i['cmd'])}</code></td></tr>"
+            f"<td>{cmd_html(i['cmd'])}</td></tr>"
             for i in items
         )
         body = (
@@ -894,7 +913,7 @@ def render_ready(ready):
         '<section class="ready"><h2>Ready to start '
         f'<span class="count">{len(items)}</span></h2>'
         '<p class="legend">Pending tasks whose dependencies are all done — '
-        'dispatchable now. Click a <code>command</code> to copy it.</p>'
+        'dispatchable now. Click a <code>command</code> or its copy button to copy it.</p>'
         f"{body}{blocked_html}</section>"
     )
 
@@ -920,7 +939,7 @@ def render_html(data):
             f"<td class='strong'>{esc(i['what'])}</td>"
             f"<td>{esc(i['repo'])}</td>"
             f"<td>{esc(i['why'])}"
-            + (f" <code>{esc(i['cmd'])}</code>" if i.get("cmd") else "")
+            + (f" {cmd_html(i['cmd'])}" if i.get("cmd") else "")
             + f"</td><td class='num'>{esc(age_str(i['age_ts']))}</td></tr>"
             for i in data["inbox"]
         )
@@ -967,7 +986,8 @@ def render_html(data):
             if sess_rows else '<p class="muted-text">no sessions recorded</p>'
         )
         handoff_html = "".join(
-            f'<p class="handoff">⚑ handoff: <code>{esc(h["path"])}</code> — {esc(h["title"])}</p>'
+            f'<p class="handoff">⚑ handoff: {esc(h["title"])} — '
+            f'{cmd_html(handoff_pickup_cmd(r["path"], h["path"]))}</p>'
             for h in r["handoffs"]
         )
         baton_html = render_batons(r.get("batons", []))
@@ -994,7 +1014,7 @@ def render_html(data):
                         for c in data["antigravity"])
         abandon_hint = (
             f'<p class="muted-text">abandon everything stale at once: '
-            f'<code>python3 {esc(shlex.quote(str(SCRIPT)))} --abandon-stale</code> '
+            f'{cmd_html(f"python3 {shlex.quote(str(SCRIPT))} --abandon-stale")} '
             f'(writes a skip-marker per conversation; Antigravity state itself is untouched)</p>'
             if any_stale else ""
         )
@@ -1135,12 +1155,22 @@ td code, .legend code {{ font-size:12px; background:var(--grid);
   padding:1px 6px; border-radius:5px; overflow-wrap:anywhere; }}
 td code {{ cursor:copy; }}
 td code.copied {{ outline:1px solid var(--good); }}
-</style></head><body
- onclick="var c=event.target.closest('td code');if(!c)return;
- (navigator.clipboard?navigator.clipboard.writeText(c.textContent):Promise.reject())
- .catch(function(){{var r=document.createRange();r.selectNodeContents(c);
- var s=getSelection();s.removeAllRanges();s.addRange(r);document.execCommand('copy')}});
- c.classList.add('copied');setTimeout(function(){{c.classList.remove('copied')}},600)">
+.cmd-wrap {{ display:inline-flex; align-items:center; gap:6px;
+  vertical-align:baseline; max-width:100%; }}
+code.cmd {{ cursor:pointer; overflow-wrap:anywhere; }}
+code.cmd:hover, code.cmd:focus {{ outline:1px solid var(--blue);
+  background:var(--surface); }}
+.copy-btn {{ flex:0 0 auto; cursor:pointer; font:inherit; font-size:11px;
+  line-height:1.4; padding:2px 8px; border:1px solid var(--border);
+  border-radius:6px; background:var(--surface); color:var(--ink-2);
+  display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }}
+.copy-btn:hover, .copy-btn:focus {{ border-color:var(--blue);
+  color:var(--ink); }}
+.copy-btn.is-copied {{ border-color:var(--good); color:var(--good); }}
+.copy-btn.is-manual {{ border-color:var(--serious); color:var(--serious);
+  font-weight:600; }}
+.copy-glyph {{ font-size:12px; }}
+</style></head><body>
 <h1>Workboard</h1>
 <div class="sub">All open work across local repos, specs, and Claude Code
 sessions · snapshot {generated_at} · stale after {stale_days}d · re-run
@@ -1152,7 +1182,7 @@ sessions · snapshot {generated_at} · stale after {stale_days}d · re-run
 <section><h2>Needs attention</h2>
 <p class="legend">⚑ blocked = waiting on a human decision · ▲ needs-review =
 verify or close finished/dirty work · ⏸ stale = open work idle past {stale_days}d.
-Most severe first. Click any <code>command</code> to copy it.</p>
+Most severe first. Click any <code>command</code> or its copy button to copy it.</p>
 {inbox}</section>
 <section><h2>Repos</h2>{repos}</section>
 {antigravity}
@@ -1163,6 +1193,67 @@ checkboxes · HANDOFF.md + DRAIN-BATON.md files · ~/.claude/projects transcript
 ~/.gemini/antigravity*/brain artifacts · git status. Read-only snapshot
 (sole write: opt-in --abandon skip-markers); glyph + word carry state,
 never color alone.</footer>
+<script>
+(function(){{
+  // Restore a copy button to its "copy" state.
+  function reset(btn){{
+    btn.classList.remove("is-copied","is-manual");
+    btn.innerHTML = btn.dataset.orig;
+  }}
+  // Visible, non-color-only feedback on the command's copy button. Bare
+  // <code> without a button (e.g. the ready-list /build items) falls back to
+  // the outline pulse the dashboard has always used.
+  function feedback(code, glyph, word, cls, hold){{
+    var wrap = code.closest(".cmd-wrap");
+    var btn = wrap && wrap.querySelector(".copy-btn");
+    if(!btn){{
+      code.classList.add("copied");
+      setTimeout(function(){{code.classList.remove("copied");}}, 600);
+      return;
+    }}
+    if(btn.dataset.orig === undefined) btn.dataset.orig = btn.innerHTML;
+    clearTimeout(btn._t);
+    btn.classList.remove("is-copied","is-manual");
+    btn.classList.add(cls);
+    btn.innerHTML = '<span class="copy-glyph" aria-hidden="true">' + glyph +
+                    '</span> ' + word;
+    btn._t = setTimeout(function(){{reset(btn);}}, hold);
+  }}
+  function copied(code){{ feedback(code, "✓", "copied ✓", "is-copied", 600); }}
+  // Deepest fallback: select the command text in place so ⌘C works, and say so.
+  function manual(code){{
+    var r = document.createRange(); r.selectNodeContents(code);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    feedback(code, "⌘", "press ⌘C", "is-manual", 4000);
+  }}
+  // execCommand path: a hidden textarea, never silent — success or manual.
+  function viaExec(code, text){{
+    var ok = false;
+    try {{
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly","");
+      ta.style.position = "fixed"; ta.style.top = "-1000px"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+    }} catch(e) {{ ok = false; }}
+    if(ok) copied(code); else manual(code);
+  }}
+  function copy(code){{
+    var text = code.textContent;
+    var p = navigator.clipboard && navigator.clipboard.writeText(text);
+    if(p) p.then(function(){{copied(code);}}, function(){{viaExec(code, text);}});
+    else viaExec(code, text);
+  }}
+  document.addEventListener("click", function(e){{
+    var btn = e.target.closest(".copy-btn");
+    var code;
+    if(btn){{ var w = btn.closest(".cmd-wrap"); code = w && w.querySelector("code.cmd"); }}
+    else {{ code = e.target.closest("code.cmd") || e.target.closest("td code"); }}
+    if(code) copy(code);
+  }});
+}})();
+</script>
 </body></html>
 """
 
