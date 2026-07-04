@@ -77,6 +77,13 @@ Runnable commands only:
 6. Sanity-check with the `critic` agent if the decomposition has any
    nontrivial dependency structure.
 
+## Queue tuning
+
+A drained spec may carry a `Relaunch-every: N` header in its SPEC.md header
+block to tune how often /drain hands off via its baton (the self-relaunch
+generation budget); absence means the default of 4. The baton grammar itself
+lives in drain's reference — cite it, don't restate it here.
+
 ## Hand off
 
 Tell the user: run `/build specs/<slug>/tasks/01-*.md` in a fresh session per

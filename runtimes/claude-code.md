@@ -148,6 +148,12 @@ drain does:
 ```js
 // drain-dispatch.js — Schema-check date: 2026-07-03.
 export default async function ({ pipeline, parallel, agent, phase, budget, tasks }) {
+  // Baton boundary: the MAIN session treats this long workflow as its own
+  // baton boundary — the run's `scriptPath` + `resumeFromRunId` (see Resume)
+  // plus each task's committed `Status:` line make the main session
+  // disposable, so a heavy/compacted main hands off and resumes the run
+  // here instead of grinding. Points at drain's baton mechanism
+  // (.claude/skills/drain/SKILL.md §3a "Baton pass"); don't duplicate the grammar.
   const groups = topoGroups(tasks); // from `Depends on:` headers, not ## Parallelization prose
   await pipeline(groups.map((group) => async () => {
     await parallel(group.map((task) => async () => {
