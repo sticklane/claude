@@ -1,9 +1,9 @@
 # Task 01: Discovered-work capture in /drain (verdict contract, collect, draft status)
 
-Status: pending — SURVIVES the 2026-07-03 beads exit; decoupled from withdrawn task 02. Re-home as a standalone spec (see ../SPEC.md banner). Ignore any beads-backend references in this file's body.
+Status: pending
 Depends on: ../../chaining-antipatterns/tasks/01-authority-layer.md, ../../chaining-antipatterns/tasks/03-antipattern-guards.md
 Budget: 40 turns
-Spec: ../SPEC.md (requirements R1, R2, R3, R6 R1–R3 mirror, R7)
+Spec: ../SPEC.md (requirements R1, R2, R3, R4 antigravity mirror, R5 research record, R6 versioning)
 
 ## Goal
 
@@ -68,18 +68,19 @@ fully, and docs/external-playbooks.md gains the "Beads" research entry.
    never-dispatchable / excluded-from-interview-and-queue-empty rules
    and both terminal conditions ("drained, listing drafts" and "drained
    pending promotion"), plus the manual-promotion path.
-5. R6 (this task's share): mirror R1–R3 fully in
+5. R4 (antigravity mirror): mirror R1–R3 fully in
    `antigravity/.agents/workflows/drain.md` — Discovered verdict
-   contract, drain-records collect, draft status. (The beads paragraph
-   is task 02's.)
-6. R7: add the "Beads" entry to `docs/external-playbooks.md`: adopted
-   now (discovered-from as R1–R3), optional (queue backend — Dolt
-   rewrite churn, binary dependency, loss of diffable state), and the
-   literal heading-phrase "adoption triggers" (queues ≫ 10 tasks or
-   multi-repo; genuinely parallel claiming; recurring queue-state
-   defects), with source links.
-7. R8 note: do NOT bump plugin.json here — the global version-bump task
-   (task 99 in specs/review-fixes) owns the single combined minor bump.
+   contract, drain-records collect, draft status.
+6. R5 (research record): add the "Beads" entry to
+   `docs/external-playbooks.md`: what was adopted (discovered-from as
+   R1–R3) and that the optional beads queue backend was evaluated and
+   declined in the 2026-07-03 full exit (Dolt rewrite churn, binary
+   dependency, loss of diffable state), under the literal heading-phrase
+   "adoption triggers" (queues ≫ 10 tasks or multi-repo; genuinely
+   parallel claiming; recurring queue-state defects), with source links.
+7. R6 (versioning): bump `plugin.json`'s minor version by exactly one
+   (skill behavior changes); if another spec's mandated bump lands in the
+   same commit-set, one combined single-minor bump satisfies both.
 8. Regression duty after all edits:
    `test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2 && test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2`
    must still pass.
@@ -89,7 +90,7 @@ fully, and docs/external-playbooks.md gains the "Beads" research entry.
 - [ ] `test "$(grep -c 'Discovered:' .claude/skills/drain/reference.md)" -ge 2` — both worker prompts carry the verdict block (R1)
 - [ ] `grep -q "## Discovered" .claude/skills/drain/SKILL.md && grep -q "Discovered-from:" .claude/skills/drain/reference.md` — collect mechanics + stub header defined (R2)
 - [ ] ``grep -qF '| `draft` |' .claude/skills/drain/reference.md && grep -qi "promotion" .claude/skills/drain/reference.md`` (R3)
-- [ ] `grep -q "Discovered" antigravity/.agents/workflows/drain.md` (R6, this task's share)
-- [ ] `grep -qi "beads" docs/external-playbooks.md && grep -qi "adoption triggers" docs/external-playbooks.md` (R7)
+- [ ] `grep -q "Discovered" antigravity/.agents/workflows/drain.md` (R4 antigravity mirror)
+- [ ] `grep -qi "beads" docs/external-playbooks.md && grep -qi "adoption triggers" docs/external-playbooks.md` (R5 research record)
 - [ ] `test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2 && test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2` — regression duty
 - [ ] End to end (markdown mode, no bd install needed): a fresh session executing drain's collect against a mock DONE verdict containing one non-blocking Discovered entry produces the `## Discovered` append plus a `draft` stub with `Discovered-from:` and placeholder acceptance, and a subsequent inventory pass does NOT dispatch the draft (manual dry-read until the eval harness covers /drain)
