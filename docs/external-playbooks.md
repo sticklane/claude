@@ -329,3 +329,52 @@ Those artifacts apply the practices; the research stays here.
   `runtimes/` profiles' `## Orchestration` sections (per the
   model-agnostic spec, `specs/model-agnostic/SPEC.md`) — e.g.
   Antigravity degrades to human-dispatched launch-list workflows.
+
+## Work tracking
+
+How discovered work, acceptance immutability, and partial progress are
+recorded → drain's draft stubs, the workers' append-only task-file
+contract, and `## Progress` stopping-point entries (the work-tracking
+spec). Those artifacts apply the practices; the research stays here.
+
+- **Adopted: follow-up tasks plus dedupe.** Anthropic's task-tool
+  prompt — "after completing a task, add any new follow-up tasks;
+  check the list first to avoid duplicates" — is the one published
+  signal on agents filing new work. → workers' fixed `Discovered:`
+  report section and drain's dedupe-then-draft bookkeeping.
+  [Effective harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
+- **Adopted: append-only state discipline.** The same harness guidance
+  makes the agent's state file effectively append-only — agents flip
+  `passes` and nothing else; "it is unacceptable to remove or edit
+  tests". It also stores that state as JSON specifically because
+  models mangle it less than prose — validating this repo's rigid
+  single-line `Key: value` headers, which exist for the same reason.
+  → workers' passes-only task-file contract (flip own Status, tick
+  boxes, never edit criterion text), enforced by the verifier's
+  mechanical diff.
+  [Effective harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)
+- **Adopted: stopping-point done-vs-remaining.** OpenAI's ExecPlans
+  require every stopping point documented, splitting work into done
+  vs remaining so a fresh session can restart from the plan alone. →
+  drain's `## Progress` entries at every non-done event, cited by the
+  relaunch prompt.
+  [Codex exec plans](https://developers.openai.com/cookbook/articles/codex_exec_plans)
+- **The gap: no vendor covers the queue side.** No published guidance
+  exists on agents filing follow-up work into a persistent tracker,
+  on recording partial progress within a task, or on done-item
+  staleness. Kiro's experimental TODO lists
+  ([Kiro specs](https://kiro.dev/docs/specs/best-practices)) and the
+  community [Backlog.md](https://github.com/MrLesk/Backlog.md)
+  project are the nearest neighbors, so the draft-stub capture design
+  is ahead of published guidance and stays conservative: humans gate
+  what enters the queue (docs/human-gates.md reason 1).
+- **Declined: done-item archiving.** Kiro's clear-finished and
+  Backlog.md's archiving solve a scale problem this queue doesn't
+  have; evidence dirs and git history already preserve the record.
+  Revisit when the queue's scale demands it.
+- **Declined: Kiro Sync Files.** A spec-regeneration model — specs
+  re-derived from the changed code — not this pipeline's spec-first
+  model ([Kiro specs](https://kiro.dev/docs/specs/best-practices)).
+- **Declined: harness task tools as the tracker.** TaskCreate/TaskList
+  state is session-scoped; this repo's tracker is committed markdown
+  that survives the session and travels with the repo.

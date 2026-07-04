@@ -1,6 +1,6 @@
 # Task 02: Work-tracking research record
 
-Status: in-progress
+Status: done
 Depends on: 01, ../../workflow-author/tasks/02-record-and-port-row.md
 Priority: P3
 Budget: 10 turns
@@ -20,4 +20,4 @@ with reasons. Spec R6 carries the exact content and URLs.
 
 ## Acceptance
 
-- [ ] `grep -qi "work tracking" docs/external-playbooks.md && sed -n '/[Ww]ork tracking/,/^## /p' docs/external-playbooks.md | grep -qi "append-only\|passes-only"` -> exit 0 (R6)
+- [x] `grep -qi "work tracking" docs/external-playbooks.md && sed -n '/[Ww]ork tracking/,/^## /p' docs/external-playbooks.md | grep -qi "append-only\|passes-only"` -> exit 0 (R6) — verifier: exit 0, entry scoped as last section; full report in ../evidence/02-research-record.md
