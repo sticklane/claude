@@ -1,6 +1,6 @@
 # Task 03: Grouped, ranked inbox + clickable filter tiles
 
-Status: pending
+Status: in-progress
 Depends on: 02
 Priority: P1
 Budget: 12 turns
