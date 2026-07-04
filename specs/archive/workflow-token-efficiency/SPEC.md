@@ -167,9 +167,11 @@ only for the hardest verify/judge stages.
 
 ## Acceptance criteria
 
-- [ ] `bash tests/test_sync_skills.sh && bash
+- [ ] `bash tests/test_sync_workflows.sh && bash
       tests/test_check_token_discipline.sh` both pass (R5 sync extension,
       R6; tests use the env-override src/dest so they never touch `~`)
+      <!-- test_sync_skills.sh retired by R5's 2026-07-03 amendment;
+           successor is test_sync_workflows.sh -->
 - [ ] `bin/check-token-discipline` exits 0 on the retrofitted tree, and
       `git worktree add /tmp/pre-retrofit <pre-retrofit-sha> &&
       bin/check-token-discipline /tmp/pre-retrofit` exits 1 (R3, R4, R6)
