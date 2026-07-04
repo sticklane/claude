@@ -6,12 +6,12 @@ ships today — a repo with no `.claude/runtime.md` (see
 
 ## Tiers
 
-| Tier | Model | Notes |
-|---|---|---|
-| scout-tier | Haiku (`haiku`) at `effort: low` | Cheap, fast, read-only reconnaissance — the `scout` agent's default. |
-| session-tier | inherit | The conversation's own model; whatever the session runs. |
-| deep-tier | Opus 4.8 (`claude-opus-4-8`; Agent-tool short name `opus`) | Recommended pin value — opt-in, not an active default. |
-| frontier-tier | Fable (`claude-fable-5`; Agent-tool short name `fable`) | Recommended pin value — opt-in, not an active default. |
+| Tier          | Model                                                      | Notes                                                                |
+| ------------- | ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| scout-tier    | Haiku (`haiku`) at `effort: low`                           | Cheap, fast, read-only reconnaissance — the `scout` agent's default. |
+| session-tier  | inherit                                                    | The conversation's own model; whatever the session runs.             |
+| deep-tier     | Opus 4.8 (`claude-opus-4-8`; Agent-tool short name `opus`) | Recommended pin value — opt-in, not an active default.               |
+| frontier-tier | Fable (`claude-fable-5`; Agent-tool short name `fable`)    | Recommended pin value — opt-in, not an active default.               |
 
 The two deep-tier rows are recommended pin values, not active defaults:
 dispatchers route deep-tier/frontier-tier work to these models only when
@@ -19,6 +19,24 @@ a repo's `.claude/runtime.md` pins the tier explicitly (the selection
 and override convention lives in [README.md](README.md)). With no pin,
 deep and frontier work inherits the session model — today's behavior,
 zero new cost.
+
+## Role pins
+
+Adopted routing defaults (spec: model-routing-native-config, C1–C3).
+Routing lives only in `.claude/settings.json` and agent/skill
+frontmatter — never in prompt prose; `bin/check-agent-model-pins`
+enforces the agent pins. Aliases only, never dated model ids, so pins
+survive model releases. The other profiles carry the same table in
+their runtime's vocabulary.
+
+| Role                                                       | Claude default                                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| session default                                            | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution |
+| implementation workers (drain/parallel dispatch)           | `sonnet`                                                                             |
+| explore / codebase-search (`scout`)                        | `haiku`                                                                              |
+| LLM reviewer, advisory lane (`critic`, `verifier`)         | `sonnet`                                                                             |
+| `/distill` (skill frontmatter)                             | `opus`                                                                               |
+| retry escalation (attempt 2+, verifier evidence in prompt) | one tier up: `sonnet` → `opus`                                                       |
 
 ## Headless
 
@@ -37,7 +55,7 @@ claude -p "<prompt>" \
   references, no subagent fan-out; the allowlist has no Task tool, so
   scout/verifier calls would abort under `dontAsk`).
 - `<allowlist>` — e.g. `"Read,Edit,Write,Glob,Grep,Bash(<verified
-  test/lint/build cmds>),Bash(git add *),Bash(git commit *)"`.
+test/lint/build cmds>),Bash(git add *),Bash(git commit *)"`.
 - `<turn cap>` — the task's `Budget:` turn count when present, else 80;
   the hard cap behind the prompt's soft stop.
 
@@ -62,7 +80,7 @@ baseline from the playbook's mechanism ladder.
 > **Model-agnostic cross-reference (sanctioned fourth section).**
 > `specs/model-agnostic/SPEC.md` R1 fixes the runtime-profile minimum at
 > three sections — `## Tiers` / `## Headless` / `## Notes`. This
-> `## Orchestration (ultra)` block is a deliberate *superset*, not drift: a
+> `## Orchestration (ultra)` block is a deliberate _superset_, not drift: a
 > later model-agnostic edit must NOT "normalize" it away. (The preceding
 > `## Orchestration` block states the deterministic Workflow-tool facts;
 > this one carries the opt-in gate, effort tiers, resume rules, and the
@@ -125,16 +143,32 @@ majority refute):
 
 ```js
 // critique-panel.js — Schema-check date: 2026-07-03.
-const LENSES = ["correctness", "security", "verification-gaps", "scope", "cost-if-missed"];
+const LENSES = [
+  "correctness",
+  "security",
+  "verification-gaps",
+  "scope",
+  "cost-if-missed",
+];
 export default async function ({ agent, parallel, log, artifact }) {
   const raised = await parallel(
     LENSES.map((lens) =>
-      agent({ role: `critic:${lens}`,
-              prompt: `Review ${artifact} through the ${lens} lens. 3–10 tool calls.` })));
+      agent({
+        role: `critic:${lens}`,
+        prompt: `Review ${artifact} through the ${lens} lens. 3–10 tool calls.`,
+      }),
+    ),
+  );
   const deduped = dedupe(raised.flat());
-  const votes = await parallel(deduped.map((f) => agent({ role: "verify-vote", prompt: refutePrompt(f) })));
+  const votes = await parallel(
+    deduped.map((f) => agent({ role: "verify-vote", prompt: refutePrompt(f) })),
+  );
   const relayed = deduped.filter((_, i) => votes[i].majority !== "refute");
-  log({ phase: "critique-panel", raised: deduped.length, relayed: relayed.length });
+  log({
+    phase: "critique-panel",
+    raised: deduped.length,
+    relayed: relayed.length,
+  });
   return relayed;
 }
 ```
@@ -147,7 +181,14 @@ drain does:
 
 ```js
 // drain-dispatch.js — Schema-check date: 2026-07-03.
-export default async function ({ pipeline, parallel, agent, phase, budget, tasks }) {
+export default async function ({
+  pipeline,
+  parallel,
+  agent,
+  phase,
+  budget,
+  tasks,
+}) {
   // Baton boundary: the MAIN session treats this long workflow as its own
   // baton boundary — the run's `scriptPath` + `resumeFromRunId` (see Resume)
   // plus each task's committed `Status:` line make the main session
@@ -155,14 +196,19 @@ export default async function ({ pipeline, parallel, agent, phase, budget, tasks
   // here instead of grinding. Points at drain's baton mechanism
   // (.claude/skills/drain/SKILL.md §3a "Baton pass"); don't duplicate the grammar.
   const groups = topoGroups(tasks); // from `Depends on:` headers, not ## Parallelization prose
-  await pipeline(groups.map((group) => async () => {
-    await parallel(group.map((task) => async () => {
-      if (budget.target && budget.remaining() <= 0) return phase("budget-stop", task);
-      const result = await agent({ role: "worker", worktree: true, task }); // today's prompt + effort tiers
-      const verdict = await agent({ role: "verifier", task, result });
-      await commitStatusFlip(task, verdict); // writes `Status: done|blocked`, then commits
-    }));
-  }));
+  await pipeline(
+    groups.map((group) => async () => {
+      await parallel(
+        group.map((task) => async () => {
+          if (budget.target && budget.remaining() <= 0)
+            return phase("budget-stop", task);
+          const result = await agent({ role: "worker", worktree: true, task }); // today's prompt + effort tiers
+          const verdict = await agent({ role: "verifier", task, result });
+          await commitStatusFlip(task, verdict); // writes `Status: done|blocked`, then commits
+        }),
+      );
+    }),
+  );
 }
 ```
 
@@ -175,9 +221,12 @@ flips to blocked with the failure evidence:
 // build-verify.js — Schema-check date: 2026-07-03.
 export default async function ({ agent, parallel, run, task }) {
   for (let cycle = 1; cycle <= 4; cycle++) {
-    const cmd = await Promise.all(task.acceptanceCommands.map(run));       // deterministic gate first
-    const votes = await parallel(task.judgedCriteria.map(
-      (c) => agent({ role: "verify-vote", lens: c.lens, prompt: refutePrompt(c) })));
+    const cmd = await Promise.all(task.acceptanceCommands.map(run)); // deterministic gate first
+    const votes = await parallel(
+      task.judgedCriteria.map((c) =>
+        agent({ role: "verify-vote", lens: c.lens, prompt: refutePrompt(c) }),
+      ),
+    );
     if (cmd.every(ok) && majorityPass(votes)) return "done";
     await agent({ role: "worker", task, prompt: "fix the failing criteria" });
   }
@@ -193,9 +242,18 @@ spans multiple repos or subsystems:
 // idea-scout.js — Schema-check date: 2026-07-03.
 const MODES = ["by-structure", "by-convention", "by-history", "by-dependency"];
 export default async function ({ parallel, agent, idea }) {
-  const surveys = await parallel(MODES.map(
-    (mode) => agent({ role: `scout:${mode}`, prompt: `${mode} sweep for ${idea}. 3–10 tool calls.` })));
-  const gaps = await agent({ role: "completeness-critic", prompt: gapPrompt(surveys) });
+  const surveys = await parallel(
+    MODES.map((mode) =>
+      agent({
+        role: `scout:${mode}`,
+        prompt: `${mode} sweep for ${idea}. 3–10 tool calls.`,
+      }),
+    ),
+  );
+  const gaps = await agent({
+    role: "completeness-critic",
+    prompt: gapPrompt(surveys),
+  });
   return { surveys, gaps }; // replaces the 2–4 ad-hoc scouts of the non-ultra path
 }
 ```

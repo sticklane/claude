@@ -1,6 +1,7 @@
 ---
 name: distill
 description: Captures this session's corrections, surprises, and repeated procedures into CLAUDE.md, rules, or new skills so the next session doesn't repay for them. Use proactively at the end of a task, after the user corrects a mistake, or whenever the same instructions have been given twice.
+model: opus
 ---
 
 Compounding engineering: every mistake becomes a rule, every repeated
@@ -10,6 +11,7 @@ partially wasted.
 ## 1. Harvest
 
 Scan THIS session for:
+
 - Corrections: places the user redirected you, or a verifier/critic caught
   something you'd have shipped.
 - Surprises: commands, conventions, or gotchas you discovered the hard way
@@ -18,13 +20,13 @@ Scan THIS session for:
 
 ## 2. Route each finding
 
-| Finding | Destination |
-|---|---|
-| Broadly applicable fact/command an agent can't infer from code | `CLAUDE.md` (one terse line) |
-| Too narrow or too long for CLAUDE.md, but worth keeping | Topic file under `docs/memory/`, indexed in `docs/memory.md` |
-| Convention scoped to part of the tree | `.claude/rules/<name>.md` with `paths:` frontmatter |
-| Multi-step procedure likely to recur | New skill in `.claude/skills/<name>/SKILL.md` |
-| One-off, or inferable from the code itself | Nowhere — write nothing |
+| Finding                                                        | Destination                                                  |
+| -------------------------------------------------------------- | ------------------------------------------------------------ |
+| Broadly applicable fact/command an agent can't infer from code | `CLAUDE.md` (one terse line)                                 |
+| Too narrow or too long for CLAUDE.md, but worth keeping        | Topic file under `docs/memory/`, indexed in `docs/memory.md` |
+| Convention scoped to part of the tree                          | `.claude/rules/<name>.md` with `paths:` frontmatter          |
+| Multi-step procedure likely to recur                           | New skill in `.claude/skills/<name>/SKILL.md`                |
+| One-off, or inferable from the code itself                     | Nowhere — write nothing                                      |
 
 Gate every CLAUDE.md addition with: "would removing this line cause a future
 agent to make a mistake?" If no, it's bloat — bloated CLAUDE.md files get

@@ -33,8 +33,9 @@ At dispatch time, resolve build's SKILL.md to a concrete path —
 plugin cache path found at dispatch — and substitute it for
 `<build-skill-path>` (workers cannot invoke `disable-model-invocation`
 skills, so the prompt must carry a readable path). For each task in the
-group, launch a background `general-purpose` agent on the session model with
-`isolation: worktree`, prompted with:
+group, launch a background `general-purpose` agent at the
+implementation-worker tier pin (Claude default: `sonnet`; a single retry
+escalates one tier up — step 3) with `isolation: worktree`, prompted with:
 
 > Execute the task in <task-file> following the build skill's procedure
 > exactly, as written in <build-skill-path> (resolved at dispatch):
@@ -45,8 +46,9 @@ group, launch a background `general-purpose` agent on the session model with
 > exceeds the remaining budget, stop with verdict BLOCKED "over budget"
 > rather than grind on. Your final message
 > must be: verdict (DONE/BLOCKED), acceptance evidence per criterion (command
-> + result), branch name, and files changed. If blocked, say why and stop —
-> do not improvise around the task's scope.
+>
+> - result), branch name, and files changed. If blocked, say why and stop —
+>   do not improvise around the task's scope.
 
 Launch all agents of the group in one message so they actually run
 concurrently. Then stop and wait for completion notifications — do not poll.
@@ -68,7 +70,10 @@ merges (lockfiles, barrel files, snapshots): on a merge conflict or a
 post-merge gate failure, STOP — leave the remaining branches unmerged, report
 which branches merged cleanly and which are pending, and let the user decide.
 For BLOCKED tasks, report the blocker and
-whether the task file needs amending (back to /breakdown) or just a retry.
+whether the task file needs amending (back to /breakdown) or just a single
+retry — a retry re-dispatches one tier up from the pin (Claude default:
+`sonnet` → `opus`), carrying the verifier's failure evidence, never the
+failed transcript.
 Dependent tasks unlocked by this group run next — sequentially via /build, or
 another /parallel group if independent. If any worker's verdict exposed a
 task-file or decomposition problem, run /distill before dispatching more.
