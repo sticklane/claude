@@ -1,7 +1,7 @@
 # Task 08: residual loop-bound false-neg/false-pos classes in check-token-discipline
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P3
 Spec: ../SPEC.md
