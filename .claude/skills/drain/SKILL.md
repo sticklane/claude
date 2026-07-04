@@ -1,6 +1,6 @@
 ---
 name: drain
-description: Works the remaining task queue unattended - dispatches one fresh worker per unblocked task in dependency order, verifies and merges each, defers clarification questions instead of stopping, and batches them for the human when the queue runs dry. Runs until the queue is empty or only blocked work remains.
+description: Works the remaining task queue unattended - dispatches one fresh worker per unblocked task in dependency order (or an independent group concurrently when the user asks for throughput), verifies and merges each, defers clarification questions instead of stopping, and batches them for the human when the queue runs dry. Runs until the queue is empty or only blocked work remains.
 argument-hint: "[specs/<slug> or tasks directory]"
 disable-model-invocation: true
 ---
@@ -44,12 +44,16 @@ task to `pending` and commit the flip (slot machine — never resume a dead
 run; rescue branches are forensic only). Full procedure in reference.md's
 Status field semantics.
 
-## 2. Dispatch one worker
+## 2. Dispatch (one worker, or one independent group)
 
-Every worker drain dispatches runs on the **session model** — workers
-implement code, so they stay session-tier — and each is told to delegate its
-own mechanical scouting to Haiku (`effort: low`) scouts and to return only a
-structured **verdict + evidence**, never its transcript
+Every worker drain dispatches runs at the **implementation-worker tier pin**
+on attempt 1 (Claude default: `sonnet`; other runtimes map the pin in their
+`runtimes/` profile's Role pins table) — step 3 walks failures up the
+ladder: a single relaunch one tier up, then one tournament at the frontier
+tier — and each is told to delegate its own
+mechanical scouting to Haiku
+(`effort: low`) scouts and to return only a structured **verdict +
+evidence**, never its transcript
 (`.claude/rules/token-discipline.md`, Dispatch authoring).
 
 Before the first dispatch, ensure `.claude/worktrees/` is gitignored —
@@ -70,16 +74,38 @@ does (numbers within a spec, task-file-relative paths across specs) —
 then lexicographic task-file path. Drain computes the order; the model
 never reorders the queue mid-run.
 
-Sequential by default — merges stay trivial and spend stays bounded. (If
-the user asked for throughput and a group passes /parallel's independence
-test, you may dispatch the group concurrently — but using drain's worker
-prompt and drain's step-3 collection per verdict, not /parallel's; only
-the independence test and worktree mechanics carry over.)
+Sequential by default — merges stay trivial and spend stays bounded.
+**Group throughput mode** (formerly the separate /parallel skill, folded in
+here): when the user asked for throughput, dispatch an independent group of
+tasks concurrently — every group worker launched in one message, each at
+the worker tier pin, using drain's worker prompt and drain's step-3
+collection per verdict. A group is independent only when: no `Depends on`
+edges between members, disjoint `Touch` lists, every member has runnable
+acceptance criteria, and the group passes /breakdown's decision-coupling
+test (members sharing an undecided design choice serialize even with
+disjoint `Touch` lists) — read the spec's Parallelization section, or
+derive independence from the headers. Size the group by the task map,
+never a default maximum; parallelism multiplies token spend, so it buys
+wall-clock time, not efficiency. Group sequencing overrides the
+one-task-at-a-time flow below: flip every member's `Status: in-progress`
+and commit them in one commit (drain stays the single writer); cut all
+member worktrees from that commit; launch all group workers in one
+message; then wait for all completion notifications — collecting each
+verdict via step 3 as it arrives — before dispatching anything else.
+Merge the group's DONE branches in task
+order. Disjoint `Touch` lists don't guarantee clean merges (lockfiles,
+barrel files, snapshots): when a member's merge conflicts with another
+member's already-merged work, or a post-merge gate failure appears during
+group integration — cross-task interference is indistinguishable from the
+task's own failure at that point — stop the group's remaining merges and
+report which merged cleanly, instead of routing the failure into the slot
+machine (a fresh attempt cannot fix an interaction between members).
 
 Set the task's `Status: in-progress` and **commit that edit** (e.g.
 `drain: task 03 in-progress`) — the worker's worktree is cut from this
 commit, so it must contain current statuses and any `## Answers`. Then
-launch ONE background `general-purpose` agent on the session model with
+launch ONE background `general-purpose` agent at the worker tier pin
+(Claude default: `sonnet`) with
 `isolation: worktree` using the worker prompt in [reference.md](reference.md) — the /build
 procedure plus the defer contract: **the worker never asks the human and
 never edits queue state; on ambiguity it stops with verdict DEFERRED and
@@ -95,7 +121,7 @@ itself flips the status to `done` and commits the flip.)
 - **DONE** — before merging, re-run the verifier's append-only
   whitelist diff over `merge-base..branch`, path-scoped to every spec's
   tasks/ dir (`git diff $(git merge-base <default-branch> <branch>)..<branch>
-  -- '*/tasks/*.md'`): changes only in the worker's own task file and
+-- '*/tasks/*.md'`): changes only in the worker's own task file and
   only in the allowed set — Status line, checkbox ticks, evidence
   lines, the plan block. Anything else is a post-verification edit
   riding in: treat it as a merge failure (the slot-machine path below).
@@ -110,7 +136,8 @@ itself flips the status to `done` and commits the flip.)
   (`git push`) so the
   merged, verifier-PASSED work is backed up the moment it lands rather
   than sitting on local `main` for a human to push by hand. **Push guard
-  (canonical; build and parallel cite this):** push only if `main` has a
+  (canonical; build cites this, and drain's own group mode follows
+  it):** push only if `main` has a
   configured upstream — if none, skip silently; never `--force`; a
   rejected, non-fast-forward, or offline push warns and continues. The
   merge already landed locally, so a failed push never fails the task or
@@ -119,12 +146,16 @@ itself flips the status to `done` and commits the flip.)
   merge to `main`.
   If the merge or gates fail: run `git merge --abort` first (a failed
   merge leaves the checkout wedged in a conflicted state), then slot
-  machine — discard the branch, relaunch once with the failure evidence
-  in the prompt. A second failure routes
+  machine — discard the branch, relaunch once, one tier up from the pin
+  (Claude default: `sonnet` → `opus`), with the verifier's failure
+  evidence — never the failed transcript — in the prompt. A second failure routes
   into one tournament (at most one per task per drain run; procedure in
   reference.md "Tournament") instead of straight to `Status: failed`:
   sweep any leftover `task/NN-<slug>-t*` branches/worktrees, then dispatch
-  three concurrent background workers on the session model, `isolation: worktree`, each on its
+  three concurrent background workers a further tier up, at the frontier
+  pin (Claude default: `fable` — tournament entrants are attempts 3+,
+  retries after a deep-tier attempt failed, the one dispatch point
+  token-discipline sanctions frontier for), `isolation: worktree`, each on its
   own `task/NN-<slug>-tN` branch with an angle-variant prompt carrying the
   failure evidence from both prior attempts. If the tournament winner's
   merge fails, likewise run `git merge --abort` before moving to the
@@ -225,7 +256,7 @@ bounded zombie escalation is reported to the user and thereafter treated
 like `blocked` here. Once no parked tasks remain:
 
 - **Tasks with `Status: deferred` exist**: collect the `## Deferred
-  questions` blocks from those files only, and ask them all in one round
+questions` blocks from those files only, and ask them all in one round
   (AskUserQuestion where available, else a numbered list). Write each
   answer into the task file under `## Answers`, flip its status to
   `pending`, commit, and return to step 1. (Gating on the status — not on

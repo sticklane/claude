@@ -32,4 +32,5 @@ All re-verified at the time of writing; run from the repo root.
 - `./specs/status.sh` — proves the queue parses; prints per-task status rows and totals.
 - `claude plugin validate .` — proves the plugin + marketplace manifests are valid.
 - `for t in tests/test_*.sh; do bash "$t"; done` — proves installers and hook templates work.
+- `./bin/check-agent-model-pins` — proves every `.claude/agents/*.md` pins a model alias in {haiku, sonnet, opus}.
 - `./evals/runner-selftest.sh` — proves the eval runner's plumbing (stub CLI, no model calls); full skill evals run via `./evals/run.sh <skill>` (headless model sessions — spend).

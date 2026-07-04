@@ -34,7 +34,7 @@ building-effective-agents; OpenAI "orchestrating via code makes tasks more
 deterministic and predictable").
 
 - **Adopt as scripted control flow** — pipeline chaining across dependency
-  groups, capped parallel fan-out in drain/parallel, a bounded evaluator loop
+  groups, capped parallel fan-out in drain (group throughput mode), a bounded evaluator loop
   that prefers runnable acceptance commands over judges, and file-based
   resume-from-checkpoint state.
 - **Leave model-driven** — decomposition judgment inside breakdown, routing /
@@ -56,8 +56,8 @@ query" failure mode in Anthropic's production Research system.
 Multi-agent orchestration is the expensive path, so it is opt-in only. The
 reported multiple is **~10–15×** a single agent — but the baseline is
 genuinely ambiguous: Anthropic's June-2025 engineering blog says multi-agent
-uses ~15× the tokens of *chat* (single agents ~4×), while the Dec-2025
-whitepaper says ~10–15× the tokens of *a single agent*. The two figures use
+uses ~15× the tokens of _chat_ (single agents ~4×), while the Dec-2025
+whitepaper says ~10–15× the tokens of _a single agent_. The two figures use
 different baselines and are self-reported internal numbers; the 90.2%
 single-vs-multi eval gain is likewise self-reported. We record the range, not a
 point estimate, and treat "is it 4× or 10–15×?" as an open budgeting question
@@ -95,10 +95,23 @@ Two patterns were considered and deliberately NOT adopted:
    best judge configuration for build tasks specifically remains an open
    question (research doc, Open questions).
 
+## 2026-07-04 — /parallel folded into /drain (group throughput mode)
+
+The parallelization and orchestrator-workers building blocks are two
+patterns, not two commands. Drain's step 2 already dispatched independent
+groups concurrently using its own worker prompt and its own collection —
+explicitly not /parallel's — so /parallel had decayed into a citation
+shell: its push guard, baton, and worker discipline all pointed back at
+drain. Merged as drain's **group throughput mode**; the one behavior
+/parallel had that drain lacked — stop on a cross-task merge conflict and
+report, instead of slot-machining a conflict a fresh attempt cannot fix —
+moved into drain's group-mode merge rules. The human gate is unchanged:
+drain stays `disable-model-invocation`, so fan-out spend still requires a
+human launch (docs/human-gates.md), and ultra remains drain's doubly
+opt-in engine rather than a peer concept.
+
 ## Links
 
 - Spec: [`specs/ultra-mode/SPEC.md`](../../specs/ultra-mode/SPEC.md)
 - Research: [`docs/orchestration-research-2026-07.md`](../orchestration-research-2026-07.md)
 - Closed-gate e2e evidence: [`specs/ultra-mode/evidence/03-closed-gate-e2e.md`](../../specs/ultra-mode/evidence/03-closed-gate-e2e.md)
-</content>
-</invoke>

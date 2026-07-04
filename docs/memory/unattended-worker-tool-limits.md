@@ -6,12 +6,12 @@ run."
 
 ## The gotcha
 
-A `general-purpose` background worker (what drain/parallel/autopilot dispatch)
+A `general-purpose` background worker (what drain/autopilot dispatch)
 does **not** have the `Workflow` tool, and cannot invoke any
-`disable-model-invocation` skill (`/build`, `/drain`, `/parallel`, `/evals`,
+`disable-model-invocation` skill (`/build`, `/drain`, `/evals`,
 `/deep-research`, …) — those are removed from the model's reach by design. So
-any acceptance criterion that requires *observing a live Workflow run* or
-*launching a gated skill* is unsatisfiable inside the worker.
+any acceptance criterion that requires _observing a live Workflow run_ or
+_launching a gated skill_ is unsatisfiable inside the worker.
 
 Seen 3× in the 2026-07-04 drain: ultra-mode's "a Workflow run is observable"
 e2e, wte-04's `[repo-deep-research]` resolution probe, and um-03's open-gate

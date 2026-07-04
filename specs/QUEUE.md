@@ -1,5 +1,12 @@
 # Combined queue — wave plan (canonical, single copy)
 
+**Queue 4 (built + archived 2026-07-04)** — routing-merge-hardening: three
+tasks (headless routing ladder, drain group-mode semantics, antigravity
+autopilot ref) from the opus critic's NOT READY review of the
+model-routing + /parallel-merge branch. All `Status: done`, spec verify
+block green, critic re-run READY, moved to `specs/archive/`. **No active
+specs remain under `specs/`.**
+
 **Queue 3 (drained + archived 2026-07-04)** — the final three tasks:
 completed-task-push 01 (push-on-completion, bump 0.7.12),
 workboard-actionability 04 (Active-group reclassification, R10, bump 0.7.13),

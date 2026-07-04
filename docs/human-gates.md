@@ -1,6 +1,6 @@
 # Why humans launch the gated stages
 
-Five skills carry `disable-model-invocation: true` — /build, /parallel,
+Four skills carry `disable-model-invocation: true` — /build,
 /autopilot, /drain, /evals — so only a human can start them. Everything
 else in the pipeline is model-invocable, and light artifact stages may
 self-chain (CLAUDE.md conventions). This file is the canonical rationale
@@ -11,7 +11,8 @@ restating it.
 
 1. **Spend discontinuities are the user's to authorize.** Ungated stages
    produce text; gated stages multiply agents: one /build is a worker +
-   scouts + verifier, /parallel is N of those, /drain is a whole queue,
+   scouts + verifier, /drain is a whole queue (its group throughput mode
+   is N of those at once),
    a tournament triples a task, /evals launches paid headless sessions.
    Vendor cost anchors: agents ≈4× chat tokens, multi-agent ≈15×
    (external-playbooks.md). A model that can self-trigger the 15× step
