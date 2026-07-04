@@ -178,5 +178,106 @@ class TestSimpleCommandsInInbox(unittest.TestCase):
         self.assertIn("demo", inbox[0]["cmd"])
 
 
+BATON_FIXTURE = """# Drain baton: demo
+
+Generation: 3
+
+## Done this generation
+- 01-a: merged (verifier PASS)
+- 02-b: merged (verifier PASS)
+
+## Next
+- 03-c: ready to dispatch
+
+## Relaunch
+```bash
+nohup claude -p "/drain specs/demo (generation 4, baton: specs/demo/DRAIN-BATON.md)" \\
+  --allowedTools "Task,Read,Edit,Write,Glob,Grep,Bash(git *)" \\
+  --permission-mode dontAsk --max-turns 80 \\
+  >> specs/demo/.drain-gen.log 2>&1 &
+```
+
+## Needs attention
+- 05-e deferred: which auth provider should the login flow use?
+"""
+
+
+def write_baton(root, slug="demo", body=BATON_FIXTURE):
+    spec = Path(root) / "specs" / slug
+    spec.mkdir(parents=True)
+    (spec / "DRAIN-BATON.md").write_text(body, encoding="utf-8")
+    return spec / "DRAIN-BATON.md"
+
+
+class TestScanBatons(unittest.TestCase):
+    def test_scan_batons_extracts_generation_command_and_needs_attention(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_baton(tmp)
+
+            batons = workboard.scan_batons(Path(tmp))
+
+            self.assertEqual(len(batons), 1)
+            b = batons[0]
+            self.assertEqual(b["path"], "specs/demo/DRAIN-BATON.md")
+            self.assertEqual(b["generation"], 3)
+            self.assertIn("claude -p", b["command"])
+            self.assertIn("/drain specs/demo", b["command"])
+            self.assertIn("auth provider", b["needs_attention"])
+
+    def test_scan_batons_returns_empty_when_no_baton_present(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "specs" / "demo").mkdir(parents=True)
+
+            self.assertEqual(workboard.scan_batons(Path(tmp)), [])
+
+
+class TestRenderBatons(unittest.TestCase):
+    def test_baton_card_shows_generation_command_and_needs_attention(self):
+        html = workboard.render_batons([{
+            "path": "specs/demo/DRAIN-BATON.md", "generation": 3,
+            "command": 'claude -p "/drain specs/demo (generation 4, baton: x)"',
+            "needs_attention": "05-e deferred: which auth provider?",
+            "mtime": 1.0,
+        }])
+
+        self.assertIn("3", html)
+        self.assertIn("claude -p", html)
+        self.assertIn("auth provider", html)
+
+    def test_baton_card_text_differs_from_handoff_resume_then_delete(self):
+        html = workboard.render_batons([{
+            "path": "specs/demo/DRAIN-BATON.md", "generation": 2,
+            "command": 'claude -p "/drain x"', "needs_attention": "",
+            "mtime": 1.0,
+        }])
+
+        self.assertNotIn("resume it in a fresh session, then delete", html)
+        self.assertIn("relaunch", html.lower())
+
+
+class TestBatonInFullRender(unittest.TestCase):
+    def test_baton_and_handoff_both_render_on_the_board(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_baton(tmp)
+            (Path(tmp) / "HANDOFF.md").write_text(
+                "# Parked work\nsome context\n", encoding="utf-8")
+            repo = make_repo_record(path=tmp)
+            repo["batons"] = workboard.scan_batons(Path(tmp))
+            repo["handoffs"] = workboard.scan_handoffs(Path(tmp))
+            data = {
+                "totals": {"repos": 1, "specs_open": 0, "tasks_open": 0,
+                           "sessions_active": 0, "attention": 0},
+                "generated_at": "now", "stale_days": 7,
+                "inbox": [], "ready": [], "repos": [repo],
+                "antigravity": [], "todos": [], "orphan_sessions": [],
+            }
+
+            html = workboard.render_html(data)
+
+            self.assertIn("DRAIN-BATON.md", html)      # baton card present
+            self.assertIn("generation", html.lower())
+            self.assertIn("HANDOFF.md", html)          # handoff still renders
+
+
 if __name__ == "__main__":
     unittest.main()
