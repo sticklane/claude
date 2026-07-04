@@ -80,6 +80,12 @@ Reason: dead-list membership (activity rule); excluded by rule.
   hooks live in the parent `hub` checkout).
 - `vaults/life` — Obsidian vault, not a codebase.
 
+## CLAUDE.md alignment (task 07)
+
+Instruction files aligned with installed reality 2026-07-03 (R18-R21; approved
+at the R21 checkpoint). Diff summary:
+`~/specs/quality-gates-rollout/claudemd-diff-summary.md`.
+
 ## Behavioral probes — all PASS (2026-07-03)
 
 - **1 fooszone settings/archival:** Stop hook wired; keys preserved
