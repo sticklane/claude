@@ -301,16 +301,16 @@ def ready_items(repos):
                 if t["status"] != "pending":
                     continue
                 task_dir = Path(t["abs"]).parent
+                # Scan every dep so an unresolvable id is always surfaced (R1),
+                # even when a resolvable-but-unfinished dep precedes it.
                 satisfied, unresolved = True, None
                 for dep in t.get("deps", []):
                     resolved = resolve_dep(dep, task_dir, repo_root)
                     if resolved is None:
                         unresolved = dep
-                        satisfied = False
                         break
                     if not _dep_is_done(resolved):
                         satisfied = False
-                        break
                 if unresolved is not None:
                     blocked.append({
                         "repo": r["name"], "slug": s["slug"],

@@ -62,6 +62,16 @@ absent '/drain specs/unresolvable'
 has 'unresolved dependency'
 has '>99</code>'
 
+# R1 — an unresolvable dep id is surfaced even when a resolvable-but-still-pending
+# dep precedes it in the header (must not be swallowed by header ordering).
+absent '/build specs/order-blocked'
+has '>88</code>'
+
+# R1 — the <slug>/NN shorthand and specs/-rooted dep forms resolve to done tasks
+# and yield ready /build items (both resolution modes exercised end-to-end).
+has '/build specs/shorthand-ready/tasks/01-uses-shorthand.md'
+has '/build specs/rooted-ready/tasks/01-uses-rooted.md'
+
 if [ "$fail" -ne 0 ]; then
   echo "FAIL: workboard actionability assertions"
   exit 1
