@@ -17,6 +17,7 @@ metadata) are never modified; undo = delete the marker. Tests:
 | Toolkit specs | `<repo>/specs/<slug>/SPEC.md` + `tasks/*.md` | spec title; per-task `Status:` line (`pending`/`in-progress`/`claimed` open; `done`/`deferred`/`skipped` closed; anything else = blocked-ish and flagged) |
 | Kiro specs | `<repo>/.kiro/specs/<name>/tasks.md` | checkbox states — `[ ]` todo, `[-]` doing, `[x]` done; phase = which of requirements/design/tasks files exist |
 | Handoffs | `HANDOFF.md` (repo root, `.claude/`, `specs/*/`, ≤2 dirs deep) | parked work waiting on a human — always an inbox item |
+| Batons | `DRAIN-BATON.md` (repo root, `specs/*/`) | a parked drain generation to relaunch — generation number, relaunch command, and any needs-attention/deferred section; a repo card, NOT the handoff's resume-then-delete prompt (drain self-manages the file) |
 | Sessions | `~/.claude/projects/<escaped-cwd>/<sessionId>.jsonl` | first user prompt (head read), `cwd`, `gitBranch`, last-record timestamp (64 KB tail read — transcripts are never read wholesale) |
 | Live sessions | `~/.claude/sessions/<pid>.json` | sessionId → pid; `active` iff the pid is alive (`kill -0`) |
 | Todos | `~/.claude/todos/*.json` (when the install has them) | open in-session todo lists |
@@ -53,7 +54,7 @@ Top-level keys: `generated_at`, `stale_days`, `totals` (`repos`,
 `specs_open`, `tasks_open`, `sessions_active`, `attention`), `inbox[]`
 (`severity`, `state`, `repo`, `what`, `why`, `age_ts`, plus `cmd` — a
 runnable shell command — on items with a one-command fix), `repos[]` (`path`,
-`name`, `git`, `specs[]`, `handoffs[]`, `sessions[]`), `sessions[]`,
+`name`, `git`, `specs[]`, `handoffs[]`, `batons[]`, `sessions[]`), `sessions[]`,
 `orphan_sessions[]` (sessions whose cwd is outside every scanned repo),
 `antigravity[]`, `todos[]`.
 

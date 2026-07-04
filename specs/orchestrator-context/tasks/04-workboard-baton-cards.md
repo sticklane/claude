@@ -1,7 +1,7 @@
 # Task 04: Workboard surfaces DRAIN-BATON.md files
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 30 turns
@@ -35,6 +35,6 @@ drain/autopilot/parallel/breakdown skills, runtimes/, plugin.json.
 
 ## Acceptance
 
-- [ ] A fixture `DRAIN-BATON.md` in a scanned repo appears on the workboard with generation + relaunch command + needs-attention content (scanner unit test or rendered-HTML grep)
-- [ ] The baton card text differs from the handoff card's resume-then-delete prompt (grep the renderer/template)
-- [ ] Existing HANDOFF.md cards still render (fixture regression check)
+- [x] A fixture `DRAIN-BATON.md` in a scanned repo appears on the workboard with generation + relaunch command + needs-attention content (scanner unit test or rendered-HTML grep) — `TestScanBatons` + e2e `workboard.py --out` render shows "drain baton · generation 3", the `claude -p "/drain ..."` command, and the needs-attention line; see evidence/04-workboard-baton-cards.md
+- [x] The baton card text differs from the handoff card's resume-then-delete prompt (grep the renderer/template) — baton reads "relaunch to continue the queue (drain self-manages...)"; test asserts absence of "resume it in a fresh session, then delete"; evidence/04-workboard-baton-cards.md
+- [x] Existing HANDOFF.md cards still render (fixture regression check) — `TestBatonInFullRender` renders both; all 11 prior tests green; evidence/04-workboard-baton-cards.md

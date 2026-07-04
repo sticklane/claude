@@ -268,7 +268,8 @@ class TestBatonInFullRender(unittest.TestCase):
                 "totals": {"repos": 1, "specs_open": 0, "tasks_open": 0,
                            "sessions_active": 0, "attention": 0},
                 "generated_at": "now", "stale_days": 7,
-                "inbox": [], "ready": [], "repos": [repo],
+                "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+                "repos": [repo],
                 "antigravity": [], "todos": [], "orphan_sessions": [],
             }
 
