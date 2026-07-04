@@ -75,8 +75,10 @@ needed).
 
 ## Parallelization
 
-Not yet decomposed — when /breakdown runs, its tasks join the combined queue in
-[specs/QUEUE.md](../QUEUE.md) (update its task count and wave table as part of
-decomposition). Collision note: `.claude/skills/onboard/SKILL.md` is also
-edited by chaining-antipatterns 02 — the decomposition must carry a cross-spec
-`Depends on:` line and serialize behind it if that task is still open.
+Decomposed 2026-07-03 into a single task (tasks/01) — the mirror convention
+("mirror the change there in the same commit") fuses skill edit, antigravity
+mirror, and version bump into one reviewable commit. Wave placement lives in
+[specs/QUEUE.md](../QUEUE.md) (single copy, per convention): osd 01 serializes
+behind wte 05 on the plugin.json bump chain; no queue-2 task touches the
+onboard skill files (verified by Touch-header grep; chaining-antipatterns 02,
+the previous collision, is done).

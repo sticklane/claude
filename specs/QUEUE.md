@@ -26,8 +26,13 @@ that chain parallelizes on disjoint Touch.
 | 7 | um 03 |
 | 8 | wte 03 |
 | 9 | wte 05 |
+| 10 | osd 01 |
 
-14 tasks. Sequential drain follows this order automatically from the
+15 tasks. onboard-split-default (osd) joined 2026-07-03: one fused task
+(skill + antigravity mirror + bump, per the same-commit mirror
+convention) that serializes behind wte 05 solely on the plugin.json
+bump chain — no queue-2 task touches the onboard skill files (verified
+by Touch-header grep). Sequential drain follows this order automatically from the
 Depends-on graph; waves 1, 2, 3, and 4 are the only sanctioned
 concurrent groups (disjoint Touch, decision-uncoupled — the
 decision-coupling test: dls/wte-01/wte-02 share no open naming or
