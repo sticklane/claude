@@ -28,15 +28,16 @@ model-routing-native-config). All rows are picker conventions for the
 human dispatcher — Antigravity has no flag or frontmatter to pin a
 model programmatically.
 
-| Role                                                                  | Antigravity default (model picker)                                      |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| session default                                                       | the Agent Manager conversation's model (no plan/execution split exists) |
-| implementation workers                                                | Flash-class                                                             |
-| explore / codebase-search                                             | Flash-class — the cheapest Flash variant in the picker                  |
-| LLM reviewer, advisory lane                                           | Flash-class                                                             |
-| distill workflow                                                      | Pro-class / the strongest model in the picker                           |
-| retry escalation (attempt 2, verifier evidence in prompt)             | one step up in the picker: Flash-class → Pro-class                      |
-| tournament escalation (attempts 3+, after the Pro-class retry failed) | the strongest model in the picker — Antigravity's frontier rung         |
+| Role                                                                  | Antigravity default (model picker)                                            |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| session default                                                       | the Agent Manager conversation's model (no plan/execution split exists)       |
+| implementation workers                                                | Flash-class                                                                   |
+| explore / codebase-search                                             | Flash-class — the cheapest Flash variant in the picker                        |
+| verifier (acceptance evidence; advisory reviewer lane)                | Flash-class                                                                   |
+| spec/plan/diff critic                                                 | Pro-class — deep-tier work; a critic pass costs ~1% of a wrong implementation |
+| distill workflow                                                      | Pro-class / the strongest model in the picker                                 |
+| retry escalation (attempt 2, verifier evidence in prompt)             | one step up in the picker: Flash-class → Pro-class                            |
+| tournament escalation (attempts 3+, after the Pro-class retry failed) | the strongest model in the picker — Antigravity's frontier rung               |
 
 ## Headless
 
