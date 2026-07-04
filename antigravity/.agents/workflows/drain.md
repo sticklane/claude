@@ -125,12 +125,17 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    member and hand the user the whole launch list at once: one Agent
    Manager agent per task at the worker tier (Flash-class in the picker),
    each with step 2's prompt. Size the group by the task map, never a
-   default maximum — concurrency multiplies token spend. Collect verdicts
+   default maximum — concurrency multiplies token spend. Group sequencing
+   overrides one-task-at-a-time: flip every member's
+   `Status: in-progress` and commit them in one commit (the workflow
+   session stays the single writer), cut all member worktrees from that
+   commit, then hand over the whole launch list. Collect verdicts
    as agents finish (step 3 per verdict) and merge DONE branches in task
-   order, gates after each; on a cross-task merge conflict — another
-   member's already-merged work, not the task's own failure — stop the
-   remaining merges and report which merged cleanly. Remove merged
-   worktrees (`git worktree remove`).
+   order, gates after each; on a cross-task merge conflict or a
+   post-merge gate failure during group integration — cross-task
+   interference is indistinguishable from the task's own failure at that
+   point — stop the remaining merges and report which merged cleanly.
+   Remove merged worktrees (`git worktree remove`).
 
 3. **Collect.** DONE → before merging, re-run the append-only
    whitelist diff over `merge-base..branch`, path-scoped to every
@@ -148,8 +153,8 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    branch for the task (the dead run's forensic branches are no longer
    needed once it has shipped). Then, per completed DONE task, **push
    `main` on completion** (`git push`) so the merged, verifier-PASSED work is backed
-   up the moment it lands. **Push guard (canonical; build and parallel
-   cite this):** push only if `main` has a configured upstream — if none,
+   up the moment it lands. **Push guard (canonical; build cites this, and drain's own group
+   mode follows it):** push only if `main` has a configured upstream — if none,
    skip silently; never `--force`; a rejected, non-fast-forward, or
    offline push warns and continues (the merge already landed locally, so
    a failed push never fails the task or aborts the run). The worker never

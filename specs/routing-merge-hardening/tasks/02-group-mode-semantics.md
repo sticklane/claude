@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -42,11 +42,11 @@ mirror matches. Plugin version bumped (skill behavior change).
 
 ## Acceptance
 
-- [ ] `grep -q 'one commit' .claude/skills/drain/SKILL.md` → exit 0
-- [ ] `grep -q 'one commit' antigravity/.agents/workflows/drain.md` → exit 0
-- [ ] `grep -q 'post-merge gate failure' .claude/skills/drain/SKILL.md` → exit 0
-- [ ] `grep -q 'post-merge gate failure' antigravity/.agents/workflows/drain.md` → exit 0
-- [ ] `! grep -rq 'build and parallel cite this' .claude antigravity` → exit 0
-- [ ] `! grep -q '## 2. Dispatch one worker' .claude/skills/drain/SKILL.md` → exit 0
-- [ ] `./bin/check-token-discipline && bash evals/lint-ultra-gate.sh` → exit 0
-- [ ] `bash tests/test_check_token_discipline.sh` → pass, 0 fail
+- [x] `grep -q 'one commit' .claude/skills/drain/SKILL.md` → exit 0
+- [x] `grep -q 'one commit' antigravity/.agents/workflows/drain.md` → exit 0
+- [x] `grep -q 'post-merge gate failure' .claude/skills/drain/SKILL.md` → exit 0
+- [x] `grep -q 'post-merge gate failure' antigravity/.agents/workflows/drain.md` → exit 0
+- [x] `! grep -rq 'build and parallel cite this' .claude antigravity` → exit 0
+- [x] `! grep -q '## 2. Dispatch one worker' .claude/skills/drain/SKILL.md` → exit 0
+- [x] `./bin/check-token-discipline && bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `bash tests/test_check_token_discipline.sh` → pass, 0 fail
