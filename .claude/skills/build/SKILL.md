@@ -94,3 +94,17 @@ replaces "is done".
   `Status: draft` stub in the owning spec's tasks/ dir (the format in drain's
   bookkeeping step) — written only on the user's yes; no silent queue writes.
 - Tell the user to `/clear` before starting the next task.
+
+## Ultra path
+
+When the active runtime profile documents an orchestration section AND
+ultracode is opted in, build's verification runs as a workflow instead of one
+verifier; with the profile silent, the single-verifier step 3 above is the
+only path. The profile holds the template — this skill only names the shape.
+
+Acceptance commands run FIRST as the deterministic gate. Each criterion with
+no runnable command then gets a refute-majority vote — 3 verifiers on distinct
+lenses, the criterion failing on a majority refute. The fix-reverify loop is
+script-owned and bounded at 4 cycles; on the 4th unresolved cycle build flips
+to blocked with the failure evidence rather than thrashing. Everything else —
+scouts, test-first implementation, close-out — is unchanged.

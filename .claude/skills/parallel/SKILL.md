@@ -76,3 +76,19 @@ commit, then write drain's baton artifact (`DRAIN-BATON.md`) listing the
 still-unmerged branches and their verdicts, and relaunch a fresh generation to
 finish collecting. Same baton grammar and generations cap as drain — this
 phase cites drain's mechanism rather than re-implementing the trigger.
+
+## Ultra path
+
+When the active runtime profile documents an orchestration section AND
+ultracode is opted in, parallel may compile the group into a workflow script
+rather than launching each background agent by hand; with the profile silent,
+the manual dispatch above is the only path. The profile holds the template —
+this skill only names the shape.
+
+The graph compiles from the members' `Depends on:` headers into a pipeline
+over dependency groups (a barrier only between groups), one worker per task
+file (worktree isolation, the same worker prompt plus effort-tier language),
+and a verifier per completed task; merge-in-task-order and the gate-after-each
+rule from step 3 are unchanged. The script checks `budget.remaining()` before
+each dispatch when a target is set. Files remain the checkpoint: interrupting
+loses nothing — the committed branches and task-file state resume the run.

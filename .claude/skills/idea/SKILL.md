@@ -98,3 +98,16 @@ Close with:
 `Next stage: /breakdown specs/<slug>/SPEC.md (self-chains per conventions)`
 — or, on the /design fallback,
 `Next stage: /design specs/<slug>/SPEC.md (human-launched)`.
+
+## Ultra path
+
+When the active runtime profile documents an orchestration section AND
+ultracode is opted in AND the idea spans multiple repos or subsystems, step 1
+runs as a workflow instead of the 2–4 ad-hoc scouts; with the profile silent,
+or for a single-subsystem idea, step 1 above is the only path. The profile
+holds the template — this skill only names the shape.
+
+The sweep fans out four scouts in parallel — by-structure, by-convention,
+by-history, by-dependency — followed by a completeness critic that flags gaps
+before the interview begins. Effort-tier language caps each scout's calls. The
+interview, spec-write, and adversarial pass are unchanged.

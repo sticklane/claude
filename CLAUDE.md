@@ -90,3 +90,11 @@ description changes, check both that it triggers on its listed phrases and
 does NOT trigger on neighbors' phrases. For skills with a stored evalset,
 /evals (runner: `evals/run.sh`) is the repeatable complement — run it
 before committing any skill change.
+
+The five ultra-path skills (critique, drain, parallel, build, idea) also
+carry a standalone, model-free gate check: run `bash evals/lint-ultra-gate.sh`
+before committing changes to them. It verifies every case-insensitive "ultra"
+mention stays within ±3 lines of the literal "active runtime profile" marker,
+so gate-closed installs (plugin caches, eval fixtures with no `runtimes/`)
+read as today's skills. It is invoked directly, never wired into
+`evals/run.sh` (which runs model sessions).
