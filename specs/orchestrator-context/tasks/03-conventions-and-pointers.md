@@ -1,7 +1,7 @@
 # Task 03: Relaunch-every convention + ultra-template baton pointer
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: in-progress
+Status: done
 Depends on: 01, ../../ultra-mode/tasks/01-runtime-orchestration-section.md
 Priority: P2
 Budget: 25 turns
@@ -39,6 +39,6 @@ scanner, plugin.json.
 
 ## Acceptance
 
-- [ ] `grep -q "Relaunch-every" .claude/skills/breakdown/SKILL.md && grep -q "Relaunch-every" antigravity/.agents/skills/breakdown/SKILL.md` → exit 0, absence-means-4 stated
-- [ ] `grep -qi "baton" runtimes/claude-code.md` → exit 0, inside the orchestration templates as a pointer comment
-- [ ] `./evals/run.sh breakdown` → 1/1 scenarios pass
+- [x] `grep -q "Relaunch-every" .claude/skills/breakdown/SKILL.md && grep -q "Relaunch-every" antigravity/.agents/skills/breakdown/SKILL.md` → exit 0, absence-means-4 stated — both skills gained a "## Queue tuning" passage stating "absence means the default of 4" and citing drain's baton reference rather than restating the grammar
+- [x] `grep -qi "baton" runtimes/claude-code.md` → exit 0, inside the orchestration templates as a pointer comment — drain-dispatch.js template carries a "Baton boundary" comment: main session is disposable via scriptPath + resumeFromRunId + committed Status:, pointing at drain/SKILL.md §3a
+- [x] `./evals/run.sh breakdown` → 1/1 scenarios pass — ran headless: "1/1 scenarios passed", assert all checks passed (2 task files)
