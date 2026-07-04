@@ -44,7 +44,7 @@ task to `pending` and commit the flip (slot machine — never resume a dead
 run; rescue branches are forensic only). Full procedure in reference.md's
 Status field semantics.
 
-## 2. Dispatch one worker
+## 2. Dispatch (one worker, or one independent group)
 
 Every worker drain dispatches runs at the **implementation-worker tier pin**
 on attempt 1 (Claude default: `sonnet`; other runtimes map the pin in their
@@ -86,13 +86,20 @@ test (members sharing an undecided design choice serialize even with
 disjoint `Touch` lists) — read the spec's Parallelization section, or
 derive independence from the headers. Size the group by the task map,
 never a default maximum; parallelism multiplies token spend, so it buys
-wall-clock time, not efficiency. Merge the group's DONE branches in task
+wall-clock time, not efficiency. Group sequencing overrides the
+one-task-at-a-time flow below: flip every member's `Status: in-progress`
+and commit them in one commit (drain stays the single writer); cut all
+member worktrees from that commit; launch all group workers in one
+message; then wait for all completion notifications — collecting each
+verdict via step 3 as it arrives — before dispatching anything else.
+Merge the group's DONE branches in task
 order. Disjoint `Touch` lists don't guarantee clean merges (lockfiles,
 barrel files, snapshots): when a member's merge conflicts with another
-member's already-merged work — cross-task interference, not the task's own
-failure — stop the group's remaining merges and report which merged
-cleanly, instead of routing the conflict into the slot machine (a fresh
-attempt cannot fix another task's merge).
+member's already-merged work, or a post-merge gate failure appears during
+group integration — cross-task interference is indistinguishable from the
+task's own failure at that point — stop the group's remaining merges and
+report which merged cleanly, instead of routing the failure into the slot
+machine (a fresh attempt cannot fix an interaction between members).
 
 Set the task's `Status: in-progress` and **commit that edit** (e.g.
 `drain: task 03 in-progress`) — the worker's worktree is cut from this
@@ -129,7 +136,8 @@ itself flips the status to `done` and commits the flip.)
   (`git push`) so the
   merged, verifier-PASSED work is backed up the moment it lands rather
   than sitting on local `main` for a human to push by hand. **Push guard
-  (canonical; build and parallel cite this):** push only if `main` has a
+  (canonical; build cites this, and drain's own group mode follows
+  it):** push only if `main` has a
   configured upstream — if none, skip silently; never `--force`; a
   rejected, non-fast-forward, or offline push warns and continues. The
   merge already landed locally, so a failed push never fails the task or
