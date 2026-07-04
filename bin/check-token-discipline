@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# check-token-discipline [skills-root]
+#
+# Conformance checker for the token-discipline "Dispatch authoring" rules
+# (specs/workflow-token-efficiency/SPEC.md, R6). Exits 0 iff every file in the
+# in-scope list passes three paragraph-level checks, and exits 1 with a
+# per-file, per-check report otherwise:
+#
+#   [dispatch]  every dispatch paragraph carries a tier token (in itself or an
+#               adjacent paragraph)
+#   [budget]    the file states an output budget at least once
+#   [loop]      every iterative re-dispatch names a cycle bound (in itself or
+#               an adjacent paragraph)
+#
+# The checks operate on blank-line-separated paragraphs (YAML frontmatter and
+# `|`-leading table rows skipped, wrapped lines joined) so verb/noun pairs
+# split across wrapped lines are seen together. The prose here states intent;
+# tests/test_check_token_discipline.sh is the contract.
+#
+# Tests point CHECK_TD_FILES (newline-separated literal paths) at fixture files
+# so they never touch the real tree; unset, the checker walks the in-scope list
+# under [skills-root] (default: the repo root above this script).
+set -u
+
+ROOT="${1:-}"
+if [ -z "$ROOT" ]; then
+  ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+fi
+
+IN_SCOPE='.claude/skills/drain/SKILL.md
+.claude/skills/drain/reference.md
+.claude/skills/parallel/SKILL.md
+.claude/skills/autopilot/SKILL.md
+.claude/skills/autopilot/reference.md
+.claude/skills/design/SKILL.md
+.claude/skills/evals/SKILL.md
+.claude/skills/evals/reference.md
+.claude/workflows/deep-research.js'
+
+# Build the file list.
+FILES=()
+if [ -n "${CHECK_TD_FILES:-}" ]; then
+  while IFS= read -r f; do
+    [ -n "$f" ] && FILES+=("$f")
+  done <<EOF
+$CHECK_TD_FILES
+EOF
+else
+  while IFS= read -r rel; do
+    [ -n "$rel" ] && FILES+=("$ROOT/$rel")
+  done <<EOF
+$IN_SCOPE
+EOF
+fi
+
+fail=0
+report() { printf '%s\n' "$1"; fail=1; }
+
+# --- regex vocabulary --------------------------------------------------------
+# Word edges use (^|[^a-zA-Z]) / ([^a-zA-Z]|$) rather than \b, which BSD grep
+# does not support. This also excludes adjectival forms: `dispatchable` never
+# matches the dispatch verb (no non-letter follows `dispatch`).
+DVERB='(spawn|dispatch|launch)(es|ed|ing|s)?'
+DNOUN='(agent|worker|session)s?'
+# Verb and noun within ~40 chars of each other, either order.
+DADJ="(^|[^a-zA-Z])${DVERB}[^a-zA-Z].{0,40}[^a-zA-Z]${DNOUN}([^a-zA-Z]|\$)"
+DADJ_REV="(^|[^a-zA-Z])${DNOUN}[^a-zA-Z].{0,40}[^a-zA-Z]${DVERB}([^a-zA-Z]|\$)"
+# A dispatch verb immediately negated -> a pure prohibition, not a dispatch.
+DPROHIB="(^|[^a-zA-Z])(no|never|not|cannot|don't)[^a-zA-Z]+${DVERB}([^a-zA-Z]|\$)"
+
+TIER_RE='haiku|session model|opts\.model|effort'
+
+BUDGET_RE='(≤|under|at most|no more than|cap(ped)?)[[:space:]]?.{0,20}(words|tokens|lines)'
+
+# Iterative re-dispatch triggers (lowercased before matching).
+LTRIG='(retry|retries|retried|re-dispatch|redispatch|revise|revises|revised|iterate|iterates|iterated|cycle|cycles|cycled|relaunch|relaunches|relaunched|relaunching)'
+# A stated bound: a numeral 1-4, once/twice, "at most one..four", or a named
+# generation cap (a relaunch ceiling counts even though the numeral exceeds 4).
+LBOUND='(^|[^0-9])[1-4]([^0-9]|$)|(^|[^a-z])(once|twice)([^a-z]|$)|at most (one|two|three|four)|max-generations|generations cap'
+
+# --- helpers -----------------------------------------------------------------
+matches() { printf '%s' "$2" | grep -qiE "$1"; }
+
+is_dispatch() { # <paragraph>
+  case "$1" in
+    *"Task("*|*"agent("*) return 0 ;;
+  esac
+  matches "$DPROHIB" "$1" && return 1
+  matches "$DADJ" "$1" && return 0
+  matches "$DADJ_REV" "$1" && return 0
+  return 1
+}
+
+has_tier() { matches "$TIER_RE" "$1"; }
+
+has_budget() {
+  matches "$BUDGET_RE" "$1" && return 0
+  printf '%s' "$1" | grep -qiF 'verdict + evidence'
+}
+
+is_live_loop() { # <paragraph> — true if a bound-requiring trigger survives
+  local lp resid
+  lp="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  # Drop excluded occurrences: negated (`no relaunch`), hyphenated
+  # (`relaunch-with-evidence`), and benign one-shot state (`relaunch clean`).
+  resid="$(printf '%s' "$lp" | sed -E \
+    -e "s/(no|never|not|cannot)[^a-z]+${LTRIG}//g" \
+    -e "s/${LTRIG}-[a-z]//g" \
+    -e "s/${LTRIG}[^a-z]+(clean|cleanly|fresh|empty)([^a-z]|$)//g")"
+  matches "(^|[^a-z])${LTRIG}" "$resid"
+}
+
+has_bound() { matches "$LBOUND" "$1"; }
+
+snippet() { printf '%s' "$1" | cut -c1-60; }
+
+# --- per-file checks ---------------------------------------------------------
+PARAS=()
+load_paragraphs() { # <file> — populate PARAS[] (frontmatter/table rows removed)
+  PARAS=()
+  local first=1 in_fm=0 para='' line trimmed
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [ "$first" = 1 ]; then
+      first=0
+      if [ "$line" = '---' ]; then in_fm=1; continue; fi
+    fi
+    if [ "$in_fm" = 1 ]; then
+      [ "$line" = '---' ] && in_fm=0
+      continue
+    fi
+    if [ -z "$line" ]; then
+      [ -n "$para" ] && PARAS+=("$para")
+      para=''
+      continue
+    fi
+    trimmed="${line#"${line%%[![:space:]]*}"}"
+    case "$trimmed" in
+      \|*) continue ;;
+    esac
+    if [ -n "$para" ]; then para="$para $line"; else para="$line"; fi
+  done < "$file"
+  [ -n "$para" ] && PARAS+=("$para")
+}
+
+check_file() { # <file>
+  local file="$1"
+  if [ ! -f "$file" ]; then
+    report "$file: [missing] file not found"
+    return
+  fi
+  load_paragraphs "$file"
+
+  local n=${#PARAS[@]} i prev next
+
+  # Output budget — per file.
+  local budget_ok=0
+  for ((i=0; i<n; i++)); do
+    if has_budget "${PARAS[$i]}"; then budget_ok=1; break; fi
+  done
+  [ "$budget_ok" = 0 ] && report "$file: [budget] no output-budget statement in file"
+
+  for ((i=0; i<n; i++)); do
+    prev=''; next=''
+    [ "$i" -gt 0 ] && prev="${PARAS[$((i-1))]}"
+    [ "$((i+1))" -lt "$n" ] && next="${PARAS[$((i+1))]}"
+
+    # Dispatch -> tier.
+    if is_dispatch "${PARAS[$i]}"; then
+      if ! has_tier "${PARAS[$i]}" && ! has_tier "$prev" && ! has_tier "$next"; then
+        report "$file: [dispatch] paragraph missing tier token: $(snippet "${PARAS[$i]}")"
+      fi
+    fi
+
+    # Bounded loops.
+    if is_live_loop "${PARAS[$i]}"; then
+      if ! has_bound "${PARAS[$i]}" && ! has_bound "$prev" && ! has_bound "$next"; then
+        report "$file: [loop] unbounded iterative re-dispatch: $(snippet "${PARAS[$i]}")"
+      fi
+    fi
+  done
+}
+
+for file in "${FILES[@]}"; do
+  check_file "$file"
+done
+
+exit "$fail"
