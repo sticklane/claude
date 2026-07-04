@@ -45,6 +45,33 @@ tiers are opt-in: profile rows are recommended pin values, not active
 defaults). Pins bind Agent-tool dispatch only; the headless fallback
 templates run their profile's default in v1.
 
+## Dispatch authoring
+
+When a skill spawns agents, its prompt text must make these choices
+explicit — model/effort tier, return budget, and any loop bound — instead
+of letting them default silently:
+
+- **Tier by stage type.** Mechanical stages (search, fetch, extract,
+  grep-like scouting, conformance checks) run on Haiku / `effort: low`;
+  judgment stages (implementation, verification, judging, synthesis) keep
+  the session model, raising effort only for the hardest verify/judge
+  stages (docs/anthropic-playbook.md, "Token-cost doctrine").
+- **Cap subagent returns at 1–2k tokens** — a structured verdict or
+  distilled summary, never the transcript
+  (docs/context-management-research-2026-07.md:66).
+- **Bound evaluator-optimizer loops to 2–4 cycles**, and skip the
+  generate/critique loop entirely when a deterministic check can decide
+  the outcome (docs/orchestration-research-2026-07.md:58).
+- **Default to a single-call rubric judge** — one prompt emitting scores
+  and a pass/fail grade — over multi-judge voting
+  (docs/orchestration-research-2026-07.md:58).
+- **Place logic on the deterministic-vs-model-driven axis:** a script owns
+  loops, fan-out, and gates; the model owns decomposition and routing
+  (docs/orchestration-research-2026-07.md:16).
+- **Scale effort in the dispatch prompt:** 1 agent / 3–10 calls for
+  lookups; 2–4 agents / 10–15 calls for comparisons; 10+ agents only
+  breadth-first (docs/orchestration-research-2026-07.md:50-52).
+
 ## Session hygiene
 
 - One task per session — light artifact stages may self-chain per

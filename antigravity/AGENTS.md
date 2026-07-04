@@ -57,6 +57,29 @@ Context is the scarce resource; spend it on decisions, not raw material.
   from it. A clean start with a better brief beats a long session of
   accumulated corrections.
 
+### Dispatch authoring
+
+When a skill spawns agents, its prompt text must make these choices
+explicit — model tier, return budget, and any loop bound — instead of
+letting them default:
+
+- Tier by stage type: mechanical stages (search, fetch, extract,
+  grep-like scouting, conformance checks) run scout-tier (a Flash-class
+  model / low effort); judgment stages (implementation, verification,
+  judging, synthesis) keep the conversation's own model, raising effort
+  only for the hardest verify/judge stages.
+- Cap what a spawned agent returns to a structured verdict or distilled
+  summary (~1–2k tokens), never its transcript.
+- Bound evaluate-and-revise loops to 2–4 cycles, and skip the
+  generate/critique loop entirely when a deterministic check can decide
+  the outcome.
+- Default to a single-call rubric judge — one prompt emitting scores and
+  a pass/fail grade — over multi-judge voting.
+- Keep logic on the deterministic-vs-model-driven axis: a script owns
+  loops, fan-out, and gates; the model owns decomposition and routing.
+- Scale effort in the dispatch prompt: 1 agent / 3–10 calls for lookups;
+  2–4 agents / 10–15 calls for comparisons; 10+ agents only breadth-first.
+
 ## Cache economics
 
 - Prompts are cached static-first: stable content (rules, skill text,
