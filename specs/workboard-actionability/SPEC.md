@@ -213,6 +213,18 @@ the dep-resolution forms at SKILL.md:57–58): a task is dispatchable when
       two new surfaces render together and the script is executable
       (R3, R4, R5).
 
+## Parallelization
+
+None — the three tasks are a strict serial chain (01 → 02 → 03). All three
+edit the same core file (`.claude/skills/workboard/workboard.py` + its
+antigravity mirror) and grow the same single test file
+(`tests/test_workboard_actionability.sh`), so their `Touch` lists fully
+overlap and no group is disjoint. They also share undecided design surface
+(the readiness data structures from R1 feed the tiles/counts in R7; the
+HTML template layout is edited by all three), which fails the
+decision-coupling test. Run them one at a time, each as its own
+mirror-and-version-bump commit.
+
 ## Open questions
 
 (none)
