@@ -1,6 +1,6 @@
 # Task 01: author the /factcheck skill (+ reference, antigravity mirror, version bump)
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 35 turns

@@ -1,6 +1,6 @@
 # Task 01: workboard copy-buttons + always-runnable commands + resilient clipboard
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 45 turns
