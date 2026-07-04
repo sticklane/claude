@@ -46,7 +46,7 @@ sanctioned edit to token-discipline.md), plugin.json.
 
 ## Acceptance
 
-- [ ] `bash tests/test_sync_workflows.sh` → exit 0 (env-override paths only)
-- [ ] `node --check .claude/workflows/deep-research.js` → exit 0; first statement is `log('[repo-deep-research]')`; search/fetch/extract stages carry `effort: 'low'`; fan-out stages pass schemas
-- [ ] Resolution probe recorded: `[repo-deep-research]` observed in a live Workflow progress log, OR the `research` fallback taken and documented in the R1 rule section
-- [ ] After `bin/sync-workflows`: `test -L ~/.claude/workflows/deep-research.js` (or `research.js`) → exit 0
+- [x] `bash tests/test_sync_workflows.sh` → exit 0 (env-override paths only) — 28/28 pass; replaces the stale `tests/test_sync_skills.sh` acceptance line (sync-skills retired 2026-07-03, commit 745b475).
+- [x] `node --check .claude/workflows/deep-research.js` → exit 0; first statement is `log('[repo-deep-research]')`; search/fetch/extract stages carry `effort: 'low'`; fan-out stages pass schemas — node --check exit 0; marker is line 11 (first executable stmt after the `meta` export); `effort: "low"` on the Search + Fetch dispatches; all 5 agent() dispatches schema-constrained; also passes bin/check-token-discipline's 3 checks.
+- [ ] Resolution probe recorded: `[repo-deep-research]` observed in a live Workflow progress log, OR the `research` fallback taken and documented in the R1 rule section — DEFERRED: the `Workflow` tool is unavailable in the unattended worker (ToolSearch `select:Workflow` → none), so a live probe cannot run here. The `research.js` fallback is NOT viable — the already-merged `bin/check-token-discipline` hardcodes `.claude/workflows/deep-research.js` in its in-scope list, so renaming breaks R6/its checker. Marker left in place; needs a 30-second attended `/deep-research` confirmation after sync (see Deferred questions).
+- [~] After `bin/sync-workflows`: `test -L ~/.claude/workflows/deep-research.js` (or `research.js`) → exit 0 — verified via env-override (`SYNC_WORKFLOWS_SRC`/`_DEST` → temp dest): `test -L <dest>/deep-research.js` exit 0 against the real workflow file. The real-`$HOME` symlink is created by the post-merge `~/claude/bin/sync-workflows` run (orchestrator step; a worktree-sourced real-home symlink would dangle after cleanup).
