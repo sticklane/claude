@@ -3,9 +3,12 @@ name: onboard
 description: Prepares an existing repository for agentic development - scouts the codebase, writes a concise AGENTS.md with verified commands, and offers quality gates. Use on first contact with a repo, or when the user says "set this repo up", "make this codebase agent-ready", or "bootstrap AGENTS.md".
 ---
 
-Make this repo a place where agents can work reliably. The deliverables are
-an AGENTS.md that never lies and (optionally) gates. Everything else agents
-can discover themselves.
+Make this repo a place where agents can work reliably. The default deliverable
+is a root `AGENTS.md` carrying orientation (`## Repo map`, `## Commands` verified
+by running, `## State`), ≤200 lines. AGENTS.md is Antigravity's native context
+file — there is no separate rules file to bridge into, so conventions and
+gotchas live in AGENTS.md alongside the orientation. Add (optionally) gates;
+everything else agents can discover themselves.
 
 ## 1. Scout
 
@@ -30,21 +33,27 @@ vars, flaky tests). An AGENTS.md that lies is worse than none. Two cautions:
 Target well under 200 lines; it's loaded every conversation. Include only
 what passes "would removing this line cause an agent to make a mistake?":
 
-- Verified commands (with the quirks discovered above).
-- A short repo map: one pointer line per top-level area — path plus one
-  clause on what lives there. Pointers only; the file-by-file exclusion
-  below still applies to the map.
-- Conventions an agent can't infer from the code.
-- Architecture facts that prevent wrong-place edits ("API handlers live in
-  X; generated code in Y — never edit").
-- Where open work lives, if the repo uses the spec pipeline: specs/, task
-  `Status:` headers, and the status script if present.
-- Known gotchas.
+- A one-paragraph purpose line: what the repo is.
+- `## Repo map`: one pointer line per top-level area — path plus one clause on
+  what lives there; mark generated/vendored dirs "generated — don't read".
+  Pointers only; the file-by-file exclusion still applies.
+- `## Commands`: the verified commands from §2 (with their quirks).
+- `## State`: where open work lives — `specs/` and task `Status:` headers and
+  the status script if the repo uses the spec pipeline, else `docs/TASKS.md`,
+  else "no task tracking".
+- Conventions an agent can't infer from the code, architecture facts that
+  prevent wrong-place edits ("API handlers live in X; generated code in Y —
+  never edit"), and known gotchas — AGENTS.md is Antigravity's native context
+  file, so these live here, not in a separate rules file.
 
 Exclude: standard language conventions, anything readable from the code,
 file-by-file tours, platitudes. If a section is becoming a procedure, it
 should be a skill instead. Merge with any existing AGENTS.md rather than
 overwriting.
+
+Already-onboarded repo (migration): a template-debris AGENTS.md lacking
+`## Repo map`, or orientation stranded in another context file — rewrite it
+under the three section names and delete the duplicated prose.
 
 Monorepos and large repos: subsystem detail belongs in per-directory
 (nested) AGENTS.md files, read nearest-file-wins when an agent works

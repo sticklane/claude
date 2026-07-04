@@ -3,9 +3,14 @@ name: onboard
 description: Prepares an existing repository for agentic development - scouts the codebase, writes a concise CLAUDE.md with verified commands, adds a permission allowlist, and offers quality gates. Use on first contact with a repo, or when the user says "set this repo up for Claude", "make this codebase agent-ready", or "bootstrap CLAUDE.md".
 ---
 
-Make this repo a place where agents can work reliably. The deliverables are
-a CLAUDE.md that never lies, permissions that match how the team actually
-works, and (optionally) gates. Everything else agents can discover themselves.
+Make this repo a place where agents can work reliably. The default deliverable
+is the orientation split: a root `AGENTS.md` carrying orientation (`## Repo map`,
+`## Commands` verified by running, `## State`) and a `CLAUDE.md` carrying
+conventions with an `@AGENTS.md` bridge line in its first 10 lines — both ≤200
+lines. AGENTS.md is the one context file Codex, Jules, Kiro, and Copilot read
+natively and Claude Code imports via the bridge; CLAUDE.md never repeats what
+AGENTS.md already says. Add permissions that match how the team works, and
+(optionally) gates. Everything else agents can discover themselves.
 
 ## 1. Scout
 
@@ -16,39 +21,52 @@ points); conventions that differ from language defaults; any existing
 
 ## 2. Verify before writing
 
-RUN every command that will go into CLAUDE.md — install, build, test, lint —
-and record the real invocations and their quirks (slow suites, required env
-vars, flaky tests). A CLAUDE.md that lies is worse than none: every future
-session inherits the lie. Two cautions:
+RUN every command that will go into AGENTS.md's `## Commands` — install, build,
+test, lint — and record the real invocations and their quirks (slow suites,
+required env vars, flaky tests). Orientation that lies is worse than none: every
+future session inherits the lie. Two cautions:
 
 - First contact means untrusted code: confirm with the user before running
   install hooks or long/side-effectful suites, and timebox anything slow.
 - Keep raw logs out of the main context — pipe through `tail`, or delegate
   the runs to a subagent that reports command + exit status + quirks only.
 
-## 3. Write CLAUDE.md
+## 3. Write the split
 
-Target well under 200 lines; it's re-sent every session. Include only what
-passes "would removing this line cause an agent to make a mistake?":
+Both files target well under 200 lines and pass, per line, "would removing this
+cause an agent to make a mistake?" Exclude from both: standard language
+conventions, anything readable from the code, file-by-file tours, "write clean
+code" platitudes. If a section is becoming a procedure, it should be a skill.
 
-- Verified commands (with the quirks discovered above).
-- A short repo map: one pointer line per top-level area — path plus one
-  clause on what lives there. Pointers only; the file-by-file exclusion
-  below still applies to the map.
+**AGENTS.md — orientation, no rules.** The context file every tool reads:
+
+- A one-paragraph purpose line: what the repo is.
+- `## Repo map`: one pointer line per top-level area — path plus one clause on
+  what lives there; mark generated/vendored dirs "generated — don't read".
+  Pointers only; the file-by-file exclusion still applies.
+- `## Commands`: the verified commands from §2 (with their quirks).
+- `## State`: where open work lives — `specs/` and task `Status:` headers and
+  the status script if the repo uses the spec pipeline, else `docs/TASKS.md`,
+  else "no task tracking".
+
+**CLAUDE.md — conventions, gotchas, checks.** Its first 10 lines carry the
+`@AGENTS.md` bridge line (Claude Code imports AGENTS.md through it) so
+orientation is never duplicated here:
+
 - Conventions an agent can't infer from the code.
-- Architecture facts that prevent wrong-place edits ("API handlers live in
-  X; generated code in Y — never edit").
-- Where open work lives, if the repo uses the spec pipeline: specs/, task
-  `Status:` headers, and the status script if present.
-- Known gotchas.
+- Architecture facts that prevent wrong-place edits ("API handlers live in X;
+  generated code in Y — never edit").
+- Known gotchas and the repo's check command.
 
-Exclude: standard language conventions, anything readable from the code,
-file-by-file tours, "write clean code" platitudes. If a section is becoming
-a procedure, it should be a skill instead.
+**Already-onboarded repo (migration).** A CLAUDE.md exists with no AGENTS.md, or
+a template-debris AGENTS.md lacking `## Repo map`: move the orientation content
+(map, commands, state) out of CLAUDE.md into a fresh AGENTS.md under the three
+section names, add the `@AGENTS.md` bridge line to CLAUDE.md, and delete the
+now-duplicated prose — CLAUDE.md keeps only conventions and gotchas.
 
-Monorepos and large repos: subsystem detail belongs in
-per-directory CLAUDE.md files, which load on demand when an agent reads
-files there — the root map stays small.
+Monorepos and large repos: subsystem detail belongs in per-directory AGENTS.md
+files, which load on demand when an agent reads files there — the root map
+stays small.
 
 ## 4. Permissions
 
@@ -64,10 +82,6 @@ profile.
 ## 5. Offer the next layer
 
 Ask which the user wants now (don't install unasked):
-- A root `AGENTS.md` interop file — pointer-only, mirroring nothing that
-  would drift — for cross-tool compatibility: Codex, Jules, and Kiro read
-  it natively, gemini-cli via `context.fileName`, Claude Code via an
-  `@AGENTS.md` import.
 - `/gate` — Stop-hook check gate, auto-format, protected files. It runs the
   toolkit's `bin/install-gates` (hooks generated from `templates/`, merged
   into existing settings, idempotent) rather than hand-writing hooks.
