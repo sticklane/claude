@@ -1,7 +1,7 @@
 # Task 05: Decision record, fixture e2e, version bump
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03, 04
 Priority: P2
 Budget: 50 turns
@@ -42,7 +42,11 @@ touch: the skill files (tasks 01–04 own them).
 
 ## Acceptance
 
-- [ ] `test -f docs/decisions/orchestrator-context.md` → exit 0; names N=4, cap 10, cross-vendor corroboration per the amendment, links both docs
-- [ ] Fixture e2e evidence file records: 2 baton passes, done/next + generation in each baton, recorder argv == documented command, gen-2 ritual-before-dispatch, baton deleted at completion, 6/6 tasks done
-- [ ] `python3 -c "import json,sys; v=json.load(open('.claude-plugin/plugin.json'))['version']; sys.exit(0 if v != '0.7.0' else 1)"` → exit 0 (bumped past the drained queue's 0.7.0; adjust if an intervening bump landed)
-- [ ] `claude plugin validate .` → exit 0
+- [x] `test -f docs/decisions/orchestrator-context.md` → exit 0; names N=4, cap 10, cross-vendor corroboration per the amendment, links both docs
+      — verifier PASS C1 (evidence/05-decisions-e2e-bump.md): doc names N=4, cap 10, "Anthropic + OpenAI + Google" superseding the stale Anthropic-only caveat, links research doc + SPEC.
+- [x] Fixture e2e evidence file records: 2 baton passes, done/next + generation in each baton, recorder argv == documented command, gen-2 ritual-before-dispatch, baton deleted at completion, 6/6 tasks done
+      — verifier PASS C2: `bash specs/orchestrator-context/evidence/05-e2e-harness.sh` exit 0, 20/20 assertions; harness faithful to drain reference.md "Baton pass" + SKILL.md step 3a; evidence at evidence/05-e2e.md.
+- [x] `python3 -c "import json,sys; v=json.load(open('.claude-plugin/plugin.json'))['version']; sys.exit(0 if v != '0.7.0' else 1)"` → exit 0 (bumped past the drained queue's 0.7.0; adjust if an intervening bump landed)
+      — verifier PASS C3: version bumped 0.7.2 → 0.7.3, exit 0.
+- [x] `claude plugin validate .` → exit 0
+      — verifier PASS C4: `✔ Validation passed`, exit 0.
