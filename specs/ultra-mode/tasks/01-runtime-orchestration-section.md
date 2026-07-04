@@ -1,7 +1,7 @@
 # Task 01: `## Orchestration (ultra)` section in runtimes/claude-code.md
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: done
 Depends on: none
 Priority: P1
 Budget: 40 turns
@@ -42,6 +42,6 @@ evals/, docs/decisions, plugin.json.
 
 ## Acceptance
 
-- [ ] `grep -n "Orchestration (ultra)" runtimes/claude-code.md` → hit; section contains all four templates, the effort-tier language (`grep -q "3–10 tool calls" runtimes/claude-code.md || grep -q "3-10 tool calls" runtimes/claude-code.md`), resume instructions, and a schema-check date comment
-- [ ] `grep -q "resumeFromRunId" runtimes/claude-code.md && grep -qi "Status:" runtimes/claude-code.md` → exit 0
-- [ ] Section notes the model-agnostic cross-reference (sanctioned fourth section)
+- [x] `grep -n "Orchestration (ultra)" runtimes/claude-code.md` → hit; section contains all four templates, the effort-tier language (`grep -q "3–10 tool calls" runtimes/claude-code.md || grep -q "3-10 tool calls" runtimes/claude-code.md`), resume instructions, and a schema-check date comment — verifier PASS: heading L60, four distinct templates (critique-panel/drain-dispatch/build-verify/idea-scout), effort-tier grep exit 0, `### Resume` present, `SCHEMA-CHECK DATE: 2026-07-03` comment (see evidence/01-runtime-orchestration-section.md)
+- [x] `grep -q "resumeFromRunId" runtimes/claude-code.md && grep -qi "Status:" runtimes/claude-code.md` → exit 0 — verifier PASS: resumeFromRunId L100/114, Status-line re-read as durable checkpoint L103
+- [x] Section notes the model-agnostic cross-reference (sanctioned fourth section) — verifier PASS: cross-reference note L62-69 cites specs/model-agnostic/SPEC.md R1 as a sanctioned superset
