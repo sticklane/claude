@@ -1,6 +1,6 @@
 # Task 02: Companion actions script + HTML link
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 12 turns
