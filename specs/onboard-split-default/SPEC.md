@@ -16,10 +16,11 @@ an offer. /onboard should produce it by default.
 ## Solution
 
 Rewrite /onboard's deliverable definition: the default output of an onboard run
-is the pair — root `AGENTS.md` (purpose paragraph, `## Map` with one pointer
+is the pair — root `AGENTS.md` (purpose paragraph, `## Repo map` with one pointer
 line per top-level dir and generated/vendored dirs marked "generated — don't
 read", `## Commands` verified by running, `## State` pointing at docs/TASKS.md
-or specs/ or "no task tracking") and `CLAUDE.md` (conventions, gotchas, checks,
+or specs/ or "no task tracking" — same section names the repo-orientation spec
+landed in this repo's own AGENTS.md) and `CLAUDE.md` (conventions, gotchas, checks,
 with the `@AGENTS.md` bridge line in its first 10 lines). Both ≤200 lines. The
 step-5 "offer AGENTS.md" bullet is replaced; the verify-by-running doctrine and
 the per-line pruning test are unchanged and apply to both files. Mirror the
@@ -30,12 +31,12 @@ needed).
 ## Requirements
 
 - R1: `.claude/skills/onboard/SKILL.md` defines the default deliverable as the
-  AGENTS.md+CLAUDE.md split described above, including the four `## Map` /
+  AGENTS.md+CLAUDE.md split described above, including the four `## Repo map` /
   `## Commands` / `## State` / bridge-line requirements; the phrase
   "pointer-only" no longer appears in the file (marker: it appears once today,
   so the grep cannot pass vacuously).
 - R2: onboarding an already-onboarded repo (CLAUDE.md exists, no AGENTS.md, or
-  a template-debris AGENTS.md lacking `## Map`) is covered by an explicit
+  a template-debris AGENTS.md lacking `## Repo map`) is covered by an explicit
   migration note: move orientation content out of CLAUDE.md into AGENTS.md,
   add the bridge line, delete duplicated prose.
 - R3: `antigravity/.agents/skills/onboard/SKILL.md` mirrors R1/R2 with the
@@ -59,9 +60,9 @@ needed).
 ## Acceptance criteria
 
 - [ ] `grep -c 'pointer-only' .claude/skills/onboard/SKILL.md` outputs 0 (R1)
-- [ ] `grep -q '## Map' .claude/skills/onboard/SKILL.md && grep -q '## Commands' .claude/skills/onboard/SKILL.md && grep -q '## State' .claude/skills/onboard/SKILL.md && grep -q '@AGENTS.md' .claude/skills/onboard/SKILL.md` (R1)
+- [ ] `grep -q '## Repo map' .claude/skills/onboard/SKILL.md && grep -q '## Commands' .claude/skills/onboard/SKILL.md && grep -q '## State' .claude/skills/onboard/SKILL.md && grep -q '@AGENTS.md' .claude/skills/onboard/SKILL.md` (R1)
 - [ ] `grep -qi 'migration' .claude/skills/onboard/SKILL.md || grep -qi 'already-onboarded' .claude/skills/onboard/SKILL.md` (R2)
-- [ ] `grep -q '## Map' antigravity/.agents/skills/onboard/SKILL.md && grep -qi 'native' antigravity/.agents/skills/onboard/SKILL.md` (R3)
+- [ ] `grep -q '## Repo map' antigravity/.agents/skills/onboard/SKILL.md && grep -qi 'native' antigravity/.agents/skills/onboard/SKILL.md` (R3)
 - [ ] `test -s specs/onboard-split-default/evidence/vendor-research.md` (R4)
 - [ ] plugin.json minor version strictly greater than pre-implementation value, in the implementing task's evidence (R5)
 - [ ] End to end: run /onboard against a scratch repo (e.g. a temp dir with a
