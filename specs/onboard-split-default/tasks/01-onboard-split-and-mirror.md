@@ -1,6 +1,6 @@
 # Task 01: /onboard writes the orientation split by default (skill + mirror + bump)
 
-Status: pending
+Status: in-progress
 Depends on: ../../workflow-token-efficiency/tasks/05-bump-and-e2e.md
 Priority: P2
 Budget: 12 turns
