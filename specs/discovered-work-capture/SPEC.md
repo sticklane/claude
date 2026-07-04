@@ -73,10 +73,10 @@ are promoted manually. Files touched:
   adoption triggers under the literal heading-phrase "adoption triggers"
   (queues ≫ 10 tasks or multi-repo; genuinely parallel claiming; recurring
   queue-state defects), with source links.
-- R6 (versioning): the implementing change bumps `plugin.json`'s minor version
-  by exactly one from whatever value it finds (skill behavior changes); if
-  another spec's implementation lands in the same commit-set with its own
-  mandated bump, one combined single-minor bump satisfies both.
+- R6 (versioning): the implementing change bumps `.claude-plugin/plugin.json`'s
+  minor version by exactly one from whatever value it finds (skill behavior
+  changes); if another spec's implementation lands in the same commit-set with
+  its own mandated bump, one combined single-minor bump satisfies both.
 
 ## Out of scope
 
@@ -93,9 +93,9 @@ are promoted manually. Files touched:
 - [ ] `test "$(grep -c 'Discovered:' .claude/skills/drain/reference.md)" -ge 2` — both worker prompts carry the verdict block (R1)
 - [ ] `grep -q "## Discovered" .claude/skills/drain/SKILL.md && grep -q "Discovered-from:" .claude/skills/drain/reference.md` — collect mechanics + stub header defined (R2)
 - [ ] ``grep -qF '| `draft` |' .claude/skills/drain/reference.md && grep -qi "promotion" .claude/skills/drain/reference.md`` (R3)
-- [ ] `grep -q "Discovered" antigravity/.agents/workflows/drain.md` (R4)
+- [ ] `grep -q 'Discovered:' antigravity/.agents/workflows/drain.md && grep -qi 'draft' antigravity/.agents/workflows/drain.md && grep -q '## Discovered' antigravity/.agents/workflows/drain.md` — mirror carries the R1–R3 markers (R4)
 - [ ] `grep -qi "beads" docs/external-playbooks.md && grep -qi "adoption triggers" docs/external-playbooks.md` (R5)
-- [ ] plugin.json minor version strictly greater than the pre-implementation value, verified in the implementing task's evidence (R6)
+- [ ] `.claude-plugin/plugin.json` minor version strictly greater than the pre-implementation value, verified in the implementing task's evidence (R6)
 - [ ] End to end (markdown mode): a fresh session executing drain's collect against a mock DONE verdict containing one non-blocking Discovered entry produces the `## Discovered` append plus a `draft` stub with `Discovered-from:` and placeholder acceptance, and a subsequent inventory pass does NOT dispatch the draft (manual dry-read until the eval harness covers /drain).
 
 ## Open questions

@@ -45,9 +45,10 @@ are chained in the Depends-on headers themselves (oc 05 → um 03 →
 wte 05), and um 02 depends on wte 01 (shared CLAUDE.md edits), so the
 wave order above is machine-enforced, not prose-only.
 
-Out of queue: `specs/beads-integration/tasks/01-discovered-work-capture.md`
-(pending but requires maintainer re-homing as a standalone spec — see
-its SPEC.md banner; not dispatchable); task 02 there is withdrawn.
+Re-homed 2026-07-03: `specs/discovered-work-capture/tasks/01-discovered-work-capture.md`
+(was `specs/beads-integration/tasks/01`). `Status: pending`; its dependencies
+(chaining-antipatterns 01/03) are done — **dispatchable now** via /build or
+/drain. The old beads-integration task 02 is withdrawn and that spec is closed.
 
 **Queue 1 (drained 2026-07-03)** — 30 tasks across review-fixes,
 model-agnostic, context-management, code-vs-llm, chaining-antipatterns,

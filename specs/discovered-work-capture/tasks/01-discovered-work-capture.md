@@ -78,9 +78,9 @@ fully, and docs/external-playbooks.md gains the "Beads" research entry.
    dependency, loss of diffable state), under the literal heading-phrase
    "adoption triggers" (queues ≫ 10 tasks or multi-repo; genuinely
    parallel claiming; recurring queue-state defects), with source links.
-7. R6 (versioning): bump `plugin.json`'s minor version by exactly one
-   (skill behavior changes); if another spec's mandated bump lands in the
-   same commit-set, one combined single-minor bump satisfies both.
+7. R6 (versioning): bump `.claude-plugin/plugin.json`'s minor version by
+   exactly one (skill behavior changes); if another spec's mandated bump lands
+   in the same commit-set, one combined single-minor bump satisfies both.
 8. Regression duty after all edits:
    `test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2 && test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2`
    must still pass.
@@ -90,7 +90,8 @@ fully, and docs/external-playbooks.md gains the "Beads" research entry.
 - [ ] `test "$(grep -c 'Discovered:' .claude/skills/drain/reference.md)" -ge 2` — both worker prompts carry the verdict block (R1)
 - [ ] `grep -q "## Discovered" .claude/skills/drain/SKILL.md && grep -q "Discovered-from:" .claude/skills/drain/reference.md` — collect mechanics + stub header defined (R2)
 - [ ] ``grep -qF '| `draft` |' .claude/skills/drain/reference.md && grep -qi "promotion" .claude/skills/drain/reference.md`` (R3)
-- [ ] `grep -q "Discovered" antigravity/.agents/workflows/drain.md` (R4 antigravity mirror)
+- [ ] `grep -q 'Discovered:' antigravity/.agents/workflows/drain.md && grep -qi 'draft' antigravity/.agents/workflows/drain.md && grep -q '## Discovered' antigravity/.agents/workflows/drain.md` — mirror carries the R1–R3 markers, not just the word (R4 antigravity mirror)
 - [ ] `grep -qi "beads" docs/external-playbooks.md && grep -qi "adoption triggers" docs/external-playbooks.md` (R5 research record)
+- [ ] `.claude-plugin/plugin.json` minor version strictly greater than the pre-implementation value, shown in the implementing evidence (R6 versioning)
 - [ ] `test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2 && test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2` — regression duty
 - [ ] End to end (markdown mode, no bd install needed): a fresh session executing drain's collect against a mock DONE verdict containing one non-blocking Discovered entry produces the `## Discovered` append plus a `draft` stub with `Discovered-from:` and placeholder acceptance, and a subsequent inventory pass does NOT dispatch the draft (manual dry-read until the eval harness covers /drain)
