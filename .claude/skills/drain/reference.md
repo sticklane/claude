@@ -414,9 +414,13 @@ result), files changed, a Discovered: section — single-line items of
 out-of-scope work found, empty means none, never create task files for
 them — and for non-DONE verdicts one Done vs remaining: line." \
   --allowedTools "Read,Edit,Write,Glob,Grep,Bash(<verified test/lint/build cmds>),Bash(git add *),Bash(git commit *)" \
-  --permission-mode dontAsk --max-turns <N from the task's Budget header, else 80>
+  --permission-mode dontAsk --max-turns <N from the task's Budget header, else 80> \
+  --model <tier alias>
 ```
 
+`--model` carries the same three-rung ladder as SKILL.md's Task-tool
+dispatch: `sonnet` on attempt 1, `opus` on the single relaunch, `fable`
+for tournament entrants (attempts 3+).
 `dontAsk` makes unapproved tools abort instead of hanging — the CI
 baseline from the playbook's mechanism ladder. `--max-turns` is N from
 the task's pinned `Budget: <N> turns` header (integer N, the format
