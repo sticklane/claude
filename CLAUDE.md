@@ -67,6 +67,9 @@ order cannot resolve are surfaced, not guessed.
   as the inline Claude default; the mappings for other runtimes live in
   `runtimes/` profiles — new skills use tier language plus the inline
   default, never a bare model name.
+- Skills that spawn agents follow the "Dispatch authoring" section of
+  `.claude/rules/token-discipline.md` (tier by stage type, capped returns,
+  bounded loops, single-call judge) — cite it, don't restate it.
 - `.claude/` is the source of truth; `antigravity/` is a mirrored port
   (skills near-identical, agents→skills, human-only skills→workflows,
   hooks in Antigravity's JSON shape). When a skill changes here, mirror the

@@ -1,7 +1,7 @@
 # Task 01: "Dispatch authoring" rule section + CLAUDE.md bullet
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: done
 Depends on: none
 Priority: P1
 Budget: 25 turns
@@ -35,6 +35,6 @@ Must NOT touch: any SKILL.md (task 03 retrofits them), bin/ or tests/
 
 ## Acceptance
 
-- [ ] `grep -q "Dispatch authoring" .claude/rules/token-discipline.md` → exit 0; section has all six points, each with a citation into docs/orchestration-research-2026-07.md, docs/context-management-research-2026-07.md, or docs/anthropic-playbook.md
-- [ ] `grep -c "Dispatch authoring" CLAUDE.md` → 1 (one pointer bullet, no restated content)
-- [ ] `grep -q "Dispatch authoring" antigravity/AGENTS.md` → exit 0
+- [x] `grep -q "Dispatch authoring" .claude/rules/token-discipline.md` → exit 0; section has all six points, each with a citation into docs/orchestration-research-2026-07.md, docs/context-management-research-2026-07.md, or docs/anthropic-playbook.md — verifier confirmed all six points present and every cited anchor resolves (evidence/01-dispatch-authoring-rule.md)
+- [x] `grep -c "Dispatch authoring" CLAUDE.md` → 1 (one pointer bullet, no restated content) — verifier confirmed count 1 and pointer-only (evidence/01-dispatch-authoring-rule.md)
+- [x] `grep -q "Dispatch authoring" antigravity/AGENTS.md` → exit 0 — verifier confirmed exit 0, mirror follows existing self-contained pattern (evidence/01-dispatch-authoring-rule.md)
