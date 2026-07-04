@@ -1,7 +1,7 @@
 # Task 01: Liveness-checked sweep, parked tasks, rescue branches
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: done
 Depends on: none
 Priority: P1
 Budget: 40 turns
@@ -58,15 +58,15 @@ workflow-token-efficiency 05).
 
 ## Acceptance
 
-- [ ] `grep -qi "grace window" .claude/skills/drain/reference.md` → exit 0, section names TaskList, the `-t*` sweep, mtimes and tip-commit signals
-- [ ] `grep -qi "park" .claude/skills/drain/SKILL.md && grep -qi "park" .claude/skills/drain/reference.md` → exit 0; step-4 trigger mentions parked tasks; `grep -qi "zombie" .claude/skills/drain/reference.md` → exit 0 with the 4-extension bound in exactly one place
-- [ ] `test "$(grep -o "15 min" .claude/skills/drain/reference.md | wc -l)" -le 1` → named-default rule holds
-- [ ] `grep -qi "not a liveness signal" .claude/skills/drain/reference.md` → exit 0
-- [ ] `grep -q "rescue/NN-<slug>-" .claude/skills/drain/reference.md && grep -q "rescue/" .claude/skills/drain/SKILL.md && ! grep -q "discard its branch/worktree" .claude/skills/drain/SKILL.md && ! grep -q "discard the dead run's worktree/branch" .claude/skills/drain/reference.md` → exit 0
-- [ ] rescue cleanup present in SKILL.md's step-3 DONE bullet AND reference.md's DONE-bookkeeping passage (check each individually)
-- [ ] `grep -q "worktree or branch disappears" .claude/skills/drain/reference.md` → exit 0, inside the worker prompt block
-- [ ] `grep -qi "sweep race" .claude/skills/drain/reference.md || grep -qi "sweep race" .claude/skills/drain/SKILL.md` → exit 0; routing distinguishes task-status cases and never counts toward relaunch/tournament thresholds
-- [ ] `grep -q "liveness check" .claude/skills/drain/SKILL.md` → exit 0
-- [ ] `grep -qi "residual" .claude/skills/drain/reference.md || grep -qi "safety net" .claude/skills/drain/reference.md` → exit 0
-- [ ] Three promptable e2e scenarios from the spec (4-min mtime → park; 40-min → sweep with named rescue branch; 4 windows of refreshing mtimes → zombie report) each answered correctly by a fresh agent given only the amended files
-- [ ] `grep -qi "rescue" antigravity/.agents/workflows/drain.md` → exit 0 (mirror)
+- [x] `grep -qi "grace window" .claude/skills/drain/reference.md` → exit 0, section names TaskList, the `-t*` sweep, mtimes and tip-commit signals — PASS (verifier C1; evidence/01-liveness-and-rescue.md)
+- [x] `grep -qi "park" .claude/skills/drain/SKILL.md && grep -qi "park" .claude/skills/drain/reference.md` → exit 0; step-4 trigger mentions parked tasks; `grep -qi "zombie" .claude/skills/drain/reference.md` → exit 0 with the 4-extension bound in exactly one place — PASS (verifier C2; bound at reference.md:101 only)
+- [x] `test "$(grep -o "15 min" .claude/skills/drain/reference.md | wc -l)" -le 1` → named-default rule holds — PASS (count = 1; verifier C3)
+- [x] `grep -qi "not a liveness signal" .claude/skills/drain/reference.md` → exit 0 — PASS (verifier C4)
+- [x] `grep -q "rescue/NN-<slug>-" .claude/skills/drain/reference.md && grep -q "rescue/" .claude/skills/drain/SKILL.md && ! grep -q "discard its branch/worktree" .claude/skills/drain/SKILL.md && ! grep -q "discard the dead run's worktree/branch" .claude/skills/drain/reference.md` → exit 0 — PASS (both old discard strings gone; verifier C5)
+- [x] rescue cleanup present in SKILL.md's step-3 DONE bullet AND reference.md's DONE-bookkeeping passage (check each individually) — PASS (SKILL.md:95-97 and reference.md:59-61; verifier C6)
+- [x] `grep -q "worktree or branch disappears" .claude/skills/drain/reference.md` → exit 0, inside the worker prompt block — PASS (verifier C7)
+- [x] `grep -qi "sweep race" .claude/skills/drain/reference.md || grep -qi "sweep race" .claude/skills/drain/SKILL.md` → exit 0; routing distinguishes task-status cases and never counts toward relaunch/tournament thresholds — PASS (both files; verifier C8)
+- [x] `grep -q "liveness check" .claude/skills/drain/SKILL.md` → exit 0 — PASS (verifier C9)
+- [x] `grep -qi "residual" .claude/skills/drain/reference.md || grep -qi "safety net" .claude/skills/drain/reference.md` → exit 0 — PASS (verifier C10)
+- [x] Three promptable e2e scenarios from the spec (4-min mtime → park; 40-min → sweep with named rescue branch; 4 windows of refreshing mtimes → zombie report) each answered correctly by a fresh agent given only the amended files — PASS (3 fresh scout agents, given only SKILL.md+reference.md, answered park / sweep+`rescue/07-<slug>-<shortsha>` / zombie-report respectively)
+- [x] `grep -qi "rescue" antigravity/.agents/workflows/drain.md` → exit 0 (mirror) — PASS (verifier mirror-parity check)
