@@ -1,7 +1,7 @@
 # Task 03: Orchestration decision record, version bump, e2e panel check
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: in-progress
 Depends on: 01, 02, ../../orchestrator-context/tasks/05-decisions-e2e-bump.md
 Priority: P2
 Budget: 35 turns
