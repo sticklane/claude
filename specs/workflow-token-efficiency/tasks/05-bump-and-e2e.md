@@ -1,7 +1,7 @@
 # Task 05: Version bump + end-to-end dispatch-language check
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: in-progress
+Status: done
 Depends on: 03, 04, ../../ultra-mode/tasks/03-decision-record-bump-e2e.md
 Priority: P2
 Budget: 25 turns
@@ -31,6 +31,6 @@ observed in the dispatch text before workers run.
 
 ## Acceptance
 
-- [ ] `git diff HEAD~1 -- .claude-plugin/plugin.json` in the implementing commit shows one version bump; `claude plugin validate .` → exit 0
-- [ ] Evidence file shows captured /parallel dispatch prompts containing tier and output-budget language before any worker ran
-- [ ] All four suite commands above → exit 0
+- [x] `git diff HEAD~1 -- .claude-plugin/plugin.json` in the implementing commit shows one version bump; `claude plugin validate .` → exit 0 — verifier PASS: single line 0.7.7→0.7.8, validate exit 0 (evidence/05-bump-and-e2e.md)
+- [x] Evidence file shows captured /parallel dispatch prompts containing tier and output-budget language before any worker ran — verifier PASS: tier (Haiku/effort:low scouting, SKILL.md L41) + output-budget (capped final message, L46-47) quoted verbatim (evidence/05-e2e.md; verifier report evidence/05-bump-and-e2e.md)
+- [x] All four suite commands above → exit 0 — verifier PASS: check-token-discipline 0, test_ctd 55/0, test_sync 28/0, lint-ultra-gate OK (evidence/05-bump-and-e2e.md)
