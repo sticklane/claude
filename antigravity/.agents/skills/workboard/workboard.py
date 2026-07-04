@@ -164,6 +164,7 @@ def git_info(repo):
 # ---------------------------------------------------------------- specs
 
 STATUS_RE = re.compile(r"^Status:\s*\[?([A-Za-z_-]+)\]?", re.MULTILINE)
+DEPENDS_RE = re.compile(r"^Depends on:\s*(.*)$", re.MULTILINE)
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 OPEN_TASK_STATUSES = {"pending", "open", "todo", "ready",
                       "in-progress", "in_progress", "claimed"}
@@ -193,8 +194,10 @@ def scan_toolkit_specs(repo):
                 tm = TITLE_RE.search(t_text)
                 tasks.append({
                     "file": str(tf.relative_to(repo)),
+                    "abs": str(tf),
                     "title": tm.group(1).strip() if tm else tf.stem,
                     "status": status,
+                    "deps": parse_deps(t_text),
                 })
                 mtimes.append(tf.stat().st_mtime)
         done = sum(1 for t in tasks if t["status"] in CLOSED_TASK_STATUSES)
@@ -216,6 +219,122 @@ def scan_toolkit_specs(repo):
             "last_touched": max(mtimes),
         })
     return specs
+
+
+# ---------------------------------------------------------------- readiness
+
+def parse_deps(text):
+    """The `Depends on:` header as a list of raw entries; none/empty ⇒ []."""
+    m = DEPENDS_RE.search(text)
+    if not m:
+        return []
+    raw = m.group(1).strip()
+    if not raw or raw.lower() == "none":
+        return []
+    return [e.strip() for e in raw.split(",") if e.strip()]
+
+
+def _glob_task(tasks_dir, num):
+    """First `NN-*.md` in tasks_dir matching the (possibly unpadded) prefix."""
+    if not tasks_dir.is_dir():
+        return None
+    for pat in dict.fromkeys((f"{num}-*.md", f"{int(num):02d}-*.md")):
+        matches = sorted(tasks_dir.glob(pat))
+        if matches:
+            return matches[0]
+    return None
+
+
+def resolve_dep(entry, task_dir, repo_root):
+    """Resolve one `Depends on:` entry to a task file the way /drain does.
+
+    - bare numeric (`01`)        → sibling `NN-*.md` in the same spec's tasks/
+    - `<slug>/NN` shorthand      → `../<slug>/tasks/NN-*.md` (another spec)
+    - task-file-relative path    → resolved against the current task dir
+    - `specs/...`-rooted path    → also tried against the repo root
+    Returns the resolved Path (existing file) or None if unresolvable.
+    """
+    entry = entry.strip()
+    if not entry:
+        return None
+    if re.fullmatch(r"\d+", entry):
+        return _glob_task(task_dir, entry)
+    m = re.fullmatch(r"([A-Za-z0-9_.-]+)/(\d+)", entry)
+    if m:
+        return _glob_task(task_dir.parent.parent / m.group(1) / "tasks", m.group(2))
+    # path form: try task-dir-relative first, then repo-root for specs/ roots
+    bases = [task_dir]
+    if entry.startswith("specs/") or entry.startswith("/"):
+        bases.append(repo_root)
+    for base in bases:
+        cand = base / entry
+        if any(ch in entry for ch in "*?["):
+            parent = cand.parent
+            matches = sorted(parent.glob(cand.name)) if parent.is_dir() else []
+            if matches:
+                return matches[0]
+        elif cand.is_file():
+            return cand
+    return None
+
+
+def _dep_is_done(path):
+    m = STATUS_RE.search(read_text(path, 10_000))
+    return bool(m) and m.group(1).lower() == "done"
+
+
+def ready_items(repos):
+    """Dispatchable toolkit-spec tasks (Status: pending, all deps done).
+
+    Per spec: one ready task ⇒ a `/build <file>` item; two or more ready in a
+    spec ⇒ a single `/drain specs/<slug>` item. A task with an unresolvable
+    dep id is not ready but is surfaced as blocked-by-unresolved."""
+    items, blocked = [], []
+    for r in repos:
+        repo_path = r["path"]
+        repo_root = Path(repo_path)
+        for s in r["specs"]:
+            if s.get("kind") != "toolkit":
+                continue
+            spec_ready = []
+            for t in s["tasks"]:
+                if t["status"] != "pending":
+                    continue
+                task_dir = Path(t["abs"]).parent
+                satisfied, unresolved = True, None
+                for dep in t.get("deps", []):
+                    resolved = resolve_dep(dep, task_dir, repo_root)
+                    if resolved is None:
+                        unresolved = dep
+                        satisfied = False
+                        break
+                    if not _dep_is_done(resolved):
+                        satisfied = False
+                        break
+                if unresolved is not None:
+                    blocked.append({
+                        "repo": r["name"], "slug": s["slug"],
+                        "task": t["file"], "dep": unresolved,
+                    })
+                elif satisfied:
+                    spec_ready.append(t)
+            if len(spec_ready) >= 2:
+                cmd = (f'cd {shlex.quote(repo_path)} && '
+                       f'claude "/drain specs/{s["slug"]}"')
+                items.append({
+                    "repo": r["name"], "slug": s["slug"],
+                    "task": f"{len(spec_ready)} ready tasks",
+                    "cmd": cmd, "kind": "drain",
+                })
+            elif spec_ready:
+                t = spec_ready[0]
+                cmd = (f'cd {shlex.quote(repo_path)} && '
+                       f'claude "/build {t["file"]}"')
+                items.append({
+                    "repo": r["name"], "slug": s["slug"],
+                    "task": t["title"], "cmd": cmd, "kind": "build",
+                })
+    return {"items": items, "blocked_unresolved": blocked}
 
 
 CHECKBOX_RE = re.compile(r"^\s*-\s*\[([ x-])\]", re.MULTILINE)
@@ -616,6 +735,7 @@ def assemble(roots, max_depth, stale_days, quiet):
     antigravity = scan_antigravity()
     todos = scan_todos(claude_home)
     inbox = attention_items(repos, sessions, antigravity, stale_days)
+    ready = ready_items(repos)
 
     return {
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
@@ -626,6 +746,7 @@ def assemble(roots, max_depth, stale_days, quiet):
         "antigravity": antigravity,
         "todos": todos,
         "inbox": inbox,
+        "ready": ready,
         "totals": {
             "repos": len(repos),
             "specs_open": sum(1 for r in repos for s in r["specs"]
@@ -671,6 +792,48 @@ def progress_bar(done, total, doing=0):
         f'<span class="bar-fill" style="width:{pct}%"></span>'
         f'<span class="bar-doing" style="left:{pct}%;width:{doing_pct}%"></span></span>'
         f'<span class="bar-label">{done}/{total}</span>'
+    )
+
+
+def render_ready(ready):
+    """The 'Ready to start' section: opportunity, distinct from the inbox."""
+    items = ready["items"]
+    if items:
+        rows = "".join(
+            f"<tr><td>{esc(i['repo'])}</td>"
+            f"<td class='strong'>{esc(i['slug'])}</td>"
+            f"<td>{esc(i['task'])}</td>"
+            f"<td><code>{esc(i['cmd'])}</code></td></tr>"
+            for i in items
+        )
+        body = (
+            "<table><thead><tr><th>repo</th><th>spec</th><th>task</th>"
+            "<th>launch</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table>"
+        )
+    else:
+        body = ('<p class="empty">Nothing ready to start — every pending task '
+                'is waiting on an unfinished dependency.</p>')
+
+    blocked = ready["blocked_unresolved"]
+    blocked_html = ""
+    if blocked:
+        lines = "".join(
+            f"<li>{esc(b['repo'])} · <code>{esc(b['task'])}</code> — "
+            f"unresolved dependency <code>{esc(b['dep'])}</code></li>"
+            for b in blocked
+        )
+        blocked_html = (
+            '<p class="legend">Blocked by an unresolved <code>Depends on:</code> '
+            f'id — fix the reference:</p><ul class="blocked-deps">{lines}</ul>'
+        )
+
+    return (
+        '<section class="ready"><h2>Ready to start '
+        f'<span class="count">{len(items)}</span></h2>'
+        '<p class="legend">Pending tasks whose dependencies are all done — '
+        'dispatchable now. Click a <code>command</code> to copy it.</p>'
+        f"{body}{blocked_html}</section>"
     )
 
 
@@ -810,6 +973,7 @@ def render_html(data):
         generated_at=esc(data["generated_at"]),
         stale_days=data["stale_days"],
         tiles=tiles,
+        ready=render_ready(data["ready"]),
         inbox=inbox_html,
         repos="".join(repo_cards) or '<p class="empty">No git repos found in the scanned roots.</p>',
         antigravity=ag_html,
@@ -887,6 +1051,13 @@ td {{ padding:6px 10px 6px 0; border-top:1px solid var(--grid);
   font-variant-numeric:tabular-nums; }}
 .muted-text {{ color:var(--muted); }}
 .empty {{ color:var(--ink-2); }}
+section.ready {{ border-left:4px solid var(--good); }}
+section.ready h2 .count {{ display:inline-block; margin-left:6px;
+  background:var(--good); color:#fff; border-radius:999px;
+  padding:0 9px; font-size:12px; font-weight:600;
+  font-variant-numeric:tabular-nums; vertical-align:middle; }}
+.blocked-deps {{ margin:6px 0 0; padding-left:20px; color:var(--ink-2);
+  font-size:12px; }}
 .handoff {{ color:var(--serious); font-size:13px; margin:8px 0 0; }}
 .handoff code {{ font-size:12px; }}
 #filter {{ width:280px; padding:6px 10px; margin-bottom:14px;
@@ -911,6 +1082,7 @@ sessions · snapshot {generated_at} · stale after {stale_days}d · re-run
 <div class="tiles">{tiles}</div>
 <input id="filter" type="search" placeholder="filter rows…"
  oninput="var q=this.value.toLowerCase();document.querySelectorAll('tbody tr, details.repo').forEach(function(el){{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none'}})">
+{ready}
 <section><h2>Needs attention</h2>
 <p class="legend">⚑ blocked = waiting on a human decision · ▲ needs-review =
 verify or close finished/dirty work · ⏸ stale = open work idle past {stale_days}d.
@@ -934,6 +1106,9 @@ def main():
     ap = argparse.ArgumentParser(description="Cross-repo agent/spec/session workboard")
     ap.add_argument("roots", nargs="*", help="directories to scan for git repos")
     ap.add_argument("--out", default="workboard.html", help="output HTML path")
+    ap.add_argument("--actions-out", default=None,
+                    help="path for the companion actions script "
+                         "(default: --out stem + .actions.sh)")
     ap.add_argument("--json", action="store_true", help="print JSON to stdout instead")
     ap.add_argument("--stale-days", type=int, default=STALE_DAYS_DEFAULT)
     ap.add_argument("--max-depth", type=int, default=3)

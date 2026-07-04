@@ -1,6 +1,6 @@
 # Task 01: Readiness computation + "Ready to start" section
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -71,10 +71,16 @@ script; that is task 02. Do not modify `attention_items()` cmd strings.
 6. Confirm the module still parses and the smoke run exits 0 (R8).
 
 ## Acceptance
-- [ ] `bash tests/test_workboard_actionability.sh` → passes (R1–R3 subset:
+- [x] `bash tests/test_workboard_actionability.sh` → passes (R1–R3 subset:
       same-spec ready `/build`, cross-spec ready, pending-dep not ready,
       unresolvable → blocked-by-unresolved, ≥2-ready → `/drain`)
-- [ ] `python3 -c "import ast; ast.parse(open('.claude/skills/workboard/workboard.py').read())"` → exits 0
-- [ ] `python3 -c "import ast; ast.parse(open('antigravity/.agents/skills/workboard/workboard.py').read())"` → exits 0
-- [ ] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0 and `/tmp/wb.html` contains a "Ready to start" section header (R8, R3)
-- [ ] `git diff --cached --name-only` (or `git show --stat` after commit) includes BOTH `workboard.py` paths and `.claude-plugin/plugin.json` (R9)
+      — `PASS: workboard actionability (R1-R3 subset)`; verifier confirmed
+      assertions non-tautological (evidence/01-readiness-and-ready-section.md).
+- [x] `python3 -c "import ast; ast.parse(open('.claude/skills/workboard/workboard.py').read())"` → exits 0
+      — verifier C2 exit 0.
+- [x] `python3 -c "import ast; ast.parse(open('antigravity/.agents/skills/workboard/workboard.py').read())"` → exits 0
+      — verifier C3 exit 0; mirror byte-identical to source.
+- [x] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0 and `/tmp/wb.html` contains a "Ready to start" section header (R8, R3)
+      — verifier C4: exit 0, `grep -c "Ready to start"` = 1; real-repo run finds 20 ready + 1 blocked-unresolved.
+- [x] `git diff --cached --name-only` (or `git show --stat` after commit) includes BOTH `workboard.py` paths and `.claude-plugin/plugin.json` (R9)
+      — verifier C5: both workboard.py + plugin.json modified; version 0.7.0→0.7.1; workboard.py diff purely additive (+172, −0), R8 preserved.
