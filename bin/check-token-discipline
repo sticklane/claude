@@ -29,7 +29,6 @@ fi
 
 IN_SCOPE='.claude/skills/drain/SKILL.md
 .claude/skills/drain/reference.md
-.claude/skills/parallel/SKILL.md
 .claude/skills/autopilot/SKILL.md
 .claude/skills/autopilot/reference.md
 .claude/skills/design/SKILL.md

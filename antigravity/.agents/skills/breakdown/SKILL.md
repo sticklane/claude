@@ -31,6 +31,7 @@ dispatchers parse it for the over-budget stop and headless `--max-turns`.
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
+
 Status: pending
 Depends on: <task numbers, or "none">
 Priority: P2
@@ -39,20 +40,25 @@ Spec: ../SPEC.md (requirements R2, R3)
 Touch: <comma-separated paths this task may change>
 
 ## Goal
+
 What exists when this task is done, in 2–4 sentences.
 
 ## Touch
+
 Optional prose on boundaries (why a path is in or out). When overlap with
 a sibling task is plausible, list the adjacent files/modules this task
 must NOT touch. Dispatchers parse the `Touch:` header line above, not
 this section; anything not listed there is scope creep.
 
 ## Steps
+
 Numbered, concrete. Include "write the failing test first" where the
 acceptance criteria are test-shaped.
 
 ## Acceptance
+
 Runnable commands only:
+
 - [ ] `<command>` → <expected result>
 ```
 
@@ -64,7 +70,7 @@ Runnable commands only:
    - P1 — sits on the longest remaining dependency chain.
    - P2 — the default.
    - P3 — cleanup / nice-to-have.
-   The human may re-prioritize at any time by editing the headers.
+     The human may re-prioritize at any time by editing the headers.
 5. Append a **Parallelization** section to SPEC.md: groups of tasks with
    disjoint `Touch` lists and no dependency edges. Apply the
    "decision coupling" test before grouping: tasks are parallel-safe
@@ -86,5 +92,6 @@ grammar itself lives in drain's reference — cite it, don't restate it here.
 ## Hand off
 
 Tell the user: run `/build specs/<slug>/tasks/01-*.md` in a new conversation
-per task, or `/parallel specs/<slug>` to dispatch an independent group
-across Agent Manager agents.
+per task, or apply the drain workflow (`.agents/workflows/drain.md`) to work
+the queue — its group throughput mode hands you concurrent Agent Manager
+launches for an independent group.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lint-ultra-gate.sh — model-free gate check for the ultra-path skills.
 #
-# For each of the five SKILL.md files that carry a `## Ultra path` section,
+# For each of the four SKILL.md files that carry a `## Ultra path` section,
 # every case-insensitive occurrence of "ultra" MUST have the literal marker
 # phrase "active runtime profile" within ±3 lines. This keeps gate-closed
 # installs (plugin caches, eval fixtures — no runtimes/ dir) reading as
@@ -17,7 +17,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FILES=(
   ".claude/skills/critique/SKILL.md"
   ".claude/skills/drain/SKILL.md"
-  ".claude/skills/parallel/SKILL.md"
   ".claude/skills/build/SKILL.md"
   ".claude/skills/idea/SKILL.md"
 )

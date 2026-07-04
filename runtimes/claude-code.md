@@ -29,15 +29,15 @@ enforces the agent pins. Aliases only, never dated model ids, so pins
 survive model releases. The other profiles carry the same table in
 their runtime's vocabulary.
 
-| Role                                                               | Claude default                                                                       |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| session default                                                    | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution |
-| implementation workers (drain/parallel dispatch)                   | `sonnet`                                                                             |
-| explore / codebase-search (`scout`)                                | `haiku`                                                                              |
-| LLM reviewer, advisory lane (`critic`, `verifier`)                 | `sonnet`                                                                             |
-| `/distill` (skill frontmatter)                                     | `opus`                                                                               |
-| retry escalation (attempt 2, verifier evidence in prompt)          | one tier up: `sonnet` → `opus`                                                       |
-| tournament escalation (attempts 3+, after the `opus` retry failed) | `fable` — the frontier-tier trigger of `.claude/rules/token-discipline.md`           |
+| Role                                                                 | Claude default                                                                       |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| session default                                                      | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution |
+| implementation workers (drain dispatch, incl. group throughput mode) | `sonnet`                                                                             |
+| explore / codebase-search (`scout`)                                  | `haiku`                                                                              |
+| LLM reviewer, advisory lane (`critic`, `verifier`)                   | `sonnet`                                                                             |
+| `/distill` (skill frontmatter)                                       | `opus`                                                                               |
+| retry escalation (attempt 2, verifier evidence in prompt)            | one tier up: `sonnet` → `opus`                                                       |
+| tournament escalation (attempts 3+, after the `opus` retry failed)   | `fable` — the frontier-tier trigger of `.claude/rules/token-discipline.md`           |
 
 Frontier stays sparing beyond that one active rung: security-critical
 review and novel-architecture sessions are the other two sanctioned
@@ -95,7 +95,7 @@ baseline from the playbook's mechanism ladder.
 > per-variant script templates.)
 
 Ultra mode is the Workflow-tool orchestration path shared by `/critique`,
-`/drain`, `/parallel`, `/build`, and `/idea`. It is **off by default** and
+`/drain`, `/build`, and `/idea`. It is **off by default** and
 fires only when BOTH conditions hold:
 
 1. **the ultracode opt-in is active.** The opt-in rules belong to the
@@ -181,7 +181,8 @@ export default async function ({ agent, parallel, log, artifact }) {
 }
 ```
 
-**Drain / parallel dispatch** (`/drain`, `/parallel`) — dependency graph
+**Drain dispatch** (`/drain`, sequential queue and group throughput mode
+alike) — dependency graph
 compiled from the task files' `Depends on:` headers into a pipeline over
 groups (barrier only between groups), one worker per task, a verifier per
 task, and the status-flip + commit after each verdict exactly as non-ultra
