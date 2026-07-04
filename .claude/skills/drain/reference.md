@@ -47,6 +47,7 @@ loses nothing.
 | `deferred` | waiting on a human answer in the file | /drain, from the verdict |
 | `blocked` | technical blocker; task needs amending | /drain, from the verdict |
 | `failed` | tournament exhausted or skipped per cost gate; evidence recorded | /drain |
+| `draft` | discovered-work stub; never dispatchable, promoted manually | /drain (from a routed verdict's `Discovered:`) |
 
 On startup, an `in-progress` task is a stale lock ONLY after the Stale-lock
 liveness check below confirms the worker dead — never on a bare "no live
@@ -66,6 +67,53 @@ merge passes gates, no rescue.)
 DONE bookkeeping deletes a task's rescues: after the task's branch merges
 and project gates pass, drain deletes every `rescue/NN-<slug>-*` branch for
 that task.
+
+### Draft status (discovered-work stubs)
+
+`Status: draft` marks a stub drain scaffolds from the finally-routed
+verdict's `Discovered:` entry (SKILL.md step 3, "Materialize discoveries").
+A draft is **never dispatchable**: inventory excludes it from dispatch, from
+the batch interview's deferred round, and from the "queue empty" terminal
+test. Two terminal readings follow so step 4 never spins without a stopping
+condition:
+
+- A queue holding only `draft` + `done` tasks reports **drained, listing the
+  drafts for human promotion** — not "queue empty, nothing to do".
+- A `pending` task whose only UNMET dependencies are all `draft` reports
+  **"drained pending promotion"** — a terminal condition, not a hang.
+
+**Promotion is manual.** A human — or an /idea / /breakdown pass — replaces
+the placeholder `## Acceptance` with runnable criteria and flips
+`draft` → `pending`. Drain never writes a draft's `Status:`, not even on an
+interview yes: a promoted Goal becomes binding worker instructions, so
+untrusted-data gates it (docs/human-gates.md reason 1, cited not restated).
+
+**Stub format** (drain writes this in the main checkout; NN = highest task
+number already in the tasks/ dir + 1, chosen at collect time):
+
+```markdown
+Status: draft
+Discovered-from: <source task file>
+Spec: ../SPEC.md
+Blocking: <yes|no>
+
+# <title>
+
+<the discovery's one-line rationale, verbatim from the worker's report —
+vet/rewrite before promoting>
+
+## Acceptance
+
+<!-- draft: needs runnable criteria before promotion -->
+```
+
+The `Blocking:` line records the discovery's blocking-or-not in the stub
+header ONLY — drain makes NO `Depends on:` edit to the source task; a human
+wires dependencies at promotion. Dedupe is by title against the source
+task's existing `## Discovered` entries before either the append or the stub
+is written. (`Depends on:` entries elsewhere may be task numbers within a
+spec or repo-relative task-file paths across specs; drain inventory accepts
+both.)
 
 ## Stale-lock liveness check
 

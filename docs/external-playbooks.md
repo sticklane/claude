@@ -378,3 +378,32 @@ spec). Those artifacts apply the practices; the research stays here.
 - **Declined: harness task tools as the tracker.** TaskCreate/TaskList
   state is session-scoped; this repo's tracker is committed markdown
   that survives the session and travels with the repo.
+
+## Beads
+
+Beads (Steve Yegge's git-backed issue DAG — issues modelled as a dependency
+graph committed to the repo) was evaluated as a queue backend, and its
+`discovered-from` edge inspired the discovered-work capture in /drain.
+
+- **Adopted: `discovered-from` capture.** The idea worth keeping — a worker
+  naming NEW work it found mid-task, linked back to the task that surfaced
+  it — is adopted natively as R1–R3 of the discovered-work-capture spec:
+  workers report a `Discovered:` verdict block, and drain records each as a
+  `## Discovered` append on the source task plus a `draft` stub carrying
+  `Discovered-from:`. Zero new dependency — it rides the existing "workers
+  report, drain records" model.
+- **Declined: the beads queue backend.** Evaluated and specced, then declined
+  in the 2026-07-03 full exit. The queue stays markdown task files with
+  `Status:`/`Depends on:` headers every runtime can read and diff. Reasons:
+  the Dolt-based rewrite churn, a binary dependency (the `bd` CLI) on the
+  critical path, and loss of the plainly diffable, git-committed queue state
+  that markdown gives for free.
+- **adoption triggers.** Revisit beads (or an equivalent DAG backend) only
+  when the markdown queue actually strains against one of: queues that run
+  ≫ 10 tasks or span multiple repos; genuinely parallel claiming (workers
+  racing to claim the same ready task); or recurring queue-state defects a
+  typed store would prevent. Absent those, markdown wins on diffability and
+  zero dependency.
+- Sources: `specs/beads-integration` (closed) and `~/specs/beads-full-exit/`
+  (the 2026-07-03 decline record); the native adoption is
+  `specs/discovered-work-capture/SPEC.md`.

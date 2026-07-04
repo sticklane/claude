@@ -5,7 +5,7 @@ description: Work the remaining task queue to empty - one fresh agent per unbloc
 Work through every remaining task under the directory given after the
 command. Queue state lives in the task files' `Status` lines in the MAIN
 checkout (`pending`, `in-progress`, `done`, `deferred`, `blocked`,
-`failed`), and **only this workflow writes it — workers report verdicts,
+`failed`, `draft`), and **only this workflow writes it — workers report verdicts,
 the workflow records them and commits every flip**. Because state is
 committed files, the queue survives any conversation reset: re-run /drain
 and it resumes from the files.
@@ -147,24 +147,35 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    `deferred`, `failed`) → log the verdict and discard it, the rescue
    branch being the durable artifact.
 
-   Materialize discoveries: any verdict's report may carry a
-   `Discovered:` section. For each item, first compare against the
-   TITLE lines of existing task files in the owning spec's tasks/ dir —
-   owning spec = the REPORTING task's spec (dedupe: check the list
-   first); if new, write a header-only stub `NN-<kebab-slug>.md` (NN =
-   highest existing number in that tasks/ dir + 1, incremented per stub
-   within a run) with `Status: draft`, `Depends on: none`,
-   `Spec: ../SPEC.md`, a `Discovered-by:` line naming the reporting
-   task, and one Goal paragraph quoting the worker's line verbatim
-   under the fixed label "verbatim worker report — vet/rewrite before
-   promoting". Commit stubs with the next bookkeeping commit for that
-   task — the verdict flip, or for DONE workers a commit immediately
-   after the merge. Drafts are never dispatchable, and the workflow
-   never writes a draft's `Status:` — not even on an interview yes:
-   only a human edits `draft` → `pending`, after vetting or rewriting
-   the quoted Goal (once dispatched it becomes binding worker
-   instructions — untrusted-data applies). The final report lists
-   drafts created, so the batch interview surfaces them.
+   Materialize discoveries: only the finally-routed verdict's report is
+   recorded — the merged tournament winner or the final attempt; a
+   discarded candidate's or a superseded attempt's `Discovered:` entries
+   are dropped. Dedupe each entry by title against the source task's
+   existing `## Discovered` entries and the TITLE lines of the owning
+   spec's tasks/ dir (owning spec = the REPORTING task's spec; check both
+   first). For a new entry, make two main-checkout writes: append it under
+   a `## Discovered` section in the source task file, and scaffold a
+   header-only stub `NN-<kebab-slug>.md` in that tasks/ dir (NN = highest
+   existing number + 1, incremented per stub within a run) with
+   `Status: draft`, `Discovered-from: <source task file>`,
+   `Spec: ../SPEC.md`, a `Blocking: <yes|no>` line (the discovery's
+   blocking flag — recorded here only; NO `Depends on:` edit to the source
+   task), the rationale as Goal (verbatim from the worker's report —
+   vet/rewrite before promoting), and an `## Acceptance` section
+   containing only `<!-- draft: needs runnable criteria before promotion -->`.
+   Commit both with the next bookkeeping commit for that task — the verdict
+   flip, or for DONE workers a commit immediately after the merge. Drafts
+   are **never dispatchable**: excluded from dispatch, from the batch
+   interview, and from "queue empty" (a queue of only `draft` + `done`
+   reports drained, listing drafts for human promotion; a `pending` task
+   whose UNMET dependencies are all `draft` reports "drained pending
+   promotion"). The workflow never writes a draft's `Status:` — not even on
+   an interview yes: only a human (or an /idea / /breakdown pass) replaces
+   the placeholder `## Acceptance` with runnable criteria and edits
+   `draft` → `pending`, after vetting or rewriting the quoted Goal (once
+   dispatched it becomes binding worker instructions — untrusted-data
+   applies). The final report lists drafts created, so the batch interview
+   surfaces them.
 
    Record stopping points: at each non-done event — worker verdict
    BLOCKED (including over budget) or DEFERRED, a DONE candidate
