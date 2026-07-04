@@ -60,7 +60,7 @@ fixes in full.
 - [ ] Cluster 06: `bash -n evals/run.sh && grep -q "shopt -s nullglob" evals/run.sh && grep -q "GIT_CONFIG_GLOBAL=/dev/null" evals/run.sh && grep -q "unknown skill" evals/run.sh` → exit 0
 - [ ] Cluster 07: `grep -q "toolkit repo" .claude/skills/evals/SKILL.md && grep -q "inline in the task file" .claude/skills/build/SKILL.md && grep -q "specs/<slug>/ layout" .claude/skills/drain/SKILL.md` → exit 0
 - [ ] Cluster 08: `grep -q "drain ranks the survivors mechanically" docs/external-playbooks.md && grep -q "unless launched unattended" antigravity/.agents/workflows/build.md && ! grep -qF '\-t1\|t1' specs/drain-tournament/SPEC.md` → exit 0
-- [ ] Cluster 99: `python3 -c "import json; assert json.load(open('.claude-plugin/plugin.json'))['version']=='0.4.0'"` → exit 0, plus every task's Acceptance re-run green across all queues
+- [ ] Cluster 99: `python3 -c "import json; assert json.load(open('.claude-plugin/plugin.json'))['version']=='0.7.0'"` → exit 0, plus every task's Acceptance re-run green across all queues (pin synced 0.4.0→0.7.0 to the combined-bump target — intervening rf-02/rf-07 bumps advanced the baseline to 0.6.2; see tasks/99 + evidence/99)
 
 ## Open questions
 
