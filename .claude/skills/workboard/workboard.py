@@ -918,6 +918,60 @@ def render_ready(ready):
     )
 
 
+def build_actions_script(data):
+    """The companion actions script: only safe, mechanical batch fixes — repo
+    pushes and verifier invocations — in labeled, independently-runnable
+    sections. Never archive moves, force pushes, rm, or /build//drain launches."""
+    pushes, verifies = [], []
+    for r in data["repos"]:
+        rp = r["path"]
+        if r["git"]["ahead"]:
+            pushes.append(f"git -C {shlex.quote(rp)} push")
+        for s in r["specs"]:
+            if (s.get("kind") == "toolkit" and s["tasks_total"] > 0
+                    and s["tasks_done"] >= s["tasks_total"]):
+                verifies.append(
+                    f"cd {shlex.quote(rp)}\n"
+                    f'claude "Use the verifier agent to verify specs/{s["slug"]} '
+                    'against its acceptance criteria"')
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -u",
+        'echo "Review this script before running: pushes run immediately; '
+        'verify lines launch review sessions." >&2',
+        "",
+    ]
+    if pushes:
+        lines.append("# === Pushes ===")
+        lines.extend(pushes)
+        lines.append("")
+    if verifies:
+        lines.append("# === Verify done specs ===")
+        lines.extend(verifies)
+        lines.append("")
+    if not pushes and not verifies:
+        lines.append("# no batch actions available")
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
+def render_actions(data):
+    """Near-top HTML surface linking the companion actions script: its path plus
+    the exact `bash <path>` invocation inside a <td><code> so the existing
+    click-to-copy handler (closest('td code')) applies."""
+    path = data.get("actions_path")
+    if not path:
+        return ""
+    inv = f"bash {shlex.quote(path)}"
+    return (
+        '<section class="actions"><h2>Batch actions</h2>'
+        '<p class="legend">A companion script of safe, mechanical fixes was '
+        f'written to <code>{esc(path)}</code>. Pushes run immediately; verify '
+        'lines launch review sessions — review it before running.</p>'
+        '<table><tbody><tr><td><code class="cmd">'
+        f'{esc(inv)}</code></td></tr></tbody></table></section>'
+    )
+
+
 def render_html(data):
     t = data["totals"]
 
@@ -1056,6 +1110,7 @@ def render_html(data):
         generated_at=esc(data["generated_at"]),
         stale_days=data["stale_days"],
         tiles=tiles,
+        actions=render_actions(data),
         ready=render_ready(data["ready"]),
         inbox=inbox_html,
         repos="".join(repo_cards) or '<p class="empty">No git repos found in the scanned roots.</p>',
@@ -1178,6 +1233,7 @@ sessions · snapshot {generated_at} · stale after {stale_days}d · re-run
 <div class="tiles">{tiles}</div>
 <input id="filter" type="search" placeholder="filter rows…"
  oninput="var q=this.value.toLowerCase();document.querySelectorAll('tbody tr, details.repo').forEach(function(el){{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none'}})">
+{actions}
 {ready}
 <section><h2>Needs attention</h2>
 <p class="legend">⚑ blocked = waiting on a human decision · ▲ needs-review =
@@ -1297,11 +1353,17 @@ def main():
         return
 
     out = Path(args.out)
+    actions_path = (Path(args.actions_out) if args.actions_out
+                    else out.parent / (out.stem + ".actions.sh"))
+    actions_path.write_text(build_actions_script(data), encoding="utf-8")
+    actions_path.chmod(actions_path.stat().st_mode | 0o111)
+    data["actions_path"] = str(actions_path)
+
     out.write_text(render_html(data), encoding="utf-8")
     t = data["totals"]
     print(f"workboard: {t['repos']} repos · {t['specs_open']} open specs · "
           f"{t['tasks_open']} open tasks · {t['sessions_active']} active sessions · "
-          f"{t['attention']} need attention → {out}")
+          f"{t['attention']} need attention → {out} (actions → {actions_path})")
 
 
 if __name__ == "__main__":

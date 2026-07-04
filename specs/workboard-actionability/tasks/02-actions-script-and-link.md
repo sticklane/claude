@@ -1,32 +1,11 @@
 # Task 02: Companion actions script + HTML link
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
 Spec: ../SPEC.md (requirements R4, R5; cross-cutting R8, R9)
 Touch: .claude/skills/workboard/workboard.py, antigravity/.agents/skills/workboard/workboard.py, .claude-plugin/plugin.json, tests/test_workboard_actionability.sh, tests/fixtures/workboard-actionability/
-
-<!-- PLAN (delete on close-out)
-RED: extend tests/test_workboard_actionability.sh —
-  - add fixtures: toolkit-repo/specs/all-done (all tasks done, tasks_total>0);
-    toolkit-repo/.kiro/specs/kiro-done/tasks.md (all [x]); a pushable-repo dir.
-  - harness: after generic git-init loop, set up pushable-repo with a bare
-    remote + upstream + one extra commit ⇒ git ahead>0.
-  - assert on $tmp/a.sh: `git -C .../pushable-repo push` present; `cd` + verify
-    line for specs/all-done present; NO `specs/kiro-done`; regex NO git mv /
-    push --force|-f / rm / build|drain. `bash -n a.sh` exits 0; `test -x a.sh`.
-  - assert on html: `<td><code` invocation `bash <a.sh path>` + path text.
-GREEN R4: build_actions_script(data) — header (#!/usr/bin/env bash, set -u,
-  echoed review banner), Pushes section (git -C <abs> push per ahead repo),
-  Verify section (cd <abs> + claude "Use the verifier agent to verify
-  specs/<slug> against its acceptance criteria" per all-done toolkit spec,
-  tasks_total>0; exclude kiro). Both empty ⇒ `# no batch actions available`.
-  main(): resolve actions_path (--actions-out or out.stem+.actions.sh), write,
-  chmod +x, stash data["actions_path"] before render_html.
-GREEN R5: render_actions(data) section near top; {actions} slot after tiles.
-MIRROR+BUMP: port to antigravity mirror same commit; bump plugin.json 0.7.9→0.7.10.
--->
 
 ## Goal
 `workboard.py` writes an executable companion actions script alongside
@@ -81,8 +60,8 @@ rather than reimplementing scans.
    `plugin.json` `version`.
 
 ## Acceptance
-- [ ] `bash tests/test_workboard_actionability.sh` → passes (R1–R5)
-- [ ] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0, then `bash -n /tmp/wb.actions.sh` → exits 0 and `test -x /tmp/wb.actions.sh` succeeds (R4, R8)
-- [ ] `grep -Eq 'git mv|push (--force|-f)|(^|[^[:alnum:]])rm |/build|/drain' /tmp/wb.actions.sh` → NO match (exit 1) (R4)
-- [ ] `/tmp/wb.html` contains the actions-script path and a `<td><code>...bash ...</code>` run invocation (R5)
-- [ ] `python3 -c "import ast; ast.parse(open('antigravity/.agents/skills/workboard/workboard.py').read())"` → exits 0, and the commit touches both workboard paths + `plugin.json` (R9)
+- [x] `bash tests/test_workboard_actionability.sh` → passes (R1–R5) — verifier: `PASS: workboard actionability (R1-R5 subset)`, exit 0 (evidence/02-actions-script-and-link.md)
+- [x] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0, then `bash -n /tmp/wb.actions.sh` → exits 0 and `test -x /tmp/wb.actions.sh` succeeds (R4, R8) — verifier: all three exit 0 (evidence/02-actions-script-and-link.md)
+- [x] `grep -Eq 'git mv|push (--force|-f)|(^|[^[:alnum:]])rm |/build|/drain' /tmp/wb.actions.sh` → NO match (exit 1) (R4) — verifier: exit 1, no unsafe commands (evidence/02-actions-script-and-link.md)
+- [x] `/tmp/wb.html` contains the actions-script path and a `<td><code>...bash ...</code>` run invocation (R5) — verifier: `<td><code class="cmd">bash …</code></td>`, `td code` copy handler applies (evidence/02-actions-script-and-link.md)
+- [x] `python3 -c "import ast; ast.parse(open('antigravity/.agents/skills/workboard/workboard.py').read())"` → exits 0, and the commit touches both workboard paths + `plugin.json` (R9) — verifier: ast ok, mirror byte-identical, plugin.json 0.7.9→0.7.10 (evidence/02-actions-script-and-link.md)
