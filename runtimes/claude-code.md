@@ -29,15 +29,16 @@ enforces the agent pins. Aliases only, never dated model ids, so pins
 survive model releases. The other profiles carry the same table in
 their runtime's vocabulary.
 
-| Role                                                                 | Claude default                                                                       |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| session default                                                      | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution |
-| implementation workers (drain dispatch, incl. group throughput mode) | `sonnet`                                                                             |
-| explore / codebase-search (`scout`)                                  | `haiku`                                                                              |
-| LLM reviewer, advisory lane (`critic`, `verifier`)                   | `sonnet`                                                                             |
-| `/distill` (skill frontmatter)                                       | `opus`                                                                               |
-| retry escalation (attempt 2, verifier evidence in prompt)            | one tier up: `sonnet` → `opus`                                                       |
-| tournament escalation (attempts 3+, after the `opus` retry failed)   | `fable` — the frontier-tier trigger of `.claude/rules/token-discipline.md`           |
+| Role                                                                 | Claude default                                                                                                       |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| session default                                                      | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution                                 |
+| implementation workers (drain dispatch, incl. group throughput mode) | `sonnet`                                                                                                             |
+| explore / codebase-search (`scout`)                                  | `haiku`                                                                                                              |
+| verifier (acceptance evidence; advisory reviewer lane)               | `sonnet`                                                                                                             |
+| `critic` (spec/plan/diff critique)                                   | `opus` — deep-tier per token-discipline ("architecture critique"); a critic pass costs ~1% of a wrong implementation |
+| `/distill` (skill frontmatter)                                       | `opus`                                                                                                               |
+| retry escalation (attempt 2, verifier evidence in prompt)            | one tier up: `sonnet` → `opus`                                                                                       |
+| tournament escalation (attempts 3+, after the `opus` retry failed)   | `fable` — the frontier-tier trigger of `.claude/rules/token-discipline.md`                                           |
 
 Frontier stays sparing beyond that one active rung: security-critical
 review and novel-architecture sessions are the other two sanctioned
