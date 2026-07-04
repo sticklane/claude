@@ -1,7 +1,7 @@
 # Task 04: Repo-owned deep-research workflow + bin/sync-workflows
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 45 turns
@@ -48,5 +48,5 @@ sanctioned edit to token-discipline.md), plugin.json.
 
 - [x] `bash tests/test_sync_workflows.sh` → exit 0 (env-override paths only) — 28/28 pass; replaces the stale `tests/test_sync_skills.sh` acceptance line (sync-skills retired 2026-07-03, commit 745b475).
 - [x] `node --check .claude/workflows/deep-research.js` → exit 0; first statement is `log('[repo-deep-research]')`; search/fetch/extract stages carry `effort: 'low'`; fan-out stages pass schemas — node --check exit 0; marker is line 11 (first executable stmt after the `meta` export); `effort: "low"` on the Search + Fetch dispatches; all 5 agent() dispatches schema-constrained; also passes bin/check-token-discipline's 3 checks.
-- [ ] Resolution probe recorded: `[repo-deep-research]` observed in a live Workflow progress log, OR the `research` fallback taken and documented in the R1 rule section — DEFERRED: the `Workflow` tool is unavailable in the unattended worker (ToolSearch `select:Workflow` → none), so a live probe cannot run here. The `research.js` fallback is NOT viable — the already-merged `bin/check-token-discipline` hardcodes `.claude/workflows/deep-research.js` in its in-scope list, so renaming breaks R6/its checker. Marker left in place; needs a 30-second attended `/deep-research` confirmation after sync (see Deferred questions).
-- [~] After `bin/sync-workflows`: `test -L ~/.claude/workflows/deep-research.js` (or `research.js`) → exit 0 — verified via env-override (`SYNC_WORKFLOWS_SRC`/`_DEST` → temp dest): `test -L <dest>/deep-research.js` exit 0 against the real workflow file. The real-`$HOME` symlink is created by the post-merge `~/claude/bin/sync-workflows` run (orchestrator step; a worktree-sourced real-home symlink would dangle after cleanup).
+- [x] Resolution probe recorded: `[repo-deep-research]` observed in a live Workflow progress log, OR the `research` fallback taken and documented in the R1 rule section — RESOLVED by orchestrator (has Workflow tool): launched `deep-research` **by name** via the Workflow tool (runId wf_37f07d3c-2fa) after `bin/sync-workflows`; `[repo-deep-research]` marker appeared in the live journal (repo script won name-resolution over the harness built-in) and the full pipeline ran to completion with a valid structured report (probe question had no sources → 0 claims, as expected).
+- [x] After `bin/sync-workflows`: `test -L ~/.claude/workflows/deep-research.js` (or `research.js`) → exit 0 — orchestrator ran `bin/sync-workflows` against real `$HOME` post-merge ("linked 1"); `test -L ~/.claude/workflows/deep-research.js` → exit 0, `readlink` → `/Users/sjaconette/claude/.claude/workflows/deep-research.js`.
