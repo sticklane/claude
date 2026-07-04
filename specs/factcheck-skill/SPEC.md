@@ -31,8 +31,9 @@ split recorded in the "Match the research tool to the question" section of
 `.claude/rules/token-discipline.md`. Follows the authoring conventions the
 scouts confirmed: no `plugin.json` skills-manifest edit needed (directory
 glob), but a `version` bump and a near-identical
-`antigravity/.agents/skills/factcheck/` mirror are required, and
-`bin/sync-skills` picks it up automatically. The worker prompt states the
+`antigravity/.agents/skills/factcheck/` mirror are required; the plugin's
+skills-manifest directory glob picks it up automatically (`bin/sync-skills`
+retired 2026-07-03 — distribution is plugin-based now). The worker prompt states the
 worker's tier and an output cap explicitly (most existing skills dispatch
 `general-purpose` without yet doing so — this skill sets the example the
 token-discipline rules point toward; note a formal "Dispatch authoring"
@@ -86,8 +87,8 @@ depending on it).
   references and runtime/tier wording for Antigravity, NOT byte-identical
   (existing mirrors legitimately differ by dozens of lines); and a
   `version` bump in `.claude-plugin/plugin.json`. No `plugin.json`
-  skills-manifest edit (directory glob) and no `bin/sync-skills` edit
-  (auto-discovers).
+  skills-manifest edit (directory glob auto-discovers; `bin/sync-skills`
+  retired 2026-07-03).
 - R8: The exact worker-prompt template and the full primary-vs-secondary
   source rubric live in `.claude/skills/factcheck/reference.md` (required),
   loaded on demand — NOT in the SKILL.md body, which stays a checklist per

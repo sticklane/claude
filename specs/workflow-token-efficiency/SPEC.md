@@ -22,7 +22,9 @@ Codify a token-efficiency authoring checklist as a new section of
 restating them), retrofit the five execution skills to comply, add a
 repo-owned `deep-research` workflow script with per-stage tiering, and
 enforce it all with a `bin/check-token-discipline` conformance script
-modeled on `bin/sync-skills` (tests in `tests/`, TDD).
+modeled on the `bin/sync-skills` pattern (tests in `tests/`, TDD; note
+sync-skills itself was retired 2026-07-03 — skills are plugin-served now —
+but its env-override + test structure remains the precedent).
 
 Tiering policy (decided 2026-07-03, interview): **tier by stage type** —
 mechanical stages (search, fetch, extract, grep-like scouting, conformance
@@ -68,9 +70,12 @@ only for the hardest verify/judge stages.
   `~/.claude/workflows/` and confirm the marker appears in the progress
   log. If the harness built-in wins name resolution, name the repo script
   `research.js` (invoked as `research`) instead and say so in the R1 rule
-  section. `bin/sync-skills` is extended to also symlink
-  `.claude/workflows/*` into `~/.claude/workflows/`, honoring the same
-  `SYNC_SKILLS_SRC`-style env overrides it already uses so tests never
+  section. **Amendment 2026-07-03:** `bin/sync-skills` is retired (skills
+  are plugin-served; user-dir copies shadow the plugin), so do NOT extend
+  it. Ship a narrow `bin/sync-workflows` instead that symlinks ONLY
+  `.claude/workflows/*` into `~/.claude/workflows/` (plugins do not ship
+  workflows, so this one sync remains legitimate), with the same
+  env-override pattern (`SYNC_WORKFLOWS_SRC`/`_DEST`) so tests never
   touch the real home directory.
 - R6: `bin/check-token-discipline [skills-root]` (default: repo root)
   exits 0 iff every file in its in-scope list passes three checks, and
@@ -123,8 +128,9 @@ only for the hardest verify/judge stages.
   `drain/SKILL.md:68-69` and `design/SKILL.md:41-42` (must be SEEN as
   dispatches). The implementer tunes the regexes until every fixture
   passes; the spec does not freeze regex syntax. Tests first, following
-  the `bin/sync-skills` precedent (commits `05df3ef`/`0629fa7`,
-  entrypoint `tests/test_sync_skills.sh` — there is no aggregate runner).
+  the `bin/sync-skills` precedent (commits `05df3ef`/`0629fa7`, entrypoint
+  was `tests/test_sync_skills.sh`; both retired 2026-07-03 but the commits
+  remain the structural reference — there is no aggregate runner).
 - R7: Each retrofitted skill's existing antigravity counterpart (mirrored
   under `antigravity/` — as a workflow file for the human-only skills, a
   skill file otherwise; follow whatever path each skill already mirrors
@@ -163,11 +169,11 @@ only for the hardest verify/judge stages.
 - [ ] Resolution probe recorded: invoking the named workflow shows
       `[repo-deep-research]` in the progress log, OR the spec's fallback
       (`research`) was taken and the R1 section documents it (R5)
-- [ ] After commit + push + `git -C ~/agentic-toolkit pull &&
-      ~/agentic-toolkit/bin/sync-skills`:
+- [ ] After commit + `~/claude/bin/sync-workflows` (amended 2026-07-03:
+      sync-skills retired; the dev checkout is `~/claude`):
       `test -L ~/.claude/workflows/deep-research.js` (or `research.js`)
-      succeeds (R5 — sync-skills reads `~/agentic-toolkit`, so this check
-      is only valid after the pull; use env overrides to test earlier)
+      succeeds (R5 — use the env overrides to test without touching the
+      real home directory first)
 - [ ] `git show --stat HEAD` includes `.claude/skills/` and `antigravity/`
       paths, and `git diff HEAD~1 -- .claude-plugin/plugin.json` shows a
       version bump (R7)

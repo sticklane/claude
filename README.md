@@ -147,11 +147,13 @@ cp -r ~/agentic-toolkit/.claude/agents/* ~/.claude/agents/
 cp -r ~/agentic-toolkit/.claude/rules/* ~/.claude/rules/
 ```
 
-Symlink instead of `cp` if you want `git pull` in `~/agentic-toolkit` to
-update everything in place: run `~/agentic-toolkit/bin/sync-skills` — the
-standard post-`git pull` step — to idempotently symlink every toolkit skill
-into `~/.claude/skills/` (new skills linked, removed ones cleaned up, local
-non-symlink skills never touched). Note the two rules (token-discipline
+Prefer the plugin (Option A) over Option C when you want skills available
+everywhere: the plugin serves skills/agents directly from the marketplace
+checkout and updates with `/plugin`, with nothing copied into
+`~/.claude/skills/` — copies there shadow the plugin's versions and go
+stale. (A former `bin/sync-skills` helper that symlinked skills into
+`~/.claude/skills/` was retired 2026-07-03 for exactly that reason.)
+Note the two rules (token-discipline
 and untrusted-data) are project-scoped — `.claude/rules/` has no
 user-level equivalent, so the copy above only stages the files under
 `~/.claude/rules/` for reference; for global use, fold both rules'
