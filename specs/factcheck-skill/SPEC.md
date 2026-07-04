@@ -163,3 +163,9 @@ All commands run from the repo root (`/Users/sjaconette/claude`).
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Single task (`tasks/01-factcheck-skill.md`) — no parallel groups. The skill,
+its reference, the antigravity mirror, and the version bump must land in one
+commit (CLAUDE.md mirror rule + R7), so they cannot be split across sessions.

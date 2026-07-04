@@ -123,3 +123,10 @@ glyph + word, never color alone).
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Single task (`tasks/01-copy-commands.md`) — no parallel groups. R5 mandates
+TDD (the test is failing by design until the implementation lands), and R6
+requires the antigravity mirror + version bump in the same commit, so test,
+implementation, mirror, and bump are one indivisible session.
