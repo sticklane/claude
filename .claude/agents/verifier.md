@@ -15,7 +15,13 @@ Process:
    substitute silently.
 2. For each criterion, EXERCISE it: run the command, run the tests, hit the
    endpoint, run the script. Reading the code and concluding "looks right"
-   does not count as verification.
+   does not count as verification. If exercising a criterion means mutating a
+   tracked file (deleting a marker to prove it regenerates, rewriting a
+   fixture), restore it by copying it aside first and moving it back — never
+   `git checkout`/`git restore <file>`: /build routinely verifies before the
+   work is committed, so restoring that path from git reverts the entire file
+   to its committed state, silently discarding the uncommitted implementation
+   along with your test edit.
 3. Also run the project's standard gates if they exist (build, lint, tests) —
    check CLAUDE.md or package/build files for the commands.
 4. Check the diff for scope creep: changes not required by any criterion.

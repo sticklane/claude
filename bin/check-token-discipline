@@ -74,9 +74,30 @@ BUDGET_RE='(≤|under|at most|no more than|cap(ped)?)[[:space:]]?.{0,20}(words|t
 
 # Iterative re-dispatch triggers (lowercased before matching).
 LTRIG='(retry|retries|retried|re-dispatch|redispatch|revise|revises|revised|iterate|iterates|iterated|cycle|cycles|cycled|relaunch|relaunches|relaunched|relaunching)'
-# A stated bound: a numeral 1-4, once/twice, "at most one..four", or a named
-# generation cap (a relaunch ceiling counts even though the numeral exceeds 4).
-LBOUND='(^|[^0-9])[1-4]([^0-9]|$)|(^|[^a-z])(once|twice)([^a-z]|$)|at most (one|two|three|four)|max-generations|generations cap'
+# A stated bound. A count (digit 1-4 or spelled one/two/three/four/single) is a
+# bound only in a *counting* context — never a bare stray numeral (wte-07):
+#   quantifier + count           "at most 3", "up to four", "cap of three"
+#   count [range] + cycle noun   "3 cycles", "two rounds", "2-4 cycles",
+#                                "single relaunch"
+#   once / twice
+#   a named generation cap       "max-generations", "generations cap"
+# The cycle nouns are word-anchored (spelled singular+plural) so a count must
+# actually name iterations — "2 timeouts" (time in timeouts), "fewer than 2
+# passing" (pass in passing), and "lines 2-4" / "days 2-4" (a range not naming a
+# cycle) no longer read as bounds. A generation cap may exceed 4 (relaunch
+# ceiling). Robust NL bound-detection is not fully regex-achievable (shown by two
+# adversarial passes); known residual classes — temporal "once a check goes red",
+# glued compounds ("onetime"), quantifier+count naming a non-cycle noun ("up to
+# four sources"), an adjective between count and noun ("two more times"), ordinals
+# ("third pass"), "loop(s)" as a noun — are tracked in
+# specs/workflow-token-efficiency/tasks/08-loop-bound-residuals.md.
+LNUM='([1-4]|one|two|three|four|single)'
+LNOUN='(times|rounds|cycles|iterations|attempts|retries|reruns|relaunches|revisions|passes|generations|redispatches|tries|time|round|cycle|iteration|attempt|retry|rerun|relaunch|revision|pass|generation|redispatch|try)'
+LQUANT='(at most|up to|no more than|maximum|max|≤|cap of|capped at|ceiling of|a cap of|a maximum of|a ceiling of)'
+LBOUND="${LQUANT}[^0-9a-z]{1,6}${LNUM}([^a-z0-9]|$)"
+LBOUND="${LBOUND}|(^|[^a-z0-9])${LNUM}([^0-9a-z]{0,4}(-|–|to)[^0-9a-z]{0,4}(${LNUM}|[0-9]+))?[^0-9a-z]{0,4}${LNOUN}([^a-z]|$)"
+LBOUND="${LBOUND}|(^|[^a-z])(once|twice)([^a-z]|$)"
+LBOUND="${LBOUND}|max-generations|generations cap"
 
 # --- helpers -----------------------------------------------------------------
 matches() { printf '%s' "$2" | grep -qiE "$1"; }

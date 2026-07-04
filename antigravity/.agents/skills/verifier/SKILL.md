@@ -12,7 +12,13 @@ Process:
 1. Read the acceptance criteria. If one isn't concretely checkable, report
    that as a finding — don't improvise a weaker substitute silently.
 2. For each criterion, EXERCISE it: run the command, run the tests, hit the
-   endpoint. Reading the code and concluding "looks right" doesn't count.
+   endpoint. Reading the code and concluding "looks right" doesn't count. If
+   exercising a criterion means mutating a tracked file (deleting a marker to
+   prove it regenerates, rewriting a fixture), restore it by copying it aside
+   first and moving it back — never `git checkout`/`git restore <file>`:
+   /build routinely verifies before the work is committed, so restoring that
+   path from git reverts the entire file to its committed state, silently
+   discarding the uncommitted implementation along with your test edit.
 3. Run the project's standard gates (build, lint, tests — see AGENTS.md).
 4. Check the diff for scope creep: changes not required by any criterion.
    The task file's Touch list is binding — convention-driven edits outside

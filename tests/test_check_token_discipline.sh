@@ -204,6 +204,49 @@ EOF
 run_check "$F"
 assert_marker "bare unbounded retry is flagged by the loop check" present "[loop]"
 
+# LOOP CHECK — a stray numeral is not a bound (wte-07). These paragraphs were
+# surfaced by an adversarial pass: each is a genuinely unbounded loop that the
+# permissive matcher wrongly passed because a stray numeric token (a range not
+# naming a cycle, or a digit glued to a non-cycle noun) fooled the bound regex.
+# All must be FLAGGED.
+i=0
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  F="$TMP/fn_$i.md"; printf '%s\n' "$line" > "$F"; i=$((i+1))
+  run_check "$F"
+  assert_marker "stray-numeral false-negative is flagged: $(printf '%s' "$line" | cut -c1-45)" present "[loop]"
+done <<'EOF'
+When the verifier rejects a candidate, retry the same worker and keep retrying; each rerun re-reads lines 2-4 of the failing assertion.
+The harness will re-dispatch the scout to pull the page again, and keeps relaunching it every time the request logs 2 timeouts back-to-back.
+The critic must revise its verdict and cycle the diff back, repeating the loop as long as the suite reports fewer than 2 passing checks.
+Re-dispatch the researcher whenever a source 404s and iterate on the query until it resolves; this has spun across days 2-4 with no bound on attempts.
+Keep retrying the ingest agent until the manifest validates; every retry stamps 2 timestamps into the audit log, and there is no ceiling on re-runs.
+On failure, retry the worker with fresh evidence, capping each report at 2k tokens.
+EOF
+
+# LOOP CHECK — genuine bounds in varied phrasing (spelled numbers, ranges,
+# "single", quantifiers) must all PASS. Surfaced by the same adversarial pass as
+# false positives the first tightening introduced; the robust matcher accepts
+# them. All must be ABSENT of [loop].
+i=0
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  F="$TMP/fp_$i.md"; printf '%s\n' "$line" > "$F"; i=$((i+1))
+  run_check "$F"
+  assert_marker "genuine bound is not flagged: $(printf '%s' "$line" | cut -c1-45)" absent "[loop]"
+done <<'EOF'
+The reviewer will iterate up to four rounds before stopping.
+Allow no more than two retries on a failed step.
+Run two-to-three cycles of critique.
+Set a cap of three relaunches for the worker.
+Cap retries at three attempts, max.
+Iterate two rounds and stop.
+Revise the answer up to three times.
+Cap the cycle at a single relaunch, no more.
+Bound the evaluator-optimizer loop to 2-4 cycles before accepting the result.
+On failure, retry the worker with fresh evidence at most 3 times before routing to failed.
+EOF
+
 # Un-tiered dispatch → dispatch check fires.
 F="$TMP/untiered_dispatch.md"
 cat > "$F" <<'EOF'
