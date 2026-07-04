@@ -7,6 +7,32 @@ Priority: P3
 Spec: ../SPEC.md
 Discovered-by: 07-loop-bound-positional-check.md
 
+<!-- PLAN (wte-08)
+Checker regex (bin/check-token-discipline), driven by fixtures:
+ 1. Close glued/hyphenated compound FN: require whitespace between count and
+    cycle noun (final gap [^0-9a-z]{0,4} -> [[:space:]]{1,4}) so onetime /
+    one-pass / twotime no longer read as bounds.
+ 2. Close quantifier+count-on-non-cycle-noun FN: drop the standalone
+    quantifier+count branch (LQUANT..LNUM with no cycle noun) so "up to four
+    sources" flags; a genuine cap must name a cycle noun (branch 2 keeps the
+    quantifier via its left word-edge).
+ 3. Close temporal once/twice FN: in has_bound, strip "once/twice + a/an/the"
+    (temporal clause) before matching, so "relaunch once a check goes red"
+    flags while "relaunch once with evidence" (count) still passes.
+ 4. Add missing-noun/form vocabulary: loop(s), hyphenated re-dispatch(es),
+    ordinals (first-fourth, 1st-4th) so real caps in those forms pass.
+ 5. Add single interposed count-adjective (additional|further|more|
+    consecutive) between count and noun so "two more times" passes.
+Real tree (make bin/check-token-discipline exit 0): state max-generations
+ cap of 10 adjacently in drain/reference.md Baton-pass paragraph B (fixes
+ heading A via next, B self, template C via prev) and paragraph F (fixes
+ override E via next, F self); reword deep-research.js advisory "retry" ->
+ "run again" (user-advisory, not an agent loop). SPEC R6 bounded-loops
+ prose gains the flag-when-unsure line citing wte-08.
+Order: fixtures first (fail red), commit, then checker, then real-tree +
+ SPEC, then verifier/simplify.
+-->
+
 ## Goal
 
 Task 07 tightened `LBOUND` so a bare stray numeral no longer counts as a loop
