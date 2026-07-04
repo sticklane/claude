@@ -1,6 +1,6 @@
 # Task 01: Discovered-work capture in /drain (verdict contract, collect, draft status)
 
-Status: pending
+Status: in-progress
 Depends on: ../../chaining-antipatterns/tasks/01-authority-layer.md, ../../chaining-antipatterns/tasks/03-antipattern-guards.md
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R1, R2, R3, R4 antigravity mirror, R5 research record, R6 versioning)
