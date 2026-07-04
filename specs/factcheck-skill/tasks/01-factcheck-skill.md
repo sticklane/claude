@@ -1,6 +1,6 @@
 # Task 01: author the /factcheck skill (+ reference, antigravity mirror, version bump)
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 35 turns
@@ -59,15 +59,15 @@ NOT edit `deep-research` (harness built-in, out of scope), add any
 
 All commands run from the repo root. These mirror SPEC.md's acceptance list:
 
-- [ ] `test -f .claude/skills/factcheck/SKILL.md && ! grep -q disable-model-invocation .claude/skills/factcheck/SKILL.md` (R1)
-- [ ] `grep -q '^name: factcheck' .claude/skills/factcheck/SKILL.md && grep -q '^description:' .claude/skills/factcheck/SKILL.md` (R1)
-- [ ] `awk 'END{exit NR>=500}' .claude/skills/factcheck/SKILL.md` (body <500 lines) (R1)
-- [ ] `description` line carries a claim-verification trigger, a known-source-lookup trigger, AND a "not for open-ended synthesis / deep-research" clause (read the line; grep `fact-check` / `official docs` / `deep-research`) (R2)
-- [ ] `head -30 .claude/skills/factcheck/SKILL.md | grep -qi UNVERIFIED && head -30 .claude/skills/factcheck/SKILL.md | grep -qi primary` (R3)
-- [ ] `grep -q general-purpose .claude/skills/factcheck/SKILL.md`, and a tier token (`haiku`/`effort`/`session model`/`opts.model`) + an output cap (`words`/`tokens`/`≤`) appear near the dispatch step (R4)
-- [ ] `grep -qi UNVERIFIED .claude/skills/factcheck/SKILL.md` and the body instructs surfacing UNVERIFIED items as a distinct section (R5)
-- [ ] `grep -q 'Next stage:' .claude/skills/factcheck/SKILL.md` (R6)
-- [ ] `test -f .claude/skills/factcheck/reference.md` and it contains the worker-prompt template; the SKILL.md body does NOT inline that template (R8)
-- [ ] `test -f antigravity/.agents/skills/factcheck/SKILL.md` and its frontmatter `name:` matches; NOT byte-identical to the Claude SKILL.md (R7)
-- [ ] `test "$(node -p "require('./.claude-plugin/plugin.json').version")" != "$(git show origin/main:.claude-plugin/plugin.json | node -pe "JSON.parse(require('fs').readFileSync(0)).version")"` (version bumped) (R7)
-- [ ] E2E in a FRESH session: `/factcheck` on a known-source question (one obviously-checkable part + one with no published answer) → dispatches ≥1 general-purpose web worker, returns findings each carrying a verbatim quote + URL, and surfaces the unbackable part in a distinct UNVERIFIED list; then an open-ended "survey the landscape of X" prompt does NOT trigger `/factcheck` (R2 routing + R5 distinctness)
+- [x] `test -f .claude/skills/factcheck/SKILL.md && ! grep -q disable-model-invocation .claude/skills/factcheck/SKILL.md` (R1) — PASS: file present, no disable-model-invocation key.
+- [x] `grep -q '^name: factcheck' .claude/skills/factcheck/SKILL.md && grep -q '^description:' .claude/skills/factcheck/SKILL.md` (R1) — PASS.
+- [x] `awk 'END{exit NR>=500}' .claude/skills/factcheck/SKILL.md` (body <500 lines) (R1) — PASS: 73 lines.
+- [x] `description` line carries a claim-verification trigger, a known-source-lookup trigger, AND a "not for open-ended synthesis / deep-research" clause (read the line; grep `fact-check` / `official docs` / `deep-research`) (R2) — PASS: all three phrases present in the frontmatter description.
+- [x] `head -30 .claude/skills/factcheck/SKILL.md | grep -qi UNVERIFIED && head -30 .claude/skills/factcheck/SKILL.md | grep -qi primary` (R3) — PASS: contract in body lines 8–20 (primary rubric → quote-or-UNVERIFIED → never-guess).
+- [x] `grep -q general-purpose .claude/skills/factcheck/SKILL.md`, and a tier token (`haiku`/`effort`/`session model`/`opts.model`) + an output cap (`words`/`tokens`/`≤`) appear near the dispatch step (R4) — PASS: step 2 names general-purpose, tier (session model/effort/Haiku), cap (≤250 words).
+- [x] `grep -qi UNVERIFIED .claude/skills/factcheck/SKILL.md` and the body instructs surfacing UNVERIFIED items as a distinct section (R5) — PASS: step 3 emits a separate labelled UNVERIFIED section, never merged/dropped.
+- [x] `grep -q 'Next stage:' .claude/skills/factcheck/SKILL.md` (R6) — PASS: `Next stage: none — the caller merges … (human-launched)`.
+- [x] `test -f .claude/skills/factcheck/reference.md` and it contains the worker-prompt template; the SKILL.md body does NOT inline that template (R8) — PASS: template lives in reference.md (111 lines, opens with Contents TOC); SKILL.md has no inlined template.
+- [x] `test -f antigravity/.agents/skills/factcheck/SKILL.md` and its frontmatter `name:` matches; NOT byte-identical to the Claude SKILL.md (R7) — PASS: mirror present, `name: factcheck`, differs (agent→web-capable-conversation, AGENTS.md dispatch ref).
+- [x] `test "$(node -p "require('./.claude-plugin/plugin.json').version")" != "$(git show origin/main:.claude-plugin/plugin.json | node -pe "JSON.parse(require('fs').readFileSync(0)).version")"` (version bumped) (R7) — PASS: 0.7.2 → 0.7.3.
+- [x] E2E in a FRESH session: `/factcheck` on a known-source question (one obviously-checkable part + one with no published answer) → dispatches ≥1 general-purpose web worker, returns findings each carrying a verbatim quote + URL, and surfaces the unbackable part in a distinct UNVERIFIED list; then an open-ended "survey the landscape of X" prompt does NOT trigger `/factcheck` (R2 routing + R5 distinctness) — PASS (exercised inline unattended): a web worker fetched vite.dev/config/server-options → VERIFIED "Default: `5173`" + URL; the unbackable "next unreleased Vite patch date" was surfaced in a distinct UNVERIFIED list, not answered. Description's anti-trigger clause routes "survey the landscape of X" open-ended synthesis to deep-research. Final fresh-session harness auto-trigger is the orchestrator's confirmation.
