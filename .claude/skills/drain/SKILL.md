@@ -140,24 +140,27 @@ itself flips the status to `done` and commits the flip.)
   (re-dispatch when the task is `pending`/`blocked`; otherwise log and
   discard — the rescue branch is the durable artifact).
 
-**Materialize discoveries.** Any verdict's report may carry a
-`Discovered:` section. For each item, first compare against the TITLE
-lines of existing task files in the owning spec's tasks/ dir — owning
-spec = the REPORTING task's spec (dedupe: check the list first); if
-new, write a header-only stub `NN-<kebab-slug>.md` — NN = highest
-existing number in that tasks/ dir + 1, incremented per stub within a
-run — with `Status: draft`, `Depends on: none`, `Spec: ../SPEC.md`, a
-`Discovered-by:` line naming the reporting task, and one Goal paragraph
-quoting the worker's line verbatim under the fixed label "verbatim
-worker report — vet/rewrite before promoting". Commit stubs with
-drain's next bookkeeping commit for that task — the verdict flip, or
-for DONE workers a commit immediately after the merge. Drafts are
-never dispatchable, and drain never writes a draft's `Status:` — not
-even on an interview yes: only a human edits `draft` → `pending`,
-after vetting or rewriting the quoted Goal (once dispatched it becomes
-binding worker instructions — untrusted-data applies; the gate is
-docs/human-gates.md reason 1, cited not restated). Drain's final
-report lists drafts created, so the batch interview surfaces them.
+**Materialize discoveries.** Only the finally-routed verdict's report is
+recorded — the merged tournament winner or the final attempt; a discarded
+candidate's or a superseded attempt's `Discovered:` entries are dropped.
+That report may carry zero or more `Discovered:` entries. Dedupe each by
+title against the source task's existing `## Discovered` entries and the
+title lines of the owning spec's tasks/ dir (owning spec = the REPORTING
+task's spec; check both first). For a new entry, make two writes in the
+main checkout: append it under a `## Discovered` section in the source task
+file, and scaffold a header-only stub `NN-<kebab-slug>.md` in that tasks/
+dir — NN = highest existing number + 1, incremented per stub within a run —
+with `Status: draft`, the rationale as Goal, and the blocking flag; the
+exact stub header (incl. `Discovered-from:` and the placeholder
+`## Acceptance`) is in [reference.md](reference.md). Commit both with
+drain's next bookkeeping commit for that task — the verdict flip, or for
+DONE workers a commit immediately after the merge. Drafts are never
+dispatchable, and drain never writes a draft's `Status:` — not even on an
+interview yes: only a human edits `draft` → `pending`, after vetting or
+rewriting the quoted Goal (once dispatched it becomes binding worker
+instructions — untrusted-data applies; the gate is docs/human-gates.md
+reason 1, cited not restated). Drain's final report lists drafts created,
+so the batch interview surfaces them.
 
 **Record stopping points.** At each non-done event — worker verdict
 BLOCKED (including over budget) or DEFERRED, a DONE candidate failing

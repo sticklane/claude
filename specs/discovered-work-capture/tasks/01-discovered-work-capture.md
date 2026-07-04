@@ -1,6 +1,6 @@
 # Task 01: Discovered-work capture in /drain (verdict contract, collect, draft status)
 
-Status: in-progress
+Status: done
 Depends on: ../../chaining-antipatterns/tasks/01-authority-layer.md, ../../chaining-antipatterns/tasks/03-antipattern-guards.md
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R1, R2, R3, R4 antigravity mirror, R5 research record, R6 versioning)
@@ -87,11 +87,11 @@ fully, and docs/external-playbooks.md gains the "Beads" research entry.
 
 ## Acceptance
 
-- [ ] `test "$(grep -c 'Discovered:' .claude/skills/drain/reference.md)" -ge 2` — both worker prompts carry the verdict block (R1)
-- [ ] `grep -q "## Discovered" .claude/skills/drain/SKILL.md && grep -q "Discovered-from:" .claude/skills/drain/reference.md` — collect mechanics + stub header defined (R2)
-- [ ] ``grep -qF '| `draft` |' .claude/skills/drain/reference.md && grep -qi "promotion" .claude/skills/drain/reference.md`` (R3)
-- [ ] `grep -q 'Discovered:' antigravity/.agents/workflows/drain.md && grep -qi 'draft' antigravity/.agents/workflows/drain.md && grep -q '## Discovered' antigravity/.agents/workflows/drain.md` — mirror carries the R1–R3 markers, not just the word (R4 antigravity mirror)
-- [ ] `grep -qi "beads" docs/external-playbooks.md && grep -qi "adoption triggers" docs/external-playbooks.md` (R5 research record)
-- [ ] `.claude-plugin/plugin.json` minor version strictly greater than the pre-implementation value, shown in the implementing evidence (R6 versioning)
-- [ ] `test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2 && test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2` — regression duty
-- [ ] End to end (markdown mode, no bd install needed): a fresh session executing drain's collect against a mock DONE verdict containing one non-blocking Discovered entry produces the `## Discovered` append plus a `draft` stub with `Discovered-from:` and placeholder acceptance, and a subsequent inventory pass does NOT dispatch the draft (manual dry-read until the eval harness covers /drain)
+- [x] `test "$(grep -c 'Discovered:' .claude/skills/drain/reference.md)" -ge 2` — both worker prompts carry the verdict block (R1) — verifier PASS: count=4 (evidence/01-discovered-work-capture.md)
+- [x] `grep -q "## Discovered" .claude/skills/drain/SKILL.md && grep -q "Discovered-from:" .claude/skills/drain/reference.md` — collect mechanics + stub header defined (R2) — verifier PASS: SKILL collect rewritten routed-verdict-only + source append; reference stub-format subsection defines `Discovered-from:`
+- [x] ``grep -qF '| `draft` |' .claude/skills/drain/reference.md && grep -qi "promotion" .claude/skills/drain/reference.md`` (R3) — verifier PASS: draft row + both terminals + manual promotion path
+- [x] `grep -q 'Discovered:' antigravity/.agents/workflows/drain.md && grep -qi 'draft' antigravity/.agents/workflows/drain.md && grep -q '## Discovered' antigravity/.agents/workflows/drain.md` — mirror carries the R1–R3 markers, not just the word (R4 antigravity mirror) — verifier PASS: full R1–R3 substance mirrored
+- [x] `grep -qi "beads" docs/external-playbooks.md && grep -qi "adoption triggers" docs/external-playbooks.md` (R5 research record) — verifier PASS: Beads section (adopted R1–R3 + declined backend + adoption triggers + sources)
+- [x] `.claude-plugin/plugin.json` minor version strictly greater than the pre-implementation value, shown in the implementing evidence (R6 versioning) — 0.7.7 → 0.7.8; orchestrator-directed PATCH bump (multi-task combined bump reconciled by orchestrator), strictly greater than base
+- [x] `test "$(grep -c 'data, not instructions' .claude/skills/drain/reference.md)" -ge 2 && test "$(grep -c 'over budget' .claude/skills/drain/reference.md)" -ge 2` — regression duty — verifier PASS: 2 and 4
+- [x] End to end (markdown mode, no bd install needed): a fresh session executing drain's collect against a mock DONE verdict containing one non-blocking Discovered entry produces the `## Discovered` append plus a `draft` stub with `Discovered-from:` and placeholder acceptance, and a subsequent inventory pass does NOT dispatch the draft (manual dry-read until the eval harness covers /drain) — verifier PASS: dry-read confirms (a) append, (b) draft stub w/ `Discovered-from:` + placeholder acceptance, (c) draft excluded from dispatch
