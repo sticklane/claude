@@ -1,7 +1,7 @@
 # Task 04: reclassify live-session / active-drain repos out of the attention inbox
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: done
 Depends on: 03
 Priority: P1
 Budget: 12 turns
@@ -191,6 +191,35 @@ Acceptance commands:
 - `python3 -m unittest discover -s .claude/skills/workboard`
 - `git diff HEAD~1 -- .claude-plugin/plugin.json` (shows the version bump; R9)
 - `git show --stat HEAD` (shows the commit touches BOTH `workboard.py` paths; R9)
+
+## Evidence (verifier PASS 2026-07-04)
+
+- ✅ `python3 -m unittest discover -s .claude/skills/workboard` → 29 tests OK;
+  antigravity mirror suite → 29 tests OK.
+- ✅ Required cases present & green: (a) live-session → active for dirty AND
+  unpushed; (b) live-drain worktree → active with no matching session; (c)
+  stale `task/*` worktree → still needs-review; (d) decay (session gone /
+  worktree ages past window) → back to needs-review. Live vs stale fixtures
+  differ ONLY by `activity_ts`.
+- ✅ `attention_total()` excludes `in-progress` from `totals["attention"]`.
+- ✅ Defect-3 fixed: human coverage is git-toplevel EQUALITY; a nested-child
+  session no longer covers the parent (tested).
+- ✅ Parked baton does not suppress git-state (tested; baton dropped as a
+  coverage signal).
+- ✅ Both `workboard.py` paths + both `test_workboard.py` paths changed and
+  byte-identical (`diff -q` clean); `.claude-plugin/plugin.json` bumped
+  0.7.12 → 0.7.13 (task body's "0.7.2 → 0.7.3" note was stale).
+- ✅ SPEC amended with R10; Parallelization line now `01 → 02 → 03 → 04`
+  (kept the file's existing Unicode-arrow style; the task's ASCII `->` was
+  shorthand — intent satisfied).
+- ✅ End-to-end: `workboard.py ~/claude --json` exits 0 and this session's own
+  dirty `~/claude` now reclassifies to Active instead of needs-review — the
+  exact misfire this task fixes.
+
+**Open questions resolved:** the antigravity mirror test IS kept in lockstep
+(both `test_workboard.py` copies were byte-identical pre-change and updated
+together). The drain-window knob shipped as `--drain-window-min` (default 15,
+= `DRAIN_WINDOW_DEFAULT` 900s).
 
 ## Open questions
 

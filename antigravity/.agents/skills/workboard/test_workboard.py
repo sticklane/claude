@@ -280,5 +280,149 @@ class TestBatonInFullRender(unittest.TestCase):
             self.assertIn("HANDOFF.md", html)          # handoff still renders
 
 
+def make_session(toplevel, state="active"):
+    """A session record as attention_items reads it: state + git toplevel."""
+    return {"state": state, "toplevel": toplevel, "cwd": toplevel}
+
+
+def task_worktree(activity_ts, path="/r/demo/.claude/worktrees/01",
+                  branch="task/01-x"):
+    return {"path": path, "branch": branch, "activity_ts": activity_ts}
+
+
+class TestActiveCoverageReclassification(unittest.TestCase):
+    """R10: a repo covered by a live session or an active drain moves its
+    uncommitted/unpushed items out of needs-review into an Active
+    (in-progress / active) group, and out of the attention headline count."""
+
+    def _states(self, inbox):
+        return [i["state"] for i in inbox]
+
+    def test_live_session_reclassifies_dirty_and_unpushed_to_active(self):
+        # session toplevel == repo root → live human coverage (both branches)
+        repo = make_repo_record(path="/r/demo", dirty=3, ahead=2)
+        inbox = workboard.attention_items(
+            [repo], [make_session("/r/demo")], [], stale_days=7)
+
+        self.assertEqual(len(inbox), 2)                       # dirty + unpushed
+        self.assertEqual(set(self._states(inbox)), {"in-progress"})
+        self.assertTrue(all(i["category"] == "active" for i in inbox))
+        self.assertFalse(any(i["state"] == "needs-review" for i in inbox))
+
+    def test_live_drain_worktree_reclassifies_active_without_matching_session(self):
+        # the case that misfired: drain live, orchestrator session cwd NOT under
+        # the repo — coverage must come from the task/* worktree activity window.
+        repo = make_repo_record(
+            path="/r/demo", dirty=1,
+            worktrees=[task_worktree(workboard.now_ts())])
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        self.assertEqual(self._states(inbox), ["in-progress"])
+        self.assertEqual(inbox[0]["category"], "active")
+
+    def test_stale_task_worktree_still_flags_needs_review(self):
+        # identical to the live-drain fixture EXCEPT activity mtime is older than
+        # the drain window → stranded work, must still flag.
+        stale_act = workboard.now_ts() - (workboard.DRAIN_WINDOW_DEFAULT + 600)
+        repo = make_repo_record(
+            path="/r/demo", dirty=1,
+            worktrees=[task_worktree(stale_act)])
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        self.assertEqual(self._states(inbox), ["needs-review"])
+
+    def test_live_and_stale_differ_only_by_worktree_activity(self):
+        live = make_repo_record(path="/r/demo", dirty=1,
+                                worktrees=[task_worktree(workboard.now_ts())])
+        stale = make_repo_record(
+            path="/r/demo", dirty=1,
+            worktrees=[task_worktree(
+                workboard.now_ts() - (workboard.DRAIN_WINDOW_DEFAULT + 600))])
+        live_states = self._states(
+            workboard.attention_items([live], [], [], stale_days=7))
+        stale_states = self._states(
+            workboard.attention_items([stale], [], [], stale_days=7))
+
+        self.assertEqual(live_states, ["in-progress"])
+        self.assertEqual(stale_states, ["needs-review"])
+
+    def test_decay_session_gone_returns_to_needs_review(self):
+        repo = make_repo_record(path="/r/demo", ahead=1)
+        covered = workboard.attention_items(
+            [repo], [make_session("/r/demo")], [], stale_days=7)
+        uncovered = workboard.attention_items([repo], [], [], stale_days=7)
+
+        self.assertEqual(self._states(covered), ["in-progress"])
+        self.assertEqual(self._states(uncovered), ["needs-review"])
+
+    def test_decay_worktree_ages_past_window_returns_to_needs_review(self):
+        fresh = make_repo_record(path="/r/demo", dirty=1,
+                                 worktrees=[task_worktree(workboard.now_ts())])
+        aged = make_repo_record(
+            path="/r/demo", dirty=1,
+            worktrees=[task_worktree(
+                workboard.now_ts() - (workboard.DRAIN_WINDOW_DEFAULT + 1))])
+
+        self.assertEqual(
+            self._states(workboard.attention_items([fresh], [], [], stale_days=7)),
+            ["in-progress"])
+        self.assertEqual(
+            self._states(workboard.attention_items([aged], [], [], stale_days=7)),
+            ["needs-review"])
+
+    def test_nested_session_toplevel_does_not_cover_parent(self):
+        # defect 3: a session inside a nested child repo (its toplevel is the
+        # child, not the parent) must NOT mark the parent covered.
+        parent = make_repo_record(path="/r/parent", dirty=1)
+        inbox = workboard.attention_items(
+            [parent], [make_session("/r/parent/child")], [], stale_days=7)
+
+        self.assertEqual(self._states(inbox), ["needs-review"])
+
+    def test_parked_baton_does_not_suppress_git_state(self):
+        # a baton is a paused generation, not proof of a live drain.
+        repo = make_repo_record(path="/r/demo", dirty=1)
+        repo["batons"] = [{"path": "specs/x/DRAIN-BATON.md", "generation": 2,
+                           "command": "", "needs_attention": "", "mtime": 1.0}]
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        self.assertEqual(self._states(inbox), ["needs-review"])
+
+    def test_attention_total_excludes_in_progress(self):
+        active = {"state": "in-progress", "category": "active", "age_ts": 1.0}
+        review = {"state": "needs-review", "age_ts": 1.0}
+        self.assertEqual(workboard.attention_total([active, review, active]), 1)
+
+
+class TestActiveRendering(unittest.TestCase):
+    def _active(self):
+        return {"state": "in-progress", "category": "active", "repo": "demo",
+                "what": "1 uncommitted change(s) — a live session/drain is working here",
+                "why": "owned work-in-progress, not neglected", "age_ts": 1.0}
+
+    def test_active_group_renders_and_suppresses_inbox_zero(self):
+        html = workboard.render_inbox([self._active()])
+        self.assertIn('data-category="active"', html)
+        self.assertNotIn("Inbox zero", html)
+        self.assertIn("in-progress", html)     # its badge/state word
+
+    def test_inbox_zero_only_when_no_attention_and_no_active(self):
+        self.assertIn("Inbox zero", workboard.render_inbox([]))
+
+    def test_active_group_renders_after_attention_groups(self):
+        review = {"state": "needs-review", "repo": "demo",
+                  "what": "stranded work", "why": "commit or stash", "age_ts": 2.0}
+        html = workboard.render_inbox([self._active(), review])
+        self.assertLess(html.index('data-category="needs-review"'),
+                        html.index('data-category="active"'))
+
+    def test_active_filter_tile_present_with_count(self):
+        data = {"ready": {"items": []},
+                "inbox": [self._active(), self._active()]}
+        html = workboard.render_filter_tiles(data)
+        self.assertIn('data-filter="active"', html)
+        self.assertIn(">2<", html)             # active count
+
+
 if __name__ == "__main__":
     unittest.main()

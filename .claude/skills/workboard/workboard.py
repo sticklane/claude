@@ -38,6 +38,10 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
 STALE_DAYS_DEFAULT = 7
+# A `task/*` worktree counts as a live drain only if its newest activity is
+# younger than this window (matches drain/reference.md's grace window). Older ⇒
+# stranded ⇒ still flags. Deliberately NOT --stale-days (7d is far too coarse).
+DRAIN_WINDOW_DEFAULT = 900  # 15 minutes, in seconds
 RECENT_HOURS = 48
 SKIP_DIRS = {
     ".git", "node_modules", ".venv", "venv", "__pycache__", ".tox",
@@ -131,6 +135,30 @@ def default_roots():
 
 # ---------------------------------------------------------------- git state
 
+def _worktree_activity(wt_path, branch, repo):
+    """Newest-activity timestamp for a worktree: the max file mtime under it
+    (excluding .git/ and node_modules/), floored by the branch tip-commit time.
+    Recency — never the worktree lock's pid — decides live vs. stranded."""
+    newest = 0.0
+    try:
+        for root, dirs, files in os.walk(wt_path):
+            dirs[:] = [d for d in dirs if d not in (".git", "node_modules")]
+            for name in files:
+                try:
+                    m = os.lstat(os.path.join(root, name)).st_mtime
+                    if m > newest:
+                        newest = m
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    if branch:
+        tip = run_git(repo, "log", "-1", "--format=%ct", branch)
+        if tip:
+            newest = max(newest, float(tip))
+    return newest or None
+
+
 def git_info(repo):
     branch = run_git(repo, "rev-parse", "--abbrev-ref", "HEAD") or "?"
     porcelain = run_git(repo, "status", "--porcelain")
@@ -151,6 +179,12 @@ def git_info(repo):
             cur["branch"] = line[7:].replace("refs/heads/", "")
         elif not line and cur:
             if Path(cur.get("path", "")).resolve() != Path(repo).resolve():
+                # Newest-activity timestamp drives live-vs-stale drain coverage
+                # in attention_items(). Only task/* worktrees consult it, so
+                # only they pay the filesystem walk.
+                if (cur.get("branch") or "").startswith("task/"):
+                    cur["activity_ts"] = _worktree_activity(
+                        cur.get("path", ""), cur.get("branch"), repo)
                 worktrees.append(cur)
             cur = {}
     return {
@@ -652,18 +686,47 @@ def scan_antigravity():
 
 # ---------------------------------------------------------------- assembly
 
-def attention_items(repos, sessions, antigravity, stale_days):
+def _actively_covered(rp, r, active_toplevels, drain_window):
+    """True if a live human session OR a live drain owns this repo's WIP.
+
+    Human coverage is git-toplevel EQUALITY (not path-prefix): a session inside
+    a nested child repo/worktree has a different toplevel, so it never falsely
+    covers the parent. Drain coverage is any `task/*` worktree whose newest
+    activity is within `drain_window` — catches both the .claude/worktrees/*
+    background path and the sibling headless-fallback path, with zero extra
+    globbing. A parked baton is NOT a coverage signal (no pid/session linkage;
+    a stranded generation looks identical to a live one)."""
+    if rp in active_toplevels:
+        return True
+    now = now_ts()
+    for wt in r["git"].get("worktrees", []):
+        if (wt.get("branch") or "").startswith("task/"):
+            act = wt.get("activity_ts")
+            if act is not None and (now - act) <= drain_window:
+                return True
+    return False
+
+
+def attention_total(inbox):
+    """Headline attention count: inbox items EXCEPT reclassified in-progress
+    (Active) items — a live session/drain's WIP is not neglected work."""
+    return sum(1 for i in inbox if i["state"] != "in-progress")
+
+
+def attention_items(repos, sessions, antigravity, stale_days,
+                    drain_window=DRAIN_WINDOW_DEFAULT):
     """The inbox: everything that needs a human decision, most severe first.
 
     severity: critical > serious > warning  (rendered with icon + word, never
-    color alone)."""
+    color alone). Items owned by a live session/drain carry state
+    `in-progress` / category `active` and are grouped/counted separately."""
     items = []
-    active_cwds = {s["cwd"] for s in sessions if s["state"] == "active" and s["cwd"]}
+    active_toplevels = {s.get("toplevel") for s in sessions
+                        if s.get("state") == "active" and s.get("toplevel")}
 
     for r in repos:
         rp = r["path"]
-        covered_by_active = any(c and (c == rp or c.startswith(rp + os.sep))
-                                for c in active_cwds)
+        covered_by_active = _actively_covered(rp, r, active_toplevels, drain_window)
         for h in r["handoffs"]:
             resume_prompt = (f"Resume the parked handoff in {h['path']}; "
                              "delete the file once fully resumed")
@@ -705,23 +768,42 @@ def attention_items(repos, sessions, antigravity, stale_days):
                     "why": "resume it, defer it (Status: deferred), or delete it — open work decays; deciding is the point",
                     "age_ts": s["last_touched"],
                 })
-        if r["git"]["dirty"] and not covered_by_active:
-            items.append({
-                "severity": "warning", "state": "needs-review",
-                "repo": r["name"],
-                "what": f"{r['git']['dirty']} uncommitted change(s), no live session",
-                "why": f"on branch {r['git']['branch']} — commit (then push) or stash; small focused commits",
-                "age_ts": r["git"]["last_commit_ts"],
-            })
+        if r["git"]["dirty"]:
+            if covered_by_active:
+                items.append({
+                    "severity": "warning", "state": "in-progress",
+                    "category": "active", "repo": r["name"],
+                    "what": f"{r['git']['dirty']} uncommitted change(s) — a live session/drain is working here",
+                    "why": f"on branch {r['git']['branch']} — owned work-in-progress, not neglected",
+                    "age_ts": r["git"]["last_commit_ts"],
+                })
+            else:
+                items.append({
+                    "severity": "warning", "state": "needs-review",
+                    "repo": r["name"],
+                    "what": f"{r['git']['dirty']} uncommitted change(s), no live session",
+                    "why": f"on branch {r['git']['branch']} — commit (then push) or stash; small focused commits",
+                    "age_ts": r["git"]["last_commit_ts"],
+                })
         if r["git"]["ahead"]:
-            items.append({
-                "severity": "warning", "state": "needs-review",
-                "repo": r["name"],
-                "what": f"{r['git']['ahead']} unpushed commit(s) on {r['git']['branch']}",
-                "why": "push or open a PR — local-only work is invisible work:",
-                "cmd": f"git -C {shlex.quote(rp)} push",
-                "age_ts": r["git"]["last_commit_ts"],
-            })
+            if covered_by_active:
+                items.append({
+                    "severity": "warning", "state": "in-progress",
+                    "category": "active", "repo": r["name"],
+                    "what": f"{r['git']['ahead']} unpushed commit(s) on {r['git']['branch']} — a live session/drain is working here",
+                    "why": "owned work-in-progress — a live session/drain will push when it lands:",
+                    "cmd": f"git -C {shlex.quote(rp)} push",
+                    "age_ts": r["git"]["last_commit_ts"],
+                })
+            else:
+                items.append({
+                    "severity": "warning", "state": "needs-review",
+                    "repo": r["name"],
+                    "what": f"{r['git']['ahead']} unpushed commit(s) on {r['git']['branch']}",
+                    "why": "push or open a PR — local-only work is invisible work:",
+                    "cmd": f"git -C {shlex.quote(rp)} push",
+                    "age_ts": r["git"]["last_commit_ts"],
+                })
 
     for c in antigravity:
         if c["open"] > 0 and (now_ts() - c["last_ts"]) > stale_days * 86400:
@@ -739,16 +821,21 @@ def attention_items(repos, sessions, antigravity, stale_days):
     return items
 
 
-def assemble(roots, max_depth, stale_days, quiet):
+def assemble(roots, max_depth, stale_days, quiet,
+             drain_window=DRAIN_WINDOW_DEFAULT):
     claude_home = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
     sessions = scan_sessions(claude_home, stale_days)
 
-    # every repo a session touched joins the scan set
+    # every repo a session touched joins the scan set; the git toplevel is
+    # attached to each session so attention_items() can test toplevel EQUALITY
+    # for human coverage (not the old path-prefix, which over-matched parents).
     session_dirs = []
     for s in sessions:
+        s["toplevel"] = None
         if s["cwd"] and Path(s["cwd"]).is_dir():
             top = run_git(s["cwd"], "rev-parse", "--show-toplevel")
             if top:
+                s["toplevel"] = top
                 session_dirs.append(Path(top))
 
     repo_paths = sorted({str(p) for p in
@@ -777,7 +864,8 @@ def assemble(roots, max_depth, stale_days, quiet):
 
     antigravity = scan_antigravity()
     todos = scan_todos(claude_home)
-    inbox = attention_items(repos, sessions, antigravity, stale_days)
+    inbox = attention_items(repos, sessions, antigravity, stale_days,
+                            drain_window)
     ready = ready_items(repos)
 
     return {
@@ -798,7 +886,7 @@ def assemble(roots, max_depth, stale_days, quiet):
             "tasks_open": sum(s["tasks_total"] - s["tasks_done"]
                               for r in repos for s in r["specs"]),
             "sessions_active": sum(1 for s in sessions if s["state"] == "active"),
-            "attention": len(inbox),
+            "attention": attention_total(inbox),
         },
     }
 
@@ -835,6 +923,7 @@ STATE_BADGE = {
     "stale": ("⏸", "warning"),
     "blocked": ("⚑", "serious"),
     "needs-review": ("▲", "warning"),
+    "in-progress": ("▶", "info"),
     "done": ("✓", "good"),
 }
 
@@ -976,37 +1065,51 @@ def render_actions(data):
 # is opportunity, not attention, so it leads the filter tiles but is not an
 # inbox group.
 INBOX_CATEGORIES = ("blocked", "needs-review", "stale")
-FILTER_CATEGORIES = ("ready", *INBOX_CATEGORIES)
+# The Active group (state in-progress) renders AFTER the attention groups and
+# is filterable, but is not an attention category — it never counts as
+# needs-attention work.
+FILTER_CATEGORIES = ("ready", *INBOX_CATEGORIES, "active")
+
+
+def _inbox_group(cat, rows, state=None):
+    """One grouped table. `cat` is the data-category (used by filter tiles);
+    `state` is the badge/state shown (defaults to cat for attention groups)."""
+    body = "".join(
+        f'<tr data-category="{cat}"><td>{badge(i["state"])}</td>'
+        f"<td class='strong'>{esc(i['what'])}</td>"
+        f"<td>{esc(i['repo'])}</td>"
+        f"<td>{esc(i['why'])}"
+        + (f" {cmd_html(i['cmd'])}" if i.get("cmd") else "")
+        + f"</td><td class='num'>{esc(age_str(i['age_ts']))}</td></tr>"
+        for i in rows
+    )
+    return (
+        f'<h3 class="group-head" data-category="{cat}">{badge(state or cat)} '
+        f'<span class="count">{len(rows)}</span></h3>'
+        f'<table data-category="{cat}"><thead><tr><th>state</th><th>item</th>'
+        '<th>repo</th><th>suggested action</th><th>age</th></tr></thead>'
+        f"<tbody>{body}</tbody></table>"
+    )
 
 
 def render_inbox(inbox):
     """The attention inbox, grouped under per-category headers in the fixed
-    severity order blocked → needs-review → stale, newest-first within a group.
+    severity order blocked → needs-review → stale, newest-first within a group,
+    with the Active (in-progress) group rendered AFTER the attention groups.
     Item content and cmd strings are unchanged from the flat render (R6)."""
-    if not inbox:
+    attention = [i for i in inbox if i["state"] != "in-progress"]
+    active = sorted((i for i in inbox if i["state"] == "in-progress"),
+                    key=lambda i: -(i["age_ts"] or 0))
+    if not attention and not active:
         return '<p class="empty">Inbox zero — nothing is blocked, stale, or waiting on review. 🎉</p>'
     groups = []
     for cat in INBOX_CATEGORIES:
-        rows = sorted((i for i in inbox if i["state"] == cat),
+        rows = sorted((i for i in attention if i["state"] == cat),
                       key=lambda i: -(i["age_ts"] or 0))
-        if not rows:
-            continue
-        body = "".join(
-            f'<tr data-category="{cat}"><td>{badge(i["state"])}</td>'
-            f"<td class='strong'>{esc(i['what'])}</td>"
-            f"<td>{esc(i['repo'])}</td>"
-            f"<td>{esc(i['why'])}"
-            + (f" {cmd_html(i['cmd'])}" if i.get("cmd") else "")
-            + f"</td><td class='num'>{esc(age_str(i['age_ts']))}</td></tr>"
-            for i in rows
-        )
-        groups.append(
-            f'<h3 class="group-head" data-category="{cat}">{badge(cat)} '
-            f'<span class="count">{len(rows)}</span></h3>'
-            f'<table data-category="{cat}"><thead><tr><th>state</th><th>item</th>'
-            '<th>repo</th><th>suggested action</th><th>age</th></tr></thead>'
-            f"<tbody>{body}</tbody></table>"
-        )
+        if rows:
+            groups.append(_inbox_group(cat, rows))
+    if active:
+        groups.append(_inbox_group("active", active, state="in-progress"))
     return "".join(groups)
 
 
@@ -1017,7 +1120,9 @@ def render_filter_tiles(data):
     counts = {c: 0 for c in FILTER_CATEGORIES}
     counts["ready"] = len(data["ready"]["items"])
     for i in data["inbox"]:
-        if i["state"] in counts:
+        if i["state"] == "in-progress":
+            counts["active"] += 1
+        elif i["state"] in counts:
             counts[i["state"]] += 1
     tiles = "".join(
         f'<button type="button" class="ftile" data-filter="{cat}">'
@@ -1294,7 +1399,9 @@ sessions · snapshot {generated_at} · stale after {stale_days}d · re-run
 {ready}
 <section><h2>Needs attention</h2>
 <p class="legend">⚑ blocked = waiting on a human decision · ▲ needs-review =
-verify or close finished/dirty work · ⏸ stale = open work idle past {stale_days}d.
+verify or close finished/dirty work · ⏸ stale = open work idle past {stale_days}d ·
+▶ active = uncommitted/unpushed work a live session or drain owns (grouped after
+the attention items, excluded from the needs-attention count).
 Most severe first. Click any <code>command</code> or its copy button to copy it.</p>
 {inbox}</section>
 <section><h2>Repos</h2>{repos}</section>
@@ -1405,6 +1512,10 @@ def main():
                          "(default: --out stem + .actions.sh)")
     ap.add_argument("--json", action="store_true", help="print JSON to stdout instead")
     ap.add_argument("--stale-days", type=int, default=STALE_DAYS_DEFAULT)
+    ap.add_argument("--drain-window-min", type=int,
+                    default=DRAIN_WINDOW_DEFAULT // 60,
+                    help="a task/* worktree counts as a live drain only if its "
+                         "newest activity is within this many minutes (default 15)")
     ap.add_argument("--max-depth", type=int, default=3)
     ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--abandon", nargs="+", metavar="CONV_ID", default=[],
@@ -1426,7 +1537,8 @@ def main():
             print(f"abandoned (stale): {cid}", file=sys.stderr)
 
     roots = [Path(r) for r in args.roots] if args.roots else default_roots()
-    data = assemble(roots, args.max_depth, args.stale_days, args.quiet)
+    data = assemble(roots, args.max_depth, args.stale_days, args.quiet,
+                    args.drain_window_min * 60)
 
     if args.json:
         json.dump(data, sys.stdout, indent=2, default=str)

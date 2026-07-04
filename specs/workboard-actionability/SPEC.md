@@ -149,6 +149,23 @@ the dep-resolution forms at SKILL.md:57–58): a task is dispatchable when
   that a change does not apply cleanly, port the equivalent change rather
   than copying verbatim, and note the divergence in the commit message.
 
+- **R10 — Active-coverage reclassification.** The attention inbox no longer
+  flags a repo's uncommitted **or** unpushed git state as `needs-review` when
+  a live session or an active drain owns that repo. Instead those items are
+  *reclassified* (not hidden) into a distinct **Active** group — state
+  `in-progress`, category `active` — rendered after the attention groups and
+  excluded from the needs-attention headline count. Two coverage signals: a
+  **live human session** whose `git rev-parse --show-toplevel` equals the repo
+  root (toplevel *equality*, replacing the old path-prefix match that
+  over-covered parents of nested repos/worktrees), OR a **live drain** — any
+  worktree on a `task/*` branch whose newest activity is within a configurable
+  **drain window** (default 15m, `--drain-window-min`). A `task/*` worktree
+  whose activity is older than the window is **stale** and still flags (the
+  "drain died, work stranded" case); live vs. stale differ ONLY by recency,
+  never by the worktree lock or branch state. A parked baton is not a coverage
+  signal. Builds on R6's grouped inbox; cross-cuts R8 (no regression) and R9
+  (mirror + bump).
+
 ## Out of scope
 
 - Clipboard mechanics — visible copy buttons, resilient clipboard
@@ -215,15 +232,15 @@ the dep-resolution forms at SKILL.md:57–58): a task is dispatchable when
 
 ## Parallelization
 
-None — the three tasks are a strict serial chain (01 → 02 → 03). All three
+None — the four tasks are a strict serial chain (01 → 02 → 03 → 04). All
 edit the same core file (`.claude/skills/workboard/workboard.py` + its
 antigravity mirror) and grow the same single test file
 (`tests/test_workboard_actionability.sh`), so their `Touch` lists fully
 overlap and no group is disjoint. They also share undecided design surface
 (the readiness data structures from R1 feed the tiles/counts in R7; the
-HTML template layout is edited by all three), which fails the
-decision-coupling test. Run them one at a time, each as its own
-mirror-and-version-bump commit.
+HTML template layout is edited by all; task 04's Active group extends R6's
+grouped inbox), which fails the decision-coupling test. Run them one at a
+time, each as its own mirror-and-version-bump commit.
 
 ## Open questions
 
