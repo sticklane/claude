@@ -43,7 +43,11 @@ prepares the dispatch and gives the user everything to launch.
 
 4. **Collect and integrate.** As agents finish, record verdict + evidence
    per task (not transcripts). Merge DONE branches in task order, running
-   the project gates after each merge. Disjoint `Touch` lists don't
+   the project gates after each merge. After each DONE branch merges
+   cleanly and its gates pass, **push `main` on completion** (`git push`) — subject to
+   the drain workflow's canonical push guard (upstream-configured only,
+   non-fatal, never `--force`; a failed push warns and continues since the
+   merge already landed locally). Disjoint `Touch` lists don't
    guarantee clean merges (lockfiles, barrel files, snapshots): on a
    conflict or gate failure, STOP — leave remaining branches unmerged,
    report which merged cleanly, and let the user decide. For BLOCKED tasks,

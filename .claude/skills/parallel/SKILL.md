@@ -59,7 +59,11 @@ back to headless dispatch: `git worktree add` per task, then
 
 As verdicts arrive: summarize per task (verdict + evidence, not transcripts).
 When the group completes, merge the DONE branches in task order, running the
-project gates after each merge. Disjoint `Touch` lists don't guarantee clean
+project gates after each merge. After each DONE branch merges cleanly and its
+gates pass, **push `main` on completion** (`git push`) — subject to drain/SKILL.md's
+canonical push guard (upstream-configured only, non-fatal, never `--force`; a
+failed push warns and continues since the merge already landed locally).
+Disjoint `Touch` lists don't guarantee clean
 merges (lockfiles, barrel files, snapshots): on a merge conflict or a
 post-merge gate failure, STOP — leave the remaining branches unmerged, report
 which branches merged cleanly and which are pending, and let the user decide.

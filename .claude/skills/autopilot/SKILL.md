@@ -28,6 +28,9 @@ wrong side, say so and recommend attended `/build` instead. Don't launch.
 - Permissions scoped: the run can build/test/commit but NOT push or deploy.
   Risk-rate each tool by reversibility and blast radius when scoping the
   allowlist — auto-allow only what discarding the branch fully undoes.
+  The attended stages' push-on-completion (drain/build/parallel) is
+  **intentionally not** adopted here: autopilot is unattended, so push
+  stays human-escalated (the trigger below), never automatic.
   Be honest about the limit — allowlists gate commands, not the filesystem;
   a worktree isolates the diff, not the machine. For hard isolation use the
   containment ladder in reference.md. Never `bypassPermissions` outside a

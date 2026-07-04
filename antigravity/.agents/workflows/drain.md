@@ -128,7 +128,15 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    artifact) and run
    the project gates; once gates pass, delete every `rescue/NN-<slug>-*`
    branch for the task (the dead run's forensic branches are no longer
-   needed once it has shipped). On merge/gate
+   needed once it has shipped). Then, per completed DONE task, **push
+   `main` on completion** (`git push`) so the merged, verifier-PASSED work is backed
+   up the moment it lands. **Push guard (canonical; build and parallel
+   cite this):** push only if `main` has a configured upstream — if none,
+   skip silently; never `--force`; a rejected, non-fast-forward, or
+   offline push warns and continues (the merge already landed locally, so
+   a failed push never fails the task or aborts the run). The worker never
+   pushes (its "do not push" clause is unchanged) — only the orchestrator,
+   after the merge. On merge/gate
    failure run `git merge --abort` (a failed merge leaves the checkout
    wedged in a conflicted state), discard the branch, and relaunch once
    with the failure evidence in the prompt; a second miss routes into

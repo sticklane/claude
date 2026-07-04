@@ -1,7 +1,7 @@
 # Task 01: push-on-completion for drain / build / parallel
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: done
 Depends on: none
 Priority: P1
 Budget: 10 turns
@@ -65,3 +65,21 @@ for the defect map and per-skill line anchors.
 
 Acceptance command (static portion):
 `grep -n 'git push' .claude/skills/{drain,build,parallel}/SKILL.md && grep -nc 'push' .claude/skills/autopilot/SKILL.md`
+
+## Evidence (verifier PASS 2026-07-04)
+
+- ✅ `git push` step present in drain (SKILL.md:110), build (:85), parallel
+  (:63), each within ±3 lines of the canonical upstream-guard (drain is the
+  canonical statement; build/parallel cite it).
+- ✅ autopilot keeps its push prohibition (SKILL.md:28) and adds the new
+  attended-only-scope note (:31–33).
+- ✅ Both `.claude/skills/` and `antigravity/.agents/workflows/` paths changed
+  for drain/build/parallel; `.claude-plugin/plugin.json` bumped 0.7.11 → 0.7.12
+  (version note in step 6 said 0.7.3 — stale; actual was 0.7.11).
+- ✅ Worker "do not push" clause (reference.md) unchanged; push is
+  orchestrator-side only.
+- ✅ `bash evals/lint-ultra-gate.sh` OK (drain/build/parallel are ultra-path).
+- ⏸ Manual E2E (`/build` on a toy task, upstream vs no-upstream) is
+  MANUAL-PENDING: `/build` is `disable-model-invocation` (human-launched), so
+  it can't be exercised in static verification — the push logic is skill prose
+  verified by inspection.

@@ -106,6 +106,17 @@ itself flips the status to `done` and commits the flip.)
   artifact) and run the project gates. Once gates pass, delete every
   `rescue/NN-<slug>-*` branch for this task — the dead run's forensic
   branches are no longer needed once the task has shipped.
+  Then, per completed DONE task, **push `main` on completion**
+  (`git push`) so the
+  merged, verifier-PASSED work is backed up the moment it lands rather
+  than sitting on local `main` for a human to push by hand. **Push guard
+  (canonical; build and parallel cite this):** push only if `main` has a
+  configured upstream — if none, skip silently; never `--force`; a
+  rejected, non-fast-forward, or offline push warns and continues. The
+  merge already landed locally, so a failed push never fails the task or
+  aborts the run. The worker never pushes (reference.md's worker "do not
+  push" clause is unchanged) — only the orchestrator session, after the
+  merge to `main`.
   If the merge or gates fail: run `git merge --abort` first (a failed
   merge leaves the checkout wedged in a conflicted state), then slot
   machine — discard the branch, relaunch once with the failure evidence

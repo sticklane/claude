@@ -57,7 +57,11 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    step 2). Commit code + task file referencing the task — plus the
    `evidence/` file when an evidence path was passed; otherwise note
    that evidence was not persisted and keep the one-line evidence
-   inline in the task file as the artifact. Push/PR only if asked. The
+   inline in the task file as the artifact. Then **push `main` on
+   completion** (`git push`) — subject to the drain workflow's canonical push guard
+   (upstream-configured only, non-fatal, never `--force`; a failed push
+   warns and continues since the commit already landed locally). Open a
+   PR only if asked. The
    close-out report ends with a fixed `Discovered:` section — zero or
    more single-line items, each "what + where + why it matters", for
    work found but out of the task's scope (an empty section means none;

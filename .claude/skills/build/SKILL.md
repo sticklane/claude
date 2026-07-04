@@ -81,8 +81,11 @@ replaces "is done".
 - Commit code + task file with a message referencing the task — plus the
   verifier's `evidence/` file when an evidence path was passed; otherwise
   note that evidence was not persisted and keep the one-line evidence
-  inline in the task file as the artifact. Push / open a PR only if the
-  user asked.
+  inline in the task file as the artifact. Then **push `main` on
+  completion** (`git push`) — subject to drain/SKILL.md's canonical push guard
+  (upstream-configured only, non-fatal, never `--force`; a failed push
+  warns and continues since the commit already landed locally). Open a PR
+  only if the user asked.
 - Report: what shipped, evidence summary, anything learned the hard way — and
   if there WAS such a learning, run /distill before ending. The report ends
   with a fixed `Discovered:` section — zero or more single-line items, each
