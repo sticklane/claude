@@ -20,3 +20,20 @@ SPEC.md or plan.
    step you're in requires READY.
 4. After fixes, re-run the critic on the changed artifact — a critique you
    didn't re-check is a claim, not a verification.
+
+## Ultra path
+
+When the active runtime profile documents an orchestration section AND
+ultracode is opted in (keyword, session flag, or explicit ask), critique may
+run a panel instead of one critic; otherwise, and always when the profile is
+silent, the single-critic path above is the only path. The active runtime
+profile carries the workflow-script template — this skill only points at it.
+
+Panel: 3–5 lens-diverse critics (correctness, security, verification-gaps,
+scope, cost-if-missed) run in parallel over the same artifact POINTER.
+Findings are deduped, then adversarially verified — a finding dies on a
+majority refute — before any relay. Ranking and the fix-recommendation rule
+above are unchanged.
+
+Worth the 10×+ token cost only for pre-implementation specs, security-
+sensitive diffs, or an explicit "be thorough" ask. Never auto-triggered.

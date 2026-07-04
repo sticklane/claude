@@ -195,3 +195,14 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    /distill if any verdict exposed a decomposition problem. Only
    blocked/failed left → report the blockers and stop; those go back to
    /breakdown or an attended /build.
+
+## Ultra path
+
+Antigravity has no Workflow tool and no runtime profile, so the ultra
+dispatch path is permanently closed here — the sequential, human-launched
+dispatch above is always the path. (For reference: in the Claude Code
+toolkit, an opted-in ultracode run compiles the `Depends on:` graph into a
+workflow script — a pipeline over dependency groups, one worker per task,
+a verifier per completed task, a `budget.remaining()` guard per dispatch,
+and the same status-flip + commit bookkeeping. Files stay the checkpoint.
+That gate never opens in this mirror.)

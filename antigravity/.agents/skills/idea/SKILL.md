@@ -82,3 +82,13 @@ specs/<slug>/SPEC.md` for multi-session work, or `/build
 specs/<slug>/SPEC.md` for single-session work — in a NEW conversation. The
 spec is the handoff artifact; this conversation's context should not be
 needed again.
+
+## Ultra path
+
+Antigravity has no Workflow tool and no runtime profile, so the ultra
+scouting path is permanently closed here — the ordinary step-1 scouting
+above is always the path. (For reference: in the Claude Code toolkit, an
+opted-in ultracode run over a multi-repo idea replaces the ad-hoc scouts
+with a four-scout multi-modal sweep — by-structure, by-convention,
+by-history, by-dependency — plus a completeness critic before the
+interview. That gate never opens in this mirror.)

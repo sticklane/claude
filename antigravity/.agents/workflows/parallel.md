@@ -49,3 +49,13 @@ prepares the dispatch and gives the user everything to launch.
    report whether the task file needs amending or just a retry. Remove
    merged worktrees (`git worktree remove`). If any verdict exposed a
    decomposition problem, apply the distill skill before dispatching more.
+
+## Ultra path
+
+Antigravity has no Workflow tool and no runtime profile, so the ultra
+dispatch path is permanently closed here — the human-launched dispatch
+above is always the path. (For reference: in the Claude Code toolkit, an
+opted-in ultracode run compiles the group's `Depends on:` graph into a
+workflow script — a pipeline over dependency groups, one worker per task,
+a verifier per completed task, a `budget.remaining()` guard per dispatch,
+merge-in-order preserved. That gate never opens in this mirror.)

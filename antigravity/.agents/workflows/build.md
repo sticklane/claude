@@ -69,3 +69,13 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    written only on the user's yes; no silent queue writes. If anything was
    learned the hard way, apply the distill skill. Tell the user to start
    the next task in a NEW conversation.
+
+## Ultra path
+
+Antigravity has no Workflow tool and no runtime profile, so the ultra
+verification path is permanently closed here — the single-verifier step 4
+above is always the path. (For reference: in the Claude Code toolkit, an
+opted-in ultracode run runs acceptance commands first as a deterministic
+gate, gives each un-runnable criterion a 3-verifier refute-majority vote,
+and bounds the fix-reverify loop at 4 cycles before flipping to blocked.
+That gate never opens in this mirror.)

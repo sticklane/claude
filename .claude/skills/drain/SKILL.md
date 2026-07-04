@@ -175,3 +175,21 @@ lines, `## Deferred questions`, `## Answers`, `## Progress`, and
 `Status: draft` stubs for discovered work), committing every mutation,
 and merges `task/NN-*` branches. Next pipeline step: /distill after a
 drained queue; answered questions loop back into step 1.
+
+## Ultra path
+
+When the active runtime profile documents an orchestration section AND
+ultracode is opted in, drain may compile the queue into a workflow script
+instead of dispatching each worker by hand; with the profile silent (plugin
+and eval installs), the sequential path above is the only path. The profile
+holds the script template — this skill only names the shape.
+
+The dependency graph compiles from the task files' `Depends on:` headers (the
+same machine-readable source step 1 uses) into a pipeline over dependency
+groups: a barrier only between groups, one background worker per task file
+(worktree isolation, the reference.md worker prompt plus effort-tier
+language), a verifier per completed task, and drain's status-flip + commit
+after each verdict exactly as above. Before each dispatch the script checks
+`budget.remaining()` when a target is set. Files remain the checkpoint:
+interrupting the workflow loses nothing — re-running the sequential drain,
+or resuming the run, picks up from the committed `Status:` lines.
