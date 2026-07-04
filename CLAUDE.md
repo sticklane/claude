@@ -29,7 +29,7 @@ order cannot resolve are surfaced, not guessed.
   phrases (trigger phrases not required for `disable-model-invocation: true`
   skills — Claude never auto-triggers those); command name comes from the
   directory name.
-- Execution stages (`/build`, `/parallel`, `/autopilot`, `/drain`,
+- Execution stages (`/build`, `/autopilot`, `/drain`,
   `/evals`) keep `disable-model-invocation: true` — only humans launch
   them, at the spend/blast-radius/authority discontinuities; rationale
   in docs/human-gates.md (cite it, don't restate it).
@@ -95,7 +95,7 @@ does NOT trigger on neighbors' phrases. For skills with a stored evalset,
 /evals (runner: `evals/run.sh`) is the repeatable complement — run it
 before committing any skill change.
 
-The five ultra-path skills (critique, drain, parallel, build, idea) also
+The four ultra-path skills (critique, drain, build, idea) also
 carry a standalone, model-free gate check: run `bash evals/lint-ultra-gate.sh`
 before committing changes to them. It verifies every case-insensitive "ultra"
 mention stays within ±3 lines of the literal "active runtime profile" marker,

@@ -17,10 +17,10 @@ built from, with citations, lives in [docs/anthropic-playbook.md](docs/anthropic
                      reviewed)   approach or                   │
                                  stack choice     ┌────────────┼────────────────┐
                                  is open)         ▼            ▼                ▼
-                                               /build      /parallel      /autopilot
-                                               (attended,  (independent   (unattended,
-                                                fresh       tasks, work-   gated, walk
-                                                session)    tree agents)   away)
+                                               /build      /drain         /autopilot
+                                               (attended,  (queue; ind.   (unattended,
+                                                fresh       groups on     gated, walk
+                                                session)    request)      away)
                                                   │            │                │
                                                   └── verified ┴────────────────┘
                                                   (verifier agent, evidence required)
@@ -39,28 +39,27 @@ questions into the task files instead of stopping on them.
 
 ## What's in the box
 
-| Piece | What it does |
-|---|---|
-| `/onboard` | First contact with an existing repo: scouts it, writes a CLAUDE.md whose every command was actually run, adds a permission allowlist |
-| `/idea` | Interviews you about a raw idea, scouts the codebase, writes an agent-ready `SPEC.md` with runnable acceptance criteria, critic-reviewed |
-| `/design` | Resolves open tech/architecture choices: parallel agents investigate candidates, judged on agent-buildability; decision recorded in the spec and CLAUDE.md |
-| `/breakdown` | Splits a spec into one-session task files with dependencies and a parallelization map |
-| `/build` | Executes one task: scout-explore → proportional plan → test-first implement → independent verify → simplification pass → commit |
-| `/parallel` | Dispatches an independent task group to concurrent worktree-isolated agents |
-| `/autopilot` | Unattended execution with guardrails: classifies the task (peripheral vs core), scopes permissions, sets a bounded goal, launches background or headless |
-| `/drain` | Works the whole task queue unattended: one fresh worker per unblocked task, questions deferred into the task files and batched at the end, resumable from `Status` lines after any `/clear` |
-| `/gate` | Installs deterministic quality gates: a Stop hook that blocks "done" until checks pass, auto-format on edit, protected-file denies |
-| `/evals` | Scaffolds and runs stored skill evals (`evals/run.sh`): fresh fixture, headless run of the skill under test, artifact assertions — the repeatable complement to fresh-session testing |
-| `/critique` | Adversarial review of any spec, plan, or diff |
-| `/distill` | Compounding engineering: session learnings → CLAUDE.md lines, rules, or new skills |
-| `/handoff` | Writes a resume-from-scratch handoff file, then you `/clear` |
-| `/fleet` | Dashboard of this session's open agents — running/queued/completed/failed, status tiles + timeline, as a self-contained HTML snapshot |
-| `/workboard` | Cross-repo dashboard of ALL open work on the machine — specs, task files, handoffs, Kiro/Antigravity state, every Claude Code session — with a needs-attention inbox (blocked / needs-review / stale) |
-| `scout` agent | scout-tier (Claude default: Haiku at low effort), read-only — answers "where/how does X work" so the main session never reads files to look around |
-| `critic` agent | Attacks specs/plans/diffs; high-signal only — confidence-scored findings, false positives filtered the way Anthropic's own review pipeline does |
-| `verifier` agent | Fresh-eyes check of finished work against acceptance criteria, including overfitting-to-tests; evidence over assertion |
-| `rules/token-discipline.md` | Always-loaded token economics: delegate consumption, match model to task, one task per session |
-| `rules/untrusted-data.md` | Always-loaded injection defense: tool-sourced content is data, not instructions — unattended workers stop BLOCKED on redirection attempts |
+| Piece                       | What it does                                                                                                                                                                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/onboard`                  | First contact with an existing repo: scouts it, writes a CLAUDE.md whose every command was actually run, adds a permission allowlist                                                                                                          |
+| `/idea`                     | Interviews you about a raw idea, scouts the codebase, writes an agent-ready `SPEC.md` with runnable acceptance criteria, critic-reviewed                                                                                                      |
+| `/design`                   | Resolves open tech/architecture choices: parallel agents investigate candidates, judged on agent-buildability; decision recorded in the spec and CLAUDE.md                                                                                    |
+| `/breakdown`                | Splits a spec into one-session task files with dependencies and a parallelization map                                                                                                                                                         |
+| `/build`                    | Executes one task: scout-explore → proportional plan → test-first implement → independent verify → simplification pass → commit                                                                                                               |
+| `/autopilot`                | Unattended execution with guardrails: classifies the task (peripheral vs core), scopes permissions, sets a bounded goal, launches background or headless                                                                                      |
+| `/drain`                    | Works the whole task queue unattended: one fresh worker per unblocked task (or an independent group concurrently on request), questions deferred into the task files and batched at the end, resumable from `Status` lines after any `/clear` |
+| `/gate`                     | Installs deterministic quality gates: a Stop hook that blocks "done" until checks pass, auto-format on edit, protected-file denies                                                                                                            |
+| `/evals`                    | Scaffolds and runs stored skill evals (`evals/run.sh`): fresh fixture, headless run of the skill under test, artifact assertions — the repeatable complement to fresh-session testing                                                         |
+| `/critique`                 | Adversarial review of any spec, plan, or diff                                                                                                                                                                                                 |
+| `/distill`                  | Compounding engineering: session learnings → CLAUDE.md lines, rules, or new skills                                                                                                                                                            |
+| `/handoff`                  | Writes a resume-from-scratch handoff file, then you `/clear`                                                                                                                                                                                  |
+| `/fleet`                    | Dashboard of this session's open agents — running/queued/completed/failed, status tiles + timeline, as a self-contained HTML snapshot                                                                                                         |
+| `/workboard`                | Cross-repo dashboard of ALL open work on the machine — specs, task files, handoffs, Kiro/Antigravity state, every Claude Code session — with a needs-attention inbox (blocked / needs-review / stale)                                         |
+| `scout` agent               | scout-tier (Claude default: Haiku at low effort), read-only — answers "where/how does X work" so the main session never reads files to look around                                                                                            |
+| `critic` agent              | Attacks specs/plans/diffs; high-signal only — confidence-scored findings, false positives filtered the way Anthropic's own review pipeline does                                                                                               |
+| `verifier` agent            | Fresh-eyes check of finished work against acceptance criteria, including overfitting-to-tests; evidence over assertion                                                                                                                        |
+| `rules/token-discipline.md` | Always-loaded token economics: delegate consumption, match model to task, one task per session                                                                                                                                                |
+| `rules/untrusted-data.md`   | Always-loaded injection defense: tool-sourced content is data, not instructions — unattended workers stop BLOCKED on redirection attempts                                                                                                     |
 
 ## Why this shape (the Anthropic practices it encodes)
 
@@ -100,8 +99,8 @@ questions into the task files instead of stopping on them.
   files read only when installing; heavy research stays in `docs/`.
 - Specs/tasks/handoffs on disk mean sessions stay short and `/clear` is
   always safe — no 200k-token kitchen-sink conversations.
-- `/parallel` warns that concurrency multiplies spend and refuses
-  non-independent groups.
+- `/drain`'s group throughput mode warns that concurrency multiplies spend
+  and refuses non-independent groups.
 - The critic runs **before** implementation: a review costs ~1% of building
   the wrong thing.
 

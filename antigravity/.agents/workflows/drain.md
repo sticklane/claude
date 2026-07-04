@@ -117,6 +117,21 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    > verdict plus these two fixed sections are all the orchestrator
    > will ever see.
 
+   **Group throughput mode** (formerly the separate parallel workflow,
+   folded in here): when the user asks for throughput and a group is
+   independent — no `Depends on` edges between members, disjoint `Touch`
+   lists, runnable acceptance criteria per member, and the breakdown
+   workflow's decision-coupling test passes — create one worktree per
+   member and hand the user the whole launch list at once: one Agent
+   Manager agent per task at the worker tier (Flash-class in the picker),
+   each with step 2's prompt. Size the group by the task map, never a
+   default maximum — concurrency multiplies token spend. Collect verdicts
+   as agents finish (step 3 per verdict) and merge DONE branches in task
+   order, gates after each; on a cross-task merge conflict — another
+   member's already-merged work, not the task's own failure — stop the
+   remaining merges and report which merged cleanly. Remove merged
+   worktrees (`git worktree remove`).
+
 3. **Collect.** DONE → before merging, re-run the append-only
    whitelist diff over `merge-base..branch`, path-scoped to every
    spec's tasks/ dir (`git diff $(git merge-base <default-branch>
