@@ -34,7 +34,9 @@ per-part test that justifies the escalation.
 ## 2. Investigate candidates in parallel
 
 For a real contest (2–4 viable options), launch one agent per candidate in
-parallel (general-purpose, or `Explore` for pure research). Each reports:
+parallel — on the session model (they weigh trade-offs), or `Explore` /
+scout-tier (Haiku, `effort: low`) for pure research. Each returns a report
+capped at ~200 words:
 
 - Fit: which spec requirements it satisfies, which it strains.
 - On-distribution score: maturity, docs quality, how much prior art exists.
@@ -45,7 +47,7 @@ parallel (general-purpose, or `Explore` for pure research). Each reports:
 - The simplest version of this option that could work.
 
 For choices where reading isn't enough, prototype instead: one background
-agent per candidate with `isolation: worktree`, timeboxed to a small fixed
+agent per candidate on the session model with `isolation: worktree`, timeboxed to a small fixed
 scope ("make the spec's riskiest requirement work end to end"), each
 returning a short report — what worked, what fought back, verification
 story. The prototypes are throwaway: keep the winner's lessons, not its

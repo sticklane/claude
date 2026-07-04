@@ -43,7 +43,8 @@ Autonomy is earned by verification, not granted by optimism.
 4. **The walk-away contract.** Before launching, state: what's running,
    where (branch/worktree), the gate that decides success, and the evidence
    the run must produce (acceptance-command output in the walkthrough —
-   claims don't count). Two triggers escalate to a human instead of
+   claims don't count). The run reports back only that **verdict + evidence**,
+   never its transcript. Two triggers escalate to a human instead of
    pressing on: the same step failing twice (a third attempt in a degraded
    context won't do better), and reaching a high-risk action —
    push, deploy, data deletion, publishing, spending — which the run must

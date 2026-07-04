@@ -33,12 +33,12 @@ At dispatch time, resolve build's SKILL.md to a concrete path —
 plugin cache path found at dispatch — and substitute it for
 `<build-skill-path>` (workers cannot invoke `disable-model-invocation`
 skills, so the prompt must carry a readable path). For each task in the
-group, launch a background `general-purpose` agent with
+group, launch a background `general-purpose` agent on the session model with
 `isolation: worktree`, prompted with:
 
 > Execute the task in <task-file> following the build skill's procedure
 > exactly, as written in <build-skill-path> (resolved at dispatch):
-> scouts for exploration, tests first
+> delegate mechanical scouting to Haiku (`effort: low`) scouts for exploration, tests first
 > where criteria are test-shaped, run every acceptance command, standard
 > gates, then commit to a branch named task/NN-<slug>. The task file's
 > `Budget:` line is a ceiling, not a target: when remaining work clearly

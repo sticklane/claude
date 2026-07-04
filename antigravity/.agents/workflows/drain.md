@@ -30,8 +30,8 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    internals) and each branch's tip-commit time; if that is younger than the
    grace window (a 15-minute named default a queue may override), the worker
    is possibly alive — park the task, do not sweep. The worktree lock's
-   recorded pid is NOT a liveness signal (it is the spawning session's pid,
-   alive after a `/clear`). A parked task stays `in-progress`; keep
+   recorded pid is NOT a liveness signal (it is the pid of the session that
+   started it, alive after a `/clear`). A parked task stays `in-progress`; keep
    dispatching other tasks whose dependencies are met, logging each park and
    window extension in one line. After 4 consecutive window extensions on
    the same task with no verdict and no harness-tracked worker, stop waiting
@@ -57,18 +57,24 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    exactly as the dispatchability check does (numbers within a spec,
    task-file-relative paths across specs) — then lexicographic task-file
    path. The workflow computes the order; the model never reorders the
-   queue mid-run. One task at a time: set its
+   queue mid-run. Every worker runs on the **session model** — workers
+   implement code, so they stay session-tier — and each is told to
+   delegate its own mechanical scouting to Haiku (`effort: low`) scouts and
+   to return only a structured **verdict + evidence**, never its transcript
+   (`.claude/rules/token-discipline.md`, Dispatch authoring). One task at a time: set its
    `Status: in-progress` and **commit that edit** — the worktree is cut
    from this commit, so it must carry current statuses and any
    `## Answers`. Create the worktree
    (`git worktree add -b task/NN-<slug> ../<repo>-task-NN`), then give
-   the user one Agent Manager launch — a fresh agent on that worktree
+   the user one Agent Manager launch — a fresh agent on the session model
+   on that worktree
    with this prompt (fill the <>; resolve the build workflow to a
    concrete path, resolved at dispatch — `.agents/workflows/build.md` in
    the repo — and substitute it for <build-workflow-path>):
 
    > Execute the task in <task-file> following the build workflow's
-   > procedure exactly, as written in <build-workflow-path>. Work only
+   > procedure exactly, as written in <build-workflow-path>. Delegate
+   > mechanical scouting to Haiku (`effort: low`) scouts. Work only
    > in this worktree, commit to
    > task/NN-<slug>, do not push. The task file's Budget: line is a
    > ceiling, not a target: when remaining work clearly exceeds the
@@ -200,7 +206,8 @@ payments, or migrations. Pull core tasks out for attended /build runs.
      then create three fresh ones with
      `git worktree add -b task/NN-<slug>-t1 ../<repo>-task-NN-t1` (and
      likewise `-t2`, `-t3`).
-   - Generate: give the user three Agent Manager launches — step 2's
+   - Generate: give the user three Agent Manager launches, each on the
+     session model — step 2's
      prompt plus the prior failure evidence plus one angle each, every
      angle overriding the branch name: (t1) commit to
      `task/NN-<slug>-t1`, minimal diff — smallest change that passes

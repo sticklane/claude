@@ -30,6 +30,8 @@ If `evals/<skill>/` has no scenario, create `evals/<skill>/01-<name>/`
 with the four files above: a minimal fixture the skill can act on, the
 smallest honest prompt, and assertions on the artifact contract the
 skill's SKILL.md promises — not on incidental wording a model might vary.
+Keep each `assert.sh` failure message under ~10 lines — that is the whole
+budget the grader returns to the orchestrator, never a transcript.
 Copy the shapes in [reference.md](reference.md) (the /breakdown scenario,
 verbatim). `chmod +x` both scripts.
 

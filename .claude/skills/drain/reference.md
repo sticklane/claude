@@ -5,8 +5,8 @@ check · Worker prompt · Deferred question format · Relaunch-with-evidence
 prompt · Tournament · Headless fallback · Baton pass (self-relaunch)
 
 Loaded on demand. Contains the classification checklist, status semantics,
-the exact worker prompt, the tournament procedure, and the headless
-fallback.
+the exact worker prompt (workers return only a **verdict + evidence**), the
+tournament procedure (at most one per task), and the headless fallback.
 
 ## When NOT to drain (the peripheral/core gate)
 
@@ -84,8 +84,8 @@ Order:
    field semantics) only when a full window has passed with no new activity.
 
 The worktree lock's recorded pid is **not a liveness signal**: it is the
-spawning session's pid — alive after a `/clear` orphaned the agent, and this
-session's own pid for workers this session spawned. Ignore it.
+pid of the session that started it — alive after a `/clear` orphaned the run,
+and this session's own pid for workers this session started. Ignore it.
 
 **Parked-task control flow.** A task still inside its window is *parked*:
 
@@ -126,7 +126,8 @@ path, resolved at dispatch:
 
 > Execute the task in <task-file> following the build skill's procedure
 > exactly, as written in <build-skill-path> (resolved at dispatch):
-> scouts for exploration, tests first where criteria are test-shaped,
+> delegate mechanical scouting to Haiku (`effort: low`) scouts for
+> exploration, tests first where criteria are test-shaped,
 > run every acceptance command, standard gates, then commit to a branch
 > named task/NN-<slug>. Work only in your worktree; do not push.
 >
@@ -203,7 +204,7 @@ orchestrator sweep race (the worker's worktree or branch vanished mid-run,
 per the Worker prompt clause) NEVER counts as a failed attempt toward the
 slot-machine relaunch or the tournament threshold. Route it by the task's
 current status when the verdict arrives: `pending` or `blocked` → treat as a
-normal dispatch decision (the task is free to re-dispatch); any other status
+normal dispatch decision (the task is free to re-dispatch once); any other status
 — re-owned `in-progress`, `done`, `deferred`, or `failed` → log the verdict
 and discard it. The rescue branch, not the verdict, is the durable artifact.
 
@@ -248,8 +249,8 @@ by the at-most-one-tournament-per-task rule — and the tournament
 remains inside the human-authorized /drain launch (docs/human-gates.md).
 
 **Generate.** Delete any existing `task/NN-<slug>-t*` branches and
-worktrees, then launch three concurrent background workers
-(`isolation: worktree`), each given the standard worker prompt plus the
+worktrees, then launch three concurrent background workers on the session
+model (`isolation: worktree`), each given the standard worker prompt plus the
 relaunch-with-evidence append (covering both prior failures) plus one
 angle suffix. Each suffix also overrides the branch name set by the
 base prompt:
@@ -391,7 +392,7 @@ itself. `dontAsk` makes any unapproved tool abort rather than hang.
 `DRAIN_RELAUNCH_CMD` is set, drain runs its value verbatim in place of the
 template above (still passing `<spec>`, the generation number, and the baton
 path as its argv tail). The e2e fixture (orchestrator-context task 05) points
-it at a recorder script to assert the relaunch argv without spawning a real
+it at a recorder script to assert the relaunch argv without starting a real
 session.
 
 **Background-dispatch verification (2026-07-03, recorded verbatim).** Mandatory
@@ -403,7 +404,8 @@ Probe: a headless `claude -p ... --permission-mode bypassPermissions
 subagent via the Task tool and wait for its completion notification. Two runs,
 each printed `RECEIVED: <token>` echoing the subagent's returned token — the
 completion notification arrived in-session before the turn ended. **Verdict:
-SUPPORTED.** A relaunched generation therefore dispatches workers via drain's
+SUPPORTED.** A relaunched generation therefore dispatches workers on the
+session model via drain's
 normal background-`Task` path (SKILL.md step 2); the sequential Headless-fallback
 path above is NOT required for orchestrator relaunch — it stays the documented
 degraded route for environments where background agents are unavailable.

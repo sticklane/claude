@@ -31,9 +31,11 @@ per-part test that justifies the escalation.
 
 ## 2. Investigate candidates
 
-For a real contest (2–4 viable options), investigate each candidate — in
+For a real contest (2–4 viable options), investigate each candidate on the
+session model (they weigh trade-offs), scout-tier for pure research — in
 parallel Agent Manager conversations if the user wants speed, otherwise
-sequentially with the scout discipline. Per candidate report:
+sequentially with the scout discipline. Per candidate report, capped at
+~200 words:
 
 - Fit: which spec requirements it satisfies, which it strains.
 - On-distribution score: maturity, docs quality, how much prior art exists.
@@ -44,8 +46,8 @@ sequentially with the scout discipline. Per candidate report:
 - The simplest version of this option that could work.
 
 Where reading isn't enough, prototype: one git worktree or branch per
-candidate, timeboxed to the spec's riskiest requirement, throwaway — keep
-the winner's lessons, not its code.
+candidate on the session model, timeboxed to the spec's riskiest
+requirement, throwaway — keep the winner's lessons, not its code.
 
 ## 3. Decide and record
 

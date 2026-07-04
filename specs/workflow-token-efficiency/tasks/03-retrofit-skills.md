@@ -8,6 +8,36 @@ Budget: 45 turns
 Spec: ../SPEC.md (requirements R3, R4, R7-mirror)
 Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, .claude/skills/parallel/SKILL.md, .claude/skills/autopilot/SKILL.md, .claude/skills/autopilot/reference.md, .claude/skills/design/SKILL.md, .claude/skills/evals/SKILL.md, .claude/skills/evals/reference.md, antigravity/.agents/workflows/drain.md, antigravity/.agents/workflows/parallel.md, antigravity/.agents/workflows/autopilot.md, antigravity/.agents/skills/design/SKILL.md, antigravity/.agents/workflows/evals.md
 
+<!-- PLAN (build step 1; delete at close-out)
+Retrofit 8 .claude files so bin/check-token-discipline's dispatch/budget/loop
+checks pass; mirror the same text to 5 antigravity files. Per-file fixes
+(derived from the RED baseline report):
+- drain/SKILL.md: reword opening "relaunching each step" (false loop trigger);
+  insert dispatch-tiering policy para after "## 2." heading (tier + verdict+
+  evidence budget); add "session model" to the real worker dispatch and to the
+  tournament three-worker dispatch.
+- drain/reference.md: add verdict+evidence budget + "at most one per task" to
+  the "Loaded on demand" summary (budget + Contents-loop cover); "re-dispatch"
+  -> "re-dispatch once" (sweep-race); dereference false spawn/dispatch triggers
+  in the pid + DRAIN_RELAUNCH_CMD paras; add "session model" to tournament
+  Generate and background-dispatch-verification paras; add scout-tier line to
+  the worker prompt.
+- parallel/SKILL.md: "session model" on the dispatch para; scout-tier hint in
+  the worker prompt (covers "Launch all agents" via adjacency). Budget already
+  present (verdict + evidence, step 3).
+- autopilot/SKILL.md: add verdict+evidence budget sentence to §4.
+- autopilot/reference.md: "session model" + verdict+evidence on the mechanism
+  para; scout-tier line in the worker prompt (covers the v2.1.172 para).
+- design/SKILL.md: tier + ~200-word budget on the contest para (covers the
+  prototype para via adjacency).
+- evals/SKILL.md + reference.md: add an assert-output line budget statement.
+Then antigravity mirrors. Acceptance is checker-based; note the deep-research.js
+[missing] cross-task dependency (task 04, pending) in the report.
+KNOWN LIMIT: full checker exit 0 needs task 04's deep-research.js. Verify the 8
+retrofit files via CHECK_TD_FILES; assess verdict honestly.
+-->
+
+
 ## Goal
 
 Every agent-spawning instruction in drain, parallel, autopilot, design,

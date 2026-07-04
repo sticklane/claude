@@ -6,7 +6,9 @@ The runner is [evals/run.sh](../../../evals/run.sh) — read it there
 rather than duplicating it here. Runner and scenarios ship in the
 toolkit repo, not with installs — not usable from plugin installs. Below are the four files of the
 reference evalset `evals/breakdown/01-small-spec/`, verbatim, as the
-template for scaffolding a new scenario.
+template for scaffolding a new scenario. Its `assert.sh` keeps its failure
+output under ~10 lines — one `ASSERT FAIL:` line per broken check, never a
+transcript.
 
 ## setup.sh
 
