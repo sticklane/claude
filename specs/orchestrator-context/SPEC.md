@@ -197,3 +197,9 @@ comparison caveat is recorded, not blocking)
   (Anthropic + OpenAI + Google) in place of the now-stale "Anthropic-only"
   vendor-coverage caveat; the remaining gap is the leg-B Anthropic
   re-verification items (still unverified after two attempts).
+
+## Parallelization
+
+See specs/QUEUE.md (canonical, single copy) — this spec's tasks are
+wired into the combined wave plan there; the Depends-on headers in
+tasks/ are the machine-readable source.

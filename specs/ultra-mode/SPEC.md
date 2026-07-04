@@ -191,3 +191,17 @@ Research-derived design rules baked into the templates:
 
 (none — gating, scope, placement, and verification defaults decided in
 interview; research caveats are recorded in the decision record, not blocking)
+
+## Parallelization
+
+See specs/QUEUE.md (canonical, single copy) — this spec's tasks are
+wired into the combined wave plan there; the Depends-on headers in
+tasks/ are the machine-readable source.
+
+## Amendments
+
+- **2026-07-03 (breakdown critic):** R8's parenthetical "there is no
+  tests/ dir in this repo" is stale — tests/ exists (hook-template and
+  install-gates suites). The operative rule stands: lint-ultra-gate.sh
+  is invoked directly, not wired into evals/run.sh or any aggregate
+  runner.

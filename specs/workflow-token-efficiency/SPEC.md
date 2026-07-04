@@ -185,3 +185,19 @@ only for the hardest verify/judge stages.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+See specs/QUEUE.md (canonical, single copy) — this spec's tasks are
+wired into the combined wave plan there; the Depends-on headers in
+tasks/ are the machine-readable source.
+
+## Amendments
+
+- **2026-07-03 (breakdown critic):** R4/R6 loop-bound scope — a named
+  generation cap (e.g. drain's baton max-generations 10, from
+  specs/orchestrator-context) is a relaunch ceiling, not an
+  evaluator-optimizer loop; the R6 checker treats "max-generations" /
+  "generations cap" phrasing as a stated bound (non-failing) even though
+  the numeral exceeds 4. Encode this as a must-PASS fixture in
+  tests/test_check_token_discipline.sh (drain's post-baton paragraph).

@@ -141,7 +141,7 @@ R10. Residual risk stated in the reference.md section: the activity signal
 
 ## Acceptance criteria
 
-Run from the repo root (`/Users/sjaconette/agentic-toolkit`). Files under
+Run from the repo root (`/Users/sjaconette/claude`). Files under
 test: `S=.claude/skills/drain/SKILL.md`, `R=.claude/skills/drain/reference.md`.
 
 - [ ] R1: `grep -qi "grace window" $R`; the new section names the TaskList
@@ -184,3 +184,9 @@ test: `S=.claude/skills/drain/SKILL.md`, `R=.claude/skills/drain/reference.md`.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+See specs/QUEUE.md (canonical, single copy) — this spec's tasks are
+wired into the combined wave plan there; the Depends-on headers in
+tasks/ are the machine-readable source.
