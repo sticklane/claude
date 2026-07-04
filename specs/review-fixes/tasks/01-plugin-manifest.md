@@ -44,5 +44,6 @@ Do NOT bump `version` — task 99 owns the single batch bump.
   Evidence: exit 0; description non-enumerating — evidence/01-plugin-manifest.md
 - [x] `python3 -c "import json; assert json.load(open('.claude-plugin/plugin.json'))['version']=='0.3.0'"` → exit 0 (version untouched — 99 owns the bump)
   Evidence: pin stale (intervening bumps landed; current 0.6.0). Intent verified instead: git diff shows the version line untouched, per task 99 step 2's stale-pin adjustment rule — evidence/01-plugin-manifest.md
+  Note: pin superseded by the review-fixes batch bump (task 99; current version 0.7.0). Do not count as a regression in later sweeps.
 - [x] `grep -q "enumerated" CLAUDE.md` → exit 0 (caveat present in the manifest bullet)
   Evidence: exit 0; caveat coherent — evidence/01-plugin-manifest.md

@@ -46,3 +46,6 @@ mirrors carry the same phrases, and the plugin version is bumped to
 - [x] `python3 -c "import json; assert json.load(open('.claude-plugin/plugin.json'))['version']=='0.3.0'"` → pass
       (verifier: exit 0; single-line version change, valid JSON, no other
       fields touched)
+      Note: pin superseded by the review-fixes batch bump (task
+      review-fixes/99; current version 0.7.0). Passed as written when this
+      task landed; do not count as a regression in later sweeps.
