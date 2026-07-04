@@ -1,8 +1,8 @@
 # /drain reference
 
-Contents: When NOT to drain · Status field semantics · Worker prompt ·
-Deferred question format · Relaunch-with-evidence prompt · Tournament ·
-Headless fallback
+Contents: When NOT to drain · Status field semantics · Stale-lock liveness
+check · Worker prompt · Deferred question format · Relaunch-with-evidence
+prompt · Tournament · Headless fallback
 
 Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt, the tournament procedure, and the headless
@@ -41,11 +41,78 @@ nothing.
 | `blocked` | technical blocker; task needs amending | /drain, from the verdict |
 | `failed` | tournament exhausted or skipped per cost gate; evidence recorded | /drain |
 
-On startup, any `in-progress` with no live worker is a stale lock — reset
-it to `pending`, commit the flip, and discard the dead run's
-worktree/branch first (slot-machine recovery, never resumed). The sweep
-also removes any `task/NN-<slug>-t*` tournament branches/worktrees a
-crashed run left behind.
+On startup, an `in-progress` task is a stale lock ONLY after the Stale-lock
+liveness check below confirms the worker dead — never on a bare "no live
+worker" guess. A confirmed-dead run is reset to `pending` (commit the
+flip), and each of its branches is PRESERVED, not deleted: rename the
+`task/NN-<slug>` branch and every `task/NN-<slug>-t*` tournament branch a
+crashed run left behind to `rescue/NN-<slug>-<shortsha>` (shortsha = that
+branch's own tip commit). Force-remove each worktree FIRST — a checked-out
+branch cannot be renamed away safely — then rename. Branches sharing a tip
+collapse into one rescue branch (skip the duplicates); a pre-existing
+`rescue/…` at the same sha counts as already preserved. Rescue branches are
+forensic only: the slot machine's "never resume a dead run" still holds and
+no new worker is pointed at them. (Post-Filter tournament losers — the
+evaluated candidates — keep their existing handling: deleted after some
+merge passes gates, no rescue.)
+
+DONE bookkeeping deletes a task's rescues: after the task's branch merges
+and project gates pass, drain deletes every `rescue/NN-<slug>-*` branch for
+that task.
+
+## Stale-lock liveness check
+
+Run this before sweeping ANY `in-progress` task; SKILL.md steps 1 and 4
+both invoke it. It replaces the old "no live worker" guess — which in
+practice meant "this session's `TaskList` shows nothing", wrong across a
+`/clear` that orphaned a still-running background worker. The
+**grace window** is a named default of **15 min** that a queue may
+override; every reference below is to "the window", defined once here.
+
+Order:
+
+1. **Harness check.** Consult `TaskList` / background-task state. A running
+   or queued worker for the task means it is live: wait for its completion
+   notification, never sweep.
+2. **Activity check.** Gather EVERY worktree and branch belonging to the
+   task — the `task/NN-<slug>` worktree and any `task/NN-<slug>-t*`
+   tournament worktrees and branches. Take the NEWEST of these signals: file
+   mtimes under each worktree (excluding `node_modules` and `.git`
+   internals) and each branch's tip-commit time. If that newest activity is
+   younger than the window, the worker is possibly alive — do NOT sweep;
+   park the task (below). Sweep (per the rescue-branch procedure in Status
+   field semantics) only when a full window has passed with no new activity.
+
+The worktree lock's recorded pid is **not a liveness signal**: it is the
+spawning session's pid — alive after a `/clear` orphaned the agent, and this
+session's own pid for workers this session spawned. Ignore it.
+
+**Parked-task control flow.** A task still inside its window is *parked*:
+
+- It is left `in-progress`; drain keeps dispatching every other task whose
+  dependencies are met. Log each park to the user in one line.
+- Step 4's trigger requires no parked tasks, on top of nothing dispatchable
+  and nothing running. Before the batch interview / final report, re-run
+  this liveness check on each parked task, sleeping out the remaining window
+  when nothing else is dispatchable. A task whose re-check confirms death is
+  swept (rescue-branch procedure), flipped to `pending`, and drain returns
+  to step 1 — it does not proceed into the interview past a newly
+  dispatchable task. Log each window extension in one line.
+- **Bounded escalation (zombie escape).** After 4 consecutive window
+  extensions on the same task with no verdict and no harness-tracked worker,
+  drain stops waiting and reports the task to the user as a suspected zombie
+  (a leftover process refreshing mtimes). It does NOT silently sweep and
+  does NOT wait forever. A zombie-reported task leaves the parked set and is
+  treated like `blocked` for step 4's trigger and the final report; its
+  status stays `in-progress`.
+
+**Residual risk (accepted).** The activity signal can go silent on a live
+worker for a full window — long read-only phases, or writes landing only
+under excluded paths like `node_modules` — so false sweeps remain possible
+by design. The rescue branch (Status field semantics) plus the worker's
+vanished-worktree clause (Worker prompt) are the deliberate safety net; do
+NOT add worker-side heartbeats to close this gap (rejected — see the spec's
+Out of scope).
 
 ## Worker prompt (verbatim, fill the <>)
 
@@ -81,6 +148,12 @@ path, resolved at dispatch:
 > The task file's `Budget:` line is a ceiling, not a target: when
 > remaining work clearly exceeds the remaining budget, stop with verdict
 > BLOCKED "over budget" rather than grind on.
+>
+> If your worktree or branch disappears mid-run — an orchestrator sweep
+> race, drain having swept your run believing it dead — stop immediately:
+> preserve any commits as `rescue/NN-<slug>-<shortsha>` if git still
+> permits, and exit with verdict BLOCKED naming the sweep as the cause. Do
+> not try to recreate the worktree.
 >
 > You are unattended — never ask the human anything. If the task file has
 > an "## Answers" section, treat it as binding spec. If you hit ambiguity
@@ -124,6 +197,15 @@ hook via its sanctioned stop bypass — a final message beginning with the
 verdict line exits the hook 0 even while checks are red, so contractual
 mid-red stops reach drain instead of looping (mechanism in the gate
 skill's reference).
+
+**Sweep-race BLOCKED verdict.** A BLOCKED verdict whose stated cause is an
+orchestrator sweep race (the worker's worktree or branch vanished mid-run,
+per the Worker prompt clause) NEVER counts as a failed attempt toward the
+slot-machine relaunch or the tournament threshold. Route it by the task's
+current status when the verdict arrives: `pending` or `blocked` → treat as a
+normal dispatch decision (the task is free to re-dispatch); any other status
+— re-owned `in-progress`, `done`, `deferred`, or `failed` → log the verdict
+and discard it. The rescue branch, not the verdict, is the durable artifact.
 
 ## Deferred question format (written by drain, from the verdict)
 

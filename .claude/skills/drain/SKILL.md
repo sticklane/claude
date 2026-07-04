@@ -32,11 +32,17 @@ every dependency is `done`. `Status: draft` stubs (discovered work,
 step 3) are never dispatchable — only a human promotes `draft` →
 `pending`.
 Report the plan in one block: dispatch order, what's already done, what's
-deferred/blocked and why. Any `in-progress` with no live worker is a dead
-worker's lock: discard its branch/worktree if present, along with any
-`task/NN-<slug>-t*` tournament branches/worktrees a crashed run left behind
-(slot machine — never resume a dead run), flip it to `pending`, commit the
-flip.
+deferred/blocked and why. An `in-progress` task is a dead worker's lock
+ONLY after the liveness check in reference.md confirms it — run that check
+first (TaskList, then the worktree/`-t*` activity grace window); a task
+still inside its window is parked, not swept, and drain keeps dispatching
+other tasks (reference.md, "Stale-lock liveness check"). On confirmed death,
+preserve the run's branches as `rescue/NN-<slug>-<shortsha>` — the
+`task/NN-<slug>` branch and any `task/NN-<slug>-t*` tournament branches a
+crashed run left behind — force-removing each worktree first, then flip the
+task to `pending` and commit the flip (slot machine — never resume a dead
+run; rescue branches are forensic only). Full procedure in reference.md's
+Status field semantics.
 
 ## 2. Dispatch one worker
 
@@ -86,7 +92,9 @@ itself flips the status to `done` and commits the flip.)
   `Status: done` and ticked boxes, per /build; for queues using the
   `specs/<slug>/ layout` it also carries the verifier's `evidence/`
   file — for other layouts the task file's inline evidence is the
-  artifact) and run the project gates.
+  artifact) and run the project gates. Once gates pass, delete every
+  `rescue/NN-<slug>-*` branch for this task — the dead run's forensic
+  branches are no longer needed once the task has shipped.
   If the merge or gates fail: run `git merge --abort` first (a failed
   merge leaves the checkout wedged in a conflicted state), then slot
   machine — discard the branch, relaunch once with the failure evidence
@@ -113,7 +121,13 @@ itself flips the status to `done` and commits the flip.)
   `Status: blocked` with the reason, commit — except BLOCKED over budget
   after a merge-failure relaunch, which routes per the tournament skip
   above (straight to the tournament's verdict routing with both prior
-  verdicts).
+  verdicts). A BLOCKED verdict whose cause is an orchestrator **sweep race**
+  (the worker's worktree or branch vanished mid-run, per reference.md's
+  Worker prompt clause) is routed specially: it never counts as a failed
+  attempt toward the slot machine or tournament threshold, and reference.md's
+  "Sweep-race BLOCKED verdict" note gives the status-dependent routing
+  (re-dispatch when the task is `pending`/`blocked`; otherwise log and
+  discard — the rescue branch is the durable artifact).
 
 **Materialize discoveries.** Any verdict's report may carry a
 `Discovered:` section. For each item, first compare against the TITLE
@@ -153,8 +167,15 @@ task, tell the user to `/clear` and re-run `/drain` — nothing is lost.
 
 ## 4. The batch interview
 
-When nothing is dispatchable and nothing is running, the queue is either
-drained or waiting on humans:
+When nothing is dispatchable, nothing is running, AND no tasks are parked
+(inside their liveness window), the queue is either drained or waiting on
+humans. Before entering this interview, re-run the liveness check
+(reference.md) on every parked task, sleeping out the remaining window when
+nothing else is dispatchable: a re-check that confirms death sweeps the run
+(preserving rescue branches), flips the task to `pending`, and sends drain
+back to step 1 rather than into the interview; a parked task that hits the
+bounded zombie escalation is reported to the user and thereafter treated
+like `blocked` here. Once no parked tasks remain:
 
 - **Tasks with `Status: deferred` exist**: collect the `## Deferred
   questions` blocks from those files only, and ask them all in one round
