@@ -57,9 +57,11 @@ shown in this conversation, and lint is clean, or stop after 20 turns
 ## Background worktree agent (fire-and-forget, local)
 
 The mechanism, concretely: delegate with the **Agent tool** — subagent type
-`general-purpose`, `isolation: worktree` (fresh checkout, auto-dispatched),
-run in background so the session stays free. Completion arrives as a
-notification in the main conversation; no polling. At dispatch time,
+`general-purpose` on the session model, `isolation: worktree` (fresh
+checkout, auto-dispatched), run in background so the session stays free.
+Completion returns only a structured **verdict + evidence**, never the
+transcript, and arrives as a notification in the main conversation; no
+polling. At dispatch time,
 resolve build's SKILL.md to a concrete path —
 `.claude/skills/build/SKILL.md` when the toolkit is in-repo, otherwise
 the plugin cache path found at dispatch — and substitute it for
@@ -67,7 +69,8 @@ the plugin cache path found at dispatch — and substitute it for
 skills, so the prompt must carry a readable path). Prompt template:
 
 > Execute the task in <file> following the build skill's procedure, as
-> written in <build-skill-path> (resolved at dispatch).
+> written in <build-skill-path> (resolved at dispatch). Delegate your own
+> mechanical scouting to Haiku (`effort: low`) scouts.
 > Work only in your worktree, commit to task/NN-<slug>, do not push.
 > The task file's `Budget:` line is a ceiling, not a target: when
 > remaining work clearly exceeds the remaining budget, stop with verdict

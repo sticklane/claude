@@ -6,7 +6,7 @@ disable-model-invocation: true
 ---
 
 Work through every remaining task under $ARGUMENTS without a human
-relaunching each step. Queue state lives in the task files' `Status` lines
+restarting it at each step. Queue state lives in the task files' `Status` lines
 in the MAIN checkout, and **only drain writes it — workers report verdicts,
 drain records them and commits every flip**. Because state is committed
 files, drain is resumable by definition: `/clear` at any point and re-run
@@ -46,6 +46,12 @@ Status field semantics.
 
 ## 2. Dispatch one worker
 
+Every worker drain dispatches runs on the **session model** — workers
+implement code, so they stay session-tier — and each is told to delegate its
+own mechanical scouting to Haiku (`effort: low`) scouts and to return only a
+structured **verdict + evidence**, never its transcript
+(`.claude/rules/token-discipline.md`, Dispatch authoring).
+
 Before the first dispatch, ensure `.claude/worktrees/` is gitignored —
 harness-managed worker worktrees land there and trip git-cleanliness
 hooks otherwise.
@@ -68,8 +74,8 @@ the independence test and worktree mechanics carry over.)
 Set the task's `Status: in-progress` and **commit that edit** (e.g.
 `drain: task 03 in-progress`) — the worker's worktree is cut from this
 commit, so it must contain current statuses and any `## Answers`. Then
-launch ONE background `general-purpose` agent with `isolation: worktree`
-using the worker prompt in [reference.md](reference.md) — the /build
+launch ONE background `general-purpose` agent on the session model with
+`isolation: worktree` using the worker prompt in [reference.md](reference.md) — the /build
 procedure plus the defer contract: **the worker never asks the human and
 never edits queue state; on ambiguity it stops with verdict DEFERRED and
 puts the exact question in its final message.** Wait for the completion
@@ -102,7 +108,7 @@ itself flips the status to `done` and commits the flip.)
   into one tournament (at most one per task per drain run; procedure in
   reference.md "Tournament") instead of straight to `Status: failed`:
   sweep any leftover `task/NN-<slug>-t*` branches/worktrees, then dispatch
-  three concurrent background workers, `isolation: worktree`, each on its
+  three concurrent background workers on the session model, `isolation: worktree`, each on its
   own `task/NN-<slug>-tN` branch with an angle-variant prompt carrying the
   failure evidence from both prior attempts. If the tournament winner's
   merge fails, likewise run `git merge --abort` before moving to the

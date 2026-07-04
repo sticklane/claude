@@ -46,7 +46,8 @@ wrong side, say so and recommend attended `/build` instead. Don't launch.
 
 Before launching, state: what's running, where (branch/worktree), the gate
 that decides success, and the evidence the run must produce (test output,
-verifier verdict — claims don't count). Two triggers escalate to a human
+verifier verdict — claims don't count). The run reports back only that
+**verdict + evidence**, never its transcript. Two triggers escalate to a human
 instead of pressing on: the same step failing twice (a third attempt in a
 degraded context won't do better), and reaching a high-risk
 action — push, deploy, data deletion, publishing, spending — which the run

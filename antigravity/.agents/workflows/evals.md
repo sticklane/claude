@@ -15,8 +15,10 @@ has no Antigravity equivalent and is ignored here.
 1. **Scaffold if no evalset exists.** Create `evals/<skill>/01-<name>/`
    with the three files: a minimal fixture the skill can act on, the
    smallest honest prompt, assertions on the artifact contract the
-   skill's SKILL.md promises — not incidental wording. `chmod +x` both
-   scripts.
+   skill's SKILL.md promises — not incidental wording. Keep each
+   `assert.sh` failure message under ~10 lines — that is the whole budget
+   the grader returns to the orchestrator, never a transcript. `chmod +x`
+   both scripts.
 2. **Provision the fixture.** Per scenario: create a fresh empty
    directory, run `EVAL_DIR=<dir> bash setup.sh`, then copy
    `.agents/skills/<skill>/` plus the helper skills that are agents in

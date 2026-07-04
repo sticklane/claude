@@ -30,7 +30,8 @@ prepares the dispatch and gives the user everything to launch.
    <build-workflow-path>):
 
    > Execute the task in <task-file path> following the build workflow's
-   > procedure exactly, as written in <build-workflow-path>. Work only
+   > procedure exactly, as written in <build-workflow-path>. Delegate
+   > mechanical scouting to a Flash-class scout. Work only
    > in this worktree, commit to task/NN-<slug>, do not push. The task
    > file's Budget: line is a ceiling, not a target: when remaining work
    > clearly exceeds the remaining budget, stop with verdict BLOCKED
