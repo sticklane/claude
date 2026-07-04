@@ -1,15 +1,16 @@
 # Combined queue — wave plan (canonical, single copy)
 
-**Queue 3 (drained 2026-07-04)** — the two remaining pending tasks:
-completed-task-push 01 (push-on-completion for drain/build/parallel, bump
-0.7.12) and workboard-actionability 04 (Active-group reclassification, R10,
-bump 0.7.13). Both `Status: done`, verifier PASS, evidence inline in each
-task file, pushed to origin/main. No dispatchable tasks remain in
-`specs/*/tasks/`. The sole non-terminal task is
-`orchestrator-context/tasks/06-baton-needs-attention-inbox.md`
-(`Status: deferred`, intentionally held — not drainable). Queue 2's four
-follow-up specs and their onboard-split-default tail all landed earlier and
-are `done`/archived; the wave plan below is retained as historical record.
+**Queue 3 (drained + archived 2026-07-04)** — the final three tasks:
+completed-task-push 01 (push-on-completion, bump 0.7.12),
+workboard-actionability 04 (Active-group reclassification, R10, bump 0.7.13),
+and orchestrator-context 06 (needs-attention batons promoted to the inbox,
+bump 0.7.14 — un-deferred and built the same session). All `Status: done`,
+verifier PASS, pushed to origin/main. All four now-complete specs
+(completed-task-push, workboard-actionability, workboard-copy-commands,
+orchestrator-context) were moved to `specs/archive/`. **No active specs
+remain under `specs/`** — the queue is empty. Queue 2's follow-ups and the
+onboard-split-default tail landed earlier; the wave plan below is retained as
+historical record.
 
 
 Drain reads each task's `Depends on:` header (numbers within a spec,
