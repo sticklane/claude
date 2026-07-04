@@ -27,14 +27,15 @@ plan/execution split, so the session default stays the CLI's default
 model; per-role pins pass via `-m`. Same id caveat as above: re-verify
 the current Flash and Pro ids before pinning.
 
-| Role                                                       | Gemini default                                                      |
-| ---------------------------------------------------------- | ------------------------------------------------------------------- |
-| session default                                            | the CLI's default model (no plan/execution split exists)            |
-| implementation workers                                     | Flash-class (e.g. `gemini-3.5-flash`, via `-m`)                     |
-| explore / codebase-search                                  | Flash-class — the CLI's cheapest Flash variant where one is exposed |
-| LLM reviewer, advisory lane                                | Flash-class                                                         |
-| distill workflow                                           | Pro-class (e.g. `gemini-3.1-pro-preview`, via `-m`)                 |
-| retry escalation (attempt 2+, verifier evidence in prompt) | one tier up: Flash-class → Pro-class                                |
+| Role                                                                  | Gemini default                                                                        |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| session default                                                       | the CLI's default model (no plan/execution split exists)                              |
+| implementation workers                                                | Flash-class (e.g. `gemini-3.5-flash`, via `-m`)                                       |
+| explore / codebase-search                                             | Flash-class — the CLI's cheapest Flash variant where one is exposed                   |
+| LLM reviewer, advisory lane                                           | Flash-class                                                                           |
+| distill workflow                                                      | Pro-class (e.g. `gemini-3.1-pro-preview`, via `-m`)                                   |
+| retry escalation (attempt 2, verifier evidence in prompt)             | one tier up: Flash-class → Pro-class                                                  |
+| tournament escalation (attempts 3+, after the Pro-class retry failed) | Pro-class — the CLI exposes no rung above Pro, so the frontier rung collapses onto it |
 
 ## Headless
 

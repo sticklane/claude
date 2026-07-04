@@ -48,8 +48,9 @@ Status field semantics.
 
 Every worker drain dispatches runs at the **implementation-worker tier pin**
 on attempt 1 (Claude default: `sonnet`; other runtimes map the pin in their
-`runtimes/` profile's Role pins table) — step 3's single relaunch and its
-one tournament escalate one tier up — and each is told to delegate its own
+`runtimes/` profile's Role pins table) — step 3 walks failures up the
+ladder: a single relaunch one tier up, then one tournament at the frontier
+tier — and each is told to delegate its own
 mechanical scouting to Haiku
 (`effort: low`) scouts and to return only a structured **verdict +
 evidence**, never its transcript
@@ -129,8 +130,10 @@ itself flips the status to `done` and commits the flip.)
   into one tournament (at most one per task per drain run; procedure in
   reference.md "Tournament") instead of straight to `Status: failed`:
   sweep any leftover `task/NN-<slug>-t*` branches/worktrees, then dispatch
-  three concurrent background workers one tier up from the pin (Claude
-  default: `opus` — tournament entrants are attempts 3+), `isolation: worktree`, each on its
+  three concurrent background workers a further tier up, at the frontier
+  pin (Claude default: `fable` — tournament entrants are attempts 3+,
+  retries after a deep-tier attempt failed, the one dispatch point
+  token-discipline sanctions frontier for), `isolation: worktree`, each on its
   own `task/NN-<slug>-tN` branch with an angle-variant prompt carrying the
   failure evidence from both prior attempts. If the tournament winner's
   merge fails, likewise run `git merge --abort` before moving to the
