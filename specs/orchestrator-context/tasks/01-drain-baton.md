@@ -1,7 +1,7 @@
 # Task 01: Drain baton-pass step + relaunch flag set
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
-Status: pending
+Status: in-progress
 Depends on: ../../drain-liveness-sweep/tasks/01-liveness-and-rescue.md
 Priority: P1
 Budget: 45 turns
