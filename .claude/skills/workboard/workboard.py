@@ -910,7 +910,7 @@ def render_ready(ready):
         )
 
     return (
-        '<section class="ready"><h2>Ready to start '
+        '<section class="ready" data-category="ready"><h2>Ready to start '
         f'<span class="count">{len(items)}</span></h2>'
         '<p class="legend">Pending tasks whose dependencies are all done — '
         'dispatchable now. Click a <code>command</code> or its copy button to copy it.</p>'
@@ -972,6 +972,65 @@ def render_actions(data):
     )
 
 
+# The attention inbox categories, in fixed severity order (R6). `ready` (R7)
+# is opportunity, not attention, so it leads the filter tiles but is not an
+# inbox group.
+INBOX_CATEGORIES = ("blocked", "needs-review", "stale")
+FILTER_CATEGORIES = ("ready", *INBOX_CATEGORIES)
+
+
+def render_inbox(inbox):
+    """The attention inbox, grouped under per-category headers in the fixed
+    severity order blocked → needs-review → stale, newest-first within a group.
+    Item content and cmd strings are unchanged from the flat render (R6)."""
+    if not inbox:
+        return '<p class="empty">Inbox zero — nothing is blocked, stale, or waiting on review. 🎉</p>'
+    groups = []
+    for cat in INBOX_CATEGORIES:
+        rows = sorted((i for i in inbox if i["state"] == cat),
+                      key=lambda i: -(i["age_ts"] or 0))
+        if not rows:
+            continue
+        body = "".join(
+            f'<tr data-category="{cat}"><td>{badge(i["state"])}</td>'
+            f"<td class='strong'>{esc(i['what'])}</td>"
+            f"<td>{esc(i['repo'])}</td>"
+            f"<td>{esc(i['why'])}"
+            + (f" {cmd_html(i['cmd'])}" if i.get("cmd") else "")
+            + f"</td><td class='num'>{esc(age_str(i['age_ts']))}</td></tr>"
+            for i in rows
+        )
+        groups.append(
+            f'<h3 class="group-head" data-category="{cat}">{badge(cat)} '
+            f'<span class="count">{len(rows)}</span></h3>'
+            f'<table data-category="{cat}"><thead><tr><th>state</th><th>item</th>'
+            '<th>repo</th><th>suggested action</th><th>age</th></tr></thead>'
+            f"<tbody>{body}</tbody></table>"
+        )
+    return "".join(groups)
+
+
+def render_filter_tiles(data):
+    """Clickable filter tiles: one per present category among ready, blocked,
+    needs-review, stale (R7). Each carries data-filter="<category>"; the embedded
+    handler in TEMPLATE toggles which categorized surfaces are shown."""
+    counts = {c: 0 for c in FILTER_CATEGORIES}
+    counts["ready"] = len(data["ready"]["items"])
+    for i in data["inbox"]:
+        if i["state"] in counts:
+            counts[i["state"]] += 1
+    tiles = "".join(
+        f'<button type="button" class="ftile" data-filter="{cat}">'
+        f'<span class="ftile-value">{counts[cat]}</span>'
+        f'<span class="ftile-label">{cat}</span></button>'
+        for cat in FILTER_CATEGORIES if counts[cat]
+    )
+    if not tiles:
+        return ""
+    return (f'<div class="filter-tiles" role="group" aria-label="Filter by category">'
+            f'{tiles}</div>')
+
+
 def render_html(data):
     t = data["totals"]
 
@@ -987,23 +1046,7 @@ def render_html(data):
         ]
     )
 
-    if data["inbox"]:
-        inbox_rows = "".join(
-            f"<tr><td>{badge(i['state'])}</td>"
-            f"<td class='strong'>{esc(i['what'])}</td>"
-            f"<td>{esc(i['repo'])}</td>"
-            f"<td>{esc(i['why'])}"
-            + (f" {cmd_html(i['cmd'])}" if i.get("cmd") else "")
-            + f"</td><td class='num'>{esc(age_str(i['age_ts']))}</td></tr>"
-            for i in data["inbox"]
-        )
-        inbox_html = (
-            "<table><thead><tr><th>state</th><th>item</th><th>repo</th>"
-            "<th>suggested action</th><th>age</th></tr></thead>"
-            f"<tbody>{inbox_rows}</tbody></table>"
-        )
-    else:
-        inbox_html = '<p class="empty">Inbox zero — nothing is blocked, stale, or waiting on review. 🎉</p>'
+    inbox_html = render_inbox(data["inbox"])
 
     repo_cards = []
     for r in sorted(data["repos"],
@@ -1110,6 +1153,7 @@ def render_html(data):
         generated_at=esc(data["generated_at"]),
         stale_days=data["stale_days"],
         tiles=tiles,
+        filter_tiles=render_filter_tiles(data),
         actions=render_actions(data),
         ready=render_ready(data["ready"]),
         inbox=inbox_html,
@@ -1153,6 +1197,18 @@ section {{ background:var(--surface); border:1px solid var(--border);
   border-radius:10px; padding:12px 18px; min-width:120px; }}
 .tile-value {{ font-size:26px; font-weight:650; }}
 .tile-label {{ font-size:12px; color:var(--ink-2); }}
+.filter-tiles {{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }}
+.ftile {{ display:inline-flex; align-items:baseline; gap:6px; cursor:pointer;
+  background:var(--surface); border:1px solid var(--border); border-radius:999px;
+  padding:5px 14px; color:var(--ink); font:inherit; }}
+.ftile:hover, .ftile:focus {{ border-color:var(--blue); }}
+.ftile.active {{ border-color:var(--blue); background:var(--blue-soft); }}
+.ftile-value {{ font-weight:650; font-variant-numeric:tabular-nums; }}
+.ftile-label {{ font-size:12px; color:var(--ink-2); }}
+.group-head {{ margin:14px 0 4px; display:flex; align-items:center; gap:8px; }}
+.group-head:first-child {{ margin-top:0; }}
+.group-head .count {{ font-size:11px; color:var(--muted);
+  font-variant-numeric:tabular-nums; }}
 table {{ width:100%; border-collapse:collapse; font-size:13px; }}
 th {{ text-align:left; color:var(--muted); font-weight:500; font-size:11px;
   text-transform:uppercase; letter-spacing:.04em; padding:4px 10px 6px 0; }}
@@ -1231,6 +1287,7 @@ code.cmd:hover, code.cmd:focus {{ outline:1px solid var(--blue);
 sessions · snapshot {generated_at} · stale after {stale_days}d · re-run
 <code>workboard.py</code> to refresh</div>
 <div class="tiles">{tiles}</div>
+{filter_tiles}
 <input id="filter" type="search" placeholder="filter rows…"
  oninput="var q=this.value.toLowerCase();document.querySelectorAll('tbody tr, details.repo').forEach(function(el){{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none'}})">
 {actions}
@@ -1307,6 +1364,30 @@ never color alone.</footer>
     if(btn){{ var w = btn.closest(".cmd-wrap"); code = w && w.querySelector("code.cmd"); }}
     else {{ code = e.target.closest("code.cmd") || e.target.closest("td code"); }}
     if(code) copy(code);
+  }});
+}})();
+</script>
+<script>
+(function(){{
+  // Click-to-filter tiles: isolate one category (ready / blocked / needs-review
+  // / stale) by hiding every categorized surface that doesn't match; re-clicking
+  // the active tile restores the full view. Independent of the text filter above.
+  var tiles = document.querySelectorAll('.ftile[data-filter]');
+  var active = null;
+  function apply(cat){{
+    document.querySelectorAll('[data-category]').forEach(function(el){{
+      el.style.display = (!cat || el.getAttribute('data-category') === cat) ? '' : 'none';
+    }});
+    tiles.forEach(function(t){{
+      t.classList.toggle('active', t.getAttribute('data-filter') === cat);
+    }});
+  }}
+  tiles.forEach(function(t){{
+    t.addEventListener('click', function(){{
+      var cat = t.getAttribute('data-filter');
+      active = (active === cat) ? null : cat;
+      apply(active);
+    }});
   }});
 }})();
 </script>

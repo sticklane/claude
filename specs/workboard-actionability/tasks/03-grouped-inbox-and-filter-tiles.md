@@ -1,6 +1,6 @@
 # Task 03: Grouped, ranked inbox + clickable filter tiles
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P1
 Budget: 12 turns
@@ -51,8 +51,8 @@ reorder the render.
    `--out` write (:967–972) still behave.
 
 ## Acceptance
-- [ ] `bash tests/test_workboard_actionability.sh` → passes (full R1–R7)
-- [ ] `/tmp/wb.html` from `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` contains a `data-filter="needs-review"` tile, the filter-handler JS, AND the existing text-filter input (R7)
-- [ ] The inbox HTML shows category group headers in `blocked` → `needs-review` → `stale` order (R6)
-- [ ] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0 (R8 smoke)
-- [ ] The commit touches BOTH workboard paths and shows a `version` bump in `.claude-plugin/plugin.json` (`git diff HEAD~1 -- .claude-plugin/plugin.json`) (R9)
+- [x] `bash tests/test_workboard_actionability.sh` → passes (full R1–R7) — verifier: EXIT 0, `PASS: workboard actionability (R1-R7)` (evidence/03-grouped-inbox-and-filter-tiles.md)
+- [x] `/tmp/wb.html` from `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` contains a `data-filter="needs-review"` tile, the filter-handler JS, AND the existing text-filter input (R7) — verifier: all three present in live HTML (evidence)
+- [x] The inbox HTML shows category group headers in `blocked` → `needs-review` → `stale` order (R6) — verifier: hardcoded `INBOX_CATEGORIES` tuple, harness asserts exact order with all three fixtures, live HTML monotonic (evidence)
+- [x] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0 (R8 smoke) — verifier: generate exits 0 (evidence)
+- [x] The commit touches BOTH workboard paths and shows a `version` bump in `.claude-plugin/plugin.json` (`git diff HEAD~1 -- .claude-plugin/plugin.json`) (R9) — verifier: both paths byte-identical, plugin.json 0.7.10→0.7.11 (evidence)

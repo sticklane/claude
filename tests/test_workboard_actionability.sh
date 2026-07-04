@@ -29,6 +29,10 @@ for d in "$tmp/tree"/*/; do
   roots+=("$d")
 done
 
+# stale-open: backdate its files so last_touched is well past --stale-days ⇒ the
+# board emits a `stale` attention item (needed to exercise R6 category order).
+find "$tmp/tree/toolkit-repo/specs/stale-open" -type f -exec touch -t 202001010000 {} +
+
 # pushable-repo: give it an upstream it is ahead of, so git_info reports
 # ahead>0 and the board emits a `git -C <repo> push` into the actions script.
 pushable="$tmp/tree/pushable-repo"
@@ -116,8 +120,31 @@ has "$asrc"
 has '<td><code'
 has "bash $asrc"
 
+# ---------------------------------------------------------------- R6/R7
+# R6 — the inbox is grouped under per-category headers rendered in the fixed
+# severity order blocked → needs-review → stale (fixtures supply all three).
+if ! python3 - "$out" <<'PY'
+import sys, re
+html = open(sys.argv[1]).read()
+sec = html.split('Needs attention', 1)[1].split('<section><h2>Repos', 1)[0]
+heads = re.findall(r'class="group-head" data-category="([a-z-]+)"', sec)
+assert heads == ['blocked', 'needs-review', 'stale'], heads
+PY
+then echo "R6: inbox group headers not in blocked→needs-review→stale order"; fail=1; fi
+
+# R7 — a clickable filter tile per present category, carrying data-filter.
+has 'data-filter="needs-review"'
+has 'data-filter="ready"'
+has 'data-filter="blocked"'
+has 'data-filter="stale"'
+
+# R7 — the embedded filter-handler JS (no external request), keyed on
+# data-category, coexists with the existing text-filter <input id="filter">.
+has "querySelectorAll('[data-category]')"
+has 'id="filter"'
+
 if [ "$fail" -ne 0 ]; then
   echo "FAIL: workboard actionability assertions"
   exit 1
 fi
-echo "PASS: workboard actionability (R1-R5 subset)"
+echo "PASS: workboard actionability (R1-R7)"
