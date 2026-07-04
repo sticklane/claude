@@ -95,6 +95,11 @@ does NOT trigger on neighbors' phrases. For skills with a stored evalset,
 /evals (runner: `evals/run.sh`) is the repeatable complement — run it
 before committing any skill change.
 
+Retiring or folding a skill: a clean reference grep plus green gates does
+not prove the merge is semantically complete — follow
+docs/memory/skill-retirement-checklist.md and run the critic on the diff
+before calling the sweep done.
+
 The four ultra-path skills (critique, drain, build, idea) also
 carry a standalone, model-free gate check: run `bash evals/lint-ultra-gate.sh`
 before committing changes to them. It verifies every case-insensitive "ultra"
