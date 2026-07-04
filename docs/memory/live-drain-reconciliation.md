@@ -22,11 +22,15 @@ Live-drain signals (any one ⇒ do not touch):
 
 The drain orchestrator may run from another session with its `cwd` in `$HOME`
 (not the repo) and its workers as Task sub-agents — so "no session has this
-repo as cwd" is **not** proof no drain is running. The workboard's
-uncommitted/unpushed/in-progress flags likewise do **not** distinguish a live
-drain from genuinely stranded work (the fix is workboard-actionability
-task 04's "Active" group) — so a flag alone is never evidence the work is
-abandoned.
+repo as cwd" is **not** proof no drain is running. As of workboard 0.7.13+ the
+board reclassifies a live-owned repo's uncommitted/unpushed state into an
+**"Active" group** (excluded from the needs-attention count) when a live
+session's git-toplevel matches OR a `task/*` worktree's newest activity is
+within the drain window (default 15m). Caveat: a drain that has gone quiet
+for longer than that window ages back to `needs-review` even though it may
+still be alive between generations — so a `needs-review` flag is *stronger*
+evidence of stranding than before, but still not proof; re-check the live
+signals above before hand-fixing.
 
 If a drain is live: leave the repo alone, let it finish, then re-check with
 `bash specs/status.sh`. If you must add unrelated files, do it without
