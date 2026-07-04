@@ -52,3 +52,12 @@ Autonomy is earned by verification, not granted by optimism.
    re-scope, relaunch clean. Either way, if the run exposed a task-file or
    gate problem, apply the distill skill so the next launch doesn't repay
    for it.
+
+5. **Pre-cap baton (long runs).** The turn budget terminates the run — there
+   is no "after the cap". At the last committed task verdict BEFORE ~80% of
+   the budget, write drain's baton artifact (`DRAIN-BATON.md`: done/next log,
+   generation number, in-flight/unmerged state), judging advancement by new
+   commits since launch — no new commits since the previous baton → stop for
+   spec repair, don't hand off. Then STOP: an Antigravity run cannot
+   self-relaunch claude, so it writes the baton and stops for the human to
+   relaunch. Same baton grammar and generations cap as the drain workflow.

@@ -56,3 +56,18 @@ does the work). FAIL or gate-capped → report, discard or re-scope, and
 restart clean. Correcting a wandering autonomous run in-context is the
 known losing move. Either way, if the run exposed a task-file or gate
 problem, run /distill so the next launch doesn't repay for it.
+
+## 5. Pre-cap baton (long runs)
+
+`--max-turns` terminates the process — there is no "after the cap" to hand
+off from, and the /goal evaluator judges only whether the condition is met,
+not progress. So a long unattended run hands off *pre-emptively*: at its last
+safe boundary (a committed task verdict) BEFORE ~80% of `--max-turns`, it
+writes drain's baton artifact and relaunches a fresh generation — the same
+`DRAIN-BATON.md` grammar, fresh-instance ritual, and generations cap drain
+uses (cite drain, don't restate the trigger). It judges its own advancement
+by **new commits since launch**: no new commits since the previous baton
+means a fresh identical generation would only repeat the stall, so it does
+NOT respawn — it stops for spec repair (the FAIL path above) instead. The
+~80% boundary computation and the relaunch flag set are in
+[reference.md](reference.md).
