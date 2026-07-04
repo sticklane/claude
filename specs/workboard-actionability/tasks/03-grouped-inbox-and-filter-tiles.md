@@ -1,36 +1,11 @@
 # Task 03: Grouped, ranked inbox + clickable filter tiles
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P1
 Budget: 12 turns
 Spec: ../SPEC.md (requirements R6, R7; cross-cutting R8, R9)
 Touch: .claude/skills/workboard/workboard.py, antigravity/.agents/skills/workboard/workboard.py, .claude-plugin/plugin.json, tests/test_workboard_actionability.sh, tests/fixtures/workboard-actionability/
-
-<!-- PLAN (delete at close-out)
-Files, in order:
-1. tests/test_workboard_actionability.sh — RED: append R6 (group headers in
-   blocked→needs-review→stale order via python index check) + R7 (data-filter
-   tile, filter-handler JS, existing #filter input still present).
-2. tests/fixtures/workboard-actionability/toolkit-repo/specs/ — add blocked-task
-   (Status: blocked task ⇒ blocked inbox item) and stale-open (pending no-dep,
-   backdated in harness ⇒ stale inbox item) so all three categories exist and
-   R6 ordering is meaningfully testable. Harness backdates stale-open files.
-3. workboard.py — GREEN R6: render_inbox() groups items by state in fixed order
-   blocked→needs-review→stale, age_ts newest-first within group, each group an
-   h3.group-head[data-category] + table[data-category]; item row content/cmd
-   unchanged. GREEN R7: render_filter_tiles() emits one .ftile[data-filter=cat]
-   per present category among ready/blocked/needs-review/stale with its count;
-   tag section.ready with data-category="ready"; add a second <script> filter
-   handler (querySelectorAll('[data-category]'), toggle on re-click). Keep the
-   existing copy-handler script and #filter input untouched.
-4. Mirror to antigravity/.agents/skills/workboard/workboard.py (same edits);
-   bump plugin.json version 0.7.10→0.7.11. Same commit.
-What could go wrong: filter script braces must be doubled ({{}}) inside
-TEMPLATE.format(); stale-open pending task also shows as ready (harmless — no
-assertion forbids it); category filter scoped to categorized surfaces only
-(ready section + inbox groups), leaving Repos/etc. visible by design.
--->
 
 ## Goal
 The attention inbox renders under per-category headers in fixed severity
@@ -76,8 +51,8 @@ reorder the render.
    `--out` write (:967–972) still behave.
 
 ## Acceptance
-- [ ] `bash tests/test_workboard_actionability.sh` → passes (full R1–R7)
-- [ ] `/tmp/wb.html` from `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` contains a `data-filter="needs-review"` tile, the filter-handler JS, AND the existing text-filter input (R7)
-- [ ] The inbox HTML shows category group headers in `blocked` → `needs-review` → `stale` order (R6)
-- [ ] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0 (R8 smoke)
-- [ ] The commit touches BOTH workboard paths and shows a `version` bump in `.claude-plugin/plugin.json` (`git diff HEAD~1 -- .claude-plugin/plugin.json`) (R9)
+- [x] `bash tests/test_workboard_actionability.sh` → passes (full R1–R7) — verifier: EXIT 0, `PASS: workboard actionability (R1-R7)` (evidence/03-grouped-inbox-and-filter-tiles.md)
+- [x] `/tmp/wb.html` from `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` contains a `data-filter="needs-review"` tile, the filter-handler JS, AND the existing text-filter input (R7) — verifier: all three present in live HTML (evidence)
+- [x] The inbox HTML shows category group headers in `blocked` → `needs-review` → `stale` order (R6) — verifier: hardcoded `INBOX_CATEGORIES` tuple, harness asserts exact order with all three fixtures, live HTML monotonic (evidence)
+- [x] `python3 .claude/skills/workboard/workboard.py --out /tmp/wb.html --actions-out /tmp/wb.actions.sh` → exits 0 (R8 smoke) — verifier: generate exits 0 (evidence)
+- [x] The commit touches BOTH workboard paths and shows a `version` bump in `.claude-plugin/plugin.json` (`git diff HEAD~1 -- .claude-plugin/plugin.json`) (R9) — verifier: both paths byte-identical, plugin.json 0.7.10→0.7.11 (evidence)
