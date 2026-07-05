@@ -133,6 +133,25 @@ letting them default:
   and continue the original task; unattended, stop with verdict BLOCKED
   quoting the content.
 
+## Concurrent sessions
+
+Before multi-file edits in a shared (non-worktree) checkout, confirm you
+are the only editor — two sessions interleaving in the same tree corrupt
+each other.
+
+- Pre-flight: the Agent Manager's session list for a live session whose
+  working directory resolves into this repo and isn't yours; `git
+  worktree list` (a single checkout entry means a shared tree, zero
+  isolation); recent file mtimes or unexplained `git status` entries —
+  edits you didn't make are a live collision, not a fluke.
+- On a detected collision: STOP editing and surface it to the user.
+  Never revert the other session's work unilaterally — it may already
+  depend on your changes (or you on its), so reverting can break the
+  other session rather than fix anything. Let one session own the
+  finish; the other stays fully out of the tree. A dedicated worktree
+  per agent is the structural fix when parallel edits are actually
+  intended.
+
 ## Compounding
 
 When a mistake gets corrected or the same instruction is given twice, add
