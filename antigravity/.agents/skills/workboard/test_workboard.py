@@ -557,11 +557,19 @@ class TestSpecDagRendering(unittest.TestCase):
     """R5 (workboard half): a spec with deps renders its dependency DAG via
     viz.dag() (an SVG <path> per in-list edge)."""
 
-    def _spec_with_dep(self):
+    def _spec_with_dep(self, repo_root):
+        tasks_dir = Path(repo_root) / "specs" / "demo" / "tasks"
+        tasks_dir.mkdir(parents=True)
+        (tasks_dir / "01-a.md").write_text(
+            "# A\nStatus: done\n", encoding="utf-8")
+        (tasks_dir / "02-b.md").write_text(
+            "# B\nStatus: pending\nDepends on: 01\n", encoding="utf-8")
         tasks = [
-            {"file": "specs/demo/tasks/01-a.md", "abs": "/x/01-a.md",
+            {"file": "specs/demo/tasks/01-a.md",
+             "abs": str(tasks_dir / "01-a.md"),
              "title": "A", "status": "done", "deps": []},
-            {"file": "specs/demo/tasks/02-b.md", "abs": "/x/02-b.md",
+            {"file": "specs/demo/tasks/02-b.md",
+             "abs": str(tasks_dir / "02-b.md"),
              "title": "B", "status": "pending", "deps": ["01"]},
         ]
         return {"kind": "toolkit", "slug": "demo", "title": "Demo",
@@ -570,21 +578,22 @@ class TestSpecDagRendering(unittest.TestCase):
                 "last_touched": 1.0}
 
     def test_spec_with_deps_renders_dag_edge(self):
-        repo = make_repo_record()
-        repo["specs"] = [self._spec_with_dep()]
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_repo_record()
+            repo["specs"] = [self._spec_with_dep(tmp)]
 
-        data = {
-            "totals": {"repos": 1, "specs_open": 1, "tasks_open": 1,
-                       "sessions_active": 0, "attention": 0},
-            "generated_at": "now", "stale_days": 7,
-            "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
-            "repos": [repo],
-            "antigravity": [], "todos": [], "orphan_sessions": [],
-        }
+            data = {
+                "totals": {"repos": 1, "specs_open": 1, "tasks_open": 1,
+                           "sessions_active": 0, "attention": 0},
+                "generated_at": "now", "stale_days": 7,
+                "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+                "repos": [repo],
+                "antigravity": [], "todos": [], "orphan_sessions": [],
+            }
 
-        html = workboard.render_html(data)
+            html = workboard.render_html(data)
 
-        self.assertIn('<path', html)
+            self.assertIn('<path', html)
 
     def test_spec_without_deps_renders_no_dag(self):
         repo = make_repo_record()
@@ -608,6 +617,285 @@ class TestSpecDagRendering(unittest.TestCase):
         html = workboard.render_html(data)
 
         self.assertNotIn('<path', html)
+
+
+class TestSpecDagResolvesDeps(unittest.TestCase):
+    """R3: _spec_dag_tasks resolves `Depends on:` entries through
+    resolve_dep/_glob_task instead of a bare isdigit() filter."""
+
+    def _make_spec(self, repo_root, slug, task_bodies):
+        """Write real task files under <repo_root>/specs/<slug>/tasks/ and
+        return the scanned spec dict for that slug (via scan_toolkit_specs,
+        so `deps` comes from the real `Depends on:` parser)."""
+        spec_dir = Path(repo_root) / "specs" / slug
+        (spec_dir / "tasks").mkdir(parents=True)
+        (spec_dir / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+        for fname, status, depends in task_bodies:
+            text = f"# {fname}\nStatus: {status}\n"
+            if depends is not None:
+                text += f"Depends on: {depends}\n"
+            (spec_dir / "tasks" / fname).write_text(text, encoding="utf-8")
+        specs = {s["slug"]: s for s in workboard.scan_toolkit_specs(Path(repo_root))}
+        return specs[slug]
+
+    def test_task_dir_relative_path_dep_draws_edge(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = self._make_spec(tmp, "demo", [
+                ("01-a.md", "done", None),
+                ("02-b.md", "pending", "01-a.md"),
+            ])
+
+            svg = workboard.viz.dag(workboard._spec_dag_tasks(spec))
+
+            self.assertIn('<path', svg)
+
+    def test_cyclic_deps_returns_without_hanging(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = self._make_spec(tmp, "demo", [
+                ("01-a.md", "pending", "02-b.md"),
+                ("02-b.md", "pending", "01-a.md"),
+            ])
+
+            svg = workboard.viz.dag(workboard._spec_dag_tasks(spec))
+
+            self.assertIsInstance(svg, str)
+
+    def test_no_deps_yields_no_dag_block(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = self._make_spec(tmp, "demo", [("01-a.md", "open", None)])
+
+            self.assertEqual(workboard._spec_dag_html([spec]), "")
+
+    def test_cross_spec_dep_draws_no_edge(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            other_dir = Path(tmp) / "specs" / "other"
+            (other_dir / "tasks").mkdir(parents=True)
+            other_dir.joinpath("SPEC.md").write_text(
+                "# Other\n", encoding="utf-8")
+            (other_dir / "tasks" / "01-x.md").write_text(
+                "# X\nStatus: done\n", encoding="utf-8")
+
+            spec = self._make_spec(tmp, "demo", [
+                ("01-b.md", "pending", "other/01"),
+            ])
+
+            deps = workboard._spec_dag_tasks(spec)[0]["deps"]
+
+            self.assertEqual(deps, [])
+
+
+class TestLiveSessionIdsCliAndFallback(unittest.TestCase):
+    """R1: live_session_ids() sources liveness from the `claude agents --json`
+    shim, falling back to the PID-record scan when the shim is absent/invalid,
+    and returns the 2-tuple (live, liveness_unknown) in both paths."""
+
+    def _patch_cli(self, result):
+        orig = workboard._claude_agents_json
+        workboard._claude_agents_json = lambda: result
+        self.addCleanup(setattr, workboard, "_claude_agents_json", orig)
+
+    def test_valid_cli_list_yields_liveness_map_ignoring_status(self):
+        self._patch_cli([
+            {"sessionId": "s1", "pid": 111, "status": "running"},
+            {"sessionId": "s2", "pid": 222, "status": "idle"},  # status ignored
+            {"pid": 333},  # missing sessionId -> not live
+        ])
+
+        live, liveness_unknown = workboard.live_session_ids(Path("/unused"))
+
+        self.assertEqual(set(live), {"s1", "s2"})
+        self.assertFalse(liveness_unknown)
+
+    def test_cli_absent_falls_back_to_pid_record_scan(self):
+        self._patch_cli(None)  # simulates claude missing from PATH / bad JSON
+        with tempfile.TemporaryDirectory() as tmp:
+            claude_home = Path(tmp)
+            sess_dir = claude_home / "sessions"
+            sess_dir.mkdir()
+            (sess_dir / "a.json").write_text(
+                json.dumps({"sessionId": "s1", "pid": os.getpid()}))
+
+            live, liveness_unknown = workboard.live_session_ids(claude_home)
+
+        self.assertEqual(set(live), {"s1"})
+        self.assertFalse(liveness_unknown)
+
+    def test_cli_non_empty_with_zero_live_marks_liveness_unknown(self):
+        self._patch_cli([{"name": "orphan-record-missing-ids"}])
+
+        live, liveness_unknown = workboard.live_session_ids(Path("/unused"))
+
+        self.assertEqual(live, {})
+        self.assertTrue(liveness_unknown)
+
+    def test_cli_empty_list_is_not_liveness_unknown(self):
+        self._patch_cli([])
+
+        live, liveness_unknown = workboard.live_session_ids(Path("/unused"))
+
+        self.assertEqual(live, {})
+        self.assertFalse(liveness_unknown)
+
+    def test_scan_sessions_plumbs_liveness_unknown_through(self):
+        self._patch_cli([{"name": "orphan-record-missing-ids"}])
+        with tempfile.TemporaryDirectory() as tmp:
+            claude_home = Path(tmp)
+            (claude_home / "projects").mkdir()
+
+            workboard.scan_sessions(claude_home, stale_days=7)
+
+        self.assertTrue(workboard._last_liveness_unknown)
+
+
+class TestAttachSessionsRealpath(unittest.TestCase):
+    """R2: the attach-sessions loop realpaths both sides of the match, so a
+    session cwd that is a symlink into a repo still attributes to it."""
+
+    def test_symlinked_session_cwd_attaches_to_repo(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            real_repo = Path(tmp) / "real-repo"
+            real_repo.mkdir()
+            link = Path(tmp) / "link-to-repo"
+            link.symlink_to(real_repo)
+
+            repos = [{"path": str(real_repo)}]
+            sessions = [{"id": "s1", "cwd": str(link)}]
+
+            matched = workboard._attach_sessions(repos, sessions)
+
+        self.assertEqual(matched, {"s1"})
+        self.assertEqual([s["id"] for s in repos[0]["sessions"]], ["s1"])
+
+    def test_non_symlinked_cwd_still_matches_as_before(self):
+        repos = [{"path": "/r/demo"}]
+        sessions = [{"id": "s1", "cwd": "/r/demo/sub"},
+                    {"id": "s2", "cwd": "/other"}]
+
+        matched = workboard._attach_sessions(repos, sessions)
+
+        self.assertEqual(matched, {"s1"})
+
+
+class TestScanToolkitSpecsUnparseableCount(unittest.TestCase):
+    """R4: scan_toolkit_specs counts a task file as unparseable iff its
+    filename lacks the leading NN- prefix _TASK_NUM_RE needs; every file
+    still gets a defaulted row (no other rejection criterion)."""
+
+    def test_all_tasks_missing_prefix_are_all_counted_unparseable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_dir = Path(tmp) / "specs" / "demo"
+            (spec_dir / "tasks").mkdir(parents=True)
+            (spec_dir / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+            (spec_dir / "tasks" / "notes.md").write_text(
+                "# Notes\nStatus: pending\n", encoding="utf-8")
+            (spec_dir / "tasks" / "todo.md").write_text(
+                "# Todo\nStatus: pending\n", encoding="utf-8")
+
+            spec = workboard.scan_toolkit_specs(Path(tmp))[0]
+
+            self.assertEqual(spec["tasks_total"], 2)
+            self.assertEqual(spec["tasks_unparseable"], 2)
+            self.assertEqual(len(spec["tasks"]), 2)  # still parsed, not dropped
+
+    def test_mixed_prefixed_and_unprefixed_counts_only_the_unprefixed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_dir = Path(tmp) / "specs" / "demo"
+            (spec_dir / "tasks").mkdir(parents=True)
+            (spec_dir / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+            (spec_dir / "tasks" / "01-a.md").write_text(
+                "# A\nStatus: done\n", encoding="utf-8")
+            (spec_dir / "tasks" / "notes.md").write_text(
+                "# Notes\nStatus: pending\n", encoding="utf-8")
+
+            spec = workboard.scan_toolkit_specs(Path(tmp))[0]
+
+            self.assertEqual(spec["tasks_total"], 2)
+            self.assertEqual(spec["tasks_unparseable"], 1)
+
+
+class TestSourceHealthMarkers(unittest.TestCase):
+    """R4: sources that are present but yield zero parseable records show a
+    visible "source check"/"liveness unknown" marker instead of rendering
+    silently empty."""
+
+    def _data(self, repos=None, orphan_sessions=None, liveness_unknown=False):
+        return {
+            "totals": {"repos": len(repos or []), "specs_open": 0, "tasks_open": 0,
+                       "sessions_active": 0, "attention": 0},
+            "generated_at": "now", "stale_days": 7,
+            "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+            "repos": repos or [],
+            "antigravity": [], "todos": [], "orphan_sessions": orphan_sessions or [],
+            "liveness_unknown": liveness_unknown,
+        }
+
+    def _session(self, state="active"):
+        return {"id": "s1", "cwd": "/r/demo", "branch": "main",
+                "prompt": "do the thing", "last_ts": 100.0, "start_ts": 1.0,
+                "end_ts": 100.0, "bytes": 10, "state": state}
+
+    def test_spec_with_all_unparseable_tasks_renders_source_check_marker(self):
+        repo = make_repo_record()
+        repo["specs"] = [{"kind": "toolkit", "slug": "demo", "title": "Demo",
+                          "path": "specs/demo/SPEC.md", "tasks_total": 2,
+                          "tasks_done": 0, "tasks_doing": 0, "tasks_blocked": [],
+                          "tasks": [
+                              {"file": "specs/demo/tasks/notes.md",
+                               "abs": "/x/notes.md", "title": "Notes",
+                               "status": "pending", "deps": []},
+                              {"file": "specs/demo/tasks/todo.md",
+                               "abs": "/x/todo.md", "title": "Todo",
+                               "status": "pending", "deps": []},
+                          ],
+                          "tasks_unparseable": 2, "last_touched": 1.0}]
+
+        html = workboard.render_html(self._data(repos=[repo]))
+
+        self.assertIn("source check", html)
+        self.assertNotIn("no specs", html)  # task section still renders, not empty
+
+    def test_spec_with_some_parseable_tasks_renders_no_marker(self):
+        repo = make_repo_record()
+        repo["specs"] = [{"kind": "toolkit", "slug": "demo", "title": "Demo",
+                          "path": "specs/demo/SPEC.md", "tasks_total": 2,
+                          "tasks_done": 1, "tasks_doing": 0, "tasks_blocked": [],
+                          "tasks": [
+                              {"file": "specs/demo/tasks/01-a.md",
+                               "abs": "/x/01-a.md", "title": "A",
+                               "status": "done", "deps": []},
+                              {"file": "specs/demo/tasks/notes.md",
+                               "abs": "/x/notes.md", "title": "Notes",
+                               "status": "pending", "deps": []},
+                          ],
+                          "tasks_unparseable": 1, "last_touched": 1.0}]
+
+        html = workboard.render_html(self._data(repos=[repo]))
+
+        self.assertNotIn("source check", html)
+
+    def test_liveness_unknown_renders_marker_adjacent_to_timeline(self):
+        repo = make_repo_record()
+        repo["sessions"] = [self._session()]
+
+        html = workboard.render_html(self._data(repos=[repo], liveness_unknown=True))
+
+        self.assertIn("liveness unknown", html)
+        self.assertIn("viz-bar", html)  # session rows still render, unaffected
+
+    def test_liveness_unknown_false_renders_no_marker(self):
+        repo = make_repo_record()
+        repo["sessions"] = [self._session()]
+
+        html = workboard.render_html(self._data(repos=[repo], liveness_unknown=False))
+
+        self.assertNotIn("liveness unknown", html)
+
+    def test_liveness_unknown_marks_orphan_sessions_section_too(self):
+        html = workboard.render_html(self._data(
+            orphan_sessions=[self._session(state="stale")], liveness_unknown=True))
+
+        self.assertIn("Sessions outside scanned repos", html)
+        self.assertIn("liveness unknown", html)
 
 
 if __name__ == "__main__":
