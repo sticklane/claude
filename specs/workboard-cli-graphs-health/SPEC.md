@@ -197,16 +197,15 @@ or inline `style=` over adding TEMPLATE CSS.
 
 ## Parallelization
 
-Three tracks touch different functions but two have flagged blast radius:
-- **A (sessions, R1+R2)** — rewrites `live_session_ids` and edits `assemble()`'s
-  attach-sessions attribution; **must re-run
-  `TestActiveCoverageReclassification`** (not fully independent — it shares
-  the session code path).
-- **B (dep graph, R3)** — `resolve_dep` wiring in `_spec_dag_tasks`;
-  independent of A.
-- **C (source-health, R4)** — `unparseable` counts in the spec/liveness parsers;
-  touches A's liveness parser, so sequence C after A.
-Reference for A and C: `~/agent-console/agent-console.py`
-(`live_sessions_from_cli`, `parse_session_entries`). B's renderer is the
-shared `viz.dag()` already imported by workboard.py — agent-console's
-`_dep_graph_svg` no longer exists upstream.
+Decomposed 2026-07-04 into `tasks/01`–`04`. **No parallel groups**: every
+code task (01 A: R1+R2, 02 B: R3, 03 C: R4) edits the same two files
+(`workboard.py`, `test_workboard.py`), so Touch lists are never disjoint and
+the queue is strictly serial — 01 → 02 → 03 → 04. The `Depends on:` edges
+encode this: 02's edge to 01 is merge-serialization only (no functional
+coupling); 03 genuinely consumes 01's `liveness_unknown` and lands after
+02 to keep merges linear; 04 (e2e + antigravity mirror + version bump)
+closes the queue. Reference for tracks A and C:
+`~/agent-console/agent-console.py` (`live_sessions_from_cli`,
+`parse_session_entries`). B's renderer is the shared `viz.dag()` already
+imported by workboard.py — agent-console's `_dep_graph_svg` no longer
+exists upstream.
