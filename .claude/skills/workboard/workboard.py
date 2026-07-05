@@ -1275,17 +1275,35 @@ _TASK_NUM_RE = re.compile(r"^(\d+)-")
 def _spec_dag_tasks(spec):
     """spec['tasks'] (file/status/deps strings) -> viz.dag()'s schema:
     {num, deps, status, title}. num comes from the task file's leading NN-
-    prefix; only bare-numeric (same-spec) deps are included — cross-spec
-    deps aren't drawable here and dag() would drop them anyway."""
-    tasks = []
-    for t in spec.get("tasks", []):
+    prefix; deps resolve through resolve_dep/_glob_task (bare numeric,
+    path-form, glob-form, and specs/-rooted same-spec refs alike). A dep
+    that resolves outside this spec's own task list is dropped — cross-spec
+    edges aren't drawable here and dag() would drop them anyway."""
+    tasks = spec.get("tasks", [])
+    by_path = {}
+    for t in tasks:
+        m = _TASK_NUM_RE.match(Path(t["file"]).name)
+        if m:
+            by_path[Path(t["abs"])] = int(m.group(1))
+
+    result = []
+    for t in tasks:
         m = _TASK_NUM_RE.match(Path(t["file"]).name)
         if not m:
             continue
-        deps = [int(d) for d in t.get("deps", []) if d.isdigit()]
-        tasks.append({"num": int(m.group(1)), "deps": deps,
-                      "status": t["status"], "title": t["title"]})
-    return tasks
+        raw_deps = t.get("deps", [])
+        deps = []
+        if raw_deps:
+            task_dir = Path(t["abs"]).parent
+            repo_root = Path(t["abs"]).parents[3]
+            for raw in raw_deps:
+                resolved = resolve_dep(raw, task_dir, repo_root)
+                num = by_path.get(resolved)
+                if num is not None:
+                    deps.append(num)
+        result.append({"num": int(m.group(1)), "deps": deps,
+                       "status": t["status"], "title": t["title"]})
+    return result
 
 
 def _spec_dag_html(specs):

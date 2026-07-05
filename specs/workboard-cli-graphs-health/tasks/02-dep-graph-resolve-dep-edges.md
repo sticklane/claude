@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 10 turns
@@ -28,6 +28,6 @@ Only the two workboard skill files, and within workboard.py only the DAG data pl
 
 ## Acceptance
 
-- [ ] `python3 -m pytest /Users/sjaconette/claude/.claude/skills/workboard/test_workboard.py -q` → all pass, including the new R3 tests (resolve_dep-form edge drawn, cycle returns, no-deps → no `spec-dag` block, cross-spec excluded) with `TestSpecDagRendering` unregressed
-- [ ] `grep -nE '\.write_text|\.write\(|\bopen\([^)]*[\x27"][wax]' /Users/sjaconette/claude/.claude/skills/workboard/workboard.py` → still only the three known write sites — R5: no new writes
-- [ ] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-task02.html` → exits 0 and the HTML contains ≥1 dependency-graph `<svg` (this repo's specs declare in-spec deps)
+- [x] `python3 -m pytest /Users/sjaconette/claude/.claude/skills/workboard/test_workboard.py -q` → all pass, including the new R3 tests (resolve_dep-form edge drawn, cycle returns, no-deps → no `spec-dag` block, cross-spec excluded) with `TestSpecDagRendering` unregressed — verifier PASS, 50 passed; see ../evidence/02-dep-graph-resolve-dep-edges.md
+- [x] `grep -nE '\.write_text|\.write\(|\bopen\([^)]*[\x27"][wax]' /Users/sjaconette/claude/.claude/skills/workboard/workboard.py` → still only the three known write sites — R5: no new writes — verifier confirmed exactly 3 lines (731, 1721, 1725); see ../evidence/02-dep-graph-resolve-dep-edges.md
+- [x] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-task02.html` → exits 0 and the HTML contains ≥1 dependency-graph `<svg` (this repo's specs declare in-spec deps) — verifier confirmed exit 0 with `<svg` present; see ../evidence/02-dep-graph-resolve-dep-edges.md
