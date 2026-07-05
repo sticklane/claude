@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P1
 Budget: 10 turns
@@ -28,6 +28,6 @@ Only the two workboard skill files. Do NOT change `live_session_ids`'s R1 contra
 
 ## Acceptance
 
-- [ ] `python3 -m pytest /Users/sjaconette/claude/.claude/skills/workboard/test_workboard.py -q` → all pass, including the new R4 tests, with all pre-existing suites unregressed
-- [ ] `grep -nE '\.write_text|\.write\(|\bopen\([^)]*[\x27"][wax]' /Users/sjaconette/claude/.claude/skills/workboard/workboard.py` → still only the three known write sites — R5: no new writes
-- [ ] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-task03.html` → exits 0; healthy sources on this machine render NO "source check" / "liveness unknown" markers (grep the HTML for the marker text → absent)
+- [x] `python3 -m pytest /Users/sjaconette/claude/.claude/skills/workboard/test_workboard.py -q` → all pass, including the new R4 tests, with all pre-existing suites unregressed — verifier confirmed: 57 passed, new tests assert real structural content, not tautological.
+- [x] `grep -nE '\.write_text|\.write\(|\bopen\([^)]*[\x27"][wax]' /Users/sjaconette/claude/.claude/skills/workboard/workboard.py` → still only the three known write sites — R5: no new writes — verifier confirmed: exactly 3 hits (abandon marker, actions_path, out.write_text render_html).
+- [x] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-task03.html` → exits 0; healthy sources on this machine render NO "source check" / "liveness unknown" markers (grep the HTML for the marker text → absent) — verifier confirmed: exit 0, both marker strings absent.

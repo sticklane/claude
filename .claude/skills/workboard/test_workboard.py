@@ -776,5 +776,127 @@ class TestAttachSessionsRealpath(unittest.TestCase):
         self.assertEqual(matched, {"s1"})
 
 
+class TestScanToolkitSpecsUnparseableCount(unittest.TestCase):
+    """R4: scan_toolkit_specs counts a task file as unparseable iff its
+    filename lacks the leading NN- prefix _TASK_NUM_RE needs; every file
+    still gets a defaulted row (no other rejection criterion)."""
+
+    def test_all_tasks_missing_prefix_are_all_counted_unparseable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_dir = Path(tmp) / "specs" / "demo"
+            (spec_dir / "tasks").mkdir(parents=True)
+            (spec_dir / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+            (spec_dir / "tasks" / "notes.md").write_text(
+                "# Notes\nStatus: pending\n", encoding="utf-8")
+            (spec_dir / "tasks" / "todo.md").write_text(
+                "# Todo\nStatus: pending\n", encoding="utf-8")
+
+            spec = workboard.scan_toolkit_specs(Path(tmp))[0]
+
+            self.assertEqual(spec["tasks_total"], 2)
+            self.assertEqual(spec["tasks_unparseable"], 2)
+            self.assertEqual(len(spec["tasks"]), 2)  # still parsed, not dropped
+
+    def test_mixed_prefixed_and_unprefixed_counts_only_the_unprefixed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_dir = Path(tmp) / "specs" / "demo"
+            (spec_dir / "tasks").mkdir(parents=True)
+            (spec_dir / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+            (spec_dir / "tasks" / "01-a.md").write_text(
+                "# A\nStatus: done\n", encoding="utf-8")
+            (spec_dir / "tasks" / "notes.md").write_text(
+                "# Notes\nStatus: pending\n", encoding="utf-8")
+
+            spec = workboard.scan_toolkit_specs(Path(tmp))[0]
+
+            self.assertEqual(spec["tasks_total"], 2)
+            self.assertEqual(spec["tasks_unparseable"], 1)
+
+
+class TestSourceHealthMarkers(unittest.TestCase):
+    """R4: sources that are present but yield zero parseable records show a
+    visible "source check"/"liveness unknown" marker instead of rendering
+    silently empty."""
+
+    def _data(self, repos=None, orphan_sessions=None, liveness_unknown=False):
+        return {
+            "totals": {"repos": len(repos or []), "specs_open": 0, "tasks_open": 0,
+                       "sessions_active": 0, "attention": 0},
+            "generated_at": "now", "stale_days": 7,
+            "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+            "repos": repos or [],
+            "antigravity": [], "todos": [], "orphan_sessions": orphan_sessions or [],
+            "liveness_unknown": liveness_unknown,
+        }
+
+    def _session(self, state="active"):
+        return {"id": "s1", "cwd": "/r/demo", "branch": "main",
+                "prompt": "do the thing", "last_ts": 100.0, "start_ts": 1.0,
+                "end_ts": 100.0, "bytes": 10, "state": state}
+
+    def test_spec_with_all_unparseable_tasks_renders_source_check_marker(self):
+        repo = make_repo_record()
+        repo["specs"] = [{"kind": "toolkit", "slug": "demo", "title": "Demo",
+                          "path": "specs/demo/SPEC.md", "tasks_total": 2,
+                          "tasks_done": 0, "tasks_doing": 0, "tasks_blocked": [],
+                          "tasks": [
+                              {"file": "specs/demo/tasks/notes.md",
+                               "abs": "/x/notes.md", "title": "Notes",
+                               "status": "pending", "deps": []},
+                              {"file": "specs/demo/tasks/todo.md",
+                               "abs": "/x/todo.md", "title": "Todo",
+                               "status": "pending", "deps": []},
+                          ],
+                          "tasks_unparseable": 2, "last_touched": 1.0}]
+
+        html = workboard.render_html(self._data(repos=[repo]))
+
+        self.assertIn("source check", html)
+        self.assertNotIn("no specs", html)  # task section still renders, not empty
+
+    def test_spec_with_some_parseable_tasks_renders_no_marker(self):
+        repo = make_repo_record()
+        repo["specs"] = [{"kind": "toolkit", "slug": "demo", "title": "Demo",
+                          "path": "specs/demo/SPEC.md", "tasks_total": 2,
+                          "tasks_done": 1, "tasks_doing": 0, "tasks_blocked": [],
+                          "tasks": [
+                              {"file": "specs/demo/tasks/01-a.md",
+                               "abs": "/x/01-a.md", "title": "A",
+                               "status": "done", "deps": []},
+                              {"file": "specs/demo/tasks/notes.md",
+                               "abs": "/x/notes.md", "title": "Notes",
+                               "status": "pending", "deps": []},
+                          ],
+                          "tasks_unparseable": 1, "last_touched": 1.0}]
+
+        html = workboard.render_html(self._data(repos=[repo]))
+
+        self.assertNotIn("source check", html)
+
+    def test_liveness_unknown_renders_marker_adjacent_to_timeline(self):
+        repo = make_repo_record()
+        repo["sessions"] = [self._session()]
+
+        html = workboard.render_html(self._data(repos=[repo], liveness_unknown=True))
+
+        self.assertIn("liveness unknown", html)
+        self.assertIn("viz-bar", html)  # session rows still render, unaffected
+
+    def test_liveness_unknown_false_renders_no_marker(self):
+        repo = make_repo_record()
+        repo["sessions"] = [self._session()]
+
+        html = workboard.render_html(self._data(repos=[repo], liveness_unknown=False))
+
+        self.assertNotIn("liveness unknown", html)
+
+    def test_liveness_unknown_marks_orphan_sessions_section_too(self):
+        html = workboard.render_html(self._data(
+            orphan_sessions=[self._session(state="stale")], liveness_unknown=True))
+
+        self.assertIn("Sessions outside scanned repos", html)
+        self.assertIn("liveness unknown", html)
+
+
 if __name__ == "__main__":
     unittest.main()
