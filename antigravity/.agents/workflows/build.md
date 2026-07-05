@@ -50,7 +50,30 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
 5. **Close out.** Simplification pass over the code touched: never change
    what the code does, only how; remove comments describing obvious code,
    redundant abstractions, and defensive handling for impossible cases;
-   re-run the acceptance commands after. Update the task file (Status
+   re-run the acceptance commands after. Pre-commit review, one pass with
+   no re-review after fixes: compute the skip gate first with
+   `git add -A && git diff <base> --numstat` (staging first surfaces new
+   untracked files; `<base>` is the commit HEAD was at when the task
+   started), classifying each path NON-product when it matches `docs/**`,
+   `**/*.md`, `tests/**`, `test/**`, `**/test_*`, `**/*_test.*`,
+   `**/*.test.*`, `**/*.spec.*`, `**/*.json`, `**/*.yaml`, `**/*.yml`,
+   `**/*.toml`, `**/*.lock`; skip straight to commit — recording
+   `review skipped: <docs-only|tests-only|tiny-diff (<lines>)>` — when
+   there are no product paths or total added+deleted product lines is
+   under 25; otherwise, since this mirror has no code-review skill to
+   invoke directly, run ONE subagent on the diff prompted for
+   high-confidence correctness/behavior findings only and capped at ≤1k
+   tokens returned — run it inline or read its output directly, never
+   block on a background notification (the drain workflow's sub-reviewer
+   clause, cited not restated). Fix a finding immediately iff it is a
+   correctness/behavior defect AND the fix stays inside the task's
+   `Touch:` — or, with no `Touch:` header, inside the files touched this
+   session — then re-run the acceptance commands; findings needing
+   out-of-Touch edits, or judged uncertain, are never fixed here: surface
+   them, or add to `Discovered:` when unattended. Style findings are
+   dropped since the simplification pass already ran. Record the outcome
+   as evidence: `review: N findings, M fixed, K discovered` or
+   `review skipped: <reason>`. Update the task file (Status
    `done`, ticked boxes, one line of evidence each rather than
    duplicating output — citing the `evidence/` file when an evidence
    path was passed in step 4; delete the plan comment block from
