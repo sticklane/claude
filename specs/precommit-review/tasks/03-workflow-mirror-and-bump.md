@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P2
 Budget: 8 turns
@@ -36,6 +36,6 @@ mirroring reveals a source problem, report it as Discovered.
 
 ## Acceptance
 
-- [ ] `for tok in code-review numstat "review skipped"; do grep -qc "$tok" antigravity/.agents/workflows/build.md || exit 1; done` → exit 0
-- [ ] `git diff main -- .claude-plugin/plugin.json | grep -c '"version"'` → 2 (old + new line)
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && ./bin/check-agent-model-pins && ./evals/runner-selftest.sh && ./specs/status.sh && claude plugin validate . && bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `for tok in code-review numstat "review skipped"; do grep -qc "$tok" antigravity/.agents/workflows/build.md || exit 1; done` → exit 0 (verified: all three tokens present in the ported close-out step)
+- [x] `git diff main -- .claude-plugin/plugin.json | grep -c '"version"'` → 2 (verified: 0.8.6 → 0.8.7)
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && ./bin/check-agent-model-pins && ./evals/runner-selftest.sh && ./specs/status.sh && claude plugin validate . && bash evals/lint-ultra-gate.sh` → exit 0 (verified: all gates pass, evidence/03-workflow-mirror-and-bump.md)
