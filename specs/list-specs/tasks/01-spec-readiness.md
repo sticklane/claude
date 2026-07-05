@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 8 turns
@@ -64,7 +64,11 @@ only replace it if it fails to satisfy R0's contract.
 
 ## Acceptance
 
-- [ ] `pytest .claude/skills/_shared/test_spec_readiness.py -v` → all
+- [x] `pytest .claude/skills/_shared/test_spec_readiness.py -v` → all
       seven R0 cases pass.
-- [ ] `python3 -c "import sys; sys.path.insert(0, '.claude/skills/_shared'); import spec_readiness; print(spec_readiness.open_questions_unresolved('## Open questions\n\n(none)\n'))"` → prints `False`.
-- [ ] `python3 -c "import sys; sys.path.insert(0, '.claude/skills/_shared'); import spec_readiness; print(spec_readiness.open_questions_unresolved('## Open questions\n\nStill deciding X.\n'))"` → prints `True`.
+      Evidence: 8 passed in 0.01s (EOF case split into its two sub-cases
+      per the task's own Steps wording — 8 tests covering the 7 R0 cases).
+- [x] `python3 -c "import sys; sys.path.insert(0, '.claude/skills/_shared'); import spec_readiness; print(spec_readiness.open_questions_unresolved('## Open questions\n\n(none)\n'))"` → prints `False`.
+      Evidence: printed `False`.
+- [x] `python3 -c "import sys; sys.path.insert(0, '.claude/skills/_shared'); import spec_readiness; print(spec_readiness.open_questions_unresolved('## Open questions\n\nStill deciding X.\n'))"` → prints `True`.
+      Evidence: printed `True`.
