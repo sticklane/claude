@@ -1,0 +1,5 @@
+/agentprof
+*.pb.gz
+/*.jsonl
+.claude/worktrees/
+.claude/settings.local.json

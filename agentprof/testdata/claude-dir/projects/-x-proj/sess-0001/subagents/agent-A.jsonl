@@ -1,0 +1,2 @@
+{"type":"user","timestamp":"2026-07-01T10:03:00.000Z","cwd":"/x/proj/sub","sessionId":"sess-0001","message":{"role":"user","content":"subtask"}}
+{"type":"assistant","timestamp":"2026-07-01T10:04:00.000Z","cwd":"/x/proj/sub","sessionId":"sess-0001","attributionSkill":"scan","message":{"id":"msg_sa1","model":"claude-fable-5","role":"assistant","content":[{"type":"text","text":"Scanning the tree."}],"usage":{"input_tokens":300,"output_tokens":30,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}
