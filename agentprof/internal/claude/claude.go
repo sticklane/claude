@@ -424,6 +424,20 @@ type transcriptLine struct {
 	} `json:"message"`
 }
 
+// normalizeSkillFrame renders a line's attributionSkill as a `skill:<name>`
+// frame, stripping a leading `<plugin>:` namespace so a namespaced
+// invocation (`agentic:build`) and a bare one (`build`) collapse into the
+// same frame. An empty attributionSkill keeps the `(no skill)` frame.
+func normalizeSkillFrame(attributionSkill string) string {
+	if attributionSkill == "" {
+		return "(no skill)"
+	}
+	if _, name, ok := strings.Cut(attributionSkill, ":"); ok {
+		return "skill:" + name
+	}
+	return "skill:" + attributionSkill
+}
+
 // parseTranscript reads one transcript and returns its deduped responses (one
 // per unique message.id, falling back to top-level requestId; lines with
 // neither key each count), turn frames, and tool_use references. The
@@ -456,10 +470,7 @@ func parseTranscript(path string) (parsed, error) {
 		if l.Message == nil {
 			continue // non-message line types
 		}
-		skill := l.AttributionSkill
-		if skill == "" {
-			skill = "(no skill)"
-		}
+		skill := normalizeSkillFrame(l.AttributionSkill)
 		switch l.Type {
 		case "user":
 			if run, ok := workflowRun(l.ToolUseResult, l.Message.Content); ok {
