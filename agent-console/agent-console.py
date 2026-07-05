@@ -31,6 +31,7 @@ import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import quote
 
 HOME = Path.home()
 PORT = int(os.environ.get("SKILLS_DASHBOARD_PORT", "8899"))
@@ -990,6 +991,8 @@ document.addEventListener('click',function(e){
     var form=b.closest('.kickoff'),prompt=form.querySelector('[name=prompt]').value,cwd=form.querySelector('[name=cwd]').value;
     if(!prompt.trim()){window.alert('Enter a prompt.');return}
     acPost('/api/agent/start',{cwd:cwd,prompt:prompt},'Kick off a background agent in '+cwd+'? This runs Claude and costs tokens.').then(function(ok){if(ok){form.querySelector('[name=prompt]').value='';setTimeout(refresh,900)}});
+  }else if(b.dataset.act==='refresh-profile'){
+    acPost('/api/profile/refresh',{}).then(function(ok){if(ok)setTimeout(refresh,600)});
   }
 });
 var REFRESH=25000;
@@ -1031,6 +1034,14 @@ def page(active: str, readout: str, body: str, with_filter: bool) -> str:
         if with_filter
         else ""
     )
+    # Profile link — pprof web UI over the rolling agentprof profile. Plain
+    # anchor, no health gating: renders even when the pprof server is down.
+    profile_link = (
+        '<a class="tab" href="http://127.0.0.1:8901/" target="_blank" '
+        'rel="noopener">Profile</a>'
+        if active == "workboard"
+        else ""
+    )
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Agent Console — {esc(active).title()}</title><style>{viz.VIZ_CSS}{CSS}</style></head><body>
@@ -1039,7 +1050,7 @@ def page(active: str, readout: str, body: str, with_filter: bool) -> str:
     <div class="wordmark">Agent<span class="dot">·</span>Console</div>
     <div class="readout">{readout}</div>
   </div>
-  <nav class="tabs">{tab("/", "Skills", "skills")}{tab("/workboard", "Workboard", "workboard")}</nav>
+  <nav class="tabs">{tab("/", "Skills", "skills")}{tab("/workboard", "Workboard", "workboard")}{profile_link}</nav>
   {filt}
 </header>
 <main>{body}</main>
@@ -1239,6 +1250,7 @@ def render_workboard(b: dict) -> str:
                     "tooltip": f'{s["branch"]} · {_ago(s["last"])}'
                     if s["branch"]
                     else _ago(s["last"]),
+                    "href": f'http://127.0.0.1:8901/ui/flamegraph?tf=session={quote(s["sid"], safe="")}',
                 }
                 for s in vis[:6]
             ]
@@ -1351,6 +1363,12 @@ def render_workboard(b: dict) -> str:
         f'<span class="rule"></span><span class="n">{len([a for a in b.get("agents", []) if a.get("pid")])} running</span></div>'
         f'<div class="agents">{kickoff}<div class="sub">Running</div>{running_html}{resume_html}</div>'
     )
+    profile_html = (
+        '<div class="eyebrow"><span class="key" style="color:var(--text)">Profile</span>'
+        '<span class="rule"></span></div>'
+        '<div class="agents"><button class="btn" data-act="refresh-profile">'
+        "Refresh profile</button></div>"
+    )
 
     body = (
         f"{health}"
@@ -1358,6 +1376,7 @@ def render_workboard(b: dict) -> str:
         f'<div class="eyebrow" id="inbox"><span class="key" style="color:var(--text)">Needs attention</span>'
         f'<span class="rule"></span></div>{inbox}'
         f"{agents_html}"
+        f"{profile_html}"
         f'<div class="eyebrow" id="repos"><span class="key" style="color:var(--text)">Repos</span>'
         f'<span class="rule"></span></div>{"".join(repo_blocks)}{orphan}'
     )
@@ -1511,6 +1530,53 @@ def resume_agent(sid: str, prompt: str) -> tuple[bool, str]:
     return True, "resumed"
 
 
+def _agentprof_refresh_script() -> Path:
+    """`agentprof/scripts/refresh-profile.sh` for this checkout, derived from
+    this file's own location — same pattern as `_skills_root()`."""
+    return (
+        Path(__file__).resolve().parent.parent
+        / "agentprof"
+        / "scripts"
+        / "refresh-profile.sh"
+    )
+
+
+def refresh_profile() -> tuple[bool, str]:
+    """Regenerate the agentprof profile via the repo-checked refresh script,
+    then kickstart the pprof service so it serves the new file. A kickstart
+    failure (e.g. the launchd service isn't installed) doesn't fail the
+    call — regeneration succeeding is enough for ok=True, with the kickstart
+    result folded into the message."""
+    script = _agentprof_refresh_script()
+    try:
+        regen = subprocess.run(
+            ["bash", str(script)], capture_output=True, text=True, timeout=120
+        )
+    except OSError as e:
+        return False, str(e)
+    if regen.returncode != 0:
+        return False, (regen.stderr or regen.stdout or "refresh failed").strip()
+    try:
+        kick = subprocess.run(
+            [
+                "launchctl",
+                "kickstart",
+                "-k",
+                f"gui/{os.getuid()}/com.sjaconette.agentprof-pprof",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        kick_msg = (
+            "pprof kickstarted"
+            if kick.returncode == 0
+            else f"kickstart failed: {(kick.stderr or kick.stdout).strip()}"
+        )
+    except OSError as e:
+        kick_msg = f"kickstart failed: {e}"
+    return True, f"profile refreshed; {kick_msg}"
+
+
 # --------------------------------------------------------------------------- #
 # Server
 # --------------------------------------------------------------------------- #
@@ -1584,6 +1650,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/agent/resume": lambda: resume_agent(
                 body.get("sid", ""), body.get("prompt", "")
             ),
+            "/api/profile/refresh": refresh_profile,
         }
         fn = handlers.get(path)
         if not fn:
