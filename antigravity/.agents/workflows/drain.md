@@ -14,6 +14,21 @@ First the classification gate: drain only peripheral work — runnable
 acceptance criteria, cheap to discard, no core business logic, auth,
 payments, or migrations. Pull core tasks out for attended /build runs.
 
+**Path-scoped commits, always.** Every queue-state commit this workflow
+makes — owner claim/release, status flips, Progress entries, Deferred
+questions, draft stubs, evidence — stages only the explicit paths
+involved, never a blanket stage-everything; a concurrent session's own
+staged or working-tree changes must never ride along. Stated once here;
+every commit below follows it without restating it.
+
+**Startup session sweep (advisory).** Before inventory, check whether
+another live session's working directory is this same repo — the Agent
+Manager's session list, or whatever runtime session record is available;
+unavailable → one "sweep unavailable" line and continue. Print one line
+per foreign live session found. This is advisory only and never blocks
+dispatch — correctness comes from the owner lease claimed in step 1, not
+this sweep.
+
 1. **Inventory.** Read only each task file's header lines (`Status`,
    `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies. `Budget`
    feeds the worker's over-budget stop; `Priority` is an optional
@@ -47,7 +62,33 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    `task/NN-<slug>-t*` tournament branch to `rescue/NN-<slug>-<shortsha>`
    (shortsha = that branch's tip; branches sharing a tip collapse into one,
    a pre-existing rescue at the same sha already counts). Rescue branches
-   are forensic only — never resume a dead run. Present the dispatch order.
+   are forensic only — never resume a dead run.
+
+   **Claim the owner lease, before presenting the dispatch order.** If
+   `specs/<slug>/DRAIN-OWNER.md` is absent, write it (single-line
+   `Key: value` headers, no body — `Run-token` a random hex identity
+   proof, `Host`, `Started`, `Generation`, `Spec`) and commit it,
+   path-scoped, as this workflow's first bookkeeping commit. The claim is
+   itself compare-and-swap: immediately after committing, re-read the
+   file at HEAD and confirm YOUR `Run-token` is the one present — a
+   different token means a simultaneous-start race was lost; treat the
+   winner as the existing owner rather than proceeding as owner. If
+   DRAIN-OWNER.md already exists, evaluate its liveness — newest of the
+   committer timestamp of the last commit touching the spec dir, or any
+   of the spec's in-progress tasks' liveness signals above, against the
+   same grace window: FRESH (any signal younger than the window) →
+   refuse, reporting the owner file and the freshest signal's age, UNLESS
+   this generation was launched via the baton relaunch and its baton's
+   `Run-token` matches (adopt the existing owner; a mismatch means the
+   predecessor died and a different run claimed in the interim — apply
+   the refuse path instead). ALL signals stale → reclaim: sweep any of
+   the spec's in-progress tasks whose activity is stale AND `git worktree
+   list` shows no worktree checked out on its task branch (a live
+   worktree with no recent mtimes can still be a paused-but-real
+   session), then replace DRAIN-OWNER.md with your own claim in one
+   path-scoped commit. Release: the terminal report (queue empty / only
+   blocked / handoff to human, step 5) deletes the owner file in a
+   committed, path-scoped cleanup. Present the dispatch order.
 
 2. **Hand the user the next launch.** When several tasks are dispatchable
    at once, apply the deterministic tie-break: dispatch lowest `Priority`
@@ -63,10 +104,17 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    one tier up, per step 4's relaunch and tournament — and each is told to
    delegate its own mechanical scouting to Haiku (`effort: low`) scouts and
    to return only a structured **verdict + evidence**, never its transcript
-   (`.claude/rules/token-discipline.md`, Dispatch authoring). One task at a time: set its
-   `Status: in-progress` and **commit that edit** — the worktree is cut
+   (`.claude/rules/token-discipline.md`, Dispatch authoring). **The flip
+   is compare-and-swap.** Re-read the task file immediately before
+   flipping — the flip is an exact-match edit of the literal
+   `Status: pending` line (a file already flipped by another writer fails
+   the edit and sends this workflow back to step 1's inventory instead of
+   proceeding as if it owned the task). One task at a time: set its
+   `Status: in-progress` and **commit that edit, path-scoped to the task
+   file**, then push (guard in step 3) — the worktree is cut
    from this commit, so it must carry current statuses and any
-   `## Answers`. Create the worktree
+   `## Answers`. After committing, re-read the file at HEAD and confirm
+   your own flip is present before dispatching. Create the worktree
    (`git worktree add -b task/NN-<slug> ../<repo>-task-NN` — this cuts from
    the current commit, so it is always fresh; if a runtime instead pins the
    worktree base to a lagging tracking ref, force-sync it to the default
@@ -151,15 +199,20 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    artifact) and run
    the project gates; once gates pass, delete every `rescue/NN-<slug>-*`
    branch for the task (the dead run's forensic branches are no longer
-   needed once it has shipped). Then, per completed DONE task, **push
-   `main` on completion** (`git push`) so the merged, verifier-PASSED work is backed
+   needed once it has shipped). Then **push `main` immediately after this
+   commit** (`git push`) so the merged, verifier-PASSED work is backed
    up the moment it lands. **Push guard (canonical; build cites this, and drain's own group
-   mode follows it):** push only if `main` has a configured upstream — if none,
+   mode follows it, extended here to every bookkeeping commit — not only
+   DONE merges — since a concurrent session's rebase-pull has been
+   observed to drop unpushed commits):** push only if `main` has a configured upstream — if none,
    skip silently; never `--force`; a rejected, non-fast-forward, or
    offline push warns and continues (the merge already landed locally, so
-   a failed push never fails the task or aborts the run). The worker never
+   a failed push never fails the task or aborts the run). This same guard
+   applies to the owner claim/release commits (step 1), every flip (step
+   2), and the Deferred/Blocked/discovery commits below — push after
+   each, not only after a DONE merge. The worker never
    pushes (its "do not push" clause is unchanged) — only the orchestrator,
-   after the merge. On merge/gate
+   after each of its own commits. On merge/gate
    failure run `git merge --abort` (a failed merge leaves the checkout
    wedged in a conflicted state), discard the branch, and relaunch once,
    one tier up in the model picker (Flash-class → Pro-class), with the
@@ -168,8 +221,10 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    step 4's tournament instead of straight to `Status: failed`. DEFERRED → write
    the verdict's question into
    the main-checkout task file under `## Deferred questions`, set
-   `Status: deferred`, commit, discard the worker's branch/worktree.
-   BLOCKED → write `Status: blocked` + reason, commit — except BLOCKED
+   `Status: deferred`, commit and push (path-scoped; guard above),
+   discard the worker's branch/worktree.
+   BLOCKED → write `Status: blocked` + reason, commit and push
+   (path-scoped; guard above) — except BLOCKED
    over budget after a merge-failure relaunch, which
    routes per the tournament skip in step 4. A BLOCKED verdict whose cause
    is an orchestrator **sweep race** (the worker's worktree or branch
@@ -196,8 +251,9 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    task), the rationale as Goal (verbatim from the worker's report —
    vet/rewrite before promoting), and an `## Acceptance` section
    containing only `<!-- draft: needs runnable criteria before promotion -->`.
-   Commit both with the next bookkeeping commit for that task — the verdict
-   flip, or for DONE workers a commit immediately after the merge. Drafts
+   Commit both, path-scoped, with the next bookkeeping commit for that
+   task — the verdict flip, or for DONE workers a commit immediately
+   after the merge — and push (guard above). Drafts
    are **never dispatchable**: excluded from dispatch, from the batch
    interview, and from "queue empty" (a queue of only `draft` + `done`
    reports drained, listing drafts for human promotion; a `pending` task
@@ -234,10 +290,17 @@ payments, or migrations. Pull core tasks out for attended /build runs.
    outcomes this generation, the generation number, and in-flight
    anomalies) and **stop** — an Antigravity run cannot self-relaunch
    `claude`, so the human re-launches /drain from the Agent Manager
-   pointing at the baton. The next generation's first acts are the
-   read-state-then-verify ritual: read the baton, read the task files'
-   `Status:` lines, `git log --oneline -15`, then run ONE cheap
-   verification (the project check or the last-flipped task's acceptance
+   pointing at the baton (write the baton's `Run-token:` line as the
+   owner lease's `Run-token` — the sole lineage proof; a fresh process
+   otherwise has no way to prove it's the legitimate heir). The next
+   generation's first acts are the read-state-then-verify ritual: (1)
+   reconcile `specs/<slug>/DRAIN-OWNER.md` against the baton — matching
+   `Run-token` and `Generation` — before touching anything else; a
+   mismatch means this generation is not the legitimate heir, so fall to
+   step 1's refuse path instead of adopting, (2) read the baton, (3) read
+   the task files' `Status:` lines, (4) `git log --oneline -15`, then (5)
+   run ONE cheap verification (the project check or the last-flipped
+   task's acceptance
    command) before dispatching. Max-generations cap: 10. The final
    generation deletes the baton when the queue completes.
 
