@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -29,6 +29,6 @@ Only the two workboard skill files. Do NOT touch `_spec_dag_tasks`/`_spec_dag_ht
 
 ## Acceptance
 
-- [ ] `python3 -m pytest /Users/sjaconette/claude/.claude/skills/workboard/test_workboard.py -q` → all pass, including new R1 tests (CLI parse + PID fallback + 2-tuple shape + liveness_unknown) and the new R2 symlink-attribution test, with `TestActiveCoverageReclassification`, `TestSessionStartTs`, `TestSessionTimelineRendering`, `TestSpecDagRendering` unregressed
-- [ ] `grep -nE '\.write_text|\.write\(|\bopen\([^)]*[\x27"][wax]' /Users/sjaconette/claude/.claude/skills/workboard/workboard.py` → still only the three known write sites (HTML + actions-script writes in `main()`, abandon marker in `abandon_conversations()`) — R5: no new writes
-- [ ] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-task01.html` → exits 0 and every HTML-active sid appears in `claude agents --json` (subset check, NOT set-equality — CLI-live sessions without a transcript under `~/.claude/projects` legitimately have no HTML row)
+- [x] `python3 -m pytest /Users/sjaconette/claude/.claude/skills/workboard/test_workboard.py -q` → all pass, including new R1 tests (CLI parse + PID fallback + 2-tuple shape + liveness_unknown) and the new R2 symlink-attribution test, with `TestActiveCoverageReclassification`, `TestSessionStartTs`, `TestSessionTimelineRendering`, `TestSpecDagRendering` unregressed — verifier: 46 passed (targeted rerun of the four named suites: 15 passed)
+- [x] `grep -nE '\.write_text|\.write\(|\bopen\([^)]*[\x27"][wax]' /Users/sjaconette/claude/.claude/skills/workboard/workboard.py` → still only the three known write sites (HTML + actions-script writes in `main()`, abandon marker in `abandon_conversations()`) — R5: no new writes — verifier: confirmed exactly 3 hits (lines 731, 1703, 1707)
+- [x] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-task01.html` → exits 0 and every HTML-active sid appears in `claude agents --json` (subset check, NOT set-equality — CLI-live sessions without a transcript under `~/.claude/projects` legitimately have no HTML row) — verifier: exit 0, HTML-active sids ⊆ CLI sids (exact equality observed on this machine's live session set)
