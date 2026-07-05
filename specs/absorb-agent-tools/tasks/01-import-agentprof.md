@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 14 turns
@@ -41,8 +41,8 @@ owns repo wiring. Do NOT modify the source repo at `~/agentprof`.
 
 ## Acceptance
 
-- [ ] `bash agentprof/scripts/check.sh` → exit 0
-- [ ] `test ! -d agentprof/specs && test ! -d agentprof/.claude && test -f agentprof/docs/TASKS.md` → exit 0
-- [ ] `grep -rn "sjaconette\|Jaconette" agentprof/ | wc -l` → 0
-- [ ] `find agentprof -name "*.pb.gz" -o -name "*.plist" ! -name "*.tmpl" | wc -l` → 0
-- [ ] `head -1 agentprof/go.mod` → `module github.com/sticklane/agentprof`
+- [x] `bash agentprof/scripts/check.sh` → exit 0 (format-check ok, lint ok, tests ok)
+- [x] `test ! -d agentprof/specs && test ! -d agentprof/.claude && test -f agentprof/docs/TASKS.md` → exit 0
+- [x] `grep -rn "sjaconette\|Jaconette" agentprof/ | wc -l` → 0
+- [x] `find agentprof -name "*.pb.gz" -o -name "*.plist" ! -name "*.tmpl" | wc -l` → 0
+- [x] `head -1 agentprof/go.mod` → `module github.com/sticklane/agentprof`

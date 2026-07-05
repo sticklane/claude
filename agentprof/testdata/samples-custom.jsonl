@@ -1,0 +1,6 @@
+{"time":"2026-07-01T09:15:00Z","stack":["vertex-online-inference","predict","gemini-2.0-flash"],"values":{"input_tokens":2048,"output_tokens":512,"cost_microusd":1830,"wall_ms":420,"calls":1},"labels":{"source":"vertex-online-inference","region":"us-central1"}}
+{"time":"2026-07-01T09:15:02Z","stack":["vertex-online-inference","predict","gemini-2.0-flash"],"values":{"input_tokens":128,"output_tokens":96,"cost_microusd":210,"wall_ms":180,"calls":1},"labels":{"source":"vertex-online-inference","region":"us-central1"}}
+{"time":"2026-07-01T09:16:41Z","stack":["vertex-online-inference","embed","text-embedding-005"],"values":{"input_tokens":4096,"cost_microusd":102,"wall_ms":95,"calls":1},"labels":{"source":"vertex-online-inference","region":"us-central1"}}
+{"time":"2026-07-01T09:17:03Z","stack":["vertex-online-inference","predict","gemini-2.0-flash"],"values":{"wall_ms":611,"calls":1}}
+{"time":"2026-07-01T09:18:00Z","stack":["vertex-online-inference","predict","gemini-2.0-flash"],"values":{"input_tokens":
+{"time":"2026-07-01T09:19:00Z","stack":[],"values":{"calls":1},"labels":{"source":"vertex-online-inference"}}
