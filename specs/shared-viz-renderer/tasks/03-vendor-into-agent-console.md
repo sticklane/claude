@@ -1,6 +1,6 @@
 # Task 03: Vendor `viz.py` into agent-console + wire + conformance
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 10 turns
