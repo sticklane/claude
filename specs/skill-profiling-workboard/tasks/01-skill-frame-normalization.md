@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns
@@ -40,6 +40,6 @@ anything outside `agentprof/`.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/claude/ -run SkillFrame -v` → PASS (fixture covers namespaced, bare, and absent attributionSkill)
-- [ ] `cd agentprof && bash scripts/check.sh` → exit 0
-- [ ] `cd agentprof && go run . claude --days 7 -o /tmp/sp-norm.jsonl && grep -c '"skill:' /tmp/sp-norm.jsonl` → ≥ 1, and `grep -cE '"(agentic:)?build"' /tmp/sp-norm.jsonl` shows no bare/namespaced skill frame names surviving (record both in evidence)
+- [x] `cd agentprof && go test ./internal/claude/ -run SkillFrame -v` → PASS (fixture covers namespaced, bare, and absent attributionSkill)
+- [x] `cd agentprof && bash scripts/check.sh` → exit 0
+- [x] `cd agentprof && go run . claude --days 7 -o /tmp/sp-norm.jsonl && grep -c '"skill:' /tmp/sp-norm.jsonl` → 15705 (≥1); `grep -cE '"(agentic:)?build"' /tmp/sp-norm.jsonl` → 0 (no bare/namespaced skill frame survives)

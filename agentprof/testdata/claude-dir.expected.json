@@ -28,7 +28,7 @@
     "depth1_subagent_msg_sa1": [
       "proj",
       "t01 · start",
-      "build",
+      "skill:build",
       "main",
       "agent:scout",
       "claude-fable-5"
@@ -36,7 +36,7 @@
     "main_turn01_msg_a1": [
       "proj",
       "t01 · start",
-      "build",
+      "skill:build",
       "main",
       "claude-fable-5"
     ],
@@ -84,7 +84,7 @@
     "workflow_agent_msg_w1": [
       "proj",
       "t01 · start",
-      "build",
+      "skill:build",
       "main",
       "wf:test-flow",
       "agent:workflow-subagent",
@@ -93,7 +93,7 @@
     "workflow_scout_msg_ws1": [
       "proj",
       "t01 · start",
-      "build",
+      "skill:build",
       "main",
       "wf:test-flow",
       "agent:workflow-subagent",
