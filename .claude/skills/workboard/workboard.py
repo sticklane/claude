@@ -1166,8 +1166,8 @@ def build_actions_script(data):
 
 def render_actions(data):
     """Near-top HTML surface linking the companion actions script: its path plus
-    the exact `bash <path>` invocation inside a <td><code> so the existing
-    click-to-copy handler (closest('td code')) applies."""
+    the exact `bash <path>` invocation rendered via cmd_html so it gets the
+    standard adjacent copy button."""
     path = data.get("actions_path")
     if not path:
         return ""
@@ -1177,8 +1177,7 @@ def render_actions(data):
         '<p class="legend">A companion script of safe, mechanical fixes was '
         f'written to <code>{esc(path)}</code>. Pushes run immediately; verify '
         'lines launch review sessions — review it before running.</p>'
-        '<table><tbody><tr><td><code class="cmd">'
-        f'{esc(inv)}</code></td></tr></tbody></table></section>'
+        f'<table><tbody><tr><td>{cmd_html(inv)}</td></tr></tbody></table></section>'
     )
 
 
