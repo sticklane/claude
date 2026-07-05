@@ -21,6 +21,25 @@ peripheral/core test. If tasks touch core business logic, auth, payments,
 or migrations, run those attended via /build and drain only the rest —
 reference.md has the checklist.
 
+**Path-scoped commits, always.** Every queue-state commit drain makes —
+owner claim/release, status flips, Progress entries, Deferred questions,
+draft stubs, evidence — uses `git add <explicit paths>` and `git commit`
+limited to those paths; never `-a`, never bare `git add .`, never an
+unscoped commit, in the shared checkout. A concurrent session's staged or
+working-tree changes must never ride along. Stated once here; every
+commit below follows it without restating it.
+
+**Startup session sweep (advisory).** Before inventory, list other live
+sessions whose cwd resolves into this repo: `claude agents --json`,
+filtered by cwd the way `agent-console/agent-console.py`'s
+`live_sessions_from_cli` (≈429–490) does; if the CLI is unavailable, fall
+back to `~/.claude/sessions/*.json` pid records probed with `kill -0`.
+Print one line per foreign live session (sid or pid, cwd, last activity).
+Sweep failure (CLI absent, no session files) prints one "sweep
+unavailable" line and continues — this check is advisory only and never
+blocks dispatch; correctness comes from the owner-lease claim below, not
+this sweep.
+
 ## 1. Inventory
 
 Read only the header fields of each task file
@@ -31,6 +50,33 @@ and the headless `--max-turns` cap; `Priority` is an optional tie-break
 every dependency is `done`. `Status: draft` stubs (discovered work,
 step 3) are never dispatchable — only a human promotes `draft` →
 `pending`.
+
+**Claim the owner lease, before reporting the plan below.** If
+`specs/<slug>/DRAIN-OWNER.md` is absent, write it (pinned format in
+reference.md's "Owner lease") and commit it, path-scoped, as drain's
+first bookkeeping commit — then push (guard in step 3). The claim is
+itself compare-and-swap: immediately after committing, re-read the file
+at HEAD and confirm YOUR `Run-token:` is the one present — a different
+token means you lost a simultaneous-start race; take the refuse path
+below (treat the winner as the existing owner), never proceed as owner.
+If DRAIN-OWNER.md already exists, evaluate its liveness (reference.md,
+"Owner lease" liveness definition): **FRESH** (any signal younger than
+the grace window) → REFUSE — report the owner file's headers, the
+freshest signal and its age, and any other specs with dispatchable
+tasks, then stop — UNLESS this generation was launched via the baton
+relaunch command and its baton's `Run-token:` matches DRAIN-OWNER.md's
+(adopt the existing owner; a mismatched token means the predecessor died
+and a foreign drain claimed — apply the FRESH path above on the evidence
+like any other startup). **ALL signals stale** → reclaim: run the
+stale-lock sweep for each of the spec's in-progress tasks, tightened here
+so a task is swept only when its activity signals are stale AND
+`git worktree list` shows no worktree checked out on its `task/NN-<slug>`
+branch — then replace DRAIN-OWNER.md with your own claim, committing the
+takeover as one path-scoped commit and pushing it. Release: the terminal
+report (queue empty / only blocked / interview handoff to human, step 4)
+deletes the owner file in a committed, path-scoped cleanup, pushed like
+every other bookkeeping commit.
+
 Report the plan in one block: dispatch order, what's already done, what's
 deferred/blocked and why. An `in-progress` task is a dead worker's lock
 ONLY after the liveness check in reference.md confirms it — run that check
@@ -101,9 +147,16 @@ task's own failure at that point — stop the group's remaining merges and
 report which merged cleanly, instead of routing the failure into the slot
 machine (a fresh attempt cannot fix an interaction between members).
 
-Set the task's `Status: in-progress` and **commit that edit** (e.g.
-`drain: task 03 in-progress`) — the worker's worktree is cut from this
-commit, so it must contain current statuses and any `## Answers`. Then
+**The flip is compare-and-swap.** Re-read the task file immediately
+before flipping — the flip is an exact-match edit of the literal
+`Status: pending` line (a file already flipped by another writer fails
+the edit and sends drain back to step 1's inventory instead of
+proceeding as if it owned the task). Set `Status: in-progress` and
+**commit that edit, path-scoped to the task file** (e.g.
+`drain: task 03 in-progress`), then push (guard in step 3) — the
+worker's worktree is cut from this commit, so it must contain current
+statuses and any `## Answers`. After committing, re-read the file at
+HEAD and confirm your own flip is present before dispatching. Then
 launch ONE background `general-purpose` agent at the worker tier pin
 (Claude default: `sonnet`) with
 `isolation: worktree` using the worker prompt in [reference.md](reference.md) — the /build
@@ -132,18 +185,22 @@ itself flips the status to `done` and commits the flip.)
   artifact) and run the project gates. Once gates pass, delete every
   `rescue/NN-<slug>-*` branch for this task — the dead run's forensic
   branches are no longer needed once the task has shipped.
-  Then, per completed DONE task, **push `main` on completion**
-  (`git push`) so the
+  Then **push `main` immediately after this commit** (`git push`) so the
   merged, verifier-PASSED work is backed up the moment it lands rather
   than sitting on local `main` for a human to push by hand. **Push guard
   (canonical; build cites this, and drain's own group mode follows
-  it):** push only if `main` has a
-  configured upstream — if none, skip silently; never `--force`; a
-  rejected, non-fast-forward, or offline push warns and continues. The
-  merge already landed locally, so a failed push never fails the task or
-  aborts the run. The worker never pushes (reference.md's worker "do not
-  push" clause is unchanged) — only the orchestrator session, after the
-  merge to `main`.
+  it, extended here to every drain bookkeeping commit — not only DONE
+  merges — since a concurrent session's `pull --rebase` has been observed
+  to drop unpushed drain commits: docs/memory/concurrent-session-collision.md):**
+  push only if `main` has a configured upstream — if none, skip silently;
+  never `--force`; a rejected, non-fast-forward, or offline push warns
+  and continues. The merge already landed locally, so a failed push
+  never fails the task or aborts the run. This same guard applies to the
+  owner claim/release commits (step 1), every flip (step 2), and the
+  Deferred/Blocked/discovery commits below — push after each, not only
+  after a DONE merge. The worker never pushes (reference.md's worker "do
+  not push" clause is unchanged) — only the orchestrator session, after
+  each of its own commits.
   If the merge or gates fail: run `git merge --abort` first (a failed
   merge leaves the checkout wedged in a conflicted state), then slot
   machine — discard the branch, relaunch once, one tier up from the pin
@@ -168,10 +225,12 @@ itself flips the status to `done` and commits the flip.)
   buy three more BLOCKEDs.
 - **DEFERRED** — the verdict message contains the question. Drain writes
   it into the main-checkout task file under `## Deferred questions`, sets
-  `Status: deferred`, commits, and discards the worker's branch/worktree.
-  Dependents simply never become dispatchable.
+  `Status: deferred`, commits and pushes (path-scoped; guard above), and
+  discards the worker's branch/worktree. Dependents simply never become
+  dispatchable.
 - **BLOCKED** (technical blocker, no human question) — write
-  `Status: blocked` with the reason, commit — except BLOCKED over budget
+  `Status: blocked` with the reason, commit and push (path-scoped; guard
+  above) — except BLOCKED over budget
   after a merge-failure relaunch, which routes per the tournament skip
   above (straight to the tournament's verdict routing with both prior
   verdicts). A BLOCKED verdict whose cause is an orchestrator **sweep race**
@@ -194,9 +253,10 @@ file, and scaffold a header-only stub `NN-<kebab-slug>.md` in that tasks/
 dir — NN = highest existing number + 1, incremented per stub within a run —
 with `Status: draft`, the rationale as Goal, and the blocking flag; the
 exact stub header (incl. `Discovered-from:` and the placeholder
-`## Acceptance`) is in [reference.md](reference.md). Commit both with
+`## Acceptance`) is in [reference.md](reference.md). Commit both, path-scoped, with
 drain's next bookkeeping commit for that task — the verdict flip, or for
-DONE workers a commit immediately after the merge. Drafts are never
+DONE workers a commit immediately after the merge — and push (guard
+above). Drafts are never
 dispatchable, and drain never writes a draft's `Status:` — not even on an
 interview yes: only a human edits `draft` → `pending`, after vetting or
 rewriting the quoted Goal (once dispatched it becomes binding worker
@@ -237,8 +297,12 @@ done and will not touch the queue again** (one-writer invariant). A **max-genera
 10** stops with the baton written + a needs-attention note instead of respawning. **Gen 1 is
 always attended**; passing `attended` in the /drain invocation makes every trigger OFFER the
 baton + relaunch command instead of self-relaunching. **Fresh-instance ritual (R1a), before any
-dispatch:** (1) read the baton, (2) read task files' `Status:` lines, (3) `git log --oneline
--15`, (4) run ONE cheap verification (project check or last-flipped task's acceptance command)
+dispatch:** (1) reconcile `specs/<slug>/DRAIN-OWNER.md` against the baton
+— matching `Run-token:` and `Generation:` — before touching anything
+else; a mismatch means this generation is not the legitimate heir, so
+fall to step 1's refuse path instead of adopting, (2) read the baton,
+(3) read task files' `Status:` lines, (4) `git log --oneline
+-15`, (5) run ONE cheap verification (project check or last-flipped task's acceptance command)
 to catch drift — only then dispatch. A headless generation reaching the batch interview writes
 its deferred questions into the baton as a needs-attention section and stops; the final
 generation deletes the baton when the queue completes.

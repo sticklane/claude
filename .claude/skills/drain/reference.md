@@ -1,6 +1,7 @@
 # /drain reference
 
-Contents: When NOT to drain · Status field semantics · Stale-lock liveness
+Contents: When NOT to drain · Owner lease (DRAIN-OWNER.md format,
+liveness, reclaim) · Status field semantics · Stale-lock liveness
 check · Worker prompt · Deferred question format · Relaunch-with-evidence
 prompt · Tournament · Headless fallback · Baton pass (self-relaunch)
 
@@ -21,6 +22,56 @@ classification — peripheral work runs unattended, core work is watched):
 
 Anything unchecked: pull that task out of the queue and run it attended
 with /build; drain the rest.
+
+## Owner lease
+
+Same-queue exclusion so two drains never dispatch against one spec at
+once (SKILL.md step 1 "Claim the owner lease" invokes this section).
+
+**DRAIN-OWNER.md format (pinned).** `specs/<slug>/DRAIN-OWNER.md`,
+single-line `Key: value` headers, no body:
+
+```markdown
+Run-token: <random hex, e.g. `openssl rand -hex 8`>
+Host: <hostname>
+Started: <ISO 8601>
+Generation: <baton generation number, 1 for a fresh run>
+Spec: <repo-relative spec dir>
+```
+
+`Run-token:` is the sole identity proof — deliberately not a session id,
+since a session cannot reliably know its own sid. The file survives
+across generations of the same run (a baton pass updates `Generation:` in
+place, in the SAME commit as the baton write — see Baton pass below) and
+is deleted, committed, by the generation that completes the queue — the
+same one that deletes the baton.
+
+**Owner liveness.** Newest of: (a) the committer timestamp of the last
+commit touching `specs/<slug>/`, (b) each of the spec's `in-progress`
+tasks' Stale-lock liveness signals (below) — compared against the same
+named grace window used there (15-min default, same overridability).
+FRESH = any signal younger than the window; ALL STALE = every signal
+older. **`TaskList` is explicitly session-local**: it reflects only this
+session's own dispatched workers and MUST NOT be treated as evidence
+about another session's activity — the liveness call rests on git
+timestamps and worktree/branch signals, never on what this session's
+`TaskList` does or doesn't show.
+
+**Reclaim (foreign-reclaim tightening).** When every signal is stale, a
+task is swept — per the Stale-lock liveness check's rescue-branch
+procedure — only when BOTH hold: its activity signals are stale, AND
+`git worktree list` shows no worktree checked out on its
+`task/NN-<slug>` branch (a live worktree with no recent mtimes can still
+be a paused-but-real session; the worktree-list check is the
+belt-and-suspenders addition specific to reclaiming ANOTHER session's
+owner lease, not this session's own tasks). After every eligible task is
+swept, replace DRAIN-OWNER.md with your own claim in one commit.
+
+**Baton-lineage exception.** A generation launched via the baton relaunch
+command adopts a FRESH existing owner instead of refusing, iff the
+baton's `Run-token:` line (Baton pass below) matches DRAIN-OWNER.md's. A
+mismatch means the predecessor died and a different drain claimed in the
+interim — treat it like any other startup and apply the FRESH refuse path.
 
 ## Status field semantics
 
@@ -446,6 +497,30 @@ needs-attention note instead of respawning. The
 relaunch uses a NEW orchestrator flag set — NOT the Headless-fallback
 worker flags above, which deliberately exclude the Task tool and would
 abort the orchestrator's first worker dispatch.
+
+**DRAIN-BATON.md format.** Single-line `Key: value` headers plus a
+free-form log body:
+
+```markdown
+Run-token: <the owner lease's Run-token: — lineage proof; argv carries
+only the generation number, so this is how a fresh process proves it is
+the legitimate heir>
+Generation: <G+1>
+Spec: <repo-relative spec dir>
+
+## Done / next
+<one line per completed task this run, then what's next>
+
+## Anomalies
+<anything the next generation should know — parked tasks, near-miss
+budgets, degradation triggers>
+```
+
+The `Run-token:` line is the R2 baton-lineage exception's proof: the
+Owner-lease section's "Baton-lineage exception" adopts the existing
+DRAIN-OWNER.md iff this line matches it. The owner-file `Generation:`
+update and this file's write land in the SAME commit on every baton pass,
+so the two files can never disagree across a crash.
 
 **Relaunch command template (generation G → G+1).** Detached, from the repo
 root:
