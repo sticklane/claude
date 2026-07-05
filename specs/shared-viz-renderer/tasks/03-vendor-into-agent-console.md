@@ -1,6 +1,6 @@
 # Task 03: Vendor `viz.py` into agent-console + wire + conformance
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 10 turns
@@ -20,6 +20,6 @@ Work entirely in the separate repo `~/agent-console` (its own git + `scripts/che
 4. Add the conformance step to `scripts/check.sh` per R8: primary = diff vendored vs `~/claude/.claude/skills/_shared/viz.py` when present (hard-fail on diff); secondary = recompute vendored body sha256 vs its header (hard-fail); toolkit absent → print the SKIPPED line and pass.
 
 ## Acceptance
-- [ ] `bash /Users/sjaconette/agent-console/scripts/check.sh` → PASS (existing render smoke-tests + new conformance step; covers R6/R7/R8)
-- [ ] tamper test: append a byte to `/Users/sjaconette/agent-console/viz.py`, rerun `bash /Users/sjaconette/agent-console/scripts/check.sh` → **fails** the toolkit-diff (with `~/claude` present); then restore the byte and it passes
-- [ ] `grep -c '_dep_graph_svg\|_task_stroke' /Users/sjaconette/agent-console/agent-console.py` → `0` (old renderers deleted)
+- [x] `bash /Users/sjaconette/agent-console/scripts/check.sh` → PASS (existing render smoke-tests + new conformance step; covers R6/R7/R8) — see evidence/03-vendor-into-agent-console.md
+- [x] tamper test: append a byte to `/Users/sjaconette/agent-console/viz.py`, rerun `bash /Users/sjaconette/agent-console/scripts/check.sh` → **fails** the toolkit-diff (with `~/claude` present); then restore the byte and it passes — see evidence/03-vendor-into-agent-console.md
+- [x] `grep -c '_dep_graph_svg\|_task_stroke' /Users/sjaconette/agent-console/agent-console.py` → `0` (old renderers deleted) — see evidence/03-vendor-into-agent-console.md
