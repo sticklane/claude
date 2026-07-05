@@ -1,6 +1,6 @@
 # Task 01: Extract the shared `viz.py` renderer + golden tests
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -20,8 +20,8 @@ Create only the two files under `.claude/skills/_shared/`. Do NOT modify `workbo
 4. Import-audit clean (stdlib only).
 
 ## Acceptance
-- [ ] `python3 -m py_compile /Users/sjaconette/claude/.claude/skills/_shared/viz.py` → exit 0
-- [ ] the stdlib-only AST audit from SPEC.md R1 acceptance → prints `stdlib-only: ok`
-- [ ] `pytest /Users/sjaconette/claude/.claude/skills/_shared/test_viz.py` → all pass (covers R2–R4)
-- [ ] `python3 /Users/sjaconette/claude/.claude/skills/_shared/viz.py --emit-fleet-css | head -1` → the `BEGIN` sentinel line
-- [ ] `python3 /Users/sjaconette/claude/.claude/skills/_shared/viz.py --self-sha256` → a 64-hex string matching the file's `# viz-sha256:` header
+- [x] `python3 -m py_compile /Users/sjaconette/claude/.claude/skills/_shared/viz.py` → exit 0 (verifier confirmed, agent aebe696152f843ed8)
+- [x] the stdlib-only AST audit from SPEC.md R1 acceptance → prints `stdlib-only: ok` (verifier confirmed)
+- [x] `pytest /Users/sjaconette/claude/.claude/skills/_shared/test_viz.py` → all pass (covers R2–R4) (verifier: 14 passed, spot-checked assertions are non-vacuous)
+- [x] `python3 /Users/sjaconette/claude/.claude/skills/_shared/viz.py --emit-fleet-css | head -1` → the `BEGIN` sentinel line (verifier confirmed)
+- [x] `python3 /Users/sjaconette/claude/.claude/skills/_shared/viz.py --self-sha256` → a 64-hex string matching the file's `# viz-sha256:` header (verifier confirmed exact match)
