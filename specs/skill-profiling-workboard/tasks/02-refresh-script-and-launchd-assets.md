@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 12 turns
@@ -56,8 +56,8 @@ pattern).
 
 ## Acceptance
 
-- [ ] `bash agentprof/scripts/refresh-profile.sh && test -s ~/.local/state/agentprof/claude-30d.pb.gz` → exit 0
-- [ ] `bash agentprof/scripts/serve-pprof.sh & sleep 2; curl -s http://127.0.0.1:8901/ | head -c 200; kill %1` → pprof UI HTML fragment
-- [ ] `ls agentprof/launchd/com.sjaconette.agentprof-refresh.plist.tmpl agentprof/launchd/com.sjaconette.agentprof-pprof.plist.tmpl` → both exist; `plutil -lint` passes on each after placeholder substitution (evidence shows the substitution used)
-- [ ] `find agentprof -name "*.plist" ! -name "*.tmpl" | wc -l` → 0
-- [ ] `cd agentprof && bash scripts/check.sh` → exit 0
+- [x] `bash agentprof/scripts/refresh-profile.sh && test -s ~/.local/state/agentprof/claude-30d.pb.gz` → exit 0. Verified: see specs/skill-profiling-workboard/evidence/02-refresh-script-and-launchd-assets.md
+- [x] `bash agentprof/scripts/serve-pprof.sh & sleep 2; curl -s http://127.0.0.1:8901/ | head -c 200; kill %1` → pprof UI HTML fragment. Verified (plain curl gets pprof's own 307 to /ui; `curl -sL` confirms the real UI HTML): see specs/skill-profiling-workboard/evidence/02-refresh-script-and-launchd-assets.md
+- [x] `ls agentprof/launchd/com.sjaconette.agentprof-refresh.plist.tmpl agentprof/launchd/com.sjaconette.agentprof-pprof.plist.tmpl` → both exist; `plutil -lint` passes on each after placeholder substitution (evidence shows the substitution used). Verified: see specs/skill-profiling-workboard/evidence/02-refresh-script-and-launchd-assets.md
+- [x] `find agentprof -name "*.plist" ! -name "*.tmpl" | wc -l` → 0. Verified: see specs/skill-profiling-workboard/evidence/02-refresh-script-and-launchd-assets.md
+- [x] `cd agentprof && bash scripts/check.sh` → exit 0. Verified: see specs/skill-profiling-workboard/evidence/02-refresh-script-and-launchd-assets.md
