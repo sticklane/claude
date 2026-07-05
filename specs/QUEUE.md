@@ -1,5 +1,21 @@
 # Combined queue — wave plan (canonical, single copy)
 
+**Queue 5 (drained 2026-07-05)** — shared-viz-renderer (4 tasks: shared
+`_shared/viz.py` renderer + golden tests; /workboard wired to
+viz.timeline/viz.dag; byte-identical vendor into ~/agent-console with a
+check.sh conformance gate, live service restarted; /fleet reference on the
+emitted CSS block) and workboard-cli-graphs-health (4 tasks: CLI-sourced
+liveness via `claude agents --json` + realpath attribution; resolve_dep DAG
+edges; source-health markers; e2e + antigravity mirror + bump 0.8.5). All 8
+`Status: done`, verifier PASS each, sequential drain, merged + pushed per
+task. Spec pipeline ran in-session: critic NOT READY → amend → critic READY
+→ breakdown → critic nits applied → drain. Two `Status: draft` stubs remain
+under shared-viz-renderer (05 spec-note, 06 viz-axis tint) awaiting human
+promotion — specs stay un-archived until those are triaged. Known
+pre-existing red gate `tests/test_workboard_render.sh` (copy-button /
+cwd-independence) predates the queue and is unchanged; not covered by any
+spec — candidate for a follow-up fix task.
+
 **Queue 4 (built + archived 2026-07-04)** — routing-merge-hardening: three
 tasks (headless routing ladder, drain group-mode semantics, antigravity
 autopilot ref) from the opus critic's NOT READY review of the
