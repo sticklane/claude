@@ -5,6 +5,13 @@ description: Launch a task for low-supervision execution with verification guard
 Run the task file given after the command with minimal supervision.
 Autonomy is earned by verification, not granted by optimism.
 
+**Startup session sweep (advisory).** Before classifying, check whether
+another live session's working directory is this same repo — the Agent
+Manager's session list, or whatever runtime session record is available;
+unavailable → one "sweep unavailable" line and continue. Print one line
+per foreign live session found; never blocking (concurrent-sessions rule,
+folded into AGENTS.md, cited not restated).
+
 1. **Classify (go/no-go).** Low-supervision execution fits: peripheral
    features, prototypes, mechanical migrations — anything with runnable
    acceptance criteria and no irreversible actions. It does NOT fit: core

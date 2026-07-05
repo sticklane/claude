@@ -5,14 +5,25 @@ description: Execute one task file (or a small SPEC.md) end to end - scout, plan
 Execute the task file given after the command. This is the pipeline's inner
 loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
 
-1. **Load only the task.** Read the task file (and its spec's Requirements
-   section if referenced). Mark Status `in-progress` (a bare SPEC.md has no
-   Status field — skip the bookkeeping and work from its acceptance
-   criteria directly). Do NOT preload the codebase: for anything unclear,
-   apply the scout skill and work from `path:line` conclusions. Read a file
-   in full only when about to edit it. If the task has no runnable
-   acceptance criteria, STOP and say it isn't agent-ready — don't improvise
-   weaker criteria.
+1. **Load only the task.** Before reading the task, run a startup session
+   sweep (advisory): check whether another live session's working
+   directory is this same repo — the Agent Manager's session list, or
+   whatever runtime session record is available; unavailable → one
+   "sweep unavailable" line and continue. Print one line per foreign live
+   session found; this never blocks the run, it only surfaces a possible
+   concurrent editor before you touch anything (concurrent-sessions rule,
+   folded into AGENTS.md, cited not restated). If the task's spec has a
+   `specs/<slug>/DRAIN-OWNER.md` showing FRESH liveness (the drain
+   workflow's Owner lease liveness definition, cited not restated), warn
+   before editing the task — ask the user whether to proceed rather than
+   risk racing a live drain run. Read the task file (and its spec's
+   Requirements section if referenced). Mark Status `in-progress` (a bare
+   SPEC.md has no Status field — skip the bookkeeping and work from its
+   acceptance criteria directly). Do NOT preload the codebase: for
+   anything unclear, apply the scout skill and work from `path:line`
+   conclusions. Read a file in full only when about to edit it. If the
+   task has no runnable acceptance criteria, STOP and say it isn't
+   agent-ready — don't improvise weaker criteria.
 
 2. **Plan proportionally.** Diff describable in one sentence → implement
    directly. Otherwise write the implementation plan (files to change, in

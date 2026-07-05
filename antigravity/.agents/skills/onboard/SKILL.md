@@ -45,6 +45,10 @@ what passes "would removing this line cause an agent to make a mistake?":
   prevent wrong-place edits ("API handlers live in X; generated code in Y —
   never edit"), and known gotchas — AGENTS.md is Antigravity's native context
   file, so these live here, not in a separate rules file.
+- Optional: if the repo is ever edited by more than one live session in the
+  same non-worktree checkout, a bullet pointing at the concurrent-sessions
+  pre-flight pattern (this toolkit's `.claude/rules/concurrent-sessions.md`,
+  folded into AGENTS.md's own "Concurrent sessions" section here).
 
 Exclude: standard language conventions, anything readable from the code,
 file-by-file tours, platitudes. If a section is becoming a procedure, it
