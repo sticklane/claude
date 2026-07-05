@@ -1,6 +1,6 @@
 # Task 04: Migrate the `/fleet` skill to the shared timeline CSS
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 6 turns
