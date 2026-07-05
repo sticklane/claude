@@ -104,7 +104,17 @@ letting them default:
   assertion: show the test output, the command run, or a screenshot in the
   walkthrough — never claim success without it.
 - Where acceptance criteria are test-shaped: write the failing tests first,
-  commit them, then implement without modifying the tests.
+  commit them, then implement without modifying the tests. Red, green,
+  refactor: confirm each new test fails for the right reason, write the
+  minimal code to green, then restructure with tests green — never change
+  behavior and tests in the same step. Bug fixes start with a failing
+  reproduction.
+- Test behavior, not implementation; one behavior per test; mock only
+  slow/external dependencies; every test asserts something ("runs without
+  error" is not a test); names describe scenario and expectation.
+- Commits are small, focused, atomic — `<type>: <subject>` (feat, fix,
+  test, refactor, docs, style, perf, chore); never commit debugging
+  prints, commented-out code, broken tests, or mixed unrelated changes.
 - Review is high-signal or it is noise: when reviewing, skip pre-existing
   issues, anything a linter/typechecker will catch, and style preferences
   not required by these rules. If not certain an issue is real, don't
