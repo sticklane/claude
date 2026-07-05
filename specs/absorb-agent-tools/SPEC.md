@@ -145,3 +145,15 @@ and its own `scripts/check.sh`; agent-console keeps `install.sh`/
 ## Open questions
 
 (none)
+
+## Parallelization
+
+- Group A (concurrent-safe): tasks 01 and 02 — disjoint Touch
+  (`agentprof/` vs `agent-console/`), no dependency edge, and no shared
+  undecided design (01 is a mechanical copy; 02's adapter seam is fully
+  pinned in R4).
+- Task 03 serializes after both (it wires what they created and runs
+  their check.sh commands).
+- Task 04 is ATTENDED ONLY (external services + machine state + working-
+  copy deletion — fails drain's peripheral/core gate); run via /build
+  after 03 is merged and pushed.
