@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: blocked
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 12 turns
@@ -43,12 +43,12 @@ in the same commit as the SKILL.md edit.
 
 ## Acceptance
 
-- [ ] `grep -c "agentprof/" AGENTS.md` → ≥1 and `grep -c "agent-console/" AGENTS.md` → ≥1
-- [ ] `grep -rn "~/agent-console/agent-console.py" .claude/skills/ antigravity/ | wc -l` → 0
-- [ ] `grep -c "~/claude/agent-console/agent-console.py" .claude/skills/workboard/SKILL.md` → 2
-- [ ] `grep -c "~/claude/agent-console/agent-console.py" antigravity/.agents/skills/workboard/SKILL.md` → 2
-- [ ] `git diff main -- .claude-plugin/plugin.json | grep -c "version"` → ≥2 (old + new line)
-- [ ] `for t in tests/test_*.sh; do bash "$t"; done && ./bin/check-agent-model-pins && ./evals/runner-selftest.sh` → all green
+- [x] `grep -c "agentprof/" AGENTS.md` → ≥1 and `grep -c "agent-console/" AGENTS.md` → ≥1
+- [x] `grep -rn "~/agent-console/agent-console.py" .claude/skills/ antigravity/ | wc -l` → 0
+- [x] `grep -c "~/claude/agent-console/agent-console.py" .claude/skills/workboard/SKILL.md` → 2
+- [x] `grep -c "~/claude/agent-console/agent-console.py" antigravity/.agents/skills/workboard/SKILL.md` → 2
+- [x] `git diff main -- .claude-plugin/plugin.json | grep -c "version"` → ≥2 (old + new line)
+- [x] `for t in tests/test_*.sh; do bash "$t"; done && ./bin/check-agent-model-pins && ./evals/runner-selftest.sh` → all green
 
 ## Progress
 
