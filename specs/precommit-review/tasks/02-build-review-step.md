@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 14 turns
@@ -52,9 +52,9 @@ lines and keeps execution-critical contracts in its first 30 lines
 
 ## Acceptance
 
-- [ ] `grep -c "code-review" .claude/skills/build/SKILL.md` → ≥ 1 and `grep -ci "one pass" .claude/skills/build/SKILL.md` → ≥ 1
-- [ ] `grep -c "numstat" .claude/skills/build/SKILL.md` → ≥ 1 and `grep -c "review skipped" .claude/skills/build/SKILL.md` → ≥ 1 and `grep -c "git add -A" .claude/skills/build/SKILL.md` → ≥ 1
-- [ ] `grep -qE "review: N findings|review:.*fixed.*discovered" .claude/skills/build/SKILL.md` → exit 0
-- [ ] `grep -c "touched this session" .claude/skills/build/SKILL.md` → ≥ 2 (simplification scope + the review step's no-Touch fallback)
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && claude plugin validate .` → exit 0
+- [x] `grep -c "code-review" .claude/skills/build/SKILL.md` → ≥ 1 and `grep -ci "one pass" .claude/skills/build/SKILL.md` → ≥ 1 — 1 and 2, verified; see specs/precommit-review/evidence/02-build-review-step.md
+- [x] `grep -c "numstat" .claude/skills/build/SKILL.md` → ≥ 1 and `grep -c "review skipped" .claude/skills/build/SKILL.md` → ≥ 1 and `grep -c "git add -A" .claude/skills/build/SKILL.md` → ≥ 1 — 1, 2, 1, verified; see specs/precommit-review/evidence/02-build-review-step.md
+- [x] `grep -qE "review: N findings|review:.*fixed.*discovered" .claude/skills/build/SKILL.md` → exit 0 — verified; see specs/precommit-review/evidence/02-build-review-step.md
+- [x] `grep -c "touched this session" .claude/skills/build/SKILL.md` → ≥ 2 (simplification scope + the review step's no-Touch fallback) — 2, verified; see specs/precommit-review/evidence/02-build-review-step.md
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — verified; see specs/precommit-review/evidence/02-build-review-step.md
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && claude plugin validate .` → exit 0 — all 7 test files + plugin validate green, verified; see specs/precommit-review/evidence/02-build-review-step.md

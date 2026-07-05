@@ -74,6 +74,32 @@ replaces "is done".
   change what the code does, only how; remove comments that describe obvious
   code, redundant abstractions, and defensive handling for cases that can't
   happen. Re-run the acceptance commands after.
+- Pre-commit review (one pass, no re-review after fixes): compute the skip
+  gate first — `git add -A && git diff <step0-base> --numstat` (staging
+  first surfaces brand-new untracked files; `<step0-base>` is the
+  `git rev-parse HEAD` recorded in step 0). Classify each path NON-product
+  when it matches `docs/**`, `**/*.md`, `tests/**`, `test/**`, `**/test_*`,
+  `**/*_test.*`, `**/*.test.*`, `**/*.spec.*`, `**/*.json`, `**/*.yaml`,
+  `**/*.yml`, `**/*.toml`, `**/*.lock`. Skip the review — record
+  `review skipped: <docs-only|tests-only|tiny-diff (<lines>)>` and go
+  straight to commit — when there are no product paths, or total
+  added+deleted product lines is < 25. Otherwise invoke `/code-review` via
+  the Skill tool with args `low` when the runtime can pass them (bare
+  invocation when it can't); where the Skill tool or plugin is unavailable,
+  fall back to ONE subagent on the diff, prompted for high-confidence
+  correctness/behavior findings only, capped at ≤1k tokens returned — run
+  it inline or read its output directly, never block on a background
+  notification (drain reference.md's sub-reviewer clause, cited not
+  restated). For each finding: fix immediately iff it's a
+  correctness/behavior defect AND the fix stays inside the task's `Touch:`
+  — or, with no `Touch:` header, inside the files touched this session (the
+  simplification pass's scope) — then re-run the acceptance commands;
+  findings needing out-of-Touch edits, or judged uncertain, are never fixed
+  here: surface to the user when attended, or add to `Discovered:` when
+  unattended. Style findings are dropped (the simplification pass already
+  ran). This is one pass — no re-review after fixes. Record the outcome as
+  evidence: `review: N findings, M fixed, K discovered` or
+  `review skipped: <reason>`.
 - Update the task file: Status `done`, tick acceptance boxes, one line of
   evidence each (from the verifier's report, not your own claim) rather
   than duplicating output — citing the `evidence/` file when an evidence
