@@ -1,6 +1,6 @@
 # Task 02: Wire the `/workboard` skill to `viz.py`
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 10 turns
@@ -20,5 +20,5 @@ Only the two workboard skill files. Do NOT touch `agent-console.py` or `fleet/re
 4. Extend `test_workboard.py`: a session row produces a `.viz-bar` that carries its `var(--viz-*, #hex)` fallback (colored with no host vars); a spec with deps produces a `<path>`.
 
 ## Acceptance
-- [ ] `pytest /Users/sjaconette/claude/.claude/skills/workboard/test_workboard.py` → all pass (covers R5 + workboard R6)
-- [ ] `python3 -c "import sys; sys.path.insert(0,'/Users/sjaconette/claude/.claude/skills/_shared'); sys.argv=['w']; import importlib.util as u; ..."` — a smoke render of the workboard HTML contains `viz-bar` and (given a spec with deps) `<path` (assert in the test file rather than inline if simpler)
+- [x] `pytest /Users/sjaconette/claude/.claude/skills/workboard/test_workboard.py` → all pass (covers R5 + workboard R6) — 39 passed; verifier PASS, see `../evidence/02-wire-workboard-skill.md`.
+- [x] Smoke render of the workboard HTML contains `viz-bar` and (given a spec with deps) `<path` — end-to-end run on the real repo tree: `viz-bar`=9, `<path`=1, `var(--viz-`=6; verifier PASS, see `../evidence/02-wire-workboard-skill.md`.
