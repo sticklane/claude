@@ -42,7 +42,7 @@ import sys, re, html
 
 out = open(sys.argv[1], encoding="utf-8").read()
 fails = []
-cwd_indep = re.compile(r"^(cd /|claude |python3 /|git -C /)")
+cwd_indep = re.compile(r"^(cd /|claude |python3 /|git -C /|bash /)")
 
 # (a) every <code class="cmd"> is immediately followed by a copy button.
 cmds = list(re.finditer(r'<code class="cmd">(.*?)</code>', out, re.S))

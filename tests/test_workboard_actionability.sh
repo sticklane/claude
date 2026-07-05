@@ -114,10 +114,10 @@ if grep -Eq 'git mv|push (--force|-f)|(^|[^[:alnum:]])rm |/build|/drain' "$asrc"
   echo "FORBIDDEN token in actions script"; fail=1
 fi
 
-# R5 — the HTML links the script: path text + a `<td><code>` bash invocation
-# (so the existing closest('td code') copy handler applies).
+# R5 — the HTML links the script: path text + a copyable `bash` invocation
+# rendered via cmd_html (code.cmd + adjacent copy button).
 has "$asrc"
-has '<td><code'
+has '<code class="cmd">bash '
 has "bash $asrc"
 
 # ---------------------------------------------------------------- R6/R7
