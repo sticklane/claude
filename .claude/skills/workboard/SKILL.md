@@ -13,7 +13,7 @@ Design rationale and sources: [docs/agent-dashboards.md](../../../docs/agent-das
 
 ## 1. Launch the live dashboard
 
-The live server is `agent-console` (`~/agent-console/agent-console.py`,
+The live server is `agent-console` (`~/claude/agent-console/agent-console.py`,
 launchd label `com.agent-console`). Its `/workboard` tab re-scans on every
 request, so the page is always current — there is no snapshot to regenerate.
 
@@ -27,7 +27,7 @@ open http://127.0.0.1:8899/workboard
   `SKILLS_DASHBOARD_HOST` (default 127.0.0.1) — use the same env vars when
   they are set.
 - If the launchd job doesn't exist, start the server directly in the
-  background (`~/agent-console/agent-console.py`), re-check `/healthz`,
+  background (`~/claude/agent-console/agent-console.py`), re-check `/healthz`,
   then open the URL.
 - **Fallback (machines without agent-console):** run the bundled stdlib-only
   scanner and present the file instead — never write it into a repo:
