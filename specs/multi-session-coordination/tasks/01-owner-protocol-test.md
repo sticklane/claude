@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -49,7 +49,11 @@ pinned grammar, so it stays green regardless of task 02–04 ordering).
 
 ## Acceptance
 
-- [ ] `bash tests/test_drain_owner_protocol.sh` → exit 0, output names all five cases (a–e) as PASS
-- [ ] `grep -c "Run-token" tests/test_drain_owner_protocol.sh` → ≥ 2 (claim-race + adoption cases use the pinned grammar)
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` → exit 0
-- [ ] `git diff --name-only main` → only `tests/test_drain_owner_protocol.sh` (plus this task file)
+- [x] `bash tests/test_drain_owner_protocol.sh` → exit 0, output names all five cases (a–e) as PASS
+      Evidence: verifier confirmed exit 0, 13/13 assertions, all five cases printed PASS — specs/multi-session-coordination/evidence/01-owner-protocol-test.md
+- [x] `grep -c "Run-token" tests/test_drain_owner_protocol.sh` → ≥ 2 (claim-race + adoption cases use the pinned grammar)
+      Evidence: verifier confirmed count = 18 — specs/multi-session-coordination/evidence/01-owner-protocol-test.md
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` → exit 0
+      Evidence: verifier confirmed the full sweep exits 0 — specs/multi-session-coordination/evidence/01-owner-protocol-test.md
+- [x] `git diff --name-only main` → only `tests/test_drain_owner_protocol.sh` (plus this task file)
+      Evidence: verifier confirmed diff scope is exactly this file — specs/multi-session-coordination/evidence/01-owner-protocol-test.md
