@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -57,10 +57,12 @@ into reference.md.
 
 ## Acceptance
 
-- [ ] `grep -c "DRAIN-OWNER" .claude/skills/drain/SKILL.md` → ≥ 2 and `grep -c "DRAIN-OWNER" .claude/skills/drain/reference.md` → ≥ 1
-- [ ] `grep -c "Run-token" .claude/skills/drain/reference.md` → ≥ 2 (owner format + baton grammar)
-- [ ] `grep -ciE "compare-and-swap|exact-match" .claude/skills/drain/SKILL.md` → ≥ 1
-- [ ] `grep -c "path-scoped" .claude/skills/drain/SKILL.md` → ≥ 1 and `grep -c "pull --rebase" .claude/skills/drain/SKILL.md` → ≥ 1
-- [ ] `grep -c "claude agents --json" .claude/skills/drain/SKILL.md` → ≥ 1
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && ./specs/status.sh && claude plugin validate .` → exit 0
+- [x] `grep -c "DRAIN-OWNER" .claude/skills/drain/SKILL.md` → ≥ 2 and `grep -c "DRAIN-OWNER" .claude/skills/drain/reference.md` → ≥ 1 — evidence: SKILL.md 5, reference.md 5
+- [x] `grep -c "Run-token" .claude/skills/drain/reference.md` → ≥ 2 (owner format + baton grammar) — evidence: reference.md 5
+- [x] `grep -ciE "compare-and-swap|exact-match" .claude/skills/drain/SKILL.md` → ≥ 1 — evidence: 3
+- [x] `grep -c "path-scoped" .claude/skills/drain/SKILL.md` → ≥ 1 and `grep -c "pull --rebase" .claude/skills/drain/SKILL.md` → ≥ 1 — evidence: 8 and 1
+- [x] `grep -c "claude agents --json" .claude/skills/drain/SKILL.md` → ≥ 1 — evidence: 1
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files"
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && ./specs/status.sh && claude plugin validate .` → exit 0 — evidence: all 9 test_*.sh files passed (0 fail each), status.sh listed queue, `claude plugin validate .` → "✔ Validation passed"
+
+Verifier: PASS — full report in ../evidence/02-drain-owner-lease-and-cas.md
