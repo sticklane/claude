@@ -224,6 +224,7 @@ def scan_toolkit_specs(repo):
         tasks = []
         tasks_dir = spec_dir / "tasks"
         mtimes = [spec_md.stat().st_mtime]
+        unparseable = 0
         if tasks_dir.is_dir():
             for tf in sorted(tasks_dir.glob("*.md")):
                 t_text = read_text(tf, 10_000)
@@ -238,6 +239,8 @@ def scan_toolkit_specs(repo):
                     "deps": parse_deps(t_text),
                 })
                 mtimes.append(tf.stat().st_mtime)
+                if not _TASK_NUM_RE.match(tf.name):
+                    unparseable += 1
         done = sum(1 for t in tasks if t["status"] in CLOSED_TASK_STATUSES)
         doing = sum(1 for t in tasks
                     if t["status"] in ("in-progress", "in_progress", "claimed"))
@@ -254,6 +257,7 @@ def scan_toolkit_specs(repo):
             "tasks_doing": doing,
             "tasks_blocked": [t["file"] for t in blocked],
             "tasks": tasks,
+            "tasks_unparseable": unparseable,
             "last_touched": max(mtimes),
         })
     return specs
@@ -1319,6 +1323,17 @@ def _spec_dag_html(specs):
     return "".join(blocks)
 
 
+def _spec_health_marker(spec):
+    """R4: a spec whose tasks/ files are ALL unparseable (no leading NN-
+    prefix) gets a visible "source check" marker instead of silently
+    rendering as if its tasks parsed fine."""
+    total = spec.get("tasks_total", 0)
+    unparseable = spec.get("tasks_unparseable", 0)
+    if total and unparseable == total:
+        return ' <span class="chip warning">source check</span>'
+    return ""
+
+
 def render_html(data):
     t = data["totals"]
 
@@ -1336,6 +1351,11 @@ def render_html(data):
 
     inbox_html = render_inbox(data["inbox"])
 
+    liveness_marker = (
+        ' <span class="chip warning">liveness unknown</span>'
+        if data.get("liveness_unknown") else ""
+    )
+
     repo_cards = []
     for r in sorted(data["repos"],
                     key=lambda r: r["git"]["last_commit_ts"] or 0, reverse=True):
@@ -1352,7 +1372,7 @@ def render_html(data):
 
         spec_rows = "".join(
             f"<tr><td class='strong'>{esc(s['slug'])}"
-            f"<span class='muted-text'> · {esc(s['kind'])}</span></td>"
+            f"<span class='muted-text'> · {esc(s['kind'])}</span>{_spec_health_marker(s)}</td>"
             f"<td>{progress_bar(s['tasks_done'], s['tasks_total'], s.get('tasks_doing', 0))}</td>"
             f"<td class='num'>{esc(age_str(s['last_touched']))}</td></tr>"
             for s in r["specs"]
@@ -1373,7 +1393,7 @@ def render_html(data):
             f'<div class="repo-grid"><div><h3>Specs</h3>'
             f"<table><thead><tr><th>spec</th><th>tasks</th><th>touched</th></tr></thead>"
             f"<tbody>{spec_rows}</tbody></table>{dag_html}</div>"
-            f"<div><h3>Sessions</h3>{sess_html}</div></div></details>"
+            f"<div><h3>Sessions</h3>{liveness_marker}{sess_html}</div></div></details>"
         )
 
     ag_html = ""
@@ -1417,7 +1437,7 @@ def render_html(data):
     orphan_html = ""
     if data["orphan_sessions"]:
         orphan_html = (
-            "<section><h2>Sessions outside scanned repos</h2>"
+            f"<section><h2>Sessions outside scanned repos</h2>{liveness_marker}"
             f"{_session_timeline_html(data['orphan_sessions'][:20])}</section>"
         )
 
