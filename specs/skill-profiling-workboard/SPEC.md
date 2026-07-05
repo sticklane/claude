@@ -96,10 +96,12 @@ like absorb task 04.
   diagram, ≥1 link to an in-repo research doc, and ≥2 links to primary
   sources; each names the toolkit skills/rules it explains (e.g.
   token-discipline for model-routing).
-- R7: a link checker (`scripts/check-doc-links.sh`) verifies every
+- R7: a link checker at `tests/test_doc_links.sh` verifies every
   relative link in `docs/guides/` resolves to an existing file and every
-  mermaid block is a fenced block with a non-empty body; wired into the
-  repo's `scripts/check.sh`.
+  mermaid block is a fenced block with a non-empty body; the location
+  makes it ride the repo's existing gate command
+  (`for t in tests/test_*.sh; do bash "$t"; done` — the repo has no root
+  `scripts/check.sh`).
 - R8: zero token overhead: the diff makes no additions to `CLAUDE.md`,
   `.claude/rules/`, or any `.claude/skills/*/SKILL.md` body. (Docs are
   informational; nothing new loads into session context.)
@@ -139,7 +141,7 @@ like absorb task 04.
       per-process CSRF token (`window.CSRF`), then
       `curl -s -X POST -H "X-CSRF: $TOKEN" http://127.0.0.1:8899/api/profile/refresh`
       → `{"ok": true, ...}` and the profile file's mtime advances
-- [ ] `bash scripts/check-doc-links.sh` passes; `ls docs/guides/` shows
+- [ ] `bash tests/test_doc_links.sh` passes; `ls docs/guides/` shows
       the three files; `grep -c '```mermaid' docs/guides/*.md` ≥ 1 each
 - [ ] R8: `git diff <base>..HEAD -- CLAUDE.md .claude/rules/ '.claude/skills/*/SKILL.md'`
       is empty
@@ -157,3 +159,18 @@ like absorb task 04.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+- Group A (concurrent-safe): tasks 01, 02, 03, 04 — pairwise-disjoint
+  Touch (`agentprof/internal/claude/` · `agentprof/scripts/` +
+  `agentprof/launchd/` · `agent-console/` · `docs/guides/` +
+  `tests/test_doc_links.sh`), no dependency edges, and no shared
+  undecided design: the 02↔03 value contract (refresh-script path
+  `agentprof/scripts/refresh-profile.sh`, atomic-replace behavior,
+  kickstart owned by the caller) is pinned in this spec, and task 03's
+  unit tests stub the subprocess so no green-over-dead-seam risk;
+  task 05 is the integration task that drives the real seam end-to-end.
+- Task 05 serializes after all four and is ATTENDED ONLY (launchd
+  machine-state mutation — fails drain's peripheral/core gate); run via
+  /build after 01–04 merge.
