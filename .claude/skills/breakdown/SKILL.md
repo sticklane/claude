@@ -63,6 +63,15 @@ Runnable commands only:
 - [ ] `<command>` → <expected result>
 ```
 
+For a task whose `Touch:` includes `antigravity/` mirror paths, check
+docs/memory/workboard-mirror-verbatim.md before writing the check: only
+workboard's two `.py` files are byte-identical across trees — prose-skill
+mirrors (`.claude/skills/*/SKILL.md` ↔ `antigravity/.agents/workflows/*.md`
+or `.agents/skills/*/SKILL.md`) are paraphrased ports, so a `diff → no
+output` criterion will wrongly fail (or force destroying deliberately
+hand-adapted wording); write a content-coverage check instead (e.g. grep
+for the concepts/identifiers that must land).
+
 4. Order tasks so each leaves the build green — no task may depend on a later
    one to compile or pass tests. Assign each task's `Priority:` by this
    rubric:
