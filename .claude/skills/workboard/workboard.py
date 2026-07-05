@@ -554,8 +554,29 @@ def _last_record_ts(path):
     return ts, branch
 
 
-def live_session_ids(claude_home):
-    """sessionIds with a live Claude Code process, from ~/.claude/sessions/*.json."""
+def _claude_agents_json():
+    """Parse `claude agents --json`. None if `claude` is absent from PATH,
+    errors, times out, or its stdout isn't a JSON list — any of which sends
+    live_session_ids() to the PID-record fallback (SPEC.md R1)."""
+    try:
+        out = subprocess.run(
+            ["claude", "agents", "--json"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if out.returncode != 0:
+        return None
+    try:
+        data = json.loads(out.stdout)
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, list) else None
+
+
+def _live_session_ids_from_pids(claude_home):
+    """Fallback: sessionIds with a live Claude Code process, from
+    ~/.claude/sessions/*.json + pid_alive()."""
     live = {}
     sess_dir = claude_home / "sessions"
     if not sess_dir.is_dir():
@@ -572,12 +593,45 @@ def live_session_ids(claude_home):
     return live
 
 
+def live_session_ids(claude_home):
+    """sessionIds with a live Claude Code process.
+
+    Primary source: `claude agents --json` — any record carrying both
+    `sessionId` and `pid` counts as live, regardless of its `status` string.
+    Falls back to the PID-record scan (_live_session_ids_from_pids) when the
+    CLI is absent or its output isn't a JSON list.
+
+    Returns (live, liveness_unknown): `live` keeps the `{sid: {...}}` shape
+    in both paths; `liveness_unknown` is True only when the CLI returned a
+    non-empty list but none of its records counted as live (SPEC.md R1/R4) —
+    the PID-record fallback never sets it.
+    """
+    records = _claude_agents_json()
+    if records is None:
+        return _live_session_ids_from_pids(claude_home), False
+
+    live = {}
+    for rec in records:
+        if not isinstance(rec, dict):
+            continue
+        sid, pid = rec.get("sessionId"), rec.get("pid")
+        if sid and pid:
+            live[sid] = {"pid": pid, "status": rec.get("status")}
+    liveness_unknown = bool(records) and not live
+    return live, liveness_unknown
+
+
+_last_liveness_unknown = False  # set by scan_sessions(); read by assemble() (SPEC.md R4)
+
+
 def scan_sessions(claude_home, stale_days):
+    global _last_liveness_unknown
     sessions = []
     projects = claude_home / "projects"
     if not projects.is_dir():
+        _last_liveness_unknown = False
         return sessions
-    live = live_session_ids(claude_home)
+    live, _last_liveness_unknown = live_session_ids(claude_home)
     for proj_dir in projects.iterdir():
         if not proj_dir.is_dir():
             continue
@@ -872,6 +926,22 @@ def attention_items(repos, sessions, antigravity, stale_days,
     return items
 
 
+def _attach_sessions(repos, sessions):
+    """Attach each session to the repo whose path it's under, matching on
+    realpath (R2: a session cwd that's a symlink into a repo still
+    attributes to it). Mutates repos in place with a "sessions" list;
+    returns the set of matched session ids."""
+    real_cwds = {s["id"]: os.path.realpath(s["cwd"]) for s in sessions if s["cwd"]}
+    for r in repos:
+        r_real = os.path.realpath(r["path"])
+        r["sessions"] = [
+            s for s in sessions if s["id"] in real_cwds
+            and (real_cwds[s["id"]] == r_real
+                 or real_cwds[s["id"]].startswith(r_real + os.sep))
+        ]
+    return {s["id"] for r in repos for s in r["sessions"]}
+
+
 def assemble(roots, max_depth, stale_days, quiet,
              drain_window=DRAIN_WINDOW_DEFAULT):
     claude_home = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
@@ -905,12 +975,7 @@ def assemble(roots, max_depth, stale_days, quiet,
             "batons": scan_batons(p),
         })
 
-    # attach sessions to repos
-    for r in repos:
-        r["sessions"] = [s for s in sessions if s["cwd"]
-                         and (s["cwd"] == r["path"]
-                              or s["cwd"].startswith(r["path"] + os.sep))]
-    matched = {s["id"] for r in repos for s in r["sessions"]}
+    matched = _attach_sessions(repos, sessions)
     orphan_sessions = [s for s in sessions if s["id"] not in matched]
 
     antigravity = scan_antigravity()
@@ -929,6 +994,7 @@ def assemble(roots, max_depth, stale_days, quiet,
         "todos": todos,
         "inbox": inbox,
         "ready": ready,
+        "liveness_unknown": _last_liveness_unknown,
         "totals": {
             "repos": len(repos),
             "specs_open": sum(1 for r in repos for s in r["specs"]

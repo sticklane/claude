@@ -610,5 +610,97 @@ class TestSpecDagRendering(unittest.TestCase):
         self.assertNotIn('<path', html)
 
 
+class TestLiveSessionIdsCliAndFallback(unittest.TestCase):
+    """R1: live_session_ids() sources liveness from the `claude agents --json`
+    shim, falling back to the PID-record scan when the shim is absent/invalid,
+    and returns the 2-tuple (live, liveness_unknown) in both paths."""
+
+    def _patch_cli(self, result):
+        orig = workboard._claude_agents_json
+        workboard._claude_agents_json = lambda: result
+        self.addCleanup(setattr, workboard, "_claude_agents_json", orig)
+
+    def test_valid_cli_list_yields_liveness_map_ignoring_status(self):
+        self._patch_cli([
+            {"sessionId": "s1", "pid": 111, "status": "running"},
+            {"sessionId": "s2", "pid": 222, "status": "idle"},  # status ignored
+            {"pid": 333},  # missing sessionId -> not live
+        ])
+
+        live, liveness_unknown = workboard.live_session_ids(Path("/unused"))
+
+        self.assertEqual(set(live), {"s1", "s2"})
+        self.assertFalse(liveness_unknown)
+
+    def test_cli_absent_falls_back_to_pid_record_scan(self):
+        self._patch_cli(None)  # simulates claude missing from PATH / bad JSON
+        with tempfile.TemporaryDirectory() as tmp:
+            claude_home = Path(tmp)
+            sess_dir = claude_home / "sessions"
+            sess_dir.mkdir()
+            (sess_dir / "a.json").write_text(
+                json.dumps({"sessionId": "s1", "pid": os.getpid()}))
+
+            live, liveness_unknown = workboard.live_session_ids(claude_home)
+
+        self.assertEqual(set(live), {"s1"})
+        self.assertFalse(liveness_unknown)
+
+    def test_cli_non_empty_with_zero_live_marks_liveness_unknown(self):
+        self._patch_cli([{"name": "orphan-record-missing-ids"}])
+
+        live, liveness_unknown = workboard.live_session_ids(Path("/unused"))
+
+        self.assertEqual(live, {})
+        self.assertTrue(liveness_unknown)
+
+    def test_cli_empty_list_is_not_liveness_unknown(self):
+        self._patch_cli([])
+
+        live, liveness_unknown = workboard.live_session_ids(Path("/unused"))
+
+        self.assertEqual(live, {})
+        self.assertFalse(liveness_unknown)
+
+    def test_scan_sessions_plumbs_liveness_unknown_through(self):
+        self._patch_cli([{"name": "orphan-record-missing-ids"}])
+        with tempfile.TemporaryDirectory() as tmp:
+            claude_home = Path(tmp)
+            (claude_home / "projects").mkdir()
+
+            workboard.scan_sessions(claude_home, stale_days=7)
+
+        self.assertTrue(workboard._last_liveness_unknown)
+
+
+class TestAttachSessionsRealpath(unittest.TestCase):
+    """R2: the attach-sessions loop realpaths both sides of the match, so a
+    session cwd that is a symlink into a repo still attributes to it."""
+
+    def test_symlinked_session_cwd_attaches_to_repo(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            real_repo = Path(tmp) / "real-repo"
+            real_repo.mkdir()
+            link = Path(tmp) / "link-to-repo"
+            link.symlink_to(real_repo)
+
+            repos = [{"path": str(real_repo)}]
+            sessions = [{"id": "s1", "cwd": str(link)}]
+
+            matched = workboard._attach_sessions(repos, sessions)
+
+        self.assertEqual(matched, {"s1"})
+        self.assertEqual([s["id"] for s in repos[0]["sessions"]], ["s1"])
+
+    def test_non_symlinked_cwd_still_matches_as_before(self):
+        repos = [{"path": "/r/demo"}]
+        sessions = [{"id": "s1", "cwd": "/r/demo/sub"},
+                    {"id": "s2", "cwd": "/other"}]
+
+        matched = workboard._attach_sessions(repos, sessions)
+
+        self.assertEqual(matched, {"s1"})
+
+
 if __name__ == "__main__":
     unittest.main()
