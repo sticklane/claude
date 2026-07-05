@@ -43,9 +43,12 @@ stdlib-only fallback note).
 `{sid: {...}}` liveness map from `claude agents --json` (active records
 `[{pid, sessionId, status, ...}]`), falling back to the existing PID-record +
 `pid_alive()` scan when `claude` is absent from PATH or returns a non-list.
-**Keep the return shape a sid-keyed dict** — its only consumer,
-`scan_sessions`, uses it purely as a membership test (`if sid in live` →
-state "active"). Session *rows* keep rendering from the `.jsonl` transcript
+**The liveness map stays a sid-keyed dict**, but the function now returns a
+2-tuple `(live, liveness_unknown)` — `live` is the unchanged `{sid: {...}}`
+map; `liveness_unknown` is the R4 bool (source present and non-empty but
+yielded zero live ids). Its only consumer, `scan_sessions`, unpacks the
+tuple and uses `live` purely as a membership test (`if sid in live` →
+state "active"), plumbing `liveness_unknown` through for R4. Session *rows* keep rendering from the `.jsonl` transcript
 via `_first_prompt_and_meta`; CLI `cwd/name` are NOT used for row content.
 Reference: agent-console `live_sessions_from_cli` / `_live_sessions_from_pids`
 (port the parse + fallback logic; then reduce to the sid-keyed map). R2:
@@ -62,17 +65,25 @@ leading `NN-` prefix) and `_spec_dag_html` wraps each non-empty `viz.dag()`
 SVG in a collapsible `<details class="spec-dag">` inside the per-spec card —
 do NOT write a new SVG layout function. The remaining work is data plumbing:
 replace `_spec_dag_tasks`'s `isdigit()` dep filter with resolution through
-the existing `resolve_dep`/`_glob_task` (task dicts carry `abs`, so the task
-dir and repo root are derivable), map each resolved in-spec file to its task
+the existing `resolve_dep`/`_glob_task` (task dicts carry `abs`; derive
+`task_dir = Path(abs).parent` and `repo_root = Path(abs).parents[3]` — abs is
+`<repo>/specs/<slug>/tasks/NN-*.md`, so parents[3] is the repo root needed
+for `specs/…`-rooted refs), map each resolved in-spec file to its task
 `num`, and exclude cross-spec resolutions from the drawn graph. `viz.dag()`
 is itself cycle-guarded and returns "" when there are no in-list edges —
 don't re-implement either guard, but keep a workboard-level test that a
 cyclic `Depends on:` set still returns.
 
 **C. Source-health (R4).** Give the spec-task parser and the liveness source an
-`unparseable` count: records that are present but yield no usable id/field
-(e.g. a `tasks/` dir with files none of which parse; a liveness source that is
-non-empty but yields no live ids). When a *work* source's count > 0, emit a
+`unparseable` count. Pinned definition for the spec-task side: a task file is
+**unparseable iff its filename lacks the leading `NN-` numeric prefix that
+`_TASK_NUM_RE` needs** (today `scan_toolkit_specs` appends a row for every
+`tasks/*.md` unconditionally — missing Status defaults to `pending`, missing
+title to the stem — so the parser must be tightened to count, not silently
+default, exactly this case; no other rejection criterion is in scope). For
+the liveness side: the source is unparseable when it is present and
+non-empty but yields no live ids — the `liveness_unknown` bool R1's 2-tuple
+carries. When a *work* source's count > 0, emit a
 small "source check" marker on that section; for the liveness source, mark
 "liveness unknown" (not "no sessions", since session rows come from
 transcripts, not liveness). Sessions now render as a `viz.timeline()` Gantt
@@ -97,10 +108,12 @@ or inline `style=` over adding TEMPLATE CSS.
 
 ## Requirements
 
-1. **R1** — `live_session_ids()` returns the same `{sid: {...}}` liveness map,
-   built from `claude agents --json` (parsing `pid`, `sessionId`, `status`).
-   With `claude` absent from PATH or returning a non-list, it falls back to the
-   current PID-record + `pid_alive()` scan, output shape unchanged.
+1. **R1** — `live_session_ids()` returns a 2-tuple `(live, liveness_unknown)`:
+   `live` is the same `{sid: {...}}` liveness map as today, built from
+   `claude agents --json` (parsing `pid`, `sessionId`, `status`);
+   `liveness_unknown` is the R4 bool. With `claude` absent from PATH or
+   returning a non-list, `live` falls back to the current PID-record +
+   `pid_alive()` scan — the map's shape is unchanged in both paths.
 2. **R2** — the session→repo attribution (the "attach sessions to repos"
    list-comprehension in `assemble()`) applies `os.path.realpath` to both the
    session cwd and the repo root before matching. A **new** test must exercise
@@ -120,8 +133,9 @@ or inline `style=` over adding TEMPLATE CSS.
    returns without hanging.
 4. **R4** — when a scanned source is present but yields zero parseable records,
    the section shows a visible "source check" marker: a spec whose `tasks/`
-   dir has files but none parse marks that spec; a non-empty liveness source
-   that yields no live ids marks liveness as "unknown". The transcript-sourced
+   dir has files but none parse (per the pinned definition in C: no leading
+   `NN-` prefix) marks that spec; a non-empty liveness source that yields no
+   live ids (R1's `liveness_unknown`) marks liveness as "unknown". The transcript-sourced
    `viz.timeline()` session rows and spec rows are unaffected.
 5. **R5** — no *new* write to the state the scanner reports on. The existing
    writes stay (the rendered-HTML `out.write_text` and the actions-script
@@ -154,7 +168,8 @@ or inline `style=` over adding TEMPLATE CSS.
       (unparseable → marker).
 - [ ] R1 fallback: a test monkeypatches the `claude agents --json` shim to (a)
       return a valid list → liveness from CLI, and (b) raise/return None →
-      liveness from PID records; both yield the same `{sid:…}` shape.
+      liveness from PID records; both return the 2-tuple whose first element
+      is the same `{sid:…}` map shape.
 - [ ] R2: a new test attributes a session whose `cwd` is a symlink into a repo
       to that repo (exercises `assemble()`'s attach-sessions loop directly;
       `TestActiveCoverageReclassification` does not).
@@ -164,8 +179,9 @@ or inline `style=` over adding TEMPLATE CSS.
       draws zero edges for that fixture); a fixture with a dependency cycle
       returns (no hang); a spec with no deps yields no `spec-dag` block; the
       existing `TestSpecDagRendering` tests keep passing.
-- [ ] R4: a spec fixture whose `tasks/` files all fail to parse yields the
-      "source check" marker for that spec, not an empty task section.
+- [ ] R4: a spec fixture whose `tasks/` files all fail to parse (none has a
+      leading `NN-` prefix) yields the "source check" marker for that spec,
+      not an empty task section.
 - [ ] R5: `grep -nE '\.write_text|\.write\(|\bopen\([^)]*[\x27"][wax]' .claude/skills/workboard/workboard.py`
       shows only the three known write sites (the HTML and actions-script
       writes in `main()`, the abandon marker in `abandon_conversations()`) —
