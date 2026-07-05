@@ -63,8 +63,11 @@ class TestWorkboardProfileLinks(unittest.TestCase):
         self.assertIn("?tf=session=sess-abc123", html_out)
 
     def test_page_carries_header_profile_link(self):
+        # Distinct from the per-row flamegraph href (which also embeds
+        # 127.0.0.1:8901 but with a longer path) — match the header anchor's
+        # exact href attribute so this doesn't pass on the row link alone.
         html_out = ac.render_workboard(self._board("sess-abc123"))
-        self.assertIn("http://127.0.0.1:8901/", html_out)
+        self.assertIn('href="http://127.0.0.1:8901/"', html_out)
 
 
 class TestRefreshProfileHandler(unittest.TestCase):

@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 16 turns
@@ -55,7 +55,7 @@ the subprocess call, they do NOT execute the real script.
 
 ## Acceptance
 
-- [ ] `python3 -m unittest discover -s agent-console/tests -v` → new tests pass (fixture-board anchor test + refresh-handler test named in evidence)
-- [ ] `bash agent-console/scripts/check.sh` → exit 0
-- [ ] `grep -c '127.0.0.1:8901' agent-console/agent-console.py` → ≥ 1; `grep -c 'tf=session=' agent-console/agent-console.py` → ≥ 1; `grep -c 'profile/refresh' agent-console/agent-console.py` → ≥ 1
-- [ ] `git diff --stat main -- .claude/skills/` → empty
+- [x] `python3 -m unittest discover -s agent-console/tests -v` → new tests pass (fixture-board anchor test + refresh-handler test named in evidence) — evidence: 27 passed, incl. `test_profile_links.TestWorkboardProfileLinks.test_session_row_anchor_targets_flamegraph_for_its_sid` + `TestRefreshProfileHandler.test_ok_wrapper_shape_on_success`/`test_ok_false_wrapper_shape_when_regen_script_fails`
+- [x] `bash agent-console/scripts/check.sh` → exit 0 — evidence: `check: PASS`
+- [x] `grep -c '127.0.0.1:8901' agent-console/agent-console.py` → ≥ 1; `grep -c 'tf=session=' agent-console/agent-console.py` → ≥ 1; `grep -c 'profile/refresh' agent-console/agent-console.py` → ≥ 1 — evidence: counts 2/1/2
+- [x] `git diff --stat main -- .claude/skills/` → empty — evidence: empty diff confirmed
