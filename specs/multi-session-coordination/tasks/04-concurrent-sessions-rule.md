@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns
@@ -42,8 +42,8 @@ imperative), consistent with the sibling rules' style
 
 ## Acceptance
 
-- [ ] `test -f .claude/rules/concurrent-sessions.md && [ $(wc -l < .claude/rules/concurrent-sessions.md) -le 40 ]` → exit 0
-- [ ] `grep -c "concurrent-sessions" docs/memory/concurrent-session-collision.md` → ≥ 1 (pointer present)
-- [ ] `grep -ci "never revert" .claude/rules/concurrent-sessions.md` → ≥ 1
-- [ ] `grep -c "concurrent-sessions" .claude/skills/onboard/SKILL.md` → ≥ 1 (one optional template bullet)
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && claude plugin validate .` → exit 0
+- [x] `test -f .claude/rules/concurrent-sessions.md && [ $(wc -l < .claude/rules/concurrent-sessions.md) -le 40 ]` → exit 0 (23 lines)
+- [x] `grep -c "concurrent-sessions" docs/memory/concurrent-session-collision.md` → ≥ 1 (pointer present) — 1
+- [x] `grep -ci "never revert" .claude/rules/concurrent-sessions.md` → ≥ 1 — 1
+- [x] `grep -c "concurrent-sessions" .claude/skills/onboard/SKILL.md` → ≥ 1 (one optional template bullet) — 2
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && claude plugin validate .` → exit 0 — all 9 test files pass, plugin validate passed

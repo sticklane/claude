@@ -11,21 +11,7 @@ the relocated symbols to a package barrel → duplicate `export`s that won't
 compile; and one session's `git mv` became **load-bearing** for the other
 session's re-pointed imports (which assumed the files were already moved).
 
-Before starting — and the instant you see unexplained edits — confirm you are
-the only editor:
-
-- `ps aux | grep 'claude daemon'` — a daemon whose `--spawned-by … "cwd":"<your
-  repo>"` carries a session UUID different from yours is another live session in
-  the same tree. A `sleep-poll … DONEMARKER` shell under
-  `/private/tmp/claude-501/-<repo>-<uuid>/` is that session's subagent waiting
-  on a worker.
-- `git worktree list` — a single checkout = shared tree = zero isolation.
-- Recent file mtimes / `git status` entries you didn't produce.
-
-On collision: **STOP editing, surface it to the user, and do NOT unilaterally
-revert your own changes** — the other session may depend on them (its imports
-can assume your moves already landed, so reverting breaks it). Let one session
-own the finish; the other stays fully out of the tree. When parallel edits are
-actually intended, `isolation: "worktree"` (Agent/Workflow) is the structural
-fix. A live drain is one special case of this — see
-[[live-drain-reconciliation]].
+The pre-flight and collision procedure now lives in the always-on rule
+`.claude/rules/concurrent-sessions.md` (cited, not restated here) — check it
+before multi-file edits in a shared checkout. A live drain is one special
+case of this — see [[live-drain-reconciliation]].

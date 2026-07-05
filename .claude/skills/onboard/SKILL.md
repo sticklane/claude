@@ -57,6 +57,9 @@ orientation is never duplicated here:
 - Architecture facts that prevent wrong-place edits ("API handlers live in X;
   generated code in Y — never edit").
 - Known gotchas and the repo's check command.
+- Optional: if the repo is ever edited by more than one live session in the
+  same non-worktree checkout, a bullet pointing at the concurrent-sessions
+  pre-flight pattern (this toolkit's `.claude/rules/concurrent-sessions.md`).
 
 **Already-onboarded repo (migration).** A CLAUDE.md exists with no AGENTS.md, or
 a template-debris AGENTS.md lacking `## Repo map`: move the orientation content
