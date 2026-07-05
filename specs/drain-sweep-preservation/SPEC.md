@@ -134,3 +134,10 @@ forensic; no worker-side heartbeats; one writer.
 - Multi-session ownership and owner leases (specs/multi-session-coordination)
   and the in-flight specs/drain-rolling-window work; R2 only REQUIRES
   respecting whatever partition/owner records exist at halt time.
+
+## Parallelization
+
+None — all three tasks edit `.claude/skills/drain/reference.md` (tasks 01 and
+02 also share SKILL.md), so every pair overlaps in Touch, and 02 textually
+cites 01's amended procedure while 03 carries the spec-wide version bump.
+Strictly sequential: 01 → 02 → 03.
