@@ -73,3 +73,8 @@ equivalent data — no visual/behavioral tab changes beyond the data seam.
 - [x] `git diff --stat main -- .claude/skills/` → empty (no skill-tree edits) — verifier PASS
 - [x] `grep -rn "sjaconette\|Jaconette" agent-console/ | wc -l` → 0 — verifier PASS
 - [x] `find agent-console -name "*.plist" ! -name "*.tmpl" | wc -l` → 0 — verifier PASS
+
+## Discovered
+
+- [2026-07-05 /drain] Mutation-guard repo list can diverge from the workboard's repo list → tasks/05-mutation-guard-repo-divergence.md
+- [2026-07-05 /drain] Workboard per-spec Priority select always shows unset → tasks/06-workboard-priority-select-unset.md
