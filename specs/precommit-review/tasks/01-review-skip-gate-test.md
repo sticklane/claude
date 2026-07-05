@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -42,7 +42,7 @@ whether task 02 has merged.
 
 ## Acceptance
 
-- [ ] `bash tests/test_review_skip.sh` → exit 0, output names all seven cases as PASS
-- [ ] `grep -c "git add -A" tests/test_review_skip.sh` → ≥ 1 (tests the pinned command, not a variant)
-- [ ] `grep -cE "\.test\.|\.spec\." tests/test_review_skip.sh` → ≥ 1 (JS/TS test-name coverage)
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` → exit 0
+- [x] `bash tests/test_review_skip.sh` → exit 0, output names all seven cases as PASS — verified, see specs/precommit-review/evidence/01-review-skip-gate-test.md
+- [x] `grep -c "git add -A" tests/test_review_skip.sh` → ≥ 1 (tests the pinned command, not a variant) — 2, verified
+- [x] `grep -cE "\.test\.|\.spec\." tests/test_review_skip.sh` → ≥ 1 (JS/TS test-name coverage) — 7, verified
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` → exit 0 — all 7 sibling scripts green, verified
