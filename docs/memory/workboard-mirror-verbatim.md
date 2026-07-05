@@ -1,7 +1,9 @@
 # The workboard skill's antigravity mirror is a verbatim copy
 
 **Trigger:** editing `.claude/skills/workboard/` (workboard.py or
-test_workboard.py) and about to port the change to the antigravity mirror.
+test_workboard.py) and about to port the change to the antigravity mirror;
+or writing a task's acceptance criteria (in `/breakdown`) for any task whose
+`Touch:` includes `antigravity/` mirror paths.
 
 Unlike the prose skills (whose `.claude/skills/*/SKILL.md` and
 `antigravity/.agents/workflows/*.md` mirrors are *paraphrased* ports that must
