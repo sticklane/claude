@@ -22,3 +22,8 @@ Only `fleet/reference.md`. Do NOT change `viz.py` (task 01 owns the emitted CSS)
 - [x] `diff <(python3 /Users/sjaconette/claude/.claude/skills/_shared/viz.py --emit-fleet-css) <(awk '/viz:timeline-css BEGIN/,/viz:timeline-css END/' /Users/sjaconette/claude/.claude/skills/fleet/reference.md)` → empty — verifier PASS, evidence: specs/shared-viz-renderer/evidence/04-migrate-fleet-reference.md
 - [x] `! grep -nE 'class="(bar|lane|axis|track)[ "]' /Users/sjaconette/claude/.claude/skills/fleet/reference.md` → exits 0 (no old timeline classes remain) — verifier PASS, evidence: specs/shared-viz-renderer/evidence/04-migrate-fleet-reference.md
 - [x] `grep -c 'viz:timeline-css BEGIN' /Users/sjaconette/claude/.claude/skills/fleet/reference.md` → `1` — verifier PASS, evidence: specs/shared-viz-renderer/evidence/04-migrate-fleet-reference.md
+
+## Discovered
+
+- [2026-07-04 /drain] Fill-rules prose never literally names `.lane`/`.track`/`.bar`/`.axis` as CSS class tokens (generic English nouns) — no rename applicable there; informational only, no stub.
+- [2026-07-04 /drain] Shared `.viz-axis` rule drops the old `.axis div` `color: var(--muted)` tint — minor visual regression (axis labels inherit body ink); same tradeoff hits agent-console/workboard. → stub 06
