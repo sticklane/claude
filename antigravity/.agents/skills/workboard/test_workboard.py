@@ -469,5 +469,146 @@ class TestActiveRendering(unittest.TestCase):
         self.assertIn(">2<", html)             # active count
 
 
+def write_session(projects_dir, proj="proj1", sid="sess1", records=None):
+    """A session transcript .jsonl with the given records (dicts), oldest first."""
+    d = projects_dir / proj
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / f"{sid}.jsonl"
+    p.write_text(
+        "\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
+    return p
+
+
+class TestSessionStartTs(unittest.TestCase):
+    """R6 (workboard half): scan_sessions resolves a start_ts per session,
+    keeping the existing last-activity as end_ts."""
+
+    def test_scan_sessions_uses_earliest_transcript_record_as_start_ts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            claude_home = Path(tmp)
+            write_session(claude_home / "projects", records=[
+                {"type": "user", "message": {"content": "hi"}, "cwd": "/r/demo",
+                 "gitBranch": "main", "timestamp": "2020-01-01T00:00:00Z"},
+                {"type": "assistant", "message": {"content": "ok"},
+                 "timestamp": "2020-01-01T01:00:00Z"},
+            ])
+
+            sessions = workboard.scan_sessions(claude_home, stale_days=7)
+
+            self.assertEqual(len(sessions), 1)
+            s = sessions[0]
+            self.assertEqual(s["start_ts"], workboard.iso_to_ts("2020-01-01T00:00:00Z"))
+            self.assertEqual(s["end_ts"], s["last_ts"])
+            self.assertLess(s["start_ts"], s["end_ts"])
+
+    def test_scan_sessions_start_ts_never_none_without_transcript_timestamps(self):
+        # No record carries a `timestamp` field at all: start_ts must still
+        # resolve (st_birthtime, then end_ts) rather than leave it None —
+        # viz.timeline() raises ValueError on a missing start_ts.
+        with tempfile.TemporaryDirectory() as tmp:
+            claude_home = Path(tmp)
+            write_session(claude_home / "projects", records=[
+                {"type": "user", "message": {"content": "hi"}, "cwd": "/r/demo"},
+            ])
+
+            sessions = workboard.scan_sessions(claude_home, stale_days=7)
+
+            s = sessions[0]
+            self.assertIsNotNone(s["start_ts"])
+            self.assertLessEqual(s["start_ts"], s["end_ts"])
+
+
+class TestSessionTimelineRendering(unittest.TestCase):
+    """R5 (workboard half): the Sessions section renders via viz.timeline()
+    instead of a flat table."""
+
+    def _data(self, repos=None, orphan_sessions=None):
+        return {
+            "totals": {"repos": len(repos or []), "specs_open": 0, "tasks_open": 0,
+                       "sessions_active": 0, "attention": 0},
+            "generated_at": "now", "stale_days": 7,
+            "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+            "repos": repos or [],
+            "antigravity": [], "todos": [], "orphan_sessions": orphan_sessions or [],
+        }
+
+    def _session(self, state="active", start_ts=1.0, end_ts=100.0):
+        return {"id": "s1", "cwd": "/r/demo", "branch": "main",
+                "prompt": "do the thing", "last_ts": end_ts, "start_ts": start_ts,
+                "end_ts": end_ts, "bytes": 10, "state": state}
+
+    def test_repo_session_renders_viz_bar_with_color_fallback(self):
+        repo = make_repo_record()
+        repo["sessions"] = [self._session()]
+
+        html = workboard.render_html(self._data(repos=[repo]))
+
+        self.assertIn('viz-bar', html)
+        self.assertIn('var(--viz-running,', html)   # "active" state -> canonical "running"
+
+    def test_orphan_sessions_render_via_viz_timeline(self):
+        html = workboard.render_html(
+            self._data(orphan_sessions=[self._session(state="stale")]))
+
+        self.assertIn('viz-bar viz-stale', html)
+
+
+class TestSpecDagRendering(unittest.TestCase):
+    """R5 (workboard half): a spec with deps renders its dependency DAG via
+    viz.dag() (an SVG <path> per in-list edge)."""
+
+    def _spec_with_dep(self):
+        tasks = [
+            {"file": "specs/demo/tasks/01-a.md", "abs": "/x/01-a.md",
+             "title": "A", "status": "done", "deps": []},
+            {"file": "specs/demo/tasks/02-b.md", "abs": "/x/02-b.md",
+             "title": "B", "status": "pending", "deps": ["01"]},
+        ]
+        return {"kind": "toolkit", "slug": "demo", "title": "Demo",
+                "path": "specs/demo/SPEC.md", "tasks_total": 2, "tasks_done": 1,
+                "tasks_doing": 0, "tasks_blocked": [], "tasks": tasks,
+                "last_touched": 1.0}
+
+    def test_spec_with_deps_renders_dag_edge(self):
+        repo = make_repo_record()
+        repo["specs"] = [self._spec_with_dep()]
+
+        data = {
+            "totals": {"repos": 1, "specs_open": 1, "tasks_open": 1,
+                       "sessions_active": 0, "attention": 0},
+            "generated_at": "now", "stale_days": 7,
+            "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+            "repos": [repo],
+            "antigravity": [], "todos": [], "orphan_sessions": [],
+        }
+
+        html = workboard.render_html(data)
+
+        self.assertIn('<path', html)
+
+    def test_spec_without_deps_renders_no_dag(self):
+        repo = make_repo_record()
+        repo["specs"] = [{"kind": "toolkit", "slug": "solo", "title": "Solo",
+                          "path": "specs/solo/SPEC.md", "tasks_total": 1,
+                          "tasks_done": 0, "tasks_doing": 0, "tasks_blocked": [],
+                          "tasks": [{"file": "specs/solo/tasks/01-a.md",
+                                    "abs": "/x/01-a.md", "title": "A",
+                                    "status": "open", "deps": []}],
+                          "last_touched": 1.0}]
+
+        data = {
+            "totals": {"repos": 1, "specs_open": 1, "tasks_open": 1,
+                       "sessions_active": 0, "attention": 0},
+            "generated_at": "now", "stale_days": 7,
+            "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+            "repos": [repo],
+            "antigravity": [], "todos": [], "orphan_sessions": [],
+        }
+
+        html = workboard.render_html(data)
+
+        self.assertNotIn('<path', html)
+
+
 if __name__ == "__main__":
     unittest.main()
