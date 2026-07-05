@@ -32,3 +32,8 @@ Only the two workboard skill files. Do NOT touch `_spec_dag_tasks`/`_spec_dag_ht
 - [x] `python3 -m pytest /Users/sjaconette/claude/.claude/skills/workboard/test_workboard.py -q` → all pass, including new R1 tests (CLI parse + PID fallback + 2-tuple shape + liveness_unknown) and the new R2 symlink-attribution test, with `TestActiveCoverageReclassification`, `TestSessionStartTs`, `TestSessionTimelineRendering`, `TestSpecDagRendering` unregressed — verifier: 46 passed (targeted rerun of the four named suites: 15 passed)
 - [x] `grep -nE '\.write_text|\.write\(|\bopen\([^)]*[\x27"][wax]' /Users/sjaconette/claude/.claude/skills/workboard/workboard.py` → still only the three known write sites (HTML + actions-script writes in `main()`, abandon marker in `abandon_conversations()`) — R5: no new writes — verifier: confirmed exactly 3 hits (lines 731, 1703, 1707)
 - [x] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-task01.html` → exits 0 and every HTML-active sid appears in `claude agents --json` (subset check, NOT set-equality — CLI-live sessions without a transcript under `~/.claude/projects` legitimately have no HTML row) — verifier: exit 0, HTML-active sids ⊆ CLI sids (exact equality observed on this machine's live session set)
+
+## Discovered
+
+- [2026-07-04 /drain] `assemble()`'s attach-sessions loop had never been unit-tested directly; extracted into `_attach_sessions` as a test seam (done in-task; informational, no stub).
+- [2026-07-04 /drain] `liveness_unknown` reaches `assemble()`'s output as `data["liveness_unknown"]` (module-level `_last_liveness_unknown` set by `scan_sessions`) — task 03 reads that key, no further plumbing needed (handed to task 03's dispatch prompt; no stub).
