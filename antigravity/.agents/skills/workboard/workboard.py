@@ -224,6 +224,7 @@ def scan_toolkit_specs(repo):
         tasks = []
         tasks_dir = spec_dir / "tasks"
         mtimes = [spec_md.stat().st_mtime]
+        unparseable = 0
         if tasks_dir.is_dir():
             for tf in sorted(tasks_dir.glob("*.md")):
                 t_text = read_text(tf, 10_000)
@@ -238,6 +239,8 @@ def scan_toolkit_specs(repo):
                     "deps": parse_deps(t_text),
                 })
                 mtimes.append(tf.stat().st_mtime)
+                if not _TASK_NUM_RE.match(tf.name):
+                    unparseable += 1
         done = sum(1 for t in tasks if t["status"] in CLOSED_TASK_STATUSES)
         doing = sum(1 for t in tasks
                     if t["status"] in ("in-progress", "in_progress", "claimed"))
@@ -254,6 +257,7 @@ def scan_toolkit_specs(repo):
             "tasks_doing": doing,
             "tasks_blocked": [t["file"] for t in blocked],
             "tasks": tasks,
+            "tasks_unparseable": unparseable,
             "last_touched": max(mtimes),
         })
     return specs
@@ -554,8 +558,29 @@ def _last_record_ts(path):
     return ts, branch
 
 
-def live_session_ids(claude_home):
-    """sessionIds with a live Claude Code process, from ~/.claude/sessions/*.json."""
+def _claude_agents_json():
+    """Parse `claude agents --json`. None if `claude` is absent from PATH,
+    errors, times out, or its stdout isn't a JSON list — any of which sends
+    live_session_ids() to the PID-record fallback (SPEC.md R1)."""
+    try:
+        out = subprocess.run(
+            ["claude", "agents", "--json"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if out.returncode != 0:
+        return None
+    try:
+        data = json.loads(out.stdout)
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, list) else None
+
+
+def _live_session_ids_from_pids(claude_home):
+    """Fallback: sessionIds with a live Claude Code process, from
+    ~/.claude/sessions/*.json + pid_alive()."""
     live = {}
     sess_dir = claude_home / "sessions"
     if not sess_dir.is_dir():
@@ -572,12 +597,45 @@ def live_session_ids(claude_home):
     return live
 
 
+def live_session_ids(claude_home):
+    """sessionIds with a live Claude Code process.
+
+    Primary source: `claude agents --json` — any record carrying both
+    `sessionId` and `pid` counts as live, regardless of its `status` string.
+    Falls back to the PID-record scan (_live_session_ids_from_pids) when the
+    CLI is absent or its output isn't a JSON list.
+
+    Returns (live, liveness_unknown): `live` keeps the `{sid: {...}}` shape
+    in both paths; `liveness_unknown` is True only when the CLI returned a
+    non-empty list but none of its records counted as live (SPEC.md R1/R4) —
+    the PID-record fallback never sets it.
+    """
+    records = _claude_agents_json()
+    if records is None:
+        return _live_session_ids_from_pids(claude_home), False
+
+    live = {}
+    for rec in records:
+        if not isinstance(rec, dict):
+            continue
+        sid, pid = rec.get("sessionId"), rec.get("pid")
+        if sid and pid:
+            live[sid] = {"pid": pid, "status": rec.get("status")}
+    liveness_unknown = bool(records) and not live
+    return live, liveness_unknown
+
+
+_last_liveness_unknown = False  # set by scan_sessions(); read by assemble() (SPEC.md R4)
+
+
 def scan_sessions(claude_home, stale_days):
+    global _last_liveness_unknown
     sessions = []
     projects = claude_home / "projects"
     if not projects.is_dir():
+        _last_liveness_unknown = False
         return sessions
-    live = live_session_ids(claude_home)
+    live, _last_liveness_unknown = live_session_ids(claude_home)
     for proj_dir in projects.iterdir():
         if not proj_dir.is_dir():
             continue
@@ -872,6 +930,22 @@ def attention_items(repos, sessions, antigravity, stale_days,
     return items
 
 
+def _attach_sessions(repos, sessions):
+    """Attach each session to the repo whose path it's under, matching on
+    realpath (R2: a session cwd that's a symlink into a repo still
+    attributes to it). Mutates repos in place with a "sessions" list;
+    returns the set of matched session ids."""
+    real_cwds = {s["id"]: os.path.realpath(s["cwd"]) for s in sessions if s["cwd"]}
+    for r in repos:
+        r_real = os.path.realpath(r["path"])
+        r["sessions"] = [
+            s for s in sessions if s["id"] in real_cwds
+            and (real_cwds[s["id"]] == r_real
+                 or real_cwds[s["id"]].startswith(r_real + os.sep))
+        ]
+    return {s["id"] for r in repos for s in r["sessions"]}
+
+
 def assemble(roots, max_depth, stale_days, quiet,
              drain_window=DRAIN_WINDOW_DEFAULT):
     claude_home = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
@@ -905,12 +979,7 @@ def assemble(roots, max_depth, stale_days, quiet,
             "batons": scan_batons(p),
         })
 
-    # attach sessions to repos
-    for r in repos:
-        r["sessions"] = [s for s in sessions if s["cwd"]
-                         and (s["cwd"] == r["path"]
-                              or s["cwd"].startswith(r["path"] + os.sep))]
-    matched = {s["id"] for r in repos for s in r["sessions"]}
+    matched = _attach_sessions(repos, sessions)
     orphan_sessions = [s for s in sessions if s["id"] not in matched]
 
     antigravity = scan_antigravity()
@@ -929,6 +998,7 @@ def assemble(roots, max_depth, stale_days, quiet,
         "todos": todos,
         "inbox": inbox,
         "ready": ready,
+        "liveness_unknown": _last_liveness_unknown,
         "totals": {
             "repos": len(repos),
             "specs_open": sum(1 for r in repos for s in r["specs"]
@@ -1209,17 +1279,35 @@ _TASK_NUM_RE = re.compile(r"^(\d+)-")
 def _spec_dag_tasks(spec):
     """spec['tasks'] (file/status/deps strings) -> viz.dag()'s schema:
     {num, deps, status, title}. num comes from the task file's leading NN-
-    prefix; only bare-numeric (same-spec) deps are included — cross-spec
-    deps aren't drawable here and dag() would drop them anyway."""
-    tasks = []
-    for t in spec.get("tasks", []):
+    prefix; deps resolve through resolve_dep/_glob_task (bare numeric,
+    path-form, glob-form, and specs/-rooted same-spec refs alike). A dep
+    that resolves outside this spec's own task list is dropped — cross-spec
+    edges aren't drawable here and dag() would drop them anyway."""
+    tasks = spec.get("tasks", [])
+    by_path = {}
+    for t in tasks:
+        m = _TASK_NUM_RE.match(Path(t["file"]).name)
+        if m:
+            by_path[Path(t["abs"])] = int(m.group(1))
+
+    result = []
+    for t in tasks:
         m = _TASK_NUM_RE.match(Path(t["file"]).name)
         if not m:
             continue
-        deps = [int(d) for d in t.get("deps", []) if d.isdigit()]
-        tasks.append({"num": int(m.group(1)), "deps": deps,
-                      "status": t["status"], "title": t["title"]})
-    return tasks
+        raw_deps = t.get("deps", [])
+        deps = []
+        if raw_deps:
+            task_dir = Path(t["abs"]).parent
+            repo_root = Path(t["abs"]).parents[3]
+            for raw in raw_deps:
+                resolved = resolve_dep(raw, task_dir, repo_root)
+                num = by_path.get(resolved)
+                if num is not None:
+                    deps.append(num)
+        result.append({"num": int(m.group(1)), "deps": deps,
+                       "status": t["status"], "title": t["title"]})
+    return result
 
 
 def _spec_dag_html(specs):
@@ -1233,6 +1321,17 @@ def _spec_dag_html(specs):
                 f'<details class="spec-dag"><summary>{esc(s["slug"])} '
                 f'— dependency graph</summary>{svg}</details>')
     return "".join(blocks)
+
+
+def _spec_health_marker(spec):
+    """R4: a spec whose tasks/ files are ALL unparseable (no leading NN-
+    prefix) gets a visible "source check" marker instead of silently
+    rendering as if its tasks parsed fine."""
+    total = spec.get("tasks_total", 0)
+    unparseable = spec.get("tasks_unparseable", 0)
+    if total and unparseable == total:
+        return ' <span class="chip warning">source check</span>'
+    return ""
 
 
 def render_html(data):
@@ -1252,6 +1351,11 @@ def render_html(data):
 
     inbox_html = render_inbox(data["inbox"])
 
+    liveness_marker = (
+        ' <span class="chip warning">liveness unknown</span>'
+        if data.get("liveness_unknown") else ""
+    )
+
     repo_cards = []
     for r in sorted(data["repos"],
                     key=lambda r: r["git"]["last_commit_ts"] or 0, reverse=True):
@@ -1268,7 +1372,7 @@ def render_html(data):
 
         spec_rows = "".join(
             f"<tr><td class='strong'>{esc(s['slug'])}"
-            f"<span class='muted-text'> · {esc(s['kind'])}</span></td>"
+            f"<span class='muted-text'> · {esc(s['kind'])}</span>{_spec_health_marker(s)}</td>"
             f"<td>{progress_bar(s['tasks_done'], s['tasks_total'], s.get('tasks_doing', 0))}</td>"
             f"<td class='num'>{esc(age_str(s['last_touched']))}</td></tr>"
             for s in r["specs"]
@@ -1289,7 +1393,7 @@ def render_html(data):
             f'<div class="repo-grid"><div><h3>Specs</h3>'
             f"<table><thead><tr><th>spec</th><th>tasks</th><th>touched</th></tr></thead>"
             f"<tbody>{spec_rows}</tbody></table>{dag_html}</div>"
-            f"<div><h3>Sessions</h3>{sess_html}</div></div></details>"
+            f"<div><h3>Sessions</h3>{liveness_marker}{sess_html}</div></div></details>"
         )
 
     ag_html = ""
@@ -1333,7 +1437,7 @@ def render_html(data):
     orphan_html = ""
     if data["orphan_sessions"]:
         orphan_html = (
-            "<section><h2>Sessions outside scanned repos</h2>"
+            f"<section><h2>Sessions outside scanned repos</h2>{liveness_marker}"
             f"{_session_timeline_html(data['orphan_sessions'][:20])}</section>"
         )
 
