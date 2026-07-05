@@ -15,6 +15,13 @@ scope-creeps into fixing it. The orchestrator likewise accepts post-merge
 gate runs "green modulo the named baseline" — comparing to baseline, never
 absolute green, until a task actually owns that fix.
 
+Recurred 2026-07-05 (absorb-agent-tools task 03, one false-BLOCK + attended
+intervention): the orchestrator confirmed the same red gate mid-run (during
+task 02's merge) yet dispatched task 03 without the baseline clause. The
+trigger is not just "known at queue start" — the moment ANY gate run in the
+run surfaces a pre-existing red, every subsequent dispatch prompt in that
+run carries the baseline clause.
+
 ## Worker-spawned sub-agent notifications route to the orchestrator
 
 A background worker that fans out its own sub-agent (verifier, reviewer) may
