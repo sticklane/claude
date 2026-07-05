@@ -557,11 +557,19 @@ class TestSpecDagRendering(unittest.TestCase):
     """R5 (workboard half): a spec with deps renders its dependency DAG via
     viz.dag() (an SVG <path> per in-list edge)."""
 
-    def _spec_with_dep(self):
+    def _spec_with_dep(self, repo_root):
+        tasks_dir = Path(repo_root) / "specs" / "demo" / "tasks"
+        tasks_dir.mkdir(parents=True)
+        (tasks_dir / "01-a.md").write_text(
+            "# A\nStatus: done\n", encoding="utf-8")
+        (tasks_dir / "02-b.md").write_text(
+            "# B\nStatus: pending\nDepends on: 01\n", encoding="utf-8")
         tasks = [
-            {"file": "specs/demo/tasks/01-a.md", "abs": "/x/01-a.md",
+            {"file": "specs/demo/tasks/01-a.md",
+             "abs": str(tasks_dir / "01-a.md"),
              "title": "A", "status": "done", "deps": []},
-            {"file": "specs/demo/tasks/02-b.md", "abs": "/x/02-b.md",
+            {"file": "specs/demo/tasks/02-b.md",
+             "abs": str(tasks_dir / "02-b.md"),
              "title": "B", "status": "pending", "deps": ["01"]},
         ]
         return {"kind": "toolkit", "slug": "demo", "title": "Demo",
@@ -570,21 +578,22 @@ class TestSpecDagRendering(unittest.TestCase):
                 "last_touched": 1.0}
 
     def test_spec_with_deps_renders_dag_edge(self):
-        repo = make_repo_record()
-        repo["specs"] = [self._spec_with_dep()]
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_repo_record()
+            repo["specs"] = [self._spec_with_dep(tmp)]
 
-        data = {
-            "totals": {"repos": 1, "specs_open": 1, "tasks_open": 1,
-                       "sessions_active": 0, "attention": 0},
-            "generated_at": "now", "stale_days": 7,
-            "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
-            "repos": [repo],
-            "antigravity": [], "todos": [], "orphan_sessions": [],
-        }
+            data = {
+                "totals": {"repos": 1, "specs_open": 1, "tasks_open": 1,
+                           "sessions_active": 0, "attention": 0},
+                "generated_at": "now", "stale_days": 7,
+                "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+                "repos": [repo],
+                "antigravity": [], "todos": [], "orphan_sessions": [],
+            }
 
-        html = workboard.render_html(data)
+            html = workboard.render_html(data)
 
-        self.assertIn('<path', html)
+            self.assertIn('<path', html)
 
     def test_spec_without_deps_renders_no_dag(self):
         repo = make_repo_record()
@@ -608,6 +617,71 @@ class TestSpecDagRendering(unittest.TestCase):
         html = workboard.render_html(data)
 
         self.assertNotIn('<path', html)
+
+
+class TestSpecDagResolvesDeps(unittest.TestCase):
+    """R3: _spec_dag_tasks resolves `Depends on:` entries through
+    resolve_dep/_glob_task instead of a bare isdigit() filter."""
+
+    def _make_spec(self, repo_root, slug, task_bodies):
+        """Write real task files under <repo_root>/specs/<slug>/tasks/ and
+        return the scanned spec dict for that slug (via scan_toolkit_specs,
+        so `deps` comes from the real `Depends on:` parser)."""
+        spec_dir = Path(repo_root) / "specs" / slug
+        (spec_dir / "tasks").mkdir(parents=True)
+        (spec_dir / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+        for fname, status, depends in task_bodies:
+            text = f"# {fname}\nStatus: {status}\n"
+            if depends is not None:
+                text += f"Depends on: {depends}\n"
+            (spec_dir / "tasks" / fname).write_text(text, encoding="utf-8")
+        specs = {s["slug"]: s for s in workboard.scan_toolkit_specs(Path(repo_root))}
+        return specs[slug]
+
+    def test_task_dir_relative_path_dep_draws_edge(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = self._make_spec(tmp, "demo", [
+                ("01-a.md", "done", None),
+                ("02-b.md", "pending", "01-a.md"),
+            ])
+
+            svg = workboard.viz.dag(workboard._spec_dag_tasks(spec))
+
+            self.assertIn('<path', svg)
+
+    def test_cyclic_deps_returns_without_hanging(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = self._make_spec(tmp, "demo", [
+                ("01-a.md", "pending", "02-b.md"),
+                ("02-b.md", "pending", "01-a.md"),
+            ])
+
+            svg = workboard.viz.dag(workboard._spec_dag_tasks(spec))
+
+            self.assertIsInstance(svg, str)
+
+    def test_no_deps_yields_no_dag_block(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = self._make_spec(tmp, "demo", [("01-a.md", "open", None)])
+
+            self.assertEqual(workboard._spec_dag_html([spec]), "")
+
+    def test_cross_spec_dep_draws_no_edge(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            other_dir = Path(tmp) / "specs" / "other"
+            (other_dir / "tasks").mkdir(parents=True)
+            other_dir.joinpath("SPEC.md").write_text(
+                "# Other\n", encoding="utf-8")
+            (other_dir / "tasks" / "01-x.md").write_text(
+                "# X\nStatus: done\n", encoding="utf-8")
+
+            spec = self._make_spec(tmp, "demo", [
+                ("01-b.md", "pending", "other/01"),
+            ])
+
+            deps = workboard._spec_dag_tasks(spec)[0]["deps"]
+
+            self.assertEqual(deps, [])
 
 
 class TestLiveSessionIdsCliAndFallback(unittest.TestCase):
