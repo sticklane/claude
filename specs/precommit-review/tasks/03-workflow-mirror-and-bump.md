@@ -39,3 +39,7 @@ mirroring reveals a source problem, report it as Discovered.
 - [x] `for tok in code-review numstat "review skipped"; do grep -qc "$tok" antigravity/.agents/workflows/build.md || exit 1; done` → exit 0 (verified: all three tokens present in the ported close-out step)
 - [x] `git diff main -- .claude-plugin/plugin.json | grep -c '"version"'` → 2 (verified: 0.8.6 → 0.8.7)
 - [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && ./bin/check-agent-model-pins && ./evals/runner-selftest.sh && ./specs/status.sh && claude plugin validate . && bash evals/lint-ultra-gate.sh` → exit 0 (verified: all gates pass, evidence/03-workflow-mirror-and-bump.md)
+
+## Discovered
+
+- [2026-07-05 /drain] antigravity drain.md missing sub-reviewer clause cited by build.md mirror — `antigravity/.agents/workflows/drain.md` has no "sub-reviewer" clause that build.md's mirrored review step cites ("the drain workflow's sub-reviewer clause") — the citation points at prose that doesn't exist in the antigravity drain mirror yet (only in `.claude/skills/drain/reference.md`); worth a follow-up task if drain.md is ever mirrored with that section. Stub: 04-antigravity-drain-sub-reviewer-clause.md
