@@ -28,7 +28,7 @@ Only the two antigravity mirror files and plugin.json. Do NOT edit `.claude/skil
 
 ## Acceptance
 
-- [ ] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-e2e.html` → exit 0; `grep -c '<svg' /tmp/wb-e2e.html` ≥ 1; active sids in the HTML match `claude agents --json` (show the diff)
+- [ ] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-e2e.html` → exit 0; `grep -c '<svg' /tmp/wb-e2e.html` ≥ 1; every HTML-active sid appears in `claude agents --json` (subset check, NOT set-equality — CLI-live sessions without a transcript have no HTML row; show the two sid sets)
 - [ ] `diff /Users/sjaconette/claude/.claude/skills/workboard/workboard.py /Users/sjaconette/claude/antigravity/.agents/skills/workboard/workboard.py` → empty, and same for `test_workboard.py`
 - [ ] `python3 -m pytest /Users/sjaconette/claude/antigravity/.agents/skills/workboard/test_workboard.py -q` → all pass
 - [ ] `claude plugin validate /Users/sjaconette/claude` → passes, and `grep '"version"' /Users/sjaconette/claude/.claude-plugin/plugin.json` shows a patch bump over the value on main at branch time

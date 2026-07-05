@@ -17,7 +17,7 @@ Sources that are present but yield zero parseable records show a visible "source
 
 ## Touch
 
-Only the two workboard skill files. Do NOT change `live_session_ids`'s R1 contract (its `liveness_unknown` bool already exists from task 01 — this task renders it), the DAG plumbing from task 02, `.claude/skills/_shared/viz.py`, or `antigravity/` (task 04). Per SPEC.md's R-note: marker HTML passed as a `.format` argument is brace-safe; prefer existing classes (`chip warning`, `muted-text`) or inline `style=` over adding TEMPLATE CSS (literal TEMPLATE CSS needs doubled braces).
+Only the two workboard skill files. Do NOT change `live_session_ids`'s R1 contract (its `liveness_unknown` bool already exists from task 01 — this task renders it), the DAG plumbing from task 02, `.claude/skills/_shared/viz.py`, or `antigravity/` (task 04). You MAY edit `assemble`/`render_html`/TEMPLATE placeholders as needed to thread `liveness_unknown` and the unparseable count from where task 01 left them (task 01 only guarantees the flag reaches `assemble`) out to the rendered HTML — that threading is this task's work, not a Touch violation. Per SPEC.md's R-note: marker HTML passed as a `.format` argument is brace-safe; prefer existing classes (`chip warning`, `muted-text`) or inline `style=` over adding TEMPLATE CSS (literal TEMPLATE CSS needs doubled braces).
 
 ## Steps
 
