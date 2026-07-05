@@ -224,3 +224,19 @@ that completes the queue — the same one that deletes the baton.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+- Group A (concurrent-safe): tasks 01, 02, 03, 04 — pairwise-disjoint
+  Touch (`tests/` · drain's two files · build+autopilot SKILL.md ·
+  rules/docs-memory/onboard), no dependency edges, and no shared
+  undecided design: the owner-file grammar, baton `Run-token:` line,
+  liveness definition, and sweep mechanism are all pinned in this
+  spec's Solution/R1–R8, so tasks reference the same pinned contract
+  rather than each inventing one (task 03 CITES drain's liveness text
+  it doesn't own — a doc reference, not a compile dependency, safe
+  even if 03 merges first).
+- Task 05 (mirror + bump) serializes after 02, 03, 04 — it copies
+  their final file states.
+- The spec's MANUAL-PENDING e2e criterion is human-run after the queue
+  completes; no task carries it.
