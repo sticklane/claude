@@ -1,0 +1,69 @@
+[
+  {
+    "endpoint": "projects/proj-vertex/locations/us-central1/publishers/google/models/gemini-2.0-flash",
+    "logging_time": "2026-07-01 12:00:00.123456 UTC",
+    "request_id": "vreq-1",
+    "api_method": "google.cloud.aiplatform.v1.PredictionService.GenerateContent",
+    "model": "publishers/google/models/gemini-2.0-flash",
+    "full_response": {
+      "modelVersion": "gemini-2.0-flash",
+      "usageMetadata": {
+        "promptTokenCount": 1000,
+        "candidatesTokenCount": 100,
+        "thoughtsTokenCount": 50,
+        "cachedContentTokenCount": 200
+      }
+    }
+  },
+  {
+    "endpoint": "projects/proj-vertex/locations/us-central1/publishers/google/models/gemini-2.0-flash",
+    "logging_time": "2026-07-01T12:05:00Z",
+    "request_id": "vreq-2",
+    "api_method": "google.cloud.aiplatform.v1.PredictionService.StreamGenerateContent",
+    "model": "publishers/google/models/gemini-2.0-flash",
+    "response_payload": [
+      "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"hel\"}]}}]}",
+      "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"lo\"}]},\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":300,\"candidatesTokenCount\":40}}"
+    ]
+  },
+  {
+    "endpoint": "projects/123456789/locations/us-east5/publishers/anthropic/models/claude-sonnet-4@20250514",
+    "logging_time": "2026-07-01 13:00:00",
+    "request_id": "vreq-3",
+    "api_method": "rawPredict",
+    "model": "publishers/anthropic/models/claude-sonnet-4@20250514",
+    "full_response": "{\"id\":\"msg_v1\",\"model\":\"claude-sonnet-4-20250514\",\"usage\":{\"input_tokens\":500,\"output_tokens\":60,\"cache_read_input_tokens\":30,\"cache_creation_input_tokens\":40}}"
+  },
+  {
+    "logging_time": "2026-07-01 14:00:00",
+    "request_id": "vreq-4",
+    "api_method": "generateContent",
+    "model": "gemini-2.0-flash",
+    "full_response": {
+      "usageMetadata": {
+        "promptTokenCount": 10,
+        "candidatesTokenCount": 2
+      }
+    }
+  },
+  {
+    "endpoint": "projects/proj-vertex/locations/us-central1/publishers/google/models/gemini-2.0-flash",
+    "logging_time": "2026-07-01 15:00:00",
+    "request_id": "vreq-5",
+    "api_method": "google.cloud.aiplatform.v1.PredictionService.GenerateContent",
+    "model": "publishers/google/models/gemini-2.0-flash",
+    "full_response": {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "no usage recorded"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+]
