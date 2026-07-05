@@ -62,7 +62,16 @@ for f in "${guide_files[@]}"; do
 
   # --- mermaid fences: every ```mermaid opening fence must be followed
   # by a non-empty body before the closing ``` fence.
-  awk -v file="$f" '
+  mermaid_count=0
+  while IFS= read -r status; do
+    [ -z "$status" ] && continue
+    mermaid_count=$((mermaid_count + 1))
+    if [ "$status" = "OK" ]; then
+      assert "$f: mermaid fence #$mermaid_count has a non-empty body" 0
+    else
+      assert "$f: mermaid fence #$mermaid_count has a non-empty body" 1
+    fi
+  done < <(awk '
     /^```mermaid[[:space:]]*$/ {
       in_block = 1
       body_lines = 0
@@ -78,19 +87,7 @@ for f in "${guide_files[@]}"; do
       gsub(/[[:space:]]/, "", line)
       if (length(line) > 0) body_lines++
     }
-  ' "$f" > "$here/.mermaid_check.$$" 2>/dev/null
-
-  mermaid_count=0
-  while IFS= read -r status; do
-    [ -z "$status" ] && continue
-    mermaid_count=$((mermaid_count + 1))
-    if [ "$status" = "OK" ]; then
-      assert "$f: mermaid fence #$mermaid_count has a non-empty body" 0
-    else
-      assert "$f: mermaid fence #$mermaid_count has a non-empty body" 1
-    fi
-  done < "$here/.mermaid_check.$$"
-  rm -f "$here/.mermaid_check.$$"
+  ' "$f")
 
   if [ "$mermaid_count" -eq 0 ]; then
     assert "$f: has at least one mermaid fence" 1
