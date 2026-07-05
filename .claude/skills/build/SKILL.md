@@ -11,6 +11,12 @@ designed to run in a fresh session.
 
 ## 0. Load only the task
 
+**Startup session sweep (advisory).** Before reading the task, list other
+live sessions whose cwd resolves into this repo — drain's mechanism
+(`claude agents --json`, pid-record fallback; drain/SKILL.md's "Startup
+session sweep (advisory)", cited not restated): one line per foreign live
+session, a "sweep unavailable" line on failure, never blocking.
+
 Read the task file (and its spec's Requirements section if referenced). Mark
 the task's Status as `in-progress` (a bare SPEC.md has no Status field — skip
 the bookkeeping steps for it and work from its acceptance criteria directly).
@@ -22,6 +28,11 @@ reports. Read a file directly only when you're about to edit it.
 If the task file has no runnable acceptance criteria, stop and say the task
 isn't agent-ready — improvising weaker criteria silently is how "looks done"
 replaces "is done".
+
+**Owner warning.** If the task's spec has a `specs/<slug>/DRAIN-OWNER.md`
+showing FRESH liveness (drain reference.md's "Owner liveness" definition,
+cited not restated), warn before editing the task — being attended, ask the
+user whether to proceed rather than risk racing a live drain run.
 
 ## 1. Plan proportionally
 

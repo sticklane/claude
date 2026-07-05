@@ -9,6 +9,12 @@ Run the task at $ARGUMENTS without supervision. Autonomy is earned by
 verification, not granted by optimism: an unattended agent is only as safe
 as the gates around it. Configs are in [reference.md](reference.md).
 
+**Startup session sweep (advisory).** Before classifying, list other live
+sessions whose cwd resolves into this repo — drain's mechanism
+(`claude agents --json`, pid-record fallback; drain/SKILL.md's "Startup
+session sweep (advisory)", cited not restated): one line per foreign live
+session, a "sweep unavailable" line on failure, never blocking.
+
 ## 1. Classify the task (go/no-go)
 
 Autonomous execution fits: peripheral features, prototypes, migrations with

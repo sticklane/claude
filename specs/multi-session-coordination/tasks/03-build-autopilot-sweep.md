@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns
@@ -42,8 +42,8 @@ the instruction and the pointer.
 
 ## Acceptance
 
-- [ ] `grep -c "claude agents --json" .claude/skills/build/SKILL.md` → ≥ 1
-- [ ] `grep -c "claude agents --json" .claude/skills/autopilot/SKILL.md` → ≥ 1
-- [ ] `grep -c "DRAIN-OWNER" .claude/skills/build/SKILL.md` → ≥ 1
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && claude plugin validate .` → exit 0
+- [x] `grep -c "claude agents --json" .claude/skills/build/SKILL.md` → ≥ 1 — got 1
+- [x] `grep -c "claude agents --json" .claude/skills/autopilot/SKILL.md` → ≥ 1 — got 1
+- [x] `grep -c "DRAIN-OWNER" .claude/skills/build/SKILL.md` → ≥ 1 — got 1
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done && claude plugin validate .` → exit 0 — all 9 test files pass, `claude plugin validate .` → "Validation passed", exit 0
