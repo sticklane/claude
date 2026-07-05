@@ -72,6 +72,19 @@ of letting them default silently:
 - **Scale effort in the dispatch prompt:** 1 agent / 3–10 calls for
   lookups; 2–4 agents / 10–15 calls for comparisons; 10+ agents only
   breadth-first (docs/orchestration-research-2026-07.md:50-52).
+- **Externalize large artifacts, return a path.** When a worker's useful
+  output is a large artifact (a full diff, a search-result dump, a log)
+  rather than a verdict, have it write the artifact to disk and return the
+  path — never paste it into the return message
+  (docs/subagent-intermediate-output-research-2026-07.md, "externalize
+  large artifacts").
+- **Prefer a fresh dispatch over one growing thread.** On the model tiers
+  this toolkit dispatches (Opus 4.5+/Sonnet 4.6+), extended-thinking blocks
+  are kept by default and re-billed as input tokens on every subsequent
+  turn — a concrete reason, beyond context rot, to hand a long task to a
+  fresh subagent rather than let one thread's reasoning grow across many
+  turns (docs/subagent-intermediate-output-research-2026-07.md,
+  "thinking-token replay cost").
 
 ## Session hygiene
 
