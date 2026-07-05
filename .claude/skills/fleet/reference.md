@@ -60,6 +60,8 @@ status alone — each status keeps its glyph + word, with the word in ink.
     --hairline: #e1e0d9; --ring: rgba(11,11,11,0.10);
     --running: #2a78d6; --completed: #0ca30c;
     --failed: #d03b3b; --queued: #898781;
+    --viz-running: #2a78d6; --viz-done: #0ca30c;
+    --viz-failed: #d03b3b; --viz-open: #898781;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -67,6 +69,7 @@ status alone — each status keeps its glyph + word, with the word in ink.
       --ink: #ffffff; --ink-2: #c3c2b7;
       --hairline: #2c2c2a; --ring: rgba(255,255,255,0.10);
       --running: #3987e5;
+      --viz-running: #3987e5;
     }
   }
   * { box-sizing: border-box; margin: 0; }
@@ -103,22 +106,25 @@ status alone — each status keeps its glyph + word, with the word in ink.
   .s-failed    .dot { background: var(--failed); }    .s-failed    b { color: var(--failed); }
   .s-queued    .dot { background: var(--queued); }    .s-queued    b { color: var(--queued); }
 
-  /* timeline */
-  .lane { display: grid; grid-template-columns: 180px 1fr; align-items: center;
-          gap: 10px; padding: 4px 0; }
-  .lane:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
-  .lane .name { font-size: 12px; color: var(--ink-2); overflow: hidden;
-                text-overflow: ellipsis; white-space: nowrap; }
-  .track { position: relative; height: 10px; border-radius: 4px;
-           background: color-mix(in srgb, var(--hairline) 55%, transparent); }
-  .bar { position: absolute; top: 0; height: 10px; border-radius: 4px; min-width: 4px; }
-  .bar.running   { background: var(--running); }
-  .bar.completed { background: var(--completed); }
-  .bar.failed    { background: var(--failed); }
-  .bar.queued    { background: var(--queued); }
-  .axis { display: grid; grid-template-columns: 180px 1fr; gap: 10px; margin-top: 6px; }
-  .axis div { display: flex; justify-content: space-between; color: var(--muted);
-              font-size: 11px; font-variant-numeric: tabular-nums; }
+/* >>> viz:timeline-css BEGIN */
+.viz-lane { display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 10px; padding: 4px 0; }
+.viz-lane .name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viz-track { position: relative; height: 10px; border-radius: 4px; background: rgba(128, 128, 128, 0.25); }
+.viz-bar { position: absolute; top: 0; height: 10px; border-radius: 4px; min-width: 4px; }
+.viz-bar.viz-running { background: var(--viz-running, #d98a63); }
+.viz-bar.viz-open { background: var(--viz-open, #6ea3c0); }
+.viz-bar.viz-done { background: var(--viz-done, #3a4150); }
+.viz-bar.viz-failed { background: var(--viz-failed, #c96262); }
+.viz-bar.viz-stale { background: var(--viz-stale, #5a6070); }
+.viz-bar.viz-blocked { background: var(--viz-blocked, #d9b063); }
+.viz-axis { display: grid; grid-template-columns: 180px 1fr; gap: 10px; margin-top: 6px; }
+.viz-axis div { display: flex; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums; }
+.viz-graphwrap { background: #161922; border-radius: 8px; padding: 8px; display: inline-block; }
+/* .viz-node/.viz-edge carry no rules here on purpose: their colors are
+   per-node inline SVG attributes (dag()'s STATUS_HEX lookup), and a CSS
+   rule targeting them would win the cascade over those attributes and
+   flatten every node/edge to one color. The classes exist as host hooks. */
+/* <<< viz:timeline-css END */
 
   /* table */
   table { width: 100%; border-collapse: collapse; }
@@ -153,13 +159,13 @@ status alone — each status keeps its glyph + word, with the word in ink.
 
 <section>
   <h2>Timeline</h2>
-  <!-- TIMELINE ROWS: one .lane per agent, ordered by start time -->
-  <div class="lane">
+  <!-- TIMELINE ROWS: one .viz-lane per agent, ordered by start time -->
+  <div class="viz-lane">
     <div class="name">build task/03-auth-routes</div>
-    <div class="track"><div class="bar running" style="left:12%;width:88%"
+    <div class="viz-track"><div class="viz-bar viz-running" style="left:12%;width:88%"
       title="build task/03-auth-routes — running, started 14:21:07, 11m 12s"></div></div>
   </div>
-  <div class="axis"><div></div><div><span>{{T0}}</span><span>now</span></div></div>
+  <div class="viz-axis"><div></div><div><span>{{T0}}</span><span>now</span></div></div>
 </section>
 
 <section>

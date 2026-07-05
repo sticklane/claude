@@ -1,6 +1,6 @@
 # Task 04: Migrate the `/fleet` skill to the shared timeline CSS
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 6 turns
@@ -19,6 +19,6 @@ Only `fleet/reference.md`. Do NOT change `viz.py` (task 01 owns the emitted CSS)
 3. Add a `:root` block (outside the sentinels) defining fleet's four validated `--viz-*` overrides (`running`, `done`←completed, `failed`, `open`←queued); leave `stale`/`blocked` to the shared fallback.
 
 ## Acceptance
-- [ ] `diff <(python3 /Users/sjaconette/claude/.claude/skills/_shared/viz.py --emit-fleet-css) <(awk '/viz:timeline-css BEGIN/,/viz:timeline-css END/' /Users/sjaconette/claude/.claude/skills/fleet/reference.md)` → empty
-- [ ] `! grep -nE 'class="(bar|lane|axis|track)[ "]' /Users/sjaconette/claude/.claude/skills/fleet/reference.md` → exits 0 (no old timeline classes remain)
-- [ ] `grep -c 'viz:timeline-css BEGIN' /Users/sjaconette/claude/.claude/skills/fleet/reference.md` → `1`
+- [x] `diff <(python3 /Users/sjaconette/claude/.claude/skills/_shared/viz.py --emit-fleet-css) <(awk '/viz:timeline-css BEGIN/,/viz:timeline-css END/' /Users/sjaconette/claude/.claude/skills/fleet/reference.md)` → empty — verifier PASS, evidence: specs/shared-viz-renderer/evidence/04-migrate-fleet-reference.md
+- [x] `! grep -nE 'class="(bar|lane|axis|track)[ "]' /Users/sjaconette/claude/.claude/skills/fleet/reference.md` → exits 0 (no old timeline classes remain) — verifier PASS, evidence: specs/shared-viz-renderer/evidence/04-migrate-fleet-reference.md
+- [x] `grep -c 'viz:timeline-css BEGIN' /Users/sjaconette/claude/.claude/skills/fleet/reference.md` → `1` — verifier PASS, evidence: specs/shared-viz-renderer/evidence/04-migrate-fleet-reference.md
