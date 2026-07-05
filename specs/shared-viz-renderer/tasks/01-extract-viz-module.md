@@ -1,6 +1,6 @@
 # Task 01: Extract the shared `viz.py` renderer + golden tests
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 12 turns
