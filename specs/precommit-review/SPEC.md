@@ -166,3 +166,17 @@ ultra-gated (`evals/lint-ultra-gate.sh` must stay green).
 ## Open questions
 
 (none)
+
+## Parallelization
+
+- Group A (concurrent-safe): tasks 01 and 02 — disjoint Touch
+  (`tests/test_review_skip.sh` vs `.claude/skills/build/SKILL.md`), no
+  dependency edge, no shared undecided design: the gate command,
+  pattern list, threshold, and outcome-line format are all pinned in
+  this spec's Solution, so the test and the skill text encode the same
+  contract independently.
+- Task 03 (workflow mirror + bump) serializes after 02 — it ports 02's
+  final text.
+- The spec's MANUAL-PENDING criterion (observing the review line in a
+  real /build or drained run) is human-run after the queue completes;
+  no task carries it.
