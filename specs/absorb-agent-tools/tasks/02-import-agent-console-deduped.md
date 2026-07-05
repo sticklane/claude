@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 30 turns
@@ -64,12 +64,12 @@ equivalent data — no visual/behavioral tab changes beyond the data seam.
 
 ## Acceptance
 
-- [ ] `bash agent-console/scripts/check.sh` → exit 0
-- [ ] `test ! -f agent-console/viz.py && test ! -d agent-console/.claude` → exit 0
-- [ ] `grep -cE "viz-sha256|--self-sha256" agent-console/scripts/check.sh` → 0
-- [ ] `grep -cE "def (scan_specs|scan_tasks|scan_handoffs|build_board)" agent-console/agent-console.py` → 0
-- [ ] `grep -n "workboard" agent-console/agent-console.py | grep -c "import"` → ≥1
-- [ ] `python3 .claude/skills/workboard/workboard.py --json > /dev/null && python3 .claude/skills/workboard/workboard.py --out /tmp/wb-contract.html && test -s /tmp/wb-contract.html` → exit 0 (skill CLI contract untouched)
-- [ ] `git diff --stat main -- .claude/skills/` → empty (no skill-tree edits)
-- [ ] `grep -rn "sjaconette\|Jaconette" agent-console/ | wc -l` → 0
-- [ ] `find agent-console -name "*.plist" ! -name "*.tmpl" | wc -l` → 0
+- [x] `bash agent-console/scripts/check.sh` → exit 0 — verifier PASS, evidence/02-import-agent-console-deduped.md
+- [x] `test ! -f agent-console/viz.py && test ! -d agent-console/.claude` → exit 0 — verifier PASS
+- [x] `grep -cE "viz-sha256|--self-sha256" agent-console/scripts/check.sh` → 0 — verifier PASS
+- [x] `grep -cE "def (scan_specs|scan_tasks|scan_handoffs|build_board)" agent-console/agent-console.py` → 0 — verifier PASS
+- [x] `grep -n "workboard" agent-console/agent-console.py | grep -c "import"` → ≥1 — verifier PASS
+- [x] `python3 .claude/skills/workboard/workboard.py --json > /dev/null && python3 .claude/skills/workboard/workboard.py --out /tmp/wb-contract.html && test -s /tmp/wb-contract.html` → exit 0 (skill CLI contract untouched) — verifier PASS
+- [x] `git diff --stat main -- .claude/skills/` → empty (no skill-tree edits) — verifier PASS
+- [x] `grep -rn "sjaconette\|Jaconette" agent-console/ | wc -l` → 0 — verifier PASS
+- [x] `find agent-console -name "*.plist" ! -name "*.tmpl" | wc -l` → 0 — verifier PASS
