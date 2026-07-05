@@ -57,3 +57,12 @@ pinned grammar, so it stays green regardless of task 02–04 ordering).
       Evidence: verifier confirmed the full sweep exits 0 — specs/multi-session-coordination/evidence/01-owner-protocol-test.md
 - [x] `git diff --name-only main` → only `tests/test_drain_owner_protocol.sh` (plus this task file)
       Evidence: verifier confirmed diff scope is exactly this file — specs/multi-session-coordination/evidence/01-owner-protocol-test.md
+
+## Discovered
+
+- SPEC.md's R2 "documented one-liner" baton-adoption predicate is not yet
+  implemented anywhere in `.claude/skills/drain/reference.md` — task 02
+  owns landing that text; this task's case (e) reimplements the predicate
+  locally per its own Touch constraint ("must not depend on skill text
+  existing"), so it won't catch a future divergence between the real
+  skill code and the spec's grammar. See task 06.
