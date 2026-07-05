@@ -25,3 +25,7 @@ Create only the two files under `.claude/skills/_shared/`. Do NOT modify `workbo
 - [x] `pytest /Users/sjaconette/claude/.claude/skills/_shared/test_viz.py` → all pass (covers R2–R4) (verifier: 14 passed, spot-checked assertions are non-vacuous)
 - [x] `python3 /Users/sjaconette/claude/.claude/skills/_shared/viz.py --emit-fleet-css | head -1` → the `BEGIN` sentinel line (verifier confirmed)
 - [x] `python3 /Users/sjaconette/claude/.claude/skills/_shared/viz.py --self-sha256` → a 64-hex string matching the file's `# viz-sha256:` header (verifier confirmed exact match)
+
+## Discovered
+
+- [2026-07-04 /drain] VIZ_CSS `.viz-node`/`.viz-edge` are an intentional structural no-op (real declarations would cascade over dag()'s inline STATUS_HEX colors); worth a one-line note in SPEC.md if a future consumer (task 03/04) expects real rules there. → stub 05
