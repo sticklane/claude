@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: deferred
+Status: pending
 Depends on: 02, 03, 04
 Priority: P1
 Budget: 12 turns
@@ -71,3 +71,49 @@ it as Discovered, don't fix it here.
   voice — in which case criterion 1's literal `diff → no output` command
   needs a human-approved substitute check (e.g., a content-coverage check
   rather than a byte diff)?
+
+## Answers
+
+- [2026-07-05 /drain] (b) — keep the established paraphrased-port
+  convention. Hand-update `antigravity/.agents/workflows/drain.md`,
+  `workflows/build.md`, `workflows/autopilot.md`, and
+  `.agents/skills/onboard/SKILL.md` to reflect tasks 02–04's new content in
+  Antigravity's own voice (its own terminology for the Task-tool-free
+  orchestration mechanism, no `$ARGUMENTS`/frontmatter, etc.) — do not
+  byte-copy the Claude source over these files.
+
+  This supersedes criterion 1's literal byte-diff check (drain, the task
+  file's single writer, is authorizing this replacement under this
+  Answer). Substitute criterion 1 with these content-coverage checks —
+  `DRAIN-OWNER` and `Run-token` are the coordination protocol's own file
+  and field names (DRAIN-OWNER.md, DRAIN-BATON.md), not English prose, so
+  they are runtime-agnostic identifiers that must survive verbatim in the
+  Antigravity port even though the surrounding explanation is paraphrased:
+
+  - [ ] `grep -c "DRAIN-OWNER" antigravity/.agents/workflows/drain.md` → ≥ 1
+  - [ ] `grep -c "Run-token" antigravity/.agents/workflows/drain.md` → ≥ 1
+  - [ ] `grep -ciE "compare-and-swap|exact-match" antigravity/.agents/workflows/drain.md` → ≥ 1
+  - [ ] `grep -c "path-scoped" antigravity/.agents/workflows/drain.md` → ≥ 1
+  - [ ] `workflows/build.md` and `workflows/autopilot.md` each gain content
+        conveying the startup session-sweep concept task 03 added (in
+        Antigravity's own terms for enumerating other live sessions — it
+        will not literally say `claude agents --json`, that's a Claude
+        Code CLI command with no Antigravity equivalent); worker picks and
+        runs a concrete grep proving the concept landed in each file
+        (e.g. on a phrase it authors, such as "session sweep" or
+        "live session"), and records the exact command + result as
+        evidence — same evidentiary bar as every other criterion.
+  - [ ] `workflows/build.md` gains content conveying the owner-liveness
+        warn-before-edit concept (citing, not restating, the liveness
+        definition) — worker picks and runs a concrete grep proving it
+        landed, records command + result as evidence.
+  - [ ] `.agents/skills/onboard/SKILL.md` gains the optional
+        concurrent-sessions pre-flight bullet in Antigravity's voice —
+        `grep -ci "concurrent.session" antigravity/.agents/skills/onboard/SKILL.md` → ≥ 1
+  - [ ] The new `.claude/rules/concurrent-sessions.md` rule mirrors per
+        whatever convention the port already uses for `.claude/rules/`
+        files (inspect before copying, per the Goal's original
+        instruction — unchanged by this Answer).
+
+  All other Acceptance criteria (plugin.json version bump, full gate
+  suite) are unchanged.
