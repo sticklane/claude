@@ -155,7 +155,7 @@ func TestCollectFallsBackToMungedDirNameWhenNoCwd(t *testing.T) {
 func TestCollectSetsValuesCostLabelsAndTimeFromLine(t *testing.T) {
 	samples, _ := collectFixture(t)
 
-	got := findByStack(samples, []string{"proj", "t01 · start", "build", "main", "claude-fable-5"})
+	got := findByStack(samples, []string{"proj", "t01 · start", "skill:build", "main", "claude-fable-5"})
 	if len(got) != 1 {
 		t.Fatalf("got %d samples for msg_a1 stack, want 1", len(got))
 	}
@@ -361,6 +361,39 @@ func assistantLine(msgID string) string {
 	return `{"type":"assistant","timestamp":"2026-07-01T09:05:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"id":"` + msgID + `","model":"claude-fable-5","usage":{"input_tokens":10,"output_tokens":1}}}`
 }
 
+func assistantLineWithSkill(msgID, skill string) string {
+	return `{"type":"assistant","timestamp":"2026-07-01T09:05:00Z","cwd":"/z/app","sessionId":"sess-z","attributionSkill":"` + skill + `","message":{"id":"` + msgID + `","model":"claude-fable-5","usage":{"input_tokens":10,"output_tokens":1}}}`
+}
+
+// TestCollectSkillFrameCollapsesNamespacedAndBareIntoOneFrame covers R1:
+// a leading `<plugin>:` namespace is stripped so `agentic:build` and bare
+// `build` land in the same `skill:build` frame, while lines with no
+// attributionSkill keep the unchanged `(no skill)` frame.
+func TestCollectSkillFrameCollapsesNamespacedAndBareIntoOneFrame(t *testing.T) {
+	dir := writeMain(t,
+		assistantLineWithSkill("m1", "agentic:build"),
+		assistantLineWithSkill("m2", "build"),
+		assistantLine("m3"),
+	)
+
+	samples, _, _, err := claude.Collect(dir, anyCutoff)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if len(samples) != 3 {
+		t.Fatalf("got %d samples, want 3", len(samples))
+	}
+	if got := samples[0].Stack[2]; got != "skill:build" {
+		t.Errorf("namespaced attributionSkill frame = %q, want %q", got, "skill:build")
+	}
+	if got := samples[1].Stack[2]; got != "skill:build" {
+		t.Errorf("bare attributionSkill frame = %q, want %q", got, "skill:build")
+	}
+	if got := samples[2].Stack[2]; got != "(no skill)" {
+		t.Errorf("absent attributionSkill frame = %q, want %q", got, "(no skill)")
+	}
+}
+
 func TestCollectAssignsSyntheticTurnZeroToSamplesBeforeFirstPrompt(t *testing.T) {
 	dir := writeMain(t,
 		assistantLine("m1"),
@@ -469,7 +502,7 @@ func TestCollectInheritsTurnLabelThroughSpawnChain(t *testing.T) {
 
 	// agent-WS is depth-2 (main -> run-linked agent-W -> agent-WS), spawned
 	// inside turn 01; the wf: frame arrives once, via agent-W's prefix.
-	deep := findByStack(samples, []string{"proj", "t01 · start", "build", "main",
+	deep := findByStack(samples, []string{"proj", "t01 · start", "skill:build", "main",
 		"wf:test-flow", "agent:workflow-subagent", "agent:scout", "claude-haiku-4-5"})
 	if len(deep) != 1 {
 		t.Fatalf("got %d depth-2 samples, want 1; all samples: %v", len(deep), stacks(samples))
