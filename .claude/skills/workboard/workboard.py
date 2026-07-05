@@ -37,6 +37,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
+sys.path.insert(0, str(SCRIPT.parent.parent / "_shared"))
+import viz  # noqa: E402
+
 STALE_DAYS_DEFAULT = 7
 # A `task/*` worktree counts as a live drain only if its newest activity is
 # younger than this window (matches drain/reference.md's grace window). Older ⇒
@@ -508,6 +511,27 @@ def _first_prompt_and_meta(path):
     return prompt, cwd, branch
 
 
+def _first_record_ts(path):
+    """Timestamp of the earliest parseable record via a head read (mirrors
+    `_first_prompt_and_meta`'s 50-line cap)."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for _ in range(50):
+                line = f.readline()
+                if not line:
+                    break
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                ts = iso_to_ts(rec.get("timestamp", ""))
+                if ts:
+                    return ts
+    except OSError:
+        pass
+    return None
+
+
 def _last_record_ts(path):
     """Timestamp (+branch if present) of the last parseable record via a tail read."""
     try:
@@ -562,6 +586,17 @@ def scan_sessions(claude_home, stale_days):
             prompt, cwd, branch = _first_prompt_and_meta(jl)
             last_ts, last_branch = _last_record_ts(jl)
             last_ts = last_ts or jl.stat().st_mtime
+            # start_ts resolution order (SPEC.md R6): earliest transcript
+            # record -> transcript st_birthtime -> last-activity (never left
+            # None; viz.timeline() raises on a missing start_ts).
+            start_ts = _first_record_ts(jl)
+            if start_ts is None:
+                try:
+                    start_ts = jl.stat().st_birthtime
+                except (OSError, AttributeError):
+                    start_ts = None
+            if start_ts is None:
+                start_ts = last_ts
             age_days = (now_ts() - last_ts) / 86400
             if sid in live:
                 state = "active"
@@ -577,6 +612,8 @@ def scan_sessions(claude_home, stale_days):
                 "branch": last_branch or branch,
                 "prompt": prompt or "(no prompt found)",
                 "last_ts": last_ts,
+                "start_ts": start_ts,
+                "end_ts": last_ts,
                 "bytes": jl.stat().st_size,
                 "state": state,
             })
@@ -1150,6 +1187,54 @@ def render_filter_tiles(data):
             f'{tiles}</div>')
 
 
+def _session_timeline_html(sessions):
+    """Sessions rendered via the shared viz.timeline() Gantt instead of a
+    flat table; state values (active/recent/idle/stale) all map through
+    viz.canonical_status without falling through to "open"."""
+    if not sessions:
+        return '<p class="muted-text">no sessions recorded</p>'
+    rows = [{
+        "label": s["prompt"],
+        "status": s["state"],
+        "start_ts": s["start_ts"],
+        "end_ts": s["end_ts"],
+        "tooltip": f"{s['branch'] or '?'} · last active {age_str(s['last_ts'])} ago",
+    } for s in sessions]
+    return viz.timeline(rows)
+
+
+_TASK_NUM_RE = re.compile(r"^(\d+)-")
+
+
+def _spec_dag_tasks(spec):
+    """spec['tasks'] (file/status/deps strings) -> viz.dag()'s schema:
+    {num, deps, status, title}. num comes from the task file's leading NN-
+    prefix; only bare-numeric (same-spec) deps are included — cross-spec
+    deps aren't drawable here and dag() would drop them anyway."""
+    tasks = []
+    for t in spec.get("tasks", []):
+        m = _TASK_NUM_RE.match(Path(t["file"]).name)
+        if not m:
+            continue
+        deps = [int(d) for d in t.get("deps", []) if d.isdigit()]
+        tasks.append({"num": int(m.group(1)), "deps": deps,
+                      "status": t["status"], "title": t["title"]})
+    return tasks
+
+
+def _spec_dag_html(specs):
+    """One collapsible viz.dag() SVG per spec that has an in-list dependency
+    edge (dag() itself returns "" for specs with none)."""
+    blocks = []
+    for s in specs:
+        svg = viz.dag(_spec_dag_tasks(s))
+        if svg:
+            blocks.append(
+                f'<details class="spec-dag"><summary>{esc(s["slug"])} '
+                f'— dependency graph</summary>{svg}</details>')
+    return "".join(blocks)
+
+
 def render_html(data):
     t = data["totals"]
 
@@ -1188,19 +1273,9 @@ def render_html(data):
             f"<td class='num'>{esc(age_str(s['last_touched']))}</td></tr>"
             for s in r["specs"]
         ) or "<tr><td colspan='3' class='muted-text'>no specs</td></tr>"
+        dag_html = _spec_dag_html(r["specs"])
 
-        sess_rows = "".join(
-            f"<tr><td>{badge(s['state'])}</td>"
-            f"<td class='prompt'>{esc(s['prompt'])}</td>"
-            f"<td>{esc(s['branch'] or '?')}</td>"
-            f"<td class='num'>{esc(age_str(s['last_ts']))}</td></tr>"
-            for s in r["sessions"][:8]
-        )
-        sess_html = (
-            "<table><thead><tr><th>state</th><th>first prompt</th>"
-            f"<th>branch</th><th>last active</th></tr></thead><tbody>{sess_rows}</tbody></table>"
-            if sess_rows else '<p class="muted-text">no sessions recorded</p>'
-        )
+        sess_html = _session_timeline_html(r["sessions"][:8])
         handoff_html = "".join(
             f'<p class="handoff">⚑ handoff: {esc(h["title"])} — '
             f'{cmd_html(handoff_pickup_cmd(r["path"], h["path"]))}</p>'
@@ -1213,7 +1288,7 @@ def render_html(data):
             f'{baton_html}{handoff_html}'
             f'<div class="repo-grid"><div><h3>Specs</h3>'
             f"<table><thead><tr><th>spec</th><th>tasks</th><th>touched</th></tr></thead>"
-            f"<tbody>{spec_rows}</tbody></table></div>"
+            f"<tbody>{spec_rows}</tbody></table>{dag_html}</div>"
             f"<div><h3>Sessions</h3>{sess_html}</div></div></details>"
         )
 
@@ -1257,15 +1332,9 @@ def render_html(data):
 
     orphan_html = ""
     if data["orphan_sessions"]:
-        rows = "".join(
-            f"<tr><td>{badge(s['state'])}</td><td class='prompt'>{esc(s['prompt'])}</td>"
-            f"<td>{esc(s['cwd'] or '?')}</td><td class='num'>{esc(age_str(s['last_ts']))}</td></tr>"
-            for s in data["orphan_sessions"][:20]
-        )
         orphan_html = (
             "<section><h2>Sessions outside scanned repos</h2>"
-            "<table><thead><tr><th>state</th><th>first prompt</th><th>cwd</th>"
-            f"<th>last active</th></tr></thead><tbody>{rows}</tbody></table></section>"
+            f"{_session_timeline_html(data['orphan_sessions'][:20])}</section>"
         )
 
     return TEMPLATE.format(
@@ -1280,6 +1349,7 @@ def render_html(data):
         antigravity=ag_html,
         todos=todo_html,
         orphans=orphan_html,
+        viz_css=viz.VIZ_CSS,
     )
 
 
@@ -1400,6 +1470,8 @@ code.cmd:hover, code.cmd:focus {{ outline:1px solid var(--blue);
 .copy-btn.is-manual {{ border-color:var(--serious); color:var(--serious);
   font-weight:600; }}
 .copy-glyph {{ font-size:12px; }}
+{viz_css}
+.spec-dag summary {{ cursor:pointer; font-size:12px; color:var(--ink-2); margin-top:6px; }}
 </style></head><body>
 <h1>Workboard</h1>
 <div class="sub">All open work across local repos, specs, and Claude Code
