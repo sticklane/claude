@@ -69,4 +69,4 @@ in the same commit as the SKILL.md edit.
 
 ## Discovered
 
-- [2026-07-05 /drain] tests/test_workboard_render.sh fails on unmodified main (copy button / cwd-independence regression in workboard.py from wcc-01) → tasks/07-fix-workboard-render-regression.md
+- [2026-07-05 /drain] tests/test_workboard_render.sh fails on unmodified main (copy button / cwd-independence regression in workboard.py from wcc-01) → RESOLVED attended 2026-07-05 (user-authorized): fix(workboard) commit on main; stub 07 removed
