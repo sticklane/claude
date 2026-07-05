@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 8 turns
@@ -28,7 +28,7 @@ Only the two antigravity mirror files and plugin.json. Do NOT edit `.claude/skil
 
 ## Acceptance
 
-- [ ] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-e2e.html` → exit 0; `grep -c '<svg' /tmp/wb-e2e.html` ≥ 1; every HTML-active sid appears in `claude agents --json` (subset check, NOT set-equality — CLI-live sessions without a transcript have no HTML row; show the two sid sets)
-- [ ] `diff /Users/sjaconette/claude/.claude/skills/workboard/workboard.py /Users/sjaconette/claude/antigravity/.agents/skills/workboard/workboard.py` → empty, and same for `test_workboard.py`
-- [ ] `python3 -m pytest /Users/sjaconette/claude/antigravity/.agents/skills/workboard/test_workboard.py -q` → all pass
-- [ ] `claude plugin validate /Users/sjaconette/claude` → passes, and `grep '"version"' /Users/sjaconette/claude/.claude-plugin/plugin.json` shows a patch bump over the value on main at branch time
+- [x] `python3 /Users/sjaconette/claude/.claude/skills/workboard/workboard.py --out /tmp/wb-e2e.html` → exit 0; `grep -c '<svg' /tmp/wb-e2e.html` ≥ 1; every HTML-active sid appears in `claude agents --json` (subset check, NOT set-equality — CLI-live sessions without a transcript have no HTML row; show the two sid sets). Evidence: exit 0, svg count 1; all 6 HTML-active sids ({49516302…, 50d58308…, 5dcdc5c4…, 92dacfc2…, c4600645…, df06b5a0…}) are a subset of the 6 `claude agents --json` sids (identical sets here) — see specs/workboard-cli-graphs-health/evidence/04-e2e-mirror-and-bump.md.
+- [x] `diff /Users/sjaconette/claude/.claude/skills/workboard/workboard.py /Users/sjaconette/claude/antigravity/.agents/skills/workboard/workboard.py` → empty, and same for `test_workboard.py`. Evidence: both diffs empty; `_shared/viz.py` also confirmed byte-identical across trees — verifier PASS.
+- [x] `python3 -m pytest /Users/sjaconette/claude/antigravity/.agents/skills/workboard/test_workboard.py -q` → all pass. Evidence: `57 passed` — verifier PASS.
+- [x] `claude plugin validate /Users/sjaconette/claude` → passes, and `grep '"version"' /Users/sjaconette/claude/.claude-plugin/plugin.json` shows a patch bump over the value on main at branch time. Evidence: `✔ Validation passed`; version bumped 0.8.4 → 0.8.5 — verifier PASS.
