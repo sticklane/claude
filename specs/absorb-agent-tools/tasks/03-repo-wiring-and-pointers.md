@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: blocked
 Depends on: 01, 02
 Priority: P2
 Budget: 12 turns
@@ -49,3 +49,24 @@ in the same commit as the SKILL.md edit.
 - [ ] `grep -c "~/claude/agent-console/agent-console.py" antigravity/.agents/skills/workboard/SKILL.md` → 2
 - [ ] `git diff main -- .claude-plugin/plugin.json | grep -c "version"` → ≥2 (old + new line)
 - [ ] `for t in tests/test_*.sh; do bash "$t"; done && ./bin/check-agent-model-pins && ./evals/runner-selftest.sh` → all green
+
+## Progress
+
+- [2026-07-05 /drain] Worker verdict BLOCKED. Done: all four Touch-scoped
+  edits complete and individually verified (acceptance 1–5 PASS) on branch
+  `task/03-repo-wiring-and-pointers` (commit 69ea7e5, based on main
+  592a8cc) — branch PRESERVED, not merged. Remaining: acceptance 6 (full
+  gate suite) fails solely on `tests/test_workboard_render.sh`, a
+  PRE-EXISTING regression on main (reproduced at b92f98f and at 592a8cc
+  with no task edits applied; drain independently reproduced it at
+  main~1 before this task dispatched). Root cause:
+  `.claude/skills/workboard/workboard.py` renders the actions-script
+  command (`bash <tmpdir>/a.sh`) with no adjacent copy button / not
+  cwd-independent — outside this task's Touch. See draft stub
+  tasks/07-fix-workboard-render-regression.md. Resolution paths: fix the
+  regression (draft 07) then re-run gates and merge the preserved
+  branch, or human re-scopes acceptance 6.
+
+## Discovered
+
+- [2026-07-05 /drain] tests/test_workboard_render.sh fails on unmodified main (copy button / cwd-independence regression in workboard.py from wcc-01) → tasks/07-fix-workboard-render-regression.md
