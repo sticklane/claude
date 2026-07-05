@@ -1,0 +1,104 @@
+{
+  "note": "hand-computed from the fixture inventory; cost fields computed against the task 03 rate table (internal/pricing/table.go)",
+  "sample_count": 10,
+  "total_input_tokens": 3000,
+  "total_output_tokens": 300,
+  "total_cache_read_tokens": 50,
+  "total_cache_write_tokens": 20,
+  "total_cost_microusd": 24788,
+  "unparseable_lines": 1,
+  "unpriced_sample_count": 2,
+  "truncated_file": "testdata/claude-dir/projects/-y-beta/sess-0002.jsonl",
+  "stack_order": "[project, turn, skill, main, agent:*..., model] per agentprof-turns SPEC (leaf-last); workflow-run-linked agents insert wf:\u003cworkflowName\u003e before their agent: frame (workflow-linkage SPEC R3); unlinked subagents [project, (unlinked), agent:*, model]",
+  "per_root_frame": {
+    "beta": {
+      "sample_count": 4,
+      "input_tokens": 1200,
+      "output_tokens": 120,
+      "cost_microusd": 4200
+    },
+    "proj": {
+      "sample_count": 6,
+      "input_tokens": 1800,
+      "output_tokens": 180,
+      "cost_microusd": 20588
+    }
+  },
+  "stacks": {
+    "depth1_subagent_msg_sa1": [
+      "proj",
+      "t01 · start",
+      "build",
+      "main",
+      "agent:scout",
+      "claude-fable-5"
+    ],
+    "main_turn01_msg_a1": [
+      "proj",
+      "t01 · start",
+      "build",
+      "main",
+      "claude-fable-5"
+    ],
+    "main_turn02_dedup_msg_a2": [
+      "proj",
+      "t02 · /parallel specs/agentprof",
+      "(no skill)",
+      "main",
+      "claude-fable-5"
+    ],
+    "request_id_fallback": [
+      "beta",
+      "t01 · hello",
+      "(no skill)",
+      "main",
+      "claude-sonnet-4-5"
+    ],
+    "scrubbed_turn02_msg_b3": [
+      "beta",
+      "t02 · api token [redacted] leaked in logs",
+      "(no skill)",
+      "main",
+      "claude-fable-5"
+    ],
+    "synthetic_msg_b2": [
+      "beta",
+      "t01 · hello",
+      "(no skill)",
+      "main",
+      "\u003csynthetic\u003e"
+    ],
+    "unknown_model_msg_b1": [
+      "beta",
+      "t01 · hello",
+      "(no skill)",
+      "main",
+      "mystery-model-9"
+    ],
+    "unlinked_subagent_msg_sb1": [
+      "proj",
+      "(unlinked)",
+      "agent:(unknown)",
+      "claude-haiku-4-5"
+    ],
+    "workflow_agent_msg_w1": [
+      "proj",
+      "t01 · start",
+      "build",
+      "main",
+      "wf:test-flow",
+      "agent:workflow-subagent",
+      "claude-fable-5"
+    ],
+    "workflow_scout_msg_ws1": [
+      "proj",
+      "t01 · start",
+      "build",
+      "main",
+      "wf:test-flow",
+      "agent:workflow-subagent",
+      "agent:scout",
+      "claude-haiku-4-5"
+    ]
+  }
+}

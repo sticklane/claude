@@ -1,0 +1,10 @@
+[
+  {"project":{"id":"proj-fooszone"},"service":{"description":"Vertex AI"},"sku":{"description":"Vertex AI Online Prediction"},"usage_start_time":"2026-06-01 00:00:00","cost":"1.5","currency":"USD"},
+  {"project":{"id":"proj-fooszone"},"service":{"description":"Cloud Storage"},"sku":{"description":"Standard Storage US Central"},"usage_start_time":"2026-06-01 01:00:00.123456 UTC","cost":"0.02","currency":"USD"},
+  {"project":{"id":"proj-hub"},"service":{"description":"Cloud Run"},"sku":{"description":"CPU Allocation Time"},"usage_start_time":"2026-06-01 02:00:00","cost":"0.75","currency":"USD"},
+  {"project":{"id":"proj-fooszone"},"labels":[{"key":"team","value":"vision"}],"service":{"description":"Vertex AI"},"sku":{"description":"Vertex AI Online Prediction"},"usage_start_time":"2026-06-01 05:00:00","cost":"2.25","currency":"USD"},
+  {"project":{"id":"proj-fooszone"},"labels":[{"key":"env","value":"prod"}],"service":{"description":"Vertex AI"},"sku":{"description":"Vertex AI Online Prediction"},"usage_start_time":"2026-06-01 06:00:00","cost":"0.4","currency":"USD"},
+  {"project":{"id":"proj-hub"},"labels":"oops","service":{"description":"Cloud Run"},"sku":{"description":"CPU Allocation Time"},"usage_start_time":"2026-06-01 07:00:00","cost":"0.1","currency":"USD"},
+  {"project":{},"service":{"description":"Cloud Storage"},"sku":{"description":"Standard Storage US Central"},"usage_start_time":"2026-06-01 03:00:00","cost":"0.01","currency":"USD"},
+  {"project":{"id":"proj-hub"},"service":{"description":"Cloud Run"},"sku":{"description":"Committed Use Discount: CPU"},"usage_start_time":"2026-06-01 04:00:00","cost":"-0.3","currency":"USD"}
+]
