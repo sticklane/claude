@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 12 turns
@@ -52,8 +52,10 @@ not grow session context. Do NOT edit the research docs themselves.
 
 ## Acceptance
 
-- [ ] `bash tests/test_doc_links.sh` → exit 0
-- [ ] `ls docs/guides/context-management.md docs/guides/correctness.md docs/guides/model-routing.md` → all exist
-- [ ] `for f in docs/guides/*.md; do grep -c '^```mermaid' "$f"; done` → ≥ 1 per file
-- [ ] `grep -l 'anthropic-playbook\|orchestration-research\|context-management-research' docs/guides/*.md | wc -l` → 3
-- [ ] `git diff --stat main -- CLAUDE.md .claude/rules/` → empty, and no `.claude/skills/*/SKILL.md` in `git diff --name-only main` (R8)
+- [x] `bash tests/test_doc_links.sh` → exit 0 — verifier: `pass: 14 fail: 0`
+- [x] `ls docs/guides/context-management.md docs/guides/correctness.md docs/guides/model-routing.md` → all exist — verifier confirmed all three present
+- [x] `for f in docs/guides/*.md; do grep -c '^```mermaid' "$f"; done` → ≥ 1 per file — verifier: 2/1/1
+- [x] `grep -l 'anthropic-playbook\|orchestration-research\|context-management-research' docs/guides/*.md | wc -l` → 3 — verifier confirmed `3`
+- [x] `git diff --stat main -- CLAUDE.md .claude/rules/` → empty, and no `.claude/skills/*/SKILL.md` in `git diff --name-only main` (R8) — verifier confirmed both empty
+
+Verifier report: specs/skill-profiling-workboard/evidence/04-guide-docs-and-link-checker.md (verdict PASS, all 6 external URLs verified verbatim in the research docs, no scope creep)
