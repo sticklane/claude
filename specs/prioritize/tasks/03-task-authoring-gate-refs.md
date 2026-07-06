@@ -1,4 +1,4 @@
-Status: in-progress
+Status: deferred
 Priority: P1
 Discovered-from: specs/prioritize/tasks/01-prioritize-scan-script.md
 Spec: ../SPEC.md
@@ -14,3 +14,18 @@ Decision (2026-07-06): confirmed — this repo has no top-level `scripts/check.s
 
 - [ ] `! grep -q 'bash scripts/check.sh' specs/prioritize/tasks/01-prioritize-scan-script.md` → exits 0 (the boilerplate invocation is gone from task 01's criterion; currently present at line 69)
 - [ ] `grep -qi 'per-subproject' specs/prioritize/SPEC.md` → exits 0 (authoring note landed in the spec; currently absent)
+
+## Deferred questions
+
+- [2026-07-06 /drain] Criterion 1 greps the *whole* of
+  `01-prioritize-scan-script.md` for `bash scripts/check.sh`, but that
+  literal string also appears at line 73 inside task 01's `## Discovered`
+  note ("Task 01's acceptance criterion 3 names `bash scripts/check.sh`…")
+  — the very note that spawned this task — which the worker was told not
+  to edit ("nothing else in that file"). Should the fix (a) also make a
+  minimal, meaning-preserving edit to line 73 (e.g. drop the `bash ` so it
+  reads "names `scripts/check.sh`") so criterion 1's whole-file grep
+  passes; or (b) leave line 73 untouched as historical record and treat
+  criterion 1 as satisfied by the line-69 fix alone, narrowing criterion
+  1's grep to target line 69 only? Blocking: task 03's own DONE verdict —
+  criterion 1 currently fails (exit 1) either way until this is resolved.
