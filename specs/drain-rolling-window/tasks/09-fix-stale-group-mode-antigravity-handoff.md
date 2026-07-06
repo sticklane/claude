@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 4 turns
@@ -17,5 +17,5 @@ Blocking: no
 
 ## Acceptance
 
-- [ ] `grep -c "group throughput mode" antigravity/.agents/skills/breakdown/SKILL.md` → 0
-- [ ] `grep -ci "rolling.window" antigravity/.agents/skills/breakdown/SKILL.md` → ≥ 1
+- [x] `grep -c "group throughput mode" antigravity/.agents/skills/breakdown/SKILL.md` → 0 (verifier PASS; evidence/09-fix-stale-group-mode-antigravity-handoff.md)
+- [x] `grep -ci "rolling.window" antigravity/.agents/skills/breakdown/SKILL.md` → 3 (verifier PASS; evidence/09-fix-stale-group-mode-antigravity-handoff.md)
