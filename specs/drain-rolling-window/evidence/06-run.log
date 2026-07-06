@@ -1,0 +1,22 @@
+**Queue drained — specs/demo is complete.** Both tasks ran concurrently in the rolling window (W=2, per the spec's `Parallel-window: 2` header and `Group: 01, 02`), each merged serially with green gates, and the owner lease is released.
+
+**Per-task verdicts:**
+
+| Task | Verdict | Acceptance evidence | Merged branch |
+|------|---------|--------------------|---------------|
+| 01 alpha script | DONE | `test -x src/alpha.sh && [ "$(./src/alpha.sh)" = alpha ]` → exit 0; verifier PASS; `specs/demo/evidence/01-alpha-script.md` | `task/01-alpha-script` (merge `cf0325e`) |
+| 02 beta script | DONE | `test -x src/beta.sh && [ "$(./src/beta.sh)" = beta ]` → exit 0; verifier PASS (mode 100755, bash shebang); `specs/demo/evidence/02-beta-script.md` | `task/02-beta-script` (merge `91e5acd`) |
+
+Both whitelist diffs were clean (each branch touched only its own task file with allowed edits) and R4 Touch enforcement held (changed paths ⊆ `Touch:` + task file + `evidence/`). Task 02's merge was cut from a pre-alpha base but merged cleanly with no rebase needed since the file sets are disjoint; both acceptance commands re-ran green on final `master`.
+
+**Drafts created:** none. Task 02's single `Discovered:` entry was an observation that task 01 looked unfinished from its branch base — that was just its concurrent sibling mid-flight, resolved by task 01's merge before collection, so no stub was scaffolded.
+
+**Notes:**
+- No upstream is configured on `master`, so every push was skipped per the push guard — all bookkeeping and merges live on local `master` (`5d49bb1` at tip).
+- No verdict exposed a decomposition or spec problem, so no /distill needed.
+- Git flagged that committer identity was auto-derived (`sjaconette@stevens.mac.mini.lan`); harmless for this fixture, but `git config --global user.email` would silence it.
+assert: all checks passed (2 tasks done, 2 merges, per-task Touch enforced)
+PASS  drain/01-rolling-window
+----
+1/1 scenarios passed
+RUNNER_EXIT=0

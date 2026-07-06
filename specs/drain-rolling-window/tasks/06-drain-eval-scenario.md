@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 20 turns
@@ -67,14 +67,22 @@ before assuming a runner edit is needed) and `evals/breakdown/`.
 
 ## Acceptance
 
-- [ ] `bash evals/run.sh drain` → exit 0, one pass line printed for
+- [x] `bash evals/run.sh drain` → exit 0, one pass line printed for
       `drain/01-rolling-window` — **OR**, if three consecutive runs fail
       with no clear fixable cause (Step 6's stop line): mark this
       criterion MANUAL-PENDING in this task file with the failure
       evidence (the runner's kept fixture path and its last output),
       rather than looping further or leaving the task file silent. The
       other two criteria below still apply regardless.
-- [ ] `ls evals/drain/01-rolling-window/` → contains `setup.sh`,
+      Evidence: `bash evals/run.sh drain` → `PASS  drain/01-rolling-window`,
+      `1/1 scenarios passed`, exit 0 (verifier PASS; re-run green after the
+      pre-commit assert fix — see evidence/06-drain-eval-scenario.md and
+      evidence/06-run.log). Passed on both attempts; MANUAL-PENDING path
+      not needed.
+- [x] `ls evals/drain/01-rolling-window/` → contains `setup.sh`,
       `prompt.txt`, `assert.sh`, `allowed-tools.txt`
-- [ ] `grep -q 'Parallel-window' evals/drain/01-rolling-window/setup.sh`
+      Evidence: `ls` → `allowed-tools.txt assert.sh prompt.txt setup.sh`.
+- [x] `grep -q 'Parallel-window' evals/drain/01-rolling-window/setup.sh`
       → match
+      Evidence: grep exit 0 (setup.sh writes `Parallel-window: 2` into
+      specs/demo/SPEC.md).
