@@ -253,3 +253,23 @@ as `cost_microusd`) plus top-5 rows from `by_model`, `by_skill`, and
 ## Open questions
 
 (none)
+
+## Parallelization
+
+- **Group A (serial chain)**: 01 → 02 — both edit `cmd_claude.go` and the
+  same internal packages; Touch overlap forces serialization.
+- **Group B (parallel with Group A)**: 03 — disjoint Touch
+  (`agent-console/` only) and the summary JSON shape is a value contract
+  pinned verbatim in this spec (R3), owned by the spec, so neither side
+  may adapt it unilaterally. Task 03 tests against fixture JSON matching
+  the pinned shape; the real-binary seam is NOT considered proven until
+  task 04.
+- **04** runs last (depends on 01, 02, 03) — it is deliberately the
+  integration task that drives real binaries across the seam
+  (script → agentprof → summary JSON → panel), per the known failure mode
+  where two fixture-tested sides of a pinned contract still ship a dead
+  seam.
+- NOTE: `specs/agentprof-instrumentation` also has tasks touching
+  `agentprof/internal/` — the two specs' Go tasks must not run
+  concurrently with each other (cross-spec Touch overlap); their
+  skill-text/console tasks are mutually disjoint.
