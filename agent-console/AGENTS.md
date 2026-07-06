@@ -32,9 +32,17 @@ launchctl kickstart -k gui/$(id -u)/com.agent-console
 
 ## State
 
-- GET routes: `/` (Skills), `/workboard`, `/healthz`. POST routes (CSRF + Host/
-  Origin guarded, in `Handler.do_POST` / the "Mutations & control" section):
-  `/api/priority`, `/api/agent/{start,stop,resume}`.
+- GET routes: `/` (Skills), `/workboard`, `/healthz`, `/dispatches` (detached
+  `claude` runs this server started), `/dispatch/<id>/log` (that run's log tail).
+  POST routes (CSRF + Host/Origin guarded, in `Handler.do_POST` / the
+  "Mutations & control" section): `/api/priority`, `/api/agent/{start,stop,resume}`.
+- Dispatch runtime ("Dispatch runtime" section): `start_dispatch()` launches
+  `claude` detached in its own process group, one `.log` + one `.json` record
+  per run under `~/Library/Logs/agent-console/dispatch/`
+  (`AGENT_CONSOLE_DISPATCH_DIR` override). Records survive a restart — liveness
+  is pgid-alive AND process-start-time match, so a recycled pgid never reads
+  live; the per-cwd lock keys off the persisted records. Binary resolved at
+  dispatch time via `AGENT_CONSOLE_CLAUDE_BIN` → PATH → `~/.local/bin/claude`.
 - Reads use `git` (per-repo, 4s timeout), `gh` (one cached `repo list`),
   `claude … --json` (plugins/sessions; falls back to `~/.claude` scraping).
   Writes: rewrite+commit a spec's `Priority:` line; spawn/kill `claude` agents.
