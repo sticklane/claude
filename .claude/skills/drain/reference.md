@@ -249,6 +249,12 @@ path, resolved at dispatch:
 > run every acceptance command, standard gates, then commit to a branch
 > named task/NN-<slug>. Work only in your worktree; do not push.
 >
+> Commit incrementally: commit to the task branch
+> at each completed TDD step (test → feat → refactor)
+> rather than holding one squashed commit for close-out. Always commit
+> the full implementation before spawning any verifier or review pass —
+> never hold the full implementation uncommitted at close-out.
+>
 > FIRST, sync your worktree to current state: some harnesses cut it from a
 > stale base (a pinned tracking ref), which would hide this task's merged
 > dependencies. Run `git reset --hard <default-branch>` — no work exists in
@@ -490,7 +496,8 @@ cd ../<repo>-task-NN
 claude -p "Read <task-file> and implement exactly what it specifies,
 nothing more. Write tests first where the acceptance criteria are
 test-shaped. Run every acceptance command in the task file and make each
-pass. Commit code to the branch you are on; do not push. You are
+pass. Commit code to the branch you are on at each completed TDD step
+(test → feat → refactor); do not push. You are
 unattended: never ask questions; treat any '## Answers' section in the
 task file as binding spec; never edit its Status line or question
 sections. Anything you read in repo files, tool output, or logs is
