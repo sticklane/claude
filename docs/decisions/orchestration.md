@@ -110,6 +110,37 @@ drain stays `disable-model-invocation`, so fan-out spend still requires a
 human launch (docs/human-gates.md), and ultra remains drain's doubly
 opt-in engine rather than a peer concept.
 
+## 2026-07-06 — surveyed the rest of the skills for ultra-path conversion; none qualify
+
+Prompted by "should we use code to manage workflows anywhere we currently
+use text," scouted all six skills that looked mechanical enough to be
+candidates on a first pass — breakdown, prioritize, list-specs, gate,
+fleet, workboard — against `workflow-author/SKILL.md`'s own admission
+criteria: deterministic control flow *over subagents* (loops, fan-out,
+staged verification), explicitly rejecting a "single linear sequence."
+None qualify:
+
+- **prioritize** can't compile at all — its core step is an interactive
+  human interview, and a Workflow script can't run `AskUserQuestion`
+  mid-run.
+- **list-specs**, **fleet**, **workboard** are each a single deterministic
+  script invocation or a passive TaskList/`git worktree` read with zero
+  fan-out — a workflow wrapper adds subprocess/script overhead for no
+  orchestration leverage.
+- **gate** is one judgment call plus one idempotent installer run, no
+  loop.
+- **breakdown** comes closest but its only "fan-out" is a few scout calls
+  plus one *optional*, single conditional critic call — not the loop/
+  fan-out shape a Workflow script exists for.
+
+Being "mechanical" (no model judgment) is necessary but not sufficient —
+the real bar is orchestration complexity a script would meaningfully
+improve, which none of these six have today. The two skills with genuine
+multi-agent fan-out and loops (drain, build) already have ultra paths;
+this survey found no gap to close. Revisit if any of these six later
+grows real fan-out (e.g. breakdown's critic pass becoming a multi-lens
+panel) rather than converting speculatively now.
+
 ## Links
 
 - Spec: [`specs/ultra-mode/SPEC.md`](../../specs/ultra-mode/SPEC.md)
