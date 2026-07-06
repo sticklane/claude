@@ -217,7 +217,61 @@ and this session's own pid for workers this session started. Ignore it.
   (a leftover process refreshing mtimes). It does NOT silently sweep and
   does NOT wait forever. A zombie-reported task leaves the parked set and is
   treated like `blocked` for step 4's trigger and the final report; its
-  status stays `in-progress`.
+  status stays `in-progress`. At escalation drain also appends the
+  suspected-zombie `## Progress` entry (its normal stopping-point record),
+  so the state survives a baton pass.
+- **Window-slot vs. Touch claim (R9.2).** Under a rolling window, a
+  zombie-escalated task **releases its window slot** — drain keeps
+  admitting other tasks into the freed slot — but its **`Touch:` claim
+  persists**: its committed `Status:` stays `in-progress`, so R1's claim
+  set (SKILL.md step 2) already covers it with no separate store. A pending
+  task whose `Touch:` overlaps the zombie's is therefore **refused
+  admission and reported "blocked by suspected zombie `<task>`"** in the
+  final report, not silently starved — starvation surfaced to a human, the
+  same terminal shape as `blocked`, not a hang. A task that does NOT
+  overlap the zombie's Touch is unaffected and still admitted (the zombie
+  does not count against window emptiness).
+
+**Termination (R9): no deadlock, no livelock.** The scheduler is
+deadlock-free by construction, and this reference preserves the three
+properties that keep it so:
+
+1. **No hold-and-wait cycle.** Admission is the only wait, and it waits
+   only on in-flight runs; a worker never waits on queue state, another
+   worker, or a merge — so the wait graph (tasks → runs) is bipartite and
+   acyclic by shape. Never add a worker-side wait on a sibling ("pause
+   until task N merges"); cross-task needs are `Depends on:` edges resolved
+   at admission.
+2. **Every in-flight run terminates.** The Budget ceiling, the stale-lock
+   sweep, and the 4-extension zombie escalation bound each run; a
+   zombie-escalated run releases its slot but keeps its Touch claim per
+   R9.2 above.
+3. **The pending set shrinks or the run ends — termination check (R9.3).**
+   When admission is **ACTIVE** — never while admissions are held for an R8
+   baton drain-down or an R8a tournament, where free slots are deliberate
+   policy — and the admission function, actually evaluated, returns
+   **empty**, drain must detect an **unsatisfiable remainder** (a `Depends
+   on:` cycle, or every remaining pending task transitively depending on
+   tasks that cannot complete this run — blocked/failed/deferred, or
+   `in-progress` without a live window slot, i.e. a suspected zombie) and
+   route to the batch interview / final report (SKILL.md step 4) instead of
+   waiting for a dispatch that can never come. The check is mechanical:
+   committed headers give statuses and dependency edges; the run's own
+   window membership distinguishes a live in-progress from a zombie.
+   Suppressed admission (a drain-down or tournament hold) is policy, not
+   starvation — the check re-arms when the hold lifts.
+
+Livelock is excluded by the existing bounded counters, which the rolling
+window loosens none of: one mechanical rebase per branch, one slot-machine
+relaunch and one tournament per task per run, one re-dispatch after a
+sweep-race BLOCKED, four liveness-window extensions per parked task, ten
+baton generations. Every retry path is a bounded counter, never
+wait-and-retry-forever. The scheduler is a deterministic function of two
+inputs — committed task headers plus the run's in-flight window membership
+(which supplies slot counts and live-vs-zombie) — so repeated
+re-computation cannot oscillate: admission order is the deterministic
+tie-break, and a task refused admission is refused for a reason that only
+monotonically resolves (an in-flight task lands, or the run ends).
 
 **Residual risk (accepted).** The activity signal can go silent on a live
 worker for a full window — long read-only phases, or writes landing only
@@ -411,6 +465,19 @@ Verifier votes triple verifier cost inside tournaments only — bounded
 by the at-most-one-tournament-per-task rule — and the tournament
 remains inside the human-authorized /drain launch (docs/human-gates.md).
 
+**Emptied-window dispatch (R8a).** Under a rolling window (SKILL.md
+step 2, W>1), a task that qualifies for a tournament first **holds all new
+admissions** and waits for every in-flight sibling to land — collecting
+each verdict per SKILL.md step 3 — then dispatches the tournament's three
+workers into the otherwise-**empty window**. Total live workers during a
+tournament is exactly **3, regardless of W** (this matches sequential
+drain, where a tournament's three workers are already the only ones running
+— including at W=1, where 3 is the deliberate, pre-existing exception to
+the cap). Admissions resume only after the tournament's verdict routing
+completes. The latency cost is accepted: tournaments are rare (at most one
+per task per run) and the window-empty dispatch removes every cap/slot
+ambiguity.
+
 **Generate.** Delete any existing `task/NN-<slug>-t*` branches and
 worktrees, then launch three concurrent `implementation-worker` agents at
 the same frontier override the relaunch already used (Claude default:
@@ -549,6 +616,22 @@ needs-attention note instead of respawning. The
 relaunch uses a NEW orchestrator flag set — NOT the Headless-fallback
 worker flags above, which deliberately exclude the Task tool and would
 abort the orchestrator's first worker dispatch.
+
+**Drain-down before the baton (R8).** Background workers notify only the
+session that launched them, so a successor generation cannot adopt
+in-flight workers. When the relaunch trigger fires (verdict count or
+degradation override, SKILL.md step 3a) under a rolling window, drain
+enters **drain-down**: it **stops admitting**, waits for **every in-flight
+worker's verdict**, records and commits each per SKILL.md step 3, and only
+then — window empty, no live workers — writes the baton and relaunches. The
+baton's verdict counter counts **recorded verdicts regardless of window
+size**; per-in-flight-worker parked-task liveness checks run unchanged. A
+drain-down that itself stalls on a parked worker rides the existing
+liveness machinery — window extensions, then zombie escalation — after
+which the baton is written with the zombie recorded as a needs-attention
+entry (its suspected-zombie `## Progress` entry survives the pass). During
+a drain-down the R9.3 termination check is suppressed: the free slots are
+deliberate, not starvation (Stale-lock liveness check, "Termination (R9)").
 
 **DRAIN-BATON.md format.** Single-line `Key: value` headers plus a
 free-form log body:

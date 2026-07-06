@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 30 turns
@@ -105,32 +105,37 @@ prose around them, never edits their sentences.
 
 ## Acceptance
 
-- [ ] `grep -c 'Parallel-window' .claude/skills/drain/SKILL.md` → ≥ 1
-- [ ] `grep -c '^- Group:\|Group:' .claude/skills/drain/SKILL.md` → ≥ 1
+- [x] `grep -c 'Parallel-window' .claude/skills/drain/SKILL.md` → ≥ 1
+- [x] `grep -c '^- Group:\|Group:' .claude/skills/drain/SKILL.md` → ≥ 1
       (drain documents the consuming side of the grammar pinned in
       specs/drain-rolling-window/SPEC.md's Parallelization section)
-- [ ] `grep -n 'Group throughput mode' .claude/skills/drain/SKILL.md` →
+- [x] `grep -n 'Group throughput mode' .claude/skills/drain/SKILL.md` →
       no output (the strict-barrier heading is gone)
-- [ ] `grep -c "DRAIN-OWNER" .claude/skills/drain/SKILL.md` → ≥ 2 (claim +
+- [x] `grep -c "DRAIN-OWNER" .claude/skills/drain/SKILL.md` → ≥ 2 (claim +
       release, unchanged from specs/multi-session-coordination)
-- [ ] `grep -n "compare-and-swap\|exact-match" .claude/skills/drain/SKILL.md`
+- [x] `grep -n "compare-and-swap\|exact-match" .claude/skills/drain/SKILL.md`
       → non-empty
-- [ ] `grep -c "pull --rebase" .claude/skills/drain/SKILL.md` → ≥ 1
-- [ ] `grep -c "Run-token" .claude/skills/drain/reference.md` → ≥ 2
-- [ ] `grep -ci "tournament" .claude/skills/drain/reference.md` → ≥ 1 and
+- [x] `grep -c "pull --rebase" .claude/skills/drain/SKILL.md` → ≥ 1
+- [x] `grep -c "Run-token" .claude/skills/drain/reference.md` → ≥ 2
+- [x] `grep -ci "tournament" .claude/skills/drain/reference.md` → ≥ 1 and
       `grep -ci "emptied\|empty window\|window-empty" .claude/skills/drain/reference.md`
       → ≥ 1 (R8a's emptied-window rule is present)
-- [ ] `grep -ci "zombie" .claude/skills/drain/reference.md` → ≥ 1 and
+- [x] `grep -ci "zombie" .claude/skills/drain/reference.md` → ≥ 1 and
       `grep -ci "blocked by suspected zombie" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md`
       → ≥ 1
-- [ ] R2 top-up is stated, not just admission: `grep -ci "top.up\|re-computes admission\|refills the window" .claude/skills/drain/SKILL.md`
+- [x] R2 top-up is stated, not just admission: `grep -ci "top.up\|re-computes admission\|refills the window" .claude/skills/drain/SKILL.md`
       → ≥ 1
-- [ ] R3's rebase recovery is stated: `grep -ci "scratch worktree\|throwaway.*worktree" .claude/skills/drain/SKILL.md`
+- [x] R3's rebase recovery is stated: `grep -ci "scratch worktree\|throwaway.*worktree" .claude/skills/drain/SKILL.md`
       → ≥ 1
-- [ ] R4's merge-time Touch enforcement is stated (this is the spec's
+- [x] R4's merge-time Touch enforcement is stated (this is the spec's
       headline safety requirement — closing the plan-time-only
       enforcement gap — and must be verifiable here, not only inferred
       from good-behavior fixtures elsewhere in this spec):
       `grep -ci "subset of the task" .claude/skills/drain/SKILL.md` → ≥ 1,
       and the text names the consequence: `grep -ci "merge failure\|slot.machine" .claude/skills/drain/SKILL.md`
       → ≥ 1
+
+Evidence: all 12 criteria verified green by the verifier agent (fresh eyes,
+base 5e8fc23) — full per-criterion command output in
+../evidence/01-drain-rolling-window-scheduler.md. Verdict PASS, no scope
+creep (only the two drain skill files + this task file changed).

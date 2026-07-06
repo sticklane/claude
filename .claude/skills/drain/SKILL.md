@@ -91,7 +91,7 @@ flip the task to `pending` and commit the flip (slot machine — never resume
 a dead run; rescue branches are forensic only). Full procedure in
 reference.md's Status field semantics.
 
-## 2. Dispatch (one worker, or one independent group)
+## 2. Dispatch (a rolling window of W workers)
 
 Every worker drain dispatches runs at the **implementation-worker tier pin**
 on attempt 1 (Claude default: `opus`; other runtimes map the pin in their
@@ -121,32 +121,88 @@ does (numbers within a spec, task-file-relative paths across specs) —
 then lexicographic task-file path. Drain computes the order; the model
 never reorders the queue mid-run.
 
-Sequential by default — merges stay trivial and spend stays bounded.
-**Group throughput mode** (formerly the separate /parallel skill, folded in
-here): when the user asked for throughput, dispatch an independent group of
-tasks concurrently — every group worker launched in one message, each at
-the worker tier pin, using drain's worker prompt and drain's step-3
-collection per verdict. A group is independent only when: no `Depends on`
-edges between members, disjoint `Touch` lists, every member has runnable
-acceptance criteria, and the group passes /breakdown's decision-coupling
-test (members sharing an undecided design choice serialize even with
-disjoint `Touch` lists) — read the spec's Parallelization section, or
-derive independence from the headers. Size the group by the task map,
-never a default maximum; parallelism multiplies token spend, so it buys
-wall-clock time, not efficiency. Group sequencing overrides the
-one-task-at-a-time flow below: flip every member's `Status: in-progress`
-and commit them in one commit (drain stays the single writer); cut all
-member worktrees from that commit; launch all group workers in one
-message; then wait for all completion notifications — collecting each
-verdict via step 3 as it arrives — before dispatching anything else.
-Merge the group's DONE branches in task
-order. Disjoint `Touch` lists don't guarantee clean merges (lockfiles,
-barrel files, snapshots): when a member's merge conflicts with another
-member's already-merged work, or a post-merge gate failure appears during
-group integration — cross-task interference is indistinguishable from the
-task's own failure at that point — stop the group's remaining merges and
-report which merged cleanly, instead of routing the failure into the slot
-machine (a fresh attempt cannot fix an interaction between members).
+**Rolling window of W workers.** Instead of a strict group barrier (flip
+every member in one commit, launch all, wait for all, then merge), drain
+keeps up to **W** workers in flight at once and tops the window up on every
+verdict. At W=1 this reduces to today's sequential drain: one worker,
+admitted alone, merged before the next is admitted; merges stay trivial and
+spend stays bounded.
+
+**Window size W.** Default **1** (today's behavior). A `Parallel-window: N`
+header in the drained SPEC.md opts the queue in at W=N. An explicit user
+request at /drain invocation overrides the header: a request naming a
+number sets W to it; a bare throughput request ("in parallel", "for
+throughput") sets W=3, the research default. **Hard cap: W ≤ 5**, and W
+caps TOTAL live workers, not window bookkeeping (research puts the writer
+sweet spot at 3–5; >5 is reserved for read-only fan-outs). The sole
+exception is a tournament, which runs its three workers in an
+otherwise-empty window (reference.md, "Tournament", R8a).
+
+**Admission (R1).** A pending task enters the window only when all hold:
+
+- `Status: pending` and every `Depends on:` dependency is `done`;
+- its `Touch:` list is pairwise-disjoint from the **claim set** — the
+  `Touch:` of every task whose committed `Status:` is `in-progress`,
+  whether it holds a live window slot or is a suspected zombie (zombies
+  keep `Status: in-progress`, so the claim set is computable from committed
+  headers alone);
+- it is **co-admissible** with every in-flight task: two tasks may be in
+  flight together iff some single `Group:` line in the owning spec's
+  Parallelization section names both. A pending task named on no `Group:`
+  line — or in a spec with no Parallelization section — runs only **alone**:
+  admitted when the window is empty, and nothing else is admitted while it
+  runs. **"Window empty" means zero live in-flight workers** — a suspected
+  zombie does not count against emptiness; its persisting Touch claim gates
+  only Touch-overlapping admissions (reference.md, R9.2), so a solo task is
+  not starved behind a zombie it does not overlap.
+
+**`Group:` grammar.** The owning spec's Parallelization section pins
+co-admissible groups as one line per group, format
+`- Group: NN, NN[, NN...]` — comma-and-space-separated two-digit task
+numbers matching each task file's `NN-` prefix. Two tasks may run
+concurrently only if a single `Group:` line names both; a task on no line
+runs alone. This is the grammar pinned in
+specs/drain-rolling-window/SPEC.md's Parallelization section and emitted by
+/breakdown — drain parses these lines rather than re-deriving independence
+from prose, so keep this wording consistent with that spec and breakdown's
+producer side. The decision-coupling test still governs what may share a
+line (members sharing an undecided design choice serialize even with
+disjoint `Touch` lists); drain only consumes the resulting lines.
+
+**Top-up on verdict, not on wave (R2).** After each verdict is collected
+and (for DONE) merged + pushed, drain **re-computes admission and refills
+the window** to W. There is no wave boundary and no all-members-one-commit
+flip: each admission is one committed `Status: in-progress` flip for one
+task (below), so the CAS/push hygiene of specs/multi-session-coordination
+composes unchanged. Size the live fleet by the task map, never a default
+maximum; parallelism multiplies token spend, so it buys wall-clock time,
+not efficiency.
+
+**Serial merge queue with mechanical rebase recovery (R3).** Merges stay
+strictly serial — one at a time, in verdict-landing order. If a branch's
+merge conflicts because a sibling merged after this branch's base was cut,
+attempt exactly one `git rebase main`, executed in a
+**throwaway scratch worktree** cut for the rebase — the normal path, since
+harness-managed
+worker worktrees are typically reaped when the worker returns its verdict,
+before the serial merge reaches the branch; if the worker's own worktree
+happens to survive, drain may reuse it instead. **Never `git checkout` a
+task branch in the shared checkout** (composing with
+multi-session-coordination's Tier-2 invariant: merges happen on the default
+branch, workers live in worktrees). A clean rebase proceeds to the normal
+DONE bookkeeping (step 3); a rebase that still conflicts routes to the
+existing cross-task interference rule — stop the remaining merges and
+report which landed cleanly, never slot-machine, since a fresh attempt
+cannot fix an interaction between siblings.
+
+**Runtime Touch enforcement at merge (R4).** Extend the merge-time
+whitelist diff (step 3): the branch's changed paths must be a
+**subset of the task's `Touch:` list** plus its own task file plus the
+spec's
+`evidence/` dir. Any path outside that set is a **merge failure** (the
+slot-machine path), closing the gap where file ownership was enforced only
+at plan time (/breakdown's decision-coupling test + human review) and never
+mechanically at runtime.
 
 **The flip is compare-and-swap.** Re-read the task file immediately
 before flipping — the flip is an exact-match edit of the literal
