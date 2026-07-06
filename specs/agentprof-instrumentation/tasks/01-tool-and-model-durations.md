@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -61,11 +61,15 @@ parser files after this task.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./...` → pass, including the new R1/R3
+- [x] `cd agentprof && go test ./...` → pass, including the new R1/R3
       fixture tests (exact known-delta match; negative delta → exactly 0).
-- [ ] `cd agentprof && go test ./... -run 'Pending'` → pass: unresolved
+      Evidence: verifier ran `go test ./...` — all packages ok; see evidence/01-tool-and-model-durations.md.
+- [x] `cd agentprof && go test ./... -run 'Pending'` → pass: unresolved
       `tool_use` yields `tool:(pending)` with empty Values, asserted on the
       parsed sample slice directly (R2).
-- [ ] `cd agentprof && go test ./... -run 'Duration'` → pass: model-call
+      Evidence: verifier confirmed TestPendingToolUseHasEmptyValues PASS (empty Values on the parsed slice).
+- [x] `cd agentprof && go test ./... -run 'Duration'` → pass: model-call
       `duration_ms` present on all but each transcript's first sample (R3).
-- [ ] `cd agentprof && gofmt -l . | wc -l` → 0.
+      Evidence: verifier confirmed 4 targeted Duration tests PASS (first-sample omission + tool_result-as-previous-line).
+- [x] `cd agentprof && gofmt -l . | wc -l` → 0.
+      Evidence: verifier confirmed `gofmt -l . | wc -l` → 0.
