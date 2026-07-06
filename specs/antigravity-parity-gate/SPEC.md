@@ -107,8 +107,9 @@ produce there.
 
 - [ ] `bash tests/test_antigravity_parity.sh` exits 0 against the current
       repo state, after `workflow-author`'s exemption row (R3) is added —
-      confirming every one of the 16 skills + 3 agents is either mirrored
-      or exempted.
+      confirming every one of the 18 skills + 4 agents (counts as of this
+      writing; the script enumerates dynamically so it stays correct as
+      skills/agents are added) is either mirrored or exempted.
 - [ ] Temporarily removing `fleet`'s "Not ported" row from
       `antigravity/README.md` and re-running the script (fixture): it
       fails, naming `fleet` as uncovered.
@@ -123,3 +124,9 @@ produce there.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Single-task decomposition — `tasks/01-parity-gate-script.md` covers the
+entire spec (script + exemption row). No parallel groups; there is
+nothing to run concurrently against.
