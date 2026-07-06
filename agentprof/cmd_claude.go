@@ -39,6 +39,13 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "agentprof claude: no samples found (check --claude-dir and --days)")
 		return 1
 	}
+	if *out == "summary" {
+		if err := writeSummary(samples, stdout); err != nil {
+			fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
+			return 1
+		}
+		return 0
+	}
 	if *nameTurns {
 		nameTurnFrames(samples, turns, stderr)
 	}
