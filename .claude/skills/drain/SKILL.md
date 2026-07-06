@@ -93,10 +93,10 @@ Status field semantics.
 ## 2. Dispatch (one worker, or one independent group)
 
 Every worker drain dispatches runs at the **implementation-worker tier pin**
-on attempt 1 (Claude default: `sonnet`; other runtimes map the pin in their
+on attempt 1 (Claude default: `opus`; other runtimes map the pin in their
 `runtimes/` profile's Role pins table) — step 3 walks failures up the
-ladder: a single relaunch one tier up, then one tournament at the frontier
-tier — and each is told to delegate its own
+ladder: a single relaunch at the frontier tier, then one tournament at that
+same frontier tier — and each is told to delegate its own
 mechanical scouting to Haiku
 (`effort: low`) scouts and to return only a structured **verdict +
 evidence**, never its transcript
@@ -157,8 +157,9 @@ proceeding as if it owned the task). Set `Status: in-progress` and
 worker's worktree is cut from this commit, so it must contain current
 statuses and any `## Answers`. After committing, re-read the file at
 HEAD and confirm your own flip is present before dispatching. Then
-launch ONE background `general-purpose` agent at the worker tier pin
-(Claude default: `sonnet`) with
+launch ONE background `implementation-worker` agent (`.claude/agents/implementation-worker.md`
+pins the tier structurally — Claude default: `opus` — independent of whatever
+model the calling session runs, so this is never a per-dispatch reminder) with
 `isolation: worktree` using the worker prompt in [reference.md](reference.md) — the /build
 procedure plus the defer contract: **the worker never asks the human and
 never edits queue state; on ambiguity it stops with verdict DEFERRED and
@@ -203,16 +204,19 @@ itself flips the status to `done` and commits the flip.)
   each of its own commits.
   If the merge or gates fail: run `git merge --abort` first (a failed
   merge leaves the checkout wedged in a conflicted state), then slot
-  machine — discard the branch, relaunch once, one tier up from the pin
-  (Claude default: `sonnet` → `opus`), with the verifier's failure
+  machine — discard the branch, relaunch once, one tier up from the pin:
+  dispatch `implementation-worker` again with an explicit `model` override
+  (Claude default: `opus` → `fable` — a retry after a deep-tier attempt
+  failed, the frontier-tier sanction in
+  `.claude/rules/token-discipline.md`), with the verifier's failure
   evidence — never the failed transcript — in the prompt. A second failure routes
   into one tournament (at most one per task per drain run; procedure in
   reference.md "Tournament") instead of straight to `Status: failed`:
   sweep any leftover `task/NN-<slug>-t*` branches/worktrees, then dispatch
-  three concurrent background workers a further tier up, at the frontier
-  pin (Claude default: `fable` — tournament entrants are attempts 3+,
-  retries after a deep-tier attempt failed, the one dispatch point
-  token-discipline sanctions frontier for), `isolation: worktree`, each on its
+  three concurrent `implementation-worker` agents at that same frontier
+  override (Claude default: `fable` — tournament entrants are attempts 3+,
+  continuing at the tier the relaunch already justified, now run as 3
+  concurrent angle-variant attempts instead of 1), `isolation: worktree`, each on its
   own `task/NN-<slug>-tN` branch with an angle-variant prompt carrying the
   failure evidence from both prior attempts. If the tournament winner's
   merge fails, likewise run `git merge --abort` before moving to the

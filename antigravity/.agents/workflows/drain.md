@@ -99,9 +99,9 @@ this sweep.
    task-file-relative paths across specs) — then lexicographic task-file
    path. The workflow computes the order; the model never reorders the
    queue mid-run. Every worker runs at the **worker tier** on attempt 1
-   (a Flash-class model in the Agent Manager picker; Gemini mapping in
+   (a Pro-class model in the Agent Manager picker; Gemini mapping in
    the toolkit's `runtimes/antigravity.md` Role pins) — retries escalate
-   one tier up, per step 4's relaunch and tournament — and each is told to
+   to the frontier rung, per step 4's relaunch and tournament — and each is told to
    delegate its own mechanical scouting to Haiku (`effort: low`) scouts and
    to return only a structured **verdict + evidence**, never its transcript
    (`.claude/rules/token-discipline.md`, Dispatch authoring). **The flip
@@ -120,7 +120,7 @@ this sweep.
    worktree base to a lagging tracking ref, force-sync it to the default
    branch before working), then give
    the user one Agent Manager launch — a fresh agent at the worker tier
-   (Flash-class in the picker)
+   (Pro-class in the picker)
    on that worktree
    with this prompt (fill the <>; resolve the build workflow to a
    concrete path, resolved at dispatch — `.agents/workflows/build.md` in
@@ -171,7 +171,7 @@ this sweep.
    lists, runnable acceptance criteria per member, and the breakdown
    workflow's decision-coupling test passes — create one worktree per
    member and hand the user the whole launch list at once: one Agent
-   Manager agent per task at the worker tier (Flash-class in the picker),
+   Manager agent per task at the worker tier (Pro-class in the picker),
    each with step 2's prompt. Size the group by the task map, never a
    default maximum — concurrency multiplies token spend. Group sequencing
    overrides one-task-at-a-time: flip every member's
@@ -215,7 +215,9 @@ this sweep.
    after each of its own commits. On merge/gate
    failure run `git merge --abort` (a failed merge leaves the checkout
    wedged in a conflicted state), discard the branch, and relaunch once,
-   one tier up in the model picker (Flash-class → Pro-class), with the
+   one tier up in the model picker (Pro-class → the strongest model in
+   the picker, the frontier rung — a retry after a deep-tier (Pro-class)
+   attempt failed), with the
    verifier's failure evidence — never the failed transcript — in the
    prompt; a second miss routes into
    step 4's tournament instead of straight to `Status: failed`. DEFERRED → write
@@ -316,9 +318,10 @@ this sweep.
      `git worktree add -b task/NN-<slug>-t1 ../<repo>-task-NN-t1` (and
      likewise `-t2`, `-t3`).
    - Generate: give the user three Agent Manager launches, each on the
-     strongest model in the picker — the frontier rung; tournament
-     entrants are attempts 3+, after the Pro-class relaunch failed —
-     step 2's
+     strongest model in the picker — the frontier rung, the same tier the
+     relaunch already used; tournament entrants are attempts 3+, continuing
+     at the tier justified when the relaunch escalated after attempt 1's
+     Pro-class attempt failed — step 2's
      prompt plus the prior failure evidence plus one angle each, every
      angle overriding the branch name: (t1) commit to
      `task/NN-<slug>-t1`, minimal diff — smallest change that passes

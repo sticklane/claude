@@ -31,13 +31,13 @@ model programmatically.
 | Role                                                                  | Antigravity default (model picker)                                            |
 | --------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | session default                                                       | the Agent Manager conversation's model (no plan/execution split exists)       |
-| implementation workers                                                | Flash-class                                                                   |
+| implementation workers                                                | Pro-class — deep-tier adopted default, mirroring claude-code's `opus` pin    |
 | explore / codebase-search                                             | Flash-class — the cheapest Flash variant in the picker                        |
 | verifier (acceptance evidence; advisory reviewer lane)                | Flash-class                                                                   |
 | spec/plan/diff critic                                                 | Pro-class — deep-tier work; a critic pass costs ~1% of a wrong implementation |
 | distill workflow                                                      | Pro-class / the strongest model in the picker                                 |
-| retry escalation (attempt 2, verifier evidence in prompt)             | one step up in the picker: Flash-class → Pro-class                            |
-| tournament escalation (attempts 3+, after the Pro-class retry failed) | the strongest model in the picker — Antigravity's frontier rung               |
+| retry escalation (attempt 2, verifier evidence in prompt)             | the strongest model in the picker — a retry after a deep-tier (Pro-class) attempt failed |
+| tournament escalation (attempts 3+, after the frontier retry failed)  | the strongest model in the picker — Antigravity's frontier rung               |
 
 ## Headless
 
