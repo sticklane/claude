@@ -76,5 +76,5 @@ version bump.
 - [ ] `diff .claude/skills/prioritize/prioritize_scan.py antigravity/.agents/skills/prioritize/prioritize_scan.py && diff .claude/skills/prioritize/test_prioritize_scan.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → identical
 - [ ] `test -f antigravity/.agents/workflows/prioritize.md` → exit 0
 - [ ] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep -q '"version"'` → version bumped in this task's commit range (equivalently: plugin.json version > 0.8.12)
-- [ ] `bash scripts/check.sh` → green
+- [ ] `python3 -m pytest .claude/skills/prioritize/ .claude/skills/workboard/ .claude/skills/list-specs/ -q` → all pass (this repo has no top-level scripts/check.sh; these suites are the relevant gates)
 - [ ] MANUAL-PENDING (spec acceptance bullets 4–7): interactive fixture run of `/prioritize` in a fresh session — apply-one-change/invalid-ref/"none" behaviors and the end-to-end run in this repo. Not orchestrator-resolvable (needs an interactive human session with a `disable-model-invocation` skill); the human ticks this after trying it.
