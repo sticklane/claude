@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 6 turns
@@ -17,5 +17,5 @@ Task 05's own acceptance criterion hard-coded the pre-task `plugin.json` version
 
 ## Acceptance
 
-- [ ] `grep -ci "base commit" .claude/skills/breakdown/SKILL.md` → ≥ 1, in the vicinity of acceptance-criteria authoring guidance
-- [ ] The new guidance text does not remove or contradict any existing acceptance-authoring rule
+- [x] `grep -ci "base commit" .claude/skills/breakdown/SKILL.md` → ≥ 1, in the vicinity of acceptance-criteria authoring guidance — verifier PASS: count 1, match at SKILL.md:76 in the new paragraph under Procedure step 3, right after the antigravity-mirror acceptance-check note; evidence specs/drain-rolling-window/evidence/10-version-bump-criteria-use-relative-check.md
+- [x] The new guidance text does not remove or contradict any existing acceptance-authoring rule — verifier PASS: `git diff` shows a purely additive 6-line hunk (0 deletions); it is the only version-bump guidance in the file, contradicting nothing existing; evidence specs/drain-rolling-window/evidence/10-version-bump-criteria-use-relative-check.md
