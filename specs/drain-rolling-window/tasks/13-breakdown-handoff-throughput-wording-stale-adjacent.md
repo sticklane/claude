@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Discovered-from: specs/drain-rolling-window/tasks/09-fix-stale-group-mode-antigravity-handoff.md
 Spec: ../SPEC.md
 Blocking: no
@@ -11,5 +11,5 @@ Decision (2026-07-06): task 09 is done and its wording is available — `antigra
 
 ## Acceptance
 
-- [ ] `! grep -q 'dispatch independent groups concurrently' .claude/skills/breakdown/SKILL.md` → exits 0 (stale pre-rolling-window phrase gone; currently present)
-- [ ] `grep -qi 'rolling window' .claude/skills/breakdown/SKILL.md` → exits 0 (Hand off names the rolling window; currently only the hyphenated spec slug appears)
+- [x] `! grep -q 'dispatch independent groups concurrently' .claude/skills/breakdown/SKILL.md` → exits 0 (stale pre-rolling-window phrase gone; currently present) — verifier PASS, exit 0 (evidence/13-breakdown-handoff-throughput-wording-stale-adjacent.md)
+- [x] `grep -qi 'rolling window' .claude/skills/breakdown/SKILL.md` → exits 0 (Hand off names the rolling window; currently only the hyphenated spec slug appears) — verifier PASS, match at line 128 in ## Hand off (evidence/13-breakdown-handoff-throughput-wording-stale-adjacent.md)
