@@ -1184,6 +1184,90 @@ def compute_spend(claude_home, session_ids):
     }
 
 
+_MODEL_DATE_RE = re.compile(r"-\d{8}$")
+
+
+def _short_model_name(model_id):
+    """R6 badge short name: drop the `claude-` prefix and a trailing
+    `-YYYYMMDD` date; ids not matching that shape render verbatim."""
+    name = model_id
+    if name.startswith("claude-"):
+        name = name[len("claude-"):]
+    return _MODEL_DATE_RE.sub("", name)
+
+
+def _fmt_dollars(cost_microusd):
+    return f"${cost_microusd / 1_000_000:.2f}"
+
+
+def _fmt_tokens(n):
+    """Human-readable token count, e.g. 1_500_000 -> `1.5M`."""
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}K"
+    return str(n)
+
+
+def _session_badge(session_spend):
+    """R6: `$<dollars> <short-model>` for a session, or `unpriced
+    <short-model>` when every contributing row is unpriced. Returns None
+    when the session has no summary rows (no badge — never `$0.00`)."""
+    if not session_spend:
+        return None
+    models = session_spend.get("models") or {}
+    if not models:
+        return None
+    # Dominant model: highest cost, tie or all-zero -> most output tokens.
+    dominant = max(
+        models,
+        key=lambda m: (models[m]["cost_microusd"], models[m]["output_tokens"]),
+    )
+    short = _short_model_name(dominant)
+    if any(m["priced"] for m in models.values()):
+        return f"{_fmt_dollars(session_spend['cost_microusd'])} {short}"
+    return f"unpriced {short}"
+
+
+def render_spend_section(spend):
+    """R7/R8/R10: the "Spend by model" section — a per-model table when spend
+    is available, else a single hint line. Self-contained, meaning never
+    carried by color alone (`unpriced` reads as text)."""
+    if not spend or not spend.get("available"):
+        reason = (spend or {}).get("reason") or "unknown"
+        return (
+            "<section><h2>Spend by model</h2>"
+            f'<p class="muted-text">spend data unavailable: {esc(reason)}</p>'
+            "</section>"
+        )
+    by_model = spend.get("by_model") or []
+    if not by_model:
+        return (
+            "<section><h2>Spend by model</h2>"
+            '<p class="muted-text">no spend recorded</p></section>'
+        )
+    rows = []
+    for m in by_model:
+        if m["priced"]:
+            cost_cell = f"<td class='num'>{_fmt_dollars(m['cost_microusd'])}</td>"
+        else:
+            cost_cell = "<td class='num'>— <span class='chip'>unpriced</span></td>"
+        rows.append(
+            f"<tr><td class='strong'>{esc(m['model'])}</td>"
+            f"<td class='num'>{_fmt_tokens(m['input_tokens'])}</td>"
+            f"<td class='num'>{_fmt_tokens(m['output_tokens'])}</td>"
+            f"<td class='num'>{_fmt_tokens(m['cache_read_tokens'])}</td>"
+            f"<td class='num'>{_fmt_tokens(m['cache_write_tokens'])}</td>"
+            f"{cost_cell}</tr>"
+        )
+    return (
+        "<section><h2>Spend by model</h2>"
+        "<table><thead><tr><th>model</th><th>input</th><th>output</th>"
+        "<th>cache read</th><th>cache write</th><th>cost</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></section>"
+    )
+
+
 def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFAULT):
     claude_home = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
     sessions = scan_sessions(claude_home, stale_days)
@@ -1520,22 +1604,28 @@ def render_filter_tiles(data):
     )
 
 
-def _session_timeline_html(sessions):
+def _session_timeline_html(sessions, by_session=None):
     """Sessions rendered via the shared viz.timeline() Gantt instead of a
     flat table; state values (active/recent/idle/stale) all map through
-    viz.canonical_status without falling through to "open"."""
+    viz.canonical_status without falling through to "open". When spend data
+    is available, each session's label is prefixed with its cost badge (R6);
+    viz.timeline() escapes labels, so the badge is plain text (R10)."""
     if not sessions:
         return '<p class="muted-text">no sessions recorded</p>'
-    rows = [
-        {
-            "label": s["prompt"],
-            "status": s["state"],
-            "start_ts": s["start_ts"],
-            "end_ts": s["end_ts"],
-            "tooltip": f"{s['branch'] or '?'} · last active {age_str(s['last_ts'])} ago",
-        }
-        for s in sessions
-    ]
+    by_session = by_session or {}
+    rows = []
+    for s in sessions:
+        badge = _session_badge(by_session.get(s["id"]))
+        label = f"{badge} · {s['prompt']}" if badge else s["prompt"]
+        rows.append(
+            {
+                "label": label,
+                "status": s["state"],
+                "start_ts": s["start_ts"],
+                "end_ts": s["end_ts"],
+                "tooltip": f"{s['branch'] or '?'} · last active {age_str(s['last_ts'])} ago",
+            }
+        )
     return viz.timeline(rows)
 
 
@@ -1609,6 +1699,8 @@ def _spec_health_marker(spec):
 
 def render_html(data):
     t = data["totals"]
+    spend = data.get("spend")
+    spend_by_session = (spend or {}).get("by_session") or {}
 
     tiles = "".join(
         f'<div class="tile"><div class="tile-value">{esc(v)}</div>'
@@ -1659,7 +1751,7 @@ def render_html(data):
         )
         dag_html = _spec_dag_html(r["specs"])
 
-        sess_html = _session_timeline_html(r["sessions"][:8])
+        sess_html = _session_timeline_html(r["sessions"][:8], spend_by_session)
         handoff_html = "".join(
             f'<p class="handoff">⚑ handoff: {esc(h["title"])} — '
             f"{cmd_html(handoff_pickup_cmd(r['path'], h['path']))}</p>"
@@ -1721,7 +1813,7 @@ def render_html(data):
     if data["orphan_sessions"]:
         orphan_html = (
             f"<section><h2>Sessions outside scanned repos</h2>{liveness_marker}"
-            f"{_session_timeline_html(data['orphan_sessions'][:20])}</section>"
+            f"{_session_timeline_html(data['orphan_sessions'][:20], spend_by_session)}</section>"
         )
 
     return TEMPLATE.format(
@@ -1737,6 +1829,7 @@ def render_html(data):
         antigravity=ag_html,
         todos=todo_html,
         orphans=orphan_html,
+        spend=render_spend_section(spend),
         viz_css=viz.VIZ_CSS,
     )
 
@@ -1879,6 +1972,7 @@ the attention items, excluded from the needs-attention count).
 Most severe first. Click any <code>command</code> or its copy button to copy it.</p>
 {inbox}</section>
 <section><h2>Repos</h2>{repos}</section>
+{spend}
 {antigravity}
 {todos}
 {orphans}
