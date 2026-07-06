@@ -578,9 +578,7 @@ def _dag_tasks(spec_tasks: list[dict]) -> list[dict]:
     return out
 
 
-def _adapt_board(
-    assembled: dict, running_agents: list, resumable_agents: list
-) -> dict:
+def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) -> dict:
     """Map workboard.assemble()'s result (`{repos, sessions, inbox, ready,
     totals, ...}` — workboard.py is the single source of scan/inbox logic
     per R4) to the board dict render_workboard consumes. The only translation
@@ -1247,10 +1245,10 @@ def render_workboard(b: dict) -> str:
                     "status": s["state"],
                     "start_ts": s["start_ts"],
                     "end_ts": s["last"],
-                    "tooltip": f'{s["branch"]} · {_ago(s["last"])}'
+                    "tooltip": f"{s['branch']} · {_ago(s['last'])}"
                     if s["branch"]
                     else _ago(s["last"]),
-                    "href": f'http://127.0.0.1:8901/ui/flamegraph?tf=session={quote(s["sid"], safe="")}',
+                    "href": f"http://127.0.0.1:8901/ui/flamegraph?tf=session={quote(s['sid'], safe='')}",
                 }
                 for s in vis[:6]
             ]
@@ -1405,7 +1403,21 @@ CSRF_TOKEN = secrets.token_urlsafe(24)
 
 
 def _tracked_repo_reals() -> set[str]:
-    return {os.path.realpath(str(r)) for r in parse_repos()}
+    """Repos a gated mutation will accept: the union of REPOS.md
+    (`parse_repos()`) and the Workboard's own repo-discovery walk
+    (`workboard.find_repos(default_roots())`). The two sources can diverge, so
+    unioning them keeps a repo visible on the board from being rejected by a
+    priority edit or agent kickoff (or vice versa). Fail soft: a failed walk
+    still yields the REPOS.md set."""
+    reals = {os.path.realpath(str(r)) for r in parse_repos()}
+    try:
+        reals |= {
+            os.path.realpath(str(r))
+            for r in workboard.find_repos(workboard.default_roots(), max_depth=3)
+        }
+    except Exception:
+        pass
+    return reals
 
 
 def _claude_run_bg(args: list[str], cwd: str):

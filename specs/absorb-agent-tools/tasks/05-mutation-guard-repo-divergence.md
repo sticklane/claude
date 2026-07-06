@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 16 turns
@@ -36,6 +36,6 @@ rejected by a priority-edit or agent-kickoff as "outside tracked repos"
 
 ## Acceptance
 
-- [ ] `cd agent-console && python3 -m pytest tests/test_parsers.py -v` → all pass, including the new divergence regression test
-- [ ] A repo present in a `default_roots()`-style root but absent from `REPOS.md` is accepted by `_tracked_repo_reals()` (verified by the new test, not just by inspection)
-- [ ] `grep -n 'def _tracked_repo_reals' agent-console/agent-console.py` shows it now reads from both `parse_repos()` and a `default_roots()`-equivalent walk (or a shared helper), not `parse_repos()` alone
+- [x] `cd agent-console && python3 -m pytest tests/test_parsers.py -v` → all pass, including the new divergence regression test — verifier: 24 passed, incl. both `TestTrackedReposUnionsDefaultRoots` tests (evidence/05-mutation-guard-repo-divergence.md)
+- [x] A repo present in a `default_roots()`-style root but absent from `REPOS.md` is accepted by `_tracked_repo_reals()` (verified by the new test, not just by inspection) — verifier: both new tests patch `parse_repos()`→[] and `default_roots()`→temp root, then exercise real `_tracked_repo_reals()`/`start_agent()`; both accept
+- [x] `grep -n 'def _tracked_repo_reals' agent-console/agent-console.py` shows it now reads from both `parse_repos()` and a `default_roots()`-equivalent walk (or a shared helper), not `parse_repos()` alone — verifier: body unions `parse_repos()` with `workboard.find_repos(workboard.default_roots(), max_depth=3)`, fail-soft; `parse_repos()` itself unchanged
