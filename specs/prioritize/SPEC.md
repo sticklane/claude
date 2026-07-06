@@ -138,3 +138,9 @@ commit.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+None — strictly serial. Task 02 depends on 01 (its SKILL.md invokes the
+script and its mirror byte-copies task 01's files), so there is no group
+with disjoint Touch and no dependency edge. Dispatch 01, then 02.
