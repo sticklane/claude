@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 10 turns
@@ -36,6 +36,9 @@ source to read a priority from until `workboard.py` provides one.
 
 ## Acceptance
 
-- [ ] `grep -n 'PRIORITY_RE' .claude/skills/workboard/workboard.py` → pattern definition present
-- [ ] `grep -n '"priority"' agent-console/agent-console.py` shows the adapter reading the scanned value, not a hardcoded `""` with the "not tracked" comment
-- [ ] `cd agent-console && python3 -m pytest tests/test_parsers.py -v` → all pass, including a new test asserting a spec with `Priority: P1` in its SPEC.md renders `<option value="P1" selected>` in `_prio_select`'s output, not the blank default
+- [x] `grep -n 'PRIORITY_RE' .claude/skills/workboard/workboard.py` → pattern definition present
+  - Evidence: `PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P\d)\]?", re.MULTILINE)` at workboard.py:206, used at :225 (evidence/06-workboard-priority-select-unset.md).
+- [x] `grep -n '"priority"' agent-console/agent-console.py` shows the adapter reading the scanned value, not a hardcoded `""` with the "not tracked" comment
+  - Evidence: agent-console.py:622 now `"priority": sp.get("priority", "")`, hardcoded `""` + "not tracked" comment removed (evidence/06-workboard-priority-select-unset.md).
+- [x] `cd agent-console && python3 -m pytest tests/test_parsers.py -v` → all pass, including a new test asserting a spec with `Priority: P1` in its SPEC.md renders `<option value="P1" selected>` in `_prio_select`'s output, not the blank default
+  - Evidence: 26 passed; `test_spec_priority_flows_from_specmd_to_selected_option` drives SPEC.md `Priority: P1` → scan → `_adapt_board` → `_prio_select` emitting `<option value="P1" selected>`; verifier confirmed red→green (evidence/06-workboard-priority-select-unset.md).

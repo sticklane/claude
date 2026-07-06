@@ -619,7 +619,7 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
                     "slug": sp["slug"],
                     "title": sp["title"],
                     "status": None,
-                    "priority": "",  # not tracked by workboard.py's scan
+                    "priority": sp.get("priority", ""),
                     "path": str(Path(r["path"]) / spec_path) if spec_path else "",
                     "done": done,
                     "total": total,
