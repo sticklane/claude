@@ -244,7 +244,12 @@ itself flips the status to `done` and commits the flip.)
   attempt toward the slot machine or tournament threshold, and reference.md's
   "Sweep-race BLOCKED verdict" note gives the status-dependent routing
   (re-dispatch when the task is `pending`/`blocked`; otherwise log and
-  discard — the rescue branch is the durable artifact).
+  discard — the rescue branch is the durable artifact). A cause naming an
+  account-wide runtime death (usage/weekly limit, auth/billing, persistent
+  429/5xx) is instead an **environment kill**: drain sweeps every live run
+  it owns, resets each to `pending`, and halts with no relaunch —
+  reference.md's "Environment kill" note has the detection signal and
+  run-wide halt.
 
 **Materialize discoveries.** Only the finally-routed verdict's report is
 recorded — the merged tournament winner or the final attempt; a discarded
