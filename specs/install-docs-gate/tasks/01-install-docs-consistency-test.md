@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 20 turns
@@ -77,21 +77,21 @@ committed.
 
 ## Acceptance
 
-- [ ] `bash tests/test_install_docs.sh` → exit 0, `fail: 0` (today's
+- [x] `bash tests/test_install_docs.sh` → exit 0, `fail: 0` (today's
       README.md/plugin.json/marketplace.json/antigravity files already
-      match)
-- [ ] A fixture tree with `plugin.json`'s top-level `name` changed: `bash
+      match) — verifier: `pass: 5 fail: 0`, exit 0 (evidence/01-install-docs-consistency-test.md)
+- [x] A fixture tree with `plugin.json`'s top-level `name` changed: `bash
       tests/test_install_docs.sh <fixture-root>` → non-zero exit, output
       names the plugin-name mismatch, and does not instead compare against
-      `author.name`
-- [ ] A fixture tree with `marketplace.json`'s `owner.name` changed: `bash
+      `author.name` — verifier: exit 1, `FAIL: plugin name mismatch: README install 'agentic' != plugin.json top-level name 'X'`, author.name decoy untouched
+- [x] A fixture tree with `marketplace.json`'s `owner.name` changed: `bash
       tests/test_install_docs.sh <fixture-root>` → non-zero exit, output
       names that mismatch, and does not instead compare against the nested
-      `plugins[0].name`
-- [ ] A fixture tree with `antigravity/.agents` renamed/removed: `bash
+      `plugins[0].name` — verifier: exit 1, `FAIL: owner mismatch: ... != marketplace.json owner.name 'Y'`, plugins[0].name decoy untouched
+- [x] A fixture tree with `antigravity/.agents` renamed/removed: `bash
       tests/test_install_docs.sh <fixture-root>` → non-zero exit, output
-      names the missing path
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` → exit 0
-      (new script picked up with no runner changes)
-- [ ] `git diff --name-only main` → only `tests/test_install_docs.sh` (plus
-      this task file)
+      names the missing path — verifier: exit 1, `FAIL: missing path: ...cp source '~/agentic-toolkit/antigravity/.agents' -> .../antigravity/.agents does not exist`
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` → exit 0
+      (new script picked up with no runner changes) — verifier: exit 0, all suites green including new script
+- [x] `git diff --name-only main` → only `tests/test_install_docs.sh` (plus
+      this task file) — verifier: diff limited to those two paths
