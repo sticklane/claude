@@ -2,6 +2,7 @@
 
 Status: open
 Priority: P0
+Parallel-window: 4
 
 ## Problem
 
@@ -239,8 +240,31 @@ rebase-onto-main recovery before declaring cross-task interference.
 
 ## Parallelization
 
-To be written by /breakdown. Expected shape: skill-text tasks (drain,
-breakdown, rules/docs) are decision-coupled on the window grammar —
-serialize or pin the grammar in this spec before splitting; the scheduler
-test task is independent once the grammar is pinned (it tests the pinned
-grammar, not the prose).
+**Grammar (pinned here per R5, before splitting, to remove the
+decision-coupling risk this section originally flagged):** one `Group:`
+line per co-admissible group, under this section, format
+`- Group: NN, NN[, NN...]` — comma-and-space-separated two-digit task
+numbers matching each task file's `NN-` prefix. Two tasks may run
+concurrently only if some single `Group:` line names both; a task named
+on no `Group:` line runs alone. Task 01 (drain/SKILL.md +
+reference.md) documents this same grammar on the consuming side; task 02
+(breakdown/SKILL.md) emits it on the producing side — both cite this
+paragraph rather than re-deriving the format, so there is no remaining
+shared open choice between them.
+
+- Group: 01, 02, 03, 04
+- Group: 05, 06
+
+Tasks 01–04 are pairwise Touch-disjoint (drain skill files; breakdown
+skill file; token-discipline.md + external-playbooks.md; a new
+tests/*.sh file) and free of shared undecided design now that the grammar
+above is pinned: 01 and 04 each independently encode this spec's riskiest
+assumption (R9's deadlock/livelock-free termination) — 04 tests the
+requirements text pinned in this SPEC, not 01's prose, so they don't
+share a design choice; 02 and 03 consume only the grammar pinned above
+and the numbers already fixed in R1/R6. Task 05 (antigravity mirrors +
+plugin.json + ultra-gate) depends on 01 and 02 landing, since it mirrors
+their exact text; task 06 (the /evals drain scenario) depends on 01
+landing, since it exercises the rewritten skill live. 05 and 06 are
+Touch-disjoint with no edge between them, so they form the second wave's
+group.
