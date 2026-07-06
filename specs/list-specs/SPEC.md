@@ -52,8 +52,9 @@ nothing, so it stays model-invocable (no `disable-model-invocation`).
 read-only-scan-then-report over the same `specs/*/tasks/`): `/list-specs`
 answers "what's the next *command* to run, per spec" (a pipeline-stage
 glance — critique vs. breakdown vs. build vs. drain vs. distill);
-`/prioritize` answers "what *order* should pending/blocked/deferred work
-happen in" (rebalancing `Priority:` headers). Both skills' own
+`/prioritize` answers "what *order* should this repo's open work happen
+in" (rebalancing `Priority:` headers across pending/blocked/deferred/draft
+tasks and not-yet-broken-down specs). Both skills' own
 descriptions cross-reference the other as the not-this-one case, so a
 user asking "what should I work on" or "what's open" lands on the right
 one instead of guessing.

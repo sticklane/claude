@@ -40,8 +40,16 @@ def write(path, text):
     path.write_text(text, encoding="utf-8")
 
 
-def make_spec_md(root, slug):
-    write(root / "specs" / slug / "SPEC.md", f"# {slug}\n\n## Goal\n\nx\n")
+def make_spec_md(root, slug, status=None, priority=None, title=None):
+    header = ""
+    if status is not None:
+        header += f"Status: {status}\n"
+    if priority is not None:
+        header += f"Priority: {priority}\n"
+    write(
+        root / "specs" / slug / "SPEC.md",
+        f"# {title or slug}\n\n{header}\n## Goal\n\nx\n",
+    )
 
 
 def make_task(root, slug, filename, status="pending", priority=None, title=None):
@@ -67,12 +75,14 @@ def parse_rows(table):
         cells = [c.strip() for c in line.strip("|").split("|")]
         if cells[0] in ("Ref", "---") or set(cells[0]) == {"-"}:
             continue
-        rows.append({
-            "ref": cells[0],
-            "title": cells[1],
-            "status": cells[2],
-            "priority": cells[3],
-        })
+        rows.append(
+            {
+                "ref": cells[0],
+                "title": cells[1],
+                "status": cells[2],
+                "priority": cells[3],
+            }
+        )
     return rows
 
 
@@ -90,7 +100,7 @@ class CollectTestCase(unittest.TestCase):
         make_task(self.root, "foo", "02-b.md", status="in-progress")
         self.assertEqual(prioritize_scan.collect(self.root), [])
 
-    def test_only_pending_blocked_deferred_are_collected(self):
+    def test_only_pending_blocked_deferred_draft_are_collected(self):
         make_spec_md(self.root, "foo")
         make_task(self.root, "foo", "01-pending.md", status="pending")
         make_task(self.root, "foo", "02-blocked.md", status="blocked")
@@ -104,7 +114,30 @@ class CollectTestCase(unittest.TestCase):
         make_task(self.root, "foo", "10-failed.md", status="failed")
         rows = prioritize_scan.collect(self.root)
         statuses = sorted(r["status"] for r in rows)
-        self.assertEqual(statuses, ["blocked", "deferred", "pending"])
+        self.assertEqual(statuses, ["blocked", "deferred", "draft", "pending"])
+
+    def test_spec_with_no_tasks_dir_gets_spec_md_fallback_row(self):
+        make_spec_md(self.root, "no-tasks-yet", title="No Tasks Yet")
+        rows = prioritize_scan.collect(self.root)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["ref"], "no-tasks-yet/SPEC.md")
+        self.assertEqual(rows[0]["title"], "No Tasks Yet")
+        self.assertEqual(rows[0]["status"], "open")
+        self.assertEqual(rows[0]["priority"], "P2 (default)")
+
+    def test_spec_md_fallback_row_reads_its_own_status_and_priority(self):
+        make_spec_md(self.root, "no-tasks-yet", status="blocked", priority="P1")
+        rows = prioritize_scan.collect(self.root)
+        self.assertEqual(rows[0]["status"], "blocked")
+        self.assertEqual(rows[0]["priority"], "P1")
+
+    def test_done_task_less_spec_gets_no_fallback_row(self):
+        make_spec_md(self.root, "finished", status="done")
+        self.assertEqual(prioritize_scan.collect(self.root), [])
+
+    def test_skipped_task_less_spec_gets_no_fallback_row(self):
+        make_spec_md(self.root, "shelved", status="skipped")
+        self.assertEqual(prioritize_scan.collect(self.root), [])
 
     def test_ref_is_slug_slash_filename(self):
         make_spec_md(self.root, "my-spec")
@@ -163,8 +196,12 @@ class RenderTestCase(unittest.TestCase):
 
     def test_nonempty_rows_render_table_with_expected_columns(self):
         rows = [
-            {"ref": "foo/01-a.md", "title": "A", "status": "pending",
-             "priority": "P2 (default)"},
+            {
+                "ref": "foo/01-a.md",
+                "title": "A",
+                "status": "pending",
+                "priority": "P2 (default)",
+            },
         ]
         out = prioritize_scan.render(rows)
         parsed = parse_rows(out)
@@ -186,7 +223,10 @@ class CliSubprocessTestCase(unittest.TestCase):
             make_task(root, "foo", "01-a.md", status="done")
             result = subprocess.run(
                 [sys.executable, str(_SCRIPT)],
-                cwd=tmp, capture_output=True, text=True, timeout=30,
+                cwd=tmp,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("nothing to reprioritize", result.stdout)
@@ -200,7 +240,10 @@ class CliSubprocessTestCase(unittest.TestCase):
             make_task(root, "foo", "02-b.md", status="done")
             result = subprocess.run(
                 [sys.executable, str(_SCRIPT)],
-                cwd=tmp, capture_output=True, text=True, timeout=30,
+                cwd=tmp,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         rows = parse_rows(result.stdout)
@@ -212,7 +255,10 @@ class CliSubprocessTestCase(unittest.TestCase):
         repo_root = find_repo_root()
         result = subprocess.run(
             [sys.executable, str(_SCRIPT)],
-            cwd=str(repo_root), capture_output=True, text=True, timeout=60,
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertNotIn("archive/", result.stdout)
