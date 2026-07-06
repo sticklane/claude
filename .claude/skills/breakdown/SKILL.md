@@ -72,6 +72,12 @@ output` criterion will wrongly fail (or force destroying deliberately
 hand-adapted wording); write a content-coverage check instead (e.g. grep
 for the concepts/identifiers that must land).
 
+A version-bump acceptance criterion must check "changed from the value at
+the task's own base commit" (e.g. `git show <base-commit>:<path> | grep
+version` compared against the current value), never a hard-coded exact
+pre-task literal — a sibling task landing first can bump the same file, so
+a pinned literal false-fails once the on-disk value has already moved past it.
+
 4. Order tasks so each leaves the build green — no task may depend on a later
    one to compile or pass tests. Assign each task's `Priority:` by this
    rubric:
