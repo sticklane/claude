@@ -2123,6 +2123,188 @@ def run_action(action_id: str) -> dict:
     return executor(action)
 
 
+# --------------------------------------------------------------------------- #
+# Dispatch runtime — detached `claude` runs, one log + one JSON record each
+# --------------------------------------------------------------------------- #
+# The generic engine (action kinds are wired in a later task): resolve the
+# claude binary at dispatch time, launch it detached in its own process group,
+# and persist a record so a server restart can still see it (liveness = pgid
+# alive AND process start-time unchanged, so a recycled pgid never reads live).
+
+
+_dispatch_procs: list = []  # live detached Popen handles (see start_dispatch)
+
+
+def _resolve_claude_bin() -> str:
+    """The claude binary to dispatch, resolved fresh on every call (the launchd
+    service starts before a CLI upgrade may repoint the symlink): the
+    `AGENT_CONSOLE_CLAUDE_BIN` override, else `claude` on PATH, else
+    `~/.local/bin/claude` (launchd's PATH omits it)."""
+    env = os.environ.get("AGENT_CONSOLE_CLAUDE_BIN")
+    if env:
+        return os.path.expanduser(env)
+    return shutil.which("claude") or str(HOME / ".local" / "bin" / "claude")
+
+
+def _dispatch_dir() -> Path:
+    """Where dispatch logs + records live; env-overridable so tests use a
+    tempdir instead of the real `~/Library/Logs/agent-console/dispatch`."""
+    env = os.environ.get("AGENT_CONSOLE_DISPATCH_DIR")
+    if env:
+        return Path(os.path.expanduser(env))
+    return HOME / "Library" / "Logs" / "agent-console" / "dispatch"
+
+
+def _slug(s: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]+", "-", str(s)).strip("-").lower() or "x"
+
+
+def _proc_start_time(pid: int) -> str:
+    """The kernel's start time for `pid` as `ps` reports it — a stable string
+    that differs once the pid/pgid is recycled to another process. Empty when
+    the process is gone."""
+    try:
+        out = subprocess.run(
+            ["ps", "-o", "lstart=", "-p", str(pid)],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return out.stdout.strip()
+
+
+def _pgid_alive(pgid: int) -> bool:
+    """Signal 0 to the group: it exists (ours, or someone else's → Permission)
+    unless there is no such group at all."""
+    try:
+        os.killpg(pgid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+
+
+def _record_live(rec: dict) -> bool:
+    """A record is running only if its process group is still alive AND that
+    group's start time matches what we recorded — the two-part check that a
+    recycled pgid cannot pass."""
+    pgid = rec.get("pgid")
+    start_time = rec.get("start_time") or ""
+    if not isinstance(pgid, int) or not start_time:
+        return False
+    return _pgid_alive(pgid) and _proc_start_time(pgid) == start_time
+
+
+def _load_records() -> list[dict]:
+    """Every persisted dispatch record, each tagged with a live `running` flag
+    from the liveness check. Read from disk on every call, so a freshly booted
+    server (no memory of what it launched) reports the same truth (R5a)."""
+    d = _dispatch_dir()
+    out = []
+    if not d.exists():
+        return out
+    for jf in sorted(d.glob("*.json")):
+        try:
+            rec = json.loads(jf.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(rec, dict):
+            continue
+        rec["running"] = _record_live(rec)
+        out.append(rec)
+    out.sort(key=lambda r: r.get("started_at") or 0, reverse=True)
+    return out
+
+
+def _running_dispatch_for_cwd(cwd: str) -> dict | None:
+    """The live dispatch (if any) for a cwd — the per-cwd lock (R6) reads from
+    the persisted records, so a restart neither drops nor duplicates the lock."""
+    real = os.path.realpath(os.path.expanduser(cwd or ""))
+    for rec in _load_records():
+        if rec.get("running") and os.path.realpath(rec.get("cwd", "")) == real:
+            return rec
+    return None
+
+
+def start_dispatch(kind: str, cwd: str, prompt: str, extra_args=()) -> dict:
+    """Launch `claude -p <prompt> [extra_args]` detached in `cwd`, in its own
+    process group (survives a server restart), streaming to one log file with a
+    sibling JSON record. Refuses (409) when a dispatch is already live for the
+    same cwd. The argv is built here from server-held values — the caller
+    supplies kind/cwd/prompt, never a raw command line (spec R9)."""
+    real = os.path.realpath(os.path.expanduser(cwd or ""))
+    running = _running_dispatch_for_cwd(real)
+    if running:
+        return {"code": 409, "body": {
+            "ok": False, "id": running["id"],
+            "message": f"a dispatch is already running for {real} "
+                       f"(id {running['id']}); stop it or wait for it to finish",
+        }}
+    claude = _resolve_claude_bin()
+    d = _dispatch_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    did = (
+        f"{time.strftime('%Y%m%dT%H%M%S')}-{_slug(kind)}"
+        f"-{_slug(os.path.basename(real) or kind)}-{secrets.token_hex(3)}"
+    )
+    log_path = d / f"{did}.log"
+    argv = [claude, "-p", prompt, *extra_args]
+    logf = open(log_path, "ab")
+    try:
+        proc = subprocess.Popen(
+            argv, cwd=real, env=GIT_ENV,
+            stdin=subprocess.DEVNULL, stdout=logf, stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    finally:
+        logf.close()
+    # Hold the handle so it isn't finalized while the detached child still runs
+    # (a GC'd running Popen warns); prune exited ones so the list stays small.
+    _dispatch_procs[:] = [p for p in _dispatch_procs if p.poll() is None]
+    _dispatch_procs.append(proc)
+    pgid = proc.pid  # start_new_session makes the child its group/session leader
+    rec = {
+        "id": did, "kind": kind, "cwd": real, "pgid": pgid,
+        "start_time": _proc_start_time(pgid), "started_at": time.time(),
+        "log": str(log_path), "state": "running", "exit_code": None,
+    }
+    (d / f"{did}.json").write_text(json.dumps(rec), encoding="utf-8")
+    return {"code": 200, "body": {
+        "ok": True, "id": did, "log": str(log_path),
+        "message": f"dispatched {kind} in {real}",
+    }}
+
+
+def render_dispatches(records: list[dict]) -> str:
+    """The `/dispatches` page: one row per persisted dispatch (state, start,
+    exit code, log link, cwd)."""
+    rows = []
+    for r in records:
+        state = "running" if r.get("running") else "exited"
+        exit_code = r.get("exit_code")
+        exit_txt = "—" if exit_code is None else str(exit_code)
+        did = r.get("id", "")
+        rows.append(
+            f"<tr><td>{esc(r.get('kind', ''))}</td><td>{esc(state)}</td>"
+            f"<td>{esc(_ago(r.get('started_at') or 0))}</td>"
+            f"<td>{esc(exit_txt)}</td>"
+            f'<td><a href="/dispatch/{esc(did)}/log">log</a></td>'
+            f"<td>{esc(r.get('cwd', ''))}</td></tr>"
+        )
+    if rows:
+        body = (
+            "<table><thead><tr><th>kind</th><th>state</th><th>started</th>"
+            "<th>exit</th><th>log</th><th>cwd</th></tr></thead><tbody>"
+            + "".join(rows) + "</tbody></table>"
+        )
+    else:
+        body = "<p>No dispatches yet.</p>"
+    return render_detail_page("Dispatches", body)
+
+
 def apply_priority(text: str, value: str) -> str:
     """Pure: return `text` with its `Priority:` line set to `value` (or removed
     when value == ""). Inserts under Status:, else after the H1 title."""
@@ -2310,6 +2492,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(render_skills(collect()).encode("utf-8"))
             elif path == "/workboard":
                 self._send(render_workboard(get_board()).encode("utf-8"))
+            elif path == "/dispatches":
+                self._send(render_dispatches(_load_records()).encode("utf-8"))
+            elif path.startswith("/dispatch/") and path.endswith("/log"):
+                self._serve_dispatch_log(path[len("/dispatch/") : -len("/log")])
             elif path.startswith("/file/"):
                 self._serve_file(path[len("/file/") :])
             elif path.startswith("/repo/"):
@@ -2349,6 +2535,26 @@ class Handler(BaseHTTPRequestHandler):
         else:
             body = f"<pre>{esc(content)}</pre>"
         self._send(render_detail_page(title, body).encode("utf-8"))
+
+    def _serve_dispatch_log(self, did: str) -> None:
+        """Serve the last ~200 lines of a dispatch's log. The id keys the
+        persisted records, so an unknown id 404s — the client never names a
+        path."""
+        rec = next((r for r in _load_records() if r.get("id") == did), None)
+        if not rec:
+            self._send(b"not found", "text/plain", 404)
+            return
+        try:
+            with open(rec["log"], encoding="utf-8", errors="replace") as fh:
+                lines = fh.readlines()
+        except OSError:
+            self._send(b"not found", "text/plain", 404)
+            return
+        tail = "".join(lines[-200:])
+        body = render_detail_page(
+            f"dispatch log — {esc(rec.get('kind', ''))}", f"<pre>{esc(tail)}</pre>"
+        )
+        self._send(body.encode("utf-8"))
 
     def _serve_repo(self, entity_id: str) -> None:
         entry = get_pages().get(entity_id)

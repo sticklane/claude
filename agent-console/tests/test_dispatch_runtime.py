@@ -82,6 +82,14 @@ class _DispatchDirTest(unittest.TestCase):
                 os.killpg(pgid, signal.SIGKILL)
             except OSError:
                 pass
+        # Reap retained handles so the killed children don't linger as zombies
+        # (and their Popen finalizers stay quiet).
+        for p in list(ac._dispatch_procs):
+            try:
+                p.wait(timeout=2)
+            except Exception:
+                pass
+        ac._dispatch_procs.clear()
         for k, v in self._prev_env.items():
             if v is None:
                 os.environ.pop(k, None)
