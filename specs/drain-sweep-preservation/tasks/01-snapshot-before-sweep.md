@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 8 turns
@@ -54,9 +54,9 @@ sweep language today — leave it alone.
 
 ## Acceptance
 
-- [ ] `grep -q 'status --porcelain' .claude/skills/drain/reference.md` → match
-- [ ] `grep -q 'wip(rescue)' .claude/skills/drain/reference.md` → match, with `git add -A` pinned in the same procedure
-- [ ] `grep -qi 'snapshotting uncommitted' .claude/skills/drain/SKILL.md` → match (the bare word "snapshot" already appears in an unrelated merge note; this pins the new fragment)
-- [ ] `grep -qi 'preserved in the rescue snapshot' .claude/skills/drain/SKILL.md` → match
-- [ ] `claude plugin validate .` → green
-- [ ] `./specs/status.sh` → parses, no errors
+- [x] `grep -q 'status --porcelain' .claude/skills/drain/reference.md` → match — verifier: match, exit 0 (evidence/01-snapshot-before-sweep.md)
+- [x] `grep -q 'wip(rescue)' .claude/skills/drain/reference.md` → match, with `git add -A` pinned in the same procedure — verifier: match; `git add -A` confirmed in same unbroken rescue paragraph
+- [x] `grep -qi 'snapshotting uncommitted' .claude/skills/drain/SKILL.md` → match — verifier: match at step 1 sweep sentence, defers to reference.md rescue procedure
+- [x] `grep -qi 'preserved in the rescue snapshot' .claude/skills/drain/SKILL.md` → match — verifier: match at step 3 discard parenthetical
+- [x] `claude plugin validate .` → green — verifier: "✔ Validation passed", exit 0
+- [x] `./specs/status.sh` → parses, no errors — verifier: exit 0, clean TOTAL summary

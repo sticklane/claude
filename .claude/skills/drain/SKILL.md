@@ -85,10 +85,11 @@ still inside its window is parked, not swept, and drain keeps dispatching
 other tasks (reference.md, "Stale-lock liveness check"). On confirmed death,
 preserve the run's branches as `rescue/NN-<slug>-<shortsha>` — the
 `task/NN-<slug>` branch and any `task/NN-<slug>-t*` tournament branches a
-crashed run left behind — force-removing each worktree first, then flip the
-task to `pending` and commit the flip (slot machine — never resume a dead
-run; rescue branches are forensic only). Full procedure in reference.md's
-Status field semantics.
+crashed run left behind — snapshotting uncommitted worktree changes per
+reference.md's rescue procedure and force-removing each worktree first, then
+flip the task to `pending` and commit the flip (slot machine — never resume
+a dead run; rescue branches are forensic only). Full procedure in
+reference.md's Status field semantics.
 
 ## 2. Dispatch (one worker, or one independent group)
 
@@ -277,8 +278,10 @@ line block, done vs remaining, sourced from the worker's `Done vs
 remaining:` report line (or, for verification failures, the verifier's
 report). The relaunch-with-evidence prompt cites it, so the next
 attempt starts from evidence instead of zero. (Worktree writes are
-discarded with failed branches; this record survives because drain,
-the single writer, writes it in the main checkout.)
+preserved in the rescue snapshot when a dead run is swept dirty; deliberately
+discarded branches — slot-machine losers, non-winning tournament candidates —
+remain discarded. This record survives regardless because drain, the single
+writer, writes it in the main checkout.)
 
 Keep verdicts, not transcripts. Log one line per task to the user as you
 go; /fleet shows the workers live. Loop to step 2 while anything is

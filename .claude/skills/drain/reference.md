@@ -106,7 +106,14 @@ worker" guess. A confirmed-dead run is reset to `pending` (commit the
 flip), and each of its branches is PRESERVED, not deleted: rename the
 `task/NN-<slug>` branch and every `task/NN-<slug>-t*` tournament branch a
 crashed run left behind to `rescue/NN-<slug>-<shortsha>` (shortsha = that
-branch's own tip commit). Force-remove each worktree FIRST — a checked-out
+branch's own tip commit). Before force-removing a worktree, snapshot any
+uncommitted work so the sweep never destroys it: run `git -C <worktree>
+status --porcelain`, and if it is non-empty, commit a WIP snapshot on the
+run's branch from inside the worktree — exactly `git add -A` from the
+worktree root (git excludes gitignored files, so `.dev.vars`/`node_modules`
+never enter the snapshot), then `git commit --no-verify -m "wip(rescue):
+<task> — swept with uncommitted work"` — so the snapshot tip becomes that
+branch's shortsha. Then force-remove each worktree FIRST — a checked-out
 branch cannot be renamed away safely — then rename. Branches sharing a tip
 collapse into one rescue branch (skip the duplicates); a pre-existing
 `rescue/…` at the same sha counts as already preserved. Rescue branches are
@@ -218,7 +225,9 @@ under excluded paths like `node_modules` — so false sweeps remain possible
 by design. The rescue branch (Status field semantics) plus the worker's
 vanished-worktree clause (Worker prompt) are the deliberate safety net; do
 NOT add worker-side heartbeats to close this gap (rejected — see the spec's
-Out of scope).
+Out of scope). A false sweep now also snapshots the live worker's
+uncommitted writes into the rescue branch, so the accepted risk is losing
+the RUN, not the work.
 
 ## Worker prompt (verbatim, fill the <>)
 
