@@ -88,6 +88,24 @@ for the concepts/identifiers that must land).
    spec leaves open. If two tasks would each make the same open choice,
    either the choice moves into the spec or the tasks serialize. Only
    groups passing both checks may run concurrently.
+
+   Emit each concurrent-safe group as a machine-readable `Group:` line in
+   that `## Parallelization` section — a hyphen, a space, `Group:`, a
+   space, then the group's two-digit task numbers, comma-and-space
+   separated (matching each task file's `NN-` prefix):
+
+   ```
+   - Group: 02, 03
+   - Group: 05, 06
+   ```
+
+   A task named on no `- Group:` line runs solo. Plain-prose rationale may
+   precede the lines, but the `- Group:` lines themselves are the parseable
+   contract: drain's rolling-window scheduler reads group membership from
+   them rather than re-deriving independence from prose. This is the
+   grammar pinned in `specs/drain-rolling-window/SPEC.md`'s
+   `## Parallelization` section — cite that paragraph rather than
+   re-deriving the format.
 6. Sanity-check with the critic skill if the decomposition has nontrivial
    dependency structure.
 
