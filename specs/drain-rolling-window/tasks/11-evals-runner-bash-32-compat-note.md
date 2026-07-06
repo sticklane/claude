@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/drain-rolling-window/tasks/06-drain-eval-scenario.md
 Spec: ../SPEC.md
 Blocking: no
