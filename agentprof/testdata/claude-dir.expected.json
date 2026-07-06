@@ -1,11 +1,12 @@
 {
-  "note": "hand-computed from the fixture inventory; cost fields computed against the task 03 rate table (internal/pricing/table.go)",
-  "sample_count": 10,
+  "note": "hand-computed from the fixture inventory; cost fields computed against the task 03 rate table (internal/pricing/table.go). sample_count and total_duration_ms include the 3 tool: samples added by agentprof-instrumentation task 01 (toolu_W=tool:Workflow with a 15s result delta, toolu_A and toolu_WS unresolved -> tool:(pending), empty Values). total_duration_ms sums model-call durations (msg_a2=45000; msg_b2=60000, req-fallback=60000, msg_b3=180000) plus the tool:Workflow 15000.",
+  "sample_count": 13,
   "total_input_tokens": 3000,
   "total_output_tokens": 300,
   "total_cache_read_tokens": 50,
   "total_cache_write_tokens": 20,
   "total_cost_microusd": 24788,
+  "total_duration_ms": 360000,
   "unparseable_lines": 1,
   "unpriced_sample_count": 2,
   "truncated_file": "testdata/claude-dir/projects/-y-beta/sess-0002.jsonl",
@@ -18,7 +19,7 @@
       "cost_microusd": 4200
     },
     "proj": {
-      "sample_count": 6,
+      "sample_count": 9,
       "input_tokens": 1800,
       "output_tokens": 180,
       "cost_microusd": 20588
@@ -99,6 +100,29 @@
       "agent:workflow-subagent",
       "agent:scout",
       "claude-haiku-4-5"
+    ],
+    "tool_workflow_toolu_W": [
+      "proj",
+      "t01 · start",
+      "skill:build",
+      "main",
+      "tool:Workflow"
+    ],
+    "tool_pending_toolu_A": [
+      "proj",
+      "t01 · start",
+      "skill:build",
+      "main",
+      "tool:(pending)"
+    ],
+    "tool_pending_toolu_WS": [
+      "proj",
+      "t01 · start",
+      "skill:build",
+      "main",
+      "wf:test-flow",
+      "agent:workflow-subagent",
+      "tool:(pending)"
     ]
   }
 }

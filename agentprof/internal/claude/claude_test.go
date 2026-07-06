@@ -44,8 +44,10 @@ func findByStack(samples []schema.Sample, want []string) []schema.Sample {
 func TestCollectProducesOneSamplePerDedupedResponse(t *testing.T) {
 	samples, skipped := collectFixture(t)
 
-	if len(samples) != 10 {
-		t.Errorf("got %d samples, want 10", len(samples))
+	// 10 deduped model-call samples + 3 tool: samples (toolu_W -> tool:Workflow,
+	// toolu_A and toolu_WS unresolved -> tool:(pending)) added by task 01.
+	if len(samples) != 13 {
+		t.Errorf("got %d samples, want 13", len(samples))
 	}
 	if skipped != 1 {
 		t.Errorf("got %d skipped lines, want 1 (the truncated final line)", skipped)
@@ -214,6 +216,7 @@ func TestCollectTotalsMatchExpectedFixtureData(t *testing.T) {
 		TotalCacheReadTokens int64 `json:"total_cache_read_tokens"`
 		TotalCacheWrite      int64 `json:"total_cache_write_tokens"`
 		TotalCostMicroUSD    int64 `json:"total_cost_microusd"`
+		TotalDurationMs      int64 `json:"total_duration_ms"`
 	}
 	if err := json.Unmarshal(data, &expected); err != nil {
 		t.Fatal(err)
@@ -232,6 +235,7 @@ func TestCollectTotalsMatchExpectedFixtureData(t *testing.T) {
 		"cache_write_tokens": expected.TotalCacheWrite,
 		"cost_microusd":      expected.TotalCostMicroUSD,
 		"calls":              10,
+		"duration_ms":        expected.TotalDurationMs,
 	}
 	if !reflect.DeepEqual(totals, want) {
 		t.Errorf("totals = %v, want %v", totals, want)
@@ -278,8 +282,8 @@ func TestCollectFreshSubagentFilePullsWholeSessionIntoWindow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}
-	if len(samples) != 6 {
-		t.Fatalf("got %d samples, want 6 (all of sess-0001, none of sess-0002)", len(samples))
+	if len(samples) != 9 {
+		t.Fatalf("got %d samples, want 9 (all of sess-0001 incl. 3 tool: samples, none of sess-0002)", len(samples))
 	}
 	sessions := map[string]bool{}
 	frames := map[string]bool{}
