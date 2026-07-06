@@ -264,3 +264,20 @@ today — this is a strictly additive parser change.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+- **Group A (serial chain)**: 01 → 02 — both edit the same parser files
+  under `agentprof/internal/`, so they serialize on Touch overlap, not on
+  design coupling.
+- **Group B (parallel with Group A)**: 03 — disjoint Touch
+  (`.claude/skills/`, `antigravity/`, `.claude-plugin/`) and no shared
+  undecided design: the marker literals, detection regexes, and frame
+  names are all pinned in this spec, so parser and skill-text work cannot
+  diverge. Caveat inside the task itself: 03 must additionally serialize
+  against any OTHER live session editing drain/build skill text, and
+  resolves the plugin.json version against the current value at execution
+  time.
+- **04** runs last (depends on 01, 02, 03) and is manual-pending — it
+  needs a real human-launched `/drain`/`/build` run to have happened after
+  03 lands.
