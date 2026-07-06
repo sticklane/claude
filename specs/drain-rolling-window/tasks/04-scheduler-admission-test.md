@@ -8,7 +8,7 @@ Status: done
 Depends on: none
 Priority: P0
 Budget: 22 turns
-Spec: ../SPEC.md (requirements R1, R5, R8a, R9)
+Spec: ../SPEC.md (requirements R1, R4, R8a, R9)
 Touch: tests/test_drain_scheduler_window.sh
 
 ## Goal
