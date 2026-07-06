@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -17,5 +17,5 @@ Task 06 added `PRIORITY_RE` extraction to `.claude/skills/workboard/workboard.py
 
 ## Acceptance
 
-- [ ] `grep -n 'PRIORITY_RE' antigravity/.agents/skills/workboard/workboard.py` → pattern definition present, matching the Claude-side version's regex
-- [ ] `diff <(grep -A2 'PRIORITY_RE' .claude/skills/workboard/workboard.py) <(grep -A2 'PRIORITY_RE' antigravity/.agents/skills/workboard/workboard.py)` → no meaningful divergence (path/import differences aside)
+- [x] `grep -n 'PRIORITY_RE' antigravity/.agents/skills/workboard/workboard.py` → pattern definition present, matching the Claude-side version's regex — line 206 `PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P\d)\]?", re.MULTILINE)`, line 225 usage; verifier PASS (evidence/08-mirror-priority-re-to-antigravity.md)
+- [x] `diff <(grep -A2 'PRIORITY_RE' .claude/skills/workboard/workboard.py) <(grep -A2 'PRIORITY_RE' antigravity/.agents/skills/workboard/workboard.py)` → no meaningful divergence (path/import differences aside) — empty diff, exit 0; verifier PASS (evidence/08-mirror-priority-re-to-antigravity.md)
