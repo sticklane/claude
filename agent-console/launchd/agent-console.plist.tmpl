@@ -33,6 +33,15 @@
         <string>__PORT__</string>
         <key>SKILLS_DASHBOARD_HOST</key>
         <string>__HOST__</string>
+        <!-- Dispatch runtime (workboard actions): the `claude` binary a
+             dispatch launches is resolved at dispatch time as
+             AGENT_CONSOLE_CLAUDE_BIN, else `claude` on PATH, else
+             ~/.local/bin/claude. launchd's PATH usually omits ~/.local/bin, so
+             set AGENT_CONSOLE_CLAUDE_BIN here if `claude` is not on __PATH__:
+               <key>AGENT_CONSOLE_CLAUDE_BIN</key><string>/path/to/claude</string>
+             Dispatch logs + records default to
+             ~/Library/Logs/agent-console/dispatch (override:
+             AGENT_CONSOLE_DISPATCH_DIR). -->
     </dict>
 
     <key>StandardOutPath</key>
