@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 16 turns
@@ -52,7 +52,9 @@ parser work must not assume they exist (fixtures carry the marker text).
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./...` → pass, including the role-marker,
+- [x] `cd agentprof && go test ./...` → pass, including the role-marker,
       stage-marker (with stage-boundary handoff), and markerless
       byte-identical-stack fixture tests (R6, R7).
-- [ ] `cd agentprof && gofmt -l . | wc -l` → 0.
+      Evidence: verifier PASS — all 12 packages ok; TestCollectInsertsRoleFrameBeforeAgentFrameFromSubagentMarker, TestCollectInsertsStageFrameAfterSkillWithBoundaryHandoff, TestCollectMarkerlessTranscriptKeepsByteIdenticalStacks pass; pre-existing byte-identical fixture test unmodified and green (specs/agentprof-instrumentation/evidence/02-marker-frame-insertion.md).
+- [x] `cd agentprof && gofmt -l . | wc -l` → 0.
+      Evidence: verifier PASS — gofmt -l . emits 0 (evidence/02-marker-frame-insertion.md).
