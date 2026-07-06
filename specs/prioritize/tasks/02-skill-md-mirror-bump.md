@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 12 turns
@@ -69,12 +69,12 @@ version bump.
 
 ## Acceptance
 
-- [ ] `grep -q 'disable-model-invocation: true' .claude/skills/prioritize/SKILL.md` → exit 0
-- [ ] `grep -q 'list-specs' .claude/skills/prioritize/SKILL.md` → exit 0 (R9 disambiguation present)
-- [ ] `grep -qF 'Next stage: none' .claude/skills/prioritize/SKILL.md` → exit 0
-- [ ] `grep -q 'prioritize' .claude/skills/list-specs/SKILL.md` → exit 0 (R9 reciprocal)
-- [ ] `diff .claude/skills/prioritize/prioritize_scan.py antigravity/.agents/skills/prioritize/prioritize_scan.py && diff .claude/skills/prioritize/test_prioritize_scan.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → identical
-- [ ] `test -f antigravity/.agents/workflows/prioritize.md` → exit 0
-- [ ] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep -q '"version"'` → version bumped in this task's commit range (equivalently: plugin.json version > 0.8.12)
-- [ ] `python3 -m pytest .claude/skills/prioritize/ .claude/skills/workboard/ .claude/skills/list-specs/ -q` → all pass (this repo has no top-level scripts/check.sh; these suites are the relevant gates)
+- [x] `grep -q 'disable-model-invocation: true' .claude/skills/prioritize/SKILL.md` → exit 0 — verifier PASS (evidence/02-skill-md-mirror-bump.md)
+- [x] `grep -q 'list-specs' .claude/skills/prioritize/SKILL.md` → exit 0 (R9 disambiguation present) — verifier PASS
+- [x] `grep -qF 'Next stage: none' .claude/skills/prioritize/SKILL.md` → exit 0 — verifier PASS
+- [x] `grep -q 'prioritize' .claude/skills/list-specs/SKILL.md` → exit 0 (R9 reciprocal) — verifier PASS (list-specs untouched; sentence pre-existed)
+- [x] `diff .claude/skills/prioritize/prioritize_scan.py antigravity/.agents/skills/prioritize/prioritize_scan.py && diff .claude/skills/prioritize/test_prioritize_scan.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → identical — verifier PASS (byte-identical)
+- [x] `test -f antigravity/.agents/workflows/prioritize.md` → exit 0 — verifier PASS
+- [x] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep -q '"version"'` → version bumped in this task's commit range (equivalently: plugin.json version > 0.8.12) — verifier PASS (0.8.13 > 0.8.12; only version line changed)
+- [x] `python3 -m pytest .claude/skills/prioritize/ .claude/skills/workboard/ .claude/skills/list-specs/ -q` → all pass (this repo has no top-level scripts/check.sh; these suites are the relevant gates) — verifier PASS (100 passed)
 - [ ] MANUAL-PENDING (spec acceptance bullets 4–7): interactive fixture run of `/prioritize` in a fresh session — apply-one-change/invalid-ref/"none" behaviors and the end-to-end run in this repo. Not orchestrator-resolvable (needs an interactive human session with a `disable-model-invocation` skill); the human ticks this after trying it.
