@@ -30,6 +30,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -1087,6 +1088,102 @@ def _attach_sessions(repos, sessions):
     return {s["id"] for r in repos for s in r["sessions"]}
 
 
+SPEND_TIMEOUT_SEC = 30
+_SPEND_TOKEN_FIELDS = (
+    "input_tokens",
+    "output_tokens",
+    "cache_read_tokens",
+    "cache_write_tokens",
+)
+
+
+def _locate_agentprof():
+    """agentprof binary lookup order (R5): $AGENTPROF_BIN, then `agentprof`
+    on PATH, then the committed toolkit binary."""
+    return (
+        os.environ.get("AGENTPROF_BIN")
+        or shutil.which("agentprof")
+        or str(Path.home() / "claude/agentprof/agentprof")
+    )
+
+
+def _unavailable_spend(reason):
+    return {"by_model": [], "by_session": {}, "available": False, "reason": reason}
+
+
+def _new_model_agg():
+    agg = {field: 0 for field in _SPEND_TOKEN_FIELDS}
+    agg["cost_microusd"] = 0
+    agg["priced"] = False
+    return agg
+
+
+def compute_spend(claude_home, session_ids):
+    """Shell out to agentprof and join its per-(session, model) summary rows to
+    the sessions workboard assembled. Any failure — missing binary, timeout,
+    non-zero exit, invalid JSON — degrades to an unavailable structure with a
+    `reason` rather than raising, so the dashboard never breaks (R8)."""
+    binary = _locate_agentprof()
+    try:
+        proc = subprocess.run(
+            [binary, "claude", "-o", "summary", "--days", "3650",
+             "--claude-dir", str(claude_home)],
+            capture_output=True,
+            text=True,
+            timeout=SPEND_TIMEOUT_SEC,
+        )
+    except FileNotFoundError:
+        return _unavailable_spend(f"agentprof not found: {binary}")
+    except subprocess.TimeoutExpired:
+        return _unavailable_spend(f"agentprof timed out after {SPEND_TIMEOUT_SEC}s")
+    except OSError as e:
+        return _unavailable_spend(f"agentprof failed to run: {e}")
+
+    if proc.returncode != 0:
+        detail = (proc.stderr or "").strip().splitlines()
+        return _unavailable_spend(
+            f"agentprof exited {proc.returncode}"
+            + (f": {detail[0]}" if detail else "")
+        )
+    try:
+        rows = json.loads(proc.stdout)
+    except (ValueError, TypeError):
+        return _unavailable_spend("agentprof emitted invalid JSON")
+    if not isinstance(rows, list):
+        return _unavailable_spend("agentprof emitted invalid JSON")
+
+    by_session = {}
+    by_model = {}
+    for row in rows:
+        sid = row.get("session")
+        if sid not in session_ids:
+            continue
+        model = row.get("model")
+        cost = int(row.get("cost_microusd", 0))
+        priced = bool(row.get("priced", False))
+
+        sess = by_session.setdefault(sid, {"cost_microusd": 0, "models": {}})
+        sess["cost_microusd"] += cost
+        smodel = sess["models"].setdefault(model, _new_model_agg())
+        agg = by_model.setdefault(model, _new_model_agg())
+        for target in (smodel, agg):
+            for field in _SPEND_TOKEN_FIELDS:
+                target[field] += int(row.get(field, 0))
+            target["cost_microusd"] += cost
+            target["priced"] = target["priced"] or priced
+
+    by_model_list = sorted(
+        ({"model": model, **agg} for model, agg in by_model.items()),
+        key=lambda m: (-m["cost_microusd"], m["model"]),
+    )
+    return {
+        "by_model": by_model_list,
+        "by_session": by_session,
+        "available": True,
+        "reason": None,
+    }
+
+
 def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFAULT):
     claude_home = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
     sessions = scan_sessions(claude_home, stale_days)
@@ -1142,6 +1239,7 @@ def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFA
         "todos": todos,
         "inbox": inbox,
         "ready": ready,
+        "spend": compute_spend(claude_home, {s["id"] for s in sessions}),
         "liveness_unknown": _last_liveness_unknown,
         "totals": {
             "repos": len(repos),
