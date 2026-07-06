@@ -307,7 +307,7 @@ def collect() -> dict:
 # Workboard collection
 # --------------------------------------------------------------------------- #
 BOARD_TTL = 45  # seconds; kept above the 25s client refresh so it serves cache
-_board_cache: dict = {"ts": 0.0, "data": None, "registry": None}
+_board_cache: dict = {"ts": 0.0, "data": None, "registry": None, "pages": None}
 _board_lock = threading.Lock()
 # GitHub repo visibility (public/private), fetched once via `gh` and cached long
 # — this is the only part of the tool that touches the network.
@@ -617,6 +617,9 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
             spec_path = sp.get("path", "")
             specs.append(
                 {
+                    "id": _entity_id("spec", _spec_dir(r["path"], spec_path))
+                    if spec_path
+                    else "",
                     "slug": sp["slug"],
                     "title": sp["title"],
                     "status": None,
@@ -651,13 +654,21 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
                 )
         board_repos.append(
             {
+                "id": _entity_id("repo", r["path"]),
                 "name": r["name"],
                 "git": git,
                 "gh": gh,
                 "specs": specs,
                 "tasks": None,  # docs/TASKS.md tracking retired with scan_tasks
                 "handoffs": [
-                    {"title": h["title"], "path": h["path"], "mtime": h["mtime"]}
+                    {
+                        "title": h["title"],
+                        "path": h["path"],
+                        "mtime": h["mtime"],
+                        "id": _entity_id("file", _abs_under(r["path"], h["path"]))
+                        if h.get("path")
+                        else "",
+                    }
                     for h in r["handoffs"]
                 ],
                 "sessions": sessions,
@@ -732,7 +743,10 @@ def get_board() -> dict:
         running_agents, resumable_agents = agents_view()
         data = _adapt_board(assembled, running_agents, resumable_agents)
         registry = build_entity_registry(assembled)
-        _board_cache.update(ts=time.time(), data=data, registry=registry)
+        pages = build_page_registry(assembled)
+        _board_cache.update(
+            ts=time.time(), data=data, registry=registry, pages=pages
+        )
         return data
 
 
@@ -799,6 +813,68 @@ def get_registry() -> dict:
     the cache within the TTL window — never an extra workboard.assemble call."""
     get_board()
     return _board_cache.get("registry") or {}
+
+
+def _abs_under(root: str, path: str) -> str:
+    return path if os.path.isabs(path) else os.path.join(root, path)
+
+
+def _spec_dir(root: str, spec_path: str) -> str:
+    """Directory holding a spec: the parent of its SPEC.md (toolkit specs) or
+    the path itself (Kiro specs, which are directories)."""
+    ab = _abs_under(root, spec_path)
+    return os.path.dirname(ab) if ab.endswith(".md") else ab
+
+
+def build_page_registry(assembled: dict) -> dict:
+    """Map id -> entry for the repo/spec/task detail pages, keyed by the same
+    content-derived id scheme as the file registry (kind + canonical path). Kept
+    separate from build_entity_registry so a repo/spec entity and a file entity
+    for the same path get distinct ids and distinct routes. Entries carry the
+    assemble() source dict the renderer needs, so no rescan is required."""
+    pages: dict = {}
+    for repo in assembled.get("repos", []):
+        root = repo.get("path") or ""
+        if not root:
+            continue
+        rid = _entity_id("repo", root)
+        pages.setdefault(
+            rid,
+            {"id": rid, "kind": "repo", "path": os.path.realpath(root),
+             "title": repo.get("name") or root, "repo": repo},
+        )
+        for spec in repo.get("specs", []):
+            spath = spec.get("path") or ""
+            if not spath:
+                continue
+            sdir = _spec_dir(root, spath)
+            sid = _entity_id("spec", sdir)
+            pages.setdefault(
+                sid,
+                {"id": sid, "kind": "spec", "path": os.path.realpath(sdir),
+                 "title": spec.get("title") or spec.get("slug") or "",
+                 "spec": spec, "root": root},
+            )
+            for task in spec.get("tasks", []):
+                tabs = task.get("abs") or (
+                    _abs_under(root, task["file"]) if task.get("file") else ""
+                )
+                if not tabs:
+                    continue
+                tid = _entity_id("task", tabs)
+                pages.setdefault(
+                    tid,
+                    {"id": tid, "kind": "task", "path": os.path.realpath(tabs),
+                     "title": task.get("title") or "", "task": task},
+                )
+    return pages
+
+
+def get_pages() -> dict:
+    """The repo/spec/task page registry for the current board (same lazy-scan
+    and TTL-cache contract as get_registry)."""
+    get_board()
+    return _board_cache.get("pages") or {}
 
 
 # --------------------------------------------------------------------------- #
@@ -888,6 +964,154 @@ def render_detail_page(title: str, body_html: str) -> str:
 <span class="rule"></span><span class="mono">scanned {esc(scanned)}</span></div>
 <article class="card">{body_html}</article></main>
 </body></html>"""
+
+
+def _unblock_line(path: str) -> str:
+    """A task file's `Unblock:` line, verbatim — plain-text passthrough; parsing
+    its next-steps grammar is unblock-next-steps' scope, not ours."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if line.strip().startswith("Unblock:"):
+                    return line.strip()
+    except OSError:
+        pass
+    return ""
+
+
+def render_repo_page(entry: dict) -> str:
+    """A repo's path, state chips, unpushed commits (`git log @{u}..`), dirty
+    files (`git status --porcelain`), and links to its specs, sessions, and
+    CLAUDE.md. Git reads are fresh, read-only, and time-capped via _git."""
+    repo = entry.get("repo") or {}
+    root = entry["path"]
+    name = entry.get("title") or os.path.basename(root)
+    rp = Path(root)
+
+    dirty = _git(rp, "status", "--porcelain")
+    dirty_files = [ln for ln in (dirty or "").splitlines() if ln.strip()]
+    unpushed = _git(rp, "log", "--oneline", "@{u}..")  # None => no upstream
+
+    chips = []
+    if dirty_files:
+        chips.append('<span class="chip dirty">dirty</span>')
+    if unpushed:
+        chips.append('<span class="chip unpushed">unpushed</span>')
+    if not dirty_files and not unpushed:
+        chips.append('<span class="chip">clean</span>')
+
+    parts = [f'<p class="mono">{esc(root)}</p>', "".join(chips)]
+
+    if unpushed is None:
+        parts.append('<div class="sub">Unpushed</div><p class="mono">no upstream</p>')
+    elif unpushed:
+        items = "".join(f"<li>{esc(ln)}</li>" for ln in unpushed.splitlines())
+        parts.append(f'<div class="sub">Unpushed commits</div><ul>{items}</ul>')
+    else:
+        parts.append('<div class="sub">Unpushed commits</div><p class="mono">none</p>')
+
+    if dirty_files:
+        items = "".join(f"<li>{esc(ln)}</li>" for ln in dirty_files)
+        parts.append(f'<div class="sub">Dirty files</div><ul>{items}</ul>')
+
+    spec_rows = []
+    for sp in repo.get("specs") or []:
+        spath = sp.get("path") or ""
+        if not spath:
+            continue
+        sid = _entity_id("spec", _spec_dir(root, spath))
+        label = esc(sp.get("title") or sp.get("slug") or "spec")
+        spec_rows.append(f'<li><a href="/spec/{esc(sid)}">{label}</a></li>')
+    if spec_rows:
+        parts.append(f'<div class="sub">Specs</div><ul>{"".join(spec_rows)}</ul>')
+
+    sess_rows = []
+    for s in repo.get("sessions") or []:
+        label = esc((s.get("prompt") or "")[:90] or "session")
+        state = esc(s.get("state") or "")
+        sid = s.get("id") or ""
+        if sid:
+            link = _entity_id("session", sid)
+            sess_rows.append(
+                f'<li><a href="/session/{esc(link)}">{label}</a> '
+                f'<span class="meta">{state}</span></li>'
+            )
+        else:
+            sess_rows.append(f'<li>{label} <span class="meta">{state}</span></li>')
+    if sess_rows:
+        parts.append(f'<div class="sub">Sessions</div><ul>{"".join(sess_rows)}</ul>')
+
+    claude_md = os.path.join(root, "CLAUDE.md")
+    if os.path.exists(claude_md):
+        cid = _entity_id("file", claude_md)
+        parts.append(
+            f'<div class="sub">Conventions</div>'
+            f'<p><a href="/file/{esc(cid)}">CLAUDE.md</a></p>'
+        )
+
+    return render_detail_page(name, "".join(parts))
+
+
+def render_spec_page(entry: dict) -> str:
+    """A spec's rendered SPEC.md, its task table (name, status, verbatim Unblock
+    line, link to the task page), evidence-file links, and — in git-repo roots —
+    the last 10 commits touching the spec dir."""
+    spec = entry.get("spec") or {}
+    spec_dir = entry["path"]
+    root = entry.get("root") or spec_dir
+    title = entry.get("title") or os.path.basename(spec_dir)
+
+    parts = [f'<p class="mono">{esc(spec_dir)}</p>']
+
+    spath = spec.get("path") or ""
+    spec_abs = _abs_under(root, spath) if spath else ""
+    if spec_abs.endswith(".md"):
+        try:
+            with open(spec_abs, encoding="utf-8", errors="replace") as fh:
+                parts.append(render_markdown(fh.read()))
+        except OSError:
+            pass
+
+    task_rows = []
+    for t in spec.get("tasks") or []:
+        tabs = t.get("abs") or (_abs_under(root, t["file"]) if t.get("file") else "")
+        label = esc(t.get("title") or (os.path.basename(tabs) if tabs else "task"))
+        status = esc(t.get("status") or "")
+        unblock = esc(_unblock_line(tabs)) if tabs else ""
+        if tabs:
+            tid = _entity_id("task", tabs)
+            cell = f'<a href="/task/{esc(tid)}">{label}</a>'
+        else:
+            cell = label
+        task_rows.append(
+            f"<tr><td>{cell}</td><td>{status}</td><td>{unblock}</td></tr>"
+        )
+    if task_rows:
+        parts.append(
+            '<div class="sub">Tasks</div>'
+            "<table><thead><tr><th>Task</th><th>Status</th><th>Unblock</th>"
+            f'</tr></thead><tbody>{"".join(task_rows)}</tbody></table>'
+        )
+
+    ev_dir = os.path.join(spec_dir, "evidence")
+    try:
+        ev_names = sorted(n for n in os.listdir(ev_dir) if n.endswith(".md"))
+    except OSError:
+        ev_names = []
+    if ev_names:
+        rows = "".join(
+            f'<li><a href="/file/{esc(_entity_id("file", os.path.join(ev_dir, n)))}">'
+            f"{esc(n)}</a></li>"
+            for n in ev_names
+        )
+        parts.append(f'<div class="sub">Evidence</div><ul>{rows}</ul>')
+
+    log = _git(Path(root), "log", "--oneline", "-10", "--", spec_dir)
+    if log:
+        items = "".join(f"<li>{esc(ln)}</li>" for ln in log.splitlines())
+        parts.append(f'<div class="sub">Recent commits</div><ul>{items}</ul>')
+
+    return render_detail_page(title, "".join(parts))
 
 
 def _prio_select(path: str, current: str) -> str:
@@ -1342,8 +1566,13 @@ def render_workboard(b: dict) -> str:
                     else f'<span class="meta">{esc(sp["status"] or "—")}</span>'
                 )
                 graph = viz.dag(sp.get("tasks", []))
+                title_el = (
+                    f'<a class="trunc" href="/spec/{esc(sp["id"])}">{esc(sp["title"])}</a>'
+                    if sp.get("id")
+                    else f'<span class="trunc">{esc(sp["title"])}</span>'
+                )
                 row = (
-                    f'<span class="trunc">{esc(sp["title"])}</span>'
+                    f'{title_el}'
                     f'{prog}<span class="meta">{_ago(sp["mtime"])}</span>'
                 )
                 prio = _prio_select(sp.get("path", ""), sp.get("priority", ""))
@@ -1394,8 +1623,12 @@ def render_workboard(b: dict) -> str:
         if r["handoffs"]:
             lines = "".join(
                 f'<div class="line evt">{chip("blocked")}'
-                f'<span class="trunc">{esc(h["title"])}</span>'
-                f'<span class="meta">{_ago(h["mtime"])}</span></div>'
+                + (
+                    f'<a class="trunc" href="/file/{esc(h["id"])}">{esc(h["title"])}</a>'
+                    if h.get("id")
+                    else f'<span class="trunc">{esc(h["title"])}</span>'
+                )
+                + f'<span class="meta">{_ago(h["mtime"])}</span></div>'
                 for h in r["handoffs"]
             )
             inner.append(f'<div class="sub">Handoffs</div>{lines}')
@@ -1417,6 +1650,11 @@ def render_workboard(b: dict) -> str:
                 f'<span class="cwhen">{_dt(g.get("commit_ts", 0))} · {_ago(g.get("commit_ts", 0))}</span></span>'
             )
 
+        rn = (
+            f'<a class="rn" href="/repo/{esc(r["id"])}">{esc(r["name"])}</a>'
+            if r.get("id")
+            else f'<span class="rn">{esc(r["name"])}</span>'
+        )
         open_attr = " open" if _repo_has_work(r) else ""
         body = (
             f'<div class="rbody">{"".join(inner)}</div>'
@@ -1425,7 +1663,7 @@ def render_workboard(b: dict) -> str:
         )
         repo_blocks.append(
             f'<details class="repo"{open_attr} data-k="r:{esc(r["name"])}"><summary>'
-            f'<span class="rn">{esc(r["name"])}</span>{ghbadge}{"".join(chips)}'
+            f'{rn}{ghbadge}{"".join(chips)}'
             f"{commit}</summary>{body}</details>"
         )
 
@@ -1757,6 +1995,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(render_workboard(get_board()).encode("utf-8"))
             elif path.startswith("/file/"):
                 self._serve_file(path[len("/file/") :])
+            elif path.startswith("/repo/"):
+                self._serve_repo(path[len("/repo/") :])
+            elif path.startswith("/spec/"):
+                self._serve_spec(path[len("/spec/") :])
+            elif path.startswith("/task/"):
+                self._serve_task(path[len("/task/") :])
             elif path == "/healthz":
                 self._send(b"ok", "text/plain")
             else:
@@ -1786,6 +2030,36 @@ class Handler(BaseHTTPRequestHandler):
         else:
             body = f"<pre>{esc(content)}</pre>"
         self._send(render_detail_page(title, body).encode("utf-8"))
+
+    def _serve_repo(self, entity_id: str) -> None:
+        entry = get_pages().get(entity_id)
+        if not entry or entry.get("kind") != "repo":
+            self._send(b"not found", "text/plain", 404)
+            return
+        self._send(render_repo_page(entry).encode("utf-8"))
+
+    def _serve_spec(self, entity_id: str) -> None:
+        entry = get_pages().get(entity_id)
+        if not entry or entry.get("kind") != "spec":
+            self._send(b"not found", "text/plain", 404)
+            return
+        self._send(render_spec_page(entry).encode("utf-8"))
+
+    def _serve_task(self, entity_id: str) -> None:
+        entry = get_pages().get(entity_id)
+        if not entry or entry.get("kind") != "task":
+            self._send(b"not found", "text/plain", 404)
+            return
+        try:
+            with open(entry["path"], encoding="utf-8", errors="replace") as fh:
+                content = fh.read()
+        except OSError:
+            self._send(b"not found", "text/plain", 404)
+            return
+        title = entry.get("title") or os.path.basename(entry["path"])
+        self._send(
+            render_detail_page(title, render_markdown(content)).encode("utf-8")
+        )
 
     # --- writes / control ---------------------------------------------------
     def _reject_cross_origin(self) -> bool:
