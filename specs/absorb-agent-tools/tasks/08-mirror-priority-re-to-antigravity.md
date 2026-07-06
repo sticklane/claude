@@ -19,3 +19,7 @@ Task 06 added `PRIORITY_RE` extraction to `.claude/skills/workboard/workboard.py
 
 - [x] `grep -n 'PRIORITY_RE' antigravity/.agents/skills/workboard/workboard.py` → pattern definition present, matching the Claude-side version's regex — line 206 `PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P\d)\]?", re.MULTILINE)`, line 225 usage; verifier PASS (evidence/08-mirror-priority-re-to-antigravity.md)
 - [x] `diff <(grep -A2 'PRIORITY_RE' .claude/skills/workboard/workboard.py) <(grep -A2 'PRIORITY_RE' antigravity/.agents/skills/workboard/workboard.py)` → no meaningful divergence (path/import differences aside) — empty diff, exit 0; verifier PASS (evidence/08-mirror-priority-re-to-antigravity.md)
+
+## Discovered
+
+- Global auto-format-on-edit hook silently rewrites entire non-black-conformant Python files (hit on the antigravity workboard.py mirror, a file outside task 07's Touch) — see specs/absorb-agent-tools/tasks/09-format-hook-full-file-rewrite-on-nonconformant-py.md
