@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 4 turns
@@ -17,6 +17,6 @@ Blocking: no
 
 ## Acceptance
 
-- [ ] `grep -n '^Spec:' specs/drain-rolling-window/tasks/04-scheduler-admission-test.md` → contains "R4", not "R5"
+- [x] `grep -n '^Spec:' specs/drain-rolling-window/tasks/04-scheduler-admission-test.md` → contains "R4", not "R5" — line 11 now reads `Spec: ../SPEC.md (requirements R1, R4, R8a, R9)`
 
 Note for drain: this task's Touch is a header line in ANOTHER task file (04, already done), not this task's own file — the merge-time whitelist check should treat that Touch-declared edit as in-scope, not as unexpected cross-file drift.
