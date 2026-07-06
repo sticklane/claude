@@ -333,6 +333,38 @@ normal dispatch decision (the task is free to re-dispatch once); any other statu
 — re-owned `in-progress`, `done`, `deferred`, or `failed` → log the verdict
 and discard it. The rescue branch, not the verdict, is the durable artifact.
 
+**Environment kill.** Distinct from a per-worker sweep race: an
+**environment kill** is the whole runtime dying under drain, so every live
+run is affected at once, not just one worker.
+
+*Detection signal.* Read it from either of two places — the harness failure
+notification's termination-cause text for a dispatched worker, or an API
+error drain's own session hits directly — but only when that text names an
+**account-wide** condition: a usage or weekly limit reached, an
+auth/billing failure, or a persistent 429/5xx that survived the harness's
+own retries. One agent erroring while its siblings keep running is NOT an
+environment kill — that is an ordinary per-worker failure and routes as
+one; the environment-kill signal is that the condition is account-wide, so
+no relaunch could clear it.
+
+*Routing.* An environment kill never counts toward the slot machine or the
+tournament threshold (like a sweep race). Unlike a stale lock, the
+Stale-lock liveness **grace window does not apply** — drain does not wait
+out the 15-min window before acting, because the death signal is definitive:
+the runtime is already gone, so there is nothing to confirm.
+
+*Run-wide halt.* On the signal, drain sweeps EVERY currently-live run it
+owns — each with task 01's R1-preserving rescue-branch procedure above (the
+snapshot-before-force-remove sweep; cited, not restated) — then writes each
+swept task's `## Progress` entry stating "environment kill, does not count
+as an attempt", flips each to `pending`, and commits and pushes the resets.
+It then **halts**: no further dispatch, no slot-machine relaunch, and
+**no baton self-relaunch**. When the underlying error carries a reset time (e.g.
+a limit's reset timestamp), the halt report names it so the human knows when
+a re-run can succeed. Ownership scoping: foreign-owned tasks named by any
+committed partition or owner record are left alone; absent any such record,
+every live run is drain's own and is swept.
+
 ## Deferred question format (written by drain, from the verdict)
 
 ```markdown

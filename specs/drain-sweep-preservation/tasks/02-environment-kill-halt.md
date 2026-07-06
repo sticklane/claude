@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P0
 Budget: 6 turns
@@ -49,9 +49,9 @@ citation. No worker-prompt edits (task 03), no version bump (task 03).
 
 ## Acceptance
 
-- [ ] `grep -qi 'environment kill' .claude/skills/drain/reference.md && grep -qi 'environment kill' .claude/skills/drain/SKILL.md` → both match
-- [ ] `grep -qi 'account-wide' .claude/skills/drain/reference.md` → match
-- [ ] `grep -Eqi 'grace window does not apply|window does not apply' .claude/skills/drain/reference.md` → match
-- [ ] `grep -qi 'no baton self-relaunch' .claude/skills/drain/reference.md` → match
-- [ ] `claude plugin validate .` → green
-- [ ] `./specs/status.sh` → parses, no errors
+- [x] `grep -qi 'environment kill' .claude/skills/drain/reference.md && grep -qi 'environment kill' .claude/skills/drain/SKILL.md` → both match (verifier PASS; evidence/02-environment-kill-halt.md)
+- [x] `grep -qi 'account-wide' .claude/skills/drain/reference.md` → match (verifier PASS; evidence file)
+- [x] `grep -Eqi 'grace window does not apply|window does not apply' .claude/skills/drain/reference.md` → match (verifier PASS; evidence file)
+- [x] `grep -qi 'no baton self-relaunch' .claude/skills/drain/reference.md` → match (verifier PASS; evidence file)
+- [x] `claude plugin validate .` → green, exit 0 "Validation passed" (verifier PASS; evidence file)
+- [x] `./specs/status.sh` → parses, exit 0, 40 tasks tallied (verifier PASS; evidence file)
