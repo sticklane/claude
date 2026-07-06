@@ -10,6 +10,10 @@ template for scaffolding a new scenario. Its `assert.sh` keeps its failure
 output under ~10 lines — one `ASSERT FAIL:` line per broken check, never a
 transcript.
 
+The runner invokes `setup.sh`/`assert.sh` with bare `bash`, and macOS's
+system bash is 3.2 — write them to bash 3.2 (no `declare -A` or other
+bash-4+ syntax), or they misbehave silently rather than erroring.
+
 ## setup.sh
 
 ```bash

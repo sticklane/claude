@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Discovered-from: specs/drain-rolling-window/tasks/06-drain-eval-scenario.md
 Spec: ../SPEC.md
 Blocking: no
@@ -11,5 +11,5 @@ Decision (2026-07-06): do BOTH (each is one line): a compat note in `.claude/ski
 
 ## Acceptance
 
-- [ ] `grep -q 'bash 3.2' .claude/skills/evals/reference.md` → exits 0 (compat note present; currently absent)
-- [ ] `grep -q 'bash 3.2' evals/run.sh` → exits 0 (top-of-file comment present; currently absent)
+- [x] `grep -q 'bash 3.2' .claude/skills/evals/reference.md` → exits 0 (compat note present; currently absent) — exits 0; compat note added to reference.md intro
+- [x] `grep -q 'bash 3.2' evals/run.sh` → exits 0 (top-of-file comment present; currently absent) — exits 0; comment added to run.sh header block
