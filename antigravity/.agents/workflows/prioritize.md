@@ -1,5 +1,5 @@
 ---
-description: Interview-driven reprioritization of the current repo's pending work - scan every pending/blocked/deferred task across specs/, present the table, take one free-form reply, and rewrite the named tasks' Priority: headers in one commit. Reorders work; it does not report the next pipeline command (for that, list-specs). Human-launched only, since it mutates task files and commits.
+description: Interview-driven reprioritization of the current repo's open work - scan every pending/blocked/deferred/draft task plus every spec with no tasks/ breakdown yet across specs/, present the table, take one free-form reply, and rewrite the named tasks' (or SPEC.md's) Priority: headers in one commit. Reorders work; it does not report the next pipeline command (for that, list-specs). Human-launched only, since it mutates task files and commits.
 ---
 
 Reorder a repo's pending work by rewriting `Priority:` headers, driven by
@@ -7,8 +7,10 @@ one interview turn. This is a human-launched workflow (it mutates task files
 and commits). It applies exactly what the human states — it never invents or
 suggests an ordering. Contracts, top-first:
 
-- **Scope is the current repo's `specs/`** (excludes `archive/`); the
-  deterministic scan is `prioritize_scan.py`, the interview is this prose.
+- **Scope is the current repo's `specs/`** (excludes `archive/`): every
+  `pending`/`blocked`/`deferred`/`draft` task, plus one row per spec with no
+  `tasks/` breakdown yet (its `SPEC.md` stands in). The deterministic scan
+  is `prioritize_scan.py`, the interview is this prose.
 - **Ask exactly ONE free-form question** (the R3 wording below), never a
   fixed-option picker — an option list can't represent an arbitrary
   re-ranking.
@@ -26,7 +28,11 @@ suggests an ordering. Contracts, top-first:
    `.agents/skills/prioritize/prioritize_scan.py`. If it prints
    `nothing to reprioritize`, stop here — no interview, no commit.
 
-2. **Present the table and ask one question.** Relay the scanner's markdown
+2. **Present the table and ask one question.** Lead with a short plain-text
+   line (e.g. "Here's what's open:") before the table — some terminal
+   clients have been observed to drop markdown tables that immediately
+   follow a tool call in the same turn, and the lead-in line gives the
+   renderer a plain-text anchor first. Then relay the scanner's markdown
    table (`| Ref | Title | Status | Priority |`) verbatim, then ask exactly
    this, as a plain conversational question (not a fixed-option picker):
 
@@ -46,11 +52,17 @@ suggests an ordering. Contracts, top-first:
    "looks fine") means zero changes; skip to step 6.
 
 4. **Apply each validated change.** Edit only the `Priority:` header of each
-   named task file:
+   named file (a task file, or a `SPEC.md` when the `Ref` points at one):
    - if a `Priority:` line already exists, replace its value in place;
    - else insert `Priority: <PX>` immediately below the `Status:` line when
      one exists;
-   - else as the first header line, above the first `#`/`##` heading.
+   - else, for a task file with neither header, insert it as the first
+     header line, above the first `#`/`##` heading (matching a
+     drain-discovered task file's header-before-title shape);
+   - else, for a headerless `SPEC.md`, insert it immediately below the
+     `# Title` line instead — every real `SPEC.md` in this repo puts its
+     title first, so inserting above it would put `Priority:` before the
+     file's own heading.
 
    Touch no other line in the file.
 

@@ -1,6 +1,6 @@
 ---
 name: list-specs
-description: Prints a per-spec status table for the current repo - one row per specs/ directory with its task Status rollup and the next pipeline command to run (/critique, /breakdown, /build, /drain, or /distill) - by running the bundled list_specs.py scanner against the cwd. Use when the user asks "list the specs", "what's the state of the specs", "which specs are ready", "what's the next command per spec", or "where is each spec in the pipeline". For reordering work rather than reporting the next command - rebalancing Priority: headers across pending/blocked/deferred tasks - use /prioritize instead. For cross-repo state, use /workboard.
+description: Prints a per-spec status table for the current repo - one row per specs/ directory with its task Status rollup and the next pipeline command to run (/critique, /breakdown, /build, /drain, or /distill) - by running the bundled list_specs.py scanner against the cwd. Use when the user asks "list the specs", "what's the state of the specs", "which specs are ready", "what's the next command per spec", or "where is each spec in the pipeline". For reordering work rather than reporting the next command - rebalancing Priority: headers across pending/blocked/deferred/draft tasks and not-yet-broken-down specs - use /prioritize instead. For cross-repo state, use /workboard.
 ---
 
 Report, don't act: run the scanner, present its table, stop. This skill

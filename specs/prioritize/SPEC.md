@@ -7,8 +7,8 @@ dispatch tie-break `/drain` honors (`.claude/skills/drain/SKILL.md`), and
 `/breakdown` assigns it once at decomposition time — but nothing lets a
 human revisit and rebalance it later without hand-editing task files one
 at a time. `/workboard` doesn't surface Priority at all, and no skill
-presents "here's everything pending/blocked/deferred in this repo, tell me
-what to reorder" in one pass. Per Anthropic's own published guidance
+presents "here's everything open in this repo, tell me what to reorder" in
+one pass. Per Anthropic's own published guidance
 (`docs/external-playbooks.md`'s Task prioritization section: "priority
 assigned ahead of the run, agent honors it, doesn't invent it"), the human
 pre-assigns priority and the agent just honors it — this skill is the
@@ -31,25 +31,36 @@ confirms no such field on its returned dict), so `prioritize_scan.py` adds
 its own `Priority:` regex parse over each task's `abs` file content: it
 enumerates every task across every spec in `specs/` (excluding `archive/`,
 excluded the same way `scan_toolkit_specs` already excludes it) whose
-`status` is `pending`, `blocked`, or `deferred`, and prints a markdown
-table. Its interactive half is `/prioritize`'s own SKILL.md prose: present
-that table, take one free-form reply describing the desired changes,
-apply them by editing each named task file's `Priority:` header, and
-commit.
+`status` is `pending`, `blocked`, `deferred`, or `draft`, plus one row per
+spec with no `tasks/` breakdown yet (its `SPEC.md` stands in, since it's
+the only file in that spec carrying a `Status:`/`Priority:` header pair),
+and prints a markdown table. Its interactive half is `/prioritize`'s own
+SKILL.md prose: present that table, take one free-form reply describing
+the desired changes, apply them by editing each named file's (task or
+`SPEC.md`) `Priority:` header, and commit.
 
 ## Requirements
 
 - **R1**: `prioritize_scan.py` collects every task (across every non-archive
-  spec in `specs/`) whose status is `pending`, `blocked`, or `deferred` —
-  `done`, `skipped`, `in-progress`/`in_progress`/`claimed`, `draft`, and
-  `failed` tasks are never listed. If none qualify, it prints "nothing to
-  reprioritize" and the skill stops there (no interview).
+  spec in `specs/`) whose status is `pending`, `blocked`, `deferred`, or
+  `draft` — `done`, `skipped`, and `in-progress`/`in_progress`/`claimed`/
+  `failed` tasks are never listed. It also emits one row per spec whose
+  `tasks/` list is empty (no breakdown yet), using that spec's `SPEC.md` as
+  the row: `ref` is `<slug>/SPEC.md`, `status` is the SPEC's own `Status:`
+  header value (lowercased) or `open` when absent, `priority` follows the
+  same rule as task rows — except a task-less spec whose own `Status:` is
+  `done` or `skipped` gets no row at all (it isn't reorderable work; the
+  fallback row exists only to represent specs still open). If nothing
+  qualifies at all, it prints "nothing to reprioritize" and the skill
+  stops there (no interview).
 - **R2**: The table has columns `Ref | Title | Status | Priority`, sorted
-  by spec slug then task number. `Ref` is `<spec-slug>/<task-filename>`
+  by spec slug then task number (a spec's `SPEC.md` fallback row is its
+  only row, so its position among task numbers is moot). `Ref` is
+  `<spec-slug>/<task-filename>` or `<spec-slug>/SPEC.md`
   (e.g. `drain-sweep-preservation/03-worker-commits.md`) — the exact
   string the user can echo back unambiguously, since a bare task filename
   like `03-foo.md` could collide across specs. `Priority` shows the
-  task's actual header value, or `P2 (default)` when the header is absent.
+  row's actual header value, or `P2 (default)` when the header is absent.
 - **R3**: After printing the table, `/prioritize` asks exactly one
   free-form question (not AskUserQuestion, which caps at 4 options and
   can't represent an arbitrary re-ranking): "What changes should I make?
@@ -64,14 +75,18 @@ commit.
   from R2's table. A `Ref` not in the table, or a target outside
   `P0`-`P3`, is **not applied**; it is listed back to the user as "not
   applied: <reason>" rather than guessed at or silently skipped.
-- **R5**: For every validated change, edit that task file's `Priority:`
-  header line to the new value: if the file already has a `Priority:`
-  line, replace it in place; otherwise add one immediately below
-  `Status:` when a `Status:` line exists, or as the first header line
-  (above the first `#`/`##` heading) when it doesn't — R1 already
+- **R5**: For every validated change, edit that file's (task or `SPEC.md`)
+  `Priority:` header line to the new value: if the file already has a
+  `Priority:` line, replace it in place; otherwise add one immediately
+  below `Status:` when a `Status:` line exists. Otherwise the insertion
+  point depends on the file kind: a headerless task file gets it as the
+  first header line, above the first `#`/`##` heading (matching a
+  drain-discovered task file's header-before-title shape) — R1 already
   includes header-less tasks (their status defaults to `pending`, per
   `scan_toolkit_specs`'s own default), so this fallback is reachable, not
-  hypothetical. No other line in the task file is touched.
+  hypothetical; a headerless `SPEC.md` instead gets it immediately below
+  the `# Title` line, since every real `SPEC.md` in this repo puts its
+  title first. No other line in the file is touched.
 - **R6**: If at least one change was applied, commit every edited task
   file in one commit: `chore: reprioritize <N> task(s) across <M> spec(s)
   per interview` — never leave the edits uncommitted (per this repo's own
@@ -96,9 +111,9 @@ commit.
 
 ## Out of scope
 
-- `draft` tasks and promoting them to `pending` — that stays a human
-  editing `Status:` directly (or a decision for `/workboard`'s inbox),
-  not this skill's job.
+- Promoting a `draft` task to `pending` (or any other status transition) —
+  `/prioritize` only ever rewrites `Priority:`; `Status:` stays a human
+  editing it directly (or a decision for `/workboard`'s inbox).
 - Cross-repo prioritization — single repo only, matching `/list-specs`'
   scope, not `/workboard`'s cross-repo scan.
 - Any automatic re-ordering/suggestion of priorities by the skill itself
@@ -110,12 +125,19 @@ commit.
 ## Acceptance criteria
 
 - [ ] `python3 .claude/skills/prioritize/prioritize_scan.py` against a
-      fixture repo with zero pending/blocked/deferred tasks prints
-      "nothing to reprioritize" and produces no table.
+      fixture repo with zero pending/blocked/deferred/draft tasks and no
+      task-less specs prints "nothing to reprioritize" and produces no
+      table.
 - [ ] Same script against a fixture with 2 specs, each having a mix of
-      pending/blocked/deferred/done/draft tasks: the table lists only the
-      pending/blocked/deferred ones, with `Ref` values in
-      `<slug>/<filename>` form, sorted by spec then task number.
+      pending/blocked/deferred/done/draft tasks: the table lists the
+      pending/blocked/deferred/draft ones (not `done`/`in-progress`/etc.),
+      with `Ref` values in `<slug>/<filename>` form, sorted by spec then
+      task number.
+- [ ] A fixture spec with no `tasks/` dir at all gets exactly one row,
+      `<slug>/SPEC.md`, whose status/priority come from the SPEC.md's own
+      `Status:`/`Priority:` headers (or their documented defaults). A
+      fixture spec with no `tasks/` dir whose `SPEC.md` reads `Status: done`
+      or `Status: skipped` gets no row at all.
 - [ ] Fixture task with no `Priority:` header shows `P2 (default)` in the
       table.
 - [ ] A fresh agent running `/prioritize` against that fixture, given the
@@ -131,9 +153,10 @@ commit.
       still applied and committed.
 - [ ] Same fixture, reply "none": no files change, no commit is made.
 - [ ] End-to-end: running `/prioritize` in this repo (`/Users/sjaconette/claude`)
-      produces a table of its current pending/blocked/deferred tasks
-      (excluding `archive/`) and, given at least one valid reprioritization
-      instruction, produces exactly one commit reflecting it.
+      produces a table of its current pending/blocked/deferred/draft tasks
+      plus task-less-spec rows (excluding `archive/`) and, given at least
+      one valid reprioritization instruction, produces exactly one commit
+      reflecting it.
 
 ## Open questions
 

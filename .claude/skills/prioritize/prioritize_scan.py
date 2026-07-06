@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""prioritize_scan — per-repo table of pending/blocked/deferred tasks (R1+R2).
+"""prioritize_scan — per-repo table of reorderable work (R1+R2).
 
 Scans `specs/` under the current working directory (excluding `archive/`, the
 same way `scan_toolkit_specs` already does), keeps every task whose status is
-`pending`, `blocked`, or `deferred`, and prints one markdown table
-`Ref | Title | Status | Priority` sorted by spec slug then task number — or
-the single line `nothing to reprioritize` when none qualify.
+`pending`, `blocked`, `deferred`, or `draft`, plus one row per spec that has
+no `tasks/` breakdown yet (its `SPEC.md` stands in for the row), and prints
+one markdown table `Ref | Title | Status | Priority` sorted by spec slug then
+task number — or the single line `nothing to reprioritize` when none qualify.
 
 `scan_toolkit_specs` does not parse `Priority:` (its task dict keys are
 `file`, `abs`, `title`, `status`, `deps`), so this script adds its own
@@ -25,7 +26,8 @@ from pathlib import Path
 _SCRIPT = Path(__file__).resolve()
 _WORKBOARD_PY = _SCRIPT.parent.parent / "workboard" / "workboard.py"
 
-_QUALIFYING = ("pending", "blocked", "deferred")
+_QUALIFYING = ("pending", "blocked", "deferred", "draft")
+_CLOSED_SPEC_STATUSES = ("done", "skipped")
 _PRIORITY_RE = re.compile(r"^Priority:\s*(P[0-3])", re.MULTILINE)
 _TASK_NUM_RE = re.compile(r"^(\d+)-")
 
@@ -42,6 +44,7 @@ def _load_module(name, path):
 _workboard = _load_module("_prioritize_workboard", _WORKBOARD_PY)
 scan_toolkit_specs = _workboard.scan_toolkit_specs
 read_text = _workboard.read_text
+STATUS_RE = _workboard.STATUS_RE
 
 
 def _task_number(filename):
@@ -56,14 +59,15 @@ def _sort_key(ref):
     return (slug, _task_number(filename), filename)
 
 
-def _priority(task):
-    """The task's `Priority:` header value, or `P2 (default)` when absent."""
-    m = _PRIORITY_RE.search(read_text(Path(task["abs"]), 10_000))
+def _priority(path):
+    """The file's `Priority:` header value, or `P2 (default)` when absent."""
+    m = _PRIORITY_RE.search(read_text(Path(path), 10_000))
     return m.group(1) if m else "P2 (default)"
 
 
 def collect(repo_root):
-    """R1+R2: sorted rows for every pending/blocked/deferred task."""
+    """R1+R2: sorted rows for every pending/blocked/deferred/draft task,
+    plus one row per spec with no tasks/ breakdown yet."""
     rows = []
     for spec in scan_toolkit_specs(Path(repo_root)):
         slug = spec["slug"]
@@ -71,12 +75,30 @@ def collect(repo_root):
             if task["status"] not in _QUALIFYING:
                 continue
             filename = Path(task["file"]).name
-            rows.append({
-                "ref": f"{slug}/{filename}",
-                "title": task["title"],
-                "status": task["status"],
-                "priority": _priority(task),
-            })
+            rows.append(
+                {
+                    "ref": f"{slug}/{filename}",
+                    "title": task["title"],
+                    "status": task["status"],
+                    "priority": _priority(task["abs"]),
+                }
+            )
+        if not spec["tasks"]:
+            spec_path = Path(repo_root) / spec["path"]
+            text = read_text(spec_path, 20_000)
+            sm = STATUS_RE.search(text)
+            status = sm.group(1).lower() if sm else "open"
+            if status in _CLOSED_SPEC_STATUSES:
+                continue
+            pm = _PRIORITY_RE.search(text)
+            rows.append(
+                {
+                    "ref": f"{slug}/SPEC.md",
+                    "title": spec["title"],
+                    "status": status,
+                    "priority": pm.group(1) if pm else "P2 (default)",
+                }
+            )
     rows.sort(key=lambda r: _sort_key(r["ref"]))
     return rows
 
@@ -90,9 +112,7 @@ def render(rows):
         "| --- | --- | --- | --- |",
     ]
     for r in rows:
-        lines.append(
-            f"| {r['ref']} | {r['title']} | {r['status']} | {r['priority']} |"
-        )
+        lines.append(f"| {r['ref']} | {r['title']} | {r['status']} | {r['priority']} |")
     return "\n".join(lines)
 
 
