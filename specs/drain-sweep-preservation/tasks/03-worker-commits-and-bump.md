@@ -52,3 +52,7 @@ touched by this task.
 - [x] `grep -q '"version"' .claude-plugin/plugin.json && ! grep -q '"version": "0.8.8"' .claude-plugin/plugin.json` → version bumped from spec-time 0.8.8 (adjust mentally if the base moved; the point is a bump lands with this spec) — verifier: version = 0.8.15 (one patch above pre-task 0.8.14); evidence/03-worker-commits-and-bump.md
 - [x] `claude plugin validate .` → green — verifier: exit 0, "✔ Validation passed"; evidence/03-worker-commits-and-bump.md
 - [x] `./specs/status.sh` → parses, no errors — verifier: exit 0, parsed 41 tasks / 10 specs, no errors; evidence/03-worker-commits-and-bump.md
+
+## Discovered
+
+- Antigravity mirror of the drain Worker prompt (`antigravity/.agents/workflows/drain.md`, worker-prompt block ~lines 127-166) still says only "commit to task/NN-<slug>, do not push" and did not receive this task's incremental-commit clause — `antigravity/` wasn't in this task's Touch list, so an unattended worker couldn't edit it. See specs/drain-sweep-preservation/tasks/04-antigravity-mirror-incremental-commit.md.
