@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/drain-rolling-window/tasks/09-fix-stale-group-mode-antigravity-handoff.md
 Spec: ../SPEC.md
 Blocking: no
