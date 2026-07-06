@@ -704,6 +704,10 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
             "why": i["why"],
             "age": i.get("age_ts") or 0,
             "cmd": i.get("cmd", ""),
+            # Forward task 01's unblock/deferred data when present; older scan
+            # JSON omits both keys, so tolerate absence (R6, console side).
+            "unblock": i.get("unblock"),
+            "deferred_questions": i.get("deferred_questions") or [],
         }
         for i in assembled["inbox"]
     ]
@@ -1585,6 +1589,12 @@ select.prio.prio-P3{color:var(--dim)}
 .inbox .repo{font-family:var(--mono);font-size:11px;color:var(--dim);
   text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .inbox .age{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:right}
+.inbox.needs-answer{border-left:3px solid var(--cool);
+  background:linear-gradient(90deg,var(--raise),var(--panel) 55%);margin-bottom:14px}
+.inbox .ihead{font-family:var(--disp);text-transform:uppercase;letter-spacing:.13em;
+  font-size:9.5px;color:var(--cool);padding:9px 15px 3px}
+.chip.needs-answer{color:var(--cool);border-color:#2f4a58}
+.chip.warn{color:var(--signal);border-color:#5c3a28}
 .chip{font-family:var(--disp);text-transform:uppercase;letter-spacing:.09em;
   font-size:9.5px;padding:2px 8px;border-radius:5px;border:1px solid var(--rule);
   color:var(--dim);white-space:nowrap;align-self:center}
@@ -1826,6 +1836,29 @@ def _dispatch_btn(kind: str, target: str, label: str, confirm: str) -> str:
     )
 
 
+def _is_answer_item(i: dict) -> bool:
+    """A needs-your-answer inbox item: an ask-typed unblock or a deferred
+    question the human must resolve. The scanner marks these `needs-answer`;
+    the structured unblock/deferred fields are honored too, for forward-compat."""
+    return (
+        i.get("state") == "needs-answer"
+        or (i.get("unblock") or {}).get("type") == "ask"
+        or bool(i.get("deferred_questions"))
+    )
+
+
+def _unblock_missing(i: dict) -> bool:
+    """A blocked item with no recorded Unblock: step — flag it so the user
+    knows to add one. The scanner bakes the step into `why` when present, so a
+    genuine absence shows only as its 'no unblock step recorded' note (or as an
+    absent structured unblock)."""
+    return (
+        i.get("state") == "blocked"
+        and not i.get("unblock")
+        and "no unblock step recorded" in (i.get("why") or "")
+    )
+
+
 def render_workboard(b: dict) -> str:
     def chip(state):
         return f'<span class="chip {esc(state)}">{esc(state)}</span>'
@@ -1885,19 +1918,41 @@ def render_workboard(b: dict) -> str:
         f'<div class="panel" id="panel-active"><div class="sub">Active sessions · {len(b["actives"])}</div>{active_panel}</div>'
     )
 
-    if b["inbox"]:
-        rows = "".join(
-            f'<div class="row" data-text="{esc((i["item"] + " " + i["why"] + " " + i["repo"]).lower())}">{chip(i["state"])}'
+    def inbox_row(i, *, answerable):
+        # Answer rows are human-decision-only: never a dispatch command. Blocked
+        # rows lacking a recorded unblock get a warning chip nudging an Unblock: line.
+        badge = chip(i["state"])
+        if not answerable and _unblock_missing(i):
+            badge += '<span class="chip warn">no unblock</span>'
+        cmd = (
+            f" <code>{esc(i['cmd'])}</code>"
+            if i["cmd"] and not answerable
+            else ""
+        )
+        return (
+            f'<div class="row" data-text="{esc((i["item"] + " " + i["why"] + " " + i["repo"]).lower())}">{badge}'
             f'<div><div class="what">{esc(i["item"])}</div>'
-            f'<div class="why">{esc(i["why"])}'
-            f"{' <code>' + esc(i['cmd']) + '</code>' if i['cmd'] else ''}</div></div>"
+            f'<div class="why">{esc(i["why"])}{cmd}</div></div>'
             f'<div class="repo">{esc(i["repo"])}</div>'
             f'<div class="age">{_ago(i["age"])}</div></div>'
-            for i in b["inbox"]
         )
-        inbox = f'<div class="inbox">{rows}</div>'
-    else:
+
+    if not b["inbox"]:
         inbox = '<div class="inbox"><div class="zero">Nothing needs you.</div></div>'
+    else:
+        answer_items = [i for i in b["inbox"] if _is_answer_item(i)]
+        rest_items = [i for i in b["inbox"] if not _is_answer_item(i)]
+        inbox = ""
+        if answer_items:  # grouped first, visually distinct, no dispatch (R6)
+            arows = "".join(inbox_row(i, answerable=True) for i in answer_items)
+            inbox += (
+                '<div class="inbox needs-answer">'
+                '<div class="ihead">Needs your answer</div>'
+                f"{arows}</div>"
+            )
+        if rest_items:
+            rrows = "".join(inbox_row(i, answerable=False) for i in rest_items)
+            inbox += f'<div class="inbox">{rrows}</div>'
 
     repo_blocks = []
     for r in sorted(b["repos"], key=lambda r: (not _repo_has_work(r), r["name"])):
