@@ -1016,6 +1016,20 @@ def build_action_registry(board: dict) -> dict:
                     "dispatch-resume-handoff", hpath, path, prompt,
                     f"resume handoff: {title}",
                 )
+
+    # stop-dispatch: one per live dispatch this server started (R1/R7). Keyed
+    # on the record's log path so the id is stable across rescans of the same
+    # running dispatch.
+    for rec in _load_records():
+        if not rec.get("running"):
+            continue
+        did = rec.get("id") or ""
+        aid = _entity_id("stop-dispatch", rec.get("log") or did)
+        actions[aid] = {
+            "id": aid, "kind": "stop-dispatch",
+            "label": f"stop {rec.get('kind', 'dispatch')}",
+            "repo": rec.get("cwd") or "", "dispatch_id": did,
+        }
     return actions
 
 
@@ -1661,7 +1675,9 @@ document.addEventListener('click',function(e){
   var b=e.target.closest('[data-act]');if(!b)return;
   e.preventDefault();
   if(b.dataset.act==='stop'){
-    acPost('/api/agent/stop',{pid:parseInt(b.dataset.pid,10)},'Stop agent "'+(b.dataset.name||b.dataset.pid)+'" (SIGTERM)? Resumable via claude --resume.').then(function(ok){if(ok)setTimeout(refresh,600)});
+    acPost('/api/agent/stop',{pid:parseInt(b.dataset.pid,10),confirm:true},'Stop agent "'+(b.dataset.name||b.dataset.pid)+'" (SIGTERM, then SIGKILL after 10s)? Resumable via claude --resume.').then(function(ok){if(ok)setTimeout(refresh,600)});
+  }else if(b.dataset.act==='stop-dispatch'){
+    acPost('/action/'+encodeURIComponent(b.dataset.id),{confirm:true},b.dataset.confirm||'Stop this dispatch (SIGTERM, then SIGKILL after 10s)?').then(function(ok){if(ok)setTimeout(refresh,800)});
   }else if(b.dataset.act==='resume'){
     var p=window.prompt('Resume "'+(b.dataset.name||b.dataset.sid)+'" as a background agent. Prompt (blank = "continue"):','');
     if(p===null)return;
@@ -2252,25 +2268,44 @@ def execute_dispatch(action: dict) -> dict:
     )
 
 
+def execute_stop_dispatch(action: dict) -> dict:
+    """Registry executor for `stop-dispatch`: terminate the recorded dispatch's
+    process group (R7). The dispatch id comes wholly from the server-built
+    registry — the client supplies only the action id + confirm flag."""
+    ok, msg = stop_dispatch(action.get("dispatch_id") or "")
+    return {"code": 200 if ok else 409, "body": {"ok": ok, "message": msg}}
+
+
 _ACTION_EXECUTORS = {
     "push": execute_push,
     "dispatch-drain": execute_dispatch,
     "dispatch-verify": execute_dispatch,
     "dispatch-resume-handoff": execute_dispatch,
+    "stop-dispatch": execute_stop_dispatch,
 }
 
+# Destructive actions additionally require an explicit confirm flag in the POST
+# body (R8's two-step confirm, mirrored server-side; R9 lists the confirm flag
+# as a permitted client value). The token + Host check still gate every POST.
+_CONFIRM_REQUIRED = {"stop-dispatch"}
 
-def run_action(action_id: str) -> dict:
+
+def run_action(action_id: str, confirm: bool = False) -> dict:
     """Validate an opaque action id against the current (TTL-window) registry
-    and execute it. The only client-supplied value is the id — the argv comes
-    wholly from the server-built registry (spec R9). An id not in the registry
-    (unknown, or valid before the last rescan) -> 409 and nothing runs."""
+    and execute it. The only client-supplied values are the id and the confirm
+    flag — the argv comes wholly from the server-built registry (spec R9). An id
+    not in the registry (unknown, or valid before the last rescan) -> 409 and
+    nothing runs; a confirm-required action without the flag -> 400."""
     action = get_actions().get(action_id)
     if not action:
         return {"code": 409, "body": {
             "ok": False,
             "message": "unknown action id — the board state may have changed; "
                        "rescan the board and try again",
+        }}
+    if action["kind"] in _CONFIRM_REQUIRED and not confirm:
+        return {"code": 400, "body": {
+            "ok": False, "message": "this action requires an explicit confirm",
         }}
     executor = _ACTION_EXECUTORS.get(action["kind"])
     if not executor:
@@ -2342,6 +2377,71 @@ def _pgid_alive(pgid: int) -> bool:
         return True
     except OSError:
         return False
+
+
+def _pid_alive(pid: int) -> bool:
+    """Signal 0 to a single pid — alive unless there is no such process."""
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+
+
+def _proc_command(pid: int) -> str:
+    """The command line of `pid` as `ps` reports it; empty when gone. Used to
+    confirm a pid we're about to signal is really a `claude` invocation (R7) —
+    a recycled pid running something else won't match."""
+    try:
+        out = subprocess.run(
+            ["ps", "-o", "command=", "-p", str(pid)],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return out.stdout.strip()
+
+
+def _stop_grace() -> float:
+    """Seconds to wait after SIGTERM before escalating to SIGKILL (R7's 10s
+    grace). Env-overridable so tests can shrink it."""
+    try:
+        return float(os.environ.get("AGENT_CONSOLE_STOP_GRACE", "10"))
+    except ValueError:
+        return 10.0
+
+
+_escalation_timers: list = []  # daemon Timers pending a SIGKILL escalation
+
+
+def _signal_with_grace(term_fn, kill_fn, alive_fn, grace, on_dead=None):
+    """R7 SIGTERM→SIGKILL, non-blocking: send the term signal now, then on a
+    background timer escalate to the kill signal after `grace` seconds — but
+    only if `alive_fn()` still reports the target alive — and run `on_dead()`
+    once done. Returns the Timer so callers/tests can join it. The handler
+    thread never blocks for the grace (task: never block the request for 10s)."""
+    term_fn()
+
+    def _finish():
+        try:
+            if alive_fn():
+                kill_fn()
+        except OSError:
+            pass
+        finally:
+            if on_dead:
+                on_dead()
+
+    t = threading.Timer(grace, _finish)
+    t.daemon = True
+    t.start()
+    _escalation_timers[:] = [x for x in _escalation_timers if x.is_alive()]
+    _escalation_timers.append(t)
+    return t
 
 
 def _record_live(rec: dict) -> bool:
@@ -2429,10 +2529,65 @@ def start_dispatch(kind: str, cwd: str, prompt: str, extra_args=()) -> dict:
         "log": str(log_path), "state": "running", "exit_code": None,
     }
     (d / f"{did}.json").write_text(json.dumps(rec), encoding="utf-8")
+    # Rebuild the board next scan so the new dispatch's `stop-dispatch` action
+    # enters the registry immediately (R8: no manual rescan to stop it).
+    _invalidate_board()
     return {"code": 200, "body": {
         "ok": True, "id": did, "log": str(log_path),
         "message": f"dispatched {kind} in {real}",
     }}
+
+
+def _find_record(dispatch_id: str) -> tuple[dict | None, Path | None]:
+    """Load a single dispatch record + its json path by id, or (None, None)."""
+    if not dispatch_id:
+        return None, None
+    jf = _dispatch_dir() / f"{dispatch_id}.json"
+    try:
+        rec = json.loads(jf.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None, None
+    return (rec, jf) if isinstance(rec, dict) else (None, None)
+
+
+def _record_stopped(jf: Path) -> None:
+    """Persist a stopped dispatch's terminal state (task: record exit state).
+    exit_code comes from a retained Popen handle when we still hold one (the
+    dispatch started in this process); otherwise it is left as recorded."""
+    try:
+        rec = json.loads(jf.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    proc = next((p for p in _dispatch_procs if p.pid == rec.get("pgid")), None)
+    rec["state"] = "stopped"
+    if proc is not None:
+        rec["exit_code"] = proc.poll()
+    try:
+        jf.write_text(json.dumps(rec), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def stop_dispatch(dispatch_id: str) -> tuple[bool, str]:
+    """R7: terminate a dispatch this server started — SIGTERM to its process
+    group, SIGKILL after the grace only if it ignores the term. Signals only
+    when the recorded pgid is still alive AND its start time matches
+    (`_record_live`), so a recycled pgid is never signaled."""
+    rec, jf = _find_record(dispatch_id)
+    if not rec:
+        return False, "unknown dispatch id"
+    if not _record_live(rec):
+        return False, "dispatch is not running (already exited)"
+    pgid = rec["pgid"]
+    _signal_with_grace(
+        term_fn=lambda: os.killpg(pgid, signal.SIGTERM),
+        kill_fn=lambda: os.killpg(pgid, signal.SIGKILL),
+        alive_fn=lambda: _record_live(rec),
+        grace=_stop_grace(),
+        on_dead=lambda: _record_stopped(jf),
+    )
+    _invalidate_board()
+    return True, "stopping dispatch (SIGTERM; SIGKILL after grace)"
 
 
 def render_dispatches(records: list[dict]) -> str:
@@ -2444,17 +2599,28 @@ def render_dispatches(records: list[dict]) -> str:
         exit_code = r.get("exit_code")
         exit_txt = "—" if exit_code is None else str(exit_code)
         did = r.get("id", "")
+        # A running dispatch gets a two-step-confirm stop button (R8); the id
+        # matches the registry's stop-dispatch action so the POST validates.
+        if r.get("running"):
+            aid = _entity_id("stop-dispatch", r.get("log") or did)
+            confirm = f"Stop this {r.get('kind', 'dispatch')} dispatch (SIGTERM)?"
+            act = (
+                f'<button class="btn stop act" data-act="stop-dispatch" '
+                f'data-id="{esc(aid)}" data-confirm="{esc(confirm)}">stop</button>'
+            )
+        else:
+            act = "—"
         rows.append(
             f"<tr><td>{esc(r.get('kind', ''))}</td><td>{esc(state)}</td>"
             f"<td>{esc(_ago(r.get('started_at') or 0))}</td>"
             f"<td>{esc(exit_txt)}</td>"
             f'<td><a href="/dispatch/{esc(did)}/log">log</a></td>'
-            f"<td>{esc(r.get('cwd', ''))}</td></tr>"
+            f"<td>{esc(r.get('cwd', ''))}</td><td>{act}</td></tr>"
         )
     if rows:
         body = (
             "<table><thead><tr><th>kind</th><th>state</th><th>started</th>"
-            "<th>exit</th><th>log</th><th>cwd</th></tr></thead><tbody>"
+            "<th>exit</th><th>log</th><th>cwd</th><th></th></tr></thead><tbody>"
             + "".join(rows) + "</tbody></table>"
         )
     else:
@@ -2534,19 +2700,45 @@ def start_agent(cwd: str, prompt: str) -> tuple[bool, str]:
     return True, "started"
 
 
-def stop_agent(pid: int) -> tuple[bool, str]:
-    # Only kill PIDs the CLI currently reports as agent sessions — never an
+def _verify_session_pid(pid: int) -> tuple[bool, str]:
+    """R7 stop-session verification: the pid must have a session record, the
+    live process must be a `claude` invocation, and its kernel start time must
+    match the record's `procStart` — a pid reassigned to another process fails
+    this and is never signaled (recycled-pid guard)."""
+    try:
+        rec = json.loads((PID_DIR / f"{pid}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False, "no session record for pid"
+    if not _pid_alive(pid):
+        return False, "session process is not alive"
+    if "claude" not in _proc_command(pid).lower():
+        return False, "pid is not a claude process"
+    proc_start = rec.get("procStart") or ""
+    if not proc_start or _proc_start_time(pid) != proc_start:
+        return False, "process start-time mismatch (recycled pid)"
+    return True, "ok"
+
+
+def stop_agent(pid: int, confirm: bool = False) -> tuple[bool, str]:
+    # Only signal PIDs the CLI currently reports as agent sessions — never an
     # arbitrary pid supplied by the caller.
     data = _claude_json("agents", "--all") or _claude_json("agents") or []
     live_pids = {e.get("pid") for e in data if isinstance(e, dict)}
     if pid not in live_pids:
         return False, "not a known agent pid"
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except OSError as e:
-        return False, str(e)
+    if not confirm:
+        return False, "confirm required"
+    ok, why = _verify_session_pid(pid)
+    if not ok:
+        return False, why
+    _signal_with_grace(
+        term_fn=lambda: os.kill(pid, signal.SIGTERM),
+        kill_fn=lambda: os.kill(pid, signal.SIGKILL),
+        alive_fn=lambda: _pid_alive(pid),
+        grace=_stop_grace(),
+    )
     _board_cache["ts"] = 0
-    return True, "stopped"
+    return True, "stopping (SIGTERM; SIGKILL after grace)"
 
 
 def resume_agent(sid: str, prompt: str) -> tuple[bool, str]:
@@ -2785,7 +2977,9 @@ class Handler(BaseHTTPRequestHandler):
         # the body (parsed above only to reject malformed JSON) is ignored, so
         # no client-supplied field can steer the executed argv (spec R9).
         if path.startswith("/action/"):
-            result = run_action(path[len("/action/") :])
+            result = run_action(
+                path[len("/action/") :], confirm=bool(body.get("confirm"))
+            )
             self._send(
                 json.dumps(result["body"]).encode("utf-8"),
                 "application/json",
@@ -2800,7 +2994,8 @@ class Handler(BaseHTTPRequestHandler):
                 body.get("cwd", ""), body.get("prompt", "")
             ),
             "/api/agent/stop": lambda: stop_agent(
-                body.get("pid") if isinstance(body.get("pid"), int) else -1
+                body.get("pid") if isinstance(body.get("pid"), int) else -1,
+                confirm=bool(body.get("confirm")),
             ),
             "/api/agent/resume": lambda: resume_agent(
                 body.get("sid", ""), body.get("prompt", "")

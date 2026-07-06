@@ -43,6 +43,16 @@ launchctl kickstart -k gui/$(id -u)/com.agent-console
   is pgid-alive AND process-start-time match, so a recycled pgid never reads
   live; the per-cwd lock keys off the persisted records. Binary resolved at
   dispatch time via `AGENT_CONSOLE_CLAUDE_BIN` → PATH → `~/.local/bin/claude`.
+- Stop actions (R7): `stop-dispatch` (registry action per live dispatch) and
+  the hardened `stop_agent()` both SIGTERM then escalate to SIGKILL after a
+  grace on a background timer (`AGENT_CONSOLE_STOP_GRACE`, default 10s — never
+  blocks the request), and signal only after verifying the target is the
+  process they think it is: `stop-dispatch` re-checks the record's pgid is
+  alive AND its start time matches (`_record_live`); `stop_agent` checks the
+  pid is a `claude` process whose start time matches the session record's
+  `procStart`. A recycled pid/pgid fails these and is never signaled.
+  Destructive actions require a `confirm` flag in the POST body (server-side
+  mirror of the UI's two-step confirm) on top of the CSRF token + Host check.
 - Reads use `git` (per-repo, 4s timeout), `gh` (one cached `repo list`),
   `claude … --json` (plugins/sessions; falls back to `~/.claude` scraping).
   Writes: rewrite+commit a spec's `Priority:` line; spawn/kill `claude` agents.
