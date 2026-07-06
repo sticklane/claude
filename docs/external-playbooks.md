@@ -85,6 +85,41 @@ Where the three vendors converge on architecting generative-AI features
   [Agents Companion](https://www.kaggle.com/whitepaper-agent-companion)
   (secondary-verified — Kaggle mirror, not a Google primary).
 
+## Concurrent writer fleets
+
+Why /drain runs a rolling window of 3–5 concurrent writers with
+verdict-triggered top-up rather than a one-shot barrier wave →
+token-discipline's fleet-sizing bullet and drain/SKILL.md's rolling-window
+dispatch (specs/drain-rolling-window). Those artifacts apply the practice;
+the verbatim research stays here.
+
+- **Rolling claim-next over barrier waves.** Anthropic's agent teams use a
+  shared task list where, "after finishing a task, a teammate picks up the
+  next unassigned, unblocked task on its own" — the shipped frontier design
+  drain's verdict-triggered top-up mirrors.
+  [Agent teams](https://code.claude.com/docs/en/agent-teams)
+- **Writer-fleet sweet spot: 3–5.** "Start with 3-5 teammates for most
+  workflows… Three focused teammates often outperform five scattered ones";
+  "If you have 15 independent tasks, 3 teammates is a good starting point."
+  10+ agents only for read-only breadth-first work.
+  [Agent teams](https://code.claude.com/docs/en/agent-teams),
+  [Multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)
+- **File ownership is the #1 safety criterion.** "Two teammates editing the
+  same file leads to overwrites. Break the work so each teammate owns a
+  different set of files" — the research basis for drain's Touch-disjoint
+  admission and merge-time whitelist.
+  [Agent teams](https://code.claude.com/docs/en/agent-teams)
+- **Integration is serial everywhere.** One branch/PR per task (Codex,
+  Jules, Cursor); Devin's manager "monitors progress, resolves any
+  conflicts, and compiles the results." No lab publishes optimistic
+  concurrent merging; community practice is to merge sequentially and
+  rebase remaining branches on updated main — drain's serial merge queue.
+- **Cognition's shared-contract warning.** "Actions carry implicit
+  decisions, and conflicting decisions carry bad results" — the case for
+  keeping /breakdown's decision-coupling test and the pinned value-contract
+  rule intact rather than weakening either for throughput.
+  [Don't Build Multi-Agents](https://cognition.ai/blog/dont-build-multi-agents)
+
 ## Considered and rejected
 
 - OpenAI handoffs / parallel guardrail classifiers — harness-level

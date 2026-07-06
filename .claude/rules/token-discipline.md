@@ -20,6 +20,15 @@ tokens on decisions; delegate consumption of raw material to subagents.
   groups (the decision-coupling test in /breakdown), and size it by the
   task map, never a default maximum. Multi-agent work costs ~15× the
   tokens of a single session — barely-parallel work doesn't earn that.
+  When a task map genuinely supports concurrency, cap the fleet at a 3–5
+  concurrent-writer window (three focused writers often beat five
+  scattered ones; >5 is reserved for read-only breadth-first fan-outs) and
+  let /drain's rolling top-up keep it full — refilling on each collected
+  verdict, not at a wave barrier — rather than launching a fixed batch and
+  idling finished workers behind the slowest. This tightens the sizing
+  guidance; it does not change the opt-in default above. The cross-vendor
+  evidence for both the window and the rolling claim-next design is in
+  docs/external-playbooks.md (cited, not restated).
 
 ## Model and effort matching
 
