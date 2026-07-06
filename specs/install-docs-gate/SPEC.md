@@ -1,5 +1,7 @@
 # Gate install-docs accuracy: README plugin names + antigravity setup paths
 
+Priority: P0
+
 ## Problem
 
 README.md's install instructions (lines 107-178) are accurate today —

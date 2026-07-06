@@ -1,4 +1,5 @@
 Status: draft
+Priority: P1
 Discovered-from: specs/precommit-review/tasks/03-workflow-mirror-and-bump.md
 Spec: ../SPEC.md
 Blocking: no

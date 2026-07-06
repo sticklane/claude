@@ -7,7 +7,7 @@
 
 Status: pending
 Depends on: 01, 02, 03, 04
-Priority: P2
+Priority: P1
 Budget: 12 turns
 Spec: ../SPEC.md (requirements R2, R3, R8 + all attended acceptance)
 Touch: none

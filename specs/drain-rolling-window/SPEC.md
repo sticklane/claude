@@ -1,7 +1,7 @@
 # Rolling-window parallel dispatch for /drain
 
 Status: open
-Priority: P2
+Priority: P0
 
 ## Problem
 

@@ -6,7 +6,7 @@
 
 Status: pending
 Depends on: 01
-Priority: P1
+Priority: P0
 Budget: 6 turns
 Spec: ../SPEC.md (requirement R2)
 Touch: .claude/skills/drain/reference.md, .claude/skills/drain/SKILL.md

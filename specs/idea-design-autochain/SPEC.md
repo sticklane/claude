@@ -1,5 +1,7 @@
 # idea: self-chain into /design instead of a printed pointer
 
+Priority: P1
+
 ## Problem
 
 `/idea`'s step 5 (`.claude/skills/idea/SKILL.md:89-95`) currently has two

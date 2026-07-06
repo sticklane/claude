@@ -1,4 +1,5 @@
 Status: draft
+Priority: P1
 Discovered-from: specs/shared-viz-renderer/tasks/04-migrate-fleet-reference.md
 Spec: ../SPEC.md
 Blocking: no

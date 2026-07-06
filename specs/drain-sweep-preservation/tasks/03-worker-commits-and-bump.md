@@ -6,7 +6,7 @@
 
 Status: pending
 Depends on: 02
-Priority: P2
+Priority: P0
 Budget: 6 turns
 Spec: ../SPEC.md (requirements R3, R4)
 Touch: .claude/skills/drain/reference.md, .claude-plugin/plugin.json, README.md

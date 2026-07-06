@@ -1,4 +1,5 @@
 Status: draft
+Priority: P0
 Discovered-from: specs/absorb-agent-tools/tasks/02-import-agent-console-deduped.md
 Spec: ../SPEC.md
 Blocking: no

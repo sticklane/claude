@@ -1,5 +1,7 @@
 # Mechanical parity gate: every .claude/ skill has a documented Antigravity counterpart or exemption
 
+Priority: P0
+
 ## Problem
 
 CLAUDE.md states the mirroring convention as a MUST ("when a skill
