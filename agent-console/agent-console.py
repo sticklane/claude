@@ -1505,7 +1505,7 @@ PAGE_JS = """<script>(function(){
 var $=function(s){return document.querySelector(s)},$$=function(s){return document.querySelectorAll(s)};
 document.addEventListener('input',function(e){
   if(e.target.id!=='q')return;var t=e.target.value.trim().toLowerCase();
-  $$('.card').forEach(function(c){c.classList.toggle('hidden',t&&c.dataset.text.indexOf(t)<0)});
+  $$('[data-text]').forEach(function(c){c.classList.toggle('hidden',t&&c.dataset.text.indexOf(t)<0)});
   $$('[data-group]').forEach(function(g){var any=[].slice.call(g.querySelectorAll('.card')).some(function(c){return !c.classList.contains('hidden')});g.classList.toggle('hidden',!any)});
 });
 document.addEventListener('click',function(e){
@@ -1729,7 +1729,7 @@ def render_workboard(b: dict) -> str:
 
     if b["inbox"]:
         rows = "".join(
-            f'<div class="row">{chip(i["state"])}'
+            f'<div class="row" data-text="{esc((i["item"] + " " + i["why"] + " " + i["repo"]).lower())}">{chip(i["state"])}'
             f'<div><div class="what">{esc(i["item"])}</div>'
             f'<div class="why">{esc(i["why"])}'
             f"{' <code>' + esc(i['cmd']) + '</code>' if i['cmd'] else ''}</div></div>"
@@ -1860,8 +1860,16 @@ def render_workboard(b: dict) -> str:
             if inner
             else '<div class="rbody"><div class="zero" style="padding:8px 0">No open work.</div></div>'
         )
+        # Filter text: repo name + spec titles/slugs + handoff titles, so
+        # typing a name or slug fragment narrows the board (client-side #q).
+        text_bits = [r["name"]]
+        for sp in r["specs"]:
+            text_bits += [sp["title"], sp.get("slug", "")]
+        text_bits += [h["title"] for h in r["handoffs"]]
+        data_text = esc(" ".join(t for t in text_bits if t).lower())
         repo_blocks.append(
-            f'<details class="repo"{open_attr} data-k="r:{esc(r["name"])}"><summary>'
+            f'<details class="repo"{open_attr} data-k="r:{esc(r["name"])}" '
+            f'data-text="{data_text}"><summary>'
             f'{rn}{ghbadge}{"".join(chips)}'
             f"{commit}</summary>{body}</details>"
         )
@@ -1947,7 +1955,7 @@ def render_workboard(b: dict) -> str:
         f'<div class="eyebrow" id="repos"><span class="key" style="color:var(--text)">Repos</span>'
         f'<span class="rule"></span></div>{"".join(repo_blocks)}{orphan}'
     )
-    return page("workboard", readout, body, with_filter=False)
+    return page("workboard", readout, body, with_filter=True)
 
 
 def _repo_has_work(r: dict) -> bool:
