@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: deferred
 Depends on: 02
 Priority: P2
 Budget: 10 turns
@@ -73,3 +73,55 @@ task only copies them verbatim into the antigravity tree.
 - [ ] `grep -n "/prioritize" antigravity/.agents/skills/list-specs/SKILL.md` → the paraphrased mirror also carries the reciprocal disambiguation (content-coverage check, not a byte diff — this file is a paraphrased port).
 - [ ] `python3 -m pytest antigravity/.agents/skills/list-specs/test_list_specs.py antigravity/.agents/skills/_shared/test_spec_readiness.py` → passes.
 - [ ] `git diff HEAD~1 -- .claude-plugin/plugin.json` (once committed) shows the version field changed.
+
+## Deferred questions
+
+Steps 1-3 done and verified in the worker's worktree (both SKILL.md files
+written; all four byte-copies — `list_specs.py`, `test_list_specs.py`,
+`spec_readiness.py`, `test_spec_readiness.py` — `diff -q` clean against
+their `.claude/skills/` originals). Step 4's mirrored pytest run fails:
+
+`python3 -m pytest antigravity/.agents/skills/list-specs/test_list_specs.py antigravity/.agents/skills/_shared/test_spec_readiness.py`
+→ 1 failed, 37 passed. Failure:
+`CliSubprocessTestCase::test_this_repo_produces_table_no_archive_rows_no_crash`
+— `AssertionError: '| Spec | Status | Next command |' not found in 'no
+specs/ directory found\n'`.
+
+Root cause: `test_list_specs.py` (from Task 02, line 261) computes
+`repo_root = Path(__file__).resolve().parents[3]` to find the repo root
+from the test file's own location. That's correct only when the file
+sits exactly 3 parents below repo root — true at its home path
+`.claude/skills/list-specs/test_list_specs.py` (2 path components —
+`.claude`, `skills` — before `list-specs`). The antigravity mirror path
+`antigravity/.agents/skills/list-specs/test_list_specs.py` has 3
+components (`antigravity`, `.agents`, `skills`) before `list-specs` —
+one level deeper — so in the mirror location `parents[3]` resolves to
+`.../antigravity` instead of the true repo root, the subprocess runs
+against a directory with no `specs/`, and the assertion fails. This is
+structural: every skill mirrored under `antigravity/.agents/skills/`
+sits one directory deeper than under `.claude/skills/`, so any test
+using this repo-root-from-self-path pattern fails identically once
+mirrored.
+
+This task's own acceptance criteria are mutually exclusive given that
+fixed `parents[3]` assumption: the byte-identity checks (criteria 4-5)
+require `test_list_specs.py` to be an unmodified copy, while the
+mirrored-suite-passes check (criterion on line 74) requires that same
+copy to pass in a location where its repo-root arithmetic is wrong. The
+worker had no `Touch` access to fix the root cause
+(`.claude/skills/list-specs/test_list_specs.py` belongs to Task 02's
+already-merged commit).
+
+**Question:** which should win?
+(a) Keep byte-identity; treat this one CLI-subprocess test as an
+    accepted, documented mirror-environment exception (amend this
+    task's acceptance to allow that specific failure in the antigravity
+    copy).
+(b) Patch the antigravity copy's repo-root calculation to account for
+    the extra nesting level (breaks byte-copy-verbatim for this file
+    only).
+(c) Fix the depth-assumption bug at the source in
+    `.claude/skills/list-specs/test_list_specs.py` (e.g. walk up to a
+    `.git` marker instead of a fixed parent count) as a follow-up task,
+    then re-copy verbatim — since Task 02 is already merged, this needs
+    a task/spec amendment or a new discovered task ahead of this one.
