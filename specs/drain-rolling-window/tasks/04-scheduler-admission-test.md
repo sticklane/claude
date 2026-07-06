@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 22 turns
@@ -86,7 +86,9 @@ particular prose file, so it has no dependency on task 01 landing first).
 
 ## Acceptance
 
-- [ ] `bash tests/test_drain_scheduler_window.sh` → exit 0
-- [ ] `bash tests/test_drain_scheduler_window.sh 2>&1 | grep -ic pass` → ≥ 7
-      (one pass line per scenario in Steps 3a–3g)
-- [ ] `bash tests/test_drain_scheduler_window.sh 2>&1 | grep -c FAIL` → 0
+- [x] `bash tests/test_drain_scheduler_window.sh` → exit 0
+      (verifier: exit 0, output `pass: 21 fail: 0`; evidence/04-scheduler-admission-test.md)
+- [x] `bash tests/test_drain_scheduler_window.sh 2>&1 | grep -ic pass` → ≥ 7
+      (verifier: got 8, one per scenario 3a–3g; evidence/04-scheduler-admission-test.md)
+- [x] `bash tests/test_drain_scheduler_window.sh 2>&1 | grep -c FAIL` → 0
+      (verifier: got 0; mutation check confirmed non-vacuous; evidence/04-scheduler-admission-test.md)
