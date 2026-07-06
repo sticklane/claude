@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P1
 Budget: 12 turns
@@ -59,12 +59,17 @@ concepts/identifiers, never chase a `diff → no output` result.
 
 ## Acceptance
 
-- [ ] `claude plugin validate .` → pass
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
-- [ ] plugin.json version changed from its pre-task value: `git log -1
+- [x] `claude plugin validate .` → pass
+      → "✔ Validation passed", exit 0 (verifier PASS; evidence/05-ship-gates-and-mirrors.md)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0
+      → "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0
+- [x] plugin.json version changed from its pre-task value: `git log -1
       --format=%H -- .claude-plugin/plugin.json` before/after differ, or
       simply confirm the checked-in `version` string is not `0.8.14`
-- [ ] `grep -ci 'rolling.window\|parallel-window' antigravity/.agents/workflows/drain.md`
+      → 0.8.15 → 0.8.16 (not 0.8.14; changed from base 819c77c)
+- [x] `grep -ci 'rolling.window\|parallel-window' antigravity/.agents/workflows/drain.md`
       → ≥ 1
-- [ ] `grep -ci 'group:' antigravity/.agents/skills/breakdown/SKILL.md`
+      → 5
+- [x] `grep -ci 'group:' antigravity/.agents/skills/breakdown/SKILL.md`
       → ≥ 1
+      → 6
