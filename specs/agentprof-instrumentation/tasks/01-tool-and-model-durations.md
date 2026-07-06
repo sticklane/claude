@@ -73,3 +73,18 @@ parser files after this task.
       Evidence: verifier confirmed 4 targeted Duration tests PASS (first-sample omission + tool_result-as-previous-line).
 - [x] `cd agentprof && gofmt -l . | wc -l` → 0.
       Evidence: verifier confirmed `gofmt -l . | wc -l` → 0.
+
+## Discovered
+
+- `agentprof/cmd_claude_test.go`'s sample-count assertion needed a one-line
+  update (10→13) even though it lies outside this task's declared
+  `Touch:` — R7 forces tool samples into every transcript including the
+  root-level cmd test fixture; see `05-touch-header-root-cmd-tests.md`.
+- `agentprof/SCHEMA.md`'s "Well-known metrics" table still only documents
+  `wall_ms` → milliseconds; `duration_ms` now also maps to milliseconds in
+  `unitFor` but the table wasn't updated; see
+  `06-schema-md-duration-ms-doc.md`.
+- `-o summary` mode (`agentprof/summary.go`) now emits zero-cost rows keyed
+  `model=tool:<name>`/`tool:(pending)` since it derives "model" from the
+  stack leaf; harmless today but needs a deliberate decision for the
+  downstream weekly-cost view; see `07-summary-tool-leaf-cost-rollup.md`.
