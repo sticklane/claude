@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 8 turns
