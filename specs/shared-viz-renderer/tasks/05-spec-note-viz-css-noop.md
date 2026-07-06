@@ -1,4 +1,5 @@
 Status: draft
+Priority: P1
 Discovered-from: specs/shared-viz-renderer/tasks/01-extract-viz-module.md
 Spec: ../SPEC.md
 Blocking: no

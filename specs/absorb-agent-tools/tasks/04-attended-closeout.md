@@ -7,7 +7,7 @@
 
 Status: pending
 Depends on: 03
-Priority: P2
+Priority: P0
 Budget: 12 turns
 Spec: ../SPEC.md (requirements R5, R8)
 Touch: none

@@ -1,4 +1,5 @@
 Status: draft
+Priority: P1
 Discovered-from: specs/prioritize/tasks/01-prioritize-scan-script.md
 Spec: ../SPEC.md
 Blocking: no
