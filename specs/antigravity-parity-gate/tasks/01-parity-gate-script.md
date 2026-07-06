@@ -109,23 +109,37 @@ checker and an exemption record, it does not port or edit any skill.
 
 ## Acceptance
 
-- [ ] `bash tests/test_antigravity_parity.sh` → exit 0, no output
-- [ ] `grep -n "workflow-author" antigravity/README.md` → shows the new
+- [x] `bash tests/test_antigravity_parity.sh` → exit 0, no output
+      <!-- evidence: ran standalone → exit=0, zero output -->
+- [x] `grep -n "workflow-author" antigravity/README.md` → shows the new
       row, left cell beginning with the token `` `workflow-author` ``,
       right cell containing "Not ported"
-- [ ] Fixture check (run by hand, not left in the tree): temporarily
+      <!-- evidence: line 40 → `| `workflow-author` skill | Not ported — ... | -->
+- [x] Fixture check (run by hand, not left in the tree): temporarily
       removing `fleet`'s row and re-running the script fails and names
       `fleet`; restoring the row makes it pass again
-- [ ] Fixture check (run by hand, not left in the tree): temporarily
+      <!-- evidence: fixture 1 → output=[fleet] exit=1; restore → exit=0 -->
+- [x] Fixture check (run by hand, not left in the tree): temporarily
       adding an empty `.claude/skills/zzz-test-skill/` with no counterpart
       or exemption row makes the script fail and name `zzz-test-skill`;
       removing the fixture dir makes it pass again
-- [ ] Fixture check (run by hand, not left in the tree): temporarily
+      <!-- evidence: fixture 2 → output=[zzz-test-skill] exit=1; remove → exit=0 -->
+- [x] Fixture check (run by hand, not left in the tree): temporarily
       adding an empty `.claude/skills/zzz-midcell/` with no counterpart,
       AND temporarily appending the token `zzz-midcell` to the end (not
       the start) of an existing "Not ported" row's left cell, makes the
       script fail and name `zzz-midcell` — confirming a non-first-token
       match is correctly rejected; reverting both edits makes it pass
       again
-- [ ] `for t in tests/test_*.sh; do bash "$t"; done` → exits 0, picks up
+      <!-- evidence: fixture 3 → mid-cell `zzz-midcell` on fleet row, output=[zzz-midcell] exit=1; revert → exit=0 -->
+- [x] `for t in tests/test_*.sh; do bash "$t"; done` → exits 0, picks up
       the new script automatically with no changes to the runner
+      <!-- evidence: runner loop → loop-exit=0, new script picked up, all suites pass:N fail:0 -->
+
+<!-- build plan (worker): (1) count names = 18 skills (minus _shared) + 4
+     agents = 22; (2) only `fleet` (pre-exempted) and `workflow-author`
+     lack existence coverage; (3) wrote silent-on-success gate with
+     first-token anchoring (backtick span or leading /slash), existence-only;
+     (4) RED before README row named `workflow-author`; GREEN after; (5) all
+     three fixtures verified + reverted; tree clean. Touch honored: only
+     tests/test_antigravity_parity.sh + antigravity/README.md changed. -->
