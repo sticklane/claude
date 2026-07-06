@@ -121,18 +121,37 @@ class TestDepGraph(unittest.TestCase):
 class TestDagTasksAdapter(unittest.TestCase):
     def test_maps_workboard_task_shape_to_viz_dag_shape(self):
         tasks = [
-            {"file": "tasks/01-a.md", "abs": "/r/tasks/01-a.md", "title": "A",
-             "status": "done", "deps": []},
-            {"file": "tasks/02-b.md", "abs": "/r/tasks/02-b.md", "title": "B",
-             "status": "pending", "deps": ["01"]},
+            {
+                "file": "tasks/01-a.md",
+                "abs": "/r/tasks/01-a.md",
+                "title": "A",
+                "status": "done",
+                "deps": [],
+            },
+            {
+                "file": "tasks/02-b.md",
+                "abs": "/r/tasks/02-b.md",
+                "title": "B",
+                "status": "pending",
+                "deps": ["01"],
+            },
         ]
         out = ac._dag_tasks(tasks)
         self.assertEqual(out[0], {"num": 1, "deps": [], "status": "done", "title": "A"})
-        self.assertEqual(out[1], {"num": 2, "deps": [1], "status": "pending", "title": "B"})
+        self.assertEqual(
+            out[1], {"num": 2, "deps": [1], "status": "pending", "title": "B"}
+        )
 
     def test_skips_unparseable_filenames(self):
-        tasks = [{"file": "tasks/notes.md", "abs": "/r/tasks/notes.md",
-                  "title": "Notes", "status": "pending", "deps": []}]
+        tasks = [
+            {
+                "file": "tasks/notes.md",
+                "abs": "/r/tasks/notes.md",
+                "title": "Notes",
+                "status": "pending",
+                "deps": [],
+            }
+        ]
         self.assertEqual(ac._dag_tasks(tasks), [])
 
 
@@ -203,8 +222,9 @@ class TestAdaptBoard(unittest.TestCase):
         }
 
     def test_adapts_repos_specs_sessions_and_inbox(self):
-        with patch.object(ac, "gh_visibility", return_value={}), patch.object(
-            ac, "_git", return_value=None
+        with (
+            patch.object(ac, "gh_visibility", return_value={}),
+            patch.object(ac, "_git", return_value=None),
         ):
             board = ac._adapt_board(self._assembled(), [], [])
 
@@ -260,6 +280,44 @@ class TestAgentsView(unittest.TestCase):
     def test_start_rejects_empty_prompt(self):
         ok, msg = ac.start_agent(str(Path.home()), "")
         self.assertFalse(ok)
+
+
+class TestTrackedReposUnionsDefaultRoots(unittest.TestCase):
+    """Regression: the mutation guard's repo list must accept a repo
+    discovered via a default_roots() walk even when it is absent from
+    REPOS.md — the two repo-discovery sources can diverge, so a repo shown
+    on the Workboard could otherwise be rejected by a gated mutation
+    (absorb-agent-tools task 05)."""
+
+    def _root_only_repo(self, d):
+        """A git repo reachable via a default_roots() walk but not REPOS.md."""
+        root = Path(d)
+        repo = root / "myrepo"
+        repo.mkdir()
+        (repo / ".git").mkdir()  # git toplevel marker find_repos() keys on
+        return root, repo
+
+    def test_default_roots_only_repo_is_tracked(self):
+        with tempfile.TemporaryDirectory() as d:
+            root, repo = self._root_only_repo(d)
+            with (
+                patch.object(ac, "parse_repos", return_value=[]),
+                patch.object(ac.workboard, "default_roots", return_value=[root]),
+            ):
+                reals = ac._tracked_repo_reals()
+            self.assertIn(os.path.realpath(str(repo)), reals)
+
+    def test_default_roots_only_repo_accepted_by_start_agent(self):
+        with tempfile.TemporaryDirectory() as d:
+            root, repo = self._root_only_repo(d)
+            with (
+                patch.object(ac, "parse_repos", return_value=[]),
+                patch.object(ac.workboard, "default_roots", return_value=[root]),
+                patch.object(ac, "_claude_run_bg") as spawn,
+            ):
+                ok, msg = ac.start_agent(str(repo), "do x")
+            self.assertTrue(ok, msg)  # not "cwd is not a tracked repo"
+            spawn.assert_called_once()
 
 
 class TestPluginSourceDiscriminator(unittest.TestCase):
