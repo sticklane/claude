@@ -30,6 +30,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -47,12 +48,23 @@ STALE_DAYS_DEFAULT = 7
 DRAIN_WINDOW_DEFAULT = 900  # 15 minutes, in seconds
 RECENT_HOURS = 48
 SKIP_DIRS = {
-    ".git", "node_modules", ".venv", "venv", "__pycache__", ".tox",
-    "dist", "build", "target", ".next", ".cache", "vendor",
+    ".git",
+    "node_modules",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".tox",
+    "dist",
+    "build",
+    "target",
+    ".next",
+    ".cache",
+    "vendor",
 }
 DEFAULT_ROOT_CANDIDATES = ["code", "src", "projects", "dev", "repos", "work"]
 
 # ---------------------------------------------------------------- utilities
+
 
 def now_ts():
     return time.time()
@@ -81,7 +93,9 @@ def run_git(repo, *args):
     try:
         out = subprocess.run(
             ["git", "-C", str(repo), *args],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         return out.stdout.strip() if out.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired):
@@ -103,7 +117,9 @@ def pid_alive(pid):
     except (OSError, ValueError):
         return False
 
+
 # ---------------------------------------------------------------- discovery
+
 
 def find_repos(roots, max_depth):
     """Walk roots (depth-limited, pruned) and yield git repo toplevels."""
@@ -136,7 +152,9 @@ def default_roots():
     roots += [home / d for d in DEFAULT_ROOT_CANDIDATES if (home / d).is_dir()]
     return roots
 
+
 # ---------------------------------------------------------------- git state
+
 
 def _worktree_activity(wt_path, branch, repo):
     """Newest-activity timestamp for a worktree: the max file mtime under it
@@ -187,7 +205,8 @@ def git_info(repo):
                 # only they pay the filesystem walk.
                 if (cur.get("branch") or "").startswith("task/"):
                     cur["activity_ts"] = _worktree_activity(
-                        cur.get("path", ""), cur.get("branch"), repo)
+                        cur.get("path", ""), cur.get("branch"), repo
+                    )
                 worktrees.append(cur)
             cur = {}
     return {
@@ -199,14 +218,22 @@ def git_info(repo):
         "worktrees": worktrees,
     }
 
+
 # ---------------------------------------------------------------- specs
 
 STATUS_RE = re.compile(r"^Status:\s*\[?([A-Za-z_-]+)\]?", re.MULTILINE)
 DEPENDS_RE = re.compile(r"^Depends on:\s*(.*)$", re.MULTILINE)
 PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P\d)\]?", re.MULTILINE)
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
-OPEN_TASK_STATUSES = {"pending", "open", "todo", "ready",
-                      "in-progress", "in_progress", "claimed"}
+OPEN_TASK_STATUSES = {
+    "pending",
+    "open",
+    "todo",
+    "ready",
+    "in-progress",
+    "in_progress",
+    "claimed",
+}
 CLOSED_TASK_STATUSES = {"done", "deferred", "skipped"}
 
 
@@ -233,40 +260,49 @@ def scan_toolkit_specs(repo):
                 sm = STATUS_RE.search(t_text)
                 status = sm.group(1).lower() if sm else "pending"
                 tm = TITLE_RE.search(t_text)
-                tasks.append({
-                    "file": str(tf.relative_to(repo)),
-                    "abs": str(tf),
-                    "title": tm.group(1).strip() if tm else tf.stem,
-                    "status": status,
-                    "deps": parse_deps(t_text),
-                })
+                tasks.append(
+                    {
+                        "file": str(tf.relative_to(repo)),
+                        "abs": str(tf),
+                        "title": tm.group(1).strip() if tm else tf.stem,
+                        "status": status,
+                        "deps": parse_deps(t_text),
+                    }
+                )
                 mtimes.append(tf.stat().st_mtime)
                 if not _TASK_NUM_RE.match(tf.name):
                     unparseable += 1
         done = sum(1 for t in tasks if t["status"] in CLOSED_TASK_STATUSES)
-        doing = sum(1 for t in tasks
-                    if t["status"] in ("in-progress", "in_progress", "claimed"))
-        blocked = [t for t in tasks
-                   if t["status"] not in CLOSED_TASK_STATUSES
-                   and t["status"] not in OPEN_TASK_STATUSES]
-        specs.append({
-            "kind": "toolkit",
-            "slug": spec_dir.name,
-            "title": (m.group(1).strip() if m else spec_dir.name),
-            "priority": (pm.group(1) if pm else ""),
-            "path": str(spec_md.relative_to(repo)),
-            "tasks_total": len(tasks),
-            "tasks_done": done,
-            "tasks_doing": doing,
-            "tasks_blocked": [t["file"] for t in blocked],
-            "tasks": tasks,
-            "tasks_unparseable": unparseable,
-            "last_touched": max(mtimes),
-        })
+        doing = sum(
+            1 for t in tasks if t["status"] in ("in-progress", "in_progress", "claimed")
+        )
+        blocked = [
+            t
+            for t in tasks
+            if t["status"] not in CLOSED_TASK_STATUSES
+            and t["status"] not in OPEN_TASK_STATUSES
+        ]
+        specs.append(
+            {
+                "kind": "toolkit",
+                "slug": spec_dir.name,
+                "title": (m.group(1).strip() if m else spec_dir.name),
+                "priority": (pm.group(1) if pm else ""),
+                "path": str(spec_md.relative_to(repo)),
+                "tasks_total": len(tasks),
+                "tasks_done": done,
+                "tasks_doing": doing,
+                "tasks_blocked": [t["file"] for t in blocked],
+                "tasks": tasks,
+                "tasks_unparseable": unparseable,
+                "last_touched": max(mtimes),
+            }
+        )
     return specs
 
 
 # ---------------------------------------------------------------- readiness
+
 
 def parse_deps(text):
     """The `Depends on:` header as a list of raw entries; none/empty ⇒ []."""
@@ -357,28 +393,41 @@ def ready_items(repos):
                     if not _dep_is_done(resolved):
                         satisfied = False
                 if unresolved is not None:
-                    blocked.append({
-                        "repo": r["name"], "slug": s["slug"],
-                        "task": t["file"], "dep": unresolved,
-                    })
+                    blocked.append(
+                        {
+                            "repo": r["name"],
+                            "slug": s["slug"],
+                            "task": t["file"],
+                            "dep": unresolved,
+                        }
+                    )
                 elif satisfied:
                     spec_ready.append(t)
             if len(spec_ready) >= 2:
-                cmd = (f'cd {shlex.quote(repo_path)} && '
-                       f'claude "/drain specs/{s["slug"]}"')
-                items.append({
-                    "repo": r["name"], "slug": s["slug"],
-                    "task": f"{len(spec_ready)} ready tasks",
-                    "cmd": cmd, "kind": "drain",
-                })
+                cmd = (
+                    f'cd {shlex.quote(repo_path)} && claude "/drain specs/{s["slug"]}"'
+                )
+                items.append(
+                    {
+                        "repo": r["name"],
+                        "slug": s["slug"],
+                        "task": f"{len(spec_ready)} ready tasks",
+                        "cmd": cmd,
+                        "kind": "drain",
+                    }
+                )
             elif spec_ready:
                 t = spec_ready[0]
-                cmd = (f'cd {shlex.quote(repo_path)} && '
-                       f'claude "/build {t["file"]}"')
-                items.append({
-                    "repo": r["name"], "slug": s["slug"],
-                    "task": t["title"], "cmd": cmd, "kind": "build",
-                })
+                cmd = f'cd {shlex.quote(repo_path)} && claude "/build {t["file"]}"'
+                items.append(
+                    {
+                        "repo": r["name"],
+                        "slug": s["slug"],
+                        "task": t["title"],
+                        "cmd": cmd,
+                        "kind": "build",
+                    }
+                )
     return {"items": items, "blocked_unresolved": blocked}
 
 
@@ -399,39 +448,53 @@ def scan_kiro_specs(repo):
         total = len(boxes)
         done = boxes.count("x")
         doing = boxes.count("-")
-        phase = [f for f in ("requirements.md", "design.md", "tasks.md")
-                 if (spec_dir / f).is_file()]
-        mtime = max((f.stat().st_mtime for f in spec_dir.glob("*.md")),
-                    default=spec_dir.stat().st_mtime)
-        specs.append({
-            "kind": "kiro",
-            "slug": spec_dir.name,
-            "title": spec_dir.name,
-            "path": str(spec_dir.relative_to(repo)),
-            "tasks_total": total,
-            "tasks_done": done,
-            "tasks_doing": doing,
-            "phase": phase,
-            "last_touched": mtime,
-        })
+        phase = [
+            f
+            for f in ("requirements.md", "design.md", "tasks.md")
+            if (spec_dir / f).is_file()
+        ]
+        mtime = max(
+            (f.stat().st_mtime for f in spec_dir.glob("*.md")),
+            default=spec_dir.stat().st_mtime,
+        )
+        specs.append(
+            {
+                "kind": "kiro",
+                "slug": spec_dir.name,
+                "title": spec_dir.name,
+                "path": str(spec_dir.relative_to(repo)),
+                "tasks_total": total,
+                "tasks_done": done,
+                "tasks_doing": doing,
+                "phase": phase,
+                "last_touched": mtime,
+            }
+        )
     return specs
 
 
 def scan_handoffs(repo):
     """HANDOFF.md anywhere shallow in the repo = work parked for a human/next session."""
     handoffs = []
-    for pattern in ("HANDOFF.md", "*/HANDOFF.md", "*/*/HANDOFF.md",
-                    ".claude/HANDOFF.md", "specs/*/HANDOFF.md"):
+    for pattern in (
+        "HANDOFF.md",
+        "*/HANDOFF.md",
+        "*/*/HANDOFF.md",
+        ".claude/HANDOFF.md",
+        "specs/*/HANDOFF.md",
+    ):
         for f in repo.glob(pattern):
             if any(part in SKIP_DIRS for part in f.parts):
                 continue
             text = read_text(f, 4_000)
             m = TITLE_RE.search(text)
-            handoffs.append({
-                "path": str(f.relative_to(repo)),
-                "title": m.group(1).strip() if m else "Handoff",
-                "mtime": f.stat().st_mtime,
-            })
+            handoffs.append(
+                {
+                    "path": str(f.relative_to(repo)),
+                    "title": m.group(1).strip() if m else "Handoff",
+                    "mtime": f.stat().st_mtime,
+                }
+            )
     # de-dup (patterns can overlap)
     seen, out = set(), []
     for h in handoffs:
@@ -448,8 +511,11 @@ BATON_CMD_RE = re.compile(r'claude\s+-p\s+"[^"]*"')
 def _section_body(text, *heading_patterns):
     """Body of the first markdown section whose heading matches, '' if none."""
     for pat in heading_patterns:
-        m = re.search(rf"^#+\s*{pat}[^\n]*\n(.*?)(?=\n#+\s|\Z)",
-                      text, re.IGNORECASE | re.DOTALL | re.MULTILINE)
+        m = re.search(
+            rf"^#+\s*{pat}[^\n]*\n(.*?)(?=\n#+\s|\Z)",
+            text,
+            re.IGNORECASE | re.DOTALL | re.MULTILINE,
+        )
         if m and m.group(1).strip():
             return m.group(1).strip()
     return ""
@@ -466,14 +532,17 @@ def scan_batons(repo):
             text = read_text(f, 8_000)
             gm = BATON_GEN_RE.search(text)
             cm = BATON_CMD_RE.search(text)
-            batons.append({
-                "path": str(f.relative_to(repo)),
-                "generation": int(gm.group(1)) if gm else None,
-                "command": cm.group(0) if cm else "",
-                "needs_attention": _section_body(text, "needs.?attention",
-                                                 "deferred"),
-                "mtime": f.stat().st_mtime,
-            })
+            batons.append(
+                {
+                    "path": str(f.relative_to(repo)),
+                    "generation": int(gm.group(1)) if gm else None,
+                    "command": cm.group(0) if cm else "",
+                    "needs_attention": _section_body(
+                        text, "needs.?attention", "deferred"
+                    ),
+                    "mtime": f.stat().st_mtime,
+                }
+            )
     seen, out = set(), []
     for b in batons:
         if b["path"] not in seen:
@@ -481,7 +550,9 @@ def scan_batons(repo):
             out.append(b)
     return out
 
+
 # ---------------------------------------------------------------- sessions
+
 
 def _first_prompt_and_meta(path):
     """First user prompt + cwd/branch from the head of a session transcript."""
@@ -505,8 +576,11 @@ def _first_prompt_and_meta(path):
                     if isinstance(content, str):
                         prompt = content
                     elif isinstance(content, list):
-                        texts = [c.get("text", "") for c in content
-                                 if isinstance(c, dict) and c.get("type") == "text"]
+                        texts = [
+                            c.get("text", "")
+                            for c in content
+                            if isinstance(c, dict) and c.get("type") == "text"
+                        ]
                         prompt = " ".join(texts).strip() or None
                 if prompt and cwd and branch:
                     break
@@ -568,7 +642,9 @@ def _claude_agents_json():
     try:
         out = subprocess.run(
             ["claude", "agents", "--json"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -628,7 +704,9 @@ def live_session_ids(claude_home):
     return live, liveness_unknown
 
 
-_last_liveness_unknown = False  # set by scan_sessions(); read by assemble() (SPEC.md R4)
+_last_liveness_unknown = (
+    False  # set by scan_sessions(); read by assemble() (SPEC.md R4)
+)
 
 
 def scan_sessions(claude_home, stale_days):
@@ -667,17 +745,19 @@ def scan_sessions(claude_home, stale_days):
                 state = "stale"
             else:
                 state = "idle"
-            sessions.append({
-                "id": sid,
-                "cwd": cwd,
-                "branch": last_branch or branch,
-                "prompt": prompt or "(no prompt found)",
-                "last_ts": last_ts,
-                "start_ts": start_ts,
-                "end_ts": last_ts,
-                "bytes": jl.stat().st_size,
-                "state": state,
-            })
+            sessions.append(
+                {
+                    "id": sid,
+                    "cwd": cwd,
+                    "branch": last_branch or branch,
+                    "prompt": prompt or "(no prompt found)",
+                    "last_ts": last_ts,
+                    "start_ts": start_ts,
+                    "end_ts": last_ts,
+                    "bytes": jl.stat().st_size,
+                    "state": state,
+                }
+            )
     sessions.sort(key=lambda s: s["last_ts"], reverse=True)
     return sessions
 
@@ -696,17 +776,23 @@ def scan_todos(claude_home):
         todos = data.get("todos", data) if isinstance(data, dict) else data
         if not isinstance(todos, list):
             continue
-        open_items = [t for t in todos if isinstance(t, dict)
-                      and t.get("status") in ("pending", "in_progress")]
+        open_items = [
+            t
+            for t in todos
+            if isinstance(t, dict) and t.get("status") in ("pending", "in_progress")
+        ]
         if open_items:
-            items.append({
-                "session": f.stem.split("-agent-")[0],
-                "open": len(open_items),
-                "total": len(todos),
-                "next": open_items[0].get("content", "")[:120],
-                "mtime": f.stat().st_mtime,
-            })
+            items.append(
+                {
+                    "session": f.stem.split("-agent-")[0],
+                    "open": len(open_items),
+                    "total": len(todos),
+                    "next": open_items[0].get("content", "")[:120],
+                    "mtime": f.stat().st_mtime,
+                }
+            )
     return items
+
 
 # ---------------------------------------------------------------- antigravity
 
@@ -737,7 +823,8 @@ def abandon_conversations(ids):
         if conv.name in wanted:
             (conv / ABANDON_MARKER).write_text(
                 f"abandoned via workboard {datetime.now(timezone.utc).isoformat(timespec='seconds')}\n",
-                encoding="utf-8")
+                encoding="utf-8",
+            )
             marked.append(conv.name)
             wanted.discard(conv.name)
     return marked, sorted(wanted)
@@ -745,8 +832,11 @@ def abandon_conversations(ids):
 
 def abandon_stale(stale_days):
     """Mark every stale conversation (open items, idle past threshold)."""
-    stale = [c["id"] for c in scan_antigravity()
-             if c["open"] > 0 and (now_ts() - c["last_ts"]) > stale_days * 86400]
+    stale = [
+        c["id"]
+        for c in scan_antigravity()
+        if c["open"] > 0 and (now_ts() - c["last_ts"]) > stale_days * 86400
+    ]
     marked, _ = abandon_conversations(stale)
     return marked
 
@@ -770,19 +860,23 @@ def scan_antigravity():
                 pass
         mtime = updated or conv.stat().st_mtime
         done = boxes.count("x")
-        convs.append({
-            "id": conv.name,
-            "store": store,
-            "summary": (summary or conv.name)[:160],
-            "tasks_total": len(boxes),
-            "tasks_done": done,
-            "open": len(boxes) - done,
-            "last_ts": mtime,
-        })
+        convs.append(
+            {
+                "id": conv.name,
+                "store": store,
+                "summary": (summary or conv.name)[:160],
+                "tasks_total": len(boxes),
+                "tasks_done": done,
+                "open": len(boxes) - done,
+                "last_ts": mtime,
+            }
+        )
     convs.sort(key=lambda c: c["last_ts"], reverse=True)
     return convs
 
+
 # ---------------------------------------------------------------- assembly
+
 
 def _actively_covered(rp, r, active_toplevels, drain_window):
     """True if a live human session OR a live drain owns this repo's WIP.
@@ -811,122 +905,163 @@ def attention_total(inbox):
     return sum(1 for i in inbox if i["state"] != "in-progress")
 
 
-def attention_items(repos, sessions, antigravity, stale_days,
-                    drain_window=DRAIN_WINDOW_DEFAULT):
+def attention_items(
+    repos, sessions, antigravity, stale_days, drain_window=DRAIN_WINDOW_DEFAULT
+):
     """The inbox: everything that needs a human decision, most severe first.
 
     severity: critical > serious > warning  (rendered with icon + word, never
     color alone). Items owned by a live session/drain carry state
     `in-progress` / category `active` and are grouped/counted separately."""
     items = []
-    active_toplevels = {s.get("toplevel") for s in sessions
-                        if s.get("state") == "active" and s.get("toplevel")}
+    active_toplevels = {
+        s.get("toplevel")
+        for s in sessions
+        if s.get("state") == "active" and s.get("toplevel")
+    }
 
     for r in repos:
         rp = r["path"]
         covered_by_active = _actively_covered(rp, r, active_toplevels, drain_window)
         for h in r["handoffs"]:
-            resume_prompt = (f"Resume the parked handoff in {h['path']}; "
-                             "delete the file once fully resumed")
-            items.append({
-                "severity": "serious", "state": "blocked",
-                "repo": r["name"], "what": f"Handoff parked: {h['title']}",
-                "why": f"{h['path']} — resume it in a fresh session, then delete the file (/handoff wrote it):",
-                "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(resume_prompt)}",
-                "age_ts": h["mtime"],
-            })
+            resume_prompt = (
+                f"Resume the parked handoff in {h['path']}; "
+                "delete the file once fully resumed"
+            )
+            items.append(
+                {
+                    "severity": "serious",
+                    "state": "blocked",
+                    "repo": r["name"],
+                    "what": f"Handoff parked: {h['title']}",
+                    "why": f"{h['path']} — resume it in a fresh session, then delete the file (/handoff wrote it):",
+                    "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(resume_prompt)}",
+                    "age_ts": h["mtime"],
+                }
+            )
         for s in r["specs"]:
             open_tasks = s["tasks_total"] - s["tasks_done"]
             if s.get("tasks_blocked"):
-                items.append({
-                    "severity": "serious", "state": "blocked",
-                    "repo": r["name"],
-                    "what": f"Spec {s['slug']}: task(s) blocked",
-                    "why": ", ".join(s["tasks_blocked"][:3])
-                           + " — answer its open question, flip its Status: line, re-dispatch via /build or /drain",
-                    "age_ts": s["last_touched"],
-                })
+                items.append(
+                    {
+                        "severity": "serious",
+                        "state": "blocked",
+                        "repo": r["name"],
+                        "what": f"Spec {s['slug']}: task(s) blocked",
+                        "why": ", ".join(s["tasks_blocked"][:3])
+                        + " — answer its open question, flip its Status: line, re-dispatch via /build or /drain",
+                        "age_ts": s["last_touched"],
+                    }
+                )
             elif s["tasks_total"] > 0 and open_tasks == 0:
-                verify_prompt = (f"Use the verifier agent to verify specs/{s['slug']} "
-                                 "against its acceptance criteria; if it passes, "
-                                 "archive the spec dir")
-                items.append({
-                    "severity": "warning", "state": "needs-review",
-                    "repo": r["name"],
-                    "what": f"Spec {s['slug']}: all {s['tasks_total']} task(s) done",
-                    "why": "run the verifier agent against the spec, then archive the spec dir:",
-                    "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(verify_prompt)}",
-                    "age_ts": s["last_touched"],
-                })
+                verify_prompt = (
+                    f"Use the verifier agent to verify specs/{s['slug']} "
+                    "against its acceptance criteria; if it passes, "
+                    "archive the spec dir"
+                )
+                items.append(
+                    {
+                        "severity": "warning",
+                        "state": "needs-review",
+                        "repo": r["name"],
+                        "what": f"Spec {s['slug']}: all {s['tasks_total']} task(s) done",
+                        "why": "run the verifier agent against the spec, then archive the spec dir:",
+                        "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(verify_prompt)}",
+                        "age_ts": s["last_touched"],
+                    }
+                )
             elif open_tasks > 0 and (now_ts() - s["last_touched"]) > stale_days * 86400:
-                items.append({
-                    "severity": "warning", "state": "stale",
-                    "repo": r["name"],
-                    "what": f"Spec {s['slug']}: {open_tasks} open task(s), idle {age_str(s['last_touched'])}",
-                    "why": "resume it, defer it (Status: deferred), or delete it — open work decays; deciding is the point",
-                    "age_ts": s["last_touched"],
-                })
+                items.append(
+                    {
+                        "severity": "warning",
+                        "state": "stale",
+                        "repo": r["name"],
+                        "what": f"Spec {s['slug']}: {open_tasks} open task(s), idle {age_str(s['last_touched'])}",
+                        "why": "resume it, defer it (Status: deferred), or delete it — open work decays; deciding is the point",
+                        "age_ts": s["last_touched"],
+                    }
+                )
         if r["git"]["dirty"]:
             if covered_by_active:
-                items.append({
-                    "severity": "warning", "state": "in-progress",
-                    "category": "active", "repo": r["name"],
-                    "what": f"{r['git']['dirty']} uncommitted change(s) — a live session/drain is working here",
-                    "why": f"on branch {r['git']['branch']} — owned work-in-progress, not neglected",
-                    "age_ts": r["git"]["last_commit_ts"],
-                })
+                items.append(
+                    {
+                        "severity": "warning",
+                        "state": "in-progress",
+                        "category": "active",
+                        "repo": r["name"],
+                        "what": f"{r['git']['dirty']} uncommitted change(s) — a live session/drain is working here",
+                        "why": f"on branch {r['git']['branch']} — owned work-in-progress, not neglected",
+                        "age_ts": r["git"]["last_commit_ts"],
+                    }
+                )
             else:
-                items.append({
-                    "severity": "warning", "state": "needs-review",
-                    "repo": r["name"],
-                    "what": f"{r['git']['dirty']} uncommitted change(s), no live session",
-                    "why": f"on branch {r['git']['branch']} — commit (then push) or stash; small focused commits",
-                    "age_ts": r["git"]["last_commit_ts"],
-                })
+                items.append(
+                    {
+                        "severity": "warning",
+                        "state": "needs-review",
+                        "repo": r["name"],
+                        "what": f"{r['git']['dirty']} uncommitted change(s), no live session",
+                        "why": f"on branch {r['git']['branch']} — commit (then push) or stash; small focused commits",
+                        "age_ts": r["git"]["last_commit_ts"],
+                    }
+                )
         if r["git"]["ahead"]:
             if covered_by_active:
-                items.append({
-                    "severity": "warning", "state": "in-progress",
-                    "category": "active", "repo": r["name"],
-                    "what": f"{r['git']['ahead']} unpushed commit(s) on {r['git']['branch']} — a live session/drain is working here",
-                    "why": "owned work-in-progress — a live session/drain will push when it lands:",
-                    "cmd": f"git -C {shlex.quote(rp)} push",
-                    "age_ts": r["git"]["last_commit_ts"],
-                })
+                items.append(
+                    {
+                        "severity": "warning",
+                        "state": "in-progress",
+                        "category": "active",
+                        "repo": r["name"],
+                        "what": f"{r['git']['ahead']} unpushed commit(s) on {r['git']['branch']} — a live session/drain is working here",
+                        "why": "owned work-in-progress — a live session/drain will push when it lands:",
+                        "cmd": f"git -C {shlex.quote(rp)} push",
+                        "age_ts": r["git"]["last_commit_ts"],
+                    }
+                )
             else:
-                items.append({
-                    "severity": "warning", "state": "needs-review",
-                    "repo": r["name"],
-                    "what": f"{r['git']['ahead']} unpushed commit(s) on {r['git']['branch']}",
-                    "why": "push or open a PR — local-only work is invisible work:",
-                    "cmd": f"git -C {shlex.quote(rp)} push",
-                    "age_ts": r["git"]["last_commit_ts"],
-                })
+                items.append(
+                    {
+                        "severity": "warning",
+                        "state": "needs-review",
+                        "repo": r["name"],
+                        "what": f"{r['git']['ahead']} unpushed commit(s) on {r['git']['branch']}",
+                        "why": "push or open a PR — local-only work is invisible work:",
+                        "cmd": f"git -C {shlex.quote(rp)} push",
+                        "age_ts": r["git"]["last_commit_ts"],
+                    }
+                )
         for b in r.get("batons", []):
             # A parked baton with a needs-attention section carries deferred
             # questions the human must answer; promote it into the inbox so it
             # ranks among blocked work, not just as a repo card (oc-06).
             if b.get("needs_attention"):
                 gen = b["generation"] if b["generation"] is not None else "?"
-                items.append({
-                    "severity": "serious", "state": "blocked",
-                    "repo": r["name"],
-                    "what": f"Drain baton (gen {gen}): needs attention",
-                    "why": f"{b['needs_attention']} — answer it, then relaunch the parked generation:",
-                    "cmd": b.get("command") or "",
-                    "age_ts": b.get("mtime"),
-                })
+                items.append(
+                    {
+                        "severity": "serious",
+                        "state": "blocked",
+                        "repo": r["name"],
+                        "what": f"Drain baton (gen {gen}): needs attention",
+                        "why": f"{b['needs_attention']} — answer it, then relaunch the parked generation:",
+                        "cmd": b.get("command") or "",
+                        "age_ts": b.get("mtime"),
+                    }
+                )
 
     for c in antigravity:
         if c["open"] > 0 and (now_ts() - c["last_ts"]) > stale_days * 86400:
-            items.append({
-                "severity": "warning", "state": "stale",
-                "repo": f"antigravity:{c['store']}",
-                "what": f"{c['open']} open checklist item(s): {c['summary'][:60]}",
-                "why": "stale Antigravity conversation — resume it, or abandon:",
-                "cmd": f"python3 {shlex.quote(str(SCRIPT))} --abandon {shlex.quote(c['id'])}",
-                "age_ts": c["last_ts"],
-            })
+            items.append(
+                {
+                    "severity": "warning",
+                    "state": "stale",
+                    "repo": f"antigravity:{c['store']}",
+                    "what": f"{c['open']} open checklist item(s): {c['summary'][:60]}",
+                    "why": "stale Antigravity conversation — resume it, or abandon:",
+                    "cmd": f"python3 {shlex.quote(str(SCRIPT))} --abandon {shlex.quote(c['id'])}",
+                    "age_ts": c["last_ts"],
+                }
+            )
 
     sev_rank = {"critical": 0, "serious": 1, "warning": 2}
     items.sort(key=lambda i: (sev_rank.get(i["severity"], 3), -(i["age_ts"] or 0)))
@@ -942,15 +1077,198 @@ def _attach_sessions(repos, sessions):
     for r in repos:
         r_real = os.path.realpath(r["path"])
         r["sessions"] = [
-            s for s in sessions if s["id"] in real_cwds
-            and (real_cwds[s["id"]] == r_real
-                 or real_cwds[s["id"]].startswith(r_real + os.sep))
+            s
+            for s in sessions
+            if s["id"] in real_cwds
+            and (
+                real_cwds[s["id"]] == r_real
+                or real_cwds[s["id"]].startswith(r_real + os.sep)
+            )
         ]
     return {s["id"] for r in repos for s in r["sessions"]}
 
 
-def assemble(roots, max_depth, stale_days, quiet,
-             drain_window=DRAIN_WINDOW_DEFAULT):
+SPEND_TIMEOUT_SEC = 30
+_SPEND_TOKEN_FIELDS = (
+    "input_tokens",
+    "output_tokens",
+    "cache_read_tokens",
+    "cache_write_tokens",
+)
+
+
+def _locate_agentprof():
+    """agentprof binary lookup order (R5): $AGENTPROF_BIN, then `agentprof`
+    on PATH, then the committed toolkit binary."""
+    return (
+        os.environ.get("AGENTPROF_BIN")
+        or shutil.which("agentprof")
+        or str(Path.home() / "claude/agentprof/agentprof")
+    )
+
+
+def _unavailable_spend(reason):
+    return {"by_model": [], "by_session": {}, "available": False, "reason": reason}
+
+
+def _new_model_agg():
+    agg = {field: 0 for field in _SPEND_TOKEN_FIELDS}
+    agg["cost_microusd"] = 0
+    agg["priced"] = False
+    return agg
+
+
+def compute_spend(claude_home, session_ids):
+    """Shell out to agentprof and join its per-(session, model) summary rows to
+    the sessions workboard assembled. Any failure — missing binary, timeout,
+    non-zero exit, invalid JSON — degrades to an unavailable structure with a
+    `reason` rather than raising, so the dashboard never breaks (R8)."""
+    binary = _locate_agentprof()
+    try:
+        proc = subprocess.run(
+            [binary, "claude", "-o", "summary", "--days", "3650",
+             "--claude-dir", str(claude_home)],
+            capture_output=True,
+            text=True,
+            timeout=SPEND_TIMEOUT_SEC,
+        )
+    except FileNotFoundError:
+        return _unavailable_spend(f"agentprof not found: {binary}")
+    except subprocess.TimeoutExpired:
+        return _unavailable_spend(f"agentprof timed out after {SPEND_TIMEOUT_SEC}s")
+    except OSError as e:
+        return _unavailable_spend(f"agentprof failed to run: {e}")
+
+    if proc.returncode != 0:
+        detail = (proc.stderr or "").strip().splitlines()
+        return _unavailable_spend(
+            f"agentprof exited {proc.returncode}"
+            + (f": {detail[0]}" if detail else "")
+        )
+    try:
+        rows = json.loads(proc.stdout)
+    except (ValueError, TypeError):
+        return _unavailable_spend("agentprof emitted invalid JSON")
+    if not isinstance(rows, list):
+        return _unavailable_spend("agentprof emitted invalid JSON")
+
+    by_session = {}
+    by_model = {}
+    for row in rows:
+        sid = row.get("session")
+        if sid not in session_ids:
+            continue
+        model = row.get("model")
+        cost = int(row.get("cost_microusd", 0))
+        priced = bool(row.get("priced", False))
+
+        sess = by_session.setdefault(sid, {"cost_microusd": 0, "models": {}})
+        sess["cost_microusd"] += cost
+        smodel = sess["models"].setdefault(model, _new_model_agg())
+        agg = by_model.setdefault(model, _new_model_agg())
+        for target in (smodel, agg):
+            for field in _SPEND_TOKEN_FIELDS:
+                target[field] += int(row.get(field, 0))
+            target["cost_microusd"] += cost
+            target["priced"] = target["priced"] or priced
+
+    by_model_list = sorted(
+        ({"model": model, **agg} for model, agg in by_model.items()),
+        key=lambda m: (-m["cost_microusd"], m["model"]),
+    )
+    return {
+        "by_model": by_model_list,
+        "by_session": by_session,
+        "available": True,
+        "reason": None,
+    }
+
+
+_MODEL_DATE_RE = re.compile(r"-\d{8}$")
+
+
+def _short_model_name(model_id):
+    """R6 badge short name: drop the `claude-` prefix and a trailing
+    `-YYYYMMDD` date; ids not matching that shape render verbatim."""
+    name = model_id
+    if name.startswith("claude-"):
+        name = name[len("claude-"):]
+    return _MODEL_DATE_RE.sub("", name)
+
+
+def _fmt_dollars(cost_microusd):
+    return f"${cost_microusd / 1_000_000:.2f}"
+
+
+def _fmt_tokens(n):
+    """Human-readable token count, e.g. 1_500_000 -> `1.5M`."""
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}K"
+    return str(n)
+
+
+def _session_badge(session_spend):
+    """R6: `$<dollars> <short-model>` for a session, or `unpriced
+    <short-model>` when every contributing row is unpriced. Returns None
+    when the session has no summary rows (no badge — never `$0.00`)."""
+    if not session_spend:
+        return None
+    models = session_spend.get("models") or {}
+    if not models:
+        return None
+    # Dominant model: highest cost, tie or all-zero -> most output tokens.
+    dominant = max(
+        models,
+        key=lambda m: (models[m]["cost_microusd"], models[m]["output_tokens"]),
+    )
+    short = _short_model_name(dominant)
+    if any(m["priced"] for m in models.values()):
+        return f"{_fmt_dollars(session_spend['cost_microusd'])} {short}"
+    return f"unpriced {short}"
+
+
+def render_spend_section(spend):
+    """R7/R8/R10: the "Spend by model" section — a per-model table when spend
+    is available, else a single hint line. Self-contained, meaning never
+    carried by color alone (`unpriced` reads as text)."""
+    if not spend or not spend.get("available"):
+        reason = (spend or {}).get("reason") or "unknown"
+        return (
+            "<section><h2>Spend by model</h2>"
+            f'<p class="muted-text">spend data unavailable: {esc(reason)}</p>'
+            "</section>"
+        )
+    by_model = spend.get("by_model") or []
+    if not by_model:
+        return (
+            "<section><h2>Spend by model</h2>"
+            '<p class="muted-text">no spend recorded</p></section>'
+        )
+    rows = []
+    for m in by_model:
+        if m["priced"]:
+            cost_cell = f"<td class='num'>{_fmt_dollars(m['cost_microusd'])}</td>"
+        else:
+            cost_cell = "<td class='num'>— <span class='chip'>unpriced</span></td>"
+        rows.append(
+            f"<tr><td class='strong'>{esc(m['model'])}</td>"
+            f"<td class='num'>{_fmt_tokens(m['input_tokens'])}</td>"
+            f"<td class='num'>{_fmt_tokens(m['output_tokens'])}</td>"
+            f"<td class='num'>{_fmt_tokens(m['cache_read_tokens'])}</td>"
+            f"<td class='num'>{_fmt_tokens(m['cache_write_tokens'])}</td>"
+            f"{cost_cell}</tr>"
+        )
+    return (
+        "<section><h2>Spend by model</h2>"
+        "<table><thead><tr><th>model</th><th>input</th><th>output</th>"
+        "<th>cache read</th><th>cache write</th><th>cost</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></section>"
+    )
+
+
+def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFAULT):
     claude_home = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
     sessions = scan_sessions(claude_home, stale_days)
 
@@ -966,33 +1284,37 @@ def assemble(roots, max_depth, stale_days, quiet,
                 s["toplevel"] = top
                 session_dirs.append(Path(top))
 
-    repo_paths = sorted({str(p) for p in
-                         list(find_repos(roots, max_depth)) + session_dirs})
+    repo_paths = sorted(
+        {str(p) for p in list(find_repos(roots, max_depth)) + session_dirs}
+    )
     repos = []
     for rp in repo_paths:
         p = Path(rp)
         if not quiet:
             print(f"  scanning {rp}", file=sys.stderr)
-        repos.append({
-            "path": rp,
-            "name": p.name,
-            "git": git_info(p),
-            "specs": scan_toolkit_specs(p) + scan_kiro_specs(p),
-            "handoffs": scan_handoffs(p),
-            "batons": scan_batons(p),
-        })
+        repos.append(
+            {
+                "path": rp,
+                "name": p.name,
+                "git": git_info(p),
+                "specs": scan_toolkit_specs(p) + scan_kiro_specs(p),
+                "handoffs": scan_handoffs(p),
+                "batons": scan_batons(p),
+            }
+        )
 
     matched = _attach_sessions(repos, sessions)
     orphan_sessions = [s for s in sessions if s["id"] not in matched]
 
     antigravity = scan_antigravity()
     todos = scan_todos(claude_home)
-    inbox = attention_items(repos, sessions, antigravity, stale_days,
-                            drain_window)
+    inbox = attention_items(repos, sessions, antigravity, stale_days, drain_window)
     ready = ready_items(repos)
 
     return {
-        "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+        "generated_at": datetime.now(timezone.utc)
+        .astimezone()
+        .isoformat(timespec="seconds"),
         "stale_days": stale_days,
         "repos": repos,
         "sessions": sessions,
@@ -1001,20 +1323,27 @@ def assemble(roots, max_depth, stale_days, quiet,
         "todos": todos,
         "inbox": inbox,
         "ready": ready,
+        "spend": compute_spend(claude_home, {s["id"] for s in sessions}),
         "liveness_unknown": _last_liveness_unknown,
         "totals": {
             "repos": len(repos),
-            "specs_open": sum(1 for r in repos for s in r["specs"]
-                              if s["tasks_total"] == 0
-                              or s["tasks_done"] < s["tasks_total"]),
-            "tasks_open": sum(s["tasks_total"] - s["tasks_done"]
-                              for r in repos for s in r["specs"]),
+            "specs_open": sum(
+                1
+                for r in repos
+                for s in r["specs"]
+                if s["tasks_total"] == 0 or s["tasks_done"] < s["tasks_total"]
+            ),
+            "tasks_open": sum(
+                s["tasks_total"] - s["tasks_done"] for r in repos for s in r["specs"]
+            ),
             "sessions_active": sum(1 for s in sessions if s["state"] == "active"),
             "attention": attention_total(inbox),
         },
     }
 
+
 # ---------------------------------------------------------------- rendering
+
 
 def esc(x):
     return html.escape(str(x if x is not None else ""))
@@ -1077,14 +1406,17 @@ def render_batons(batons):
     out = []
     for b in batons:
         gen = b["generation"] if b["generation"] is not None else "?"
-        attn = (f'<span class="baton-attn"> · needs attention: '
-                f'{esc(b["needs_attention"])}</span>'
-                if b.get("needs_attention") else "")
-        cmd = f' <code>{esc(b["command"])}</code>' if b.get("command") else ""
+        attn = (
+            f'<span class="baton-attn"> · needs attention: '
+            f"{esc(b['needs_attention'])}</span>"
+            if b.get("needs_attention")
+            else ""
+        )
+        cmd = f" <code>{esc(b['command'])}</code>" if b.get("command") else ""
         out.append(
             f'<p class="baton">🪧 drain baton · generation {esc(gen)} parked in '
-            f'<code>{esc(b["path"])}</code> — relaunch to continue the queue '
-            f'(drain self-manages; the final generation deletes it):{cmd}{attn}</p>'
+            f"<code>{esc(b['path'])}</code> — relaunch to continue the queue "
+            f"(drain self-manages; the final generation deletes it):{cmd}{attn}</p>"
         )
     return "".join(out)
 
@@ -1106,8 +1438,10 @@ def render_ready(ready):
             f"<tbody>{rows}</tbody></table>"
         )
     else:
-        body = ('<p class="empty">Nothing ready to start — every pending task '
-                'is waiting on an unfinished dependency.</p>')
+        body = (
+            '<p class="empty">Nothing ready to start — every pending task '
+            "is waiting on an unfinished dependency.</p>"
+        )
 
     blocked = ready["blocked_unresolved"]
     blocked_html = ""
@@ -1126,7 +1460,7 @@ def render_ready(ready):
         '<section class="ready" data-category="ready"><h2>Ready to start '
         f'<span class="count">{len(items)}</span></h2>'
         '<p class="legend">Pending tasks whose dependencies are all done — '
-        'dispatchable now. Click a <code>command</code> or its copy button to copy it.</p>'
+        "dispatchable now. Click a <code>command</code> or its copy button to copy it.</p>"
         f"{body}{blocked_html}</section>"
     )
 
@@ -1141,12 +1475,16 @@ def build_actions_script(data):
         if r["git"]["ahead"]:
             pushes.append(f"git -C {shlex.quote(rp)} push")
         for s in r["specs"]:
-            if (s.get("kind") == "toolkit" and s["tasks_total"] > 0
-                    and s["tasks_done"] >= s["tasks_total"]):
+            if (
+                s.get("kind") == "toolkit"
+                and s["tasks_total"] > 0
+                and s["tasks_done"] >= s["tasks_total"]
+            ):
                 verifies.append(
                     f"cd {shlex.quote(rp)}\n"
                     f'claude "Use the verifier agent to verify specs/{s["slug"]} '
-                    'against its acceptance criteria"')
+                    'against its acceptance criteria"'
+                )
     lines = [
         "#!/usr/bin/env bash",
         "set -u",
@@ -1178,9 +1516,9 @@ def render_actions(data):
     return (
         '<section class="actions"><h2>Batch actions</h2>'
         '<p class="legend">A companion script of safe, mechanical fixes was '
-        f'written to <code>{esc(path)}</code>. Pushes run immediately; verify '
-        'lines launch review sessions — review it before running.</p>'
-        f'<table><tbody><tr><td>{cmd_html(inv)}</td></tr></tbody></table></section>'
+        f"written to <code>{esc(path)}</code>. Pushes run immediately; verify "
+        "lines launch review sessions — review it before running.</p>"
+        f"<table><tbody><tr><td>{cmd_html(inv)}</td></tr></tbody></table></section>"
     )
 
 
@@ -1210,7 +1548,7 @@ def _inbox_group(cat, rows, state=None):
         f'<h3 class="group-head" data-category="{cat}">{badge(state or cat)} '
         f'<span class="count">{len(rows)}</span></h3>'
         f'<table data-category="{cat}"><thead><tr><th>state</th><th>item</th>'
-        '<th>repo</th><th>suggested action</th><th>age</th></tr></thead>'
+        "<th>repo</th><th>suggested action</th><th>age</th></tr></thead>"
         f"<tbody>{body}</tbody></table>"
     )
 
@@ -1221,14 +1559,18 @@ def render_inbox(inbox):
     with the Active (in-progress) group rendered AFTER the attention groups.
     Item content and cmd strings are unchanged from the flat render (R6)."""
     attention = [i for i in inbox if i["state"] != "in-progress"]
-    active = sorted((i for i in inbox if i["state"] == "in-progress"),
-                    key=lambda i: -(i["age_ts"] or 0))
+    active = sorted(
+        (i for i in inbox if i["state"] == "in-progress"),
+        key=lambda i: -(i["age_ts"] or 0),
+    )
     if not attention and not active:
         return '<p class="empty">Inbox zero — nothing is blocked, stale, or waiting on review. 🎉</p>'
     groups = []
     for cat in INBOX_CATEGORIES:
-        rows = sorted((i for i in attention if i["state"] == cat),
-                      key=lambda i: -(i["age_ts"] or 0))
+        rows = sorted(
+            (i for i in attention if i["state"] == cat),
+            key=lambda i: -(i["age_ts"] or 0),
+        )
         if rows:
             groups.append(_inbox_group(cat, rows))
     if active:
@@ -1251,27 +1593,39 @@ def render_filter_tiles(data):
         f'<button type="button" class="ftile" data-filter="{cat}">'
         f'<span class="ftile-value">{counts[cat]}</span>'
         f'<span class="ftile-label">{cat}</span></button>'
-        for cat in FILTER_CATEGORIES if counts[cat]
+        for cat in FILTER_CATEGORIES
+        if counts[cat]
     )
     if not tiles:
         return ""
-    return (f'<div class="filter-tiles" role="group" aria-label="Filter by category">'
-            f'{tiles}</div>')
+    return (
+        f'<div class="filter-tiles" role="group" aria-label="Filter by category">'
+        f"{tiles}</div>"
+    )
 
 
-def _session_timeline_html(sessions):
+def _session_timeline_html(sessions, by_session=None):
     """Sessions rendered via the shared viz.timeline() Gantt instead of a
     flat table; state values (active/recent/idle/stale) all map through
-    viz.canonical_status without falling through to "open"."""
+    viz.canonical_status without falling through to "open". When spend data
+    is available, each session's label is prefixed with its cost badge (R6);
+    viz.timeline() escapes labels, so the badge is plain text (R10)."""
     if not sessions:
         return '<p class="muted-text">no sessions recorded</p>'
-    rows = [{
-        "label": s["prompt"],
-        "status": s["state"],
-        "start_ts": s["start_ts"],
-        "end_ts": s["end_ts"],
-        "tooltip": f"{s['branch'] or '?'} · last active {age_str(s['last_ts'])} ago",
-    } for s in sessions]
+    by_session = by_session or {}
+    rows = []
+    for s in sessions:
+        badge = _session_badge(by_session.get(s["id"]))
+        label = f"{badge} · {s['prompt']}" if badge else s["prompt"]
+        rows.append(
+            {
+                "label": label,
+                "status": s["state"],
+                "start_ts": s["start_ts"],
+                "end_ts": s["end_ts"],
+                "tooltip": f"{s['branch'] or '?'} · last active {age_str(s['last_ts'])} ago",
+            }
+        )
     return viz.timeline(rows)
 
 
@@ -1307,8 +1661,14 @@ def _spec_dag_tasks(spec):
                 num = by_path.get(resolved)
                 if num is not None:
                     deps.append(num)
-        result.append({"num": int(m.group(1)), "deps": deps,
-                       "status": t["status"], "title": t["title"]})
+        result.append(
+            {
+                "num": int(m.group(1)),
+                "deps": deps,
+                "status": t["status"],
+                "title": t["title"],
+            }
+        )
     return result
 
 
@@ -1321,7 +1681,8 @@ def _spec_dag_html(specs):
         if svg:
             blocks.append(
                 f'<details class="spec-dag"><summary>{esc(s["slug"])} '
-                f'— dependency graph</summary>{svg}</details>')
+                f"— dependency graph</summary>{svg}</details>"
+            )
     return "".join(blocks)
 
 
@@ -1338,6 +1699,8 @@ def _spec_health_marker(spec):
 
 def render_html(data):
     t = data["totals"]
+    spend = data.get("spend")
+    spend_by_session = (spend or {}).get("by_session") or {}
 
     tiles = "".join(
         f'<div class="tile"><div class="tile-value">{esc(v)}</div>'
@@ -1355,12 +1718,14 @@ def render_html(data):
 
     liveness_marker = (
         ' <span class="chip warning">liveness unknown</span>'
-        if data.get("liveness_unknown") else ""
+        if data.get("liveness_unknown")
+        else ""
     )
 
     repo_cards = []
-    for r in sorted(data["repos"],
-                    key=lambda r: r["git"]["last_commit_ts"] or 0, reverse=True):
+    for r in sorted(
+        data["repos"], key=lambda r: r["git"]["last_commit_ts"] or 0, reverse=True
+    ):
         g = r["git"]
         chips = [f'<span class="chip">⎇ {esc(g["branch"])}</span>']
         if g["dirty"]:
@@ -1370,28 +1735,33 @@ def render_html(data):
         if g["behind"]:
             chips.append(f'<span class="chip">↓ {g["behind"]} behind</span>')
         for wt in g["worktrees"]:
-            chips.append(f'<span class="chip">⌂ {esc(wt.get("branch", "worktree"))}</span>')
+            chips.append(
+                f'<span class="chip">⌂ {esc(wt.get("branch", "worktree"))}</span>'
+            )
 
-        spec_rows = "".join(
-            f"<tr><td class='strong'>{esc(s['slug'])}"
-            f"<span class='muted-text'> · {esc(s['kind'])}</span>{_spec_health_marker(s)}</td>"
-            f"<td>{progress_bar(s['tasks_done'], s['tasks_total'], s.get('tasks_doing', 0))}</td>"
-            f"<td class='num'>{esc(age_str(s['last_touched']))}</td></tr>"
-            for s in r["specs"]
-        ) or "<tr><td colspan='3' class='muted-text'>no specs</td></tr>"
+        spec_rows = (
+            "".join(
+                f"<tr><td class='strong'>{esc(s['slug'])}"
+                f"<span class='muted-text'> · {esc(s['kind'])}</span>{_spec_health_marker(s)}</td>"
+                f"<td>{progress_bar(s['tasks_done'], s['tasks_total'], s.get('tasks_doing', 0))}</td>"
+                f"<td class='num'>{esc(age_str(s['last_touched']))}</td></tr>"
+                for s in r["specs"]
+            )
+            or "<tr><td colspan='3' class='muted-text'>no specs</td></tr>"
+        )
         dag_html = _spec_dag_html(r["specs"])
 
-        sess_html = _session_timeline_html(r["sessions"][:8])
+        sess_html = _session_timeline_html(r["sessions"][:8], spend_by_session)
         handoff_html = "".join(
             f'<p class="handoff">⚑ handoff: {esc(h["title"])} — '
-            f'{cmd_html(handoff_pickup_cmd(r["path"], h["path"]))}</p>'
+            f"{cmd_html(handoff_pickup_cmd(r['path'], h['path']))}</p>"
             for h in r["handoffs"]
         )
         baton_html = render_batons(r.get("batons", []))
         repo_cards.append(
             f'<details class="repo" open><summary><span class="repo-name">{esc(r["name"])}</span>'
             f'<span class="repo-path">{esc(r["path"])}</span>{"".join(chips)}</summary>'
-            f'{baton_html}{handoff_html}'
+            f"{baton_html}{handoff_html}"
             f'<div class="repo-grid"><div><h3>Specs</h3>'
             f"<table><thead><tr><th>spec</th><th>tasks</th><th>touched</th></tr></thead>"
             f"<tbody>{spec_rows}</tbody></table>{dag_html}</div>"
@@ -1407,13 +1777,16 @@ def render_html(data):
             f"<td class='num'>{esc(age_str(c['last_ts']))}</td></tr>"
             for c in data["antigravity"][:20]
         )
-        any_stale = any(c["open"] and (now_ts() - c["last_ts"]) > data["stale_days"] * 86400
-                        for c in data["antigravity"])
+        any_stale = any(
+            c["open"] and (now_ts() - c["last_ts"]) > data["stale_days"] * 86400
+            for c in data["antigravity"]
+        )
         abandon_hint = (
             f'<p class="muted-text">abandon everything stale at once: '
-            f'{cmd_html(f"python3 {shlex.quote(str(SCRIPT))} --abandon-stale")} '
-            f'(writes a skip-marker per conversation; Antigravity state itself is untouched)</p>'
-            if any_stale else ""
+            f"{cmd_html(f'python3 {shlex.quote(str(SCRIPT))} --abandon-stale')} "
+            f"(writes a skip-marker per conversation; Antigravity state itself is untouched)</p>"
+            if any_stale
+            else ""
         )
         ag_html = (
             "<section><h2>Antigravity conversations</h2>"
@@ -1440,7 +1813,7 @@ def render_html(data):
     if data["orphan_sessions"]:
         orphan_html = (
             f"<section><h2>Sessions outside scanned repos</h2>{liveness_marker}"
-            f"{_session_timeline_html(data['orphan_sessions'][:20])}</section>"
+            f"{_session_timeline_html(data['orphan_sessions'][:20], spend_by_session)}</section>"
         )
 
     return TEMPLATE.format(
@@ -1451,10 +1824,12 @@ def render_html(data):
         actions=render_actions(data),
         ready=render_ready(data["ready"]),
         inbox=inbox_html,
-        repos="".join(repo_cards) or '<p class="empty">No git repos found in the scanned roots.</p>',
+        repos="".join(repo_cards)
+        or '<p class="empty">No git repos found in the scanned roots.</p>',
         antigravity=ag_html,
         todos=todo_html,
         orphans=orphan_html,
+        spend=render_spend_section(spend),
         viz_css=viz.VIZ_CSS,
     )
 
@@ -1597,6 +1972,7 @@ the attention items, excluded from the needs-attention count).
 Most severe first. Click any <code>command</code> or its copy button to copy it.</p>
 {inbox}</section>
 <section><h2>Repos</h2>{repos}</section>
+{spend}
 {antigravity}
 {todos}
 {orphans}
@@ -1695,25 +2071,40 @@ never color alone.</footer>
 
 # ---------------------------------------------------------------- main
 
+
 def main():
     ap = argparse.ArgumentParser(description="Cross-repo agent/spec/session workboard")
     ap.add_argument("roots", nargs="*", help="directories to scan for git repos")
     ap.add_argument("--out", default="workboard.html", help="output HTML path")
-    ap.add_argument("--actions-out", default=None,
-                    help="path for the companion actions script "
-                         "(default: --out stem + .actions.sh)")
+    ap.add_argument(
+        "--actions-out",
+        default=None,
+        help="path for the companion actions script "
+        "(default: --out stem + .actions.sh)",
+    )
     ap.add_argument("--json", action="store_true", help="print JSON to stdout instead")
     ap.add_argument("--stale-days", type=int, default=STALE_DAYS_DEFAULT)
-    ap.add_argument("--drain-window-min", type=int,
-                    default=DRAIN_WINDOW_DEFAULT // 60,
-                    help="a task/* worktree counts as a live drain only if its "
-                         "newest activity is within this many minutes (default 15)")
+    ap.add_argument(
+        "--drain-window-min",
+        type=int,
+        default=DRAIN_WINDOW_DEFAULT // 60,
+        help="a task/* worktree counts as a live drain only if its "
+        "newest activity is within this many minutes (default 15)",
+    )
     ap.add_argument("--max-depth", type=int, default=3)
     ap.add_argument("--quiet", action="store_true")
-    ap.add_argument("--abandon", nargs="+", metavar="CONV_ID", default=[],
-                    help="mark Antigravity conversation(s) abandoned (skip-marker only), then rescan")
-    ap.add_argument("--abandon-stale", action="store_true",
-                    help="abandon every stale Antigravity conversation, then rescan")
+    ap.add_argument(
+        "--abandon",
+        nargs="+",
+        metavar="CONV_ID",
+        default=[],
+        help="mark Antigravity conversation(s) abandoned (skip-marker only), then rescan",
+    )
+    ap.add_argument(
+        "--abandon-stale",
+        action="store_true",
+        help="abandon every stale Antigravity conversation, then rescan",
+    )
     args = ap.parse_args()
 
     if args.abandon:
@@ -1729,8 +2120,9 @@ def main():
             print(f"abandoned (stale): {cid}", file=sys.stderr)
 
     roots = [Path(r) for r in args.roots] if args.roots else default_roots()
-    data = assemble(roots, args.max_depth, args.stale_days, args.quiet,
-                    args.drain_window_min * 60)
+    data = assemble(
+        roots, args.max_depth, args.stale_days, args.quiet, args.drain_window_min * 60
+    )
 
     if args.json:
         json.dump(data, sys.stdout, indent=2, default=str)
@@ -1738,17 +2130,22 @@ def main():
         return
 
     out = Path(args.out)
-    actions_path = (Path(args.actions_out) if args.actions_out
-                    else out.parent / (out.stem + ".actions.sh"))
+    actions_path = (
+        Path(args.actions_out)
+        if args.actions_out
+        else out.parent / (out.stem + ".actions.sh")
+    )
     actions_path.write_text(build_actions_script(data), encoding="utf-8")
     actions_path.chmod(actions_path.stat().st_mode | 0o111)
     data["actions_path"] = str(actions_path)
 
     out.write_text(render_html(data), encoding="utf-8")
     t = data["totals"]
-    print(f"workboard: {t['repos']} repos · {t['specs_open']} open specs · "
-          f"{t['tasks_open']} open tasks · {t['sessions_active']} active sessions · "
-          f"{t['attention']} need attention → {out} (actions → {actions_path})")
+    print(
+        f"workboard: {t['repos']} repos · {t['specs_open']} open specs · "
+        f"{t['tasks_open']} open tasks · {t['sessions_active']} active sessions · "
+        f"{t['attention']} need attention → {out} (actions → {actions_path})"
+    )
 
 
 if __name__ == "__main__":
