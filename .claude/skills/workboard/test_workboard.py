@@ -1188,5 +1188,190 @@ class TestSpendRendering(unittest.TestCase):
         self.assertIn("Spend by model", html)
 
 
+# ---- Unblock lines + Deferred questions (unblock-next-steps task 01) -------
+
+
+def _write_unblock_spec(root, slug="demo", spec_body="# Demo\n", tasks=None):
+    """Write a specs/<slug>/ tree; `tasks` maps filename → body text."""
+    spec = Path(root) / "specs" / slug
+    (spec / "tasks").mkdir(parents=True)
+    (spec / "SPEC.md").write_text(spec_body, encoding="utf-8")
+    for name, body in (tasks or {}).items():
+        (spec / "tasks" / name).write_text(body, encoding="utf-8")
+    return spec
+
+
+class TestUnblockParsing(unittest.TestCase):
+    def _scan_task(self, body, name="01-a.md"):
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_unblock_spec(tmp, tasks={name: body})
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+        return specs[0]["tasks"][0]
+
+    def test_blocked_task_with_ask_unblock_parses_type_and_step(self):
+        t = self._scan_task("# A\nStatus: blocked\nUnblock: ask: which creds?\n")
+        self.assertEqual(t["unblock"], {"type": "ask", "step": "which creds?"})
+
+    def test_blocked_task_with_run_unblock_parses(self):
+        t = self._scan_task("# A\nStatus: blocked\nUnblock: run: make deploy\n")
+        self.assertEqual(t["unblock"], {"type": "run", "step": "make deploy"})
+
+    def test_blocked_task_with_agent_unblock_parses(self):
+        t = self._scan_task("# A\nStatus: blocked\nUnblock: agent: check the deploy\n")
+        self.assertEqual(t["unblock"], {"type": "agent", "step": "check the deploy"})
+
+    def test_malformed_unblock_line_yields_no_unblock_key(self):
+        t = self._scan_task("# A\nStatus: blocked\nUnblock: someday soon\n")
+        self.assertNotIn("unblock", t)
+
+    def test_unblock_line_on_non_blocked_task_is_ignored(self):
+        t = self._scan_task("# A\nStatus: pending\nUnblock: ask: which creds?\n")
+        self.assertNotIn("unblock", t)
+
+    def test_deferred_questions_section_appears_in_task_json(self):
+        body = (
+            "# A\nStatus: blocked\n\n"
+            "## Deferred questions\n\n"
+            "- which auth provider?\n- what is the base URL?\n"
+        )
+        t = self._scan_task(body)
+        self.assertEqual(len(t["deferred_questions"]), 2)
+        self.assertIn("what is the base URL?", t["deferred_questions"])
+
+
+class TestWaitingSpecUnblock(unittest.TestCase):
+    def test_waiting_spec_header_surfaces_unblock_and_counts_open(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_unblock_spec(
+                tmp,
+                spec_body="# Demo\nStatus: waiting\nUnblock: agent: check the deploy\n",
+            )
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+        s = specs[0]
+        self.assertEqual(s["unblock"], {"type": "agent", "step": "check the deploy"})
+        self.assertEqual(s["status"], "waiting")
+        # a waiting spec (no completed tasks) still counts among open specs
+        self.assertTrue(s["tasks_total"] == 0 or s["tasks_done"] < s["tasks_total"])
+
+    def test_spec_without_status_header_has_no_unblock_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_unblock_spec(tmp, spec_body="# Demo\n")
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+        self.assertNotIn("unblock", specs[0])
+
+
+def _unblock_task(status="blocked", unblock=None, deferred=None, name="01-a.md"):
+    t = {"file": f"specs/demo/tasks/{name}", "abs": f"/x/{name}",
+         "title": name, "status": status, "deps": []}
+    if unblock:
+        t["unblock"] = unblock
+    if deferred:
+        t["deferred_questions"] = deferred
+    return t
+
+
+def _unblock_spec(tasks, status=None, unblock=None):
+    s = {"kind": "toolkit", "slug": "demo", "title": "Demo", "priority": "",
+         "path": "specs/demo/SPEC.md", "tasks_total": len(tasks) or 1,
+         "tasks_done": 0, "tasks_doing": 0,
+         "tasks_blocked": [t["file"] for t in tasks
+                           if workboard._task_is_blocked(t["status"])],
+         "tasks": tasks, "tasks_unparseable": 0, "last_touched": 1.0}
+    if status:
+        s["status"] = status
+    if unblock:
+        s["unblock"] = unblock
+    return s
+
+
+class TestUnblockWarningChip(unittest.TestCase):
+    def _data(self, spec):
+        repo = make_repo_record(path="/r/demo")
+        repo["specs"] = [spec]
+        return {
+            "totals": {"repos": 1, "specs_open": 1, "tasks_open": 1,
+                       "sessions_active": 0, "attention": 1},
+            "generated_at": "now", "stale_days": 7,
+            "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+            "repos": [repo], "antigravity": [], "todos": [],
+            "orphan_sessions": [], "spend": None,
+        }
+
+    def test_blocked_task_without_unblock_shows_warning_chip(self):
+        html = workboard.render_html(self._data(_unblock_spec([_unblock_task()])))
+        self.assertIn('data-chip="no-unblock"', html)
+
+    def test_blocked_task_with_unblock_shows_no_warning_chip(self):
+        spec = _unblock_spec([_unblock_task(unblock={"type": "ask", "step": "q?"})])
+        html = workboard.render_html(self._data(spec))
+        self.assertNotIn('data-chip="no-unblock"', html)
+
+    def test_waiting_spec_without_unblock_shows_warning_chip(self):
+        html = workboard.render_html(self._data(_unblock_spec([], status="waiting")))
+        self.assertIn('data-chip="no-unblock"', html)
+
+
+class TestNeedsAnswerInbox(unittest.TestCase):
+    def _repo(self, spec):
+        repo = make_repo_record(path="/r/demo")
+        repo["specs"] = [spec]
+        return repo
+
+    def _inbox(self, spec):
+        return workboard.attention_items([self._repo(spec)], [], [], stale_days=7)
+
+    def test_ask_unblock_becomes_needs_answer_item_without_cmd(self):
+        spec = _unblock_spec([_unblock_task(unblock={"type": "ask",
+                                                     "step": "which creds?"})])
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertEqual(len(answer), 1)
+        self.assertIn("which creds?", answer[0]["why"])
+        self.assertNotIn("cmd", answer[0])
+
+    def test_deferred_question_becomes_needs_answer_item_without_cmd(self):
+        spec = _unblock_spec([_unblock_task(deferred=["which provider?"])])
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertEqual(len(answer), 1)
+        self.assertIn("which provider?", answer[0]["why"])
+        self.assertNotIn("cmd", answer[0])
+
+    def test_run_unblock_is_not_a_needs_answer_item(self):
+        spec = _unblock_spec([_unblock_task(unblock={"type": "run", "step": "make x"})])
+        self.assertEqual(
+            [i for i in self._inbox(spec) if i["state"] == "needs-answer"], [])
+
+    def test_run_unblock_step_shows_on_blocked_inbox_row(self):
+        spec = _unblock_spec([_unblock_task(unblock={"type": "run",
+                                                     "step": "make deploy"})])
+        blocked = [i for i in self._inbox(spec)
+                   if i["state"] == "blocked" and "blocked" in i["what"].lower()]
+        self.assertIn("make deploy", blocked[0]["why"])
+
+    def test_waiting_spec_ask_unblock_becomes_needs_answer(self):
+        spec = _unblock_spec([], status="waiting",
+                             unblock={"type": "ask", "step": "sign in at URL?"})
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertEqual(len(answer), 1)
+        self.assertIn("sign in at URL?", answer[0]["why"])
+        self.assertNotIn("cmd", answer[0])
+
+    def test_waiting_spec_agent_unblock_becomes_blocked_item_with_step(self):
+        spec = _unblock_spec([], status="waiting",
+                             unblock={"type": "agent", "step": "check deploy"})
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("check deploy", blocked[0]["why"])
+        self.assertNotIn("cmd", blocked[0])
+
+    def test_needs_answer_group_renders_before_blocked_group(self):
+        answer = {"state": "needs-answer", "repo": "demo",
+                  "what": "Answer needed: A", "why": "which creds?", "age_ts": 2.0}
+        blocked = {"state": "blocked", "repo": "demo",
+                   "what": "Spec demo: task(s) blocked", "why": "x", "age_ts": 3.0}
+        html = workboard.render_inbox([blocked, answer])
+        self.assertLess(html.index('data-category="needs-answer"'),
+                        html.index('data-category="blocked"'))
+
+
 if __name__ == "__main__":
     unittest.main()
