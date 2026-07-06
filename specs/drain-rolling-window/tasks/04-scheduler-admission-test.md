@@ -92,3 +92,7 @@ particular prose file, so it has no dependency on task 01 landing first).
       (verifier: got 8, one per scenario 3a–3g; evidence/04-scheduler-admission-test.md)
 - [x] `bash tests/test_drain_scheduler_window.sh 2>&1 | grep -c FAIL` → 0
       (verifier: got 0; mutation check confirmed non-vacuous; evidence/04-scheduler-admission-test.md)
+
+## Discovered
+
+- This task file's own `Spec:` header lists requirements "R1, R5, R8a, R9", but the Goal, Step 3g, and SPEC.md's acceptance criterion all key the merge-time Touch case to R4, not R5 — a pre-existing header typo (behavior unaffected; the test correctly implements R4). See specs/drain-rolling-window/tasks/08-fix-task-04-header-typo.md.
