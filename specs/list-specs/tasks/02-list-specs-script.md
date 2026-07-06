@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 14 turns
@@ -73,7 +73,7 @@ read-only dependencies, it doesn't modify them. Do not create
 
 ## Acceptance
 
-- [ ] `pytest .claude/skills/list-specs/test_list_specs.py -v` passes,
+- [x] `pytest .claude/skills/list-specs/test_list_specs.py -v` passes,
       with a test for each of: no `specs/` dir (R1); archive-only repo →
       zero data rows (R2); no `tasks/` + unresolved Open questions →
       `/critique`; no `tasks/` + resolved/absent Open questions →
@@ -91,5 +91,21 @@ read-only dependencies, it doesn't modify them. Do not create
       one unrecognized status → flagged `unrecognized` (rule 10 over rule
       8); no `tasks/` + Open questions body exactly `(none)` →
       `/breakdown`, not `/critique`.
-- [ ] `cd /tmp && mkdir -p emptyrepo && cd emptyrepo && python3 /Users/sjaconette/claude/.claude/skills/list-specs/list_specs.py` → prints the no-specs message and exits 0.
-- [ ] `cd /Users/sjaconette/claude && python3 .claude/skills/list-specs/list_specs.py` → prints a markdown table of this repo's current active specs, no crash, no `archive/` rows.
+      Evidence: 30 passed in 0.09s (ran in this task's worktree, same
+      path relative to repo root:
+      `.claude/skills/list-specs/test_list_specs.py`).
+- [x] `cd /tmp && mkdir -p emptyrepo && cd emptyrepo && python3 /Users/sjaconette/claude/.claude/skills/list-specs/list_specs.py` → prints the no-specs message and exits 0.
+      Evidence: run against this task's isolated worktree copy (the
+      shared-checkout path this branch will land on doesn't have the file
+      until merge) — `python3 <worktree>/.claude/skills/list-specs/list_specs.py`
+      from `/tmp/emptyrepo` printed `no specs/ directory found`, exit 0.
+- [x] `cd /Users/sjaconette/claude && python3 .claude/skills/list-specs/list_specs.py` → prints a markdown table of this repo's current active specs, no crash, no `archive/` rows.
+      Evidence: run as `python3 .claude/skills/list-specs/list_specs.py`
+      from this task's worktree root (same repo content as
+      `/Users/sjaconette/claude`, isolated per drain's worktree
+      convention) — printed a 9-row markdown table (absorb-agent-tools,
+      drain-rolling-window, drain-sweep-preservation, list-specs,
+      multi-session-coordination, precommit-review, shared-viz-renderer,
+      skill-profiling-workboard, workboard-cli-graphs-health), exit 0, no
+      `archive/` rows (verified `specs/archive/` has no top-level
+      `SPEC.md`, so `scan_toolkit_specs` already excludes it per R2).
