@@ -24,6 +24,7 @@ import json
 import os
 import re
 import secrets
+import shlex
 import shutil
 import signal
 import subprocess
@@ -909,20 +910,78 @@ def get_pages() -> dict:
     return _board_cache.get("pages") or {}
 
 
+def _is_git_root(path: str) -> bool:
+    """Whether `path` is a git-repo root — the same `.git`-child test the
+    scanner's find_repos uses. Dispatches (drain/verify/resume) only generate
+    for git roots (R5b): a spec under the non-git `~/specs` home has no repo
+    cwd to run in, so it gets view actions only."""
+    try:
+        return (Path(path) / ".git").exists()
+    except OSError:
+        return False
+
+
+def _prompt_from_cmd(cmd: str) -> str:
+    """The prompt out of a scanner inbox `cmd` (`cd <repo> && claude <prompt>`).
+    Reusing the scanner's own text keeps a single source for the verify/resume
+    prompts (workboard.py owns them; this server never duplicates them)."""
+    try:
+        parts = shlex.split(cmd)
+    except ValueError:
+        return ""
+    if "claude" in parts:
+        i = parts.index("claude")
+        if i + 1 < len(parts):
+            return parts[i + 1]
+    return ""
+
+
+def _scanner_dispatch_prompts(inbox: list) -> tuple[dict, dict]:
+    """Index the verify/resume prompts workboard.attention_items already built,
+    keyed by (repo-name, spec-slug) and (repo-name, handoff-title), so a
+    dispatch action reuses the scanner's exact prompt rather than a local copy."""
+    verify: dict = {}
+    resume: dict = {}
+    for i in inbox:
+        prompt = _prompt_from_cmd(i.get("cmd") or "")
+        if not prompt:
+            continue
+        repo, item = i.get("repo") or "", i.get("item") or ""
+        if i.get("state") == "needs-review" and item.startswith("Spec ") and ": all " in item:
+            verify[(repo, item[len("Spec ") : item.index(": all ")])] = prompt
+        elif item.startswith("Handoff parked: "):
+            resume[(repo, item[len("Handoff parked: ") :])] = prompt
+    return verify, resume
+
+
 def build_action_registry(board: dict) -> dict:
     """Map action-id -> action dict for every executable action the current
-    board affords. v1: a `push` action per repo with unpushed commits
-    (`git.ahead > 0`). The argv is built here from scanned facts (the repo
-    path) — never from client input — and the id is content-derived
+    board affords. Kinds: a `push` per repo with unpushed commits
+    (`git.ahead > 0`); and, for specs/handoffs in git-repo roots (R5b), the
+    detached-`claude` dispatches — `dispatch-drain` (a spec with pending
+    tasks), `dispatch-verify` (a spec whose tasks are all done), and
+    `dispatch-resume-handoff` (a parked handoff). Every argv is built here from
+    scanned facts — never client input — and each id is content-derived
     (_entity_id, kind + canonical path), so it is stable across rescans of
     unchanged state and validates a later POST against the TTL-window board."""
     actions: dict = {}
+    verify_prompts, resume_prompts = _scanner_dispatch_prompts(board.get("inbox", []))
+
+    def add_dispatch(kind: str, target: str, cwd: str, prompt: str, label: str) -> None:
+        aid = _entity_id(kind, target)
+        actions[aid] = {
+            "id": aid, "kind": kind, "label": label,
+            "repo": cwd, "cwd": cwd, "prompt": prompt,
+        }
+
     for repo in board.get("repos", []):
         path = repo.get("path") or ""
+        if not path:
+            continue
+        name = repo.get("name") or path
         ahead = (repo.get("git") or {}).get("ahead") or 0
-        if path and ahead > 0:
+        if ahead > 0:
             aid = _entity_id("push", path)
-            name = repo.get("name") or path
             actions[aid] = {
                 "id": aid,
                 "kind": "push",
@@ -930,6 +989,33 @@ def build_action_registry(board: dict) -> dict:
                 "repo": path,
                 "argv": ["git", "-C", path, "push"],
             }
+        if not _is_git_root(path):
+            continue  # R5b: no repo cwd for a dispatch to run in
+        for sp in repo.get("specs", []):
+            slug, spec_path = sp.get("slug") or "", sp.get("path") or ""
+            done, total = sp.get("done", 0) or 0, sp.get("total", 0) or 0
+            if not spec_path or not total:
+                continue
+            if done < total:
+                add_dispatch(
+                    "dispatch-drain", spec_path, path,
+                    f"Run /drain for specs/{slug}; work only that spec's tasks",
+                    f"drain {slug} ({done}/{total})",
+                )
+            else:
+                prompt = verify_prompts.get((name, slug))
+                if prompt:
+                    add_dispatch(
+                        "dispatch-verify", spec_path, path, prompt, f"verify {slug}"
+                    )
+        for h in repo.get("handoffs", []):
+            title, hpath = h.get("title") or "", h.get("path") or ""
+            prompt = resume_prompts.get((name, title))
+            if hpath and prompt:
+                add_dispatch(
+                    "dispatch-resume-handoff", hpath, path, prompt,
+                    f"resume handoff: {title}",
+                )
     return actions
 
 
@@ -1586,6 +1672,8 @@ document.addEventListener('click',function(e){
     acPost('/api/agent/start',{cwd:cwd,prompt:prompt},'Kick off a background agent in '+cwd+'? This runs Claude and costs tokens.').then(function(ok){if(ok){form.querySelector('[name=prompt]').value='';setTimeout(refresh,900)}});
   }else if(b.dataset.act==='push'){
     acPost('/action/'+encodeURIComponent(b.dataset.id),{},'Push "'+(b.dataset.name||'repo')+'"? Runs: git push').then(function(ok){if(ok)setTimeout(refresh,800)});
+  }else if(b.dataset.act==='dispatch'){
+    acPost('/action/'+encodeURIComponent(b.dataset.id),{},b.dataset.confirm||'Launch this Claude dispatch in the repo? It runs an agent with write access and costs tokens.').then(function(ok){if(ok)setTimeout(refresh,800)});
   }else if(b.dataset.act==='refresh-profile'){
     acPost('/api/profile/refresh',{}).then(function(ok){if(ok)setTimeout(refresh,600)});
   }
@@ -1710,6 +1798,18 @@ def render_skills(model: dict) -> str:
     return page("skills", readout, body, with_filter=True)
 
 
+def _dispatch_btn(kind: str, target: str, label: str, confirm: str) -> str:
+    """A two-step-confirm dispatch button (R8). The id is content-derived from
+    kind + target exactly as build_action_registry keys it, so the POST it
+    fires validates against the current registry; the client sends only that
+    opaque id (R9)."""
+    aid = _entity_id(kind, target)
+    return (
+        f'<button class="btn act" data-act="dispatch" data-id="{esc(aid)}" '
+        f'data-confirm="{esc(confirm)}" title="{esc(confirm)}">{esc(label)}</button>'
+    )
+
+
 def render_workboard(b: dict) -> str:
     def chip(state):
         return f'<span class="chip {esc(state)}">{esc(state)}</span>'
@@ -1786,6 +1886,7 @@ def render_workboard(b: dict) -> str:
     repo_blocks = []
     for r in sorted(b["repos"], key=lambda r: (not _repo_has_work(r), r["name"])):
         g = r["git"]
+        git_root = _is_git_root(r.get("path") or "")  # R5b: dispatches only here
         chips = []
         if g.get("branch"):
             chips.append(f'<span class="gchip">{esc(g["branch"])}</span>')
@@ -1822,9 +1923,23 @@ def render_workboard(b: dict) -> str:
                     if sp.get("id")
                     else f'<span class="trunc">{esc(sp["title"])}</span>'
                 )
+                disp = ""
+                if git_root and sp.get("path") and sp["total"]:
+                    if sp["done"] < sp["total"]:
+                        disp = _dispatch_btn(
+                            "dispatch-drain", sp["path"], f'drain {sp["slug"]}',
+                            f'Drain specs/{sp["slug"]} in {r["name"]}? Launches a '
+                            "Claude /drain session (agent with write access, costs tokens).",
+                        )
+                    else:
+                        disp = _dispatch_btn(
+                            "dispatch-verify", sp["path"], f'verify {sp["slug"]}',
+                            f'Verify specs/{sp["slug"]} in {r["name"]}? Launches the '
+                            "verifier agent (costs tokens).",
+                        )
                 row = (
                     f'{title_el}'
-                    f'{prog}<span class="meta">{_ago(sp["mtime"])}</span>'
+                    f'{prog}<span class="meta">{_ago(sp["mtime"])}</span>{disp}'
                 )
                 prio = _prio_select(sp.get("path", ""), sp.get("priority", ""))
                 if graph:  # expandable to the dependency graph
@@ -1879,7 +1994,17 @@ def render_workboard(b: dict) -> str:
                     if h.get("id")
                     else f'<span class="trunc">{esc(h["title"])}</span>'
                 )
-                + f'<span class="meta">{_ago(h["mtime"])}</span></div>'
+                + f'<span class="meta">{_ago(h["mtime"])}</span>'
+                + (
+                    _dispatch_btn(
+                        "dispatch-resume-handoff", h["path"], "resume",
+                        f'Resume the handoff "{h["title"]}" in {r["name"]}? Launches a '
+                        "Claude session to finish it (costs tokens).",
+                    )
+                    if git_root and h.get("path")
+                    else ""
+                )
+                + "</div>"
                 for h in r["handoffs"]
             )
             inner.append(f'<div class="sub">Handoffs</div>{lines}')
@@ -2100,7 +2225,39 @@ def execute_push(action: dict) -> dict:
     }}
 
 
-_ACTION_EXECUTORS = {"push": execute_push}
+# Every dispatch runs an agentic `claude` session with write access to the
+# target repo — that is the point of a dispatch button (R5). The elevation is
+# recorded here, deliberate, and kept local-only by the Host check + CSRF token
+# (R2/R2a): the flag set is the headless one the drain/autopilot reference docs
+# document — a non-interactive permission mode (`dontAsk` aborts rather than
+# hangs on an unapproved tool), a tool allowlist broad enough to orchestrate a
+# drain / run the verifier / resume a handoff, and a hard `--max-turns` cap.
+_DISPATCH_PERMISSION_MODE = "dontAsk"
+_DISPATCH_ALLOWED_TOOLS = "Read,Edit,Write,Glob,Grep,Task,Bash"
+_DISPATCH_MAX_TURNS = "80"
+_DISPATCH_ARGS = [
+    "--allowedTools", _DISPATCH_ALLOWED_TOOLS,
+    "--permission-mode", _DISPATCH_PERMISSION_MODE,
+    "--max-turns", _DISPATCH_MAX_TURNS,
+]
+
+
+def execute_dispatch(action: dict) -> dict:
+    """Run a `dispatch-*` action: launch `claude -p <prompt>` detached in the
+    target repo via the shared runtime, with the recorded permission flags. The
+    prompt and cwd come wholly from the server-built registry (spec R9); a
+    second dispatch for the same cwd is refused (409) by the per-cwd lock."""
+    return start_dispatch(
+        action["kind"], action["cwd"], action["prompt"], extra_args=_DISPATCH_ARGS
+    )
+
+
+_ACTION_EXECUTORS = {
+    "push": execute_push,
+    "dispatch-drain": execute_dispatch,
+    "dispatch-verify": execute_dispatch,
+    "dispatch-resume-handoff": execute_dispatch,
+}
 
 
 def run_action(action_id: str) -> dict:
