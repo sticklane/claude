@@ -139,3 +139,7 @@ Evidence: all 12 criteria verified green by the verifier agent (fresh eyes,
 base 5e8fc23) — full per-criterion command output in
 ../evidence/01-drain-rolling-window-scheduler.md. Verdict PASS, no scope
 creep (only the two drain skill files + this task file changed).
+
+## Discovered
+
+- Stale cross-reference in `.claude/skills/drain/SKILL.md`'s "## 3. Collect the verdict" push-guard parenthetical (line 249): still reads "drain's own group mode follows it" — the group mode it names no longer exists after this task's rewrite; should read "drain's own rolling-window merges." See specs/drain-rolling-window/tasks/07-fix-stale-group-mode-reference.md.
