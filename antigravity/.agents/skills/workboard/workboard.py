@@ -203,6 +203,7 @@ def git_info(repo):
 
 STATUS_RE = re.compile(r"^Status:\s*\[?([A-Za-z_-]+)\]?", re.MULTILINE)
 DEPENDS_RE = re.compile(r"^Depends on:\s*(.*)$", re.MULTILINE)
+PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P\d)\]?", re.MULTILINE)
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 OPEN_TASK_STATUSES = {"pending", "open", "todo", "ready",
                       "in-progress", "in_progress", "claimed"}
@@ -221,6 +222,7 @@ def scan_toolkit_specs(repo):
             continue
         text = read_text(spec_md, 20_000)
         m = TITLE_RE.search(text)
+        pm = PRIORITY_RE.search(text)
         tasks = []
         tasks_dir = spec_dir / "tasks"
         mtimes = [spec_md.stat().st_mtime]
@@ -251,6 +253,7 @@ def scan_toolkit_specs(repo):
             "kind": "toolkit",
             "slug": spec_dir.name,
             "title": (m.group(1).strip() if m else spec_dir.name),
+            "priority": (pm.group(1) if pm else ""),
             "path": str(spec_md.relative_to(repo)),
             "tasks_total": len(tasks),
             "tasks_done": done,
