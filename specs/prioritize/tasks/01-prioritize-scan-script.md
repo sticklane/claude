@@ -67,3 +67,7 @@ task 02 owns the skill prose and the antigravity mirror.
 - [x] `python3 -m pytest .claude/skills/prioritize/test_prioritize_scan.py -q` → all pass — verifier: `13 passed` (evidence/01-prioritize-scan-script.md)
 - [x] `cd /Users/sjaconette/claude && python3 .claude/skills/prioritize/prioritize_scan.py` → prints a table containing `Ref | Title | Status | Priority` header with only pending/blocked/deferred rows and no `archive/` refs — verifier ran it from the branch worktree (file only exists on this branch): table rendered, only pending rows, zero `archive/` refs (evidence/01-prioritize-scan-script.md)
 - [x] `bash scripts/check.sh` → green — repo has no top-level `scripts/check.sh` (`ls scripts/` → absent); equivalent standard gates green: `pytest .claude/skills/workboard/ .claude/skills/list-specs/` → `87 passed` (importlib reuse intact), plus the new suite `13 passed` (evidence/01-prioritize-scan-script.md)
+
+## Discovered
+
+- Task 01's acceptance criterion 3 names `bash scripts/check.sh`, but this repo has no top-level `scripts/check.sh` — its canonical checks are per-subproject (`agentprof/scripts/check.sh`, `agent-console/scripts/check.sh`) and the suites in `AGENTS.md`; future task authoring here should point at real gates rather than the global-CLAUDE.md boilerplate path.
