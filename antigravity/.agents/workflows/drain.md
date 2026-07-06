@@ -1,5 +1,5 @@
 ---
-description: Work the remaining task queue to empty - one fresh agent per unblocked task in dependency order, clarification questions deferred and answered in one batch. In Antigravity the human launches each worker from the Agent Manager; this workflow runs the queue bookkeeping.
+description: Work the remaining task queue to empty - a rolling window of up to W fresh agents in flight (default W=1, sequential; a spec opts into a wider parallel-window), each on an unblocked task in dependency order, clarification questions deferred and answered in one batch. In Antigravity the human launches each worker from the Agent Manager; this workflow runs the queue bookkeeping.
 ---
 
 Work through every remaining task under the directory given after the
@@ -52,7 +52,11 @@ this sweep.
    the same task with no verdict and no harness-tracked worker, stop waiting
    and report a suspected zombie to the user (do NOT silently sweep, do NOT
    wait forever); its status stays `in-progress` and it is treated like
-   `blocked` thereafter. Residual risk (accepted): the activity signal can
+   `blocked` thereafter. **Window-slot vs. Touch claim (R9.2):** under a
+   rolling window, a zombie-escalated task releases its window slot — drain
+   keeps admitting other tasks into the freed slot — but its `Touch:` claim
+   persists, so pending tasks overlapping that `Touch` are blocked and
+   reported, not silently starved. Residual risk (accepted): the activity signal can
    go silent on a live worker for a full window, so false sweeps stay
    possible by design — the rescue branch and the worker's vanished-worktree
    clause are the deliberate safety net; do NOT add worker heartbeats.
@@ -109,7 +113,7 @@ this sweep.
    flipping — the flip is an exact-match edit of the literal
    `Status: pending` line (a file already flipped by another writer fails
    the edit and sends this workflow back to step 1's inventory instead of
-   proceeding as if it owned the task). One task at a time: set its
+   proceeding as if it owned the task). Per admitted task, set its
    `Status: in-progress` and **commit that edit, path-scoped to the task
    file**, then push (guard in step 3) — the worktree is cut
    from this commit, so it must carry current statuses and any
@@ -165,25 +169,45 @@ this sweep.
    > verdict plus these two fixed sections are all the orchestrator
    > will ever see.
 
-   **Group throughput mode** (formerly the separate parallel workflow,
-   folded in here): when the user asks for throughput and a group is
-   independent — no `Depends on` edges between members, disjoint `Touch`
-   lists, runnable acceptance criteria per member, and the breakdown
-   workflow's decision-coupling test passes — create one worktree per
-   member and hand the user the whole launch list at once: one Agent
-   Manager agent per task at the worker tier (Pro-class in the picker),
-   each with step 2's prompt. Size the group by the task map, never a
-   default maximum — concurrency multiplies token spend. Group sequencing
-   overrides one-task-at-a-time: flip every member's
-   `Status: in-progress` and commit them in one commit (the workflow
-   session stays the single writer), cut all member worktrees from that
-   commit, then hand over the whole launch list. Collect verdicts
-   as agents finish (step 3 per verdict) and merge DONE branches in task
-   order, gates after each; on a cross-task merge conflict or a
-   post-merge gate failure during group integration — cross-task
-   interference is indistinguishable from the task's own failure at that
-   point — stop the remaining merges and report which merged cleanly.
-   Remove merged worktrees (`git worktree remove`).
+   **Rolling window of W agents** (this replaces the old wave-style group
+   throughput mode). Drain keeps up to W agents in flight at once and tops
+   the window up on every verdict. In Antigravity the human launches each
+   from the Agent Manager, so "keep the window full" means: hand the user
+   as many launches as there are free slots now, and one fresh launch each
+   time a verdict frees a slot. W defaults to 1 — the sequential,
+   one-at-a-time baseline above; a spec opts into a wider window with a
+   `Parallel-window: N` header in its SPEC.md header block, and the user's
+   request at /drain invocation overrides it. Hard cap W ≤ 5: concurrency
+   multiplies token spend, so size the window by the task map, never the
+   cap.
+
+   **Window admission.** A task enters the window only when it is
+   dispatchable (step 1) AND co-admissible with everything already in
+   flight. Two tasks are co-admissible only when named together on one
+   `- Group:` line in the spec's `## Parallelization` section — the grammar
+   the breakdown workflow emits after its decision-coupling test (disjoint
+   `Touch`, no shared undecided design). A task on no `- Group:` line runs
+   **solo**: admitted only when the window is empty ("window empty" means
+   zero live in-flight workers) and nothing else is admitted while it runs.
+   Each admission is its own compare-and-swap flip + path-scoped commit +
+   worktree + launch — never a group barrier that flips every member in one
+   commit — and each worktree is cut from its own flip commit.
+
+   **Top-up on verdict.** After each verdict is collected and — for DONE —
+   merged and pushed (step 3), re-compute admission and refill the window
+   back to W with the next co-admissible dispatchable tasks. Refill is
+   per-verdict, not wave-based: a slower sibling never holds the window
+   while a finished sibling's slot sits idle. Collect each verdict as its
+   agent finishes and route it through step 3.
+
+   **Termination (R9): no deadlock, no livelock.** Admission is the only
+   wait and it waits only on in-flight runs (never on another worker, on
+   queue state, or on a merge), so the wait graph is acyclic; every
+   in-flight run is bounded by its Budget ceiling, the stale-lock sweep,
+   and the 4-extension zombie escalation; and when admission is active but
+   evaluates to empty with tasks still pending, drain detects the
+   unsatisfiable remainder and routes to the batch interview / final report
+   (step 5) rather than waiting for a dispatch that can never come.
 
 3. **Collect.** DONE → before merging, re-run the append-only
    whitelist diff over `merge-base..branch`, path-scoped to every
@@ -192,6 +216,15 @@ this sweep.
    worker's own task file and only in the allowed set — Status line,
    checkbox ticks, evidence lines, the plan block; anything else is a
    post-verification edit riding in — treat it as a merge failure.
+   **Merges stay strictly serial** — one branch at a time, in
+   verdict-landing order, never two at once even with W>1. If a branch's
+   merge conflicts because a sibling merged after this branch's base was
+   cut, attempt exactly one `git rebase main` in a throwaway scratch
+   worktree cut for the rebase: a clean rebase proceeds to the DONE
+   bookkeeping below, and a persistent conflict routes to the cross-task
+   interference handling (the branch is treated as a merge failure below —
+   no repeated retry, since cross-task interference is indistinguishable
+   from the task's own failure at that point).
    Then merge the branch (it carries the task file's
    `Status: done` from /build; for queues using the
    `specs/<slug>/ layout` it also carries the verifier's `evidence/`
@@ -279,7 +312,8 @@ this sweep.
    attempt starts from evidence instead of zero.
 
    Keep verdicts,
-   not transcripts. Loop to step 2 while anything is dispatchable.
+   not transcripts. Then top up the window (step 2's top-up on verdict) —
+   loop while anything is dispatchable and the window has a free slot.
 
    **Baton pass (write the baton and stop).** At each safe boundary (a
    verdict just recorded and committed) evaluate the same relaunch trigger
@@ -287,7 +321,12 @@ this sweep.
    this session (default; a `Relaunch-every: N` header in the drained
    spec's SPEC.md header block overrides N) — or a degradation override on
    re-reading files already read, losing queue position, repeated failed
-   corrections, or a compaction event. When it fires, write the baton
+   corrections, or a compaction event. When it fires, drain first enters
+   **drain-down (R8)**: it stops admitting new tasks and waits for every
+   in-flight worker's verdict, recording and committing each per step 3 —
+   a background worker notifies only the session that launched it, so a
+   successor generation cannot adopt in-flight workers. Only then, window
+   empty with no live workers, write the baton
    `specs/<slug>/DRAIN-BATON.md` (a done/next log of task ids + one-line
    outcomes this generation, the generation number, and in-flight
    anomalies) and **stop** — an Antigravity run cannot self-relaunch
@@ -308,7 +347,12 @@ this sweep.
 
 4. **Tournament** (second miss on one task; at most once per task per
    drain run). Tell the user first: this costs ~3 more worker runs
-   plus three verifier runs per DONE candidate.
+   plus three verifier runs per DONE candidate. **Emptied-window dispatch
+   (R8a):** under a rolling window (W>1), a task that qualifies for a
+   tournament first holds all new admissions and waits for every in-flight
+   sibling to land — collecting each verdict per step 3 — then dispatches
+   the tournament's three workers into the otherwise-empty window; total
+   live workers during a tournament is exactly 3, regardless of W.
    Skip it — straight to the verdict routing below with the two prior
    verdicts — when attempt 2 (the relaunch) returned BLOCKED over
    budget; attempt 1 must have returned DONE to reach a merge, so only
