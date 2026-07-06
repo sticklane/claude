@@ -246,7 +246,7 @@ itself flips the status to `done` and commits the flip.)
   Then **push `main` immediately after this commit** (`git push`) so the
   merged, verifier-PASSED work is backed up the moment it lands rather
   than sitting on local `main` for a human to push by hand. **Push guard
-  (canonical; build cites this, and drain's own group mode follows
+  (canonical; build cites this, and drain's own rolling-window merges follow
   it, extended here to every drain bookkeeping commit — not only DONE
   merges — since a concurrent session's `pull --rebase` has been observed
   to drop unpushed drain commits: docs/memory/concurrent-session-collision.md):**

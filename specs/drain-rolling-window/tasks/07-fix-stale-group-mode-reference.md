@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 4 turns
@@ -17,5 +17,7 @@ Blocking: no
 
 ## Acceptance
 
-- [ ] `grep -c "drain's own group mode" .claude/skills/drain/SKILL.md` → 0
-- [ ] `grep -c "rolling-window" .claude/skills/drain/SKILL.md` → ≥ 1 in the push-guard parenthetical's vicinity
+- [x] `grep -c "drain's own group mode" .claude/skills/drain/SKILL.md` → 0
+- [x] `grep -c "rolling-window" .claude/skills/drain/SKILL.md` → ≥ 1 in the push-guard parenthetical's vicinity
+
+Evidence: verifier PASS (specs/drain-rolling-window/evidence/07-fix-stale-group-mode-reference.md) — AC1 grep → 0; AC2 line 249 now reads "drain's own rolling-window merges follow it" in the push-guard parenthetical; single-line diff, no scope creep.
