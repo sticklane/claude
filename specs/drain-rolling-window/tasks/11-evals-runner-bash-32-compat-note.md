@@ -13,3 +13,11 @@ Decision (2026-07-06): do BOTH (each is one line): a compat note in `.claude/ski
 
 - [x] `grep -q 'bash 3.2' .claude/skills/evals/reference.md` → exits 0 (compat note present; currently absent) — exits 0; compat note added to reference.md intro
 - [x] `grep -q 'bash 3.2' evals/run.sh` → exits 0 (top-of-file comment present; currently absent) — exits 0; comment added to run.sh header block
+
+## Discovered
+
+- `antigravity/.agents/workflows/evals.md` (the antigravity mirror) documents
+  authoring `setup.sh`/`assert.sh` scenario scripts too but carries no
+  bash-3.2 warning; per the `.claude/` → `antigravity/` mirror convention it
+  should get the same one-line note. See
+  `15-mirror-bash-32-compat-note-to-antigravity-evals.md`.
