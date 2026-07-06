@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 8 turns
@@ -59,10 +59,11 @@ this task does not touch it).
 
 ## Acceptance
 
-- [ ] `grep -ci '3.5\|3–5\|3-5' .claude/rules/token-discipline.md` → ≥ 1
-- [ ] `grep -ci 'rolling top.up\|rolling top-up' .claude/rules/token-discipline.md`
-      → ≥ 1
-- [ ] `grep -ci 'agent teams\|agent-teams' docs/external-playbooks.md`
-      → ≥ 1
-- [ ] `grep -ci 'shared.contract\|shared contract' docs/external-playbooks.md`
-      → ≥ 1
+- [x] `grep -ci '3.5\|3–5\|3-5' .claude/rules/token-discipline.md` → ≥ 1
+      — verifier: 1 (evidence/03-doctrine-and-playbook-citations.md)
+- [x] `grep -ci 'rolling top.up\|rolling top-up' .claude/rules/token-discipline.md`
+      → ≥ 1 — verifier: 1 (evidence/03-doctrine-and-playbook-citations.md)
+- [x] `grep -ci 'agent teams\|agent-teams' docs/external-playbooks.md`
+      → ≥ 1 — verifier: 4 (evidence/03-doctrine-and-playbook-citations.md)
+- [x] `grep -ci 'shared.contract\|shared contract' docs/external-playbooks.md`
+      → ≥ 1 — verifier: 1 (evidence/03-doctrine-and-playbook-citations.md)
