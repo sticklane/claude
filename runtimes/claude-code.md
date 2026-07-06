@@ -32,13 +32,13 @@ their runtime's vocabulary.
 | Role                                                                 | Claude default                                                                                                       |
 | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | session default                                                      | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution                                 |
-| implementation workers (drain dispatch, incl. group throughput mode) | `sonnet`                                                                                                             |
+| implementation workers (drain dispatch, incl. group throughput mode) | `opus` — deep-tier adopted default; the alias always resolves to the current Opus release, never a dated snapshot   |
 | explore / codebase-search (`scout`)                                  | `haiku`                                                                                                              |
 | verifier (acceptance evidence; advisory reviewer lane)               | `sonnet`                                                                                                             |
 | `critic` (spec/plan/diff critique)                                   | `opus` — deep-tier per token-discipline ("architecture critique"); a critic pass costs ~1% of a wrong implementation |
 | `/distill` (skill frontmatter)                                       | `opus`                                                                                                               |
-| retry escalation (attempt 2, verifier evidence in prompt)            | one tier up: `sonnet` → `opus`                                                                                       |
-| tournament escalation (attempts 3+, after the `opus` retry failed)   | `fable` — the frontier-tier trigger of `.claude/rules/token-discipline.md`                                           |
+| retry escalation (attempt 2, verifier evidence in prompt)            | `fable` — a retry after a deep-tier (`opus`) attempt failed, the frontier-tier sanction in `.claude/rules/token-discipline.md` |
+| tournament escalation (attempts 3+, after the `fable` retry failed)  | `fable` — same frontier-tier alias as the retry above, now run as 3 concurrent angle-variant attempts instead of 1   |
 
 Frontier stays sparing beyond that one active rung: security-critical
 review and novel-architecture sessions are the other two sanctioned
@@ -69,7 +69,7 @@ test/lint/build cmds>),Bash(git add *),Bash(git commit *)"`.
 - `<turn cap>` — the task's `Budget:` turn count when present, else 80;
   the hard cap behind the prompt's soft stop.
 - `<tier alias>` — the Role pins ladder, same rungs as Task-tool
-  dispatch: `sonnet` attempt 1, `opus` relaunch, `fable` tournament.
+  dispatch: `opus` attempt 1, `fable` relaunch, `fable` tournament.
 
 `dontAsk` makes unapproved tools abort instead of hanging — the CI
 baseline from the playbook's mechanism ladder.

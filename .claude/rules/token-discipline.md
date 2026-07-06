@@ -27,20 +27,28 @@ Four rungs, cheapest first — don't pay frontier-model rates to run `grep`:
 
 - scout-tier → mechanical or lookup work (Claude default: Haiku at low
   effort; the `scout` default).
-- session-tier → ordinary judgment work (specs, review, tricky
-  implementation): the conversation's own model.
+- session-tier → ordinary judgment work done directly in the session
+  (specs, review, tricky implementation): the conversation's own model.
+  Distinct from drain's *dispatched* implementation workers, below — those
+  carry their own adopted Role pin regardless of what the session runs.
 - deep-tier (Claude default: Opus 4.8) → heavy judgment above the session
   default: final review of a large diff, subtle-bug hunts, architecture
-  critique.
+  critique. Also the adopted default for drain's implementation-worker
+  dispatch (the `implementation-worker` agent pins this in its own
+  frontmatter, independent of the calling session's model — runtimes/
+  claude-code.md's Role pins table).
 - frontier-tier (Claude default: Fable) → ONLY work that truly needs the
   strongest model: novel architecture decisions, security-critical review,
   or a retry after a deep-tier attempt failed.
 
-Skills that spawn agents — at their actual spawn points: drain's tournament
-workers and per-candidate verifier runs, /design's candidate investigators,
-an on-demand verifier escalation — consult `.claude/runtime.md` tier pins
-and pass the mapped model through the harness's model parameter. No config,
-or no pin for the tier in question → inherit the session model (the deep
+Skills that spawn agents — at their actual spawn points: drain's attempt-1
+implementation-worker dispatch, its relaunch and tournament workers, its
+per-candidate verifier runs, /design's candidate investigators, an
+on-demand verifier escalation — consult `.claude/runtime.md` tier pins (or,
+where one exists, an agent definition's own frontmatter pin) and pass the
+mapped model through the harness's model parameter. No config, or no pin
+for the tier in question — and no agent-frontmatter pin either — → inherit
+the session model (the deep
 tiers are opt-in: profile rows are recommended pin values, not active
 defaults). Pins bind Agent-tool dispatch and the headless fallback
 templates alike — headless workers pass the same tier alias through the

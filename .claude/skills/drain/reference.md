@@ -365,11 +365,12 @@ by the at-most-one-tournament-per-task rule — and the tournament
 remains inside the human-authorized /drain launch (docs/human-gates.md).
 
 **Generate.** Delete any existing `task/NN-<slug>-t*` branches and
-worktrees, then launch three concurrent background workers a further tier
-up, at the frontier pin (Claude default: `fable` — tournament entrants are
-attempts 3+, retries after the deep-tier relaunch failed, which is the one
-dispatch point `.claude/rules/token-discipline.md` sanctions frontier for;
-`isolation: worktree`), each given the standard worker prompt plus the
+worktrees, then launch three concurrent `implementation-worker` agents at
+the same frontier override the relaunch already used (Claude default:
+`fable` — tournament entrants are attempts 3+, continuing at the tier
+justified when the relaunch escalated after attempt 1's deep-tier (`opus`)
+failure, which is the one dispatch point `.claude/rules/token-discipline.md`
+sanctions frontier for; `isolation: worktree`), each given the standard worker prompt plus the
 relaunch-with-evidence append (covering both prior failures) plus one
 angle suffix. Each suffix also overrides the branch name set by the
 base prompt:
@@ -469,9 +470,12 @@ them — and for non-DONE verdicts one Done vs remaining: line." \
   --model <tier alias>
 ```
 
-`--model` carries the same three-rung ladder as SKILL.md's Task-tool
-dispatch: `sonnet` on attempt 1, `opus` on the single relaunch, `fable`
-for tournament entrants (attempts 3+).
+`--model` carries the same ladder as SKILL.md's Task-tool
+dispatch: `opus` on attempt 1, `fable` on the single relaunch, `fable`
+for tournament entrants (attempts 3+). Headless mode has no `.claude/agents/`
+frontmatter to pin against (it's a plain CLI invocation, not a Task-tool
+dispatch), so `--model` must be passed explicitly here — there is no
+structural fallback if it's omitted.
 `dontAsk` makes unapproved tools abort instead of hanging — the CI
 baseline from the playbook's mechanism ladder. `--max-turns` is N from
 the task's pinned `Budget: <N> turns` header (integer N, the format
