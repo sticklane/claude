@@ -307,7 +307,10 @@ def collect() -> dict:
 # Workboard collection
 # --------------------------------------------------------------------------- #
 BOARD_TTL = 45  # seconds; kept above the 25s client refresh so it serves cache
-_board_cache: dict = {"ts": 0.0, "data": None, "registry": None, "pages": None}
+ACTION_TIMEOUT = 60  # seconds; hard cap on any single action's subprocess
+_board_cache: dict = {
+    "ts": 0.0, "data": None, "registry": None, "pages": None, "actions": None
+}
 _board_lock = threading.Lock()
 # GitHub repo visibility (public/private), fetched once via `gh` and cached long
 # — this is the only part of the tool that touches the network.
@@ -671,6 +674,7 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
             {
                 "id": _entity_id("repo", r["path"]),
                 "name": r["name"],
+                "path": r["path"],  # the -C target for a push action's argv
                 "git": git,
                 "gh": gh,
                 "specs": specs,
@@ -759,8 +763,10 @@ def get_board() -> dict:
         data = _adapt_board(assembled, running_agents, resumable_agents)
         registry = build_entity_registry(assembled)
         pages = build_page_registry(assembled)
+        actions = build_action_registry(data)
         _board_cache.update(
-            ts=time.time(), data=data, registry=registry, pages=pages
+            ts=time.time(), data=data, registry=registry, pages=pages,
+            actions=actions,
         )
         return data
 
@@ -901,6 +907,38 @@ def get_pages() -> dict:
     and TTL-cache contract as get_registry)."""
     get_board()
     return _board_cache.get("pages") or {}
+
+
+def build_action_registry(board: dict) -> dict:
+    """Map action-id -> action dict for every executable action the current
+    board affords. v1: a `push` action per repo with unpushed commits
+    (`git.ahead > 0`). The argv is built here from scanned facts (the repo
+    path) — never from client input — and the id is content-derived
+    (_entity_id, kind + canonical path), so it is stable across rescans of
+    unchanged state and validates a later POST against the TTL-window board."""
+    actions: dict = {}
+    for repo in board.get("repos", []):
+        path = repo.get("path") or ""
+        ahead = (repo.get("git") or {}).get("ahead") or 0
+        if path and ahead > 0:
+            aid = _entity_id("push", path)
+            name = repo.get("name") or path
+            actions[aid] = {
+                "id": aid,
+                "kind": "push",
+                "label": f"push {name} (↑{ahead})",
+                "repo": path,
+                "argv": ["git", "-C", path, "push"],
+            }
+    return actions
+
+
+def get_actions() -> dict:
+    """The action registry for the current board (same lazy-scan and TTL-cache
+    contract as get_registry): a POST validates its id against exactly the
+    registry built for the board the browser is looking at."""
+    get_board()
+    return _board_cache.get("actions") or {}
 
 
 # --------------------------------------------------------------------------- #
@@ -1464,6 +1502,8 @@ select.prio.prio-P3{color:var(--dim)}
 .gchip{font-family:var(--mono);font-size:10.5px;color:var(--dim);
   border:1px solid var(--rule);border-radius:5px;padding:1px 7px}
 .gchip.warn{color:var(--signal);border-color:#5c3a28}
+button.gchip.act{background:none;cursor:pointer}
+button.gchip.act:hover{color:var(--text);border-color:#8a4a30}
 .ghb{font-family:var(--disp);text-transform:uppercase;letter-spacing:.08em;
   font-size:9px;padding:2px 7px;border-radius:5px;border:1px solid var(--rule);color:var(--dim)}
 .ghb.public{color:var(--cool);border-color:#2f4a58}
@@ -1544,6 +1584,8 @@ document.addEventListener('click',function(e){
     var form=b.closest('.kickoff'),prompt=form.querySelector('[name=prompt]').value,cwd=form.querySelector('[name=cwd]').value;
     if(!prompt.trim()){window.alert('Enter a prompt.');return}
     acPost('/api/agent/start',{cwd:cwd,prompt:prompt},'Kick off a background agent in '+cwd+'? This runs Claude and costs tokens.').then(function(ok){if(ok){form.querySelector('[name=prompt]').value='';setTimeout(refresh,900)}});
+  }else if(b.dataset.act==='push'){
+    acPost('/action/'+encodeURIComponent(b.dataset.id),{},'Push "'+(b.dataset.name||'repo')+'"? Runs: git push').then(function(ok){if(ok)setTimeout(refresh,800)});
   }else if(b.dataset.act==='refresh-profile'){
     acPost('/api/profile/refresh',{}).then(function(ok){if(ok)setTimeout(refresh,600)});
   }
@@ -1750,7 +1792,17 @@ def render_workboard(b: dict) -> str:
         if g.get("dirty"):
             chips.append(f'<span class="gchip warn">{g["dirty"]}&#916;</span>')
         if g.get("ahead"):
-            chips.append(f'<span class="gchip warn">&#8593;{g["ahead"]}</span>')
+            if r.get("path"):  # a one-click push for the unpushed commits
+                pid = _entity_id("push", r["path"])
+                chips.append(
+                    f'<button class="gchip warn act" data-act="push" '
+                    f'data-id="{esc(pid)}" data-name="{esc(r["name"])}" '
+                    f'title="git push">push &#8593;{g["ahead"]}</button>'
+                )
+            else:
+                chips.append(
+                    f'<span class="gchip warn">&#8593;{g["ahead"]}</span>'
+                )
         if g.get("behind"):
             chips.append(f'<span class="gchip">&#8595;{g["behind"]}</span>')
         inner = []
@@ -2011,6 +2063,64 @@ def _claude_run_bg(args: list[str], cwd: str):
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
+
+
+def _invalidate_board() -> None:
+    """Force the next get_board() to rescan: an executed action likely changed
+    the state the board reflects (a push clears the repo's `ahead` chip)."""
+    with _board_lock:
+        _board_cache["ts"] = 0.0
+
+
+def execute_push(action: dict) -> dict:
+    """Run a `push` action's argv (git push, no shell), capturing combined
+    stdout+stderr and the exit code. A non-zero exit is reported, never retried;
+    a success invalidates the board cache so the next render drops the stale
+    `ahead` chip. Returns {code, body} for the POST handler to serialize."""
+    try:
+        proc = subprocess.run(
+            action["argv"],
+            capture_output=True,
+            text=True,
+            timeout=ACTION_TIMEOUT,
+            env=GIT_ENV,
+        )
+    except subprocess.TimeoutExpired:
+        return {"code": 200, "body": {
+            "ok": False, "kind": "push", "exit": None, "output": "",
+            "message": f"git push timed out after {ACTION_TIMEOUT}s",
+        }}
+    output = (proc.stdout or "") + (proc.stderr or "")
+    ok = proc.returncode == 0
+    if ok:
+        _invalidate_board()
+    return {"code": 200, "body": {
+        "ok": ok, "kind": "push", "exit": proc.returncode, "output": output,
+        "message": "pushed" if ok else f"git push exited {proc.returncode}",
+    }}
+
+
+_ACTION_EXECUTORS = {"push": execute_push}
+
+
+def run_action(action_id: str) -> dict:
+    """Validate an opaque action id against the current (TTL-window) registry
+    and execute it. The only client-supplied value is the id — the argv comes
+    wholly from the server-built registry (spec R9). An id not in the registry
+    (unknown, or valid before the last rescan) -> 409 and nothing runs."""
+    action = get_actions().get(action_id)
+    if not action:
+        return {"code": 409, "body": {
+            "ok": False,
+            "message": "unknown action id — the board state may have changed; "
+                       "rescan the board and try again",
+        }}
+    executor = _ACTION_EXECUTORS.get(action["kind"])
+    if not executor:
+        return {"code": 400, "body": {
+            "ok": False, "message": f"unsupported action kind: {action['kind']}",
+        }}
+    return executor(action)
 
 
 def apply_priority(text: str, value: str) -> str:
@@ -2307,6 +2417,17 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("body")
         except (ValueError, OSError):
             self._send(b'{"ok":false,"error":"bad body"}', "application/json", 400)
+            return
+        # Action registry: the only client input is the opaque id in the path;
+        # the body (parsed above only to reject malformed JSON) is ignored, so
+        # no client-supplied field can steer the executed argv (spec R9).
+        if path.startswith("/action/"):
+            result = run_action(path[len("/action/") :])
+            self._send(
+                json.dumps(result["body"]).encode("utf-8"),
+                "application/json",
+                result["code"],
+            )
             return
         handlers = {
             "/api/priority": lambda: set_priority(
