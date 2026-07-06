@@ -310,8 +310,10 @@ func (s session) collect() ([]schema.Sample, []Turn, int, error) {
 
 	var out []schema.Sample
 	for _, r := range mainP.responses {
+		turn := fmt.Sprintf("%02d", r.turnIdx)
 		stack := []string{project, mainP.turns[r.turnIdx].frame, r.skill, "main", r.model}
-		out = append(out, r.sample(stack, s.id, fmt.Sprintf("%02d", r.turnIdx)))
+		out = append(out, r.sample(stack, s.id, turn))
+		out = append(out, r.toolSamples(stack, mainP.toolResults, s.id, turn)...)
 	}
 	for _, a := range s.agents {
 		prefix, turnIdx, linked := resolve(a, 0)
@@ -319,7 +321,8 @@ func (s session) collect() ([]schema.Sample, []Turn, int, error) {
 		if linked {
 			turn = fmt.Sprintf("%02d", turnIdx)
 		}
-		for _, r := range byPath[a.path].responses {
+		ap := byPath[a.path]
+		for _, r := range ap.responses {
 			var stack []string
 			if linked {
 				stack = slices.Concat(prefix, []string{a.frame, r.model})
@@ -327,6 +330,7 @@ func (s session) collect() ([]schema.Sample, []Turn, int, error) {
 				stack = []string{project, "(unlinked)", a.frame, r.model}
 			}
 			out = append(out, r.sample(stack, s.id, turn))
+			out = append(out, r.toolSamples(stack, ap.toolResults, s.id, turn)...)
 		}
 	}
 
@@ -349,6 +353,21 @@ type response struct {
 	model   string
 	usage   pricing.Usage
 	turnIdx int // turn open at the response's first line
+	// toolCalls are the tool_use blocks in this response's assistant message;
+	// each emits a sibling tool:<name> sample beside the model-call sample.
+	toolCalls []toolCall
+	// durationMs is clamp0(this response's ts - the previous captured line's
+	// ts); hasDuration is false only for the first captured response in each
+	// transcript, which has no previous line (SPEC "Model-call duration").
+	durationMs  int64
+	hasDuration bool
+}
+
+// toolCall is one tool_use block: its id (to pair with a tool_result) and name
+// (the tool:<name> leaf frame).
+type toolCall struct {
+	id   string
+	name string
 }
 
 // toolUseRef is one tool_use block id with its spawning line's context.
@@ -387,14 +406,18 @@ type parsed struct {
 	turns     []turnRec
 	toolUses  []toolUseRef
 	runs      []runRef
-	firstCwd  string
-	skipped   int
+	// toolResults maps a tool_use id to the timestamp of the user line carrying
+	// its tool_result, used to time each tool call (SPEC R1); first line wins.
+	toolResults map[string]time.Time
+	firstCwd    string
+	skipped     int
 }
 
 type contentBlock struct {
 	Type      string `json:"type"`
 	Text      string `json:"text"`
 	ID        string `json:"id"`
+	Name      string `json:"name"`
 	ToolUseID string `json:"tool_use_id"`
 }
 
@@ -450,8 +473,17 @@ func parseTranscript(path string) (parsed, error) {
 	}
 	defer f.Close()
 
-	p := parsed{turns: []turnRec{{frame: turnFrame(0, "(before first prompt)")}}}
+	p := parsed{
+		turns:       []turnRec{{frame: turnFrame(0, "(before first prompt)")}},
+		toolResults: map[string]time.Time{},
+	}
 	seen := map[string]bool{}
+	// prevTs is the timestamp of the most recent parser-captured line — a
+	// deduped assistant response or a tool_result-carrying user line — used for
+	// each model call's duration_ms (SPEC "Model-call duration"). Lines the
+	// parser skips are never "previous".
+	var prevTs time.Time
+	hasPrev := false
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 64*1024), maxLineSize)
 	for sc.Scan() {
@@ -478,6 +510,16 @@ func parseTranscript(path string) (parsed, error) {
 			}
 			if l.IsMeta || l.IsSidechain {
 				continue
+			}
+			if ids := toolResultIDs(l.Message.Content); len(ids) > 0 {
+				if ts, err := time.Parse(time.RFC3339Nano, l.Timestamp); err == nil {
+					for _, id := range ids {
+						if _, dup := p.toolResults[id]; !dup {
+							p.toolResults[id] = ts
+						}
+					}
+					prevTs, hasPrev = ts, true
+				}
 			}
 			if prompt, cmdExtracted, ok := turnPrompt(l.Message.Content); ok {
 				sn := snippet(prompt)
@@ -531,10 +573,16 @@ func parseTranscript(path string) (parsed, error) {
 			usage.Cache5mTokens = u.CacheCreation.Ephemeral5m
 			usage.Cache1hTokens = u.CacheCreation.Ephemeral1h
 		}
-		p.responses = append(p.responses, response{
+		r := response{
 			time: ts, skill: skill, model: l.Message.Model, usage: usage,
-			turnIdx: len(p.turns) - 1,
-		})
+			turnIdx:   len(p.turns) - 1,
+			toolCalls: toolCallsFrom(l.Message.Content),
+		}
+		if hasPrev {
+			r.durationMs, r.hasDuration = clamp0(ts.Sub(prevTs)), true
+		}
+		prevTs, hasPrev = ts, true
+		p.responses = append(p.responses, r)
 	}
 	if sc.Err() != nil {
 		p.skipped++ // unreadable remainder (e.g. oversized line); keep going
@@ -635,19 +683,59 @@ func workflowRun(toolUseResult, content json.RawMessage) (runRef, bool) {
 	return runRef{}, false
 }
 
-// toolUseIDs returns the ids of tool_use blocks in message.content.
-func toolUseIDs(raw json.RawMessage) []string {
+// toolCallsFrom returns the {id, name} of each tool_use block in an assistant
+// message's content, in order (SPEC R1: each yields a tool:<name> sample).
+func toolCallsFrom(raw json.RawMessage) []toolCall {
 	var blocks []contentBlock
 	if json.Unmarshal(raw, &blocks) != nil {
 		return nil // string or malformed content carries no tool_use blocks
 	}
-	var ids []string
+	var calls []toolCall
 	for _, b := range blocks {
 		if b.Type == "tool_use" && b.ID != "" {
-			ids = append(ids, b.ID)
+			calls = append(calls, toolCall{id: b.ID, name: b.Name})
+		}
+	}
+	return calls
+}
+
+// toolUseIDs returns the ids of tool_use blocks in message.content.
+func toolUseIDs(raw json.RawMessage) []string {
+	calls := toolCallsFrom(raw)
+	if len(calls) == 0 {
+		return nil
+	}
+	ids := make([]string, len(calls))
+	for i, c := range calls {
+		ids[i] = c.id
+	}
+	return ids
+}
+
+// toolResultIDs returns the tool_use ids carried by tool_result blocks in a
+// user message's content (SPEC R1: their line's timestamp times the call).
+func toolResultIDs(raw json.RawMessage) []string {
+	var blocks []contentBlock
+	if json.Unmarshal(raw, &blocks) != nil {
+		return nil
+	}
+	var ids []string
+	for _, b := range blocks {
+		if b.Type == "tool_result" && b.ToolUseID != "" {
+			ids = append(ids, b.ToolUseID)
 		}
 	}
 	return ids
+}
+
+// clamp0 renders a duration as non-negative whole milliseconds: a non-positive
+// delta (clock skew, out-of-order lines, sub-ms call) becomes exactly 0, never
+// negative (SPEC R1/R3 clamp rule).
+func clamp0(d time.Duration) int64 {
+	if ms := d.Milliseconds(); ms > 0 {
+		return ms
+	}
+	return 0
 }
 
 // turnFrame formats "tNN · <snippet>" (R2): 1-based ordinal zero-padded to at
@@ -712,17 +800,42 @@ func (r response) sample(stack []string, sessionID, turn string) schema.Sample {
 	if !priced {
 		labels["priced"] = "false"
 	}
-	return schema.Sample{
-		Time:  r.time,
-		Stack: stack,
-		Values: map[string]int64{
-			"input_tokens":       r.usage.InputTokens,
-			"output_tokens":      r.usage.OutputTokens,
-			"cache_read_tokens":  r.usage.CacheReadTokens,
-			"cache_write_tokens": r.usage.CacheCreationTokens,
-			"cost_microusd":      cost,
-			"calls":              1,
-		},
-		Labels: labels,
+	values := map[string]int64{
+		"input_tokens":       r.usage.InputTokens,
+		"output_tokens":      r.usage.OutputTokens,
+		"cache_read_tokens":  r.usage.CacheReadTokens,
+		"cache_write_tokens": r.usage.CacheCreationTokens,
+		"cost_microusd":      cost,
+		"calls":              1,
 	}
+	if r.hasDuration { // omitted only for each transcript's first sample (R3)
+		values["duration_ms"] = r.durationMs
+	}
+	return schema.Sample{Time: r.time, Stack: stack, Values: values, Labels: labels}
+}
+
+// toolSamples emits one sample per tool_use block in the response (SPEC R1/R2),
+// each a sibling of the model-call sample: modelStack with the model-name leaf
+// replaced by tool:<name>. A call with a matching tool_result in results carries
+// duration_ms = clamp0(result_ts - r.time) (the tool_use message ts is r.time,
+// the same assistant line); an unmatched call gets a tool:(pending) leaf and an
+// empty Values map — no fabricated duration.
+func (r response) toolSamples(modelStack []string, results map[string]time.Time, sessionID, turn string) []schema.Sample {
+	var out []schema.Sample
+	for _, tc := range r.toolCalls {
+		leaf := "tool:(pending)"
+		values := map[string]int64{}
+		if resultTs, ok := results[tc.id]; ok {
+			leaf = "tool:" + tc.name
+			values["duration_ms"] = clamp0(resultTs.Sub(r.time))
+		}
+		stack := slices.Clone(modelStack)
+		stack[len(stack)-1] = leaf
+		labels := map[string]string{"source": "claude-code", "session": sessionID}
+		if turn != "" {
+			labels["turn"] = turn
+		}
+		out = append(out, schema.Sample{Time: r.time, Stack: stack, Values: values, Labels: labels})
+	}
+	return out
 }
