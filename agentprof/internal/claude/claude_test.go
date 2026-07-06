@@ -516,6 +516,121 @@ func TestCollectInheritsTurnLabelThroughSpawnChain(t *testing.T) {
 	}
 }
 
+// assistantMsg builds an assistant transcript line whose message.content is
+// the given raw JSON array (so tests can embed marker text and tool_use
+// blocks), with usage so it emits a sample. An empty skill omits
+// attributionSkill.
+func assistantMsg(msgID, model, skill, contentArray string) string {
+	attr := ""
+	if skill != "" {
+		attr = `"attributionSkill":"` + skill + `",`
+	}
+	return `{"type":"assistant","timestamp":"2026-07-01T09:05:00Z","cwd":"/z/app","sessionId":"sess-z",` + attr +
+		`"message":{"id":"` + msgID + `","model":"` + model + `","content":` + contentArray + `,"usage":{"input_tokens":10,"output_tokens":1}}}`
+}
+
+// hasMarkerFrame reports whether any sample's stack carries a role: or stage:
+// frame — used to assert markerless input stays clean (R7).
+func hasMarkerFrame(samples []schema.Sample) bool {
+	for _, s := range samples {
+		for _, f := range s.Stack {
+			if strings.HasPrefix(f, "role:") || strings.HasPrefix(f, "stage:") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// TestCollectInsertsRoleFrameBeforeAgentFrameFromSubagentMarker covers R6: a
+// role marker in a dispatched sub-agent's own transcript inserts a role:<role>
+// frame immediately before that sub-agent's agent:<type> frame.
+func TestCollectInsertsRoleFrameBeforeAgentFrameFromSubagentMarker(t *testing.T) {
+	dir := writeMain(t,
+		`{"type":"user","timestamp":"2026-07-01T09:00:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"role":"user","content":"go"}}`,
+		assistantMsg("m1", "claude-fable-5", "drain", `[{"type":"tool_use","id":"toolu_sub","name":"Task"}]`),
+	)
+	sub := filepath.Join(dir, "projects", "-z-app", "sess-z", "subagents")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	agent := `{"type":"assistant","timestamp":"2026-07-01T09:10:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"id":"m_sub","model":"claude-sonnet-4-5","content":[{"type":"text","text":"<!-- agentprof:role=worker-attempt1 -->"}],"usage":{"input_tokens":5,"output_tokens":1}}}`
+	if err := os.WriteFile(filepath.Join(sub, "agent-A.jsonl"), []byte(agent+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	meta := `{"agentId":"agent-A","agentType":"general-purpose","toolUseId":"toolu_sub","spawnDepth":1}`
+	if err := os.WriteFile(filepath.Join(sub, "agent-A.meta.json"), []byte(meta+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	samples, _, _, err := claude.Collect(dir, anyCutoff)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	want := []string{"app", "t01 · go", "skill:drain", "main", "role:worker-attempt1", "agent:general-purpose", "claude-sonnet-4-5"}
+	if got := findByStack(samples, want); len(got) != 1 {
+		t.Fatalf("got %d samples with role frame, want 1; all: %v", len(got), stacks(samples))
+	}
+	// The pre-change stack (no role frame) must no longer be produced.
+	noRole := []string{"app", "t01 · go", "skill:drain", "main", "agent:general-purpose", "claude-sonnet-4-5"}
+	if got := findByStack(samples, noRole); len(got) != 0 {
+		t.Errorf("role frame was appended elsewhere, not inserted before agent: %v", stacks(samples))
+	}
+}
+
+// TestCollectInsertsStageFrameAfterSkillWithBoundaryHandoff covers R6: stage
+// markers in the orchestrating transcript insert stage:<stage> immediately
+// after skill:<name>, for both model-call and tool: samples, and a second
+// marker re-stages every following sample.
+func TestCollectInsertsStageFrameAfterSkillWithBoundaryHandoff(t *testing.T) {
+	dir := writeMain(t,
+		`{"type":"user","timestamp":"2026-07-01T09:00:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"role":"user","content":"go"}}`,
+		assistantMsg("m1", "claude-fable-5", "drain", `[{"type":"text","text":"<!-- agentprof:stage=dispatch -->"},{"type":"tool_use","id":"toolu_b","name":"Bash"}]`),
+		`{"type":"user","timestamp":"2026-07-01T09:05:01Z","cwd":"/z/app","sessionId":"sess-z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_b","content":"ok"}]}}`,
+		assistantMsg("m1b", "claude-fable-5", "drain", `[{"type":"text","text":"still working"}]`),
+		assistantMsg("m2", "claude-fable-5", "drain", `[{"type":"text","text":"<!-- agentprof:stage=collect -->"}]`),
+	)
+
+	samples, _, _, err := claude.Collect(dir, anyCutoff)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	dispatchModel := []string{"app", "t01 · go", "skill:drain", "stage:dispatch", "main", "claude-fable-5"}
+	if got := findByStack(samples, dispatchModel); len(got) != 2 {
+		t.Errorf("got %d dispatch model samples, want 2 (marker persists past its own line); all: %v", len(got), stacks(samples))
+	}
+	dispatchTool := []string{"app", "t01 · go", "skill:drain", "stage:dispatch", "main", "tool:Bash"}
+	if got := findByStack(samples, dispatchTool); len(got) != 1 {
+		t.Errorf("got %d dispatch tool samples, want 1 (stage applies to tool: samples too); all: %v", len(got), stacks(samples))
+	}
+	collectModel := []string{"app", "t01 · go", "skill:drain", "stage:collect", "main", "claude-fable-5"}
+	if got := findByStack(samples, collectModel); len(got) != 1 {
+		t.Errorf("got %d collect model samples, want 1 (second marker re-stages); all: %v", len(got), stacks(samples))
+	}
+}
+
+// TestCollectMarkerlessTranscriptKeepsByteIdenticalStacks covers R7: a
+// transcript with no markers yields stacks identical to the pre-change parser
+// output, with no role:/stage: frame anywhere.
+func TestCollectMarkerlessTranscriptKeepsByteIdenticalStacks(t *testing.T) {
+	dir := writeMain(t,
+		`{"type":"user","timestamp":"2026-07-01T09:00:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"role":"user","content":"hi"}}`,
+		assistantLineWithSkill("m1", "build"),
+	)
+
+	samples, _, _, err := claude.Collect(dir, anyCutoff)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	want := []string{"app", "t01 · hi", "skill:build", "main", "claude-fable-5"}
+	if got := findByStack(samples, want); len(got) != 1 {
+		t.Fatalf("markerless model-call stack = %v, want %v", stacks(samples), want)
+	}
+	if hasMarkerFrame(samples) {
+		t.Errorf("markerless transcript produced a role:/stage: frame: %v", stacks(samples))
+	}
+}
+
 func stacks(samples []schema.Sample) []string {
 	var out []string
 	for _, s := range samples {

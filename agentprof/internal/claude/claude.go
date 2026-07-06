@@ -311,7 +311,11 @@ func (s session) collect() ([]schema.Sample, []Turn, int, error) {
 	var out []schema.Sample
 	for _, r := range mainP.responses {
 		turn := fmt.Sprintf("%02d", r.turnIdx)
-		stack := []string{project, mainP.turns[r.turnIdx].frame, r.skill, "main", r.model}
+		stack := []string{project, mainP.turns[r.turnIdx].frame, r.skill}
+		if r.stage != "" {
+			stack = append(stack, "stage:"+r.stage)
+		}
+		stack = append(stack, "main", r.model)
 		out = append(out, r.sample(stack, s.id, turn))
 		out = append(out, r.toolSamples(stack, mainP.toolResults, s.id, turn)...)
 	}
@@ -323,11 +327,15 @@ func (s session) collect() ([]schema.Sample, []Turn, int, error) {
 		}
 		ap := byPath[a.path]
 		for _, r := range ap.responses {
+			agentFrames := []string{a.frame, r.model}
+			if r.role != "" {
+				agentFrames = slices.Concat([]string{"role:" + r.role}, agentFrames)
+			}
 			var stack []string
 			if linked {
-				stack = slices.Concat(prefix, []string{a.frame, r.model})
+				stack = slices.Concat(prefix, agentFrames)
 			} else {
-				stack = []string{project, "(unlinked)", a.frame, r.model}
+				stack = slices.Concat([]string{project, "(unlinked)"}, agentFrames)
 			}
 			out = append(out, r.sample(stack, s.id, turn))
 			out = append(out, r.toolSamples(stack, ap.toolResults, s.id, turn)...)
@@ -361,6 +369,13 @@ type response struct {
 	// transcript, which has no previous line (SPEC "Model-call duration").
 	durationMs  int64
 	hasDuration bool
+	// role and stage are the marker frames active at this response's line, "" for
+	// none (SPEC R6). role is inserted before a sub-agent's agent: frame; stage
+	// after the orchestrator's skill: frame. Each applies only where its target
+	// frame exists, so a role on a main-transcript response (no agent: frame) and
+	// a stage on a sub-agent response (no skill: leaf) are recorded but unused.
+	role  string
+	stage string
 }
 
 // toolCall is one tool_use block: its id (to pair with a tool_result) and name
@@ -484,6 +499,10 @@ func parseTranscript(path string) (parsed, error) {
 	// parser skips are never "previous".
 	var prevTs time.Time
 	hasPrev := false
+	// activeRole/activeStage carry the most recent marker of each kind forward:
+	// a marker applies to every response from its line until the next marker of
+	// the same kind or transcript end (SPEC R6).
+	var activeRole, activeStage string
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 64*1024), maxLineSize)
 	for sc.Scan() {
@@ -532,6 +551,14 @@ func parseTranscript(path string) (parsed, error) {
 			}
 			continue
 		case "assistant":
+			if text, ok := contentText(l.Message.Content); ok {
+				if m := roleMarkerRe.FindStringSubmatch(text); m != nil {
+					activeRole = m[1]
+				}
+				if m := stageMarkerRe.FindStringSubmatch(text); m != nil {
+					activeStage = m[1]
+				}
+			}
 			for _, id := range toolUseIDs(l.Message.Content) {
 				p.toolUses = append(p.toolUses, toolUseRef{id: id, turnIdx: len(p.turns) - 1, skill: skill})
 			}
@@ -577,6 +604,8 @@ func parseTranscript(path string) (parsed, error) {
 			time: ts, skill: skill, model: l.Message.Model, usage: usage,
 			turnIdx:   len(p.turns) - 1,
 			toolCalls: toolCallsFrom(l.Message.Content),
+			role:      activeRole,
+			stage:     activeStage,
 		}
 		if hasPrev {
 			r.durationMs, r.hasDuration = clamp0(ts.Sub(prevTs)), true
@@ -593,6 +622,11 @@ func parseTranscript(path string) (parsed, error) {
 var (
 	commandNameRe = regexp.MustCompile(`(?s)<command-name>(.*?)</command-name>`)
 	commandArgsRe = regexp.MustCompile(`(?s)<command-args>(.*?)</command-args>`)
+	// Opt-in instrumentation markers (SPEC R6), emitted as HTML comments in
+	// assistant text: role:<role> inserts before a sub-agent's agent:<type>
+	// frame; stage:<stage> inserts after the orchestrator's skill:<name> frame.
+	roleMarkerRe  = regexp.MustCompile(`<!-- agentprof:role=([a-z0-9-]+) -->`)
+	stageMarkerRe = regexp.MustCompile(`<!-- agentprof:stage=([a-z0-9-]+) -->`)
 )
 
 // excludedPrefixes open no turn (R1): harness-injected notifications, bash
