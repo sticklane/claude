@@ -549,6 +549,21 @@ def agents_view():
     return running, resumable[:12]
 
 
+def _running_pid_for(sid: str):
+    """Live pid for a running session id, or None. Best-effort — a failed
+    `claude agents` probe never breaks the session page."""
+    if not sid:
+        return None
+    try:
+        running, _ = agents_view()
+    except Exception:
+        return None
+    for a in running:
+        if a.get("sid") == sid and a.get("pid"):
+            return a["pid"]
+    return None
+
+
 _TASK_NUM_RE = re.compile(r"^(\d+)")
 
 
@@ -867,6 +882,17 @@ def build_page_registry(assembled: dict) -> dict:
                     {"id": tid, "kind": "task", "path": os.path.realpath(tabs),
                      "title": task.get("title") or "", "task": task},
                 )
+        for s in repo.get("sessions", []):
+            ssid = s.get("id")
+            if not ssid:
+                continue
+            seid = _entity_id("session", ssid)
+            pages.setdefault(
+                seid,
+                {"id": seid, "kind": "session",
+                 "title": (s.get("prompt") or "session")[:90],
+                 "session": s, "root": root},
+            )
     return pages
 
 
@@ -1050,6 +1076,179 @@ def render_repo_page(entry: dict) -> str:
         )
 
     return render_detail_page(name, "".join(parts))
+
+
+def _projects_root() -> Path:
+    """Root of the per-project session transcript tree
+    (`~/.claude/projects/*/<sessionId>.jsonl`); a function so tests can point
+    it at a fixture dir."""
+    return HOME / ".claude" / "projects"
+
+
+def _transcript_path(sid: str, root: Path | None = None):
+    """First `<root>/*/<sid>.jsonl` match, else None. `sid` is a resolved
+    sessionId from the registry, never client input, but path separators are
+    rejected defensively before globbing."""
+    if not sid or "/" in sid or "\\" in sid or ".." in sid:
+        return None
+    base = root if root is not None else _projects_root()
+    try:
+        matches = sorted(Path(base).glob(f"*/{sid}.jsonl"))
+    except OSError:
+        return None
+    return matches[0] if matches else None
+
+
+def tail_events(path, n: int = 50, window: int = 65_536):
+    """Last ~n parsed JSONL events read tail-first from a bounded byte window
+    (never the whole file). Returns (events, approx_total): approx_total is the
+    exact count when the window spans the file, else a byte-ratio estimate
+    (events_in_window * file_size / bytes_read)."""
+    path = str(path)
+    try:
+        size = os.path.getsize(path)
+    except OSError:
+        return [], 0
+    start = max(0, size - window)
+    try:
+        with open(path, "rb") as f:
+            f.seek(start)
+            chunk = f.read()
+    except OSError:
+        return [], 0
+    lines = chunk.decode("utf-8", errors="replace").splitlines()
+    if start > 0 and lines:
+        lines = lines[1:]  # drop the partial leading line the window cut into
+    events = []
+    for ln in lines:
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            events.append(json.loads(ln))
+        except json.JSONDecodeError:
+            continue
+    in_window = len(events)
+    read_bytes = len(chunk)
+    if start == 0 or read_bytes >= size or not read_bytes:
+        approx_total = in_window
+    else:
+        approx_total = round(in_window * size / read_bytes)
+    return events[-n:], approx_total
+
+
+def _render_events(events) -> str:
+    """A transcript tail as role-tagged lines. Tool payloads are elided: a
+    tool_use shows only `[tool: NAME]`; a tool_result resolves its NAME from a
+    matching tool_use in the tail (else `[tool result]`). No tool input/output
+    payload text is ever emitted."""
+    names: dict = {}
+    for ev in events:
+        msg = ev.get("message") if isinstance(ev, dict) else None
+        content = msg.get("content") if isinstance(msg, dict) else None
+        if isinstance(content, list):
+            for blk in content:
+                if isinstance(blk, dict) and blk.get("type") == "tool_use" and blk.get("id"):
+                    names[blk["id"]] = blk.get("name") or "tool"
+
+    rows = []
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        msg = ev.get("message") if isinstance(ev.get("message"), dict) else {}
+        role = msg.get("role") or ev.get("type") or "event"
+        content = msg.get("content")
+        pieces = []
+        if isinstance(content, str):
+            if content.strip():
+                pieces.append(esc(content.strip()))
+        elif isinstance(content, list):
+            for blk in content:
+                if not isinstance(blk, dict):
+                    continue
+                bt = blk.get("type")
+                if bt == "text":
+                    text = (blk.get("text") or "").strip()
+                    if text:
+                        pieces.append(esc(text))
+                elif bt == "tool_use":
+                    pieces.append(
+                        f'<span class="tool">[tool: {esc(blk.get("name") or "tool")}]</span>'
+                    )
+                elif bt == "tool_result":
+                    nm = names.get(blk.get("tool_use_id"))
+                    label = f"[tool: {esc(nm)} result]" if nm else "[tool result]"
+                    pieces.append(f'<span class="tool">{label}</span>')
+        if not pieces:
+            continue
+        rows.append(
+            f'<div class="evt"><span class="role">{esc(role)}</span> '
+            f'{" ".join(pieces)}</div>'
+        )
+    return "".join(rows)
+
+
+def render_session_page(entry: dict) -> str:
+    """A session's metadata (cwd, sessionId, state, started/last-active, pid when
+    live) plus a tail of the last ~50 transcript events (roles + text + tool
+    names; payloads elided). Resume/stop reuse the existing agent-control POSTs
+    via the shared data-act handlers."""
+    session = entry.get("session") or {}
+    sid = session.get("id") or ""
+    state = session.get("state") or ""
+    cwd = session.get("cwd") or ""
+    started = _dt(session.get("start_ts") or 0)
+    last = _dt(session.get("last_ts") or session.get("end_ts") or 0)
+    pid = _running_pid_for(sid) if state == "active" else None
+
+    meta = [
+        f'<p class="mono">{esc(cwd or "—")}</p>',
+        '<div class="sub">Session</div>',
+        '<table class="meta">'
+        f'<tr><td>sessionId</td><td class="mono">{esc(sid)}</td></tr>'
+        f'<tr><td>state</td><td>{esc(state)}</td></tr>'
+        f'<tr><td>started</td><td>{esc(started)}</td></tr>'
+        f'<tr><td>last active</td><td>{esc(last)}</td></tr>'
+        + (f'<tr><td>pid</td><td class="mono">{esc(pid)}</td></tr>' if pid else "")
+        + "</table>",
+    ]
+
+    btns = []
+    if pid:
+        btns.append(
+            f'<button class="btn stop" data-act="stop" data-pid="{esc(pid)}" '
+            f'data-name="{esc(sid[:8])}">stop</button>'
+        )
+    if sid:
+        btns.append(
+            f'<button class="btn" data-act="resume" data-sid="{esc(sid)}" '
+            f'data-name="{esc(sid[:8])}">resume</button>'
+        )
+    if btns:
+        meta.append(f'<div class="controls">{"".join(btns)}</div>')
+
+    tpath = _transcript_path(sid)
+    if tpath is None:
+        meta.append(
+            '<div class="sub">Transcript</div>'
+            '<p class="mono">no transcript found</p>'
+        )
+    else:
+        events, total = tail_events(tpath)
+        shown = len(events)
+        banner = f"last {shown} of ~{total}" if total > shown else f"{shown} events"
+        body = _render_events(events) or '<p class="mono">no events</p>'
+        meta.append(
+            f'<div class="sub">Transcript</div><p class="meta">{esc(banner)}</p>'
+            f'<div class="transcript">{body}</div>'
+        )
+
+    title = (session.get("prompt") or "session")[:90]
+    page = render_detail_page(title, "".join(meta))
+    # inject the shared CSRF token + client JS so the resume/stop data-act
+    # buttons work from this page too (render_detail_page ships neither).
+    inject = f"<script>window.CSRF={json.dumps(CSRF_TOKEN)};</script>{PAGE_JS}"
+    return page.replace("</body></html>", inject + "</body></html>")
 
 
 def render_spec_page(entry: dict) -> str:
@@ -2001,6 +2200,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._serve_spec(path[len("/spec/") :])
             elif path.startswith("/task/"):
                 self._serve_task(path[len("/task/") :])
+            elif path.startswith("/session/"):
+                self._serve_session(path[len("/session/") :])
             elif path == "/healthz":
                 self._send(b"ok", "text/plain")
             else:
@@ -2044,6 +2245,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send(b"not found", "text/plain", 404)
             return
         self._send(render_spec_page(entry).encode("utf-8"))
+
+    def _serve_session(self, entity_id: str) -> None:
+        entry = get_pages().get(entity_id)
+        if not entry or entry.get("kind") != "session":
+            self._send(b"not found", "text/plain", 404)
+            return
+        self._send(render_session_page(entry).encode("utf-8"))
 
     def _serve_task(self, entity_id: str) -> None:
         entry = get_pages().get(entity_id)
