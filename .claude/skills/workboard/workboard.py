@@ -225,6 +225,11 @@ STATUS_RE = re.compile(r"^Status:\s*\[?([A-Za-z_-]+)\]?", re.MULTILINE)
 DEPENDS_RE = re.compile(r"^Depends on:\s*(.*)$", re.MULTILINE)
 PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P\d)\]?", re.MULTILINE)
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
+UNBLOCK_RE = re.compile(r"^Unblock:\s*(run|agent|ask):\s*(\S.*?)\s*$", re.MULTILINE)
+DEFERRED_RE = re.compile(
+    r"^#{2,}\s+Deferred questions\s*$(.*?)(?=^#{1,6}\s|\Z)",
+    re.MULTILINE | re.DOTALL | re.IGNORECASE,
+)
 OPEN_TASK_STATUSES = {
     "pending",
     "open",
@@ -235,6 +240,35 @@ OPEN_TASK_STATUSES = {
     "claimed",
 }
 CLOSED_TASK_STATUSES = {"done", "deferred", "skipped"}
+
+
+def _task_is_blocked(status):
+    """A task status that is neither open nor closed reads as blocked (matches
+    scan_toolkit_specs' `tasks_blocked` rule): blocked, waiting, failed, …"""
+    return status not in CLOSED_TASK_STATUSES and status not in OPEN_TASK_STATUSES
+
+
+def parse_unblock(text):
+    """The `Unblock: <run|agent|ask>: <step>` line → {type, step}; None when the
+    line is absent or malformed (unknown type, or empty step)."""
+    m = UNBLOCK_RE.search(text)
+    if not m:
+        return None
+    return {"type": m.group(1), "step": m.group(2).strip()}
+
+
+def parse_deferred_questions(text):
+    """Bullet items under a `## Deferred questions` section, as a list of
+    strings; [] when the section is absent."""
+    m = DEFERRED_RE.search(text)
+    if not m:
+        return []
+    out = []
+    for line in m.group(1).splitlines():
+        bm = re.match(r"\s*[-*]\s+(.+)", line)
+        if bm and bm.group(1).strip():
+            out.append(bm.group(1).strip())
+    return out
 
 
 def scan_toolkit_specs(repo):
@@ -260,18 +294,26 @@ def scan_toolkit_specs(repo):
                 sm = STATUS_RE.search(t_text)
                 status = sm.group(1).lower() if sm else "pending"
                 tm = TITLE_RE.search(t_text)
-                tasks.append(
-                    {
-                        "file": str(tf.relative_to(repo)),
-                        "abs": str(tf),
-                        "title": tm.group(1).strip() if tm else tf.stem,
-                        "status": status,
-                        "deps": parse_deps(t_text),
-                    }
-                )
+                task = {
+                    "file": str(tf.relative_to(repo)),
+                    "abs": str(tf),
+                    "title": tm.group(1).strip() if tm else tf.stem,
+                    "status": status,
+                    "deps": parse_deps(t_text),
+                }
+                if _task_is_blocked(status):
+                    ub = parse_unblock(t_text)
+                    if ub:
+                        task["unblock"] = ub
+                dq = parse_deferred_questions(t_text)
+                if dq:
+                    task["deferred_questions"] = dq
+                tasks.append(task)
                 mtimes.append(tf.stat().st_mtime)
                 if not _TASK_NUM_RE.match(tf.name):
                     unparseable += 1
+        spec_sm = STATUS_RE.search(text)
+        spec_status = spec_sm.group(1).lower() if spec_sm else None
         done = sum(1 for t in tasks if t["status"] in CLOSED_TASK_STATUSES)
         doing = sum(
             1 for t in tasks if t["status"] in ("in-progress", "in_progress", "claimed")
@@ -282,22 +324,26 @@ def scan_toolkit_specs(repo):
             if t["status"] not in CLOSED_TASK_STATUSES
             and t["status"] not in OPEN_TASK_STATUSES
         ]
-        specs.append(
-            {
-                "kind": "toolkit",
-                "slug": spec_dir.name,
-                "title": (m.group(1).strip() if m else spec_dir.name),
-                "priority": (pm.group(1) if pm else ""),
-                "path": str(spec_md.relative_to(repo)),
-                "tasks_total": len(tasks),
-                "tasks_done": done,
-                "tasks_doing": doing,
-                "tasks_blocked": [t["file"] for t in blocked],
-                "tasks": tasks,
-                "tasks_unparseable": unparseable,
-                "last_touched": max(mtimes),
-            }
-        )
+        spec_rec = {
+            "kind": "toolkit",
+            "slug": spec_dir.name,
+            "title": (m.group(1).strip() if m else spec_dir.name),
+            "priority": (pm.group(1) if pm else ""),
+            "path": str(spec_md.relative_to(repo)),
+            "tasks_total": len(tasks),
+            "tasks_done": done,
+            "tasks_doing": doing,
+            "tasks_blocked": [t["file"] for t in blocked],
+            "tasks": tasks,
+            "tasks_unparseable": unparseable,
+            "last_touched": max(mtimes),
+        }
+        if spec_status == "waiting":
+            spec_rec["status"] = spec_status
+            ub = parse_unblock(text)
+            if ub:
+                spec_rec["unblock"] = ub
+        specs.append(spec_rec)
     return specs
 
 
@@ -941,15 +987,81 @@ def attention_items(
             )
         for s in r["specs"]:
             open_tasks = s["tasks_total"] - s["tasks_done"]
+            # Needs-your-answer surfaces: ask-typed unblocks + deferred questions.
+            # No dispatch cmd — these are human decisions only (R6).
+            for t in s.get("tasks", []):
+                ub = t.get("unblock")
+                if ub and ub["type"] == "ask":
+                    items.append(
+                        {
+                            "severity": "serious",
+                            "state": "needs-answer",
+                            "repo": r["name"],
+                            "what": f"Answer needed: {t['title']}",
+                            "why": ub["step"],
+                            "age_ts": s["last_touched"],
+                        }
+                    )
+                for q in t.get("deferred_questions", []):
+                    items.append(
+                        {
+                            "severity": "serious",
+                            "state": "needs-answer",
+                            "repo": r["name"],
+                            "what": f"Deferred question: {t['title']}",
+                            "why": q,
+                            "age_ts": s["last_touched"],
+                        }
+                    )
+            # A spec-level `Status: waiting` header (spec-only status): ask →
+            # needs-answer, run/agent → blocked. No dispatch cmd here (R7 owns it).
+            if s.get("status") == "waiting":
+                ub = s.get("unblock")
+                if ub and ub["type"] == "ask":
+                    items.append(
+                        {
+                            "severity": "serious",
+                            "state": "needs-answer",
+                            "repo": r["name"],
+                            "what": f"Answer needed: spec {s['slug']}",
+                            "why": ub["step"],
+                            "age_ts": s["last_touched"],
+                        }
+                    )
+                else:
+                    items.append(
+                        {
+                            "severity": "serious",
+                            "state": "blocked",
+                            "repo": r["name"],
+                            "what": f"Spec {s['slug']}: waiting",
+                            "why": ub["step"]
+                            if ub
+                            else "no unblock step recorded — add an Unblock: line",
+                            "age_ts": s["last_touched"],
+                        }
+                    )
             if s.get("tasks_blocked"):
+                unblock_steps = [
+                    f"{t['unblock']['type']}: {t['unblock']['step']}"
+                    for t in s.get("tasks", [])
+                    if _task_is_blocked(t["status"])
+                    and t.get("unblock")
+                    and t["unblock"]["type"] != "ask"
+                ]
+                why = (
+                    ", ".join(s["tasks_blocked"][:3])
+                    + " — answer its open question, flip its Status: line, re-dispatch via /build or /drain"
+                )
+                if unblock_steps:
+                    why += " · unblock: " + "; ".join(unblock_steps)
                 items.append(
                     {
                         "severity": "serious",
                         "state": "blocked",
                         "repo": r["name"],
                         "what": f"Spec {s['slug']}: task(s) blocked",
-                        "why": ", ".join(s["tasks_blocked"][:3])
-                        + " — answer its open question, flip its Status: line, re-dispatch via /build or /drain",
+                        "why": why,
                         "age_ts": s["last_touched"],
                     }
                 )
@@ -1374,6 +1486,7 @@ STATE_BADGE = {
     "recent": ("◐", "info"),
     "idle": ("○", "muted"),
     "stale": ("⏸", "warning"),
+    "needs-answer": ("?", "serious"),
     "blocked": ("⚑", "serious"),
     "needs-review": ("▲", "warning"),
     "in-progress": ("▶", "info"),
@@ -1522,10 +1635,11 @@ def render_actions(data):
     )
 
 
-# The attention inbox categories, in fixed severity order (R6). `ready` (R7)
-# is opportunity, not attention, so it leads the filter tiles but is not an
-# inbox group.
-INBOX_CATEGORIES = ("blocked", "needs-review", "stale")
+# The attention inbox categories, in fixed severity order (R6). `needs-answer`
+# (ask-typed unblocks + deferred questions) leads — those are decisions only
+# Steven can make. `ready` (R7) is opportunity, not attention, so it leads the
+# filter tiles but is not an inbox group.
+INBOX_CATEGORIES = ("needs-answer", "blocked", "needs-review", "stale")
 # The Active group (state in-progress) renders AFTER the attention groups and
 # is filterable, but is not an attention category — it never counts as
 # needs-attention work.
@@ -1697,6 +1811,22 @@ def _spec_health_marker(spec):
     return ""
 
 
+_NO_UNBLOCK_CHIP = (
+    ' <span class="chip warning" data-chip="no-unblock">no unblock step</span>'
+)
+
+
+def _unblock_marker(spec):
+    """R5: a blocked/waiting spec whose blocking item records no machine-readable
+    Unblock step gets a warning chip; items that carry one render clean."""
+    if spec.get("status") == "waiting":
+        return "" if spec.get("unblock") else _NO_UNBLOCK_CHIP
+    for t in spec.get("tasks", []):
+        if _task_is_blocked(t["status"]) and not t.get("unblock"):
+            return _NO_UNBLOCK_CHIP
+    return ""
+
+
 def render_html(data):
     t = data["totals"]
     spend = data.get("spend")
@@ -1742,7 +1872,7 @@ def render_html(data):
         spec_rows = (
             "".join(
                 f"<tr><td class='strong'>{esc(s['slug'])}"
-                f"<span class='muted-text'> · {esc(s['kind'])}</span>{_spec_health_marker(s)}</td>"
+                f"<span class='muted-text'> · {esc(s['kind'])}</span>{_spec_health_marker(s)}{_unblock_marker(s)}</td>"
                 f"<td>{progress_bar(s['tasks_done'], s['tasks_total'], s.get('tasks_doing', 0))}</td>"
                 f"<td class='num'>{esc(age_str(s['last_touched']))}</td></tr>"
                 for s in r["specs"]
