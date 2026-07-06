@@ -10,6 +10,29 @@ Budget: 20 turns
 Spec: ../SPEC.md (requirements R1, R2, R3, R7's Values half)
 Touch: agentprof/internal/, agentprof/testdata/
 
+<!-- PLAN (delete at close-out)
+Files:
+1. internal/claude/duration_test.go (NEW) — failing tests first: R1 known-delta
+   tool duration, R1 negative-delta clamp→0, R2 unresolved tool_use→tool:(pending)
+   empty Values, R3 model-call duration_ms present on all but first sample.
+2. internal/claude/claude.go — (a) add Name to contentBlock; (b) capture
+   tool_result ts per transcript (toolResults map) + per-line prevTs tracking for
+   model-call duration; (c) capture tool_use {id,name} on deduped response
+   (toolCalls); (d) compute model-call duration_ms on response (omit first per
+   transcript); (e) emit tool:<name>/tool:(pending) samples in collect() with
+   leaf replaced; clamp0 helper. tool_use_message_ts == response.time (same line).
+3. internal/pprofenc/pprofenc.go — unitFor: duration_ms → milliseconds. SCHEMA.md
+   table row.
+4. Update existing fixture-count tests + testdata/claude-dir.expected.json for the
+   3 new tool samples (sess-0001) and duration_ms totals: claude_test.go counts
+   10→13 and window 6→9, add duration_ms to totals want, add 3 tool stacks;
+   cmd_claude_test.go 10→13.
+Fixture-derived numbers: tool:Workflow dur=15000 (toolu_W), toolu_A→pending,
+agent-W toolu_WS→pending; model durs: sess1 msg_a2=45000; sess2 b2=60000,
+reqfb=60000, b3=180000; grand duration_ms total=360000.
+Risk: brittle fixture recomputation — verify every number against parser output.
+-->
+
 ## Goal
 
 The agentprof parser retains per-line timestamps it currently discards, pairs
