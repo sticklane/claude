@@ -18,7 +18,7 @@ func unitFor(metric string) string {
 	switch {
 	case metric == "cost_microusd":
 		return "microusd"
-	case metric == "wall_ms":
+	case metric == "wall_ms", metric == "duration_ms":
 		return "milliseconds"
 	case strings.HasSuffix(metric, "_tokens"):
 		return "tokens"

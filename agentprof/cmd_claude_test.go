@@ -43,8 +43,8 @@ func TestClaudeCommandEmitsCanonicalJSONLOnStdout(t *testing.T) {
 	if skipped != 0 {
 		t.Errorf("stdout contained %d invalid canonical lines, want 0", skipped)
 	}
-	if len(samples) != 10 {
-		t.Errorf("got %d samples on stdout, want 10", len(samples))
+	if len(samples) != 13 {
+		t.Errorf("got %d samples on stdout, want 13 (10 model-call + 3 tool: samples)", len(samples))
 	}
 }
 
