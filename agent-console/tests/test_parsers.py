@@ -266,6 +266,54 @@ class TestPriority(unittest.TestCase):
         self.assertNotIn("Priority", out)
         self.assertIn("Status: ready\nbody", out)
 
+    def test_spec_priority_flows_from_specmd_to_selected_option(self):
+        # A spec whose SPEC.md carries `Priority: P1` must render as the
+        # selected option in the workboard's per-spec priority <select>,
+        # not the blank "—" unset default. Exercises the full chain:
+        # workboard.scan_toolkit_specs -> _adapt_board -> _prio_select.
+        with tempfile.TemporaryDirectory() as d:
+            spec_dir = Path(d) / "specs" / "mine"
+            spec_dir.mkdir(parents=True)
+            (spec_dir / "SPEC.md").write_text("# My Spec\nPriority: P1\n")
+            scanned = ac.workboard.scan_toolkit_specs(Path(d))
+
+            self.assertEqual(scanned[0]["priority"], "P1")
+
+            assembled = {
+                "repos": [
+                    {
+                        "path": d,
+                        "name": "r1",
+                        "git": {"branch": "main", "dirty": 0, "ahead": 0, "behind": 0},
+                        "specs": scanned,
+                        "handoffs": [],
+                        "sessions": [],
+                    }
+                ],
+                "orphan_sessions": [],
+                "inbox": [],
+                "liveness_unknown": False,
+            }
+            with (
+                patch.object(ac, "gh_visibility", return_value={}),
+                patch.object(ac, "_git", return_value=None),
+            ):
+                board = ac._adapt_board(assembled, [], [])
+
+        sp = board["repos"][0]["specs"][0]
+        self.assertEqual(sp["priority"], "P1")
+        html_out = ac._prio_select(sp["path"], sp["priority"])
+        self.assertIn('<option value="P1" selected>', html_out)
+        self.assertIn('<option value="">—</option>', html_out)  # unset not selected
+
+    def test_scan_absent_priority_header_defaults_to_unset(self):
+        with tempfile.TemporaryDirectory() as d:
+            spec_dir = Path(d) / "specs" / "mine"
+            spec_dir.mkdir(parents=True)
+            (spec_dir / "SPEC.md").write_text("# My Spec\n")
+            scanned = ac.workboard.scan_toolkit_specs(Path(d))
+        self.assertEqual(scanned[0]["priority"], "")
+
 
 class TestAgentsView(unittest.TestCase):
     def test_stop_only_kills_known_pids(self):
