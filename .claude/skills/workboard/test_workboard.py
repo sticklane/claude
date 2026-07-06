@@ -1049,5 +1049,144 @@ class TestSpend(unittest.TestCase):
              "--claude-dir", str(claude_dir)])
 
 
+class TestSpendRendering(unittest.TestCase):
+    """R6/R7/R8-hint/R10: render the spend data — per-session cost badges, the
+    "Spend by model" table, and a hint line when spend is unavailable."""
+
+    def _session(self, sid="s1", state="active"):
+        return {"id": sid, "cwd": "/r/demo", "branch": "main",
+                "prompt": "do the thing", "last_ts": 100.0, "start_ts": 1.0,
+                "end_ts": 100.0, "bytes": 10, "state": state}
+
+    def _data(self, spend, repos=None, orphan_sessions=None):
+        return {
+            "totals": {"repos": len(repos or []), "specs_open": 0,
+                       "tasks_open": 0, "sessions_active": 0, "attention": 0},
+            "generated_at": "now", "stale_days": 7,
+            "inbox": [], "ready": {"items": [], "blocked_unresolved": []},
+            "repos": repos or [],
+            "antigravity": [], "todos": [], "orphan_sessions": orphan_sessions or [],
+            "spend": spend,
+        }
+
+    def _model_agg(self, cost, priced=True, output=10, inp=0, cr=0, cw=0):
+        return {"input_tokens": inp, "output_tokens": output,
+                "cache_read_tokens": cr, "cache_write_tokens": cw,
+                "cost_microusd": cost, "priced": priced}
+
+    # -- short model name helper (R6) ------------------------------------
+
+    def test_short_name_strips_prefix_and_date_suffix(self):
+        self.assertEqual(
+            workboard._short_model_name("claude-haiku-4-5-20251001"),
+            "haiku-4-5")
+
+    def test_short_name_renders_non_matching_id_verbatim(self):
+        self.assertEqual(workboard._short_model_name("gpt-4o"), "gpt-4o")
+
+    # -- per-session badge (R6) ------------------------------------------
+
+    def test_priced_session_row_shows_dollars_and_short_name(self):
+        repo = make_repo_record()
+        repo["sessions"] = [self._session()]
+        spend = {
+            "available": True, "reason": None, "by_model": [],
+            "by_session": {"s1": {"cost_microusd": 4370000, "models": {
+                "claude-haiku-4-5-20251001": self._model_agg(4370000)}}},
+        }
+
+        html = workboard.render_html(self._data(spend, repos=[repo]))
+
+        self.assertIn("$4.37 haiku-4-5", html)
+        self.assertNotIn("$0.00", html)
+
+    def test_session_absent_from_spend_gets_no_badge_no_zero(self):
+        repo = make_repo_record()
+        repo["sessions"] = [self._session()]
+        spend = {"available": True, "reason": None,
+                 "by_model": [], "by_session": {}}
+
+        html = workboard.render_html(self._data(spend, repos=[repo]))
+
+        self.assertNotIn("$0.00", html)
+        self.assertNotIn("unpriced", html)
+
+    def test_all_unpriced_session_shows_unpriced_chip_no_dollars(self):
+        repo = make_repo_record()
+        repo["sessions"] = [self._session()]
+        spend = {
+            "available": True, "reason": None, "by_model": [],
+            "by_session": {"s1": {"cost_microusd": 0, "models": {
+                "claude-haiku-4-5-20251001": self._model_agg(0, priced=False)}}},
+        }
+
+        html = workboard.render_html(self._data(spend, repos=[repo]))
+
+        self.assertIn("unpriced haiku-4-5", html)
+        self.assertNotIn("$0.00", html)
+
+    # -- Spend by model table (R7) ---------------------------------------
+
+    def test_spend_table_sorts_by_cost_and_shows_full_ids(self):
+        by_model = [
+            {"model": "claude-sonnet-4-5-20250929", "input_tokens": 1500000,
+             "output_tokens": 20, "cache_read_tokens": 0, "cache_write_tokens": 0,
+             "cost_microusd": 9000000, "priced": True},
+            {"model": "claude-haiku-4-5-20251001", "input_tokens": 100,
+             "output_tokens": 10, "cache_read_tokens": 0, "cache_write_tokens": 0,
+             "cost_microusd": 1000000, "priced": True},
+        ]
+        spend = {"available": True, "reason": None,
+                 "by_model": by_model, "by_session": {}}
+
+        html = workboard.render_spend_section(spend)
+
+        # full model ids, not short names
+        self.assertIn("claude-sonnet-4-5-20250929", html)
+        self.assertIn("claude-haiku-4-5-20251001", html)
+        # sorted by cost descending: sonnet ($9) before haiku ($1)
+        self.assertLess(html.index("claude-sonnet-4-5-20250929"),
+                        html.index("claude-haiku-4-5-20251001"))
+        # human-formatted token counts
+        self.assertIn("1.5M", html)
+        # dollars
+        self.assertIn("$9.00", html)
+
+    def test_spend_table_unpriced_model_shows_dash_and_badge_not_zero(self):
+        spend = {"available": True, "reason": None, "by_session": {},
+                 "by_model": [
+                     {"model": "custom-model", "input_tokens": 30,
+                      "output_tokens": 3, "cache_read_tokens": 0,
+                      "cache_write_tokens": 0, "cost_microusd": 0,
+                      "priced": False}]}
+
+        html = workboard.render_spend_section(spend)
+
+        self.assertIn("custom-model", html)
+        self.assertIn("unpriced", html)
+        self.assertIn("—", html)
+        self.assertNotIn("$0.00", html)
+
+    # -- unavailable hint (R8) -------------------------------------------
+
+    def test_unavailable_spend_renders_hint_line_and_no_table(self):
+        spend = {"available": False, "reason": "agentprof not found",
+                 "by_model": [], "by_session": {}}
+
+        html = workboard.render_spend_section(spend)
+
+        self.assertIn("Spend by model", html)
+        self.assertIn("spend data unavailable: agentprof not found", html)
+        self.assertNotIn("<table", html)
+
+    def test_render_html_includes_spend_section(self):
+        spend = {"available": False, "reason": "agentprof not found",
+                 "by_model": [], "by_session": {}}
+
+        html = workboard.render_html(self._data(spend))
+
+        self.assertIn("Spend by model", html)
+
+
 if __name__ == "__main__":
     unittest.main()
