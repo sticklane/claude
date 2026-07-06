@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 8 turns
@@ -18,7 +18,7 @@ Both `agent-console/agent-console.py` and `.claude/skills/workboard/workboard.py
 
 ## Acceptance
 
-- [ ] `git diff --stat` for this commit touches only the two named files
-- [ ] `cd agent-console && python3 -m pytest tests/ -v` → same pass count before and after (no behavior change)
-- [ ] `bash tests/test_*.sh` (repo-root suites referencing workboard.py, if any) → unchanged pass/fail results before and after
-- [ ] A second, unrelated edit to either file (e.g. adding a comment) no longer triggers a full-file reformat — confirmed by making a trivial edit and checking the diff stays scoped to that edit
+- [x] `git diff --stat` for this commit touches only the two named files — only `.claude/skills/workboard/workboard.py` changed (501 ins / 296 del); `agent-console/agent-console.py` was already ruff-conformant (`ruff format` left it unchanged). No other file in the diff. AST before vs after is byte-identical (behavior-preserving; token diffs are only f-string implicit-concat merges, magic trailing commas, quote normalization).
+- [x] `cd agent-console && python3 -m pytest tests/ -v` → 31 passed before AND after (identical).
+- [x] `bash tests/test_*.sh` (repo-root suites referencing workboard.py) → test_workboard_render.sh, test_workboard_actionability.sh, test_doc_links.sh all PASS before AND after (unchanged).
+- [x] A second, unrelated edit no longer triggers a full-file reformat — added a trivial comment to workboard.py via the Edit tool (firing the real PostToolUse `ruff format` hook); diff vs the formatted file was the single added line only (`1a2`), no cascade. Probe reverted.
