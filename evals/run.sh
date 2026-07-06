@@ -8,6 +8,10 @@
 # scenario and a summary; exits non-zero if any scenario failed.
 # Failed fixtures are kept (path printed) for forensics; passing ones
 # are deleted.
+#
+# Compat: scenario setup.sh/assert.sh run under bare `bash`, and macOS's
+# system bash is 3.2 — write them to bash 3.2, no `declare -A` or other
+# bash-4+ syntax.
 set -u -o pipefail
 shopt -s nullglob
 
