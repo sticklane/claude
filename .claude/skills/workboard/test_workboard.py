@@ -898,5 +898,156 @@ class TestSourceHealthMarkers(unittest.TestCase):
         self.assertIn("liveness unknown", html)
 
 
+def make_agentprof_stub(tmpdir, stdout_payload, argv_out=None, exit_code=0):
+    """Write an executable stub standing in for the agentprof binary.
+
+    It prints `stdout_payload` verbatim (so callers can emit invalid JSON),
+    optionally records its argv (one arg per line) to `argv_out`, and exits
+    with `exit_code`.
+    """
+    p = Path(tmpdir) / "agentprof_stub.py"
+    lines = ["#!/usr/bin/env python3", "import sys"]
+    if argv_out:
+        lines.append(
+            "open(%r, 'w').write(chr(10).join(sys.argv[1:]))" % str(argv_out))
+    lines.append("sys.stdout.write(%r)" % stdout_payload)
+    lines.append("sys.exit(%d)" % exit_code)
+    p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    p.chmod(0o755)
+    return str(p)
+
+
+class TestSpend(unittest.TestCase):
+    """R5/R8/R9: shell out to agentprof, join summary rows to assembled
+    sessions, expose under a `spend` key. Failures never raise."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self._old_bin = os.environ.get("AGENTPROF_BIN")
+
+    def tearDown(self):
+        if self._old_bin is None:
+            os.environ.pop("AGENTPROF_BIN", None)
+        else:
+            os.environ["AGENTPROF_BIN"] = self._old_bin
+        self._tmp.cleanup()
+
+    def _two_session_rows(self):
+        return [
+            {"session": "s1", "model": "claude-haiku-4-5-20251001",
+             "input_tokens": 100, "output_tokens": 10, "cache_read_tokens": 5,
+             "cache_write_tokens": 2, "cost_microusd": 1000, "priced": True},
+            {"session": "s1", "model": "claude-sonnet-4-5-20250929",
+             "input_tokens": 200, "output_tokens": 20, "cache_read_tokens": 6,
+             "cache_write_tokens": 3, "cost_microusd": 5000, "priced": True},
+            {"session": "s2", "model": "claude-haiku-4-5-20251001",
+             "input_tokens": 50, "output_tokens": 5, "cache_read_tokens": 1,
+             "cache_write_tokens": 1, "cost_microusd": 500, "priced": True},
+            {"session": "s2", "model": "custom-model",
+             "input_tokens": 30, "output_tokens": 3, "cache_read_tokens": 0,
+             "cache_write_tokens": 0, "cost_microusd": 0, "priced": False},
+        ]
+
+    def test_joins_per_session_and_per_model_with_summed_totals(self):
+        os.environ["AGENTPROF_BIN"] = make_agentprof_stub(
+            self.tmp, json.dumps(self._two_session_rows()))
+
+        spend = workboard.compute_spend(self.tmp, {"s1", "s2"})
+
+        self.assertIs(spend["available"], True)
+        self.assertIsNone(spend["reason"])
+
+        # per-session: session total is the sum of its model costs
+        self.assertEqual(spend["by_session"]["s1"]["cost_microusd"], 6000)
+        haiku_s1 = spend["by_session"]["s1"]["models"][
+            "claude-haiku-4-5-20251001"]
+        self.assertEqual(haiku_s1["input_tokens"], 100)
+        self.assertIs(haiku_s1["priced"], True)
+        unpriced = spend["by_session"]["s2"]["models"]["custom-model"]
+        self.assertIs(unpriced["priced"], False)
+        self.assertEqual(unpriced["cost_microusd"], 0)
+
+        # per-model: aggregated over every joined session
+        by_model = {m["model"]: m for m in spend["by_model"]}
+        self.assertEqual(by_model["claude-haiku-4-5-20251001"]["input_tokens"],
+                         150)
+        self.assertEqual(by_model["claude-haiku-4-5-20251001"]["output_tokens"],
+                         15)
+        self.assertEqual(by_model["claude-haiku-4-5-20251001"]["cost_microusd"],
+                         1500)
+        self.assertIs(by_model["claude-haiku-4-5-20251001"]["priced"], True)
+        self.assertIs(by_model["custom-model"]["priced"], False)
+
+    def test_priced_true_if_any_contributing_row_priced(self):
+        rows = [
+            {"session": "s1", "model": "m", "input_tokens": 1, "output_tokens": 1,
+             "cache_read_tokens": 0, "cache_write_tokens": 0,
+             "cost_microusd": 0, "priced": False},
+            {"session": "s2", "model": "m", "input_tokens": 1, "output_tokens": 1,
+             "cache_read_tokens": 0, "cache_write_tokens": 0,
+             "cost_microusd": 7, "priced": True},
+        ]
+        os.environ["AGENTPROF_BIN"] = make_agentprof_stub(
+            self.tmp, json.dumps(rows))
+
+        spend = workboard.compute_spend(self.tmp, {"s1", "s2"})
+
+        by_model = {m["model"]: m for m in spend["by_model"]}
+        self.assertIs(by_model["m"]["priced"], True)
+
+    def test_rows_for_unassembled_sessions_are_dropped(self):
+        rows = self._two_session_rows() + [
+            {"session": "s3", "model": "claude-haiku-4-5-20251001",
+             "input_tokens": 9999, "output_tokens": 9999,
+             "cache_read_tokens": 0, "cache_write_tokens": 0,
+             "cost_microusd": 9999, "priced": True},
+        ]
+        os.environ["AGENTPROF_BIN"] = make_agentprof_stub(
+            self.tmp, json.dumps(rows))
+
+        spend = workboard.compute_spend(self.tmp, {"s1", "s2"})
+
+        self.assertNotIn("s3", spend["by_session"])
+        by_model = {m["model"]: m for m in spend["by_model"]}
+        # s3's 9999 must not leak into the haiku aggregate
+        self.assertEqual(by_model["claude-haiku-4-5-20251001"]["cost_microusd"],
+                         1500)
+
+    def test_missing_binary_yields_unavailable_without_exception(self):
+        os.environ["AGENTPROF_BIN"] = "/nonexistent/agentprof"
+
+        spend = workboard.compute_spend(self.tmp, {"s1"})
+
+        self.assertIs(spend["available"], False)
+        self.assertTrue(spend["reason"])
+        self.assertEqual(spend["by_model"], [])
+        self.assertEqual(spend["by_session"], {})
+
+    def test_invalid_json_yields_unavailable(self):
+        os.environ["AGENTPROF_BIN"] = make_agentprof_stub(
+            self.tmp, "this is not json {")
+
+        spend = workboard.compute_spend(self.tmp, {"s1"})
+
+        self.assertIs(spend["available"], False)
+        self.assertTrue(spend["reason"])
+        self.assertEqual(spend["by_model"], [])
+
+    def test_invokes_binary_with_pinned_argv(self):
+        argv_out = self.tmp / "argv.txt"
+        os.environ["AGENTPROF_BIN"] = make_agentprof_stub(
+            self.tmp, json.dumps([]), argv_out=argv_out)
+        claude_dir = self.tmp / "claude-home"
+
+        workboard.compute_spend(claude_dir, {"s1"})
+
+        argv = argv_out.read_text().splitlines()
+        self.assertEqual(
+            argv,
+            ["claude", "-o", "summary", "--days", "3650",
+             "--claude-dir", str(claude_dir)])
+
+
 if __name__ == "__main__":
     unittest.main()
