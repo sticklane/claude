@@ -73,3 +73,8 @@ concepts/identifiers, never chase a `diff → no output` result.
 - [x] `grep -ci 'group:' antigravity/.agents/skills/breakdown/SKILL.md`
       → ≥ 1
       → 6
+
+## Discovered
+
+- `antigravity/.agents/skills/breakdown/SKILL.md`'s "Hand off" section still says "its group throughput mode hands you concurrent Agent Manager launches" — stale after this task renamed that mode to the rolling window in drain.md. See specs/drain-rolling-window/tasks/09-fix-stale-group-mode-antigravity-handoff.md.
+- Task 05's own acceptance criterion hard-coded the pre-task plugin.json version as `0.8.14`, but main had already advanced to `0.8.15` from a sibling task's bump by the time this task ran — a version-bump criterion pinning an exact pre-value can go stale when sibling tasks bump the same file first. See specs/drain-rolling-window/tasks/10-version-bump-criteria-use-relative-check.md.
