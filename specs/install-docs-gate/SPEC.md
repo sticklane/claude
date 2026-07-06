@@ -107,3 +107,11 @@ Commands section already documents — no separate wiring). It checks:
 ## Open questions
 
 (none)
+
+## Parallelization
+
+- Single task (01-install-docs-consistency-test.md) — R1–R6 all land in
+  one new file (`tests/test_install_docs.sh`) with one shared design
+  decision (the `$1` repo-root seam every check resolves paths through),
+  so there is no disjoint-Touch group to parallelize. Run via `/build`
+  or `/drain` as a lone task.
