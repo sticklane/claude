@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 10 turns
@@ -59,9 +59,12 @@ side of the same grammar).
 
 ## Acceptance
 
-- [ ] `grep -c '^- Group:' .claude/skills/breakdown/SKILL.md` → ≥ 1
-- [ ] `grep -c 'decision.coupling\|decision-coupling' .claude/skills/breakdown/SKILL.md`
+- [x] `grep -c '^- Group:' .claude/skills/breakdown/SKILL.md` → ≥ 1
+      — verifier: returned `2` (evidence/02-breakdown-group-grammar.md).
+- [x] `grep -c 'decision.coupling\|decision-coupling' .claude/skills/breakdown/SKILL.md`
       → ≥ 1 (the judgment test survives)
-- [ ] The worked example's task numbers are two-digit and comma-space
+      — verifier: returned `1`; decision-coupling paragraph preserved.
+- [x] The worked example's task numbers are two-digit and comma-space
       separated: `grep -n '^- Group: [0-9][0-9], [0-9][0-9]' .claude/skills/breakdown/SKILL.md`
       → at least one match
+      — verifier: matched at lines 106–107 (`- Group: 02, 03` / `05, 06`).
