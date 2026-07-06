@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P0
 Budget: 6 turns
@@ -47,8 +47,8 @@ touched by this task.
 
 ## Acceptance
 
-- [ ] `[ "$(grep -c 'at each completed TDD step' .claude/skills/drain/reference.md)" -eq 2 ]` → true (Worker prompt + Headless fallback)
-- [ ] `[ "$(grep -c 'before spawning any verifier' .claude/skills/drain/reference.md)" -eq 1 ]` → true (Worker prompt only)
-- [ ] `grep -q '"version"' .claude-plugin/plugin.json && ! grep -q '"version": "0.8.8"' .claude-plugin/plugin.json` → version bumped from spec-time 0.8.8 (adjust mentally if the base moved; the point is a bump lands with this spec)
-- [ ] `claude plugin validate .` → green
-- [ ] `./specs/status.sh` → parses, no errors
+- [x] `[ "$(grep -c 'at each completed TDD step' .claude/skills/drain/reference.md)" -eq 2 ]` → true (Worker prompt + Headless fallback) — verifier: grep -c = 2 (reference.md lines 253, 499); evidence/03-worker-commits-and-bump.md
+- [x] `[ "$(grep -c 'before spawning any verifier' .claude/skills/drain/reference.md)" -eq 1 ]` → true (Worker prompt only) — verifier: grep -c = 1 (line 255, Worker prompt only; absent from Headless block); evidence/03-worker-commits-and-bump.md
+- [x] `grep -q '"version"' .claude-plugin/plugin.json && ! grep -q '"version": "0.8.8"' .claude-plugin/plugin.json` → version bumped from spec-time 0.8.8 (adjust mentally if the base moved; the point is a bump lands with this spec) — verifier: version = 0.8.15 (one patch above pre-task 0.8.14); evidence/03-worker-commits-and-bump.md
+- [x] `claude plugin validate .` → green — verifier: exit 0, "✔ Validation passed"; evidence/03-worker-commits-and-bump.md
+- [x] `./specs/status.sh` → parses, no errors — verifier: exit 0, parsed 41 tasks / 10 specs, no errors; evidence/03-worker-commits-and-bump.md
