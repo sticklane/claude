@@ -86,3 +86,7 @@ before assuming a runner edit is needed) and `evals/breakdown/`.
       → match
       Evidence: grep exit 0 (setup.sh writes `Parallel-window: 2` into
       specs/demo/SPEC.md).
+
+## Discovered
+
+- `evals/run.sh` invokes assert/setup scripts with bare `bash`, but macOS ships bash 3.2 (no `declare -A` etc.) — see specs/drain-rolling-window/tasks/11-evals-runner-bash-32-compat-note.md
