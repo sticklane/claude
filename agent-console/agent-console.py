@@ -17,6 +17,7 @@ Env: SKILLS_DASHBOARD_PORT (8899), SKILLS_DASHBOARD_HOST (127.0.0.1)
 
 from __future__ import annotations
 
+import hashlib
 import html
 import importlib.util
 import json
@@ -306,7 +307,7 @@ def collect() -> dict:
 # Workboard collection
 # --------------------------------------------------------------------------- #
 BOARD_TTL = 45  # seconds; kept above the 25s client refresh so it serves cache
-_board_cache: dict = {"ts": 0.0, "data": None}
+_board_cache: dict = {"ts": 0.0, "data": None, "registry": None}
 _board_lock = threading.Lock()
 # GitHub repo visibility (public/private), fetched once via `gh` and cached long
 # — this is the only part of the tool that touches the network.
@@ -730,8 +731,74 @@ def get_board() -> dict:
         )
         running_agents, resumable_agents = agents_view()
         data = _adapt_board(assembled, running_agents, resumable_agents)
-        _board_cache.update(ts=time.time(), data=data)
+        registry = build_entity_registry(assembled)
+        _board_cache.update(ts=time.time(), data=data, registry=registry)
         return data
+
+
+# Detail-view id contract, shared with the workboard-actions queue: id =
+# truncated hex sha256 of `kind + "\0" + canonical-target-path`, so it is
+# stable across rescans of unchanged state and never derived from client input.
+_ENTITY_ID_LEN = 16
+
+
+def _entity_id(kind: str, target_path: str) -> str:
+    canonical = os.path.realpath(target_path)
+    digest = hashlib.sha256(f"{kind}\0{canonical}".encode("utf-8")).hexdigest()
+    return digest[:_ENTITY_ID_LEN]
+
+
+def build_entity_registry(assembled: dict) -> dict:
+    """Map id -> {id, kind, path, title} for every file the board references:
+    each repo CLAUDE.md, each SPEC.md, each task file, each handoff, plus a
+    targeted listing of every spec's evidence/ dir. Built from assemble() data
+    so it costs no extra scan; keyed by id, so one file yields exactly one id."""
+    registry: dict = {}
+
+    def add(kind: str, path: str, title: str = "") -> None:
+        real = os.path.realpath(path)
+        eid = _entity_id(kind, real)
+        registry.setdefault(eid, {"id": eid, "kind": kind, "path": real, "title": title})
+
+    for repo in assembled.get("repos", []):
+        root = repo.get("path") or ""
+        if not root:
+            continue
+        add("file", os.path.join(root, "CLAUDE.md"), "CLAUDE.md")
+        for spec in repo.get("specs", []):
+            spath = spec.get("path") or ""
+            spec_abs = spath if os.path.isabs(spath) else os.path.join(root, spath)
+            if spec_abs.endswith(".md"):  # toolkit SPEC.md; Kiro specs are dirs
+                add("file", spec_abs, spec.get("title", ""))
+            for task in spec.get("tasks", []):
+                tabs = task.get("abs")
+                if not tabs and task.get("file"):
+                    tabs = os.path.join(root, task["file"])
+                if tabs:
+                    add("file", tabs, task.get("title", ""))
+            evidence_dir = os.path.join(os.path.dirname(spec_abs), "evidence")
+            try:
+                names = sorted(os.listdir(evidence_dir))
+            except OSError:
+                names = []
+            for name in names:
+                if name.endswith(".md"):
+                    add("file", os.path.join(evidence_dir, name), name)
+        for handoff in repo.get("handoffs", []):
+            hpath = handoff.get("path") or ""
+            if not hpath:
+                continue
+            habs = hpath if os.path.isabs(hpath) else os.path.join(root, hpath)
+            add("file", habs, handoff.get("title", ""))
+    return registry
+
+
+def get_registry() -> dict:
+    """The entity registry for the current board, doing the lazy first scan via
+    get_board() (so a deep link before any scan resolves, not 404s) and serving
+    the cache within the TTL window — never an extra workboard.assemble call."""
+    get_board()
+    return _board_cache.get("registry") or {}
 
 
 # --------------------------------------------------------------------------- #
@@ -756,6 +823,71 @@ def _dt(ts: float) -> str:
 
 def esc(s) -> str:
     return html.escape(str(s))
+
+
+def render_markdown(text: str) -> str:
+    """Minimal, dependency-free markdown → HTML: headings, fenced code, and
+    dash/star lists; everything else is an escaped paragraph. Every text run is
+    HTML-escaped, so file contents can never inject markup."""
+    out: list[str] = []
+    in_code = False
+    in_list = False
+
+    def close_list() -> None:
+        nonlocal in_list
+        if in_list:
+            out.append("</ul>")
+            in_list = False
+
+    for line in text.split("\n"):
+        if line.lstrip().startswith("```"):
+            if in_code:
+                out.append("</code></pre>")
+            else:
+                close_list()
+                out.append("<pre><code>")
+            in_code = not in_code
+            continue
+        if in_code:
+            out.append(esc(line))
+            continue
+        heading = re.match(r"^(#{1,6})\s+(.*)$", line)
+        if heading:
+            close_list()
+            level = len(heading.group(1))
+            out.append(f"<h{level}>{esc(heading.group(2).strip())}</h{level}>")
+            continue
+        item = re.match(r"^\s*[-*]\s+(.*)$", line)
+        if item:
+            if not in_list:
+                out.append("<ul>")
+                in_list = True
+            out.append(f"<li>{esc(item.group(1).strip())}</li>")
+            continue
+        close_list()
+        if line.strip():
+            out.append(f"<p>{esc(line)}</p>")
+    if in_code:
+        out.append("</code></pre>")
+    close_list()
+    return "\n".join(out)
+
+
+def render_detail_page(title: str, body_html: str) -> str:
+    """Chrome shared by every detail view: a back-to-board link, the last scan
+    timestamp, and the rendered body."""
+    scanned = _dt(_board_cache.get("ts") or 0)
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Console — {esc(title)}</title><style>{CSS}</style></head><body>
+<header><div class="masthead">
+  <div class="wordmark">Agent<span class="dot">·</span>Console</div>
+  <nav class="tabs"><a href="/workboard">&larr; Board</a></nav>
+</div></header>
+<main><div class="eyebrow"><span class="key" style="color:var(--text)">{esc(title)}</span>
+<span class="rule"></span><span class="mono">scanned {esc(scanned)}</span></div>
+<article class="card">{body_html}</article></main>
+</body></html>"""
 
 
 def _prio_select(path: str, current: str) -> str:
@@ -1601,13 +1733,30 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _host_allowed(self) -> bool:
+        """The Host header names a loopback origin (127.0.0.1, localhost, ::1).
+        Guards every route against DNS-rebinding; shared by GET and POST."""
+        raw = (self.headers.get("Host") or "").strip()
+        if raw.startswith("["):  # bracketed IPv6, e.g. [::1]:8899
+            host = raw[1 : raw.index("]")] if "]" in raw else raw[1:]
+        elif raw.count(":") == 1:  # host:port
+            host = raw.rsplit(":", 1)[0]
+        else:
+            host = raw
+        return host in ("127.0.0.1", "localhost", "::1")
+
     def do_GET(self):
+        if not self._host_allowed():
+            self._send(b"bad host", "text/plain", 400)
+            return
         path = self.path.split("?", 1)[0]
         try:
             if path in ("/", "/index.html"):
                 self._send(render_skills(collect()).encode("utf-8"))
             elif path == "/workboard":
                 self._send(render_workboard(get_board()).encode("utf-8"))
+            elif path.startswith("/file/"):
+                self._serve_file(path[len("/file/") :])
             elif path == "/healthz":
                 self._send(b"ok", "text/plain")
             else:
@@ -1617,12 +1766,32 @@ class Handler(BaseHTTPRequestHandler):
                 f"<pre>dashboard error: {esc(exc)}</pre>".encode("utf-8"), code=500
             )
 
+    def _serve_file(self, entity_id: str) -> None:
+        """Read-only view of a registry file. The path comes only from the
+        registry (keyed by id), so a client can never steer it — an unknown id
+        or `../` segment is just a missing key and 404s."""
+        entry = get_registry().get(entity_id)
+        if not entry:
+            self._send(b"not found", "text/plain", 404)
+            return
+        try:
+            with open(entry["path"], encoding="utf-8", errors="replace") as fh:
+                content = fh.read()
+        except OSError:
+            self._send(b"not found", "text/plain", 404)
+            return
+        title = entry.get("title") or os.path.basename(entry["path"])
+        if entry["path"].endswith(".md"):
+            body = render_markdown(content)
+        else:
+            body = f"<pre>{esc(content)}</pre>"
+        self._send(render_detail_page(title, body).encode("utf-8"))
+
     # --- writes / control ---------------------------------------------------
     def _reject_cross_origin(self) -> bool:
         """True (and sends 403) if the request isn't a same-origin localhost
         POST carrying the CSRF token. Blocks CSRF and DNS-rebinding."""
-        host = (self.headers.get("Host") or "").split(":")[0]
-        if host not in ("127.0.0.1", "localhost"):
+        if not self._host_allowed():
             self._send(b"bad host", "text/plain", 403)
             return True
         origin = self.headers.get("Origin")
