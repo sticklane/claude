@@ -21,6 +21,19 @@ list_specs = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(list_specs)
 
 
+def find_repo_root():
+    """Walk up from this file to the first directory containing .git.
+
+    Location-independent on purpose: this file is byte-copied into the
+    antigravity mirror one directory deeper, so a fixed parent count
+    would resolve to the wrong root there.
+    """
+    for parent in Path(__file__).resolve().parents:
+        if (parent / ".git").exists():
+            return parent
+    raise RuntimeError("no .git directory found above test file")
+
+
 def write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
@@ -258,7 +271,7 @@ class CliSubprocessTestCase(unittest.TestCase):
         self.assertIn("no specs/", result.stdout.lower())
 
     def test_this_repo_produces_table_no_archive_rows_no_crash(self):
-        repo_root = Path(__file__).resolve().parents[3]
+        repo_root = find_repo_root()
         result = subprocess.run(
             [sys.executable, str(_SCRIPT)],
             cwd=str(repo_root),
