@@ -13,7 +13,10 @@ single self-contained HTML snapshot of all open work:
                     (repo, branch, first prompt, last activity, live PID)
   - git             branch, dirty files, unpushed commits, worktrees
 
-Stdlib only. Read-only: it never mutates any of the state it reports on.
+Stdlib only. Read-only: it never mutates any of the state it reports on,
+except two explicit, --flag-gated actions: `--abandon`/`--abandon-stale`
+(Antigravity skip-marker) and `--prune-stale-sessions` (deletes dead-pid
+~/.claude/sessions/*.json records).
 
 Usage:
   workboard.py [ROOTS ...] [--out workboard.html] [--json] [--stale-days 7]
@@ -722,6 +725,33 @@ def _live_session_ids_from_pids(claude_home):
     return live
 
 
+def prune_stale_session_pids(claude_home):
+    """Delete ~/.claude/sessions/*.json records whose pid is no longer
+    alive. These accumulate forever otherwise: the liveness scan above
+    already filters dead ones out of its own output, but never removes the
+    file. Malformed records (unreadable JSON, missing/non-int pid) are left
+    untouched rather than guessed at. Returns (removed, kept): removed is
+    the sorted list of deleted records' sessionId (or filename if absent);
+    kept is the count of records left in place."""
+    sess_dir = claude_home / "sessions"
+    if not sess_dir.is_dir():
+        return [], 0
+    removed, kept = [], 0
+    for f in sess_dir.glob("*.json"):
+        try:
+            rec = json.loads(read_text(f, 10_000))
+        except json.JSONDecodeError:
+            kept += 1
+            continue
+        pid = rec.get("pid")
+        if isinstance(pid, int) and not pid_alive(pid):
+            removed.append(rec.get("sessionId") or f.name)
+            f.unlink()
+        else:
+            kept += 1
+    return sorted(removed), kept
+
+
 def live_session_ids(claude_home):
     """sessionIds with a live Claude Code process.
 
@@ -1238,8 +1268,16 @@ def compute_spend(claude_home, session_ids):
     binary = _locate_agentprof()
     try:
         proc = subprocess.run(
-            [binary, "claude", "-o", "summary", "--days", "3650",
-             "--claude-dir", str(claude_home)],
+            [
+                binary,
+                "claude",
+                "-o",
+                "summary",
+                "--days",
+                "3650",
+                "--claude-dir",
+                str(claude_home),
+            ],
             capture_output=True,
             text=True,
             timeout=SPEND_TIMEOUT_SEC,
@@ -1254,8 +1292,7 @@ def compute_spend(claude_home, session_ids):
     if proc.returncode != 0:
         detail = (proc.stderr or "").strip().splitlines()
         return _unavailable_spend(
-            f"agentprof exited {proc.returncode}"
-            + (f": {detail[0]}" if detail else "")
+            f"agentprof exited {proc.returncode}" + (f": {detail[0]}" if detail else "")
         )
     try:
         rows = json.loads(proc.stdout)
@@ -1304,7 +1341,7 @@ def _short_model_name(model_id):
     `-YYYYMMDD` date; ids not matching that shape render verbatim."""
     name = model_id
     if name.startswith("claude-"):
-        name = name[len("claude-"):]
+        name = name[len("claude-") :]
     return _MODEL_DATE_RE.sub("", name)
 
 
@@ -1380,8 +1417,12 @@ def render_spend_section(spend):
     )
 
 
+def default_claude_home():
+    return Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
+
+
 def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFAULT):
-    claude_home = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
+    claude_home = default_claude_home()
     sessions = scan_sessions(claude_home, stale_days)
 
     # every repo a session touched joins the scan set; the git toplevel is
@@ -2235,6 +2276,11 @@ def main():
         action="store_true",
         help="abandon every stale Antigravity conversation, then rescan",
     )
+    ap.add_argument(
+        "--prune-stale-sessions",
+        action="store_true",
+        help="delete ~/.claude/sessions/*.json records whose pid is dead, then rescan",
+    )
     args = ap.parse_args()
 
     if args.abandon:
@@ -2248,6 +2294,11 @@ def main():
     if args.abandon_stale:
         for cid in abandon_stale(args.stale_days):
             print(f"abandoned (stale): {cid}", file=sys.stderr)
+    if args.prune_stale_sessions:
+        removed, kept = prune_stale_session_pids(default_claude_home())
+        for sid in removed:
+            print(f"pruned dead-pid session record: {sid}", file=sys.stderr)
+        print(f"pruned {len(removed)}, kept {kept}", file=sys.stderr)
 
     roots = [Path(r) for r in args.roots] if args.roots else default_roots()
     data = assemble(
