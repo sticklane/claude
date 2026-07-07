@@ -2,6 +2,7 @@
 name: implementation-worker
 description: Unattended TDD implementation worker for /drain and /build dispatch. The dispatch prompt is self-contained (task file, procedure, defer contract) — this agent exists to pin the dispatch tier structurally, independent of whatever model the calling session happens to be running.
 tools: "*"
+disallowedTools: AskUserQuestion, EnterPlanMode, ExitPlanMode
 model: opus
 ---
 
