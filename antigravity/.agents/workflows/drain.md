@@ -138,7 +138,13 @@ this sweep.
    > branch at each completed TDD step (test → feat → refactor) rather than
    > holding one squashed commit for close-out, and always commit the full
    > implementation before spawning any verifier or review pass — never hold
-   > the full implementation uncommitted at close-out. The task file's Budget: line is a
+   > the full implementation uncommitted at close-out. If the build
+   > procedure spawns a simplification, cleanup, or review sub-reviewer as
+   > a separate background agent, do NOT block waiting on a notification
+   > from it — a sub-agent's result may not route back to you. Run that
+   > pass inline, or if you fan it out, read its output directly rather
+   > than awaiting a notification, then finish close-out and deliver your
+   > verdict. The task file's Budget: line is a
    > ceiling, not a target: when remaining work clearly exceeds the
    > remaining budget, stop with verdict BLOCKED "over budget" rather
    > than grind on. If your worktree or branch disappears mid-run (an

@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Priority: P1
 Discovered-from: specs/precommit-review/tasks/03-workflow-mirror-and-bump.md
 Spec: ../SPEC.md
@@ -12,4 +12,5 @@ Decision (2026-07-06): confirmed gap — `antigravity/.agents/workflows/drain.md
 
 ## Acceptance
 
-- [ ] `grep -q 'sub-reviewer' antigravity/.agents/workflows/drain.md` → exits 0 (clause mirrored; currently 0 mentions)
+- [x] `grep -q 'sub-reviewer' antigravity/.agents/workflows/drain.md` → exits 0 (clause mirrored; currently 0 mentions)
+  - Evidence: verifier PASS — grep exits 0 (drain.md line 142); clause mirrored into the worker-dispatch blockquote, faithful to `.claude/skills/drain/reference.md:328-333`; sole change is `antigravity/.agents/workflows/drain.md` (7 ins, 1 del). See `specs/precommit-review/evidence/04-antigravity-drain-sub-reviewer-clause.md`.
