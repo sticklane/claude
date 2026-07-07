@@ -1,8 +1,9 @@
 # Unattended workers can't use the Workflow tool or `disable-model-invocation` skills
 
-When to read: authoring a task that will be drained/parallelized, or debugging
+When to read: authoring a task that will be drained/parallelized, debugging
 a worker that returned DEFERRED/BLOCKED on an acceptance criterion it "couldn't
-run."
+run," or smoke-testing a change to a gated skill (`/build`, `/drain`,
+`/autopilot`, `/evals`).
 
 ## The gotcha
 
@@ -28,3 +29,22 @@ panel e2e.
   this is satisfaction, not a DEFERRED.
 - Don't write a drain-able task whose ONLY path to green needs a tool the
   worker lacks with no such escape — it will DEFER and stall the queue.
+
+## Testing implication: you can't smoke-test a gated skill via Agent dispatch
+
+Confirmed 2026-07-06 (drain auto-breakdown feature): a `general-purpose`
+background agent — full tool access, explicitly instructed by a
+human-directed request to call `Skill(skill: "drain")` — hit a hard
+`InputValidationError`-style block, not a soft refusal. The
+`disable-model-invocation` gate is enforced at the tool-call layer
+regardless of who or what is asking; it doesn't matter that a human's
+instructions are what ultimately drove the call.
+
+Consequence: an in-session `Agent` dispatch can never exercise a gated
+skill's real invocation for a smoke test — it can only hand-walk the
+skill's written procedure step-by-step (which validates the *logic*, not
+that the actual `/command` invocation works end-to-end). To really exercise
+`/build`/`/drain`/`/autopilot`/`/evals`, use headless CLI
+(`claude -p "/drain ..."`, what `evals/run.sh` already does) or the human
+runs it directly. When reporting a smoke test's results, say plainly which
+kind you ran — the caveat matters for how much the PASS is worth.

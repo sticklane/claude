@@ -4,6 +4,8 @@ description: Adversarially review a spec, plan, or diff; high-signal findings on
 
 Use the critic skill (.agents/skills/critic/SKILL.md) and follow it exactly, applying it to whatever arguments follow the command. If no arguments were given and the skill needs a target, ask for it.
 
+If the target is a `SPEC.md`: on a READY verdict, write `Breakdown-ready: true` as a header line under the spec's title (above the first `##`) — this is the token drain reads to auto-invoke the breakdown workflow on specs with no `tasks/` yet. On NOT READY, remove a stale `Breakdown-ready:` line if one is present — a spec that regressed shouldn't keep an old authorization. Never write or remove this marker for a plan or diff target.
+
 ## Ultra path
 
 Antigravity has no Workflow tool and no runtime profile, so the ultra

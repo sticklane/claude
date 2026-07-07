@@ -75,8 +75,12 @@ Must be EMPTY before implementation starts.
 
 ## 4. Adversarial pass
 
-Spawn the `critic` agent on the spec file. Fix what it finds; repeat until it
-returns READY. This costs ~1% of what implementing an ambiguous spec costs.
+Invoke the `/critique` skill on the spec file (via the Skill tool) rather than
+spawning the critic agent directly — `/critique` is what stamps the spec's
+`Breakdown-ready: true` header once it reaches READY, the token step 5's
+self-chain and `/drain`'s auto-breakdown phase both rely on. Fix what it
+finds; re-invoke until READY. This costs ~1% of what implementing an
+ambiguous spec costs.
 
 ## 5. Hand off
 

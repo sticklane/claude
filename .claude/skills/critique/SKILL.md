@@ -14,11 +14,18 @@ SPEC.md or plan.
    here (e.g., "this spec feeds /breakdown; ambiguity is the enemy").
 2. Relay the verdict and findings verbatim in ranked order. Don't soften
    NOT READY.
-3. A reviewer told to find gaps will always find some: recommend fixing
+3. If the artifact is a `SPEC.md`: on READY, write `Breakdown-ready: true` as
+   a header line under the spec's title (above the first `##`) — this is the
+   token `/drain` reads to auto-invoke `/breakdown` on specs with no `tasks/`
+   yet (docs/human-gates.md has the rationale, cited not restated). On NOT
+   READY, remove a stale `Breakdown-ready:` line if one is present — a spec
+   that regressed shouldn't keep an old authorization. Never write or remove
+   this marker for a plan or diff target.
+4. A reviewer told to find gaps will always find some: recommend fixing
    findings that change behavior or block verification; flag style-level
    findings as optional. Apply fixes only if the user asks or the pipeline
    step you're in requires READY.
-4. After fixes, re-run the critic on the changed artifact — a critique you
+5. After fixes, re-run the critic on the changed artifact — a critique you
    didn't re-check is a claim, not a verification.
 
 ## Ultra path
@@ -32,8 +39,9 @@ profile carries the workflow-script template — this skill only points at it.
 Panel: 3–5 lens-diverse critics (correctness, security, verification-gaps,
 scope, cost-if-missed) run in parallel over the same artifact POINTER.
 Findings are deduped, then adversarially verified — a finding dies on a
-majority refute — before any relay. Ranking and the fix-recommendation rule
-above are unchanged.
+majority refute — before any relay. Ranking, the marker-write step, and the
+fix-recommendation rule above are unchanged — the panel still resolves to one
+verdict that step 3 acts on.
 
 Worth the 10×+ token cost only for pre-implementation specs, security-
 sensitive diffs, or an explicit "be thorough" ask. Never auto-triggered.
