@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Priority: P1
 Touch: antigravity/.agents/workflows/drain.md
 Discovered-from: specs/drain-sweep-preservation/tasks/03-worker-commits-and-bump.md
@@ -13,4 +13,5 @@ Decision (2026-07-06): yes — mirror the incremental-commit guidance from the d
 
 ## Acceptance
 
-- [ ] `grep -q 'each completed TDD step' antigravity/.agents/workflows/drain.md` → exits 0 (incremental-commit clause mirrored; currently absent)
+- [x] `grep -q 'each completed TDD step' antigravity/.agents/workflows/drain.md` → exits 0 (incremental-commit clause mirrored; currently absent)
+  - Evidence: grep exits 0; clause added inside the worker-prompt blockquote after "task/NN-<slug>, do not push", mirroring `.claude/skills/drain/reference.md`'s incremental-commit paragraph. Verifier report: specs/drain-sweep-preservation/evidence/04-antigravity-mirror-incremental-commit.md
