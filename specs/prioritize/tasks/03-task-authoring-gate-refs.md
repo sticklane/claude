@@ -1,4 +1,4 @@
-Status: deferred
+Status: pending
 Priority: P1
 Discovered-from: specs/prioritize/tasks/01-prioritize-scan-script.md
 Spec: ../SPEC.md
@@ -29,3 +29,10 @@ Decision (2026-07-06): confirmed — this repo has no top-level `scripts/check.s
   criterion 1 as satisfied by the line-69 fix alone, narrowing criterion
   1's grep to target line 69 only? Blocking: task 03's own DONE verdict —
   criterion 1 currently fails (exit 1) either way until this is resolved.
+
+## Answers
+
+- [2026-07-06] (a) — also edit line 73: drop the `bash ` so it reads
+  "names `scripts/check.sh`", preserving the note's meaning while letting
+  criterion 1's whole-file grep pass as literally written. Do not narrow
+  the grep.
