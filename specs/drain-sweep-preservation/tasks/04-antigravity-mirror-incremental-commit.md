@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Priority: P1
 Touch: antigravity/.agents/workflows/drain.md
 Discovered-from: specs/drain-sweep-preservation/tasks/03-worker-commits-and-bump.md
