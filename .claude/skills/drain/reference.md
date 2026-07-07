@@ -3,7 +3,8 @@
 Contents: When NOT to drain · Owner lease (DRAIN-OWNER.md format,
 liveness, reclaim) · Status field semantics · Stale-lock liveness
 check · Worker prompt · Deferred question format · Relaunch-with-evidence
-prompt · Tournament · Headless fallback · Baton pass (self-relaunch)
+prompt · Tournament · Headless fallback · Baton pass (self-relaunch) ·
+Auto-breakdown (lowest priority)
 
 Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt (workers return only a **verdict + evidence**), the
@@ -642,6 +643,8 @@ only the generation number, so this is how a fresh process proves it is
 the legitimate heir>
 Generation: <G+1>
 Spec: <repo-relative spec dir>
+Breakdown-failed: <comma-separated spec paths 3b attempted and failed this
+run, across every generation so far — absent or empty if none>
 
 ## Done / next
 <one line per completed task this run, then what's next>
@@ -650,6 +653,15 @@ Spec: <repo-relative spec dir>
 <anything the next generation should know — parked tasks, near-miss
 budgets, degradation triggers>
 ```
+
+`Breakdown-failed:` is how 3b's "at most once per spec per drain run"
+guarantee survives a generation boundary: 3b's attempted-set is otherwise
+in-session only, and a baton relaunch would discard it, letting a
+non-decomposable spec (still eligible — a failed attempt never clears its
+`Breakdown-ready:` marker) get re-attempted every generation. Each
+generation appends any spec it failed to this line (never removes one) and
+seeds its own in-session attempted-set from it on read (SKILL.md 3a's
+"Fresh-instance ritual (R1a)", step 2).
 
 The `Run-token:` line is the R2 baton-lineage exception's proof: the
 Owner-lease section's "Baton-lineage exception" adopts the existing
@@ -679,6 +691,107 @@ template above (still passing `<spec>`, the generation number, and the baton
 path as its argv tail). The e2e fixture (orchestrator-context task 05) points
 it at a recorder script to assert the relaunch argv without starting a real
 session.
+
+## Auto-breakdown (lowest priority)
+
+SKILL.md step 3b's eligibility predicate, invocation, and verify/commit
+procedure, in full.
+
+**Eligibility predicate.** A directory under drain's scope (the tree rooted
+at `$ARGUMENTS`, or all of `specs/` when `$ARGUMENTS` is empty — the same
+scope step 1's inventory uses) qualifies when ALL hold:
+
+- it contains a `SPEC.md`;
+- it has no `tasks/` directory, or `tasks/` exists but contains zero `.md`
+  files (this is `list_specs.py`'s own "no tasks/" classification — reuse
+  it, don't re-derive);
+- its `SPEC.md` carries a `Breakdown-ready: true` header line (single-line
+  `Key: value`, above the first `##`) — written by `/critique` on a READY
+  verdict against that file, or inherited transitively via `/idea`'s
+  adversarial-pass step, which now routes through `/critique`.
+
+`specs/archive/` is out of scope (archived specs are done, not pending
+breakdown) — the same exclusion `list_specs.py` already applies.
+
+**Ordering.** `Priority` header (absent = P2, ascending) then lexicographic
+spec-directory path — identical to step 2's tie-break, so a human reading
+both procedures sees one rule, not two.
+
+**Attempt budget.** At most one eligible spec per 3b pass (then drain loops
+to step 1, per SKILL.md), and at most one attempt per spec per drain run —
+including across baton generations, since a failed attempt never clears the
+spec's `Breakdown-ready:` marker and it would otherwise re-match eligibility
+forever. Track attempted-and-failed specs in-session; on a baton pass,
+append any newly-failed spec to `DRAIN-BATON.md`'s `Breakdown-failed:` line
+(Baton pass, above) so a relaunched generation inherits the exclusion on
+read, without writing anything into the spec itself.
+
+**Owner lease on the target spec.** A no-`tasks/` spec has never had a
+`DRAIN-OWNER.md`, so claim one for it using the exact "Owner lease" section
+above (write-if-absent, compare-and-swap re-read, refuse-on-lost-race —
+refusing here means skip to the next eligible spec, not abort the run) before
+invoking `/breakdown`. This is a SEPARATE lease from whatever this run
+already holds for the spec whose task queue it was dispatching when 3b
+fired — drain's scope can span multiple specs, and each spec's lease
+protects only that spec's directory. Release it (delete the file, committed)
+as soon as this spec's attempt concludes, success or failure; a spec with no
+task queue has nothing left for the lease to protect once breakdown either
+lands or fails.
+
+**Invocation.** Invoke the `/breakdown` skill on `specs/<slug>/SPEC.md` via
+the Skill tool, in-session (no worktree, no branch — `/breakdown` only
+writes markdown task files, so there is nothing to isolate). Let it run its
+own internal scouting and, per its own judgment, a sanity-check critic pass
+on nontrivial dependency structure — this call passes no extra flags beyond
+the spec path.
+
+**Verify before committing.** After `/breakdown` returns, run `git status
+--porcelain -- specs/<slug>` (path-scoped to the one spec — never a bare
+`git status`) and confirm every changed path is one of:
+
+- a new file under `specs/<slug>/tasks/*.md`;
+- an edit to `specs/<slug>/SPEC.md` that only appends a `## Parallelization`
+  section (breakdown's own convention for recording group structure).
+
+Any other changed path — anywhere in or outside the spec dir — is a failed
+attempt: run `git checkout -- <path>` / `git clean -f <path>` scoped to
+exactly the offending paths (never a bare `git clean -fd` on the whole
+tree), leave the spec un-broken-down, and record it as failed this run (no
+commit). A result with **zero** `tasks/*.md` files created (breakdown judged
+the spec not decomposable, errored, or produced nothing) is likewise a
+failed attempt, even if nothing else in the tree changed.
+
+**Commit.** On a clean result with at least one new `tasks/NN-*.md` file:
+`git add specs/<slug>/tasks/ specs/<slug>/SPEC.md` (path-scoped; the SPEC.md
+add is a no-op if breakdown didn't touch it) and commit
+`drain: auto-breakdown specs/<slug> (N tasks)`, then push per the standard
+guard (SKILL.md step 3). Loop to step 1 — the new `Status: pending` tasks
+are now ordinary inventory, subject to the same classification gate and
+dispatch tie-break as any other task; auto-breakdown is a source of new
+queue entries, not a bypass of how they're vetted or ordered.
+
+**Reporting.** A failed attempt is never persisted into the spec or the
+task-file layer — it lives only in this run's in-session attempted-set (and,
+across a baton pass, `DRAIN-BATON.md`'s `Breakdown-failed:` line, deleted
+along with the rest of the baton when the queue completes) — surfaced in
+SKILL.md step 4's final report. A human re-running `/breakdown` by hand, or
+amending the spec and re-running `/critique`, is the recovery path; drain
+itself never retries a spec it has already attempted this drain run.
+
+**Residual risk (accepted): stale marker after a post-READY edit.**
+`Breakdown-ready: true` authorizes decomposition of the `SPEC.md` content
+that existed WHEN the marker was written — nothing binds the marker to that
+content. If the spec is edited afterward (a human adds scope, an unrelated
+tool touches the file) without an explicit `/critique` re-run, the marker
+survives and 3b will auto-breakdown the CURRENT, un-reviewed content on its
+next pass. `/critique`'s own NOT READY path clears a stale marker
+(critique/SKILL.md step 3), but only when someone actually re-runs it —
+there is no automatic invalidation on edit, no content hash, no mtime check.
+This mirrors the Stale-lock liveness check's accepted residual risk above:
+the mitigation is procedural (re-critique after any post-READY edit, same
+discipline as re-running critique after fixing findings), not mechanical.
+Do NOT treat this as license to skip re-critiquing an edited spec before
+relying on auto-breakdown.
 
 **Background-dispatch verification (2026-07-03, recorded verbatim).** Mandatory
 pre-ship check per SPEC R1 — every existing headless template in the toolkit is

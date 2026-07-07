@@ -65,3 +65,20 @@ because their outputs are cheap, reversible, and already gated by the
 critic's READY verdict. As models improve, the playbook's own advice is
 to delete scaffolding — these gates are the part designed to be deleted
 last, and only ever by a human editing the frontmatter.
+
+/drain's own auto-breakdown phase (SKILL.md step 3b) is the one place a
+gated skill self-chains into an ungated one on its own initiative, at
+lowest priority, with no human present at that moment. It stays inside
+reason 2's line rather than crossing it because the READY verdict was
+never drain's own to grant: `/critique` (or `/idea`, transitively — both
+model-invocable, so this isn't necessarily a discrete human decision
+either) writes `Breakdown-ready: true` into a `SPEC.md` only on a READY
+verdict, in a separate, earlier invocation. Drain reads that persisted
+marker; it never classifies its own request for autonomy and then grants
+it — the gate is the READY verdict itself, already recorded on disk before
+drain ever looks, not a human's presence at the moment it looks. That gate
+has a known residual gap — a marker survives a spec edit made after the
+verdict, with no automatic invalidation (drain/reference.md, Auto-breakdown,
+"Residual risk (accepted)") — accepted the same way the stale-lock liveness
+check accepts its own false-sweep window: procedurally mitigated, not
+mechanically closed.

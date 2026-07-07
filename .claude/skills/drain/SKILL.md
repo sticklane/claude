@@ -1,6 +1,6 @@
 ---
 name: drain
-description: Works the remaining task queue unattended - dispatches one fresh worker per unblocked task in dependency order (or an independent group concurrently when the user asks for throughput), verifies and merges each, defers clarification questions instead of stopping, and batches them for the human when the queue runs dry. Runs until the queue is empty or only blocked work remains.
+description: Works the remaining task queue unattended - dispatches one fresh worker per unblocked task in dependency order (or an independent group concurrently when the user asks for throughput), verifies and merges each, defers clarification questions instead of stopping, and batches them for the human when the queue runs dry. At lowest priority, also auto-breaks-down critic-READY specs that have no tasks/ yet. Runs until the queue is empty or only blocked work remains.
 argument-hint: "[specs/<slug> or tasks directory]"
 disable-model-invocation: true
 ---
@@ -352,8 +352,10 @@ notice.
 
 ## 3a. Baton pass (self-relaunch)
 
-At each safe boundary (a verdict just recorded and committed) evaluate the relaunch **trigger**:
-a generation budget — hand off every 4 recorded verdicts this session (default; a
+At each safe boundary (a verdict just recorded and committed, or a 3b
+auto-breakdown attempt) evaluate the relaunch **trigger**:
+a generation budget — hand off every 4 recorded verdicts this session (an
+auto-breakdown attempt, success or failure, counts as one; default; a
 `Relaunch-every: N` header in the drained spec's SPEC.md header block overrides N) — or a
 **degradation override** on re-reading files already read, losing queue position, repeated
 failed corrections, or a compaction event. On fire: write the baton
@@ -368,18 +370,74 @@ baton + relaunch command instead of self-relaunching. **Fresh-instance ritual (R
 dispatch:** (1) reconcile `specs/<slug>/DRAIN-OWNER.md` against the baton
 — matching `Run-token:` and `Generation:` — before touching anything
 else; a mismatch means this generation is not the legitimate heir, so
-fall to step 1's refuse path instead of adopting, (2) read the baton,
-(3) read task files' `Status:` lines, (4) `git log --oneline
+fall to step 1's refuse path instead of adopting, (2) read the baton — seeding
+3b's in-session attempted-and-failed set from its `Breakdown-failed:` line, so
+a spec a prior generation already failed to auto-breakdown is not retried
+this generation either — (3) read task files' `Status:` lines, (4) `git log --oneline
 -15`, (5) run ONE cheap verification (project check or last-flipped task's acceptance command)
 to catch drift — only then dispatch. A headless generation reaching the batch interview writes
 its deferred questions into the baton as a needs-attention section and stops; the final
 generation deletes the baton when the queue completes.
 
+## 3b. Auto-breakdown (lowest priority)
+
+When step 1's inventory finds nothing dispatchable, nothing in-progress, and
+no parked tasks — the same trigger step 4 uses — check for **not-yet-broken-
+down specs** in scope before falling into the batch interview: a spec dir
+with a `SPEC.md`, no `tasks/` (or an empty one), and a `Breakdown-ready: true`
+header line — the token `/critique` writes on a READY verdict against a
+`SPEC.md` (`/idea` inherits it, since its adversarial pass now routes through
+`/critique` rather than the raw critic agent). This is genuinely the
+lowest-priority action drain takes: it only fires once real dispatch is
+exhausted, never displacing or reordering a pending task.
+
+Eligible specs are ordered by `Priority` header (absent = P2) then
+lexicographic spec path — the same tie-break as step 2. Attempt exactly one
+per pass, then loop back to step 1: new tasks may make higher-priority work
+dispatchable immediately, and re-scanning after each attempt keeps the
+ordering honest if a marker or `Priority` changed mid-run. Attempt each
+eligible spec **at most once per drain run — spanning every baton
+generation, not just this one:** a failed attempt is added to this
+generation's in-session attempted-and-failed set immediately, AND (since a
+failed spec's `Breakdown-ready:` marker is never cleared, so it stays
+eligible) survives a baton pass via `DRAIN-BATON.md`'s `Breakdown-failed:`
+line (reference.md, "Baton pass"), which the next generation reads before
+its first 3b pass. A spec that fails is left for the next `/drain`
+invocation (a fresh run, not a relaunch) or a human, never retried in a
+loop within one run (reference.md, "Auto-breakdown", has the exact
+eligibility predicate and verify/commit procedure).
+
+**Claim the target spec's owner lease first.** A spec with no `tasks/` yet
+has never had a `DRAIN-OWNER.md` written for it, so the chosen spec's lease
+is claimed exactly per step 1 (write it if absent, compare-and-swap re-read
+to confirm, refuse and skip to the next eligible spec on a lost race) before
+touching anything else — this is what stops two concurrent drains from
+racing to auto-breakdown the same spec. This lease is independent of
+whatever lease this run already holds for the spec whose tasks it was
+dispatching (drain's scope can span multiple specs); release it (delete,
+committed) once this spec's breakdown attempt concludes, success or
+failure — a no-tasks spec has no queue to keep the lease open for.
+
+Invoke `/breakdown specs/<slug>/SPEC.md` directly via the Skill tool —
+`/breakdown` carries no `disable-model-invocation` flag, so this is the same
+sanctioned in-session exception `/idea`'s self-chain already relies on (a
+light artifact stage that works from the spec file, not a code change
+needing worker isolation). Verify the result before committing — reference.md
+has the exact diff check — then commit path-scoped and push (guard in step
+3), and loop to step 1. Auto-created tasks land `Status: pending` exactly
+like human-run `/breakdown` output: they still pass through step 1's
+classification gate and step 2's ordinary dispatch/tie-break like any other
+task — auto-breakdown grants no exemption from either. A failed attempt
+(stray changes outside the expected paths, or zero tasks produced) is
+reported in step 4's final report, never persisted into the spec, and never
+retried this run.
+
 ## 4. The batch interview
 
-When nothing is dispatchable, nothing is running, AND no tasks are parked
-(inside their liveness window), the queue is either drained or waiting on
-humans. Before entering this interview, re-run the liveness check
+When nothing is dispatchable, nothing is running, no tasks are parked
+(inside their liveness window), AND 3b finds no eligible not-yet-broken-down
+spec, the queue is either drained or waiting on humans. Before entering this
+interview, re-run the liveness check
 (reference.md) on every parked task, sleeping out the remaining window when
 nothing else is dispatchable: a re-check that confirms death sweeps the run
 (preserving rescue branches), flips the task to `pending`, and sends drain
@@ -400,12 +458,17 @@ questions` blocks from those files only, and ask them all in one round
 - **Only blocked/failed remain**: report each blocker with its evidence
   and stop; those tasks need amending (back to /breakdown) or an attended
   /build.
+- **Specs that failed auto-breakdown this run** (3b): report each with its
+  failure reason (stray changes outside the expected paths, or zero tasks
+  produced) alongside the other blockers — these need a human `/breakdown`
+  or spec amendment, not a retry.
 
 Artifacts: drain mutates task files in the main checkout only (`Status`
 lines, `## Deferred questions`, `## Answers`, `## Progress`, and
 `Status: draft` stubs for discovered work), committing every mutation,
-and merges `task/NN-*` branches. Next pipeline step: /distill after a
-drained queue; answered questions loop back into step 1.
+merges `task/NN-*` branches, and — via 3b — invokes `/breakdown` to create
+new `tasks/NN-*.md` files for critic-READY specs. Next pipeline step:
+/distill after a drained queue; answered questions loop back into step 1.
 
 ## Ultra path
 

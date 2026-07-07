@@ -70,9 +70,13 @@ Must be EMPTY before implementation starts.
 
 ## 4. Adversarial pass
 
-Apply the critic skill to the spec (ideally in a fresh Agent Manager
-conversation for unbiased eyes). Fix what it finds; repeat until READY.
-This costs ~1% of what implementing an ambiguous spec costs.
+Apply the critique workflow's procedure (`.agents/workflows/critique.md`) to
+the spec, rather than the critic skill directly — the critique workflow is
+what stamps the spec's `Breakdown-ready: true` header once it reaches READY,
+the token step 5's hand-off and drain's auto-breakdown phase both rely on
+(ideally in a fresh Agent Manager conversation for unbiased eyes). Fix what
+it finds; repeat until READY. This costs ~1% of what implementing an
+ambiguous spec costs.
 
 ## 5. Hand off
 
