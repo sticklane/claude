@@ -6,9 +6,11 @@ description: Opens the live cross-repo dashboard of ALL open work on this machin
 Show the user every piece of open work on this machine and what needs a
 human decision, on the **live agent-console dashboard** — do not write a
 static HTML snapshot. Read-only: nothing here mutates the state it reports —
-the one explicit exception is the scanner's `--abandon` / `--abandon-stale`,
+the explicit exceptions are the scanner's `--abandon` / `--abandon-stale`,
 which write a `.workboard-abandoned` skip-marker into an Antigravity
-conversation dir (Antigravity's own artifacts are never touched).
+conversation dir (Antigravity's own artifacts are never touched), and
+`--prune-stale-sessions`, which deletes dead-pid `~/.claude/sessions/*.json`
+records (step 4).
 Design rationale and sources: the toolkit repo's docs/agent-dashboards.md —
 not shipped with installs.
 
@@ -68,6 +70,16 @@ For each inbox item the suggested-action column already names the move:
 - `stale` Antigravity conversation → resume it in the Agent Manager, or run
   the scanner's `--abandon <conv-id>` (or `--abandon-stale` for all) — the
   inbox row shows the exact command; both rescan after marking.
+
+## 4. Session hygiene (only if the user asks)
+
+Dead-pid `~/.claude/sessions/*.json` records (left behind by `claude`
+processes that exited) accumulate forever — the dashboard already filters
+them out of its own liveness view, but the files themselves persist
+untouched. `python3 <this skill dir>/workboard.py --prune-stale-sessions`
+deletes only records whose pid is confirmed dead, then rescans; malformed
+or unreadable records are left alone rather than guessed at. This is disk
+hygiene, not an inbox action — it never changes what the dashboard shows.
 
 The dashboard is live — it re-scans on every refresh, so there is nothing
 to regenerate. Next step: none — items route back into the
