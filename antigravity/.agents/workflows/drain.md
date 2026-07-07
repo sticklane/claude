@@ -134,7 +134,11 @@ this sweep.
    > procedure exactly, as written in <build-workflow-path>. Delegate
    > mechanical scouting to Haiku (`effort: low`) scouts. Work only
    > in this worktree, commit to
-   > task/NN-<slug>, do not push. The task file's Budget: line is a
+   > task/NN-<slug>, do not push. Commit incrementally: commit to the task
+   > branch at each completed TDD step (test → feat → refactor) rather than
+   > holding one squashed commit for close-out, and always commit the full
+   > implementation before spawning any verifier or review pass — never hold
+   > the full implementation uncommitted at close-out. The task file's Budget: line is a
    > ceiling, not a target: when remaining work clearly exceeds the
    > remaining budget, stop with verdict BLOCKED "over budget" rather
    > than grind on. If your worktree or branch disappears mid-run (an
