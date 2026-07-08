@@ -29,7 +29,11 @@ per foreign live session found. This is advisory only and never blocks
 dispatch — correctness comes from the owner lease claimed in step 1, not
 this sweep.
 
-1. **Inventory.** Read only each task file's header lines (`Status`,
+1. **Inventory.** Open this step by emitting
+   `<!-- agentprof:stage=inventory -->` verbatim each time you enter it —
+   agentprof reads it from this session's transcript to attribute
+   cost/tokens/time to the stage until the next stage marker.
+   Read only each task file's header lines (`Status`,
    `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies. `Budget`
    feeds the worker's over-budget stop; `Priority` is an optional
    tie-break (absent = P2). Dispatchable = `pending` with all
@@ -94,7 +98,10 @@ this sweep.
    blocked / handoff to human, step 5) deletes the owner file in a
    committed, path-scoped cleanup. Present the dispatch order.
 
-2. **Hand the user the next launch.** When several tasks are dispatchable
+2. **Hand the user the next launch.** Open this step by emitting
+   `<!-- agentprof:stage=dispatch -->` verbatim each time you enter it,
+   including each time step 3's loop sends you back here — not once per
+   session. When several tasks are dispatchable
    at once, apply the deterministic tie-break: dispatch lowest `Priority`
    value first (absent = P2), then greatest unblocking-power — the count
    of still-`pending` tasks whose `Depends on:` names this task, counted
@@ -128,7 +135,11 @@ this sweep.
    on that worktree
    with this prompt (fill the <>; resolve the build workflow to a
    concrete path, resolved at dispatch — `.agents/workflows/build.md` in
-   the repo — and substitute it for <build-workflow-path>):
+   the repo — and substitute it for <build-workflow-path>). Prepend
+   `<!-- agentprof:role=worker-attempt1 -->` as the first line of that
+   prompt — both the solo launch and any concurrent group-throughput launch
+   are attempt-1 and share this role value; agentprof reads it from the
+   launched agent's transcript to attribute the run to this dispatch role:
 
    > Execute the task in <task-file> following the build workflow's
    > procedure exactly, as written in <build-workflow-path>. Delegate
@@ -219,7 +230,11 @@ this sweep.
    unsatisfiable remainder and routes to the batch interview / final report
    (step 5) rather than waiting for a dispatch that can never come.
 
-3. **Collect.** DONE → before merging, re-run the append-only
+3. **Collect.** Open this step by emitting
+   `<!-- agentprof:stage=collect-verdict -->` verbatim each time you enter
+   it; it re-fires on every loop iteration, so a per-session emission would
+   misattribute later iterations.
+   DONE → before merging, re-run the append-only
    whitelist diff over `merge-base..branch`, path-scoped to every
    spec's tasks/ dir (`git diff $(git merge-base <default-branch>
 <branch>)..<branch> -- '*/tasks/*.md'`): changes only in the
@@ -262,7 +277,8 @@ this sweep.
    the picker, the frontier rung — a retry after a deep-tier (Pro-class)
    attempt failed), with the
    verifier's failure evidence — never the failed transcript — in the
-   prompt; a second miss routes into
+   prompt; prepend `<!-- agentprof:role=worker-relaunch -->` as the first
+   line of this relaunch prompt. A second miss routes into
    step 4's tournament instead of straight to `Status: failed`. DEFERRED → write
    the verdict's question into
    the main-checkout task file under `## Deferred questions`, set
@@ -325,7 +341,9 @@ this sweep.
    not transcripts. Then top up the window (step 2's top-up on verdict) —
    loop while anything is dispatchable and the window has a free slot.
 
-   **Baton pass (write the baton and stop).** At each safe boundary (a
+   **Baton pass (write the baton and stop).** Open this step by emitting
+   `<!-- agentprof:stage=baton-pass -->` verbatim each time you enter it.
+   At each safe boundary (a
    verdict just recorded and committed, or a 4a auto-breakdown attempt)
    evaluate the same relaunch trigger
    as `.claude`'s drain: a generation budget — every 4 recorded verdicts
@@ -390,7 +408,11 @@ this sweep.
      strict test-first — write all acceptance-shaped tests before any
      implementation; (t3) commit to `task/NN-<slug>-t3`, re-derive —
      reread the task's Goal and Spec reference and design from scratch,
-     ignoring the failed approach.
+     ignoring the failed approach. Prepend each entrant's own role marker
+     as the first line of its prompt:
+     `<!-- agentprof:role=worker-tournament-t1 -->` on t1,
+     `<!-- agentprof:role=worker-tournament-t2 -->` on t2, and
+     `<!-- agentprof:role=worker-tournament-t3 -->` on t3.
    - Filter: three independent verifier-skill runs per candidate —
      each inside that candidate's worktree, fresh eyes per run (no
      shared transcript), no evidence path passed — against the task's
@@ -491,7 +513,9 @@ layout` the winner's branch already carries the worker's evidence
    procedural (re-critique an edited spec before relying on
    auto-breakdown), not mechanical.
 
-5. **Batch interview.** Trigger only when nothing is dispatchable, nothing
+5. **Batch interview.** Open this step by emitting
+   `<!-- agentprof:stage=batch-interview -->` verbatim each time you enter
+   it. Trigger only when nothing is dispatchable, nothing
    is running, no tasks are parked, AND 4a finds no eligible
    not-yet-broken-down spec. First re-run the liveness check
    (step 1) on every parked task, sleeping out the remaining window when

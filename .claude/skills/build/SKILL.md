@@ -11,6 +11,10 @@ designed to run in a fresh session.
 
 ## 0. Load only the task
 
+Emit `<!-- agentprof:stage=load -->` verbatim as this step's opening line
+every time you enter it — agentprof reads it from this session's transcript
+to attribute cost/tokens/time to this stage until the next stage marker.
+
 **Startup session sweep (advisory).** Before reading the task, list other
 live sessions whose cwd resolves into this repo — drain's mechanism
 (`claude agents --json`, pid-record fallback; drain/SKILL.md's "Startup
@@ -36,6 +40,9 @@ user whether to proceed rather than risk racing a live drain run.
 
 ## 1. Plan proportionally
 
+Emit `<!-- agentprof:stage=plan -->` verbatim as this step's opening line
+every time you enter it.
+
 - Diff describable in one sentence → skip planning, implement.
 - Otherwise → write a short plan (files to change, in what order, what could
   go wrong) as a comment block in the task file, placed below the header lines
@@ -47,6 +54,9 @@ user whether to proceed rather than risk racing a live drain run.
 
 ## 2. Implement, verification-first
 
+Emit `<!-- agentprof:stage=implement -->` verbatim as this step's opening
+line every time you enter it.
+
 - Where acceptance criteria are test-shaped: write the failing tests FIRST,
   run them, confirm they fail for the right reason, commit the tests, then
   implement until green — without modifying the tests.
@@ -56,6 +66,9 @@ user whether to proceed rather than risk racing a live drain run.
   suite every time.
 
 ## 3. Verify with fresh eyes
+
+Emit `<!-- agentprof:stage=verify -->` verbatim as this step's opening line
+every time you enter it.
 
 1. Run every acceptance command yourself; fix until all pass.
 2. Run the project's standard gates (build/lint/tests per CLAUDE.md).
@@ -79,6 +92,9 @@ user whether to proceed rather than risk racing a live drain run.
    session of thrashing.
 
 ## 4. Close out
+
+Emit `<!-- agentprof:stage=close-out -->` verbatim as this step's opening
+line every time you enter it.
 
 - Simplification pass over the code touched this session: run the bundled
   `/simplify` if available, otherwise apply its principles yourself — never

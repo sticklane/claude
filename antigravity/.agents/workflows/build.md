@@ -5,7 +5,11 @@ description: Execute one task file (or a small SPEC.md) end to end - scout, plan
 Execute the task file given after the command. This is the pipeline's inner
 loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
 
-1. **Load only the task.** Before reading the task, run a startup session
+1. **Load only the task.** Open this step by emitting
+   `<!-- agentprof:stage=load -->` verbatim each time you enter it —
+   agentprof reads it from this session's transcript to attribute
+   cost/tokens/time to the stage until the next stage marker.
+   Before reading the task, run a startup session
    sweep (advisory): check whether another live session's working
    directory is this same repo — the Agent Manager's session list, or
    whatever runtime session record is available; unavailable → one
@@ -25,7 +29,9 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    task has no runnable acceptance criteria, STOP and say it isn't
    agent-ready — don't improvise weaker criteria.
 
-2. **Plan proportionally.** Diff describable in one sentence → implement
+2. **Plan proportionally.** Open this step by emitting
+   `<!-- agentprof:stage=plan -->` verbatim each time you enter it.
+   Diff describable in one sentence → implement
    directly. Otherwise write the implementation plan (files to change, in
    what order, what could go wrong) as a comment block in the task file,
    placed below the header lines (never between them — dispatchers parse
@@ -35,14 +41,18 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    If the plan contradicts the task or reveals a missing decision, surface
    it rather than guessing.
 
-3. **Implement, verification-first.** Where acceptance criteria are
+3. **Implement, verification-first.** Open this step by emitting
+   `<!-- agentprof:stage=implement -->` verbatim each time you enter it.
+   Where acceptance criteria are
    test-shaped: write the failing tests FIRST, run them, confirm they fail
    for the right reason, commit the tests, then implement until green —
    without modifying the tests. Match the surrounding code's style; no
    drive-by refactors. Run the narrowest relevant test after each
    meaningful change.
 
-4. **Verify with fresh eyes.** Run every acceptance command; fix until all
+4. **Verify with fresh eyes.** Open this step by emitting
+   `<!-- agentprof:stage=verify -->` verbatim each time you enter it.
+   Run every acceptance command; fix until all
    pass. Run the project's standard gates (per AGENTS.md). Then apply the
    verifier skill against the task file, passing an evidence file path
    derived from the task file's location: `specs/<slug>/tasks/<name>.md` →
@@ -58,7 +68,9 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    answer), or BLOCKED (stuck after the fix attempts) — rather than
    thrashing.
 
-5. **Close out.** Simplification pass over the code touched: never change
+5. **Close out.** Open this step by emitting
+   `<!-- agentprof:stage=close-out -->` verbatim each time you enter it.
+   Simplification pass over the code touched: never change
    what the code does, only how; remove comments describing obvious code,
    redundant abstractions, and defensive handling for impossible cases;
    re-run the acceptance commands after. Pre-commit review, one pass with
