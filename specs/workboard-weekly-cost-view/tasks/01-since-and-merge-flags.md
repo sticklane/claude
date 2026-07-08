@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -50,10 +50,13 @@ task 02 — leave `--summary` out entirely.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./...` → pass, including all R1/R2 fixture
-      tests listed in Steps 1.
-- [ ] `cd agentprof && go run . claude --since 2020-01-01T00:00:00Z --days 1 -o /tmp/wwcv-x` →
-      nonzero exit, stderr mentions both flags (R1).
-- [ ] `cd agentprof && go run . claude --since 2020-01-01T00:00:00Z -o /tmp/wwcv-x` →
-      exit 0 (R1).
-- [ ] `cd agentprof && gofmt -l . | wc -l` → 0.
+- [x] `cd agentprof && go test ./...` → pass, including all R1/R2 fixture
+      tests listed in Steps 1. (verifier: all 13 packages ok; merge overlap-drop,
+      empty-fresh-keep, all-evicted-empty, and since/merge usage-error tests
+      present and passing — evidence/01-since-and-merge-flags.md)
+- [x] `cd agentprof && go run . claude --since 2020-01-01T00:00:00Z --days 1 -o /tmp/wwcv-x` →
+      nonzero exit, stderr mentions both flags (R1). (verifier: exit status 2,
+      stderr "--since and --days are mutually exclusive" — evidence file)
+- [x] `cd agentprof && go run . claude --since 2020-01-01T00:00:00Z -o /tmp/wwcv-x` →
+      exit 0 (R1). (verifier: exit 0 — evidence file)
+- [x] `cd agentprof && gofmt -l . | wc -l` → 0. (verifier: 0 — evidence file)
