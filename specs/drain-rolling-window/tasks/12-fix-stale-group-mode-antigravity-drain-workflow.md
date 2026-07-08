@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Discovered-from: specs/drain-rolling-window/tasks/07-fix-stale-group-mode-reference.md
 Spec: ../SPEC.md
 Blocking: no
@@ -11,5 +11,5 @@ Decision (2026-07-06): apply the known fix — replace the stale phrasing at `an
 
 ## Acceptance
 
-- [ ] `! grep -q "drain's own group" antigravity/.agents/workflows/drain.md` → exits 0 (stale phrase gone; currently present at line 237)
-- [ ] `grep -q "rolling-window merges" antigravity/.agents/workflows/drain.md` → exits 0 (task 07's wording in place; currently absent)
+- [x] `! grep -q "drain's own group" antigravity/.agents/workflows/drain.md` → exits 0 (stale phrase gone; currently present at line 237) — verified: exit 0
+- [x] `grep -q "rolling-window merges" antigravity/.agents/workflows/drain.md` → exits 0 (task 07's wording in place; currently absent) — verified: exit 0
