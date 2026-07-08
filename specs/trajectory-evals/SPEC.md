@@ -6,7 +6,8 @@ Priority: P2
 ## Problem
 
 The evals runner grades artifacts only — "v1 grades artifacts only — what
-a run produced, not the trajectory it took" (`evals/SKILL.md`), a scope
+a run produced, not the trajectory it took"
+(`.claude/skills/evals/SKILL.md`), a scope
 decision recorded in `specs/archive/skill-evals/SPEC.md` ("Trajectory
 assertions (transcript greps) — v2, per scope decision"). Every
 `assert.sh` runs with CWD `$EVAL_DIR` and sees only produced files; the
@@ -40,7 +41,8 @@ touches it.
 - Typical assertions: expected dispatches present
   (`grep -q '"subagent_type":"scout"'`), banned patterns absent (no
   `Read` of a path the skill promises to delegate), gate steps reached.
-- `evals/SKILL.md` and `evals/reference.md` document the variable, the
+- `.claude/skills/evals/SKILL.md` and `.claude/skills/evals/reference.md`
+  document the variable, the
   opt-in stance, and one worked trajectory-assertion example; the "v1
   grades artifacts only" line is updated to name the v2 mechanism.
 
@@ -54,7 +56,8 @@ touches it.
 - R3: At least one committed scenario exercises a trajectory assertion
   (a new scenario for an existing evalset, asserting an expected dispatch
   or the absence of a banned pattern) and passes.
-- R4: `evals/SKILL.md` + `evals/reference.md` document `EVAL_TRANSCRIPT`,
+- R4: `.claude/skills/evals/SKILL.md` + `.claude/skills/evals/reference.md`
+  document `EVAL_TRANSCRIPT`,
   keep artifact assertions primary, and keep the ~10-line failure-message
   budget for trajectory failures too.
 - R5: The antigravity mirror (`antigravity/.agents/workflows/evals.md`)

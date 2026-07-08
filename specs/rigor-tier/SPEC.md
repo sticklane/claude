@@ -29,11 +29,21 @@ the same way `Priority:` is (single-line `Key: value` above the first
 `##`; absent = `production`):
 
 - `Rigor: production` (or absent) — today's behavior, unchanged.
-- `Rigor: prototype` — /build and /drain workers skip the TDD red-first
-  discipline and the verifier dispatch for tasks carrying it; they keep
-  commit hygiene, the acceptance-command check (the task's own runnable
-  criteria still must pass), and the untrusted-data rules. Workers state
-  in their close-out that prototype gates applied.
+- `Rigor: prototype` — the verifier is skipped at whichever locus
+  dispatches it. On the primary path that is the /build procedure
+  itself (attended /build, and drain's attempt-1/relaunch workers, who
+  run /build verbatim): the worker skips TDD red-first and its own
+  verifier spawn, substituting a mechanical run of the task's
+  acceptance commands, and reports DONE/BLOCKED on that signal — so
+  drain's verdict-driven routing (relaunch, merge) works unchanged.
+  Drain's orchestrator-owned mechanics are untouched on this path (the
+  pre-merge whitelist diff and project gates are already mechanical).
+  Only in the tournament path, where the orchestrator genuinely owns
+  the per-candidate verifier runs, does the ORCHESTRATOR substitute
+  acceptance-command runs for those verifier dispatches and rank on
+  them. Kept in all cases: commit hygiene, the task's runnable
+  acceptance criteria, and the untrusted-data rules. Workers state in
+  their close-out that prototype gates applied.
 
 Producers and consumers:
 
@@ -58,19 +68,24 @@ input to a normal production task, not as done work.
   spec it produces.
 - R3: /breakdown copies the spec's effective `Rigor:` onto each generated
   task file.
-- R4: /build and /drain worker instructions scale gates down for
-  `Rigor: prototype` exactly as the Solution defines — skip TDD red-first
-  and verifier dispatch; keep commit discipline and acceptance commands.
+- R4: Gate scaling lands at each gate's real locus — the /build
+  procedure (attended, and inside drain's attempt-1/relaunch workers)
+  skips TDD red-first and its own verifier spawn, substituting a
+  mechanical acceptance-command run for the verdict it reports; drain's
+  orchestrator substitutes the same only where it actually dispatches
+  verifiers (the tournament's per-candidate runs); the orchestrator's
+  mechanical pre-merge gate is unchanged. Commit discipline and
+  acceptance commands stay mandatory.
 - R5: /list-specs displays the tier per spec.
 - R6: The promotion rule appears in the skill text that consumes the
   header (/build and /drain), not only in this spec.
 - R7: quality-discipline.md gains one line scoping its TDD mandate to
   production-rigor work, citing this mechanism.
-- R8: Antigravity mirrors (`antigravity/.agents/workflows/{idea,breakdown,
-build,drain}.md` and the ported skills they reference) receive the
-  equivalent changes in the same commit, and `.claude-plugin/plugin.json`
-  is bumped; some task's `Touch:` must list these paths (CLAUDE.md's
-  mirroring convention).
+- R8: Antigravity mirrors (the idea, breakdown, build, and drain files
+  under `antigravity/.agents/workflows/` and the ported skills they
+  reference) receive the equivalent changes in the same commit, and
+  `.claude-plugin/plugin.json` is bumped; some task's `Touch:` must list
+  these paths (CLAUDE.md's mirroring convention).
 
 ## Out of scope
 
