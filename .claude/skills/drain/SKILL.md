@@ -42,6 +42,11 @@ this sweep.
 
 ## 1. Inventory
 
+Emit `<!-- agentprof:stage=inventory -->` verbatim as this step's opening
+line every time you enter it — agentprof reads it from this session's
+transcript to attribute cost/tokens/time to this stage until the next stage
+marker.
+
 Read only the header fields of each task file
 (`Status`, `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies;
 workers read their own task. `Budget` feeds the worker's over-budget stop
@@ -92,6 +97,10 @@ a dead run; rescue branches are forensic only). Full procedure in
 reference.md's Status field semantics.
 
 ## 2. Dispatch (a rolling window of W workers)
+
+Emit `<!-- agentprof:stage=dispatch -->` verbatim as this step's opening
+line every time you enter it, including each time step 3's loop sends you
+back here — not once per session.
 
 Every worker drain dispatches runs at the **implementation-worker tier pin**
 on attempt 1 (Claude default: `opus`; other runtimes map the pin in their
@@ -220,7 +229,12 @@ model the calling session runs, so this is never a per-dispatch reminder) with
 `isolation: worktree` using the worker prompt in [reference.md](reference.md) — the /build
 procedure plus the defer contract: **the worker never asks the human and
 never edits queue state; on ambiguity it stops with verdict DEFERRED and
-puts the exact question in its final message.** Wait for the completion
+puts the exact question in its final message.** Prepend
+`<!-- agentprof:role=worker-attempt1 -->` as the first line of that
+worker's prompt — both the single-worker launch and the concurrent
+group-throughput launch are attempt-1 and share this role value; agentprof
+reads the marker from the dispatched agent's own transcript to attribute
+that run to this dispatch role. Wait for the completion
 notification — do not poll. (No background agents available? reference.md
 has the headless fallback — a different, self-contained prompt. Headless
 workers, unlike /build workers, never flip the task's `Status: done`:
@@ -228,6 +242,10 @@ after a headless DONE verdict and the post-merge acceptance re-run, drain
 itself flips the status to `done` and commits the flip.)
 
 ## 3. Collect the verdict
+
+Emit `<!-- agentprof:stage=collect-verdict -->` verbatim as this step's
+opening line every time you enter it; it re-fires on every loop iteration,
+so a per-session emission would misattribute later iterations.
 
 - **DONE** — before merging, re-run the verifier's append-only
   whitelist diff over `merge-base..branch`, path-scoped to every spec's
@@ -266,7 +284,9 @@ itself flips the status to `done` and commits the flip.)
   (Claude default: `opus` → `fable` — a retry after a deep-tier attempt
   failed, the frontier-tier sanction in
   `.claude/rules/token-discipline.md`), with the verifier's failure
-  evidence — never the failed transcript — in the prompt. A second failure routes
+  evidence — never the failed transcript — in the prompt. Prepend
+  `<!-- agentprof:role=worker-relaunch -->` as the first line of this
+  relaunch prompt. A second failure routes
   into one tournament (at most one per task per drain run; procedure in
   reference.md "Tournament") instead of straight to `Status: failed`:
   sweep any leftover `task/NN-<slug>-t*` branches/worktrees, then dispatch
@@ -275,7 +295,11 @@ itself flips the status to `done` and commits the flip.)
   continuing at the tier the relaunch already justified, now run as 3
   concurrent angle-variant attempts instead of 1), `isolation: worktree`, each on its
   own `task/NN-<slug>-tN` branch with an angle-variant prompt carrying the
-  failure evidence from both prior attempts. If the tournament winner's
+  failure evidence from both prior attempts. Prepend each entrant's own
+  role marker as the first line of its prompt —
+  `<!-- agentprof:role=worker-tournament-t1 -->` on the t1 entrant,
+  `<!-- agentprof:role=worker-tournament-t2 -->` on t2, and
+  `<!-- agentprof:role=worker-tournament-t3 -->` on t3. If the tournament winner's
   merge fails, likewise run `git merge --abort` before moving to the
   next-ranked survivor. Log one line before dispatch:
   a tournament costs ~3 more worker runs. Skip it — straight to the
@@ -351,6 +375,9 @@ override in step 3a — hand off via the baton, don't wait for a human to
 notice.
 
 ## 3a. Baton pass (self-relaunch)
+
+Emit `<!-- agentprof:stage=baton-pass -->` verbatim as this step's opening
+line every time you enter it.
 
 At each safe boundary (a verdict just recorded and committed, or a 3b
 auto-breakdown attempt) evaluate the relaunch **trigger**:
@@ -433,6 +460,9 @@ reported in step 4's final report, never persisted into the spec, and never
 retried this run.
 
 ## 4. The batch interview
+
+Emit `<!-- agentprof:stage=batch-interview -->` verbatim as this step's
+opening line every time you enter it.
 
 When nothing is dispatchable, nothing is running, no tasks are parked
 (inside their liveness window), AND 3b finds no eligible not-yet-broken-down
