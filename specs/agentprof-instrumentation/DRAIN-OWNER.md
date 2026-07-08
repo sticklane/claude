@@ -1,5 +1,0 @@
-Run-token: cf81496ebd6ac8d4
-Host: stevens.mac.mini.lan
-Started: 2026-07-08T01:33:49Z
-Generation: 1
-Spec: specs/agentprof-instrumentation
