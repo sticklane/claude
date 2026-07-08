@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Discovered-from: specs/absorb-agent-tools/tasks/08-mirror-priority-re-to-antigravity.md
 Spec: ../SPEC.md
 Blocking: no
@@ -11,5 +11,12 @@ Decision (2026-07-06): intentionally ruff-conform the repo's Python files in ONE
 
 ## Acceptance
 
-- [ ] `ruff format --check .` → exits 0, "already formatted" for all repo Python files (currently 18 would be reformatted)
-- [ ] the reformat lands as a single style-only commit (`style: ...`) with no behavior changes; existing pytest suites stay green
+- [x] `ruff format --check .` → exits 0, "already formatted" for all repo Python files (currently 18 would be reformatted)
+- [x] the reformat lands as a single style-only commit (`style: ...`) with no behavior changes; existing pytest suites stay green
+
+<!-- Evidence (see specs/absorb-agent-tools/evidence/09-format-hook-full-file-rewrite-on-nonconformant-py.md):
+- `ruff format --check .` exits 0 ("33 files already formatted"); 13 files were reformatted (drifted down from the decision-time count of 18), spanning .claude/skills/_shared/, agent-console/tests/, and antigravity/.agents/skills/_shared/.
+- Behavior-preservation proven: for all 13 files in `git diff --name-only main`, ast.dump(ast.parse()) is byte-identical between main and the working tree — pure formatting, zero behavior change (verifier-confirmed).
+- pytest green pre- and post-reformat, identical counts: agent-console 144, .claude/skills 163, antigravity/.agents/skills 162. Gate `bash agent-console/scripts/check.sh` → check: PASS.
+-->
+

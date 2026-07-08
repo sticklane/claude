@@ -241,8 +241,10 @@ class SessionPageRouteTest(unittest.TestCase):
             sid = "sid-with-transcript"
             _write_transcript(proj / f"{sid}.jsonl", 200)
             seid, entry = _session_entry(sid, prompt="fix the bug")
-            with patch.object(ac, "get_pages", create=True, return_value={seid: entry}), \
-                 patch.object(ac, "_projects_root", return_value=root):
+            with (
+                patch.object(ac, "get_pages", create=True, return_value={seid: entry}),
+                patch.object(ac, "_projects_root", return_value=root),
+            ):
                 h, cap = _handler(f"/session/{seid}")
                 h.do_GET()
         self.assertEqual(cap["code"], 200)
@@ -257,8 +259,10 @@ class SessionPageRouteTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             seid, entry = _session_entry("sid-no-file", prompt="orphan session")
-            with patch.object(ac, "get_pages", create=True, return_value={seid: entry}), \
-                 patch.object(ac, "_projects_root", return_value=root):
+            with (
+                patch.object(ac, "get_pages", create=True, return_value={seid: entry}),
+                patch.object(ac, "_projects_root", return_value=root),
+            ):
                 h, cap = _handler(f"/session/{seid}")
                 h.do_GET()
         self.assertEqual(cap["code"], 200)
@@ -270,8 +274,10 @@ class SessionPageRouteTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             seid, entry = _session_entry("sid-btn")
-            with patch.object(ac, "get_pages", create=True, return_value={seid: entry}), \
-                 patch.object(ac, "_projects_root", return_value=root):
+            with (
+                patch.object(ac, "get_pages", create=True, return_value={seid: entry}),
+                patch.object(ac, "_projects_root", return_value=root),
+            ):
                 h, cap = _handler(f"/session/{seid}")
                 h.do_GET()
         body = cap["body"].decode("utf-8")
@@ -348,8 +354,10 @@ class RepoLinkResolvesEndToEndTest(unittest.TestCase):
         self.assertEqual(linked_id, expected)
 
         # drive the route with that exact id → it resolves (no 404)
-        with patch.object(ac, "get_pages", create=True, return_value=pages), \
-             patch.object(ac, "_projects_root", return_value=Path("/nonexistent")):
+        with (
+            patch.object(ac, "get_pages", create=True, return_value=pages),
+            patch.object(ac, "_projects_root", return_value=Path("/nonexistent")),
+        ):
             h, cap = _handler(f"/session/{linked_id}")
             h.do_GET()
         self.assertEqual(cap["code"], 200)

@@ -212,9 +212,14 @@ class TestPerCwdLock(_DispatchDirTest):
 class TestRecordReloadLiveness(_DispatchDirTest):
     def _write_record(self, did, pgid, start_time, cwd="/some/cwd"):
         rec = {
-            "id": did, "kind": "drain", "cwd": cwd, "pgid": pgid,
-            "start_time": start_time, "started_at": time.time(),
-            "log": str(Path(self.tmp) / f"{did}.log"), "state": "running",
+            "id": did,
+            "kind": "drain",
+            "cwd": cwd,
+            "pgid": pgid,
+            "start_time": start_time,
+            "started_at": time.time(),
+            "log": str(Path(self.tmp) / f"{did}.log"),
+            "state": "running",
             "exit_code": None,
         }
         (Path(self.tmp) / f"{did}.json").write_text(json.dumps(rec))
@@ -248,9 +253,15 @@ class TestDispatchRoutes(_DispatchDirTest):
         if log_lines is not None:
             log.write_text("".join(log_lines))
         rec = {
-            "id": did, "kind": kind, "cwd": cwd, "pgid": 999999,
-            "start_time": "", "started_at": time.time(),
-            "log": str(log), "state": "exited", "exit_code": None,
+            "id": did,
+            "kind": kind,
+            "cwd": cwd,
+            "pgid": 999999,
+            "start_time": "",
+            "started_at": time.time(),
+            "log": str(log),
+            "state": "exited",
+            "exit_code": None,
         }
         (Path(self.tmp) / f"{did}.json").write_text(json.dumps(rec))
 
@@ -272,8 +283,8 @@ class TestDispatchRoutes(_DispatchDirTest):
         h.do_GET()
         self.assertEqual(cap["code"], 200)
         body = cap["body"].decode("utf-8")
-        self.assertIn("line0300", body)      # last line present
-        self.assertNotIn("line0001", body)   # first line trimmed by the ~200 tail
+        self.assertIn("line0300", body)  # last line present
+        self.assertNotIn("line0001", body)  # first line trimmed by the ~200 tail
 
     def test_dispatch_log_unknown_id_404(self):
         h, cap = _get("/dispatch/nope/log")

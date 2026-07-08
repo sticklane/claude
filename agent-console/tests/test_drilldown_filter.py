@@ -84,8 +84,9 @@ def _render(*, repo_name, spec_title, spec_slug, handoff_title, inbox_what):
         ],
         "liveness_unknown": False,
     }
-    with patch.object(ac, "gh_visibility", return_value={}), patch.object(
-        ac, "_repo_extras", return_value=({}, {})
+    with (
+        patch.object(ac, "gh_visibility", return_value={}),
+        patch.object(ac, "_repo_extras", return_value=({}, {})),
     ):
         board = ac._adapt_board(fixture, [], [])
     return ac.render_workboard(board)
@@ -102,15 +103,17 @@ class WorkboardFilterBar(unittest.TestCase):
         )
 
     def test_workboard_renders_the_filterbar_search_input(self):
-        inputs = [a for (t, a) in _tags(self.html) if t == "input" and a.get("id") == "q"]
-        self.assertEqual(len(inputs), 1, "workboard must render exactly one #q filter input")
+        inputs = [
+            a for (t, a) in _tags(self.html) if t == "input" and a.get("id") == "q"
+        ]
+        self.assertEqual(
+            len(inputs), 1, "workboard must render exactly one #q filter input"
+        )
         self.assertEqual(inputs[0].get("type"), "search")
 
     def test_repo_card_carries_lowercase_data_text_with_name_and_titles(self):
         repos = [
-            a
-            for (t, a) in _tags(self.html)
-            if t == "details" and "repo" in _classes(a)
+            a for (t, a) in _tags(self.html) if t == "details" and "repo" in _classes(a)
         ]
         self.assertTrue(repos, "expected a repo <details> card")
         dt = repos[0].get("data-text")
@@ -121,9 +124,7 @@ class WorkboardFilterBar(unittest.TestCase):
 
     def test_repo_card_data_text_includes_spec_slug_for_slug_fragment_filtering(self):
         repos = [
-            a
-            for (t, a) in _tags(self.html)
-            if t == "details" and "repo" in _classes(a)
+            a for (t, a) in _tags(self.html) if t == "details" and "repo" in _classes(a)
         ]
         self.assertIn("widget-pipeline", repos[0].get("data-text", ""))
 

@@ -40,11 +40,7 @@ def _headers(mapping):
 def _board(ahead, path="/repo/alpha", name="alpha"):
     """An _adapt_board()-shaped dict with one repo (only the fields the action
     registry reads)."""
-    return {
-        "repos": [
-            {"id": "x", "name": name, "path": path, "git": {"ahead": ahead}}
-        ]
-    }
+    return {"repos": [{"id": "x", "name": name, "path": path, "git": {"ahead": ahead}}]}
 
 
 def _post(path, headers, body=b"{}"):
@@ -113,9 +109,10 @@ class TestPostActionSecurity(unittest.TestCase):
 
     def test_post_action_without_token_is_403(self):
         reg, aid = self._registry_with_one_push()
-        with patch.object(ac, "get_actions", return_value=reg), patch.object(
-            ac.subprocess, "run"
-        ) as run:
+        with (
+            patch.object(ac, "get_actions", return_value=reg),
+            patch.object(ac.subprocess, "run") as run,
+        ):
             h, cap = _post("/action/" + aid, {"Host": "127.0.0.1:8899"})
             h.do_POST()
         self.assertEqual(cap["code"], 403)
@@ -123,9 +120,10 @@ class TestPostActionSecurity(unittest.TestCase):
 
     def test_post_action_wrong_token_is_403(self):
         reg, aid = self._registry_with_one_push()
-        with patch.object(ac, "get_actions", return_value=reg), patch.object(
-            ac.subprocess, "run"
-        ) as run:
+        with (
+            patch.object(ac, "get_actions", return_value=reg),
+            patch.object(ac.subprocess, "run") as run,
+        ):
             h, cap = _post(
                 "/action/" + aid, {"Host": "127.0.0.1:8899", "X-CSRF": "nope"}
             )
@@ -135,9 +133,10 @@ class TestPostActionSecurity(unittest.TestCase):
 
     def test_post_unknown_id_is_409_and_nothing_executed(self):
         reg, _ = self._registry_with_one_push()
-        with patch.object(ac, "get_actions", return_value=reg), patch.object(
-            ac.subprocess, "run"
-        ) as run:
+        with (
+            patch.object(ac, "get_actions", return_value=reg),
+            patch.object(ac.subprocess, "run") as run,
+        ):
             h, cap = _post("/action/deadbeef", _good_headers())
             h.do_POST()
         self.assertEqual(cap["code"], 409)
@@ -148,9 +147,10 @@ class TestPostActionSecurity(unittest.TestCase):
 
     def test_bad_host_rejected_on_post_action(self):
         reg, aid = self._registry_with_one_push()
-        with patch.object(ac, "get_actions", return_value=reg), patch.object(
-            ac.subprocess, "run"
-        ) as run:
+        with (
+            patch.object(ac, "get_actions", return_value=reg),
+            patch.object(ac.subprocess, "run") as run,
+        ):
             h, cap = _post(
                 "/action/" + aid,
                 {"Host": "evil.example:8899", "X-CSRF": ac.CSRF_TOKEN},
@@ -172,11 +172,14 @@ class TestPushExecution(unittest.TestCase):
         expected_argv = list(reg[aid]["argv"])
 
         completed = type(
-            "R", (), {"returncode": 0, "stdout": "Everything up-to-date\n", "stderr": ""}
+            "R",
+            (),
+            {"returncode": 0, "stdout": "Everything up-to-date\n", "stderr": ""},
         )()
-        with patch.object(ac, "get_actions", return_value=reg), patch.object(
-            ac.subprocess, "run", return_value=completed
-        ) as run:
+        with (
+            patch.object(ac, "get_actions", return_value=reg),
+            patch.object(ac.subprocess, "run", return_value=completed) as run,
+        ):
             junk = json.dumps(
                 {"argv": ["rm", "-rf", "/"], "path": "/etc/passwd", "extra": 1}
             ).encode("utf-8")
@@ -198,9 +201,10 @@ class TestPushExecution(unittest.TestCase):
         failed = type(
             "R", (), {"returncode": 1, "stdout": "", "stderr": "rejected\n"}
         )()
-        with patch.object(ac, "get_actions", return_value=reg), patch.object(
-            ac.subprocess, "run", return_value=failed
-        ) as run:
+        with (
+            patch.object(ac, "get_actions", return_value=reg),
+            patch.object(ac.subprocess, "run", return_value=failed) as run,
+        ):
             h, cap = _post("/action/" + aid, _good_headers())
             h.do_POST()
         self.assertEqual(cap["code"], 200)
