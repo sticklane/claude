@@ -44,6 +44,12 @@ report_case() { # report_case <letter> <label>
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+# The shipped skill text that case (e) cross-checks its local baton-adoption
+# predicate against (SPEC R2). Resolved from this script's own location so the
+# cross-check works regardless of the caller's cwd.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REFERENCE_MD="$SCRIPT_DIR/../.claude/skills/drain/reference.md"
+
 mkrepo() { # mkrepo <dir>
   mkdir -p "$1"
   git -C "$1" init -q
@@ -249,6 +255,21 @@ EOF
     adopt "$baton_match" "$owner"
   assert_not "(e) baton adoption: mismatched Run-token fails adoption" \
     adopt "$baton_mismatch" "$owner"
+
+  # Cross-check the local adopt() predicate above against the SHIPPED skill
+  # text so the two can't silently diverge. The R2 baton-lineage exception in
+  # .claude/skills/drain/reference.md pins the grammar: a baton adopts the
+  # existing owner iff its `Run-token:` line matches DRAIN-OWNER.md's — exactly
+  # what adopt() compares. If that shipped prose ever changes the identity
+  # field or the comparison target, this fails instead of the local
+  # reimplementation passing on stale grammar. (Flattened to one line because
+  # the pinned clause wraps across two lines in the reference.)
+  assert "(e) baton adoption: shipped reference.md exists to cross-check against" \
+    test -f "$REFERENCE_MD"
+  local shipped
+  shipped="$(tr '\n' ' ' < "$REFERENCE_MD")"
+  assert "(e) baton adoption: shipped reference.md still pins the Run-token/DRAIN-OWNER.md predicate adopt() implements" \
+    grep -Eq "baton.*Run-token:.*matches DRAIN-OWNER\.md" <<<"$shipped"
   report_case e "baton adoption predicate"
 }
 
