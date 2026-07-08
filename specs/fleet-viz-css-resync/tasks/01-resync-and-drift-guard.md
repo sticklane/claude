@@ -1,6 +1,6 @@
 # Task 01: Resync /fleet's CSS and add a drift guard
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 8 turns
