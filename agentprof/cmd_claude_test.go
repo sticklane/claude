@@ -66,6 +66,146 @@ func TestClaudeCommandZeroSamplesExitsOneWithoutWritingFile(t *testing.T) {
 	}
 }
 
+func TestClaudeSinceWithExplicitDaysIsUsageError(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "cc.jsonl")
+	var stdout, stderr bytes.Buffer
+
+	code := run([]string{"claude", "--claude-dir", "testdata/claude-dir",
+		"--since", "2020-01-01T00:00:00Z", "--days", "1", "-o", out}, &stdout, &stderr)
+
+	if code == 0 {
+		t.Fatalf("exit code = %d, want nonzero (--since + explicit --days is a usage error)", code)
+	}
+	msg := stderr.String()
+	if !strings.Contains(msg, "since") || !strings.Contains(msg, "days") {
+		t.Errorf("stderr = %q, want it to mention both --since and --days", msg)
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Errorf("no output must be written on a usage error, stat err = %v", err)
+	}
+}
+
+func TestClaudeSinceAloneWithDefaultDaysExitsZero(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "cc.jsonl")
+	var stdout, stderr bytes.Buffer
+
+	// --since alone leaves --days at its default 30; that must NOT be treated
+	// as the mutually-exclusive case.
+	code := run([]string{"claude", "--claude-dir", "testdata/claude-dir",
+		"--since", "2020-01-01T00:00:00Z", "-o", out}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr: %s", code, stderr.String())
+	}
+	if _, err := os.Stat(out); err != nil {
+		t.Errorf("output not written: %v", err)
+	}
+}
+
+func TestClaudeMergeWithPbGzOutputIsUsageError(t *testing.T) {
+	cache := filepath.Join(t.TempDir(), "cache.jsonl")
+	writeCache(t, cache, []schema.Sample{mergeSample("A", time.Now().Add(-time.Hour))})
+	out := filepath.Join(t.TempDir(), "cc.pb.gz")
+	var stdout, stderr bytes.Buffer
+
+	code := run([]string{"claude", "--claude-dir", "testdata/claude-dir",
+		"--merge", cache, "-o", out}, &stdout, &stderr)
+
+	if code == 0 {
+		t.Fatalf("exit code = %d, want nonzero (--merge with .pb.gz -o is a usage error)", code)
+	}
+	if stderr.Len() == 0 {
+		t.Error("want an error message on stderr")
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Errorf("no output must be written on a usage error, stat err = %v", err)
+	}
+}
+
+func TestClaudeMergeEmptyFreshKeepsNonEvictedAndExitsZero(t *testing.T) {
+	// An empty claude-dir yields an empty fresh Collect() pass; the merge must
+	// still exit 0 (bypassing the "no samples found" guard) and leave the
+	// existing non-evicted cache samples in the output.
+	emptyDir := t.TempDir()
+	cache := filepath.Join(t.TempDir(), "cache.jsonl")
+	writeCache(t, cache, []schema.Sample{
+		mergeSample("A", time.Now().Add(-time.Hour)),
+		mergeSample("B", time.Now().Add(-2*time.Hour)),
+	})
+	out := filepath.Join(t.TempDir(), "out.jsonl")
+	var stdout, stderr bytes.Buffer
+
+	code := run([]string{"claude", "--claude-dir", emptyDir,
+		"--merge", cache, "-o", out}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0 (empty-fresh merge must not exit 1); stderr: %s", code, stderr.String())
+	}
+	f, err := os.Open(out)
+	if err != nil {
+		t.Fatalf("output not written: %v", err)
+	}
+	defer f.Close()
+	samples, _, err := schema.Read(f)
+	if err != nil {
+		t.Fatalf("output is not valid JSONL: %v", err)
+	}
+	if len(samples) != 2 {
+		t.Errorf("got %d merged samples, want 2 (both non-evicted cache samples retained)", len(samples))
+	}
+}
+
+func TestClaudeMergeAllEvictedWritesEmptyJSONLAndExitsZero(t *testing.T) {
+	// Every cache sample is older than 7d and fresh is empty: the merged result
+	// is empty, which must write a valid empty JSONL file (never route through
+	// output.Write's zero-sample error) and exit 0.
+	emptyDir := t.TempDir()
+	cache := filepath.Join(t.TempDir(), "cache.jsonl")
+	old := time.Now().Add(-10 * 24 * time.Hour)
+	writeCache(t, cache, []schema.Sample{mergeSample("A", old), mergeSample("B", old)})
+	out := filepath.Join(t.TempDir(), "out.jsonl")
+	var stdout, stderr bytes.Buffer
+
+	code := run([]string{"claude", "--claude-dir", emptyDir,
+		"--merge", cache, "-o", out}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr: %s", code, stderr.String())
+	}
+	info, err := os.Stat(out)
+	if err != nil {
+		t.Fatalf("empty JSONL file not written: %v", err)
+	}
+	if info.Size() != 0 {
+		t.Errorf("output size = %d bytes, want 0 (empty merged result → empty file)", info.Size())
+	}
+}
+
+func mergeSample(session string, ts time.Time) schema.Sample {
+	return schema.Sample{
+		Time:   ts,
+		Stack:  []string{"proj", "leaf"},
+		Values: map[string]int64{"cost_microusd": 100},
+		Labels: map[string]string{"source": "claude-code", "session": session},
+	}
+}
+
+func writeCache(t *testing.T, path string, samples []schema.Sample) {
+	t.Helper()
+	var buf bytes.Buffer
+	for _, s := range samples {
+		line, err := schema.MarshalLine(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		buf.Write(line)
+		buf.WriteByte('\n')
+	}
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestClaudeCommandDaysFlagExcludesOldSessions(t *testing.T) {
 	// Copy the fixture and age every file beyond the window.
 	dir := t.TempDir()
