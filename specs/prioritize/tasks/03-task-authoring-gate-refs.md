@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Priority: P1
 Discovered-from: specs/prioritize/tasks/01-prioritize-scan-script.md
 Spec: ../SPEC.md
@@ -12,8 +12,8 @@ Decision (2026-07-06): confirmed — this repo has no top-level `scripts/check.s
 
 ## Acceptance
 
-- [ ] `! grep -q 'bash scripts/check.sh' specs/prioritize/tasks/01-prioritize-scan-script.md` → exits 0 (the boilerplate invocation is gone from task 01's criterion; currently present at line 69)
-- [ ] `grep -qi 'per-subproject' specs/prioritize/SPEC.md` → exits 0 (authoring note landed in the spec; currently absent)
+- [x] `! grep -q 'bash scripts/check.sh' specs/prioritize/tasks/01-prioritize-scan-script.md` → exits 0 (the boilerplate invocation is gone from task 01's criterion; currently present at line 69) — verifier: exit 0, line 69 rewritten to cite `python3 -m pytest .claude/skills/workboard/ .claude/skills/list-specs/ -q`, line 73 note dropped `bash ` prefix (evidence/03-task-authoring-gate-refs.md)
+- [x] `grep -qi 'per-subproject' specs/prioritize/SPEC.md` → exits 0 (authoring note landed in the spec; currently absent) — verifier: exit 0, new `## Authoring note` section landed (evidence/03-task-authoring-gate-refs.md)
 
 ## Deferred questions
 
