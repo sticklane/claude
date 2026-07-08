@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Priority: P1
 Discovered-from: specs/shared-viz-renderer/tasks/01-extract-viz-module.md
 Spec: ../SPEC.md
