@@ -1,0 +1,92 @@
+# End-to-end duration evidence — task 04
+# Profiled session: this live /agentic:drain run (session eed20d5f-829c-4a98-94ea-1e780af8aede),
+# captured after tasks 01-03 landed (task 03 merged at e56e6b3).
+# Command: cd agentprof && go run . claude --days 1 -o /tmp/agentprof-e2e.pb.gz
+# Command: go tool pprof -top -nodefraction=0 -edgefraction=0 -sample_index=duration_ms /tmp/agentprof-e2e.pb.gz
+# (default -top pruning hides sub-0.5%-of-total nodes; -nodefraction=0 surfaces the small but
+# real tool: frames below, per Steps 3-4's intent of showing non-zero cumulative duration)
+# Date: 2026-07-08
+Type: duration_ms
+Time: 2026-07-06 14:58:58 CDT
+Duration: 30.82hrs, Total samples = 365954.84s (329.85%)
+Showing nodes accounting for 365954.84s, 100% of 365954.84s total
+      flat  flat%   sum%        cum   cum%
+231152.80s 63.16% 63.16% 231152.80s 63.16%  claude-opus-4-8
+126937.10s 34.69% 97.85% 126937.10s 34.69%  claude-sonnet-5
+  4720.33s  1.29% 99.14%   4720.33s  1.29%  claude-fable-5
+  2251.06s  0.62% 99.76%   2251.06s  0.62%  claude-haiku-4-5-20251001
+   731.90s   0.2%   100%    731.90s   0.2%  tool:Bash
+    92.58s 0.025%   100%     92.58s 0.025%  tool:AskUserQuestion
+    31.41s 0.0086%   100%     31.41s 0.0086%  tool:Agent
+    21.86s 0.006%   100%     21.86s 0.006%  tool:Edit
+    15.61s 0.0043%   100%     15.61s 0.0043%  tool:Write
+     0.19s 5.1e-05%   100%      0.19s 5.1e-05%  tool:Read
+         0     0%   100% 269607.05s 73.67%  (no skill)
+         0     0%   100%    220.62s  0.06%  agent:Explore
+         0     0%   100%    424.56s  0.12%  agent:agentic:critic
+         0     0%   100%  29681.47s  8.11%  agent:agentic:implementation-worker
+         0     0%   100%   1912.51s  0.52%  agent:agentic:scout
+         0     0%   100%  14295.81s  3.91%  agent:agentic:verifier
+         0     0%   100%     24.90s 0.0068%  agent:claude-code-guide
+         0     0%   100%   8009.90s  2.19%  agent:implementation-worker
+         0     0%   100%    313.65s 0.086%  agent:scout
+         0     0%   100%    982.71s  0.27%  agent:verifier
+         0     0%   100%  88002.50s 24.05%  automation
+         0     0%   100%  35747.33s  9.77%  claude
+         0     0%   100% 100099.87s 27.35%  fooszone
+         0     0%   100%  47039.30s 12.85%  hub
+         0     0%   100% 365954.84s   100%  main
+         0     0%   100%  94457.11s 25.81%  sjaconette
+         0     0%   100%    742.13s   0.2%  skill:breakdown
+         0     0%   100%  82000.96s 22.41%  skill:distill
+         0     0%   100%  11564.20s  3.16%  skill:drain
+         0     0%   100%   1935.94s  0.53%  skill:idea
+         0     0%   100%    104.56s 0.029%  skill:verify
+         0     0%   100%     51.61s 0.014%  stage:collect-verdict
+         0     0%   100%    278.60s 0.076%  stage:inventory
+         0     0%   100%  14244.76s  3.89%  t01 · /agentic:drain
+         0     0%   100%    311.60s 0.085%  t01 · /agentic:drain (generation 4, baton: spe…
+         0     0%   100%    608.72s  0.17%  t01 · /drain specs/demo
+         0     0%   100%   7923.25s  2.17%  t01 · /verify all unverified tasks
+         0     0%   100%  14644.86s  4.00%  t02 · /agentic:drain
+         0     0%   100%  81879.89s 22.37%  t02 · continue
+         0     0%   100%   3637.77s  0.99%  t03 · /agentic:drain
+         0     0%   100%   1521.26s  0.42%  t03 · breakdown each of those proposals
+         0     0%   100%   4653.97s  1.27%  t03 · continue
+         0     0%   100%     27.16s 0.0074%  t03 · for the obsidian piece at least: check i…
+         0     0%   100%  25617.93s  7.00%  t03 · is there anything that needs to be verif…
+         0     0%   100%   1818.61s   0.5%  t04 · for now, proceed without my approval
+         0     0%   100%   1932.91s  0.53%  t04 · is there anything that needs to be verif…
+         0     0%   100%    161.33s 0.044%  t04 · sorry, how do we promote those?
+         0     0%   100%  81876.13s 22.37%  t05 · /agentic:distill
+         0     0%   100%    103.48s 0.028%  t05 · I think those need /breakdonw, not my ac…
+         0     0%   100%     70.26s 0.019%  t05 · give me a holistic, simple explanation o…
+         0     0%   100%  20008.68s  5.47%  t05 · run me through everything that depends o…
+         0     0%   100%   3949.97s  1.08%  t06 · /agentic:drain
+         0     0%   100%    110.73s  0.03%  t06 · gen2 is not running as a nromal backgrou…
+         0     0%   100%     48.03s 0.013%  t06 · normal chat does not show up in those ca…
+         0     0%   100%  10567.73s  2.89%  t06 · tac-tacs is being used incorrectly, but …
+         0     0%   100%    216.24s 0.059%  t07 · I think the issue is with how our skills…
+         0     0%   100%   4763.97s  1.30%  t07 · yeah do that please
+         0     0%   100%    117.50s 0.032%  t07 · yes
+         0     0%   100%    826.33s  0.23%  t08 · interview somehow locks up: check that w…
+         0     0%   100%    128.13s 0.035%  t08 · no I like interactive, I just am noticin…
+         0     0%   100%    506.30s  0.14%  t08 · yeah do breakdown please
+         0     0%   100%   2636.52s  0.72%  t09 · /agentic:drain
+         0     0%   100%   2297.41s  0.63%  t10 · this doesn't make sense: is it the resul…
+         0     0%   100%  78618.55s 21.48%  t11 · sync to head
+         0     0%   100%    124.83s 0.034%  t12 · /agentic:distill
+         0     0%   100%     83.20s 0.023%  tmp.dtzD5dSYT2
+         0     0%   100%    525.52s  0.14%  tmp.xVjjCvWl7h
+
+## tool: frames (non-zero cumulative duration_ms) — R6/task-04 criterion
+   731.90s   0.2%   100%    731.90s   0.2%  tool:Bash
+    92.58s 0.025%   100%     92.58s 0.025%  tool:AskUserQuestion
+    31.41s 0.0086%   100%     31.41s 0.0086%  tool:Agent
+    21.86s 0.006%   100%     21.86s 0.006%  tool:Edit
+    15.61s 0.0043%   100%     15.61s 0.0043%  tool:Write
+     0.19s 5.1e-05%   100%      0.19s 5.1e-05%  tool:Read
+
+## stage: markers observed (task 03's drain/build marker instructions, bonus confirmation)
+         0     0%   100%     51.61s 0.014%  stage:collect-verdict
+         0     0%   100%    278.60s 0.076%  stage:inventory
