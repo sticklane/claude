@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 12 turns
@@ -65,14 +65,21 @@ execution time (other specs also bump it — known contention point).
 
 ## Acceptance
 
-- [ ] `grep -c 'agentprof:role=' .claude/skills/drain/SKILL.md` → 5 (R4).
-- [ ] `grep -c 'agentprof:stage=' .claude/skills/drain/SKILL.md` → 5 and
+- [x] `grep -c 'agentprof:role=' .claude/skills/drain/SKILL.md` → 5 (R4).
+      Evidence: verifier report → 5 (worker-attempt1, worker-relaunch,
+      worker-tournament-t1/-t2/-t3).
+- [x] `grep -c 'agentprof:stage=' .claude/skills/drain/SKILL.md` → 5 and
       `grep -c 'agentprof:stage=' .claude/skills/build/SKILL.md` → 5 (R5).
-- [ ] `grep -c 'agentprof:role=' antigravity/.agents/workflows/drain.md` → 5,
+      Evidence: verifier report → 5 and 5.
+- [x] `grep -c 'agentprof:role=' antigravity/.agents/workflows/drain.md` → 5,
       `grep -c 'agentprof:stage=' antigravity/.agents/workflows/drain.md` → 5,
       `grep -c 'agentprof:stage=' antigravity/.agents/workflows/build.md` → 5
       — OR the task's evidence records an explicit reviewed carve-out for
-      the mirror (R8).
-- [ ] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep '"version"'`
-      shows the version increased (R8).
-- [ ] `bash evals/lint-ultra-gate.sh` → pass.
+      the mirror (R8). Evidence: verifier report → 5/5/5; mirrors ported in
+      antigravity's own voice with literals verbatim (no carve-out needed).
+- [x] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep '"version"'`
+      shows the version increased (R8). Evidence: 0.8.20 → 0.8.21.
+- [x] `bash evals/lint-ultra-gate.sh` → pass. Evidence: verifier report →
+      "OK — all ultra mentions gated in 4 files", exit 0.
+
+Evidence file: specs/agentprof-instrumentation/evidence/03-skill-marker-instructions.md
