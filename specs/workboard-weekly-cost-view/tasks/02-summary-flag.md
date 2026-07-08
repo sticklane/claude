@@ -61,3 +61,7 @@ never be absorbed silently on either side of the seam.
       Evidence: exit 0, printed all 6 keys (evidence/02-summary-flag.md §2).
 - [x] `cd agentprof && gofmt -l . | wc -l` → 0.
       Evidence: output `0` (evidence/02-summary-flag.md §3).
+
+## Discovered
+
+- Pure `tool:` samples (e.g. `[proj, turn, skill, main, tool:Workflow]`, carrying only `duration_ms`) resolve their model to `"main"` under the R3 "last leaf frame that isn't tool:/role:/stage:" rule, so `duration_ms` lands in `by_model["main"]` in `agentprof/internal/costsummary/costsummary.go`'s `modelLeaf` — harmless today (tool samples carry no tokens/cost, and the panel shows cost/model, not duration), but worth a spec note once agentprof-instrumentation ships richer tool/duration frames, since the contract has no explicit "no model" bucket.
