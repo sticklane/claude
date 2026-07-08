@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/drain-rolling-window/tasks/07-fix-stale-group-mode-reference.md
 Spec: ../SPEC.md
 Blocking: no
