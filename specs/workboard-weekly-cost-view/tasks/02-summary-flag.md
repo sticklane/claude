@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 16 turns
@@ -50,9 +50,14 @@ never be absorbed silently on either side of the seam.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./...` → pass, including every R3 fixture
+- [x] `cd agentprof && go test ./...` → pass, including every R3 fixture
       test listed in Steps 1.
-- [ ] `cd agentprof && go run . claude --days 1 -o /tmp/wwcv-y --summary /tmp/wwcv-summary.json && python3 -c "import json; d=json.load(open('/tmp/wwcv-summary.json')); print(sorted(d))"` →
+      Evidence: all packages `ok` incl `internal/costsummary`; fixtures cover
+      grouped shape, `(unlinked)`→`by_skill["(no skill)"]`, sessions_added
+      (3 and 0), and merge-divergence (evidence/02-summary-flag.md §1).
+- [x] `cd agentprof && go run . claude --days 1 -o /tmp/wwcv-y --summary /tmp/wwcv-summary.json && python3 -c "import json; d=json.load(open('/tmp/wwcv-summary.json')); print(sorted(d))"` →
       exits 0 and prints keys including `by_agent_type, by_model,
       by_project, by_skill, sessions_added, totals`.
-- [ ] `cd agentprof && gofmt -l . | wc -l` → 0.
+      Evidence: exit 0, printed all 6 keys (evidence/02-summary-flag.md §2).
+- [x] `cd agentprof && gofmt -l . | wc -l` → 0.
+      Evidence: output `0` (evidence/02-summary-flag.md §3).

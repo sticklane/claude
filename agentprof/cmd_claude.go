@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sticklane/agentprof/internal/claude"
+	"github.com/sticklane/agentprof/internal/costsummary"
 	"github.com/sticklane/agentprof/internal/merge"
 	"github.com/sticklane/agentprof/internal/naming"
 	"github.com/sticklane/agentprof/internal/output"
@@ -25,6 +27,7 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 	days := fs.Int("days", 30, "include sessions active within the last N days")
 	since := fs.String("since", "", "absolute RFC3339 cutoff (mutually exclusive with an explicit --days)")
 	mergePath := fs.String("merge", "", "JSONL rolling-cache path: merge fresh samples in, evicting samples older than 7d")
+	summaryPath := fs.String("summary", "", "write the pre-aggregated Cost (7d) summary JSON to this path")
 	nameTurns := fs.Bool("name-turns", false, "rename uninformative turn frames via one cached haiku call")
 	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (default stdout)")
 	if err := fs.Parse(args); err != nil {
@@ -66,7 +69,7 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 	}
 
 	if *mergePath != "" {
-		return mergeClaude(samples, *mergePath, *out, stdout, stderr)
+		return mergeClaude(samples, *mergePath, *out, *summaryPath, stdout, stderr)
 	}
 
 	if len(samples) == 0 {
@@ -87,6 +90,13 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
 		return 1
 	}
+	// Without --merge the summary groups the fresh Collect() output directly (R3).
+	if *summaryPath != "" {
+		if err := writeCostSummary(samples, samples, *summaryPath); err != nil {
+			fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
+			return 1
+		}
+	}
 	return 0
 }
 
@@ -95,7 +105,7 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 // bypassed (R2): a missing cache is zero samples, an empty fresh pass is not an
 // error, and an empty merged result writes a valid empty JSONL file directly
 // rather than routing through output.Write's zero-sample error.
-func mergeClaude(fresh []schema.Sample, mergePath, out string, stdout, stderr io.Writer) int {
+func mergeClaude(fresh []schema.Sample, mergePath, out, summaryPath string, stdout, stderr io.Writer) int {
 	existing, err := readCache(mergePath)
 	if err != nil {
 		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
@@ -107,13 +117,29 @@ func mergeClaude(fresh []schema.Sample, mergePath, out string, stdout, stderr io
 			fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
 			return 1
 		}
-		return 0
-	}
-	if err := output.Write(merged, out, stdout); err != nil {
+	} else if err := output.Write(merged, out, stdout); err != nil {
 		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
 		return 1
 	}
+	// The summary groups the final merged, post-eviction rolling window; only
+	// sessions_added counts fresh. Writing works even when merged is empty (R3).
+	if summaryPath != "" {
+		if err := writeCostSummary(merged, fresh, summaryPath); err != nil {
+			fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
+			return 1
+		}
+	}
 	return 0
+}
+
+// writeCostSummary aggregates forGrouping into the Cost (7d) summary JSON
+// (sessions_added counted from fresh) and writes it to path (R3).
+func writeCostSummary(forGrouping, fresh []schema.Sample, path string) error {
+	b, err := json.MarshalIndent(costsummary.Build(forGrouping, fresh), "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(b, '\n'), 0o644)
 }
 
 // readCache reads the existing rolling-cache JSONL; a missing file is treated
