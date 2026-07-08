@@ -92,7 +92,10 @@ which carries the actual worker prompt; build and autopilot where noted):
    item. `Status: blocked` keeps its current meaning (failures needing
    amendment, with no askable question) and is not used for decisions.
    /build (attended) applies the same reversible-default rule, logging
-   to the task file's `## Decisions` in its close-out.
+   to the task file's `## Decisions` in its close-out. Autopilot's
+   unattended run inherits the rule with no separate edit — it
+   dispatches with the amended /build procedure — and its checklist's
+   "defaults taken" line reads the same `## Decisions` section.
 4. **Context self-management.** The orchestrator keeps only the loop;
    consumption (implementation, verification, critique) runs in
    subagents per token-discipline. Drain's existing degradation
@@ -124,7 +127,10 @@ which carries the actual worker prompt; build and autopilot where noted):
 - R2: drain gains the critique-intake branch exactly as Solution 2
   defines — exhaustion-triggered, evaluated before 3b, lease-claimed,
   once per run across generations — and leaves draft-stub promotion
-  human-only.
+  human-only. Cross-generation persistence adds an `Intake-failed:`
+  line to the baton grammar in `drain/reference.md` (the analogue of
+  `Breakdown-failed:`), so the intake task's `Touch:` must list
+  `drain/reference.md` too (same Touch rule as R3).
 - R3: The decision-deferral rule lands per Solution 3, in BOTH drain
   files: `drain/reference.md`'s worker-prompt ambiguity clause and
   report format (the fixed `Decisions:` section; the "two fixed
@@ -171,9 +177,11 @@ which carries the actual worker prompt; build and autopilot where noted):
       literal branch name from Solution 2, absent from today's text (R2).
 - [ ] `grep -qi "reversible default" .claude/skills/drain/reference.md && grep -qi "reversible default" .claude/skills/build/SKILL.md` (R3)
 - [ ] `grep -q "Decisions:" .claude/skills/drain/reference.md` — the
-      fixed report section exists in the worker prompt — and the "two
-      fixed sections" wording is gone:
-      `! grep -q "these two fixed sections" .claude/skills/drain/reference.md` (R3).
+      fixed report section exists in the worker prompt — and the
+      section count is revised:
+      `grep -q "three fixed sections" .claude/skills/drain/reference.md`
+      (absent from today's text, so the check fails until the sentence
+      is actually rewritten) (R3).
 - [ ] `grep -q "## Decisions" .claude/skills/drain/SKILL.md` — drain
       records what workers report (R3).
 - [ ] `grep -qi "checklist" .claude/skills/drain/SKILL.md && grep -qi "checklist" .claude/skills/autopilot/SKILL.md` (R4)
