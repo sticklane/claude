@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/absorb-agent-tools/tasks/08-mirror-priority-re-to-antigravity.md
 Spec: ../SPEC.md
 Blocking: no
