@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Priority: P1
 Discovered-from: specs/shared-viz-renderer/tasks/04-migrate-fleet-reference.md
 Spec: ../SPEC.md
@@ -12,6 +12,6 @@ Decision (2026-07-06): restore the muted axis-label tint in the SHARED viz modul
 
 ## Acceptance
 
-- [ ] `grep -q 'viz-muted' .claude/skills/_shared/viz.py` → exits 0 (muted axis rule present in the shared VIZ_CSS; currently absent)
-- [ ] `grep -q 'viz-muted' antigravity/.agents/skills/_shared/viz.py` → exits 0 (mirror carries it)
-- [ ] `python3 -m pytest .claude/skills/_shared/ .claude/skills/workboard/ -q` → all pass (existing consumer tests stay green)
+- [x] `grep -q 'viz-muted' .claude/skills/_shared/viz.py` → exits 0 (muted axis rule present in the shared VIZ_CSS; currently absent) — `.viz-axis div` now sets `color: var(--viz-muted, #898781)`
+- [x] `grep -q 'viz-muted' antigravity/.agents/skills/_shared/viz.py` → exits 0 (mirror carries it) — byte-identical mirror copied same commit
+- [x] `python3 -m pytest .claude/skills/_shared/ .claude/skills/workboard/ -q` → all pass (existing consumer tests stay green) — 116 passed

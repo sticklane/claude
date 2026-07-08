@@ -8,7 +8,7 @@ Distribution: /workboard imports this module; agent-console vendors a
 byte-identical copy (checked by its own conformance gate); /fleet's CSS
 region is regenerated from --emit-fleet-css.
 """
-# viz-sha256: 5ebf4958c23e00a35629fdb40233170b372244228b5652215565e848010cc77b
+# viz-sha256: 168aadae500cdb69f410fe06d30f98039cb2b26bb2f08a62c97409c521090dc5
 
 import argparse
 import hashlib
@@ -205,7 +205,7 @@ VIZ_CSS = f"""\
 .viz-bar {{ position: absolute; top: 0; height: 10px; border-radius: 4px; min-width: 4px; }}
 {_BAR_COLOR_RULES}
 .viz-axis {{ display: grid; grid-template-columns: 180px 1fr; gap: 10px; margin-top: 6px; }}
-.viz-axis div {{ display: flex; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums; }}
+.viz-axis div {{ display: flex; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--viz-muted, #898781); }}
 .viz-graphwrap {{ background: {_DAG_NODE_FILL}; border-radius: 8px; padding: 8px; display: inline-block; }}
 /* .viz-node/.viz-edge carry no rules here on purpose: their colors are
    per-node inline SVG attributes (dag()'s STATUS_HEX lookup), and a CSS
