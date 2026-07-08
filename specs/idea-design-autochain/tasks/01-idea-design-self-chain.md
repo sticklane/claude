@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -81,27 +81,41 @@ byte-for-byte unchanged.
 
 ## Acceptance
 
-- [ ] `grep -c '## Open questions' .claude/skills/idea/SKILL.md` → the new
+- [x] `grep -c '## Open questions' .claude/skills/idea/SKILL.md` → the new
       step's text references `## Open questions` at least once as its
-      trigger condition (R1).
-- [ ] The new step's text states the check re-runs after every `/critique`
+      trigger condition (R1). Evidence: new step 4 gate reads "does the
+      spec's `## Open questions` section name a technology or architecture
+      choice?"; grep count 6 (verifier PASS #1, evidence file).
+- [x] The new step's text states the check re-runs after every `/critique`
       fix wave, not only once after the spec is first written (R1b) —
       confirm by reading the step's prose; it must not describe a second,
-      different detection mechanism for critic-revealed choices.
-- [ ] The new step's text states the once-per-session cap and its
+      different detection mechanism for critic-revealed choices. Evidence:
+      "re-run the *identical* check after every `/critique` fix wave … one
+      file check re-evaluated at both points, never a separate judgment
+      over critic findings" (verifier PASS #2).
+- [x] The new step's text states the once-per-session cap and its
       fallback (a second occurrence after the cap is spent takes the
       printed-pointer fallback, never a second `/design` call) (R5).
-- [ ] The new step's text states R4's fallback for both entry points (R1:
+      Evidence: step 4 item 3 "Once per session … do NOT invoke `/design` a
+      second time — take the printed-pointer fallback" (verifier PASS #4).
+- [x] The new step's text states R4's fallback for both entry points (R1:
       does not proceed to the first `/critique` invocation; R1b: aborts
       the fix loop) when `/design` leaves `## Open questions` non-empty.
-- [ ] `grep -c 'design' .claude/skills/idea/SKILL.md` in the hand-off step
+      Evidence: step 4 item 4 states both branches verbatim (verifier PASS
+      #5).
+- [x] `grep -c 'design' .claude/skills/idea/SKILL.md` in the hand-off step
       specifically (the step containing "Hand off" / the `/breakdown`
       self-chain) → the technology-choice `/design` fallback branch is
       gone from that step; the non-technology fallback text is still
-      present, unchanged.
-- [ ] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep '"version"'`
-      shows the version increased (R6).
-- [ ] `git diff HEAD~1 -- antigravity/` → empty (no antigravity changes;
-      per Out of scope).
-- [ ] `git diff HEAD~1 -- .claude/skills/design/SKILL.md .claude/skills/critique/SKILL.md .claude/skills/breakdown/SKILL.md` →
+      present, unchanged. Evidence: awk-scoped grep over `## 6. Hand off`
+      → 0 'design' matches; non-tech fallback retained (verifier PASS #6).
+- [x] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep '"version"'`
+      shows the version increased (R6). Evidence: `0.8.21` → `0.8.22`
+      (verifier PASS #7).
+- [x] `git diff HEAD~1 -- antigravity/` → empty (no antigravity changes;
+      per Out of scope). Evidence: `git diff 51cba13 -- antigravity/` empty
+      (verifier PASS #8).
+- [x] `git diff HEAD~1 -- .claude/skills/design/SKILL.md .claude/skills/critique/SKILL.md .claude/skills/breakdown/SKILL.md` →
       empty (none of the downstream skills' own internals touched).
+      Evidence: `git diff 51cba13 --` for all three empty (verifier PASS
+      #8).

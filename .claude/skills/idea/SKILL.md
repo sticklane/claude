@@ -73,16 +73,64 @@ End with one end-to-end check that exercises the feature as a user would.
 Must be EMPTY before implementation starts.
 ```
 
-## 4. Adversarial pass
+## 4. Resolve open technology/architecture choices
+
+Run this check immediately after writing the spec (step 3), before the first
+`/critique` invocation — and re-run the *identical* check after every
+`/critique` fix wave inside step 5's loop, not only once here. It is one file
+check re-evaluated at both points, never a separate judgment over critic
+findings: **does the spec's `## Open questions` section name a technology or
+architecture choice?** A fix wave that adds such an entry to `## Open
+questions` is caught by this same re-run — that is what interrupts the loop,
+rather than waiting for a READY the critique pass cannot reach by editing
+prose.
+
+If `## Open questions` names a technology/architecture choice, self-chain into
+`/design` — the same synchronous, in-session Skill-tool mechanism step 6 uses
+for `/breakdown`, never `run_in_background` or a detached Agent dispatch:
+
+1. Announce it in one line — "`/design` needed for <the open choice>, chaining
+   now" — then invoke the Skill tool for `design` with argument
+   `specs/<slug>/SPEC.md`, blocking until it returns.
+2. `/design` records its decision directly into the SPEC.md and prints its own
+   closing `Next stage: /breakdown ... (human-launched)` line. **Ignore that
+   line** — it is written for design's own human-launched entry point, not
+   this flow. When control returns, resume step 5: proceed to `/critique` if
+   this was the post-step-3 check, or continue the fix loop (without restarting
+   from step 3) if this was a mid-loop re-check.
+3. **Once per session.** This self-chain fires at most once per `/idea`
+   session, whether triggered by the post-step-3 check or a mid-loop re-check.
+   If `/design` has already run once this session and `## Open questions` names
+   a technology/architecture choice again (a genuinely new one, or the same one
+   design could not resolve), do NOT invoke `/design` a second time — take the
+   printed-pointer fallback below.
+4. **Design left the choice open.** If `/design` returns with `## Open
+   questions` still non-empty, take the printed-pointer fallback instead of
+   proceeding — for the post-step-3 check, do not proceed to the first
+   `/critique` invocation; for a mid-loop re-check, abort the fix loop rather
+   than continuing it (an unresolved `## Open questions` entry already means
+   `/breakdown` would refuse the spec).
+
+The printed-pointer fallback here is step 6's fallback — the same one used when
+the user asked for the spec only — stopping the chain and handing the spec to
+the user to pick up in a fresh session.
+
+If `## Open questions` names no technology/architecture choice, do nothing here
+and proceed to step 5.
+
+## 5. Adversarial pass
 
 Invoke the `/critique` skill on the spec file (via the Skill tool) rather than
 spawning the critic agent directly — `/critique` is what stamps the spec's
-`Breakdown-ready: true` header once it reaches READY, the token step 5's
+`Breakdown-ready: true` header once it reaches READY, the token step 6's
 self-chain and `/drain`'s auto-breakdown phase both rely on. Fix what it
-finds; re-invoke until READY. This costs ~1% of what implementing an
-ambiguous spec costs.
+finds; re-invoke until READY. After each fix wave, re-run step 4's `## Open
+questions` design check before re-invoking `/critique` — a fix that introduced
+an open technology/architecture choice self-chains into `/design` (once per
+session) per that step. This costs ~1% of what implementing an ambiguous spec
+costs.
 
-## 5. Hand off
+## 6. Hand off
 
 After READY, chain: announce it in one line, then invoke `/breakdown` on the
 spec via the Skill tool, per the self-chain bullet in CLAUDE.md's authoring
@@ -91,17 +139,13 @@ to the fresh-session hand-off — it is a light artifact stage that works from
 the spec file, not from this conversation's context.
 
 Fall back to the printed pointer when the self-chain conditions fail — the
-user asked for the spec only, non-interactive doubt (answers you had to
-infer rather than get), or a technology/architecture choice is still open
-(run `/design specs/<slug>/SPEC.md` first; open /design choices stop the
-chain). The fallback keeps the `/clear`-first advice: tell the user to run
-`/breakdown specs/<slug>/SPEC.md` (or `/build specs/<slug>/SPEC.md` for
-single-session work) in a FRESH session — the spec is the handoff artifact.
+user asked for the spec only, or non-interactive doubt (answers you had to
+infer rather than get). The fallback keeps the `/clear`-first advice: tell the
+user to run `/breakdown specs/<slug>/SPEC.md` (or `/build specs/<slug>/SPEC.md`
+for single-session work) in a FRESH session — the spec is the handoff artifact.
 
 Close with:
-`Next stage: /breakdown specs/<slug>/SPEC.md (self-chains per conventions)`
-— or, on the /design fallback,
-`Next stage: /design specs/<slug>/SPEC.md (human-launched)`.
+`Next stage: /breakdown specs/<slug>/SPEC.md (self-chains per conventions)`.
 
 ## Ultra path
 
