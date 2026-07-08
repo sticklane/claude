@@ -39,7 +39,14 @@ def test_canonical_status_unknown_term_maps_to_open():
 
 
 def test_status_hex_covers_all_six_canonical_tokens():
-    assert set(viz.STATUS_HEX) == {"running", "open", "done", "failed", "stale", "blocked"}
+    assert set(viz.STATUS_HEX) == {
+        "running",
+        "open",
+        "done",
+        "failed",
+        "stale",
+        "blocked",
+    }
     for hexval in viz.STATUS_HEX.values():
         assert re.fullmatch(r"#[0-9a-f]{6}", hexval)
 
@@ -47,6 +54,7 @@ def test_status_hex_covers_all_six_canonical_tokens():
 # ---------------------------------------------------------------------------
 # dag() (R2)
 # ---------------------------------------------------------------------------
+
 
 def test_dag_renders_one_g_per_task_and_one_path_per_edge():
     tasks = [
@@ -97,18 +105,31 @@ def test_dag_node_stroke_and_num_text_use_status_hex():
 # timeline() (R3)
 # ---------------------------------------------------------------------------
 
+
 def test_timeline_orders_rows_by_start_ts_and_normalizes_left_width(monkeypatch):
     monkeypatch.setattr(viz.time, "time", lambda: 1000.0)
     rows = [
-        {"label": "second", "status": "open", "start_ts": 500.0, "end_ts": 750.0,
-         "tooltip": "t2", "href": None},
-        {"label": "first", "status": "running", "start_ts": 0.0, "end_ts": 500.0,
-         "tooltip": "t1", "href": None},
+        {
+            "label": "second",
+            "status": "open",
+            "start_ts": 500.0,
+            "end_ts": 750.0,
+            "tooltip": "t2",
+            "href": None,
+        },
+        {
+            "label": "first",
+            "status": "running",
+            "start_ts": 0.0,
+            "end_ts": 500.0,
+            "tooltip": "t1",
+            "href": None,
+        },
     ]
     html_out = viz.timeline(rows)
 
     assert html_out.count('class="viz-lane"') == 2
-    assert html_out.count('viz-bar') == 2
+    assert html_out.count("viz-bar") == 2
     # ordered by start_ts: "first" (start 0) must appear before "second" (start 500)
     assert html_out.index(">first<") < html_out.index(">second<")
 
@@ -124,8 +145,14 @@ def test_timeline_orders_rows_by_start_ts_and_normalizes_left_width(monkeypatch)
 def test_timeline_floors_narrow_bars_at_quarter_percent(monkeypatch):
     monkeypatch.setattr(viz.time, "time", lambda: 1000.0)
     rows = [
-        {"label": "tiny", "status": "open", "start_ts": 0.0, "end_ts": 1.0,
-         "tooltip": "", "href": None},
+        {
+            "label": "tiny",
+            "status": "open",
+            "start_ts": 0.0,
+            "end_ts": 1.0,
+            "tooltip": "",
+            "href": None,
+        },
     ]
     html_out = viz.timeline(rows)
     # raw width would be (1-0)/1000*100 = 0.1%, floored up to 0.75%
@@ -140,7 +167,9 @@ def test_timeline_empty_rows_returns_fixed_empty_state():
 
 
 def test_timeline_row_missing_start_ts_raises_value_error():
-    rows = [{"label": "x", "status": "open", "end_ts": 100.0, "tooltip": "", "href": None}]
+    rows = [
+        {"label": "x", "status": "open", "end_ts": 100.0, "tooltip": "", "href": None}
+    ]
     with pytest.raises(ValueError):
         viz.timeline(rows)
 
@@ -148,13 +177,19 @@ def test_timeline_row_missing_start_ts_raises_value_error():
 def test_timeline_bar_class_has_css_var_fallback_for_its_status(monkeypatch):
     monkeypatch.setattr(viz.time, "time", lambda: 1000.0)
     rows = [
-        {"label": "a", "status": "running", "start_ts": 0.0, "end_ts": 500.0,
-         "tooltip": "t", "href": None},
+        {
+            "label": "a",
+            "status": "running",
+            "start_ts": 0.0,
+            "end_ts": 500.0,
+            "tooltip": "t",
+            "href": None,
+        },
     ]
     html_out = viz.timeline(rows)
     assert "viz-bar viz-running" in html_out
     # the fallback color lives in VIZ_CSS (bars are colored with zero host vars)
-    assert f'var(--viz-running, {viz.STATUS_HEX["running"]})' in viz.VIZ_CSS
+    assert f"var(--viz-running, {viz.STATUS_HEX['running']})" in viz.VIZ_CSS
 
 
 def test_viz_css_defines_fallback_for_every_canonical_token():
