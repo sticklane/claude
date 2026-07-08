@@ -1,14 +1,17 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/sticklane/agentprof/internal/claude"
+	"github.com/sticklane/agentprof/internal/merge"
 	"github.com/sticklane/agentprof/internal/naming"
 	"github.com/sticklane/agentprof/internal/output"
 	"github.com/sticklane/agentprof/internal/schema"
@@ -20,13 +23,39 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	dir := fs.String("claude-dir", defaultClaudeDir(), "Claude Code data directory")
 	days := fs.Int("days", 30, "include sessions active within the last N days")
+	since := fs.String("since", "", "absolute RFC3339 cutoff (mutually exclusive with an explicit --days)")
+	mergePath := fs.String("merge", "", "JSONL rolling-cache path: merge fresh samples in, evicting samples older than 7d")
 	nameTurns := fs.Bool("name-turns", false, "rename uninformative turn frames via one cached haiku call")
 	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (default stdout)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 
+	// Usage checks run before Collect so a rejected invocation writes nothing.
+	daysExplicit := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "days" {
+			daysExplicit = true
+		}
+	})
 	cutoff := time.Now().AddDate(0, 0, -*days)
+	if *since != "" {
+		if daysExplicit {
+			fmt.Fprintln(stderr, "agentprof claude: --since and --days are mutually exclusive")
+			return 2
+		}
+		t, err := time.Parse(time.RFC3339, *since)
+		if err != nil {
+			fmt.Fprintf(stderr, "agentprof claude: invalid --since %q: %v\n", *since, err)
+			return 2
+		}
+		cutoff = t
+	}
+	if *mergePath != "" && strings.HasSuffix(*out, ".pb.gz") {
+		fmt.Fprintln(stderr, "agentprof claude: --merge requires a JSONL -o path, not .pb.gz (pprof cannot round-trip per-sample time)")
+		return 2
+	}
+
 	samples, turns, skipped, err := claude.Collect(*dir, cutoff)
 	if err != nil {
 		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
@@ -35,6 +64,11 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 	if skipped > 0 {
 		fmt.Fprintf(stderr, "skipped %d unparseable lines\n", skipped)
 	}
+
+	if *mergePath != "" {
+		return mergeClaude(samples, *mergePath, *out, stdout, stderr)
+	}
+
 	if len(samples) == 0 {
 		fmt.Fprintln(stderr, "agentprof claude: no samples found (check --claude-dir and --days)")
 		return 1
@@ -54,6 +88,60 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// mergeClaude folds fresh samples into the JSONL rolling cache at mergePath
+// and writes the merged, 7d-evicted result to out. Both zero-sample guards are
+// bypassed (R2): a missing cache is zero samples, an empty fresh pass is not an
+// error, and an empty merged result writes a valid empty JSONL file directly
+// rather than routing through output.Write's zero-sample error.
+func mergeClaude(fresh []schema.Sample, mergePath, out string, stdout, stderr io.Writer) int {
+	existing, err := readCache(mergePath)
+	if err != nil {
+		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
+		return 1
+	}
+	merged := merge.Merge(existing, fresh, time.Now())
+	if len(merged) == 0 {
+		if err := writeEmptyJSONL(out, stdout); err != nil {
+			fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
+			return 1
+		}
+		return 0
+	}
+	if err := output.Write(merged, out, stdout); err != nil {
+		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+// readCache reads the existing rolling-cache JSONL; a missing file is treated
+// as zero existing samples, not an error (R2).
+func readCache(path string) ([]schema.Sample, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer f.Close()
+	samples, _, err := schema.Read(f)
+	return samples, err
+}
+
+// writeEmptyJSONL writes a valid empty JSONL result for an empty merged set:
+// stdout gets nothing, a real path is truncated to zero bytes.
+func writeEmptyJSONL(path string, stdout io.Writer) error {
+	if path == "" || path == "-" {
+		return nil
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	return f.Close()
 }
 
 // nameTurnFrames renames candidate turns' frames to "tNN · <name>" in place,
