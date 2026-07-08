@@ -259,8 +259,8 @@ this sweep.
    branch for the task (the dead run's forensic branches are no longer
    needed once it has shipped). Then **push `main` immediately after this
    commit** (`git push`) so the merged, verifier-PASSED work is backed
-   up the moment it lands. **Push guard (canonical; build cites this, and drain's own group
-   mode follows it, extended here to every bookkeeping commit — not only
+   up the moment it lands. **Push guard (canonical; build cites this, and drain's own rolling-window merges
+   follow it, extended here to every bookkeeping commit — not only
    DONE merges — since a concurrent session's rebase-pull has been
    observed to drop unpushed commits):** push only if `main` has a configured upstream — if none,
    skip silently; never `--force`; a rejected, non-fast-forward, or
