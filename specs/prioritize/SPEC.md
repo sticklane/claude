@@ -158,6 +158,12 @@ the desired changes, apply them by editing each named file's (task or
       one valid reprioritization instruction, produces exactly one commit
       reflecting it.
 
+## Authoring note
+
+Acceptance criteria in this repo cite the real per-subproject checks that
+were actually run (e.g. `python3 -m pytest .claude/skills/workboard/ -q`),
+never a top-level `bash scripts/check.sh` — this repo has no such gate.
+
 ## Open questions
 
 (none)
