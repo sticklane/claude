@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Priority: P1
 Discovered-from: specs/shared-viz-renderer/tasks/01-extract-viz-module.md
 Spec: ../SPEC.md
@@ -12,5 +12,5 @@ Decision (2026-07-06): yes — document the intentional VIZ_CSS no-op in specs/s
 
 ## Acceptance
 
-- [ ] `grep -qi 'no-op' specs/shared-viz-renderer/SPEC.md` → exits 0 (the note exists; currently absent)
-- [ ] `grep -i -C2 'no-op' specs/shared-viz-renderer/SPEC.md | grep -q 'viz-node'` → exits 0 (the note names the unstyled classes)
+- [x] `grep -qi 'no-op' specs/shared-viz-renderer/SPEC.md` → exits 0 (the note exists; currently absent) — verifier: exit 0, note added to VIZ_CSS bullet (evidence/05-spec-note-viz-css-noop.md)
+- [x] `grep -i -C2 'no-op' specs/shared-viz-renderer/SPEC.md | grep -q 'viz-node'` → exits 0 (the note names the unstyled classes) — verifier: exit 0, same sentence names viz-node (evidence/05-spec-note-viz-css-noop.md)
