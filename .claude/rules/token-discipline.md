@@ -75,7 +75,7 @@ of letting them default silently:
   the session model, raising effort only for the hardest verify/judge
   stages (docs/anthropic-playbook.md, "Token-cost doctrine"). Review work
   splits by altitude: reviewing individual code blocks (style,
-  conformance, mechanical correctness) is mechanical-tier; reviewing
+  conformance, mechanical correctness) is scout-tier; reviewing
   APIs, architecture, structure, and abstraction is judgment work on a
   high-quality model — the critic's deep-tier pin
   (docs/external-playbooks.md, "The new-SDLC spectrum").

@@ -144,8 +144,8 @@ are the only editor — two sessions interleaving in the same tree corrupt
 each other.
 
 - Pre-flight: the Agent Manager's session list for a live session whose
-  working directory resolves into this repo and isn't yours; `git
-worktree list` (a single checkout entry means a shared tree, zero
+  working directory resolves into this repo and isn't yours;
+  `git worktree list` (a single checkout entry means a shared tree, zero
   isolation); recent file mtimes or unexplained `git status` entries —
   edits you didn't make are a live collision, not a fluke.
 - On a detected collision: STOP editing and surface it to the user.
