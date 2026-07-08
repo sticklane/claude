@@ -72,3 +72,7 @@ subprocess boundary in tests).
       the written summary, not derived (R5). Verifier PASS.
 
 Evidence: ../evidence/03-cost-panel-and-refresh-endpoint.md
+
+## Discovered
+
+- The format-on-edit gate reflows the entire `agent-console.py` on any edit (dict literals expanded, f-string quote swaps), inflating this task's diff with unrelated churn. Already tracked as `specs/absorb-agent-tools/tasks/09-format-hook-full-file-rewrite-on-nonconformant-py.md` (Status: pending, dupe — no new stub filed).
