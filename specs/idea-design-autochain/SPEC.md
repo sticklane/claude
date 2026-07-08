@@ -222,3 +222,10 @@ non-technology fallback and its existing `/breakdown` self-chain.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Single task (01-idea-design-self-chain.md) — the entire change is one
+coherent behavioral edit to `.claude/skills/idea/SKILL.md` plus a version
+bump, describable in one paragraph per the sizing rule. No grouping
+applies.
