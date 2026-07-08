@@ -310,7 +310,11 @@ def collect() -> dict:
 BOARD_TTL = 45  # seconds; kept above the 25s client refresh so it serves cache
 ACTION_TIMEOUT = 60  # seconds; hard cap on any single action's subprocess
 _board_cache: dict = {
-    "ts": 0.0, "data": None, "registry": None, "pages": None, "actions": None
+    "ts": 0.0,
+    "data": None,
+    "registry": None,
+    "pages": None,
+    "actions": None,
 }
 _board_lock = threading.Lock()
 # GitHub repo visibility (public/private), fetched once via `gh` and cached long
@@ -770,7 +774,10 @@ def get_board() -> dict:
         pages = build_page_registry(assembled)
         actions = build_action_registry(data)
         _board_cache.update(
-            ts=time.time(), data=data, registry=registry, pages=pages,
+            ts=time.time(),
+            data=data,
+            registry=registry,
+            pages=pages,
             actions=actions,
         )
         return data
@@ -798,7 +805,9 @@ def build_entity_registry(assembled: dict) -> dict:
     def add(kind: str, path: str, title: str = "") -> None:
         real = os.path.realpath(path)
         eid = _entity_id(kind, real)
-        registry.setdefault(eid, {"id": eid, "kind": kind, "path": real, "title": title})
+        registry.setdefault(
+            eid, {"id": eid, "kind": kind, "path": real, "title": title}
+        )
 
     for repo in assembled.get("repos", []):
         root = repo.get("path") or ""
@@ -866,8 +875,13 @@ def build_page_registry(assembled: dict) -> dict:
         rid = _entity_id("repo", root)
         pages.setdefault(
             rid,
-            {"id": rid, "kind": "repo", "path": os.path.realpath(root),
-             "title": repo.get("name") or root, "repo": repo},
+            {
+                "id": rid,
+                "kind": "repo",
+                "path": os.path.realpath(root),
+                "title": repo.get("name") or root,
+                "repo": repo,
+            },
         )
         for spec in repo.get("specs", []):
             spath = spec.get("path") or ""
@@ -877,9 +891,14 @@ def build_page_registry(assembled: dict) -> dict:
             sid = _entity_id("spec", sdir)
             pages.setdefault(
                 sid,
-                {"id": sid, "kind": "spec", "path": os.path.realpath(sdir),
-                 "title": spec.get("title") or spec.get("slug") or "",
-                 "spec": spec, "root": root},
+                {
+                    "id": sid,
+                    "kind": "spec",
+                    "path": os.path.realpath(sdir),
+                    "title": spec.get("title") or spec.get("slug") or "",
+                    "spec": spec,
+                    "root": root,
+                },
             )
             for task in spec.get("tasks", []):
                 tabs = task.get("abs") or (
@@ -890,8 +909,13 @@ def build_page_registry(assembled: dict) -> dict:
                 tid = _entity_id("task", tabs)
                 pages.setdefault(
                     tid,
-                    {"id": tid, "kind": "task", "path": os.path.realpath(tabs),
-                     "title": task.get("title") or "", "task": task},
+                    {
+                        "id": tid,
+                        "kind": "task",
+                        "path": os.path.realpath(tabs),
+                        "title": task.get("title") or "",
+                        "task": task,
+                    },
                 )
         for s in repo.get("sessions", []):
             ssid = s.get("id")
@@ -900,9 +924,13 @@ def build_page_registry(assembled: dict) -> dict:
             seid = _entity_id("session", ssid)
             pages.setdefault(
                 seid,
-                {"id": seid, "kind": "session",
-                 "title": (s.get("prompt") or "session")[:90],
-                 "session": s, "root": root},
+                {
+                    "id": seid,
+                    "kind": "session",
+                    "title": (s.get("prompt") or "session")[:90],
+                    "session": s,
+                    "root": root,
+                },
             )
     return pages
 
@@ -951,7 +979,11 @@ def _scanner_dispatch_prompts(inbox: list) -> tuple[dict, dict]:
         if not prompt:
             continue
         repo, item = i.get("repo") or "", i.get("item") or ""
-        if i.get("state") == "needs-review" and item.startswith("Spec ") and ": all " in item:
+        if (
+            i.get("state") == "needs-review"
+            and item.startswith("Spec ")
+            and ": all " in item
+        ):
             verify[(repo, item[len("Spec ") : item.index(": all ")])] = prompt
         elif item.startswith("Handoff parked: "):
             resume[(repo, item[len("Handoff parked: ") :])] = prompt
@@ -974,8 +1006,12 @@ def build_action_registry(board: dict) -> dict:
     def add_dispatch(kind: str, target: str, cwd: str, prompt: str, label: str) -> None:
         aid = _entity_id(kind, target)
         actions[aid] = {
-            "id": aid, "kind": kind, "label": label,
-            "repo": cwd, "cwd": cwd, "prompt": prompt,
+            "id": aid,
+            "kind": kind,
+            "label": label,
+            "repo": cwd,
+            "cwd": cwd,
+            "prompt": prompt,
         }
 
     for repo in board.get("repos", []):
@@ -1002,7 +1038,9 @@ def build_action_registry(board: dict) -> dict:
                 continue
             if done < total:
                 add_dispatch(
-                    "dispatch-drain", spec_path, path,
+                    "dispatch-drain",
+                    spec_path,
+                    path,
                     f"Run /drain for specs/{slug}; work only that spec's tasks",
                     f"drain {slug} ({done}/{total})",
                 )
@@ -1017,7 +1055,10 @@ def build_action_registry(board: dict) -> dict:
             prompt = resume_prompts.get((name, title))
             if hpath and prompt:
                 add_dispatch(
-                    "dispatch-resume-handoff", hpath, path, prompt,
+                    "dispatch-resume-handoff",
+                    hpath,
+                    path,
+                    prompt,
                     f"resume handoff: {title}",
                 )
 
@@ -1030,9 +1071,11 @@ def build_action_registry(board: dict) -> dict:
         did = rec.get("id") or ""
         aid = _entity_id("stop-dispatch", rec.get("log") or did)
         actions[aid] = {
-            "id": aid, "kind": "stop-dispatch",
+            "id": aid,
+            "kind": "stop-dispatch",
             "label": f"stop {rec.get('kind', 'dispatch')}",
-            "repo": rec.get("cwd") or "", "dispatch_id": did,
+            "repo": rec.get("cwd") or "",
+            "dispatch_id": did,
         }
     return actions
 
@@ -1290,7 +1333,11 @@ def _render_events(events) -> str:
         content = msg.get("content") if isinstance(msg, dict) else None
         if isinstance(content, list):
             for blk in content:
-                if isinstance(blk, dict) and blk.get("type") == "tool_use" and blk.get("id"):
+                if (
+                    isinstance(blk, dict)
+                    and blk.get("type") == "tool_use"
+                    and blk.get("id")
+                ):
                     names[blk["id"]] = blk.get("name") or "tool"
 
     rows = []
@@ -1325,7 +1372,7 @@ def _render_events(events) -> str:
             continue
         rows.append(
             f'<div class="evt"><span class="role">{esc(role)}</span> '
-            f'{" ".join(pieces)}</div>'
+            f"{' '.join(pieces)}</div>"
         )
     return "".join(rows)
 
@@ -1348,9 +1395,9 @@ def render_session_page(entry: dict) -> str:
         '<div class="sub">Session</div>',
         '<table class="meta">'
         f'<tr><td>sessionId</td><td class="mono">{esc(sid)}</td></tr>'
-        f'<tr><td>state</td><td>{esc(state)}</td></tr>'
-        f'<tr><td>started</td><td>{esc(started)}</td></tr>'
-        f'<tr><td>last active</td><td>{esc(last)}</td></tr>'
+        f"<tr><td>state</td><td>{esc(state)}</td></tr>"
+        f"<tr><td>started</td><td>{esc(started)}</td></tr>"
+        f"<tr><td>last active</td><td>{esc(last)}</td></tr>"
         + (f'<tr><td>pid</td><td class="mono">{esc(pid)}</td></tr>' if pid else "")
         + "</table>",
     ]
@@ -1372,8 +1419,7 @@ def render_session_page(entry: dict) -> str:
     tpath = _transcript_path(sid)
     if tpath is None:
         meta.append(
-            '<div class="sub">Transcript</div>'
-            '<p class="mono">no transcript found</p>'
+            '<div class="sub">Transcript</div><p class="mono">no transcript found</p>'
         )
     else:
         events, total = tail_events(tpath)
@@ -1424,14 +1470,12 @@ def render_spec_page(entry: dict) -> str:
             cell = f'<a href="/task/{esc(tid)}">{label}</a>'
         else:
             cell = label
-        task_rows.append(
-            f"<tr><td>{cell}</td><td>{status}</td><td>{unblock}</td></tr>"
-        )
+        task_rows.append(f"<tr><td>{cell}</td><td>{status}</td><td>{unblock}</td></tr>")
     if task_rows:
         parts.append(
             '<div class="sub">Tasks</div>'
             "<table><thead><tr><th>Task</th><th>Status</th><th>Unblock</th>"
-            f'</tr></thead><tbody>{"".join(task_rows)}</tbody></table>'
+            f"</tr></thead><tbody>{''.join(task_rows)}</tbody></table>"
         )
 
     ev_dir = os.path.join(spec_dir, "evidence")
@@ -1859,7 +1903,7 @@ def _unblock_missing(i: dict) -> bool:
     )
 
 
-def render_workboard(b: dict) -> str:
+def render_workboard(b: dict, cost: dict | None = None) -> str:
     def chip(state):
         return f'<span class="chip {esc(state)}">{esc(state)}</span>'
 
@@ -1869,12 +1913,58 @@ def render_workboard(b: dict) -> str:
             f'<div class="v">{v}</div><div class="l">{esc(label)}</div></button>'
         )
 
+    # Cost (7d): the summary dict is read+passed by the HTTP handler (R6);
+    # this function stays pure. A missing summary (cost is None) renders an
+    # explicit pending state, never an error (R7).
+    def _usd(microusd):
+        try:
+            return f"${(microusd or 0) / 1_000_000:,.2f}"
+        except (TypeError, ValueError):
+            return "$0.00"
+
+    def _cost_rows(dim):
+        top = sorted(
+            (dim or {}).items(),
+            key=lambda kv: (kv[1] or {}).get("cost_microusd", 0),
+            reverse=True,
+        )[:5]
+        return (
+            "".join(
+                f'<div class="line"><span class="trunc">{esc(name)}</span>'
+                f'<span class="meta">{_usd((v or {}).get("cost_microusd", 0))}</span></div>'
+                for name, v in top
+            )
+            or '<div class="zero">None.</div>'
+        )
+
+    if cost is None:
+        cost_value = "—"
+        cost_body = (
+            '<div class="zero">Cost data pending — run a refresh to populate '
+            "the 7-day window.</div>"
+        )
+    else:
+        cost_value = _usd((cost.get("totals") or {}).get("cost_microusd", 0))
+        cost_body = (
+            '<div class="sub">By model</div>'
+            + _cost_rows(cost.get("by_model"))
+            + '<div class="sub">By skill</div>'
+            + _cost_rows(cost.get("by_skill"))
+            + '<div class="sub">By project</div>'
+            + _cost_rows(cost.get("by_project"))
+        )
+    cost_panel = (
+        f'<div class="panel" id="panel-cost"><div class="sub">Cost (7d) · '
+        f"{cost_value}</div>{cost_body}</div>"
+    )
+
     tiles = "".join(
         [
             tile(b["n_repos"], "repos", 'data-scroll="#repos"'),
             tile(b["n_open_specs"], "open specs", 'data-panel="specs"'),
             tile(b["n_open_tasks"], "open tasks", 'data-panel="tasks"'),
             tile(b["n_active"], "active sessions", 'data-panel="active"'),
+            tile(cost_value, "cost (7d)", 'data-panel="cost"'),
             tile(
                 len(b["inbox"]),
                 "needs attention",
@@ -1916,6 +2006,7 @@ def render_workboard(b: dict) -> str:
         f'<div class="panel" id="panel-specs"><div class="sub">Open specs · {len(b["open_specs"])}</div>{specs_panel}</div>'
         f'<div class="panel" id="panel-tasks"><div class="sub">Repos with open tasks · {len(b["task_repos"])}</div>{tasks_panel}</div>'
         f'<div class="panel" id="panel-active"><div class="sub">Active sessions · {len(b["actives"])}</div>{active_panel}</div>'
+        f"{cost_panel}"
     )
 
     def inbox_row(i, *, answerable):
@@ -1924,11 +2015,7 @@ def render_workboard(b: dict) -> str:
         badge = chip(i["state"])
         if not answerable and _unblock_missing(i):
             badge += '<span class="chip warn">no unblock</span>'
-        cmd = (
-            f" <code>{esc(i['cmd'])}</code>"
-            if i["cmd"] and not answerable
-            else ""
-        )
+        cmd = f" <code>{esc(i['cmd'])}</code>" if i["cmd"] and not answerable else ""
         return (
             f'<div class="row" data-text="{esc((i["item"] + " " + i["why"] + " " + i["repo"]).lower())}">{badge}'
             f'<div><div class="what">{esc(i["item"])}</div>'
@@ -1972,9 +2059,7 @@ def render_workboard(b: dict) -> str:
                     f'title="git push">push &#8593;{g["ahead"]}</button>'
                 )
             else:
-                chips.append(
-                    f'<span class="gchip warn">&#8593;{g["ahead"]}</span>'
-                )
+                chips.append(f'<span class="gchip warn">&#8593;{g["ahead"]}</span>')
         if g.get("behind"):
             chips.append(f'<span class="gchip">&#8595;{g["behind"]}</span>')
         inner = []
@@ -1998,18 +2083,22 @@ def render_workboard(b: dict) -> str:
                 if git_root and sp.get("path") and sp["total"]:
                     if sp["done"] < sp["total"]:
                         disp = _dispatch_btn(
-                            "dispatch-drain", sp["path"], f'drain {sp["slug"]}',
-                            f'Drain specs/{sp["slug"]} in {r["name"]}? Launches a '
+                            "dispatch-drain",
+                            sp["path"],
+                            f"drain {sp['slug']}",
+                            f"Drain specs/{sp['slug']} in {r['name']}? Launches a "
                             "Claude /drain session (agent with write access, costs tokens).",
                         )
                     else:
                         disp = _dispatch_btn(
-                            "dispatch-verify", sp["path"], f'verify {sp["slug"]}',
-                            f'Verify specs/{sp["slug"]} in {r["name"]}? Launches the '
+                            "dispatch-verify",
+                            sp["path"],
+                            f"verify {sp['slug']}",
+                            f"Verify specs/{sp['slug']} in {r['name']}? Launches the "
                             "verifier agent (costs tokens).",
                         )
                 row = (
-                    f'{title_el}'
+                    f"{title_el}"
                     f'{prog}<span class="meta">{_ago(sp["mtime"])}</span>{disp}'
                 )
                 prio = _prio_select(sp.get("path", ""), sp.get("priority", ""))
@@ -2068,7 +2157,9 @@ def render_workboard(b: dict) -> str:
                 + f'<span class="meta">{_ago(h["mtime"])}</span>'
                 + (
                     _dispatch_btn(
-                        "dispatch-resume-handoff", h["path"], "resume",
+                        "dispatch-resume-handoff",
+                        h["path"],
+                        "resume",
                         f'Resume the handoff "{h["title"]}" in {r["name"]}? Launches a '
                         "Claude session to finish it (costs tokens).",
                     )
@@ -2118,7 +2209,7 @@ def render_workboard(b: dict) -> str:
         repo_blocks.append(
             f'<details class="repo"{open_attr} data-k="r:{esc(r["name"])}" '
             f'data-text="{data_text}"><summary>'
-            f'{rn}{ghbadge}{"".join(chips)}'
+            f"{rn}{ghbadge}{''.join(chips)}"
             f"{commit}</summary>{body}</details>"
         )
 
@@ -2282,18 +2373,30 @@ def execute_push(action: dict) -> dict:
             env=GIT_ENV,
         )
     except subprocess.TimeoutExpired:
-        return {"code": 200, "body": {
-            "ok": False, "kind": "push", "exit": None, "output": "",
-            "message": f"git push timed out after {ACTION_TIMEOUT}s",
-        }}
+        return {
+            "code": 200,
+            "body": {
+                "ok": False,
+                "kind": "push",
+                "exit": None,
+                "output": "",
+                "message": f"git push timed out after {ACTION_TIMEOUT}s",
+            },
+        }
     output = (proc.stdout or "") + (proc.stderr or "")
     ok = proc.returncode == 0
     if ok:
         _invalidate_board()
-    return {"code": 200, "body": {
-        "ok": ok, "kind": "push", "exit": proc.returncode, "output": output,
-        "message": "pushed" if ok else f"git push exited {proc.returncode}",
-    }}
+    return {
+        "code": 200,
+        "body": {
+            "ok": ok,
+            "kind": "push",
+            "exit": proc.returncode,
+            "output": output,
+            "message": "pushed" if ok else f"git push exited {proc.returncode}",
+        },
+    }
 
 
 # Every dispatch runs an agentic `claude` session with write access to the
@@ -2307,9 +2410,12 @@ _DISPATCH_PERMISSION_MODE = "dontAsk"
 _DISPATCH_ALLOWED_TOOLS = "Read,Edit,Write,Glob,Grep,Task,Bash"
 _DISPATCH_MAX_TURNS = "80"
 _DISPATCH_ARGS = [
-    "--allowedTools", _DISPATCH_ALLOWED_TOOLS,
-    "--permission-mode", _DISPATCH_PERMISSION_MODE,
-    "--max-turns", _DISPATCH_MAX_TURNS,
+    "--allowedTools",
+    _DISPATCH_ALLOWED_TOOLS,
+    "--permission-mode",
+    _DISPATCH_PERMISSION_MODE,
+    "--max-turns",
+    _DISPATCH_MAX_TURNS,
 ]
 
 
@@ -2353,20 +2459,31 @@ def run_action(action_id: str, confirm: bool = False) -> dict:
     nothing runs; a confirm-required action without the flag -> 400."""
     action = get_actions().get(action_id)
     if not action:
-        return {"code": 409, "body": {
-            "ok": False,
-            "message": "unknown action id — the board state may have changed; "
-                       "rescan the board and try again",
-        }}
+        return {
+            "code": 409,
+            "body": {
+                "ok": False,
+                "message": "unknown action id — the board state may have changed; "
+                "rescan the board and try again",
+            },
+        }
     if action["kind"] in _CONFIRM_REQUIRED and not confirm:
-        return {"code": 400, "body": {
-            "ok": False, "message": "this action requires an explicit confirm",
-        }}
+        return {
+            "code": 400,
+            "body": {
+                "ok": False,
+                "message": "this action requires an explicit confirm",
+            },
+        }
     executor = _ACTION_EXECUTORS.get(action["kind"])
     if not executor:
-        return {"code": 400, "body": {
-            "ok": False, "message": f"unsupported action kind: {action['kind']}",
-        }}
+        return {
+            "code": 400,
+            "body": {
+                "ok": False,
+                "message": f"unsupported action kind: {action['kind']}",
+            },
+        }
     return executor(action)
 
 
@@ -2413,7 +2530,9 @@ def _proc_start_time(pid: int) -> str:
     try:
         out = subprocess.run(
             ["ps", "-o", "lstart=", "-p", str(pid)],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
     except (OSError, subprocess.SubprocessError):
         return ""
@@ -2454,7 +2573,9 @@ def _proc_command(pid: int) -> str:
     try:
         out = subprocess.run(
             ["ps", "-o", "command=", "-p", str(pid)],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
     except (OSError, subprocess.SubprocessError):
         return ""
@@ -2550,11 +2671,15 @@ def start_dispatch(kind: str, cwd: str, prompt: str, extra_args=()) -> dict:
     real = os.path.realpath(os.path.expanduser(cwd or ""))
     running = _running_dispatch_for_cwd(real)
     if running:
-        return {"code": 409, "body": {
-            "ok": False, "id": running["id"],
-            "message": f"a dispatch is already running for {real} "
-                       f"(id {running['id']}); stop it or wait for it to finish",
-        }}
+        return {
+            "code": 409,
+            "body": {
+                "ok": False,
+                "id": running["id"],
+                "message": f"a dispatch is already running for {real} "
+                f"(id {running['id']}); stop it or wait for it to finish",
+            },
+        }
     claude = _resolve_claude_bin()
     d = _dispatch_dir()
     d.mkdir(parents=True, exist_ok=True)
@@ -2567,8 +2692,12 @@ def start_dispatch(kind: str, cwd: str, prompt: str, extra_args=()) -> dict:
     logf = open(log_path, "ab")
     try:
         proc = subprocess.Popen(
-            argv, cwd=real, env=GIT_ENV,
-            stdin=subprocess.DEVNULL, stdout=logf, stderr=subprocess.STDOUT,
+            argv,
+            cwd=real,
+            env=GIT_ENV,
+            stdin=subprocess.DEVNULL,
+            stdout=logf,
+            stderr=subprocess.STDOUT,
             start_new_session=True,
         )
     finally:
@@ -2579,18 +2708,29 @@ def start_dispatch(kind: str, cwd: str, prompt: str, extra_args=()) -> dict:
     _dispatch_procs.append(proc)
     pgid = proc.pid  # start_new_session makes the child its group/session leader
     rec = {
-        "id": did, "kind": kind, "cwd": real, "pgid": pgid,
-        "start_time": _proc_start_time(pgid), "started_at": time.time(),
-        "log": str(log_path), "state": "running", "exit_code": None,
+        "id": did,
+        "kind": kind,
+        "cwd": real,
+        "pgid": pgid,
+        "start_time": _proc_start_time(pgid),
+        "started_at": time.time(),
+        "log": str(log_path),
+        "state": "running",
+        "exit_code": None,
     }
     (d / f"{did}.json").write_text(json.dumps(rec), encoding="utf-8")
     # Rebuild the board next scan so the new dispatch's `stop-dispatch` action
     # enters the registry immediately (R8: no manual rescan to stop it).
     _invalidate_board()
-    return {"code": 200, "body": {
-        "ok": True, "id": did, "log": str(log_path),
-        "message": f"dispatched {kind} in {real}",
-    }}
+    return {
+        "code": 200,
+        "body": {
+            "ok": True,
+            "id": did,
+            "log": str(log_path),
+            "message": f"dispatched {kind} in {real}",
+        },
+    }
 
 
 def _find_record(dispatch_id: str) -> tuple[dict | None, Path | None]:
@@ -2676,7 +2816,8 @@ def render_dispatches(records: list[dict]) -> str:
         body = (
             "<table><thead><tr><th>kind</th><th>state</th><th>started</th>"
             "<th>exit</th><th>log</th><th>cwd</th><th></th></tr></thead><tbody>"
-            + "".join(rows) + "</tbody></table>"
+            + "".join(rows)
+            + "</tbody></table>"
         )
     else:
         body = "<p>No dispatches yet.</p>"
@@ -2815,6 +2956,28 @@ def resume_agent(sid: str, prompt: str) -> tuple[bool, str]:
     return True, "resumed"
 
 
+def _cost_summary_path() -> Path:
+    """The rolling 7-day cost summary agentprof's hourly refresh maintains.
+    Overridable for tests/deployment via `AGENT_CONSOLE_COST_SUMMARY`."""
+    override = os.environ.get("AGENT_CONSOLE_COST_SUMMARY")
+    if override:
+        return Path(override)
+    return Path.home() / ".local" / "state" / "agentprof" / "weekly-7d-summary.json"
+
+
+def _read_cost_summary() -> dict | None:
+    """Read the pre-aggregated cost summary JSON (a tiny file — cheap on every
+    request; no subprocess, no transcript reparse). Returns None when the file
+    is absent (fresh install, R7) or unreadable/malformed — the caller renders
+    an explicit pending state, never a 500."""
+    try:
+        with open(_cost_summary_path(), encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def _agentprof_refresh_script() -> Path:
     """`agentprof/scripts/refresh-profile.sh` for this checkout, derived from
     this file's own location — same pattern as `_skills_root()`."""
@@ -2862,6 +3025,30 @@ def refresh_profile() -> tuple[bool, str]:
     return True, f"profile refreshed; {kick_msg}"
 
 
+def refresh_cost() -> tuple[bool, str, int]:
+    """Run the same incremental refresh step as the hourly launchd job (task
+    04 wires `weekly-7d.jsonl`/`weekly-7d-summary.json` maintenance into
+    `refresh-profile.sh`), synchronously, for the manual "refresh now" button
+    (R5). `sessions_added` is read back out of the just-written summary JSON —
+    agentprof computes it (per SPEC R3); the console never derives it."""
+    script = _agentprof_refresh_script()
+    try:
+        regen = subprocess.run(
+            ["bash", str(script)], capture_output=True, text=True, timeout=120
+        )
+    except OSError as e:
+        return False, str(e), 0
+    if regen.returncode != 0:
+        return False, (regen.stderr or regen.stdout or "refresh failed").strip(), 0
+    summary = _read_cost_summary()
+    if summary is None:
+        return False, "refresh ran but no cost summary was written", 0
+    added = summary.get("sessions_added", 0)
+    if not isinstance(added, int):
+        added = 0
+    return True, "cost refreshed", added
+
+
 # --------------------------------------------------------------------------- #
 # Server
 # --------------------------------------------------------------------------- #
@@ -2895,7 +3082,9 @@ class Handler(BaseHTTPRequestHandler):
             if path in ("/", "/index.html"):
                 self._send(render_skills(collect()).encode("utf-8"))
             elif path == "/workboard":
-                self._send(render_workboard(get_board()).encode("utf-8"))
+                self._send(
+                    render_workboard(get_board(), _read_cost_summary()).encode("utf-8")
+                )
             elif path == "/dispatches":
                 self._send(render_dispatches(_load_records()).encode("utf-8"))
             elif path.startswith("/dispatch/") and path.endswith("/log"):
@@ -2993,9 +3182,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(b"not found", "text/plain", 404)
             return
         title = entry.get("title") or os.path.basename(entry["path"])
-        self._send(
-            render_detail_page(title, render_markdown(content)).encode("utf-8")
-        )
+        self._send(render_detail_page(title, render_markdown(content)).encode("utf-8"))
 
     # --- writes / control ---------------------------------------------------
     def _reject_cross_origin(self) -> bool:
@@ -3039,6 +3226,24 @@ class Handler(BaseHTTPRequestHandler):
                 json.dumps(result["body"]).encode("utf-8"),
                 "application/json",
                 result["code"],
+            )
+            return
+        # Cost refresh returns a richer body ({"ok", "sessions_added"}) than
+        # the generic (ok, message) handlers below, so it's handled here (R5).
+        if path == "/api/cost/refresh":
+            ok, msg, added = refresh_cost()
+            payload = (
+                {"ok": ok, "sessions_added": added}
+                if ok
+                else {
+                    "ok": ok,
+                    "message": msg,
+                }
+            )
+            self._send(
+                json.dumps(payload).encode("utf-8"),
+                "application/json",
+                200 if ok else 400,
             )
             return
         handlers = {
