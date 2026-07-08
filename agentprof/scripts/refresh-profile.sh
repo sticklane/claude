@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Regenerates the rolling 30-day agentprof profile used by the pprof web UI
-# (agentprof/scripts/serve-pprof.sh) and the workboard's refresh control.
+# (agentprof/scripts/serve-pprof.sh) and the workboard's refresh control, then
+# maintains the rolling 7-day cost-summary cache used by the workboard's
+# "Cost (7d)" panel (specs/workboard-weekly-cost-view/SPEC.md R4).
 #
-# Locates (building if needed) the agentprof binary, then writes the profile
+# Locates (building if needed) the agentprof binary, then writes each output
 # to a temp file in the state dir and mv's it into place so readers never see
-# a partial file. Restarting the pprof service that serves the profile is the
-# CALLER's job (launchd KeepAlive / the workboard's refresh handler) — this
-# script only regenerates the file.
+# a partial file. Restarting the pprof service that serves the 30d profile is
+# the CALLER's job (launchd KeepAlive / the workboard's refresh handler) —
+# this script only regenerates files.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,6 +16,8 @@ AGENTPROF_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 STATE_DIR="$HOME/.local/state/agentprof"
 OUTPUT="$STATE_DIR/claude-30d.pb.gz"
+WEEKLY_JSONL="$STATE_DIR/weekly-7d.jsonl"
+WEEKLY_SUMMARY="$STATE_DIR/weekly-7d-summary.json"
 
 mkdir -p "$STATE_DIR"
 
@@ -28,8 +32,29 @@ else
   AGENTPROF_BIN="$AGENTPROF_DIR/agentprof"
 fi
 
-TMP_FILE="$(mktemp "$STATE_DIR/.claude-30d.XXXXXX.pb.gz")"
-trap 'rm -f "$TMP_FILE"' EXIT
+# mktemp's X-substitution only fires on trailing X's (BSD mktemp does not
+# randomize a template with a static suffix after the X's, e.g.
+# ".XXXXXX.pb.gz" — it silently returns the literal, colliding name on a
+# second run), so generate suffix-free then rename.
+TMP_FILE="$(mktemp "$STATE_DIR/.claude-30d.XXXXXX")"
+mv "$TMP_FILE" "$TMP_FILE.pb.gz"
+TMP_FILE="$TMP_FILE.pb.gz"
+TMP_WEEKLY="$(mktemp "$STATE_DIR/.weekly-7d.XXXXXX")"
+mv "$TMP_WEEKLY" "$TMP_WEEKLY.jsonl"
+TMP_WEEKLY="$TMP_WEEKLY.jsonl"
+trap 'rm -f "$TMP_FILE" "$TMP_WEEKLY"' EXIT
 
 "$AGENTPROF_BIN" claude --days 30 -o "$TMP_FILE"
 mv "$TMP_FILE" "$OUTPUT"
+
+# Weekly 7d rolling cache: --since the previous run's cache mtime (falling
+# back to 7 days ago on first run / missing file), --merge reads the current
+# cache while -o writes to a temp file so readers never see a partial write.
+if [ -f "$WEEKLY_JSONL" ]; then
+  SINCE="$(date -u -r "$WEEKLY_JSONL" '+%Y-%m-%dT%H:%M:%SZ')"
+else
+  SINCE="$(date -u -v-7d '+%Y-%m-%dT%H:%M:%SZ')"
+fi
+
+"$AGENTPROF_BIN" claude --since "$SINCE" --merge "$WEEKLY_JSONL" -o "$TMP_WEEKLY" --summary "$WEEKLY_SUMMARY"
+mv "$TMP_WEEKLY" "$WEEKLY_JSONL"
