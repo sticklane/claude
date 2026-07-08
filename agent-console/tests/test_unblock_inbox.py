@@ -114,14 +114,20 @@ class NeedsAnswerGrouping(unittest.TestCase):
     def test_ask_item_is_grouped_first_in_a_distinct_needs_answer_block(self):
         html = _render([_review_item(), _ask_item()])
         groups = _inbox_groups(html)
-        self.assertEqual(len(groups), 2, "expected a needs-answer block + a general block")
+        self.assertEqual(
+            len(groups), 2, "expected a needs-answer block + a general block"
+        )
         answer_cls, answer_rows = groups[0]
         general_cls, general_rows = groups[1]
         self.assertIn(
-            "needs-answer", answer_cls, "the first inbox block must be the needs-answer block"
+            "needs-answer",
+            answer_cls,
+            "the first inbox block must be the needs-answer block",
         )
         self.assertNotIn(
-            "needs-answer", general_cls, "the general inbox block must not carry needs-answer"
+            "needs-answer",
+            general_cls,
+            "the general inbox block must not carry needs-answer",
         )
         self.assertTrue(
             any("wire the creds" in t for t in answer_rows),
@@ -142,9 +148,15 @@ class NeedsAnswerGrouping(unittest.TestCase):
     def test_needs_answer_block_carries_no_dispatch_or_action_affordance(self):
         html = _render([_ask_item()])
         region = html[html.index("inbox needs-answer") : html.index('id="agents"')]
-        self.assertNotIn("<button", region, "needs-answer rows must have no dispatch button")
-        self.assertNotIn("data-act", region, "needs-answer rows must have no action control")
-        self.assertNotIn("<code", region, "needs-answer rows must render no runnable command")
+        self.assertNotIn(
+            "<button", region, "needs-answer rows must have no dispatch button"
+        )
+        self.assertNotIn(
+            "data-act", region, "needs-answer rows must have no action control"
+        )
+        self.assertNotIn(
+            "<code", region, "needs-answer rows must render no runnable command"
+        )
 
 
 class BlockedUnblockRow(unittest.TestCase):
@@ -167,7 +179,9 @@ class BlockedUnblockRow(unittest.TestCase):
         html = _render([item])
         self.assertIn("make deploy", html, "the unblock step text must show on the row")
         self.assertEqual(
-            self._warn_chips(html), [], "an item with a recorded unblock gets no warning chip"
+            self._warn_chips(html),
+            [],
+            "an item with a recorded unblock gets no warning chip",
         )
 
     def test_blocked_item_without_unblock_shows_warning_chip(self):
@@ -181,7 +195,8 @@ class BlockedUnblockRow(unittest.TestCase):
         }
         html = _render([item])
         self.assertTrue(
-            self._warn_chips(html), "a blocked item with no recorded unblock must show a warning chip"
+            self._warn_chips(html),
+            "a blocked item with no recorded unblock must show a warning chip",
         )
 
 

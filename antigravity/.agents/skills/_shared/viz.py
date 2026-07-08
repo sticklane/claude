@@ -35,12 +35,26 @@ STATUS_HEX: dict[str, str] = {
 # Every real status term in use across agent-console.py, workboard.py, and
 # fleet/reference.md, mapped to one canonical token.
 _STATUS_ALIASES: dict[str, str] = {
-    "running": "running", "in-progress": "running", "in_progress": "running",
-    "claimed": "running", "active": "running",
-    "open": "open", "pending": "open", "todo": "open", "ready": "open", "queued": "open",
-    "done": "done", "completed": "done", "closed": "done", "deferred": "done", "skipped": "done",
-    "failed": "failed", "error": "failed",
-    "recent": "stale", "stale": "stale", "idle": "stale",
+    "running": "running",
+    "in-progress": "running",
+    "in_progress": "running",
+    "claimed": "running",
+    "active": "running",
+    "open": "open",
+    "pending": "open",
+    "todo": "open",
+    "ready": "open",
+    "queued": "open",
+    "done": "done",
+    "completed": "done",
+    "closed": "done",
+    "deferred": "done",
+    "skipped": "done",
+    "failed": "failed",
+    "error": "failed",
+    "recent": "stale",
+    "stale": "stale",
+    "idle": "stale",
     "blocked": "blocked",
 }
 
@@ -176,14 +190,16 @@ def timeline(rows: list[dict]) -> str:
         label = html.escape(str(row.get("label") or ""))
         tooltip = html.escape(str(row.get("tooltip") or ""))
         name = (
-            f'<a href="{html.escape(row["href"])}">{label}</a>' if row.get("href") else label
+            f'<a href="{html.escape(row["href"])}">{label}</a>'
+            if row.get("href")
+            else label
         )
         lanes.append(
             f'<div class="viz-lane">'
             f'<div class="name">{name}</div>'
             f'<div class="viz-track"><div class="viz-bar viz-{canon}" '
             f'style="left:{left:.3f}%;width:{bar_width:.3f}%" title="{tooltip}"></div></div>'
-            f'</div>'
+            f"</div>"
         )
 
     return "".join(lanes)
@@ -194,7 +210,7 @@ def timeline(rows: list[dict]) -> str:
 # ---------------------------------------------------------------------------
 
 _BAR_COLOR_RULES = "\n".join(
-    f'.viz-bar.viz-{token} {{ background: var(--viz-{token}, {hexval}); }}'
+    f".viz-bar.viz-{token} {{ background: var(--viz-{token}, {hexval}); }}"
     for token, hexval in STATUS_HEX.items()
 )
 
@@ -218,6 +234,7 @@ VIZ_CSS = f"""\
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def _emit_fleet_css() -> None:
     print("/* >>> viz:timeline-css BEGIN */")
     print(VIZ_CSS, end="")
@@ -236,8 +253,14 @@ def _self_sha256() -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="viz.py")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--emit-fleet-css", action="store_true", help="print VIZ_CSS wrapped in fleet sentinels")
-    group.add_argument("--self-sha256", action="store_true", help="print sha256 of the module body")
+    group.add_argument(
+        "--emit-fleet-css",
+        action="store_true",
+        help="print VIZ_CSS wrapped in fleet sentinels",
+    )
+    group.add_argument(
+        "--self-sha256", action="store_true", help="print sha256 of the module body"
+    )
     args = parser.parse_args(argv)
 
     if args.emit_fleet_css:

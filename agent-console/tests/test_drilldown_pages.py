@@ -35,8 +35,12 @@ _GIT_ENV = {
 
 def _git(*args, cwd=None):
     subprocess.run(
-        ["git", *args], check=True, capture_output=True, text=True,
-        env=_GIT_ENV, cwd=cwd,
+        ["git", *args],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=_GIT_ENV,
+        cwd=cwd,
     )
 
 

@@ -125,9 +125,7 @@ class TestFileRoute(unittest.TestCase):
         return eid, {eid: {"id": eid, "kind": kind, "path": fpath, "title": title}}
 
     def test_serves_file_contents_html_escaped(self):
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".md", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write("# Title\n\n<script>alert(1)</script>\n")
             fpath = f.name
         self.addCleanup(os.unlink, fpath)
@@ -182,9 +180,7 @@ class TestLazyScanAndCaching(unittest.TestCase):
     def _wire(self, td):
         assembled, _ = _make_repo(Path(td))
         reg = ac.build_entity_registry(assembled)
-        spec_id = next(
-            eid for eid, e in reg.items() if e["path"].endswith("SPEC.md")
-        )
+        spec_id = next(eid for eid, e in reg.items() if e["path"].endswith("SPEC.md"))
         calls = {"n": 0}
 
         def fake_assemble(*a, **k):

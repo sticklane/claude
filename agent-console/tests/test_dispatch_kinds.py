@@ -49,8 +49,16 @@ def _non_git_dir():
 
 def _spec_entry(slug, path, done, total):
     return {
-        "id": "", "slug": slug, "title": slug, "status": None, "priority": "",
-        "path": path, "done": done, "total": total, "tasks": [], "mtime": 0,
+        "id": "",
+        "slug": slug,
+        "title": slug,
+        "status": None,
+        "priority": "",
+        "path": path,
+        "done": done,
+        "total": total,
+        "tasks": [],
+        "mtime": 0,
     }
 
 
@@ -60,10 +68,14 @@ def _handoff_entry(title, path):
 
 def _repo_entry(path, name, specs=(), handoffs=(), ahead=0):
     return {
-        "id": "", "name": name, "path": path,
+        "id": "",
+        "name": name,
+        "path": path,
         "git": {"branch": "main", "dirty": 0, "ahead": ahead, "behind": 0},
-        "specs": list(specs), "handoffs": list(handoffs),
-        "tasks": None, "sessions": [],
+        "specs": list(specs),
+        "handoffs": list(handoffs),
+        "tasks": None,
+        "sessions": [],
     }
 
 
@@ -78,20 +90,28 @@ def _inbox_verify(repo_name, slug, total, repo_path, prompt=None):
             "against its acceptance criteria; if it passes, archive the spec dir"
         )
     return {
-        "sev": "warning", "state": "needs-review",
+        "sev": "warning",
+        "state": "needs-review",
         "item": f"Spec {slug}: all {total} task(s) done",
-        "repo": repo_name, "why": "run the verifier", "age": 0,
+        "repo": repo_name,
+        "why": "run the verifier",
+        "age": 0,
         "cmd": _cmd(repo_path, prompt),
     }
 
 
 def _inbox_resume(repo_name, title, path, repo_path, prompt=None):
     if prompt is None:
-        prompt = f"Resume the parked handoff in {path}; delete the file once fully resumed"
+        prompt = (
+            f"Resume the parked handoff in {path}; delete the file once fully resumed"
+        )
     return {
-        "sev": "serious", "state": "blocked",
+        "sev": "serious",
+        "state": "blocked",
         "item": f"Handoff parked: {title}",
-        "repo": repo_name, "why": "resume it", "age": 0,
+        "repo": repo_name,
+        "why": "resume it",
+        "age": 0,
         "cmd": _cmd(repo_path, prompt),
     }
 
@@ -109,7 +129,9 @@ class TestDrainGeneration(unittest.TestCase):
         repo = _git_root()
         sp = os.path.join(repo, "specs", "widget", "SPEC.md")
         reg = ac.build_action_registry(
-            _board([_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 1, 3)])])
+            _board(
+                [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 1, 3)])]
+            )
         )
         drains = _of_kind(reg, "dispatch-drain")
         self.assertEqual(len(drains), 1)
@@ -124,7 +146,9 @@ class TestDrainGeneration(unittest.TestCase):
         repo = _git_root()
         sp = os.path.join(repo, "specs", "widget", "SPEC.md")
         reg = ac.build_action_registry(
-            _board([_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 3, 3)])])
+            _board(
+                [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 3, 3)])]
+            )
         )
         self.assertEqual(_of_kind(reg, "dispatch-drain"), [])
 
@@ -155,7 +179,9 @@ class TestVerifyGeneration(unittest.TestCase):
             _board(
                 [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 2, 2)])],
                 inbox=[
-                    _inbox_verify("alpha", "widget", 2, repo, prompt="SENTINEL-VERIFY-x")
+                    _inbox_verify(
+                        "alpha", "widget", 2, repo, prompt="SENTINEL-VERIFY-x"
+                    )
                 ],
             )
         )
@@ -167,7 +193,9 @@ class TestVerifyGeneration(unittest.TestCase):
         repo = _git_root()
         sp = os.path.join(repo, "specs", "widget", "SPEC.md")
         reg = ac.build_action_registry(
-            _board([_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 2, 2)])])
+            _board(
+                [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 2, 2)])]
+            )
         )
         self.assertEqual(_of_kind(reg, "dispatch-verify"), [])
 
@@ -194,7 +222,11 @@ class TestResumeHandoffGeneration(unittest.TestCase):
         reg = ac.build_action_registry(
             _board(
                 [_repo_entry(repo, "alpha", handoffs=[_handoff_entry("Ship it", hp)])],
-                inbox=[_inbox_resume("alpha", "Ship it", hp, repo, prompt="SENTINEL-RESUME")],
+                inbox=[
+                    _inbox_resume(
+                        "alpha", "Ship it", hp, repo, prompt="SENTINEL-RESUME"
+                    )
+                ],
             )
         )
         (r,) = _of_kind(reg, "dispatch-resume-handoff")
@@ -210,19 +242,31 @@ class TestGitRootGate(unittest.TestCase):
         hp = os.path.join(home, "HANDOFF.md")
         reg = ac.build_action_registry(
             _board(
-                [_repo_entry(home, "specs", specs=[_spec_entry("widget", sp, 1, 3)],
-                             handoffs=[_handoff_entry("h", hp)])],
-                inbox=[_inbox_verify("specs", "widget", 3, home),
-                       _inbox_resume("specs", "h", hp, home)],
+                [
+                    _repo_entry(
+                        home,
+                        "specs",
+                        specs=[_spec_entry("widget", sp, 1, 3)],
+                        handoffs=[_handoff_entry("h", hp)],
+                    )
+                ],
+                inbox=[
+                    _inbox_verify("specs", "widget", 3, home),
+                    _inbox_resume("specs", "h", hp, home),
+                ],
             )
         )
-        self.assertEqual([a for a in reg.values() if a["kind"].startswith("dispatch-")], [])
+        self.assertEqual(
+            [a for a in reg.values() if a["kind"].startswith("dispatch-")], []
+        )
 
     def test_git_root_spec_yields_dispatch_actions(self):
         repo = _git_root()
         sp = os.path.join(repo, "specs", "widget", "SPEC.md")
         reg = ac.build_action_registry(
-            _board([_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 1, 3)])])
+            _board(
+                [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 1, 3)])]
+            )
         )
         self.assertTrue([a for a in reg.values() if a["kind"].startswith("dispatch-")])
 
@@ -231,7 +275,9 @@ class TestActionIdStability(unittest.TestCase):
     def test_dispatch_ids_stable_across_two_builds(self):
         repo = _git_root()
         sp = os.path.join(repo, "specs", "widget", "SPEC.md")
-        board = _board([_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 1, 3)])])
+        board = _board(
+            [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 1, 3)])]
+        )
         first = ac.build_action_registry(board)
         second = ac.build_action_registry(board)
         self.assertEqual(sorted(first), sorted(second))
@@ -341,7 +387,9 @@ class _DispatchExecTest(unittest.TestCase):
         repo = _git_root()
         sp = os.path.join(repo, "specs", "widget", "SPEC.md")
         reg = ac.build_action_registry(
-            _board([_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 1, 3)])])
+            _board(
+                [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 1, 3)])]
+            )
         )
         (drain,) = _of_kind(reg, "dispatch-drain")
         return reg, drain["id"], repo

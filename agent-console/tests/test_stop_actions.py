@@ -122,13 +122,19 @@ class _StopTest(unittest.TestCase):
         time.sleep(0.25)  # let it install the signal handler / start
         return proc
 
-    def _write_dispatch(self, did, pgid, start_time, kind="drain",
-                        cwd="/a/repo", state="running"):
+    def _write_dispatch(
+        self, did, pgid, start_time, kind="drain", cwd="/a/repo", state="running"
+    ):
         rec = {
-            "id": did, "kind": kind, "cwd": cwd, "pgid": pgid,
-            "start_time": start_time, "started_at": time.time(),
+            "id": did,
+            "kind": kind,
+            "cwd": cwd,
+            "pgid": pgid,
+            "start_time": start_time,
+            "started_at": time.time(),
             "log": str(Path(self.tmp) / f"{did}.log"),
-            "state": state, "exit_code": None,
+            "state": state,
+            "exit_code": None,
         }
         (Path(self.tmp) / f"{did}.json").write_text(json.dumps(rec))
         return rec
@@ -136,10 +142,17 @@ class _StopTest(unittest.TestCase):
     def _write_session(self, pid, proc_start=None):
         if proc_start is None:
             proc_start = ac._proc_start_time(pid)
-        (ac.PID_DIR / f"{pid}.json").write_text(json.dumps({
-            "pid": pid, "sessionId": f"sess-{pid}", "procStart": proc_start,
-            "cwd": "/tmp", "startedAt": time.time(),
-        }))
+        (ac.PID_DIR / f"{pid}.json").write_text(
+            json.dumps(
+                {
+                    "pid": pid,
+                    "sessionId": f"sess-{pid}",
+                    "procStart": proc_start,
+                    "cwd": "/tmp",
+                    "startedAt": time.time(),
+                }
+            )
+        )
 
     def _join_timers(self):
         for t in list(ac._escalation_timers):
@@ -288,9 +301,7 @@ class TestStopDispatchRegistry(_StopTest):
     def test_exited_record_yields_no_stop_action(self):
         self._write_dispatch("dead1", 999999, "Wed Jan  1 00:00:00 2020")
         reg = ac.build_action_registry({"repos": []})
-        self.assertEqual(
-            [a for a in reg.values() if a["kind"] == "stop-dispatch"], []
-        )
+        self.assertEqual([a for a in reg.values() if a["kind"] == "stop-dispatch"], [])
 
 
 class TestStopUIConfirm(_StopTest):
@@ -320,26 +331,37 @@ class TestStopUIConfirm(_StopTest):
 class TestStopEndpointSecurity(_StopTest):
     def _stop_registry(self):
         aid = ac._entity_id("stop-dispatch", "/x/log")
-        return {aid: {"id": aid, "kind": "stop-dispatch",
-                      "label": "stop drain", "repo": "/a/repo",
-                      "dispatch_id": "d9"}}, aid
+        return {
+            aid: {
+                "id": aid,
+                "kind": "stop-dispatch",
+                "label": "stop drain",
+                "repo": "/a/repo",
+                "dispatch_id": "d9",
+            }
+        }, aid
 
     def test_post_stop_without_token_is_403(self):
         reg, aid = self._stop_registry()
-        with patch.object(ac, "get_actions", return_value=reg), patch.object(
-            ac, "stop_dispatch"
-        ) as sd:
-            h, cap = _post("/action/" + aid, {"Host": "127.0.0.1:8899"},
-                           json.dumps({"confirm": True}).encode())
+        with (
+            patch.object(ac, "get_actions", return_value=reg),
+            patch.object(ac, "stop_dispatch") as sd,
+        ):
+            h, cap = _post(
+                "/action/" + aid,
+                {"Host": "127.0.0.1:8899"},
+                json.dumps({"confirm": True}).encode(),
+            )
             h.do_POST()
         self.assertEqual(cap["code"], 403)
         sd.assert_not_called()
 
     def test_post_stop_without_confirm_flag_rejected(self):
         reg, aid = self._stop_registry()
-        with patch.object(ac, "get_actions", return_value=reg), patch.object(
-            ac, "stop_dispatch"
-        ) as sd:
+        with (
+            patch.object(ac, "get_actions", return_value=reg),
+            patch.object(ac, "stop_dispatch") as sd,
+        ):
             h, cap = _post("/action/" + aid, _good_headers(), b"{}")
             h.do_POST()
         self.assertNotEqual(cap["code"], 200)
@@ -347,11 +369,15 @@ class TestStopEndpointSecurity(_StopTest):
 
     def test_post_stop_with_token_and_confirm_executes(self):
         reg, aid = self._stop_registry()
-        with patch.object(ac, "get_actions", return_value=reg), patch.object(
-            ac, "stop_dispatch", return_value=(True, "stopping")
-        ) as sd:
-            h, cap = _post("/action/" + aid, _good_headers(),
-                           json.dumps({"confirm": True}).encode())
+        with (
+            patch.object(ac, "get_actions", return_value=reg),
+            patch.object(ac, "stop_dispatch", return_value=(True, "stopping")) as sd,
+        ):
+            h, cap = _post(
+                "/action/" + aid,
+                _good_headers(),
+                json.dumps({"confirm": True}).encode(),
+            )
             h.do_POST()
         self.assertEqual(cap["code"], 200)
         sd.assert_called_once_with("d9")
