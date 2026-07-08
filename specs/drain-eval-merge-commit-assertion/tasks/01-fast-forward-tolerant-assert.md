@@ -1,6 +1,6 @@
 # Task 01: Fast-forward-tolerant landing identification in assert.sh
 
-Status: in-progress
+Status: pending
 Depends on: none
 Priority: P0
 Budget: 20 turns
