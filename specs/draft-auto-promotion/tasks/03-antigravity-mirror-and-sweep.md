@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions / ## Decisions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 10 turns
@@ -35,7 +35,7 @@ as a closing sweep.
 
 ## Acceptance
 
-- [ ] `grep -qi "stub intake" antigravity/.agents/workflows/drain.md` → match (content-coverage, not byte-diff)
-- [ ] `rg -Uqi "only a human (promotes|edits)|only a human \(or|Promotion is manual|promoted manually|only a human\s+(promotes|edits)" .claude/skills/ antigravity/.agents/` → exit 1, no matches (the spec's R7 sweep, both trees)
-- [ ] plugin.json version differs from `git show <this task's base commit>:.claude-plugin/plugin.json` (cite both values)
-- [ ] Every automatable checkbox in `../SPEC.md` Acceptance criteria → pass, cited individually in the evidence file
+- [x] `grep -qi "stub intake" antigravity/.agents/workflows/drain.md` → match (content-coverage, not byte-diff) — verifier PASS; 7 "stub intake" hits in the mirror (evidence file)
+- [x] `rg -Uqi "only a human (promotes|edits)|only a human \(or|Promotion is manual|promoted manually|only a human\s+(promotes|edits)" .claude/skills/ antigravity/.agents/` → exit 1, no matches (the spec's R7 sweep, both trees) — verifier PASS, exit 1 (evidence file)
+- [x] plugin.json version differs from `git show <this task's base commit>:.claude-plugin/plugin.json` (cite both values) — base 0.8.27 (7d0c7b2) → current 0.8.28; verifier PASS (evidence file)
+- [x] Every automatable checkbox in `../SPEC.md` Acceptance criteria → pass, cited individually in the evidence file — verifier re-ran the full SPEC list; all automatable checks pass, one fixture-queue check flagged manual (evidence file)
