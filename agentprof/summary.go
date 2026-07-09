@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 
 	"github.com/sticklane/agentprof/internal/schema"
 )
@@ -33,7 +34,15 @@ func summarize(samples []schema.Sample) []summaryRow {
 	type key struct{ session, model string }
 	agg := map[key]*summaryRow{}
 	for _, s := range samples {
-		k := key{s.Labels["session"], s.Stack[len(s.Stack)-1]}
+		leaf := s.Stack[len(s.Stack)-1]
+		// EXCLUDE tool:/role:/stage: leaf frames from the (session, model)
+		// rollup — mirroring costsummary.modelLeaf's marker set. Such samples
+		// carry no token/cost values, so folding them in would only emit a
+		// spurious zero-cost row (task 07 decision: exclude, not relabel).
+		if isMarkerLeaf(leaf) {
+			continue
+		}
+		k := key{s.Labels["session"], leaf}
 		row := agg[k]
 		if row == nil {
 			row = &summaryRow{Session: k.session, Model: k.model, Priced: true}
@@ -59,6 +68,13 @@ func summarize(samples []schema.Sample) []summaryRow {
 		return rows[i].Model < rows[j].Model
 	})
 	return rows
+}
+
+// isMarkerLeaf reports whether a stack leaf is a tool:/role:/stage: frame
+// rather than a model-call leaf — the same non-model frame set costsummary's
+// modelLeaf skips.
+func isMarkerLeaf(f string) bool {
+	return strings.HasPrefix(f, "tool:") || strings.HasPrefix(f, "role:") || strings.HasPrefix(f, "stage:")
 }
 
 // writeSummary marshals the aggregated rows as a JSON array to stdout (R1).
