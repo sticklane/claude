@@ -11,6 +11,22 @@ Budget: 20 turns
 Spec: ../SPEC.md (requirements R1, R2 SKILL-side, R3 SKILL-side, R4 drain-side, R5)
 Touch: .claude/skills/drain/SKILL.md
 
+<!-- PLAN (delete at close-out)
+SKILL.md-only prose edits, in order:
+A. Opening: add "Exhaustion contract (R1)" para (first-30-lines rule) — no-arg = all specs/,
+   sequential-walk lease discipline (release on nothing-left, re-claim on re-dispatch, transient
+   3b/intake overlap). Supplies "dispatchable work remains".
+B. New "## Critique intake" section BETWEEN 3a and 3b (auto-breakdown stays named 3b per spec):
+   eligibility (no tasks/, no Breakdown-ready), claim->/critique->release, once-per-run via
+   Intake-failed: baton line (cite reference.md, do not edit). Supplies "critique intake".
+C. 3a fresh-instance ritual (2): also seed intake set from Intake-failed: line.
+D. Step 3 "Record decisions" subsection near Materialize discoveries: append worker Decisions:
+   to task file ## Decisions; gate-list -> DEFERRED to interview; blocked stays failures-only.
+E. 3a max-generations-cap sentence: add /handoff escape (baton first, /handoff only past cap).
+F. Step 4: fuse exit checklist w/ interview — six fixed sections, each with a file path, once/session.
+Guard: no new "ultra" mentions (lint-ultra-gate). Touch = SKILL.md only; cite reference.md names.
+-->
+
 ## Goal
 
 `drain/SKILL.md` carries the session-level exhaustion contract from the
