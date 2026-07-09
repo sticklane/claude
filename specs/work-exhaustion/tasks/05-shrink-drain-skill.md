@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: deferred
+Status: pending
 Depends on: 02, 03, 04
 Priority: P3
 Budget: 16 turns
@@ -52,3 +52,9 @@ itself. Runs after tasks 02–04 so the moved prose is final.
   commit. Done: pre-move token inventory (in the worker's plan). Remaining:
   the whole move. Not counted as a failed attempt; routed to the batch
   interview via Status: deferred.
+
+## Answers
+
+- [2026-07-09, maintainer] Re-dispatch now (option b): run the shrink.
+  Dispatch AFTER draft-auto-promotion 02/03 land (Touch overlap on
+  drain/reference.md; the shrink should move final prose).

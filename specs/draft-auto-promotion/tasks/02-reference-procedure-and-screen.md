@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions / ## Decisions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: deferred
+Status: pending
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -76,3 +76,8 @@ Only the two files in the header. Do NOT touch `drain/SKILL.md` or
   (post-red-fixture, pre-implementation). Not counted as a failed attempt;
   routed to the batch interview via Status: deferred. Task 03 is
   dep-blocked behind this.
+
+## Answers
+
+- [2026-07-09, maintainer] Re-dispatch now (option a): finish the
+  reference.md procedure + screen script; task 03 then closes the spec.
