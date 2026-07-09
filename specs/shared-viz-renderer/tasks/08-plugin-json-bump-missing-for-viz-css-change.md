@@ -1,4 +1,5 @@
-Status: draft
+Status: obsolete
+Closed: 2026-07-09 — the bump landed with the viz-css resync (commit 2f15b0d, 0.8.23→0.8.24; now 0.8.25), satisfying CLAUDE.md's convention; nothing remains.
 Discovered-from: specs/shared-viz-renderer/tasks/06-viz-axis-muted-tint.md
 Spec: ../SPEC.md
 Blocking: no
