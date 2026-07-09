@@ -72,7 +72,10 @@ rule where injection could escalate") — the reason that actually
 grounds the draft gate; drain's existing citations of "reason 1" for
 this gate (drain/SKILL.md and drain/reference.md both cite it) are
 themselves mis-aimed at the spend rationale and get corrected in the
-same change. The hard mechanism is preserved, relocated: the
+same change — three citations, not one per file: two in
+`drain/SKILL.md` (the inventory-step invariant and the critique-intake
+passage) and one in `drain/reference.md` (the promotion-is-manual
+paragraph). The hard mechanism is preserved, relocated: the
 deterministic injection screen plus mandatory Goal re-authoring are the
 hard layer (untrusted text never becomes binding instructions), and the
 critic gate is the judgment layer on top — mirroring how
@@ -94,14 +97,19 @@ Breakdown-ready authorization already works for specs. /build and
   left to judgment.
 - R3: `Status: obsolete` closure (+ `Closed:` evidence line,
   gate-confirmed) is documented in drain's status semantics.
-- R4: docs/human-gates.md **reason 4** is REVISED (not appended to):
-  draft promotion moves from human-only to hard-screen + re-authored
-  Goal + adversarial review; the human retains the exit checklist as
-  the audit point and may demote any auto-promoted task back to draft
-  (a `Demoted:` line stub intake permanently respects). Drain's two
-  mis-aimed "reason 1" citations for the draft gate (in
-  `drain/SKILL.md` and `drain/reference.md`) are corrected to reason 4
-  in the same change.
+- R4: docs/human-gates.md **reason 4** is revised by WEAVING, never
+  wholesale replacement: its existing disable-model-invocation launch
+  rationale (why injected text can't become launched workers) is
+  PRESERVED verbatim in substance — it is the only place that rationale
+  lives — and the draft-gate relocation (human-only → hard-screen +
+  re-authored Goal + adversarial review) is woven in alongside it. The
+  human retains the exit checklist as the audit point and may demote
+  any auto-promoted task back to draft (a `Demoted:` line stub intake
+  permanently respects). Drain's THREE mis-aimed "reason 1" citations
+  for the draft gate — two in `drain/SKILL.md` (inventory-step
+  invariant; critique-intake passage) and one in `drain/reference.md`
+  (promotion-is-manual paragraph) — are corrected to reason 4 in the
+  same change.
 - R5: drain's exit checklist gains a "promoted this run" section
   (stub, verdict, criteria source) so every auto-promotion is audited —
   and the checklist's pinned "six-section" count text in
@@ -119,9 +127,14 @@ Breakdown-ready authorization already works for specs. /build and
   "only a human promotes `draft` → `pending`" statements (inventory
   step and discoveries paragraph), and the critique-intake section's
   "Draft TASK stubs are explicitly not intake … promotion candidates"
-  passage (which becomes a pointer to stub intake). A grep sweep for
-  "only a human promotes" and "Promotion is manual" over `.claude/`
-  must come back empty after the change.
+  passage (which becomes a pointer to stub intake), and the antigravity
+  drain workflow's manual-promotion sentence
+  (`antigravity/.agents/workflows/drain.md`, "only a human (or an
+  /idea / /breakdown pass) replaces…"). The verification sweep must be
+  multiline and cover every phrasing variant:
+  `rg -Uqi "only a human promotes|only a human \(or|Promotion is manual|promoted manually|only a human\s+promotes" .claude/skills/ antigravity/.agents/`
+  → no matches after the change (line-oriented grep provably misses the
+  wrapped SKILL.md occurrence and the "promoted manually" table row).
 
 ## Out of scope
 
@@ -143,8 +156,9 @@ Breakdown-ready authorization already works for specs. /build and
       passing a clean fixture stub (two-line test run, cited) (R2)
 - [ ] `grep -qi "obsolete" .claude/skills/drain/reference.md` — status semantics document the gate-confirmed closure (manual read confirms `Closed:` line requirement)
 - [ ] `grep -qi "adversarial" docs/human-gates.md` → match, and reason 4's revised text names the hard screen + re-authored Goal (manual read of reason 4, not reason 1) (R4)
-- [ ] `grep -rn "reason 1" .claude/skills/drain/` → no hit that cites reason 1 for the draft gate (R4)
-- [ ] `grep -rEi "only a human promotes|Promotion is manual" .claude/skills/` → no matches (R7)
+- [ ] `grep -rn "reason 1" .claude/skills/drain/` → no hit that cites reason 1 for the draft gate — all three retargeted (R4)
+- [ ] Reason 4 still carries the disable-model-invocation launch rationale after the weave (manual read) (R4)
+- [ ] `rg -Uqi "only a human promotes|only a human \(or|Promotion is manual|promoted manually|only a human\s+promotes" .claude/skills/ antigravity/.agents/` → exit 1, no matches (R7 — multiline, both trees)
 - [ ] `grep -qi "promoted this run" .claude/skills/drain/SKILL.md` → match, and the exit-checklist count text says seven (R5)
 - [ ] Antigravity mirrors carry the contract; plugin.json version higher than before (R6)
 - [ ] Fresh-session test: a fixture queue with one actionable stub, one
