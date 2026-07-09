@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 14 turns
@@ -43,8 +43,8 @@ source to port, never edit them.
 
 ## Acceptance
 
-- [ ] `grep -qi "critique intake" antigravity/.agents/workflows/drain.md` → match (content-coverage, not byte-diff)
-- [ ] `grep -qi "reversible default" antigravity/.agents/workflows/drain.md || grep -qi "reversible default" antigravity/.agents/workflows/build.md` → match
-- [ ] `grep -qi "checklist" antigravity/.agents/workflows/autopilot.md` → match
-- [ ] `python3 -c "import json;print(json.load(open('.claude-plugin/plugin.json'))['version'])"` differs from `git show <this task's base commit>:.claude-plugin/plugin.json | python3 -c "import json,sys;print(json.load(sys.stdin)['version'])"` → true (cite both values)
-- [ ] Every automatable checkbox in `../SPEC.md` Acceptance criteria → pass, cited individually in evidence
+- [x] `grep -qi "critique intake" antigravity/.agents/workflows/drain.md` → match (content-coverage, not byte-diff) — PASS (new "Critique intake" branch before 4a; evidence/04-antigravity-mirrors-and-bump.md)
+- [x] `grep -qi "reversible default" antigravity/.agents/workflows/drain.md || grep -qi "reversible default" antigravity/.agents/workflows/build.md` → match — PASS (present in both drain.md worker-prompt clause and build.md step 2; evidence file)
+- [x] `grep -qi "checklist" antigravity/.agents/workflows/autopilot.md` → match — PASS (new "Exit checklist (fixed final message)" three-section block; evidence file)
+- [x] `python3 -c "import json;print(json.load(open('.claude-plugin/plugin.json'))['version'])"` differs from `git show <this task's base commit>:.claude-plugin/plugin.json | python3 -c "import json,sys;print(json.load(sys.stdin)['version'])"` → true (cite both values) — PASS: base(adf9bf1)=0.8.25, current=0.8.26 (evidence file)
+- [x] Every automatable checkbox in `../SPEC.md` Acceptance criteria → pass, cited individually in evidence — PASS (R1–R7 greps all pass; fresh-session test is MANUAL per CLAUDE.md; evidence/04-antigravity-mirrors-and-bump.md)
