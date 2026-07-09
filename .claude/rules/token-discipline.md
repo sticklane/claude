@@ -38,7 +38,7 @@ Four rungs, cheapest first — don't pay frontier-model rates to run `grep`:
   effort; the `scout` default).
 - session-tier → ordinary judgment work done directly in the session
   (specs, review, tricky implementation): the conversation's own model.
-  Distinct from drain's *dispatched* implementation workers, below — those
+  Distinct from drain's _dispatched_ implementation workers, below — those
   carry their own adopted Role pin regardless of what the session runs.
 - deep-tier (Claude default: Opus 4.8) → heavy judgment above the session
   default: final review of a large diff, subtle-bug hunts, architecture
@@ -73,7 +73,12 @@ of letting them default silently:
   grep-like scouting, conformance checks) run on Haiku / `effort: low`;
   judgment stages (implementation, verification, judging, synthesis) keep
   the session model, raising effort only for the hardest verify/judge
-  stages (docs/anthropic-playbook.md, "Token-cost doctrine").
+  stages (docs/anthropic-playbook.md, "Token-cost doctrine"). Review work
+  splits by altitude: reviewing individual code blocks (style,
+  conformance, mechanical correctness) is scout-tier; reviewing
+  APIs, architecture, structure, and abstraction is judgment work on a
+  high-quality model — the critic's deep-tier pin
+  (docs/external-playbooks.md, "The new-SDLC spectrum").
 - **Cap subagent returns at 1–2k tokens** — a structured verdict or
   distilled summary, never the transcript
   (docs/context-management-research-2026-07.md:66).

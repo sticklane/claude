@@ -11,7 +11,10 @@ SPEC.md or plan.
 1. Spawn the `critic` agent with a POINTER to the artifact (file path, or
    "the output of `git diff HEAD`"), never the pasted content — the critic
    reads it in its own context. Include one line on what "wrong" looks like
-   here (e.g., "this spec feeds /breakdown; ambiguity is the enemy").
+   here (e.g., "this spec feeds /breakdown; ambiguity is the enemy"). If the
+   artifact touches auth, payments, secrets, or user-data handling, name
+   security in that line so the critic reviews with a security lens — and
+   for a working diff, also point the user at the built-in /security-review.
 2. Relay the verdict and findings verbatim in ranked order. Don't soften
    NOT READY.
 3. If the artifact is a `SPEC.md`: on READY, write `Breakdown-ready: true` as
