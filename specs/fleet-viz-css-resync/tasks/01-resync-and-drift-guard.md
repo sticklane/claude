@@ -52,3 +52,8 @@ there (see SPEC.md's Solution section); nothing to sync.
 ## Next stage
 
 No further tasks in this spec.
+
+## Discovered
+
+- Protect fleet reference.md's viz-css block from the prettier format hook (stub 02-prettierignore-viz-css.md)
+- Make the three container-hostile tests portable (GNU sed/stat, root) (stub 03-container-portable-tests.md)
