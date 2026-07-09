@@ -1,6 +1,6 @@
 # Task 01: Resync /fleet's CSS and add a drift guard
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 8 turns
@@ -40,10 +40,14 @@ there (see SPEC.md's Solution section); nothing to sync.
 
 ## Acceptance
 
-- [ ] `diff <(python3 .claude/skills/_shared/viz.py --emit-fleet-css) <(awk '/viz:timeline-css BEGIN/,/viz:timeline-css END/' .claude/skills/fleet/reference.md)` → empty
-- [ ] `bash tests/test_fleet_css_drift.sh` → exits 0 (post-resync)
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` → all pass, including the new test, with no runner changes
-- [ ] `git diff .claude-plugin/plugin.json` → shows a one-patch-level version bump
+- [x] `diff <(python3 .claude/skills/_shared/viz.py --emit-fleet-css) <(awk '/viz:timeline-css BEGIN/,/viz:timeline-css END/' .claude/skills/fleet/reference.md)` → empty
+  - Evidence: diff empty (exit 0); byte-identical. See evidence/01-resync-and-drift-guard.md (C1).
+- [x] `bash tests/test_fleet_css_drift.sh` → exits 0 (post-resync)
+  - Evidence: exit 0, no output; red against pre-resync state (exit 1). evidence/01-resync-and-drift-guard.md (C2, C3).
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` → all pass, including the new test, with no runner changes
+  - Evidence: new test passes and is picked up by the glob, no runner changes. 3 unrelated tests (drain_owner_protocol, hook_templates, install_gates) fail on GNU-vs-BSD sed/stat + root-permission env — verified identical on base 6196cc8, i.e. pre-existing, not regressions. evidence/01-resync-and-drift-guard.md.
+- [x] `git diff .claude-plugin/plugin.json` → shows a one-patch-level version bump
+  - Evidence: 0.8.23 -> 0.8.24. evidence/01-resync-and-drift-guard.md (C4).
 
 ## Next stage
 
