@@ -39,3 +39,12 @@ as a closing sweep.
 - [x] `rg -Uqi "only a human (promotes|edits)|only a human \(or|Promotion is manual|promoted manually|only a human\s+(promotes|edits)" .claude/skills/ antigravity/.agents/` → exit 1, no matches (the spec's R7 sweep, both trees) — verifier PASS, exit 1 (evidence file)
 - [x] plugin.json version differs from `git show <this task's base commit>:.claude-plugin/plugin.json` (cite both values) — base 0.8.27 (7d0c7b2) → current 0.8.28; verifier PASS (evidence file)
 - [x] Every automatable checkbox in `../SPEC.md` Acceptance criteria → pass, cited individually in the evidence file — verifier re-ran the full SPEC list; all automatable checks pass, one fixture-queue check flagged manual (evidence file)
+
+## Decisions
+
+- [2026-07-09, worker] Ported the full equivalent contract into the
+  antigravity drain workflow (obsolete status, Stub-intake-failed: baton
+  line, seven-section checklist, Promoted-this-run audit), not only the
+  two grepped strings — per CLAUDE.md's near-identical-mirror mandate.
+  Reversible: trim the mirror to the minimal mention if R6 is scoped
+  narrower on review.
