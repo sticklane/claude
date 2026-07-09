@@ -51,6 +51,13 @@ every time you enter it.
   extended thinking on mechanical steps.
 - Plan contradicts the task or reveals a missing decision → stop and surface
   it rather than guessing.
+- A mid-task decision with a **reversible default** (the attended parallel to
+  the worker's decision-deferral rule): take the default and keep working
+  rather than interrupting — record each (decision, default taken, how to
+  reverse) and log them to the task file's `## Decisions` section at close-out
+  (step 4). A decision with NO reversible default, or any on the human-gates
+  list (irreversible, blast-radius, spend, authority), still stops and
+  surfaces to the user — being attended, it asks rather than parks.
 
 ## 2. Implement, verification-first
 
@@ -90,6 +97,11 @@ every time you enter it.
    issue, stop and report — repeated correction in a degraded context is the
    known failure mode; a fresh session with a better task file beats a long
    session of thrashing.
+6. Heavy-context escape: attended /build has no baton (that is drain's
+   degradation response); when the session itself has grown heavy — not just
+   one stuck fix — write a `/handoff` file and lead the report with its resume
+   command instead of continuing degraded. This is the escape available to an
+   attended run where the baton cannot apply.
 
 ## 4. Close out
 
@@ -127,6 +139,10 @@ line every time you enter it.
   ran). This is one pass — no re-review after fixes. Record the outcome as
   evidence: `review: N findings, M fixed, K discovered` or
   `review skipped: <reason>`.
+- Log any reversible-default decisions taken this session (step 1's rule) to
+  the task file's `## Decisions` section — one line each: decision, default
+  taken, how to reverse. Append; never overwrite prior entries. No decisions
+  taken → no section needed.
 - Update the task file: Status `done`, tick acceptance boxes, one line of
   evidence each (from the verifier's report, not your own claim) rather
   than duplicating output — citing the `evidence/` file when an evidence

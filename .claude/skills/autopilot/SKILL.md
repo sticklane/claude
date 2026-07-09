@@ -67,6 +67,16 @@ restart clean. Correcting a wandering autonomous run in-context is the
 known losing move. Either way, if the run exposed a task-file or gate
 problem, run /distill so the next launch doesn't repay for it.
 
+**Exit checklist (fixed final message).** At scope exhaustion the run's final
+message is a three-section **checklist**, one file path per entry, carrying
+only what autopilot produces: (1) **defaults taken** — the reversible-default
+decisions logged to the task file's `## Decisions`, which the /build procedure
+this run dispatches already produces, so autopilot reads that section rather
+than editing it; (2) **the task's blocker**, if any, with what unblocks it;
+and (3) **the next command**. "Nothing needs you" is a valid checklist. This
+is autopilot's three-section analogue of drain's six-section exit checklist
+(cite drain, don't restate its sections).
+
 ## 5. Pre-cap baton (long runs)
 
 `--max-turns` terminates the process — there is no "after the cap" to hand
