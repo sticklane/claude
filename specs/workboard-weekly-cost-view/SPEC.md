@@ -103,6 +103,17 @@ A sample with no frame matching the skill rule (e.g. an `(unlinked)`
 subagent stack, which carries neither `skill:` nor `(no skill)`) falls
 into a `(no skill)` bucket in `by_skill` rather than being silently
 dropped — it still counts in `by_project`/`by_model`/`totals` either way.
+NOTE (no requirement change; R3's model rule stays exactly as specified
+above): the model rule has no explicit "no model" bucket, so a pure
+`tool:` sample — one carrying only `duration_ms`, no tokens/cost — does
+not resolve to "no model"; the leaf rule simply skips its `tool:` frame
+and resolves to the preceding non-tool frame (e.g. `main`), so that
+sample's `duration_ms` lands in `by_model["main"]`. This is harmless for
+the "Cost (7d)" panel today (it renders cost, not duration), but worth
+naming once `specs/agentprof-instrumentation`'s richer `tool:`/duration
+frames ship, since the contract will then carry duration samples whose
+only honest model attribution would be a bucket this rule does not
+provide.
 **When `--merge` is present, `--summary` is computed from the FINAL
 merged, post-eviction sample set — the full rolling 7-day window — never
 from the fresh `Collect()` pass alone** (the panel is titled "Cost (7d)";
@@ -231,7 +242,7 @@ as `cost_microusd`) plus top-5 rows from `by_model`, `by_skill`, and
       fixture's distinct session count (R3).
 - [ ] `agentprof claude --since 2020-01-01T00:00:00Z --days 1 -o /tmp/x`
       → nonzero exit, stderr mentions both flags; `agentprof claude
-      --since 2020-01-01T00:00:00Z -o /tmp/x` (no explicit `--days`) →
+    --since 2020-01-01T00:00:00Z -o /tmp/x` (no explicit `--days`) →
       exits 0 (R1).
 - [ ] Running `agentprof/scripts/refresh-profile.sh` twice in a row (no
       new sessions between runs) leaves `weekly-7d.jsonl`'s sample count
@@ -243,7 +254,7 @@ as `cost_microusd`) plus top-5 rows from `by_model`, `by_skill`, and
 - [ ] `curl -s http://127.0.0.1:8899/workboard | grep -c 'Cost (7d)'` → ≥ 1
       (R6).
 - [ ] With `weekly-7d-summary.json` temporarily moved aside, `curl -s -o
-      /dev/null -w '%{http_code}' http://127.0.0.1:8899/workboard` → 200,
+    /dev/null -w '%{http_code}' http://127.0.0.1:8899/workboard` → 200,
       and the page body shows the empty/pending state (R7).
 - [ ] End-to-end: after one manual refresh,
       `python3 -c "import json; print(json.load(open('$HOME/.local/state/agentprof/weekly-7d-summary.json'))['totals'])"`

@@ -48,6 +48,7 @@ Command run directly: matched (`GREP_OK` printed, exit 0). setup.sh line 19
 contains `Parallel-window: 2` inside the heredoc SPEC.md fixture. **PASS.**
 
 ## Fresh-eyes review of scenario file contents (since criterion 1 is not
+
 cheaply reproducible)
 
 - **setup.sh**: builds a git repo (`git init -q`), writes
@@ -93,7 +94,7 @@ prompts:
   task's Touch list) and merged it with commit subject
   `merge task 02: sneaky change beyond touch`. Reran `assert.sh`:
   `ASSERT FAIL: merge 'merge task 02: sneaky change beyond touch' changed
-  src/gamma.sh, outside task 02 Touch [src/beta.sh]`, exit 1. **Confirms
+src/gamma.sh, outside task 02 Touch [src/beta.sh]`, exit 1. **Confirms
   it fails the Touch-violation case.**
 
 assert.sh's logic is sound and discriminates correctly between a clean
@@ -102,6 +103,7 @@ rolling-window drain and a Touch-violating one.
 ## Scope / diff check
 
 `git status --short` (working tree) shows only:
+
 - `M specs/drain-rolling-window/tasks/06-drain-eval-scenario.md` (plan
   comment only, per append-only check above)
 - `?? evals/drain/` (new scenario directory — within Touch:
@@ -148,60 +150,66 @@ checks passed (2 tasks done, 2 merges, per-task Touch enforced)`,
 `PASS  drain/01-rolling-window`, `1/1 scenarios passed`, exit 0 (see
 06-run.log).
 
-## Fast-forward-tolerant landing identification (spec drain-eval-merge-commit-assertion, 2026-07-07)
+## Fast-forward-tolerant landing identification (spec drain-eval-merge-commit-assertion)
 
-The mechanism described above — identifying each landing by a **merge commit**
-(`git rev-list --merges HEAD`) — is landing-order-fragile and has been
-replaced. A real `/drain` landing is a plain `git merge` with no `--no-ff`
-(`.claude/skills/drain/SKILL.md:257`), so when a task branch is still `main`'s
-direct descendant at merge time the merge **fast-forwards and produces no merge
-commit**. A fast-forwarded landing then broke all three merge-commit-dependent
-checks at once: the merge count undercounted and failed
-(`expected >1 merge commit … found 1` — the originally reported symptom), the
-Touch-enforcement check was silently **skipped** for that task, and the final
-done-but-unlanded loop mis-fired. The stale "2 merge commits" pass line above
-reflected landing-order luck, not a stable proof.
+The fix above still identified a landing by its **merge commit**
+(`git rev-list --merges HEAD`). A 2026-07-06 runtime sweep found that
+landing-order-fragile: when a task branch is still `main`'s direct
+descendant at merge time, `git merge` fast-forwards silently and produces
+**no** merge commit — so the merge-count check under-counts and fails, the
+done-but-unlanded loop reports the task unlanded, and the Touch check for
+that task is silently **skipped**. Production `/drain` does not force
+`--no-ff` (`.claude/skills/drain/SKILL.md`), so the eval must tolerate
+fast-forwards rather than the eval demanding merge commits production
+doesn't produce.
 
-**New mechanism (fast-forward-tolerant).** Landing identification is now
-anchored on each task file's `Status:` done-flip, never on a merge commit:
+`assert.sh` now identifies each task's landing by its `Status:` **done-flip
+commit** — the earliest commit reachable from `HEAD` whose blob reads
+`Status: done` — which exists whether the landing fast-forwarded or merged.
+That one mechanism feeds all three previously merge-dependent checks:
 
-- The done-flip commit for a task is the earliest commit (topo order) whose
-  version of the task file reads `Status: done`.
-- `assert.sh` walks `main`'s first-parent chain oldest→newest. A **landing
-  tip** is the first first-parent commit that brings a task's done-flip into
-  `main` — the done-flip commit itself for a fast-forward, or the merge commit
-  for a real merge. Both land identically.
-- **Barrier check:** a landing tip that flips ≥2 task files to done at once is
-  an all-in-one barrier → fail (replaces the old "≥2 merge commits" floor; no
-  merge-count floor remains).
-- **Touch-enforcement check:** diffs the FULL landed range
-  (`prior-landing-tip → this tip`), so a violation anywhere in a multi-commit
-  branch (TDD test→feat→refactor) is caught — not only one in the done-flip
-  commit.
-- **Done-but-unlanded loop:** every done task must be attributed exactly one
-  landing, so the Touch check can never silently no-op.
+- **Rolling-window / barrier check**: counts distinct done-flip landings and
+  fails if a single commit is the done-flip for ≥2 task files (an
+  all-in-one barrier). No `git rev-list --merges` floor remains, so a
+  history with zero merge commits still passes.
+- **Touch-enforcement check**: diffs the **full landed range**
+  `fork-point..done-flip` (fork-point = the closest other-task done-flip
+  that is an ancestor of this landing, else the repo root/base commit) — not
+  just the done-flip commit — so a violation in any branch commit is caught,
+  not only one in the commit that happens to flip `Status:`.
+- **Done-but-unlanded loop**: a task is landed iff a done-flip commit exists
+  in `HEAD`'s history; a done task with none fails loudly (the check can
+  still never silently no-op).
 
-The pass line is now
-`assert: all checks passed (N tasks done, N rolling-window landings, per-task
-Touch enforced)` — "rolling-window landings", not "merge commits".
+Verified deterministically via six hand-built git fixtures (per this repo's
+own synthetic-fixture precedent, above), run directly against `assert.sh` in
+one session — results below (not a full `/drain` re-run, which cannot be
+forced to exhibit fast-forward-vs-merge on demand):
 
-**Deterministic fixture matrix (6 hand-built git repos, run directly against
-`assert.sh`; matches the hand-built-fixture precedent this file established at
-lines 77–100).** Confirmed red on the pre-fix script, then green on the
-rewrite, all under macOS bash 3.2:
+- **Fixture A** — task 01 fast-forwards, task 02 real merge → PASS
+  (`assert: all checks passed (2 tasks done, 2 distinct landings, per-task
+Touch enforced)`, exit 0). This is the exact reported-bug shape; the old
+  script failed it with `expected >1 merge commit ... found 1`.
+- **Fixture B** — both tasks land via `git merge --no-ff` (real merges) →
+  PASS, exit 0 (no regression for the original design case).
+- **Fixture C** — task 01 fast-forwards and its done-flip commit itself also
+  creates `src/gamma.sh` (outside its Touch) → FAIL, exit 1:
+  `task 01 landing changed src/gamma.sh, outside its Touch [src/alpha.sh]`.
+  Proves the Touch check runs (not silently skipped) on a fast-forwarded
+  landing.
+- **Fixture C'** — task 01 fast-forwards across two commits: an earlier
+  commit adds `src/gamma.sh`, a separate later commit only flips `Status:`
+  to done → FAIL, exit 1, naming `src/gamma.sh`. Proves the Touch check
+  diffs the full fork-point..done-flip range, not just the done-flip commit.
+- **Fixture D** — one fast-forward commit flips both task files' `Status:`
+  at once (a barrier) → FAIL, exit 1:
+  `commit <sha> flips task 01 and task 02 at once (all-in-one barrier)`.
+  Barrier detection survives the rewrite and works with zero merge commits.
+- **Fixture E** — both tasks fast-forward, **zero merge commits anywhere**
+  in history → PASS, exit 0. Proves no hidden merge-count floor remains.
 
-| Fixture | Shape | Expected | Result |
-|---|---|---|---|
-| A | task01 fast-forwards, task02 real merge | PASS | `assert: all checks passed (2 tasks done, 2 rolling-window landings …)`, exit 0 |
-| B | both real merges (`--no-ff`) — no-regression control | PASS | exit 0 |
-| C | task01 fast-forwards; done-flip commit ALSO touches out-of-Touch `src/gamma.sh` | FAIL, names violation | `ASSERT FAIL: task 01 landing changed src/gamma.sh, outside its Touch [src/alpha.sh]`, exit 1 |
-| C′ | task01 fast-forwards across TWO commits; earlier commit touches `src/gamma.sh`, done-flip commit clean | FAIL, names violation from earlier commit | `ASSERT FAIL: task 01 landing changed src/gamma.sh …`, exit 1 (proves full-range diff, not done-flip-only) |
-| D | one fast-forward commit flips BOTH task files (barrier) | FAIL barrier | `ASSERT FAIL: landing <sha> flips 2 task files at once (all-in-one barrier …)`, exit 1 |
-| E | both tasks fast-forward, ZERO merge commits anywhere | PASS | exit 0 (proves no hidden merge-count floor) |
-
-Pre-fix baseline for the same fixtures (establishing red): A and E failed
-incorrectly (`found 1` / `found 0` merge commits); C, C′, D failed on the
-merge-count floor for the *wrong* reason (never reaching the Touch/barrier
-check); B passed (control). The rewrite flips A/E to PASS and makes C/C′/D fail
-for the *correct* reason. Fixture builder and full run logs:
-`scratchpad/build_fixtures.sh` (throwaway repos outside the tracked tree).
+Fixtures A and E are the cases the old merge-commit-based script failed
+incorrectly; C/C'/D previously failed only by accident of the merge-count
+check firing first, and now fail for the correct reason. The stale "2 merge
+commits" success line is replaced by "N distinct landings" — landings, not
+merges, are what the rolling-window contract actually requires.

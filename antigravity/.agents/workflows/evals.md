@@ -8,7 +8,9 @@ is `evals/<skill>/<NN-name>/` containing `setup.sh` (builds a fixture
 repo in `$EVAL_DIR`), `prompt.txt` (the user turn, a slash command with
 fixture-relative paths, no `$EVAL_DIR` variables), `assert.sh` (runs
 with CWD the fixture; exit 0 = pass, non-zero with output explaining
-what failed). Antigravity has no headless CLI, so the run step hands the
+what failed). Both scripts run under bare `bash`, and macOS's system bash
+is 3.2 — write them to bash 3.2 (no `declare -A` or other bash-4+ syntax),
+or they misbehave silently rather than erroring. Antigravity has no headless CLI, so the run step hands the
 user Agent Manager launches instead of `claude -p`; `allowed-tools.txt`
 has no Antigravity equivalent and is ignored here.
 

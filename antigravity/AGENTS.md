@@ -64,11 +64,22 @@ When a skill spawns agents, its prompt text must make these choices
 explicit — model tier, return budget, and any loop bound — instead of
 letting them default:
 
+- Awaited children, never detached (maintainer policy, 2026-07-09):
+  fresh context comes from the conversation boundary — a separate Agent
+  Manager conversation with a blank context — never from detachment.
+  Every spawned conversation has a parent that waits for it and collects
+  its result before moving on; no fire-and-forget sub-reviews, no
+  orphaned children outliving the step that spawned them.
+
 - Tier by stage type: mechanical stages (search, fetch, extract,
   grep-like scouting, conformance checks) run scout-tier (a Flash-class
   model / low effort); judgment stages (implementation, verification,
   judging, synthesis) keep the conversation's own model, raising effort
-  only for the hardest verify/judge stages.
+  only for the hardest verify/judge stages. Review work splits by
+  altitude: reviewing individual code blocks (style, conformance,
+  mechanical correctness) is scout-tier; reviewing APIs, architecture,
+  structure, and abstraction is judgment work on a high-quality model
+  (the critic's deep-tier pin).
 - Cap what a spawned agent returns to a structured verdict or distilled
   summary (~1–2k tokens), never its transcript.
 - Bound evaluate-and-revise loops to 2–4 cycles, and skip the
@@ -140,8 +151,8 @@ are the only editor — two sessions interleaving in the same tree corrupt
 each other.
 
 - Pre-flight: the Agent Manager's session list for a live session whose
-  working directory resolves into this repo and isn't yours; `git
-  worktree list` (a single checkout entry means a shared tree, zero
+  working directory resolves into this repo and isn't yours;
+  `git worktree list` (a single checkout entry means a shared tree, zero
   isolation); recent file mtimes or unexplained `git status` entries —
   edits you didn't make are a live collision, not a fluke.
 - On a detected collision: STOP editing and surface it to the user.

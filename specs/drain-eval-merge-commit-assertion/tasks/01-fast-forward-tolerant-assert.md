@@ -52,15 +52,15 @@ Do not touch `evals/run.sh` or any other eval scenario.
 
 ## Acceptance
 
-- [x] Fixture A (task 01 fast-forwards, task 02 real merge) → `assert.sh` passes; all three checks correctly recognize task 01's landing — verifier reproduced: exit 0, `2 rolling-window landings` (evidence/01-fast-forward-tolerant-assert.md)
-- [x] Fixture B (both tasks real merges) → `assert.sh` passes (no regression) — verifier reproduced: exit 0 (evidence/01-...md)
-- [x] Fixture C (task 01 fast-forwards; its done-flip commit itself also touches a file outside its Touch list) → `assert.sh` fails, naming the Touch violation — verifier reproduced: exit 1, `task 01 landing changed src/gamma.sh, outside its Touch [src/alpha.sh]`
-- [x] Fixture C' (task 01 fast-forwards across TWO commits: an earlier commit with an out-of-Touch edit, then a separate later done-flip-only commit) → `assert.sh` fails, naming the Touch violation from the earlier commit — proves the Touch check diffs the full landed range, not just the done-flip commit — verifier reproduced: exit 1, same gamma.sh message from the earlier commit
-- [x] Fixture D (one fast-forward commit flips two task files' Status at once — a barrier, not a rolling-window landing) → `assert.sh` fails the barrier check — verifier reproduced: exit 1, `landing <sha> flips 2 task files at once (all-in-one barrier …)`
-- [x] Fixture E (both tasks fast-forward, zero merge commits anywhere in history) → `assert.sh` passes — proves no hidden merge-count floor remains — verifier reproduced: exit 0; confirmed no residual `--merges` floor in assert.sh
-- [x] `bash evals/drain/01-rolling-window/assert.sh` run against all 6 fixtures above produces the documented pass/fail in a single session's log — full matrix (red pre-fix, green post-fix) recorded in specs/drain-rolling-window/evidence/06-drain-eval-scenario.md; builder at scratchpad/build_fixtures.sh; all 6 also confirmed under macOS bash 3.2
-- [x] `specs/drain-rolling-window/evidence/06-drain-eval-scenario.md` updated per step 5 — appended fast-forward-tolerant mechanism section + fixture matrix, superseding the stale "2 merge commits" claim
-- [ ] Optional: one full `bash evals/run.sh drain` end-to-end run passes — SKIPPED (optional per spec/dispatch; ~25-min headless model spend; hand-built fixtures are the primary acceptance gate per R3)
+- [x] Fixture A (task 01 fast-forwards, task 02 real merge) → `assert.sh` passes; all three checks correctly recognize task 01's landing — verifier reproduced: exit 0, "2 distinct landings"; confirmed 1 merge commit total, task 01 fast-forwarded (evidence/01-fast-forward-tolerant-assert.md; runs cited in drain-rolling-window/evidence/06)
+- [x] Fixture B (both tasks real merges) → `assert.sh` passes (no regression) — verifier: exit 0, both real merges (evidence/01)
+- [x] Fixture C (task 01 fast-forwards; its done-flip commit itself also touches a file outside its Touch list) → `assert.sh` fails, naming the Touch violation — verifier: exit 1, `task 01 landing changed src/gamma.sh, outside its Touch [src/alpha.sh]`; gamma.sh confirmed in the same done-flip commit (evidence/01)
+- [x] Fixture C' (task 01 fast-forwards across TWO commits: an earlier commit with an out-of-Touch edit, then a separate later done-flip-only commit) → `assert.sh` fails, naming the Touch violation from the earlier commit — proves the Touch check diffs the full landed range, not just the done-flip commit — verifier: exit 1, same message; gamma.sh confirmed in the EARLIER commit, done-flip a separate later commit (evidence/01)
+- [x] Fixture D (one fast-forward commit flips two task files' Status at once — a barrier, not a rolling-window landing) → `assert.sh` fails the barrier check — verifier: exit 1, `commit <sha> flips task 01 and task 02 at once (all-in-one barrier)` (evidence/01)
+- [x] Fixture E (both tasks fast-forward, zero merge commits anywhere in history) → `assert.sh` passes — proves no hidden merge-count floor remains — verifier: exit 0; confirmed `git rev-list --merges --count HEAD` = 0; script has no `--merges` reference (evidence/01)
+- [x] `bash evals/drain/01-rolling-window/assert.sh` run against all 6 fixtures above produces the documented pass/fail in a single session's log — all 6 runs summarized with actual output in specs/drain-rolling-window/evidence/06-drain-eval-scenario.md
+- [x] `specs/drain-rolling-window/evidence/06-drain-eval-scenario.md` updated per step 5 — new section replaces the stale "2 merge commits" claim with the done-flip mechanism and cites all six fixture runs
+- [ ] Optional: one full `bash evals/run.sh drain` end-to-end run passes (not required to reproduce the fast-forward case specifically) — NOT RUN: optional per task and SPEC R3 (~25-min non-deterministic live run; the six deterministic fixtures are the primary gate)
 
 ## Next stage
 

@@ -38,7 +38,26 @@ restating it.
    from the model's context entirely (and blocks scheduled firing), so
    injected text can never transitively become a fleet of launched
    workers. "Shouldn't" becomes "can't" exactly where escalation would
-   be catastrophic.
+   be catastrophic. This same principle now grounds drain's draft-stub
+   promotion, relocated rather than removed. The former shape was a
+   blanket human-only rule ("only a human promotes `draft` → `pending`");
+   the new shape keeps the hardness where it matters and lets a session
+   do the work a human was only doing because policy said so. The hard
+   layer is two mechanisms, not a rule: a **deterministic screen** refuses
+   any instruction-shaped stub outright before a model ever reads it as a
+   candidate, and mandatory **Goal re-authoring** means the
+   worker-reported text is retained only as quoted data and never becomes
+   the task's binding instructions. On top of that hard layer sits an
+   **adversarial critic gate** as the judgment layer — mirroring how
+   `Breakdown-ready:` authorization already works for specs (the READY
+   verdict is produced by a context that was never drain's). The human is
+   not removed from the loop: the exit checklist is the audit point for
+   every auto-promotion and closure, and a human may demote any
+   auto-promoted task back to `draft` with a `Demoted:` line that stub
+   intake permanently respects. Injectable text still can't transitively
+   become a launched worker — that guarantee moved from "the whole skill
+   is human-only" to "the screen plus re-authoring make it structurally
+   impossible."
 5. **The vendors converge on this boundary.** OpenAI mandates human
    intervention at retry thresholds and high-risk actions; Claude Code's
    own auto-mode classifier denies "launching an autonomous agent loop
@@ -72,11 +91,17 @@ lowest priority, with no human present at that moment. It stays inside
 reason 2's line rather than crossing it because the READY verdict was
 never drain's own to grant: `/critique` (or `/idea`, transitively — both
 model-invocable, so this isn't necessarily a discrete human decision
-either) writes `Breakdown-ready: true` into a `SPEC.md` only on a READY
-verdict, in a separate, earlier invocation. Drain reads that persisted
-marker; it never classifies its own request for autonomy and then grants
-it — the gate is the READY verdict itself, already recorded on disk before
-drain ever looks, not a human's presence at the moment it looks. That gate
+either) writes `Breakdown-ready: true` into a `SPEC.md` only on the
+critic's independent, adversarial READY verdict — whether that critique
+ran in a separate earlier invocation or in-session during drain's critique
+intake (SKILL.md's exhaustion-triggered intake branch). Drain reads that
+verdict — persisted marker or same-session critic result — and never
+classifies its own request for autonomy and then grants it: the gate is
+the READY verdict itself, produced by a context that was never drain's.
+This is the shape of the whole boundary — the human gates govern the
+_launch_ of an autonomous run, not its _continuation_: once a human
+launches, the session consumes its scope and self-chains on
+already-granted READY verdicts, re-gating no individual step. That gate
 has a known residual gap — a marker survives a spec edit made after the
 verdict, with no automatic invalidation (drain/reference.md, Auto-breakdown,
 "Residual risk (accepted)") — accepted the same way the stale-lock liveness

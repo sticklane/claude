@@ -1,4 +1,5 @@
-Status: draft
+Status: obsolete
+Closed: 2026-07-09 — resolved by fleet-viz-css-resync task 01 (commits 2f15b0d resync + 36215dc drift-guard test); `diff <(python3 .claude/skills/_shared/viz.py --emit-fleet-css) <(awk '/viz:timeline-css BEGIN/,/viz:timeline-css END/' .claude/skills/fleet/reference.md)` is empty and tests/test_fleet_css_drift.sh passes.
 Discovered-from: specs/shared-viz-renderer/tasks/06-viz-axis-muted-tint.md
 Spec: ../SPEC.md
 Blocking: no

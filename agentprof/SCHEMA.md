@@ -14,10 +14,15 @@ required.
 {
   "time": "2026-07-02T18:04:11Z",
   "stack": ["fooszone", "/build", "agent:scout", "claude-haiku-4-5"],
-  "values": {"input_tokens": 10101, "output_tokens": 1560,
-             "cache_read_tokens": 18118, "cache_write_tokens": 14266,
-             "cost_microusd": 41230, "calls": 1},
-  "labels": {"source": "claude-code", "session": "7c576eff-..."}
+  "values": {
+    "input_tokens": 10101,
+    "output_tokens": 1560,
+    "cache_read_tokens": 18118,
+    "cache_write_tokens": 14266,
+    "cost_microusd": 41230,
+    "calls": 1
+  },
+  "labels": { "source": "claude-code", "session": "7c576eff-..." }
 }
 ```
 
@@ -39,10 +44,11 @@ required.
 ## Well-known metrics and pprof units
 
 | Metric name     | pprof unit     |
-|-----------------|----------------|
+| --------------- | -------------- |
 | `*_tokens`      | `tokens`       |
 | `cost_microusd` | `microusd`     |
 | `wall_ms`       | `milliseconds` |
+| `duration_ms`   | `milliseconds` |
 | `calls`         | `count`        |
 | anything else   | `count`        |
 

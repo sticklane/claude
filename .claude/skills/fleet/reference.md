@@ -118,7 +118,7 @@ status alone — each status keeps its glyph + word, with the word in ink.
 .viz-bar.viz-stale { background: var(--viz-stale, #5a6070); }
 .viz-bar.viz-blocked { background: var(--viz-blocked, #d9b063); }
 .viz-axis { display: grid; grid-template-columns: 180px 1fr; gap: 10px; margin-top: 6px; }
-.viz-axis div { display: flex; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums; }
+.viz-axis div { display: flex; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--viz-muted, #898781); }
 .viz-graphwrap { background: #161922; border-radius: 8px; padding: 8px; display: inline-block; }
 /* .viz-node/.viz-edge carry no rules here on purpose: their colors are
    per-node inline SVG attributes (dag()'s STATUS_HEX lookup), and a CSS
