@@ -4,7 +4,8 @@ Contents: When NOT to drain · Owner lease (DRAIN-OWNER.md format,
 liveness, reclaim) · Status field semantics · Stale-lock liveness
 check · Worker prompt · Deferred question format · Relaunch-with-evidence
 prompt · Tournament · Headless fallback · Baton pass (self-relaunch) ·
-Stub intake (assess → gate → act) · Auto-breakdown (lowest priority)
+Critique intake · Stub intake (assess → gate → act) · Auto-breakdown
+(lowest priority)
 
 Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt (workers return only a **verdict + evidence**), the
@@ -747,6 +748,43 @@ template above (still passing `<spec>`, the generation number, and the baton
 path as its argv tail). The e2e fixture (orchestrator-context task 05) points
 it at a recorder script to assert the relaunch argv without starting a real
 session.
+
+## Critique intake
+
+The detail home for SKILL.md's **Critique intake** contract (that section
+carries the contract + pointer). Critique intake fires at the exhaustion
+trigger — nothing dispatchable, nothing in-progress, nothing parked —
+**immediately before 3b**, never preempting a dispatchable task. It scans
+scope for a **draft spec**: a spec dir with a `SPEC.md`, no `tasks/` (or an
+empty one), and **no `Breakdown-ready:` header**. Order eligible specs by
+`Priority` header (absent = P2) then lexicographic spec path — step 2's
+tie-break. For the chosen spec:
+
+- **Claim that spec's owner lease first** — the same claim → act → release
+  procedure 3b uses on its target (write `DRAIN-OWNER.md` if absent,
+  compare-and-swap re-read to confirm your `Run-token:`, refuse and skip to
+  the next eligible spec on a lost race). This is what stops two concurrent
+  drains from racing to critique the same spec.
+- Invoke **/critique** on the spec via the Skill tool — model-invocable, no
+  `disable-model-invocation` flag, the same sanctioned in-session exception
+  3b's `/breakdown` invocation relies on.
+- **READY** → the critic writes the `Breakdown-ready:` marker; 3b's existing
+  auto-breakdown path then makes the spec dispatchable **in the same
+  session**. Release the lease and loop to step 1.
+- **NOT READY** → the findings are recorded with the spec, the spec lands on
+  step 4's exit checklist as a NOT-READY item, the lease is released, and the
+  loop continues.
+
+Attempt each spec's intake **at most once per run — spanning every baton
+generation, not just this one**: a NOT-READY or failed attempt is added to
+this generation's in-session intake set immediately AND (since intake never
+clears any marker) survives a baton pass via `DRAIN-BATON.md`'s
+`Intake-failed:` line — the analogue of `Breakdown-failed:`, whose grammar
+is pinned in "Baton pass" above. Draft TASK stubs are **not** critique
+intake — they are handled by **stub intake** (the next section), which
+promotes actionable stubs `draft` → `pending` through a deterministic screen
+plus an adversarial gate (docs/human-gates.md reason 4, cited not restated);
+stubs it cannot promote appear on the exit checklist for the human.
 
 ## Stub intake (assess → gate → act)
 
