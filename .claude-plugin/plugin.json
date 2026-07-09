@@ -1,7 +1,7 @@
 {
   "name": "agentic",
   "description": "Spec-driven agentic development pipeline \u2014 raw idea to spec to tasks to verified commits \u2014 with cheap scout/review subagents and a /fleet dashboard of open agents.",
-  "version": "0.8.26",
+  "version": "0.8.27",
   "license": "MIT",
   "author": {
     "name": "sticklane"
