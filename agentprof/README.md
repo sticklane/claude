@@ -61,6 +61,12 @@ go tool pprof -top week.pb.gz
 
 The default metric is `cost_microusd` (1,000,000 = $1).
 
+> **Note:** `-top`'s default node-fraction pruning
+> hides small `tool:` frames unless you pass `-nodefraction=0 -edgefraction=0`
+> (or narrow the window with `--days` or a `--focus` project filter) — so a
+> missing `tool:` frame on a day-scale profile reads as pruning, not a broken
+> feature.
+
 ## Switching metrics
 
 One profile carries every metric; `-sample_index` picks which one to view:
