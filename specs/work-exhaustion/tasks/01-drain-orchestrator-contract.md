@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -61,9 +61,13 @@ nor `antigravity/` or `.claude-plugin/plugin.json` (task 04).
 
 ## Acceptance
 
-- [ ] `grep -qi "dispatchable work remains" .claude/skills/drain/SKILL.md` → match
-- [ ] `grep -qi "critique intake" .claude/skills/drain/SKILL.md` → match
-- [ ] `grep -q "## Decisions" .claude/skills/drain/SKILL.md` → match
-- [ ] `grep -q "/handoff" .claude/skills/drain/SKILL.md && grep -qi "generations cap" .claude/skills/drain/SKILL.md` → both match, same passage (cite the passage as evidence)
-- [ ] `grep -qi "checklist" .claude/skills/drain/SKILL.md` → match
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `grep -qi "dispatchable work remains" .claude/skills/drain/SKILL.md` → match — Exhaustion contract para, SKILL.md opening (evidence/01-drain-orchestrator-contract.md, criterion 1 PASS).
+- [x] `grep -qi "critique intake" .claude/skills/drain/SKILL.md` → match — new "## Critique intake" section between 3a and 3b (evidence file, criterion 2 PASS).
+- [x] `grep -q "## Decisions" .claude/skills/drain/SKILL.md` → match — "Record decisions" subsection in step 3 (evidence file, criterion 3 PASS).
+- [x] `grep -q "/handoff" .claude/skills/drain/SKILL.md && grep -qi "generations cap" .claude/skills/drain/SKILL.md` → both match, same passage — 3a max-generations-cap passage: "The baton is always the first escape … The /handoff escape applies only where the baton cannot: once this generations cap is exhausted" (evidence file, criterion 4 PASS, baton-first confirmed).
+- [x] `grep -qi "checklist" .claude/skills/drain/SKILL.md` → match — six-section exit checklist in step 4 (evidence file, criterion 5 PASS).
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — "all ultra mentions gated in 4 files" (evidence file, criterion 6 PASS).
+
+## Discovered
+
+- Shrink drain/SKILL.md back under the 500-line convention (stub 05-shrink-drain-skill.md)
