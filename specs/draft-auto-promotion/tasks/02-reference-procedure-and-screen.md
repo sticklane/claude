@@ -89,3 +89,11 @@ Only the two files in the header. Do NOT touch `drain/SKILL.md` or
 
 - [2026-07-09, maintainer] Re-dispatch now (option a): finish the
   reference.md procedure + screen script; task 03 then closes the spec.
+
+## Decisions
+
+- [2026-07-09, worker] screen-stub.sh scans the whole stub file rather
+  than only an extracted Goal: value — a conservative superset (never
+  lets injection through; real stubs carry the goal as body prose).
+  Reversible: narrow the grep target to an extracted Goal region if
+  false positives on other sections appear.
