@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 2 turns
@@ -27,6 +27,6 @@ bump: antigravity-only change; the plugin manifest ships
 
 ## Acceptance
 
-- [ ] `grep -q '3\.2' antigravity/.agents/workflows/evals.md` → match
-- [ ] `grep -q 'declare -A' antigravity/.agents/workflows/evals.md` → match
-- [ ] `grep -Eqi 'macos|system bash' antigravity/.agents/workflows/evals.md` → match
+- [x] `grep -q '3\.2' antigravity/.agents/workflows/evals.md` → match (verifier confirmed)
+- [x] `grep -q 'declare -A' antigravity/.agents/workflows/evals.md` → match (verifier confirmed)
+- [x] `grep -Eqi 'macos|system bash' antigravity/.agents/workflows/evals.md` → match (verifier confirmed)
