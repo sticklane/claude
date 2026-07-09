@@ -4,28 +4,12 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
 Spec: ../SPEC.md (requirements R1, R2 SKILL-side, R3 SKILL-side, R4 drain-side, R5)
 Touch: .claude/skills/drain/SKILL.md
-
-<!-- PLAN (delete at close-out)
-SKILL.md-only prose edits, in order:
-A. Opening: add "Exhaustion contract (R1)" para (first-30-lines rule) — no-arg = all specs/,
-   sequential-walk lease discipline (release on nothing-left, re-claim on re-dispatch, transient
-   3b/intake overlap). Supplies "dispatchable work remains".
-B. New "## Critique intake" section BETWEEN 3a and 3b (auto-breakdown stays named 3b per spec):
-   eligibility (no tasks/, no Breakdown-ready), claim->/critique->release, once-per-run via
-   Intake-failed: baton line (cite reference.md, do not edit). Supplies "critique intake".
-C. 3a fresh-instance ritual (2): also seed intake set from Intake-failed: line.
-D. Step 3 "Record decisions" subsection near Materialize discoveries: append worker Decisions:
-   to task file ## Decisions; gate-list -> DEFERRED to interview; blocked stays failures-only.
-E. 3a max-generations-cap sentence: add /handoff escape (baton first, /handoff only past cap).
-F. Step 4: fuse exit checklist w/ interview — six fixed sections, each with a file path, once/session.
-Guard: no new "ultra" mentions (lint-ultra-gate). Touch = SKILL.md only; cite reference.md names.
--->
 
 ## Goal
 
@@ -77,9 +61,9 @@ nor `antigravity/` or `.claude-plugin/plugin.json` (task 04).
 
 ## Acceptance
 
-- [ ] `grep -qi "dispatchable work remains" .claude/skills/drain/SKILL.md` → match
-- [ ] `grep -qi "critique intake" .claude/skills/drain/SKILL.md` → match
-- [ ] `grep -q "## Decisions" .claude/skills/drain/SKILL.md` → match
-- [ ] `grep -q "/handoff" .claude/skills/drain/SKILL.md && grep -qi "generations cap" .claude/skills/drain/SKILL.md` → both match, same passage (cite the passage as evidence)
-- [ ] `grep -qi "checklist" .claude/skills/drain/SKILL.md` → match
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `grep -qi "dispatchable work remains" .claude/skills/drain/SKILL.md` → match — Exhaustion contract para, SKILL.md opening (evidence/01-drain-orchestrator-contract.md, criterion 1 PASS).
+- [x] `grep -qi "critique intake" .claude/skills/drain/SKILL.md` → match — new "## Critique intake" section between 3a and 3b (evidence file, criterion 2 PASS).
+- [x] `grep -q "## Decisions" .claude/skills/drain/SKILL.md` → match — "Record decisions" subsection in step 3 (evidence file, criterion 3 PASS).
+- [x] `grep -q "/handoff" .claude/skills/drain/SKILL.md && grep -qi "generations cap" .claude/skills/drain/SKILL.md` → both match, same passage — 3a max-generations-cap passage: "The baton is always the first escape … The /handoff escape applies only where the baton cannot: once this generations cap is exhausted" (evidence file, criterion 4 PASS, baton-first confirmed).
+- [x] `grep -qi "checklist" .claude/skills/drain/SKILL.md` → match — six-section exit checklist in step 4 (evidence file, criterion 5 PASS).
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — "all ultra mentions gated in 4 files" (evidence file, criterion 6 PASS).
