@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 6 turns
@@ -39,5 +39,5 @@ grouping branch if a downstream consumer for tool rows appears.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./... -run Summary` → pass, including the new red-first test asserting no row has model prefix `tool:`
-- [ ] `cd agentprof && bash scripts/check.sh` → exit 0
+- [x] `cd agentprof && go test ./... -run Summary` → pass, including the new red-first test asserting no row has model prefix `tool:` — verifier confirmed 5 tests pass incl. `TestClaudeSummaryExcludesToolLeafRows`, red-first proven by stashing the fix (evidence/07-summary-tool-leaf-cost-rollup.md)
+- [x] `cd agentprof && bash scripts/check.sh` → exit 0 — verifier: format-check ok, lint ok, tests ok (evidence/07-summary-tool-leaf-cost-rollup.md)
