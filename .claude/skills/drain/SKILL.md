@@ -16,6 +16,24 @@ verifier is smart) plus its walk-away contract; see
 docs/anthropic-playbook.md, "How they let agents run unattended" (ships in
 the toolkit repo, not with installs).
 
+**Exhaustion contract (R1).** So long as dispatchable work remains in the
+launched scope, the session never ends. The scope is drain's launch argument,
+unchanged; a **no-argument launch means the whole `specs/` queue**, consumed
+one spec at a time in a sequential walk. Lease discipline for that walk:
+claim a spec's `DRAIN-OWNER.md` when its dispatch begins (step 1) and
+release it (delete, committed) the moment that spec has **nothing left to
+dispatch** — every remaining task done, deferred, blocked, failed, or draft
+— before moving to the next spec. Deferred questions live in committed task
+files, so nothing needs the lease held while the session works elsewhere; if
+the end-of-session interview (step 4) turns a deferred task back to
+`pending`, drain **re-claims that spec's lease before re-dispatching**,
+exactly like a fresh claim. At most one dispatch lease is held at a time; the
+short-lived second lease that 3b — and critique intake — take while acting on
+another spec (claim → act → release) is unchanged and may transiently
+overlap. The per-spec concurrent-drain refusal and the per-run generations
+cap are unchanged. The session ends only when no spec in scope has
+dispatchable work.
+
 First, the classification gate: drain is for queues that pass the
 peripheral/core test. If tasks touch core business logic, auth, payments,
 or migrations, run those attended via /build and drain only the rest —
@@ -331,6 +349,22 @@ so a per-session emission would misattribute later iterations.
   reference.md's "Environment kill" note has the detection signal and
   run-wide halt.
 
+**Record decisions.** A worker's verdict report may carry a fixed
+`Decisions:` section (the worker-prompt ambiguity clause in reference.md —
+task 02 owns that file, cite it, do not edit — now lets the worker take a
+**reversible default** itself instead of deferring, and report it: the
+decision, the default taken, and how to reverse). For each entry drain
+appends it to the reporting task file under a `## Decisions` section in the
+main checkout — the same worker-reports / drain-records split as
+discovered-work capture, so the worker never edits queue state — committing
+it path-scoped with that task's next bookkeeping commit and pushing (guard
+above). This is decision _logging_, not a blocker: gate-list decisions
+(irreversible, blast-radius, spend, authority) and any ambiguity with **no**
+reversible default still stop the worker with **DEFERRED** and reach the
+human through step 4's batch interview, once — never as a decision entry.
+`Status: blocked` keeps its current meaning — a technical failure needing
+amendment, no askable question — and is **never** used for a decision.
+
 **Materialize discoveries.** Only the finally-routed verdict's report is
 recorded — the merged tournament winner or the final attempt; a discarded
 candidate's or a superseded attempt's `Discovered:` entries are dropped.
@@ -391,20 +425,71 @@ done/next log, generation number, anomalies), spawn a fresh detached generation 
 relaunch command + NEW orchestrator flag set (background Task dispatch verified supported;
 verdict recorded there), report the pass, and **end your turn at once, stating this session is
 done and will not touch the queue again** (one-writer invariant). A **max-generations cap of
-10** stops with the baton written + a needs-attention note instead of respawning. **Gen 1 is
+10** stops with the baton written + a needs-attention note instead of respawning.
+The **baton is always the first escape** — at every earlier degradation
+boundary the session hands off via the baton and self-relaunches. The
+**/handoff** escape applies only where the baton cannot: once this
+generations cap is exhausted (or in attended /build), the session writes the
+/handoff file and leads its exit checklist (step 4) with the resume command
+instead of continuing degraded. **Gen 1 is
 always attended**; passing `attended` in the /drain invocation makes every trigger OFFER the
 baton + relaunch command instead of self-relaunching. **Fresh-instance ritual (R1a), before any
 dispatch:** (1) reconcile `specs/<slug>/DRAIN-OWNER.md` against the baton
 — matching `Run-token:` and `Generation:` — before touching anything
 else; a mismatch means this generation is not the legitimate heir, so
 fall to step 1's refuse path instead of adopting, (2) read the baton — seeding
-3b's in-session attempted-and-failed set from its `Breakdown-failed:` line, so
-a spec a prior generation already failed to auto-breakdown is not retried
-this generation either — (3) read task files' `Status:` lines, (4) `git log --oneline
+3b's in-session attempted-and-failed set from its `Breakdown-failed:` line
+(and critique intake's set from its `Intake-failed:` line), so a spec a prior
+generation already failed to auto-breakdown or to critique-intake is not
+retried this generation either — (3) read task files' `Status:` lines, (4) `git log --oneline
 -15`, (5) run ONE cheap verification (project check or last-flipped task's acceptance command)
 to catch drift — only then dispatch. A headless generation reaching the batch interview writes
 its deferred questions into the baton as a needs-attention section and stops; the final
 generation deletes the baton when the queue completes.
+
+## Critique intake (fires at the exhaustion trigger, before 3b)
+
+Emit `<!-- agentprof:stage=critique-intake -->` verbatim as this step's
+opening line every time you enter it.
+
+At the exhaustion trigger — the same "nothing dispatchable, nothing
+in-progress, nothing parked" check that gates 3b, evaluated **immediately
+before 3b** (intake writes the `Breakdown-ready:` marker 3b then consumes) —
+scan scope for a **draft spec**: a spec dir with a `SPEC.md`, no `tasks/` (or
+an empty one), and **no `Breakdown-ready:` header**. That is critique intake
+work. It is genuinely lower priority than dispatch and never preempts a
+dispatchable task; it fires only once real dispatch is exhausted, exactly
+like 3b.
+
+Order eligible specs by `Priority` header (absent = P2) then lexicographic
+spec path — step 2's tie-break. For the chosen spec:
+
+- **Claim that spec's owner lease first** — the same claim → act → release
+  procedure 3b uses on its target (write `DRAIN-OWNER.md` if absent,
+  compare-and-swap re-read to confirm your `Run-token:`, refuse and skip to
+  the next eligible spec on a lost race). This is what stops two concurrent
+  drains from racing to critique the same spec.
+- Invoke **/critique** on the spec via the Skill tool — model-invocable, no
+  `disable-model-invocation` flag, the same sanctioned in-session exception
+  3b's `/breakdown` invocation relies on.
+- **READY** → the critic writes the `Breakdown-ready:` marker; 3b's existing
+  auto-/breakdown path then makes the spec dispatchable **in the same
+  session**. Release the lease and loop to step 1 (new tasks may make
+  higher-priority work dispatchable immediately).
+- **NOT READY** → the findings are recorded with the spec, the spec lands on
+  step 4's exit checklist as a NOT-READY item, the lease is released, and the
+  loop continues.
+
+Attempt each spec's intake **at most once per run — spanning every baton
+generation, not just this one**: a NOT-READY or failed attempt is added to
+this generation's in-session intake set immediately AND (since intake never
+clears any marker) survives a baton pass via `DRAIN-BATON.md`'s
+`Intake-failed:` line — the analogue of `Breakdown-failed:`, whose grammar is
+pinned in reference.md's "Baton pass" (cite it; task 02 owns that file, do
+not edit it). Draft TASK stubs are explicitly **not** intake: only a human
+promotes `draft` → `pending` (docs/human-gates.md reason 1, drain's existing
+invariant, both unchanged) — stubs appear on the exit checklist as promotion
+candidates instead.
 
 ## 3b. Auto-breakdown (lowest priority)
 
@@ -465,8 +550,9 @@ Emit `<!-- agentprof:stage=batch-interview -->` verbatim as this step's
 opening line every time you enter it.
 
 When nothing is dispatchable, nothing is running, no tasks are parked
-(inside their liveness window), AND 3b finds no eligible not-yet-broken-down
-spec, the queue is either drained or waiting on humans. Before entering this
+(inside their liveness window), critique intake finds no eligible draft spec,
+AND 3b finds no eligible not-yet-broken-down spec, the queue is either
+drained or waiting on humans. Before entering this
 interview, re-run the liveness check
 (reference.md) on every parked task, sleeping out the remaining window when
 nothing else is dispatchable: a re-check that confirms death sweeps the run
@@ -493,8 +579,30 @@ questions` blocks from those files only, and ask them all in one round
   produced) alongside the other blockers — these need a human `/breakdown`
   or spec amendment, not a retry.
 
+**Exit checklist (R4), once per session at scope exhaustion.** The batch
+interview and the session's final message are fused: the interview asks every
+deferred question aggregated across ALL specs drained this session (gated on
+`Status: deferred`, above), and the final message is a fixed **six-section
+checklist** for the human — **each entry names a file path**:
+
+1. **Deferred questions still unanswered** — the task file for each.
+2. **Defaults taken** — from the `## Decisions` sections drain recorded
+   (decision, default, how to reverse), with the task file for each.
+3. **Blocked items** — each `Status: blocked` task, what unblocks it, and its
+   task file.
+4. **NOT-READY specs** — each spec critique intake left NOT READY, its top
+   findings, and its `SPEC.md` path.
+5. **Draft stubs awaiting promotion** — each `Status: draft` stub (discovered
+   work and un-promoted intake candidates), with its file, for a human to
+   promote `draft` → `pending`.
+6. **Next commands** — the exact commands to resume.
+
+One interview and one checklist per session; "Nothing needs you" is a valid
+checklist.
+
 Artifacts: drain mutates task files in the main checkout only (`Status`
-lines, `## Deferred questions`, `## Answers`, `## Progress`, and
+lines, `## Deferred questions`, `## Answers`, `## Progress`, `## Decisions`,
+and
 `Status: draft` stubs for discovered work), committing every mutation,
 merges `task/NN-*` branches, and — via 3b — invokes `/breakdown` to create
 new `tasks/NN-*.md` files for critic-READY specs. Next pipeline step:
