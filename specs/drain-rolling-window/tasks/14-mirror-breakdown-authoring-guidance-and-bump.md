@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 4 turns
@@ -36,6 +36,6 @@ real mirror is the SKILL.md above.
 
 ## Acceptance
 
-- [ ] `grep -qi 'base commit' antigravity/.agents/skills/breakdown/SKILL.md && grep -qi 'version' antigravity/.agents/skills/breakdown/SKILL.md` → both match
-- [ ] `grep -Eqi 'never a hard-coded|pinned literal' antigravity/.agents/skills/breakdown/SKILL.md` → match (the false-fail rationale landed)
-- [ ] plugin.json version differs from `git show <this task's base commit>:.claude-plugin/plugin.json` (cite both values)
+- [x] `grep -qi 'base commit' antigravity/.agents/skills/breakdown/SKILL.md && grep -qi 'version' antigravity/.agents/skills/breakdown/SKILL.md` → both match (verifier PASS; evidence/14-\*.md)
+- [x] `grep -Eqi 'never a hard-coded|pinned literal' antigravity/.agents/skills/breakdown/SKILL.md` → match (the false-fail rationale landed; verifier PASS)
+- [x] plugin.json version differs from `git show <this task's base commit>:.claude-plugin/plugin.json` (base f5648489 = 0.8.26 → worktree 0.8.27; verifier PASS)
