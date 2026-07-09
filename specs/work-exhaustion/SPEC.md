@@ -208,3 +208,15 @@ which carries the actual worker prompt; build and autopilot where noted):
   budget (N defaults taken before it stops anyway) — decide at
   /breakdown; default is no budget (defaults are reversible by
   definition, and the checklist surfaces every one).
+
+## Parallelization
+
+Tasks 01, 02, and 03 have pairwise-disjoint `Touch:` lists, and every
+shared design choice (the `Decisions:` report section, the `## Decisions`
+task-file section, the `Intake-failed:` baton line, DEFERRED routing for
+gate-list decisions) is pinned in this spec, so no member resolves an open
+choice — the decision-coupling test passes. Task 04 mirrors the landed
+result and closes the spec, so it depends on all three. Group-line grammar
+per specs/drain-rolling-window/SPEC.md's Parallelization section.
+
+- Group: 01, 02, 03
