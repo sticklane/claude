@@ -99,6 +99,16 @@ func TestClaudeSummaryMarksUnpricedModelPricedFalseZeroCost(t *testing.T) {
 	}
 }
 
+func TestClaudeSummaryExcludesToolLeafRows(t *testing.T) {
+	rows := runClaudeSummary(t)
+
+	for _, r := range rows {
+		if model := r["model"].(string); strings.HasPrefix(model, "tool:") {
+			t.Errorf("summary row model = %q: tool:/pending leaf frames must not key a cost rollup row (task 07)", model)
+		}
+	}
+}
+
 func TestClaudeSummaryNonexistentDirExitsNonzeroWithMessage(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	code := run([]string{"claude", "--claude-dir", "/nonexistent", "-o", "summary"}, &stdout, &stderr)
