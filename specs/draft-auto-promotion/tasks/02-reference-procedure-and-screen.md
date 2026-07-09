@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions / ## Decisions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: deferred
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -59,3 +59,20 @@ Only the two files in the header. Do NOT touch `drain/SKILL.md` or
 - [ ] `grep -qi "obsolete" .claude/skills/drain/reference.md` → match in the status-semantics section (cite the passage; `Closed:` line requirement present)
 - [ ] `rg -Uqi "only a human (promotes|edits)|only a human \(or|Promotion is manual|promoted manually|only a human\s+(promotes|edits)" .claude/skills/drain/reference.md` → exit 1, no matches
 - [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+
+## Deferred questions
+
+- [2026-07-09 /drain] You stopped this task's worker mid-plan (red
+  fixture checks confirmed; any partial state is on the rescue/02-* branch).
+  Should the reference.md procedure + screen script (a) be re-dispatched,
+  (b) wait for a later run, or (c) be dropped? Note: sibling task 01
+  (SKILL.md stub-intake contract) is already merged, so until 02 lands the
+  SKILL.md contract points at a reference procedure and screen script that
+  do not exist yet — dropping 02 would need 01 reverted or amended.
+
+## Progress
+
+- [2026-07-09 /drain] Attempt 1 stopped BY THE USER during planning
+  (post-red-fixture, pre-implementation). Not counted as a failed attempt;
+  routed to the batch interview via Status: deferred. Task 03 is
+  dep-blocked behind this.
