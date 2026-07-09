@@ -47,3 +47,11 @@ context).
 <!-- evidence: verifier ran full sweep, exit 0, no regressions — evidence/03-container-portable-tests.md -->
 - [x] Evidence cites each added skip (if any) with its reason — skips are the exception, not the fix
 <!-- evidence: NO skip added. Root-safe fix instead — for uid 0 the "unusable check.sh" fixture points check.sh at a broken symlink (unresolvable for every user, root included), hitting the SAME stop-gate fail-open branch; non-root keeps chmod 000. Scratch-copy sabotage (warn removed from stop-gate.sh) turned the assertion red, proving it still bites. -->
+
+## Decisions
+
+- [2026-07-09, worker] Root-defeated chmod-000 fixture: took the
+  root-safe denial mechanism (broken symlink for uid 0, reaching the
+  identical stop-gate fail-open branch) over the permitted guarded
+  skip — keeps a live assertion in both environments. Reversible: swap
+  the uid-0 branch for a messaged skip if preferred.
