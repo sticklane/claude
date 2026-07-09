@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 12 turns
@@ -48,12 +48,12 @@ Only the three files in the header. Do NOT touch `drain/SKILL.md` (task 01) or `
 
 ## Acceptance
 
-- [ ] `grep -qi "reversible default" .claude/skills/build/SKILL.md` → match
-- [ ] `grep -q "## Decisions" .claude/skills/build/SKILL.md` → match
-- [ ] `grep -qi "checklist" .claude/skills/autopilot/SKILL.md` → match
-- [ ] `grep -qi "continuation" docs/human-gates.md` → match
-- [ ] `grep -c "before drain ever looks" docs/human-gates.md` → 0
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `grep -qi "reversible default" .claude/skills/build/SKILL.md` → match (verifier PASS; evidence/03-build-autopilot-human-gates.md)
+- [x] `grep -q "## Decisions" .claude/skills/build/SKILL.md` → match (verifier PASS; evidence/03-build-autopilot-human-gates.md)
+- [x] `grep -qi "checklist" .claude/skills/autopilot/SKILL.md` → match (verifier PASS; evidence/03-build-autopilot-human-gates.md)
+- [x] `grep -qi "continuation" docs/human-gates.md` → match (verifier PASS; evidence/03-build-autopilot-human-gates.md)
+- [x] `grep -c "before drain ever looks" docs/human-gates.md` → 0 (verifier PASS; evidence/03-build-autopilot-human-gates.md)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (verifier PASS: "OK — all ultra mentions gated in 4 files"; evidence/03-build-autopilot-human-gates.md)
 
 ## Progress
 

@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P3
 Budget: 2 turns
@@ -28,6 +28,10 @@ the contract has no explicit "no model" bucket.
 
 ## Acceptance
 
-- [ ] `grep -Eqi 'no.model' specs/workboard-weekly-cost-view/SPEC.md` → match
-- [ ] `grep -qi 'duration_ms' specs/workboard-weekly-cost-view/SPEC.md` → match (note names what lands mis-bucketed)
-- [ ] `cd agentprof && go test ./internal/costsummary/` → pass (docs-only change; code untouched)
+- [x] `grep -Eqi 'no.model' specs/workboard-weekly-cost-view/SPEC.md` → match (verifier: exit 0; NOTE reads "has no explicit 'no model' bucket") — evidence/05-costsummary-tool-sample-model-bucket-note.md
+- [x] `grep -qi 'duration_ms' specs/workboard-weekly-cost-view/SPEC.md` → match (verifier: exit 0; NOTE names the pure `tool:` sample's `duration_ms` landing in `by_model["main"]`) — evidence/05-costsummary-tool-sample-model-bucket-note.md
+- [x] `cd agentprof && go test ./internal/costsummary/` → pass (verifier: `ok github.com/sticklane/agentprof/internal/costsummary`; no agentprof code changed) — evidence/05-costsummary-tool-sample-model-bucket-note.md
+
+## Decisions
+
+- Formatter whitespace on SPEC.md R1/R7 acceptance-bullet continuation lines (245, 257, 6→4 spaces): kept the repo PostToolUse formatter's canonical output rather than reverting. Default taken: keep (reverting would fight the format-check gate). To reverse: restore 6-space indent on those two continuation lines and disable/adjust the markdown formatter.

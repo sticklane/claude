@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 6 turns
@@ -33,6 +33,6 @@ tools.
 
 ## Acceptance
 
-- [ ] `grep -q "\.claude/skills/fleet/reference\.md" .prettierignore` → match
-- [ ] `npx --yes prettier --write .claude/skills/fleet/reference.md && bash tests/test_fleet_css_drift.sh` → exit 0 (use the repo's installed prettier if npx is unavailable)
-- [ ] `git diff --stat -- .claude/skills/fleet/reference.md` → empty after the prettier run above
+- [x] `grep -q "\.claude/skills/fleet/reference\.md" .prettierignore` → match — exit 0 (verifier PASS; evidence/02-prettierignore-viz-css.md)
+- [x] `npx --yes prettier --write .claude/skills/fleet/reference.md && bash tests/test_fleet_css_drift.sh` → exit 0; prettier is a no-op because the file is now ignored, drift test green (verifier PASS; evidence/02-prettierignore-viz-css.md)
+- [x] `git diff --stat -- .claude/skills/fleet/reference.md` → empty after the prettier run above (verifier PASS; evidence/02-prettierignore-viz-css.md)

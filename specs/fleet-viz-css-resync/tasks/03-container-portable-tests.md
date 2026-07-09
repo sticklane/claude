@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 12 turns
@@ -37,8 +37,21 @@ context).
 
 ## Acceptance
 
-- [ ] `bash tests/test_drain_owner_protocol.sh` → exit 0 (as root, this container)
-- [ ] `bash tests/test_hook_templates.sh` → exit 0
-- [ ] `bash tests/test_install_gates.sh` → exit 0
-- [ ] `for t in tests/test_*.sh; do bash "$t" || { echo "FAIL: $t"; exit 1; }; done` → exit 0 (whole sweep, no regressions)
-- [ ] Evidence cites each added skip (if any) with its reason — skips are the exception, not the fix
+- [x] `bash tests/test_drain_owner_protocol.sh` → exit 0 (as root, this container)
+<!-- evidence: verifier confirmed exit 0, pass 15 fail 0 — evidence/03-container-portable-tests.md -->
+- [x] `bash tests/test_hook_templates.sh` → exit 0
+<!-- evidence: verifier confirmed exit 0, pass 77 fail 0 — evidence/03-container-portable-tests.md -->
+- [x] `bash tests/test_install_gates.sh` → exit 0
+<!-- evidence: verifier confirmed exit 0, pass 159 fail 0 — evidence/03-container-portable-tests.md -->
+- [x] `for t in tests/test_*.sh; do bash "$t" || { echo "FAIL: $t"; exit 1; }; done` → exit 0 (whole sweep, no regressions)
+<!-- evidence: verifier ran full sweep, exit 0, no regressions — evidence/03-container-portable-tests.md -->
+- [x] Evidence cites each added skip (if any) with its reason — skips are the exception, not the fix
+<!-- evidence: NO skip added. Root-safe fix instead — for uid 0 the "unusable check.sh" fixture points check.sh at a broken symlink (unresolvable for every user, root included), hitting the SAME stop-gate fail-open branch; non-root keeps chmod 000. Scratch-copy sabotage (warn removed from stop-gate.sh) turned the assertion red, proving it still bites. -->
+
+## Decisions
+
+- [2026-07-09, worker] Root-defeated chmod-000 fixture: took the
+  root-safe denial mechanism (broken symlink for uid 0, reaching the
+  identical stop-gate fail-open branch) over the permitted guarded
+  skip — keeps a live assertion in both environments. Reversible: swap
+  the uid-0 branch for a messaged skip if preferred.

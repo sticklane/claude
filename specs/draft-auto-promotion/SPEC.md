@@ -2,6 +2,7 @@
 
 Status: open
 Priority: P1
+Breakdown-ready: true
 
 ## Problem
 
@@ -171,3 +172,14 @@ Breakdown-ready authorization already works for specs. /build and
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Tasks 01 and 02 are Touch-disjoint (SKILL.md + human-gates vs
+reference.md + the screen script) and every shared name is pinned in this
+spec (`Stub-intake-failed:`, `.claude/skills/drain/screen-stub.sh`, the
+"promoted this run" section, the R7 sweep regex), so the decision-coupling
+test passes. Task 03 mirrors and closes, depending on both. Group-line
+grammar per specs/drain-rolling-window/SPEC.md's Parallelization section.
+
+- Group: 01, 02
