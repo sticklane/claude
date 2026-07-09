@@ -44,6 +44,21 @@ assert_eq() { # assert_eq <description> <expected> <actual>
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+# Portable in-place sed. GNU sed rejects the BSD `sed -i '' EXPR file` form
+# (it reads '' as an empty script and EXPR as a filename). Route through a
+# temp file, identical on both; `cat >` back preserves mode and inode.
+sedi() { # sedi <sed-expression> <file>
+  local expr="$1" file="$2" tmp
+  tmp="$(mktemp)"
+  sed "$expr" "$file" >"$tmp" && cat "$tmp" >"$file"
+  rm -f "$tmp"
+}
+
+# Portable octal file mode. GNU: `stat -c %a`; BSD/macOS: `stat -f %Lp`.
+filemode() { # filemode <file>
+  stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1"
+}
+
 mkrepo() { # mkrepo <dir>
   mkdir -p "$1"
   git -C "$1" init -q
@@ -92,7 +107,7 @@ assert "python fixture: prints tier full" out_has "tier: full"
 PY_CHECK="$PY/scripts/check.sh"
 PY_HOOK="$PY/.git/hooks/pre-commit"
 assert "python fixture: scripts/check.sh exists" test -f "$PY_CHECK"
-assert_eq "python fixture: check.sh mode 755" 755 "$(stat -f '%Lp' "$PY_CHECK")"
+assert_eq "python fixture: check.sh mode 755" 755 "$(filemode "$PY_CHECK")"
 assert "python fixture: check.sh uses ruff (acceptance grep)" \
   grep -q 'uvx ruff\|^ruff\| ruff ' "$PY_CHECK"
 assert_not "python fixture: no bare npx in check.sh or pre-commit" \
@@ -339,7 +354,7 @@ assert_not "node-tsc: no per-file tsc in pre-commit" \
 
 # R3: the typecheck-timing marker is reused on re-runs, never re-measured
 # implicitly; only --remeasure re-measures.
-sed -i '' 's/^# install-gates-typecheck: excluded$/# install-gates-typecheck: included/' "$NT_HOOK"
+sedi 's/^# install-gates-typecheck: excluded$/# install-gates-typecheck: included/' "$NT_HOOK"
 run_install "$NT"
 assert_eq "R3 marker: re-run exits 0" 0 "$RI_EXIT"
 assert "R3 marker: decision reused absent --remeasure" \

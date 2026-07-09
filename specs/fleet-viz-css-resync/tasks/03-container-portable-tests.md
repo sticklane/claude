@@ -11,6 +11,22 @@ Spec: ../SPEC.md
 Discovered-from: specs/fleet-viz-css-resync/tasks/01-resync-and-drift-guard.md
 Touch: tests/test_drain_owner_protocol.sh, tests/test_hook_templates.sh, tests/test_install_gates.sh
 
+<!--
+PLAN (delete at close-out):
+- drain: add a portable `sedi` helper (sed -> temp file -> overwrite),
+  replace the 3 `sed -i ''` calls (BSD misparse under GNU).
+- install_gates: add `sedi` + a `filemode` helper (GNU `stat -c %a`,
+  BSD `stat -f %Lp` fallback); replace the `stat -f '%Lp'` and the
+  `sed -i ''` R3-marker call.
+- hook_templates: the chmod-000 "unreadable" fixture is defeated by root's
+  DAC bypass. Root-safe substitute: for uid 0 point check.sh at a broken
+  symlink (unresolvable for every user) so the SAME existing-but-unusable
+  fail-open branch fires; non-root keeps chmod 000 so the `-r` guard stays
+  covered. No assertion deleted, no skip.
+- Prove each guard still bites: sabotage one guarded behavior per file in a
+  scratch copy, confirm red.
+-->
+
 ## Goal
 
 `tests/test_drain_owner_protocol.sh`, `tests/test_hook_templates.sh`, and
