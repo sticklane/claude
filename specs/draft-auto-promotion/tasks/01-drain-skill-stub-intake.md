@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions / ## Decisions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -53,9 +53,9 @@ the screen script (task 02 owns them — cite the spec-pinned names:
 
 ## Acceptance
 
-- [ ] `grep -qi "stub intake" .claude/skills/drain/SKILL.md` → match (absent today)
-- [ ] `grep -qi "promoted this run" .claude/skills/drain/SKILL.md` → match, and the exit-checklist count text says seven (cite the line)
-- [ ] `rg -Uqi "only a human (promotes|edits)|only a human \(or|Promotion is manual|promoted manually|only a human\s+(promotes|edits)" .claude/skills/drain/SKILL.md` → exit 1, no matches
-- [ ] `grep -n "reason 1" .claude/skills/drain/SKILL.md` → no draft-gate citation remains (cite what's left, if anything)
-- [ ] `grep -qi "adversarial" docs/human-gates.md` → match, and reason 4 still carries the disable-model-invocation launch rationale (cite the surviving sentence)
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `grep -qi "stub intake" .claude/skills/drain/SKILL.md` → match (absent today) — verifier PASS; `## Stub intake` header added between Critique intake and 3b (evidence/01-drain-skill-stub-intake.md)
+- [x] `grep -qi "promoted this run" .claude/skills/drain/SKILL.md` → match, and the exit-checklist count text says seven (cite the line) — verifier PASS; count line reads "fixed **seven-section checklist**", new item 6 "Promoted this run" (evidence file)
+- [x] `rg -Uqi "only a human (promotes|edits)|only a human \(or|Promotion is manual|promoted manually|only a human\s+(promotes|edits)" .claude/skills/drain/SKILL.md` → exit 1, no matches — verifier PASS: exit 1 (evidence file)
+- [x] `grep -n "reason 1" .claude/skills/drain/SKILL.md` → no draft-gate citation remains — verifier PASS: no output; both draft-gate citations now "reason 4" (evidence file)
+- [x] `grep -qi "adversarial" docs/human-gates.md` → match, and reason 4 still carries the disable-model-invocation launch rationale — verifier PASS; surviving sentence: "`disable-model-invocation` removes gated skills from the model's context entirely (and blocks scheduled firing), so injected text can never transitively become a fleet of launched workers." (evidence file)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — verifier PASS: "OK — all ultra mentions gated in 4 files" (evidence file)
