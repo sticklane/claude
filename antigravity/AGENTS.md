@@ -64,6 +64,13 @@ When a skill spawns agents, its prompt text must make these choices
 explicit — model tier, return budget, and any loop bound — instead of
 letting them default:
 
+- Awaited children, never detached (maintainer policy, 2026-07-09):
+  fresh context comes from the conversation boundary — a separate Agent
+  Manager conversation with a blank context — never from detachment.
+  Every spawned conversation has a parent that waits for it and collects
+  its result before moving on; no fire-and-forget sub-reviews, no
+  orphaned children outliving the step that spawned them.
+
 - Tier by stage type: mechanical stages (search, fetch, extract,
   grep-like scouting, conformance checks) run scout-tier (a Flash-class
   model / low effort); judgment stages (implementation, verification,
