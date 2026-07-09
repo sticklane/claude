@@ -58,3 +58,14 @@ itself. Runs after tasks 02–04 so the moved prose is final.
 - [2026-07-09, maintainer] Re-dispatch now (option b): run the shrink.
   Dispatch AFTER draft-auto-promotion 02/03 land (Touch overlap on
   drain/reference.md; the shrink should move final prose).
+
+- [2026-07-09 /drain] Attempt 2 (post-answer re-dispatch) BLOCKED over
+  budget at 16 turns. Done: 698->551 lines, zero regressions across a
+  104-command before/after grep harness, critique-intake detail moved to
+  reference.md, plugin 0.8.29, lint green, all work-exhaustion +
+  draft-auto-promotion greps green. Remaining: ~51 lines via
+  whole-paragraph relocation (stale-lock/rescue paragraph, worktree
+  base-sync paragraph, tier-pin paragraph, DONE-bullet whitelist-diff
+  mechanics — all already duplicated in reference.md). Progress preserved
+  on rescue/05-shrink-drain-skill-ced203c; relaunched once with the
+  worker's own resume recipe.
