@@ -69,6 +69,16 @@ When a skill spawns agents, its prompt text must make these choices
 explicit — model/effort tier, return budget, and any loop bound — instead
 of letting them default silently:
 
+- **Awaited children, never detached (maintainer policy, 2026-07-09).**
+  Fresh context comes from the subagent boundary — a worktree-isolated
+  worker with a blank context — never from detachment. Every spawned
+  agent has a parent that waits for it and collects its result before
+  moving on (synchronous dispatch); no fire-and-forget sub-verifiers, no
+  orphaned children outliving the step that spawned them, no detached
+  orchestrator generations where an attended parent can supervise
+  instead. A worker that spawns its own verifier awaits it inline the
+  same way.
+
 - **Tier by stage type.** Mechanical stages (search, fetch, extract,
   grep-like scouting, conformance checks) run on Haiku / `effort: low`;
   judgment stages (implementation, verification, judging, synthesis) keep

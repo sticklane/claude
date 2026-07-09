@@ -100,8 +100,10 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    under 25; otherwise, since this mirror has no code-review skill to
    invoke directly, run ONE subagent on the diff prompted for
    high-confidence correctness/behavior findings only and capped at ≤1k
-   tokens returned — run it inline or read its output directly, never
-   block on a background notification (the drain workflow's sub-reviewer
+   tokens returned — run it as an awaited child (start it, wait for it,
+   collect its result before close-out; never fire-and-forget, never
+   leave a child conversation running past your own finish — the
+   awaited-children dispatch rule; the drain workflow's sub-reviewer
    clause, cited not restated). Fix a finding immediately iff it is a
    correctness/behavior defect AND the fix stays inside the task's
    `Touch:` — or, with no `Touch:` header, inside the files touched this
