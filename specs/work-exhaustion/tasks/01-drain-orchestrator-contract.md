@@ -67,3 +67,7 @@ nor `antigravity/` or `.claude-plugin/plugin.json` (task 04).
 - [x] `grep -q "/handoff" .claude/skills/drain/SKILL.md && grep -qi "generations cap" .claude/skills/drain/SKILL.md` → both match, same passage — 3a max-generations-cap passage: "The baton is always the first escape … The /handoff escape applies only where the baton cannot: once this generations cap is exhausted" (evidence file, criterion 4 PASS, baton-first confirmed).
 - [x] `grep -qi "checklist" .claude/skills/drain/SKILL.md` → match — six-section exit checklist in step 4 (evidence file, criterion 5 PASS).
 - [x] `bash evals/lint-ultra-gate.sh` → exit 0 — "all ultra mentions gated in 4 files" (evidence file, criterion 6 PASS).
+
+## Discovered
+
+- Shrink drain/SKILL.md back under the 500-line convention (stub 05-shrink-drain-skill.md)
