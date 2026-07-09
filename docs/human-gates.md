@@ -72,11 +72,17 @@ lowest priority, with no human present at that moment. It stays inside
 reason 2's line rather than crossing it because the READY verdict was
 never drain's own to grant: `/critique` (or `/idea`, transitively — both
 model-invocable, so this isn't necessarily a discrete human decision
-either) writes `Breakdown-ready: true` into a `SPEC.md` only on a READY
-verdict, in a separate, earlier invocation. Drain reads that persisted
-marker; it never classifies its own request for autonomy and then grants
-it — the gate is the READY verdict itself, already recorded on disk before
-drain ever looks, not a human's presence at the moment it looks. That gate
+either) writes `Breakdown-ready: true` into a `SPEC.md` only on the
+critic's independent, adversarial READY verdict — whether that critique
+ran in a separate earlier invocation or in-session during drain's critique
+intake (SKILL.md's exhaustion-triggered intake branch). Drain reads that
+verdict — persisted marker or same-session critic result — and never
+classifies its own request for autonomy and then grants it: the gate is
+the READY verdict itself, produced by a context that was never drain's.
+This is the shape of the whole boundary — the human gates govern the
+_launch_ of an autonomous run, not its _continuation_: once a human
+launches, the session consumes its scope and self-chains on
+already-granted READY verdicts, re-gating no individual step. That gate
 has a known residual gap — a marker survives a spec edit made after the
 verdict, with no automatic invalidation (drain/reference.md, Auto-breakdown,
 "Residual risk (accepted)") — accepted the same way the stale-lock liveness
