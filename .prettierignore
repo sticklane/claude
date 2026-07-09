@@ -1,0 +1,5 @@
+# /fleet's reference.md carries a byte-exact copy of viz.py's timeline CSS
+# (guarded by tests/test_fleet_css_drift.sh). Prettier would reflow the
+# compact block into multi-line form and break that byte-identity, so it is
+# exempt from the PostToolUse format hook.
+.claude/skills/fleet/reference.md
