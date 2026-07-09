@@ -15,3 +15,4 @@ Breakdown-failed:
 - W=1 (no Parallel-window header); Group: 01, 02, 03 exists but 01 already landed.
 - Draft stubs awaiting human promotion: 10 pre-existing across specs + fleet-viz-css-resync/02,03 + work-exhaustion/05 — list them in the final report/checklist.
 - Known container issue: tests test_drain_owner_protocol.sh, test_hook_templates.sh, test_install_gates.sh fail as root/GNU env (pre-existing; docs/memory root-container-test-failures) — not regressions; gates for this queue are lint-ultra-gate.sh + acceptance greps + specs/status.sh parse.
+- CI gate on the PR branch: any push changing .claude/(skills|agents) needs plugin.json bumped relative to origin/main — 0.8.25 (this commit) already satisfies it branch-wide; task 04 still does its own base-relative bump.
