@@ -40,6 +40,14 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    case plan as a comment block and proceed.
    If the plan contradicts the task or reveals a missing decision, surface
    it rather than guessing.
+   A mid-task decision with a **reversible default** (the attended parallel
+   to the worker's decision-deferral rule): take the default and keep
+   working rather than interrupting — record each (decision, default taken,
+   how to reverse) and log them to the task file's `## Decisions` section at
+   close-out (step 5). A decision with NO reversible default, or any on the
+   human-gates list (irreversible, blast-radius, spend, authority), still
+   stops and surfaces to the user — being attended, it asks rather than
+   parks.
 
 3. **Implement, verification-first.** Open this step by emitting
    `<!-- agentprof:stage=implement -->` verbatim each time you enter it.
@@ -67,6 +75,12 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    (all acceptance passing), DEFERRED (a question a human must
    answer), or BLOCKED (stuck after the fix attempts) — rather than
    thrashing.
+   Heavy-context escape: attended build has no baton (that is the drain
+   workflow's degradation response); when the session itself has grown
+   heavy — not just one stuck fix — apply the handoff skill to write a
+   handoff file and lead the report with its resume command instead of
+   continuing degraded. This is the escape available to an attended run
+   where the baton cannot apply.
 
 5. **Close out.** Open this step by emitting
    `<!-- agentprof:stage=close-out -->` verbatim each time you enter it.
@@ -96,7 +110,11 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    them, or add to `Discovered:` when unattended. Style findings are
    dropped since the simplification pass already ran. Record the outcome
    as evidence: `review: N findings, M fixed, K discovered` or
-   `review skipped: <reason>`. Update the task file (Status
+   `review skipped: <reason>`. Log any reversible-default decisions taken
+   this session (step 2's rule) to the task file's `## Decisions` section —
+   one line each: decision, default taken, how to reverse. Append; never
+   overwrite prior entries. No decisions taken → no section needed. Update
+   the task file (Status
    `done`, ticked boxes, one line of evidence each rather than
    duplicating output — citing the `evidence/` file when an evidence
    path was passed in step 4; delete the plan comment block from

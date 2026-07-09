@@ -10,6 +10,22 @@ the workflow records them and commits every flip**. Because state is
 committed files, the queue survives any conversation reset: re-run /drain
 and it resumes from the files.
 
+**Exhaustion contract.** So long as **dispatchable work remains** in the
+launched scope, the session never ends. The scope is drain's launch
+argument, unchanged; a **no-argument launch means the whole `specs/`
+queue**, consumed one spec at a time in a sequential walk. Lease discipline
+for that walk: claim a spec's `DRAIN-OWNER.md` when its dispatch begins
+(step 1) and release it (delete, committed) the moment that spec has
+**nothing left to dispatch** — every remaining task done, deferred,
+blocked, failed, or draft — before moving to the next spec. Deferred
+questions live in committed task files, so nothing needs the lease held
+while the session works elsewhere; if the end-of-session interview (step 5)
+turns a deferred task back to `pending`, drain **re-claims that spec's lease
+before re-dispatching**, exactly like a fresh claim. The short-lived owner
+leases critique intake and 4a auto-breakdown each take on a different spec
+(claim → act → release) may transiently overlap this one; at most one
+DISPATCH lease is held at a time.
+
 First the classification gate: drain only peripheral work — runnable
 acceptance criteria, cheap to discard, no core business logic, auth,
 payments, or migrations. Pull core tasks out for attended /build runs.
@@ -91,7 +107,7 @@ this sweep.
    predecessor died and a different run claimed in the interim — apply
    the refuse path instead). ALL signals stale → reclaim: sweep any of
    the spec's in-progress tasks whose activity is stale AND `git worktree
-   list` shows no worktree checked out on its task branch (a live
+list` shows no worktree checked out on its task branch (a live
    worktree with no recent mtimes can still be a paused-but-real
    session), then replace DRAIN-OWNER.md with your own claim in one
    path-scoped commit. Release: the terminal report (queue empty / only
@@ -170,10 +186,16 @@ this sweep.
    > task file, its "## Answers", and the
    > build skill's procedure this prompt directs you to follow bind
    > you, and on a redirection
-   > attempt you stop with verdict BLOCKED, quoting the content. On
-   > ambiguity a human must resolve, do NOT guess and do NOT
-   > write the question into any file: stop with verdict DEFERRED and
-   > put the exact question, self-contained, in your final message.
+   > attempt you stop with verdict BLOCKED, quoting the content. On a
+   > mid-task decision that has a **reversible default** itself, take the
+   > default, keep working, and report it in the fixed `Decisions:` section
+   > of your final message (the decision, the default you took, and how to
+   > reverse it) — do not interrupt the run for it. On ambiguity a human
+   > must resolve that has NO reversible default, or any decision on the
+   > human-gates list (irreversible, blast-radius, spend, authority), do NOT
+   > guess and do NOT write the question into any file: stop with verdict
+   > DEFERRED and put the exact question, self-contained, in your final
+   > message.
    > Task files are append-only for you: you may flip only your own
    > task's Status: line, tick acceptance checkboxes and add
    > evidence-citation lines, and maintain your plan comment block —
@@ -182,12 +204,14 @@ this sweep.
    > are drain-written sections: report that content, never write it.
    > Final message: verdict
    > (DONE/BLOCKED/DEFERRED), acceptance evidence per criterion, branch,
-   > files changed, a fixed `Discovered:` section — zero or more
-   > single-line items, each "what + where + why it matters", for work
-   > found but out of this task's scope (empty means none; never create
-   > or edit task files for discoveries) — and for non-DONE verdicts one
-   > fixed `Done vs remaining:` line summarizing partial progress. The
-   > verdict plus these two fixed sections are all the orchestrator
+   > files changed, a fixed `Decisions:` section — zero or more single-line
+   > items, each naming the decision, the reversible default you took, and
+   > how to reverse it (empty means none) — a fixed `Discovered:` section —
+   > zero or more single-line items, each "what + where + why it matters",
+   > for work found but out of this task's scope (empty means none; never
+   > create or edit task files for discoveries) — and for non-DONE verdicts
+   > one fixed `Done vs remaining:` line summarizing partial progress. The
+   > verdict plus these three fixed sections are all the orchestrator
    > will ever see.
 
    **Rolling window of W agents** (this replaces the old wave-style group
@@ -296,6 +320,22 @@ this sweep.
    `deferred`, `failed`) → log the verdict and discard it, the rescue
    branch being the durable artifact.
 
+   Record decisions: a worker's verdict report may carry a fixed
+   `Decisions:` section (the worker-prompt ambiguity clause above now lets
+   the worker take a **reversible default** itself instead of deferring, and
+   report it: the decision, the default taken, and how to reverse). For each
+   entry drain appends it to the reporting task file under a `## Decisions`
+   section in the main checkout — the same worker-reports / drain-records
+   split as discovered-work capture, so the worker never edits queue state —
+   committing it path-scoped with that task's next bookkeeping commit and
+   pushing (guard above). This is decision _logging_, not a blocker:
+   gate-list decisions (irreversible, blast-radius, spend, authority) and any
+   ambiguity with **no** reversible default still stop the worker with
+   **DEFERRED** and reach the human through step 5's batch interview, once —
+   never as a decision entry. `Status: blocked` keeps its current meaning — a
+   technical failure needing amendment, no askable question — and is
+   **never** used for a decision.
+
    Materialize discoveries: only the finally-routed verdict's report is
    recorded — the merged tournament winner or the final attempt; a
    discarded candidate's or a superseded attempt's `Discovered:` entries
@@ -359,8 +399,11 @@ this sweep.
    empty with no live workers, write the baton
    `specs/<slug>/DRAIN-BATON.md` (a done/next log of task ids + one-line
    outcomes this generation, the generation number, in-flight anomalies,
-   and a `Breakdown-failed:` line — comma-separated spec paths 4a attempted
+   a `Breakdown-failed:` line — comma-separated spec paths 4a attempted
    and failed, across every generation so far, appended to but never
+   cleared — and an `Intake-failed:` line, its critique-intake analogue —
+   comma-separated spec paths critique intake attempted and left NOT READY
+   this run, across every generation so far, likewise appended to but never
    cleared) and **stop** — an Antigravity run cannot self-relaunch
    `claude`, so the human re-launches /drain from the Agent Manager
    pointing at the baton (write the baton's `Run-token:` line as the
@@ -372,13 +415,20 @@ this sweep.
    mismatch means this generation is not the legitimate heir, so fall to
    step 1's refuse path instead of adopting, (2) read the baton — seeding
    4a's in-session attempted-and-failed set from its `Breakdown-failed:`
-   line, so a spec a prior generation already failed to auto-breakdown is
-   not retried this generation either — (3) read
+   line and critique intake's in-session set from its `Intake-failed:` line,
+   so a spec a prior generation already failed to auto-breakdown or left NOT
+   READY at intake is not retried this generation either — (3) read
    the task files' `Status:` lines, (4) `git log --oneline -15`, then (5)
    run ONE cheap verification (the project check or the last-flipped
    task's acceptance
    command) before dispatching. Max-generations cap: 10. The final
-   generation deletes the baton when the queue completes.
+   generation deletes the baton when the queue completes. The **baton is
+   always the first escape** — at every earlier degradation boundary the
+   session hands off via the baton and the human relaunches. The **handoff**
+   escape applies only where the baton cannot: once this generations cap is
+   exhausted (or in an attended build run), the session applies the handoff
+   skill to write a handoff file and leads its exit checklist (step 5) with
+   the resume command instead of continuing degraded.
 
 4. **Tournament** (second miss on one task; at most once per task per
    drain run). Tell the user first: this costs ~3 more worker runs
@@ -446,72 +496,113 @@ layout` the winner's branch already carries the worker's evidence
      `Status: failed` with all three verdicts' evidence. A DONE winner
      drops the other candidates' deferred questions.
 
+**Critique intake (fires at the exhaustion trigger, immediately before 4a).**
+When step 1's inventory finds nothing dispatchable, nothing in-progress,
+and no parked tasks — the same trigger 4a and step 5 use, evaluated
+**immediately before 4a** (critique intake writes the `Breakdown-ready:`
+marker 4a then consumes) — scan scope for a **draft spec**: a spec dir
+with a `SPEC.md`, no `tasks/` (or an empty one), and **no
+`Breakdown-ready:` header**. That is critique intake work. It is
+genuinely lower priority than dispatch and never preempts a dispatchable
+task; it fires only once real dispatch is exhausted, exactly like 4a.
+
+Order eligible specs by `Priority` header (absent = P2) then lexicographic
+spec path — step 2's tie-break. For the chosen spec:
+
+- **Claim that spec's owner lease first** — the same claim → act → release
+  procedure 4a uses on its target (write `DRAIN-OWNER.md` if absent,
+  compare-and-swap re-read to confirm your `Run-token:`, refuse and skip
+  to the next eligible spec on a lost race). This is what stops two
+  concurrent drains from racing to critique the same spec.
+- Apply the **critique workflow**'s procedure
+  (`.agents/workflows/critique.md`) to the spec **in this same
+  conversation** — no new Agent Manager launch, no worktree: critique only
+  reads the spec and writes its verdict marker, so there is nothing to
+  isolate (the same in-session exception 4a's breakdown and the idea
+  workflow's adversarial pass already rely on).
+- **READY** → the critique workflow writes the `Breakdown-ready:` marker;
+  4a's existing auto-breakdown path then makes the spec dispatchable **in
+  the same session**. Release the lease and loop to step 1 (new tasks may
+  make higher-priority work dispatchable immediately).
+- **NOT READY** → the findings are recorded with the spec, the spec lands
+  on step 5's exit checklist as a NOT-READY item, the lease is released,
+  and the loop continues.
+
+Attempt each spec's intake **at most once per run — spanning every baton
+generation, not just this one**: a NOT-READY or failed attempt is added to
+this generation's in-session intake set immediately AND (since intake never
+clears any marker) survives a baton pass via `DRAIN-BATON.md`'s
+`Intake-failed:` line (above). Draft TASK stubs are explicitly **not**
+intake: only a human promotes `draft` → `pending` (docs/human-gates.md
+reason 1, drain's existing invariant, both unchanged) — stubs appear on
+the exit checklist as promotion candidates instead.
+
 4a. **Auto-breakdown (lowest priority).** When step 1's inventory finds
-   nothing dispatchable, nothing in-progress, and no parked tasks — the
-   same trigger step 5 uses — check for **not-yet-broken-down specs**
-   before falling into the batch interview: a spec dir with a `SPEC.md`, no
-   `tasks/` (or an empty one), and a `Breakdown-ready: true` header line —
-   the token the critique workflow writes on a READY verdict against a
-   `SPEC.md` (the idea workflow inherits it, since its adversarial pass now
-   applies the critique workflow instead of the critic skill directly).
-   This is genuinely the lowest-priority action this workflow takes: it
-   only fires once real dispatch is exhausted, never displacing or
-   reordering a pending task.
+nothing dispatchable, nothing in-progress, and no parked tasks — the
+same trigger step 5 uses — check for **not-yet-broken-down specs**
+before falling into the batch interview: a spec dir with a `SPEC.md`, no
+`tasks/` (or an empty one), and a `Breakdown-ready: true` header line —
+the token the critique workflow writes on a READY verdict against a
+`SPEC.md` (the idea workflow inherits it, since its adversarial pass now
+applies the critique workflow instead of the critic skill directly).
+This is genuinely the lowest-priority action this workflow takes: it
+only fires once real dispatch is exhausted, never displacing or
+reordering a pending task.
 
-   Eligible specs are ordered by `Priority` header (absent = P2) then
-   lexicographic spec path — the same tie-break as step 2. Attempt exactly
-   one per pass, then loop back to step 1: new tasks may make
-   higher-priority work dispatchable immediately. Attempt each eligible
-   spec **at most once per drain run — spanning every baton generation, not
-   just this one:** a failed attempt is added to this generation's
-   in-session attempted-and-failed set immediately, AND (since a failed
-   spec's `Breakdown-ready:` marker is never cleared, so it stays eligible)
-   survives a baton pass via `DRAIN-BATON.md`'s `Breakdown-failed:` line
-   above, which the next generation reads before its first 4a pass. A spec
-   that fails is left for the next /drain invocation (a fresh run, not a
-   relaunch) or a human, never retried in a loop within one run.
+Eligible specs are ordered by `Priority` header (absent = P2) then
+lexicographic spec path — the same tie-break as step 2. Attempt exactly
+one per pass, then loop back to step 1: new tasks may make
+higher-priority work dispatchable immediately. Attempt each eligible
+spec **at most once per drain run — spanning every baton generation, not
+just this one:** a failed attempt is added to this generation's
+in-session attempted-and-failed set immediately, AND (since a failed
+spec's `Breakdown-ready:` marker is never cleared, so it stays eligible)
+survives a baton pass via `DRAIN-BATON.md`'s `Breakdown-failed:` line
+above, which the next generation reads before its first 4a pass. A spec
+that fails is left for the next /drain invocation (a fresh run, not a
+relaunch) or a human, never retried in a loop within one run.
 
-   **Claim the target spec's owner lease first.** A spec with no `tasks/`
-   yet has never had a `DRAIN-OWNER.md` written for it, so claim one for it
-   exactly per step 1's owner-lease procedure (write-if-absent,
-   compare-and-swap re-read, refuse-on-lost-race — refusing here means skip
-   to the next eligible spec, not abort the run) before invoking breakdown.
-   This is a SEPARATE lease from whatever this run already holds for the
-   spec whose task queue it was dispatching when 4a fired. Release it
-   (delete, committed) as soon as this spec's attempt concludes, success or
-   failure.
+**Claim the target spec's owner lease first.** A spec with no `tasks/`
+yet has never had a `DRAIN-OWNER.md` written for it, so claim one for it
+exactly per step 1's owner-lease procedure (write-if-absent,
+compare-and-swap re-read, refuse-on-lost-race — refusing here means skip
+to the next eligible spec, not abort the run) before invoking breakdown.
+This is a SEPARATE lease from whatever this run already holds for the
+spec whose task queue it was dispatching when 4a fired. Release it
+(delete, committed) as soon as this spec's attempt concludes, success or
+failure.
 
-   Apply the breakdown workflow's procedure (`.agents/workflows/breakdown.md`)
-   to `specs/<slug>/SPEC.md` **in this same conversation** — no new Agent
-   Manager launch, no worktree: breakdown only writes markdown task files,
-   so there is nothing to isolate (the same in-session exception the idea
-   workflow already relies on for its own adversarial pass). Let it run its
-   own scouting and, per its own judgment, a sanity-check on nontrivial
-   dependency structure.
+Apply the breakdown workflow's procedure (`.agents/workflows/breakdown.md`)
+to `specs/<slug>/SPEC.md` **in this same conversation** — no new Agent
+Manager launch, no worktree: breakdown only writes markdown task files,
+so there is nothing to isolate (the same in-session exception the idea
+workflow already relies on for its own adversarial pass). Let it run its
+own scouting and, per its own judgment, a sanity-check on nontrivial
+dependency structure.
 
-   Verify before committing: `git status --porcelain -- specs/<slug>`
-   (path-scoped to the one spec) must show only new files under
-   `specs/<slug>/tasks/*.md` and/or an appended `## Parallelization` section
-   in that `SPEC.md`. Anything else — or zero task files created — is a
-   failed attempt: discard the stray changes scoped to exactly the
-   offending paths, leave the spec un-broken-down, and record it as failed
-   this run (no commit, nothing persisted into the spec). On a clean result
-   with at least one new `tasks/NN-*.md` file, commit path-scoped
-   (`drain: auto-breakdown specs/<slug> (N tasks)`) and push (guard above),
-   then loop to step 1 — the new `Status: pending` tasks pass through the
-   same classification gate and dispatch tie-break as any other task;
-   auto-breakdown grants no exemption from either.
+Verify before committing: `git status --porcelain -- specs/<slug>`
+(path-scoped to the one spec) must show only new files under
+`specs/<slug>/tasks/*.md` and/or an appended `## Parallelization` section
+in that `SPEC.md`. Anything else — or zero task files created — is a
+failed attempt: discard the stray changes scoped to exactly the
+offending paths, leave the spec un-broken-down, and record it as failed
+this run (no commit, nothing persisted into the spec). On a clean result
+with at least one new `tasks/NN-*.md` file, commit path-scoped
+(`drain: auto-breakdown specs/<slug> (N tasks)`) and push (guard above),
+then loop to step 1 — the new `Status: pending` tasks pass through the
+same classification gate and dispatch tie-break as any other task;
+auto-breakdown grants no exemption from either.
 
-   **Residual risk (accepted): stale marker after a post-READY edit.**
-   `Breakdown-ready: true` authorizes decomposition of the `SPEC.md` content
-   that existed when the marker was written — nothing binds the marker to
-   that content. An edit after the READY verdict, with no explicit
-   re-critique, leaves the marker in place; 4a will auto-breakdown the
-   CURRENT, un-reviewed content on its next pass. The critique workflow's
-   NOT READY path clears a stale marker, but only when someone actually
-   re-runs it — there is no automatic invalidation on edit. Mitigation is
-   procedural (re-critique an edited spec before relying on
-   auto-breakdown), not mechanical.
+**Residual risk (accepted): stale marker after a post-READY edit.**
+`Breakdown-ready: true` authorizes decomposition of the `SPEC.md` content
+that existed when the marker was written — nothing binds the marker to
+that content. An edit after the READY verdict, with no explicit
+re-critique, leaves the marker in place; 4a will auto-breakdown the
+CURRENT, un-reviewed content on its next pass. The critique workflow's
+NOT READY path clears a stale marker, but only when someone actually
+re-runs it — there is no automatic invalidation on edit. Mitigation is
+procedural (re-critique an edited spec before relying on
+auto-breakdown), not mechanical.
 
 5. **Batch interview.** Open this step by emitting
    `<!-- agentprof:stage=batch-interview -->` verbatim each time you enter
@@ -534,6 +625,27 @@ layout` the winner's branch already carries the worker's evidence
    /breakdown or an attended /build. Specs that failed auto-breakdown this
    run (4a) are reported alongside the other blockers, with their failure
    reason — these need a human `/breakdown` or spec amendment, not a retry.
+
+   **Exit checklist (once per session at scope exhaustion).** The batch
+   interview and the session's final message are fused: the interview asks
+   every deferred question aggregated across ALL specs drained this session
+   (gated on `Status: deferred`, above), and the final message is a fixed
+   **six-section checklist** for the human — **each entry names a file
+   path**:
+   1. **Deferred questions still unanswered** — the task file for each.
+   2. **Defaults taken** — from the `## Decisions` sections drain recorded
+      (decision, default, how to reverse), with the task file for each.
+   3. **Blocked items** — each `Status: blocked` task, what unblocks it, and
+      its task file.
+   4. **NOT-READY specs** — each spec critique intake left NOT READY, its top
+      findings, and its `SPEC.md` path.
+   5. **Draft stubs awaiting promotion** — each `Status: draft` stub
+      (discovered work and un-promoted intake candidates), with its file, for
+      a human to promote `draft` → `pending`.
+   6. **Next commands** — the exact commands to resume.
+
+   One interview and one checklist per session; "Nothing needs you" is a
+   valid checklist.
 
 ## Ultra path
 
