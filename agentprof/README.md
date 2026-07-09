@@ -266,11 +266,23 @@ contract — field rules, well-known metric units, validation/skip rules — is
 ```json
 {
   "time": "2026-07-02T18:04:11Z",
-  "stack": ["fooszone", "t03 · /build specs/turns", "/build", "main", "agent:scout", "claude-haiku-4-5"],
-  "values": {"input_tokens": 10101, "output_tokens": 1560,
-             "cache_read_tokens": 18118, "cache_write_tokens": 14266,
-             "cost_microusd": 41230, "calls": 1},
-  "labels": {"source": "claude-code", "session": "7c576eff-..."}
+  "stack": [
+    "fooszone",
+    "t03 · /build specs/turns",
+    "/build",
+    "main",
+    "agent:scout",
+    "claude-haiku-4-5"
+  ],
+  "values": {
+    "input_tokens": 10101,
+    "output_tokens": 1560,
+    "cache_read_tokens": 18118,
+    "cache_write_tokens": 14266,
+    "cost_microusd": 41230,
+    "calls": 1
+  },
+  "labels": { "source": "claude-code", "session": "7c576eff-..." }
 }
 ```
 
@@ -279,7 +291,8 @@ contract — field rules, well-known metric units, validation/skip rules — is
   element is the pprof leaf.
 - `values`: metric name → non-negative integer. Well-known units: `*_tokens`
   → `tokens`, `cost_microusd` → `microusd`, `wall_ms` → `milliseconds`,
-  `calls` → `count`; unknown metric names get unit `count`.
+  `duration_ms` → `milliseconds`, `calls` → `count`; unknown metric names get
+  unit `count`.
 - `labels`: optional string → string map; becomes pprof string labels.
 
 Invalid lines are skipped and counted (`skipped N invalid lines` on stderr),
@@ -293,13 +306,13 @@ go tool pprof -top custom.pb.gz
 
 ## Commands
 
-| Command | What it does |
-|---|---|
+| Command                                                                   | What it does                                                               |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `agentprof claude [--claude-dir PATH] [--days N] [--name-turns] [-o out]` | Claude Code transcripts → samples. Defaults: `~/.claude`, 30 days, stdout. |
-| `agentprof gcp <billing.json> [--frame-labels k1,k2] [-o out]` | GCP billing export rows → samples. |
-| `agentprof vertex <logs.json> [-o out]` | Vertex AI request-response logging rows → samples. |
-| `agentprof build <samples.jsonl>... -o out.pb.gz` | Canonical-schema JSONL → pprof profile. |
-| `agentprof --version` | Print version. |
+| `agentprof gcp <billing.json> [--frame-labels k1,k2] [-o out]`            | GCP billing export rows → samples.                                         |
+| `agentprof vertex <logs.json> [-o out]`                                   | Vertex AI request-response logging rows → samples.                         |
+| `agentprof build <samples.jsonl>... -o out.pb.gz`                         | Canonical-schema JSONL → pprof profile.                                    |
+| `agentprof --version`                                                     | Print version.                                                             |
 
 For all adapters, an `-o` path ending `.pb.gz` writes the pprof profile
 directly; any other path (or stdout) emits canonical-schema JSONL.
