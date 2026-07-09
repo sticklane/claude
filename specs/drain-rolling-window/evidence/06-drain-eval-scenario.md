@@ -147,3 +147,61 @@ task files (barrier) → FAIL; a task left not-done → FAIL. Re-ran the full
 checks passed (2 tasks done, 2 merges, per-task Touch enforced)`,
 `PASS  drain/01-rolling-window`, `1/1 scenarios passed`, exit 0 (see
 06-run.log).
+
+## Fast-forward-tolerant landing identification (spec drain-eval-merge-commit-assertion, 2026-07-07)
+
+The mechanism described above — identifying each landing by a **merge commit**
+(`git rev-list --merges HEAD`) — is landing-order-fragile and has been
+replaced. A real `/drain` landing is a plain `git merge` with no `--no-ff`
+(`.claude/skills/drain/SKILL.md:257`), so when a task branch is still `main`'s
+direct descendant at merge time the merge **fast-forwards and produces no merge
+commit**. A fast-forwarded landing then broke all three merge-commit-dependent
+checks at once: the merge count undercounted and failed
+(`expected >1 merge commit … found 1` — the originally reported symptom), the
+Touch-enforcement check was silently **skipped** for that task, and the final
+done-but-unlanded loop mis-fired. The stale "2 merge commits" pass line above
+reflected landing-order luck, not a stable proof.
+
+**New mechanism (fast-forward-tolerant).** Landing identification is now
+anchored on each task file's `Status:` done-flip, never on a merge commit:
+
+- The done-flip commit for a task is the earliest commit (topo order) whose
+  version of the task file reads `Status: done`.
+- `assert.sh` walks `main`'s first-parent chain oldest→newest. A **landing
+  tip** is the first first-parent commit that brings a task's done-flip into
+  `main` — the done-flip commit itself for a fast-forward, or the merge commit
+  for a real merge. Both land identically.
+- **Barrier check:** a landing tip that flips ≥2 task files to done at once is
+  an all-in-one barrier → fail (replaces the old "≥2 merge commits" floor; no
+  merge-count floor remains).
+- **Touch-enforcement check:** diffs the FULL landed range
+  (`prior-landing-tip → this tip`), so a violation anywhere in a multi-commit
+  branch (TDD test→feat→refactor) is caught — not only one in the done-flip
+  commit.
+- **Done-but-unlanded loop:** every done task must be attributed exactly one
+  landing, so the Touch check can never silently no-op.
+
+The pass line is now
+`assert: all checks passed (N tasks done, N rolling-window landings, per-task
+Touch enforced)` — "rolling-window landings", not "merge commits".
+
+**Deterministic fixture matrix (6 hand-built git repos, run directly against
+`assert.sh`; matches the hand-built-fixture precedent this file established at
+lines 77–100).** Confirmed red on the pre-fix script, then green on the
+rewrite, all under macOS bash 3.2:
+
+| Fixture | Shape | Expected | Result |
+|---|---|---|---|
+| A | task01 fast-forwards, task02 real merge | PASS | `assert: all checks passed (2 tasks done, 2 rolling-window landings …)`, exit 0 |
+| B | both real merges (`--no-ff`) — no-regression control | PASS | exit 0 |
+| C | task01 fast-forwards; done-flip commit ALSO touches out-of-Touch `src/gamma.sh` | FAIL, names violation | `ASSERT FAIL: task 01 landing changed src/gamma.sh, outside its Touch [src/alpha.sh]`, exit 1 |
+| C′ | task01 fast-forwards across TWO commits; earlier commit touches `src/gamma.sh`, done-flip commit clean | FAIL, names violation from earlier commit | `ASSERT FAIL: task 01 landing changed src/gamma.sh …`, exit 1 (proves full-range diff, not done-flip-only) |
+| D | one fast-forward commit flips BOTH task files (barrier) | FAIL barrier | `ASSERT FAIL: landing <sha> flips 2 task files at once (all-in-one barrier …)`, exit 1 |
+| E | both tasks fast-forward, ZERO merge commits anywhere | PASS | exit 0 (proves no hidden merge-count floor) |
+
+Pre-fix baseline for the same fixtures (establishing red): A and E failed
+incorrectly (`found 1` / `found 0` merge commits); C, C′, D failed on the
+merge-count floor for the *wrong* reason (never reaching the Touch/barrier
+check); B passed (control). The rewrite flips A/E to PASS and makes C/C′/D fail
+for the *correct* reason. Fixture builder and full run logs:
+`scratchpad/build_fixtures.sh` (throwaway repos outside the tracked tree).

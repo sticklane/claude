@@ -3,20 +3,33 @@
 # exit 0 = pass, non-zero with output explaining what failed. Checks four
 # things, mechanically, on the resulting git history and task-file statuses:
 #   1. every specs/demo/tasks/NN-*.md ended Status: done;
-#   2. the git log holds more than one merge commit (the tasks landed via a
-#      rolling window of per-task merges, not one all-in-one-commit barrier);
-#   3. no landing merge's changed paths escaped that task's Touch: list
-#      (plus its own task file, the spec, evidence/, and drain/runner infra);
-#   4. every done task was landed by exactly one merge — so check 3 can never
-#      silently no-op (a task with no landing merge fails loudly).
-# A landing merge is identified by the task-file done-flip it carries (a
-# drain-contract invariant), never by the free-text commit subject, which
-# drain does not guarantee. Failure output stays under ~10 lines: one
-# `ASSERT FAIL:` per broken check.
+#   2. the tasks landed as a rolling window of per-task landings, not one
+#      all-in-one-commit barrier (no single landing flips >=2 task files);
+#   3. no landing's full changed range escaped that task's Touch: list (plus
+#      its own task file, the spec, evidence/, and drain/runner infra);
+#   4. every done task was attributed exactly one landing — so check 3 can
+#      never silently no-op (a task with no landing fails loudly).
+#
+# Landing identification is anchored on each task file's Status done-flip (a
+# drain-contract invariant), NOT on the presence of a merge commit. A /drain
+# landing is a plain `git merge` with no `--no-ff`, so when a task branch is
+# still main's direct descendant at merge time it fast-forwards and produces
+# NO merge commit. Keying off merge commits would then undercount landings,
+# skip the Touch check, and mis-fire the unlanded loop for that task. Instead
+# we walk main's first-parent chain and treat as a landing tip the first
+# first-parent commit that brings a task's done-flip into main — the done-flip
+# commit itself for a fast-forward, or the merge commit for a real merge. Both
+# land identically. The Touch check diffs the FULL landed range
+# (prior-landing-tip -> this tip), so a violation anywhere in a multi-commit
+# branch (TDD test->feat->refactor) is caught, not just one in the done-flip
+# commit. Failure output stays under ~10 lines: one `ASSERT FAIL:` per broken
+# check. Plain strings/indexed arrays only — the runner invokes `bash
+# assert.sh` and macOS ships bash 3.2 (no `declare -A`).
 set -u
 
 fail() { echo "ASSERT FAIL: $*" >&2; exit 1; }
 nn_of() { basename "$1" | sed 's/^\([0-9][0-9]\)-.*/\1/'; }
+is_anc() { git merge-base --is-ancestor "$1" "$2" 2>/dev/null; }
 
 shopt -s nullglob
 tasks=(specs/demo/tasks/[0-9][0-9]-*.md)
@@ -26,22 +39,55 @@ for t in "${tasks[@]}"; do
   grep -q '^Status: done' "$t" || fail "$t did not end Status: done"
 done
 
-merges=$(git rev-list --merges --count HEAD)
-[ "$merges" -ge 2 ] || fail "expected >1 merge commit (rolling window), found $merges"
+# done-flip commit per task (parallel to the tasks array): the earliest commit
+# in topo order whose version of the task file already reads `Status: done`.
+doneflip=()
+for t in "${tasks[@]}"; do
+  df=""
+  for sha in $(git log --format=%H --topo-order --reverse -- "$t"); do
+    if git show "$sha:$t" 2>/dev/null | grep -q '^Status: done'; then
+      df="$sha"; break
+    fi
+  done
+  [ -n "$df" ] || fail "task $(nn_of "$t") is Status: done but no commit flips it to done"
+  doneflip+=("$df")
+done
 
-# landed: space-delimited list of task numbers seen landing via a merge.
-# Plain string, not an associative array — the runner invokes `bash
-# assert.sh` and macOS ships bash 3.2, which has no `declare -A`.
+root=$(git rev-list --max-parents=0 HEAD | tail -1)
+
+# Walk main's first-parent chain oldest->newest. A landing tip is the first
+# first-parent commit that brings one or more task done-flips into main
+# (ancestor of the tip, not yet of the running base). base advances to each
+# landing tip so the next landing's range starts where this one ended.
+base="$root"
 landed=" "
-for sha in $(git rev-list --merges HEAD); do
-  changed=$(git diff --name-only "$sha^1" "$sha")
-  merged_tasks=$(printf '%s\n' "$changed" | grep -E '^specs/demo/tasks/[0-9][0-9]-.*\.md$' || true)
-  n=$(printf '%s' "$merged_tasks" | grep -c .)
-  [ "$n" -eq 0 ] && continue
-  [ "$n" -eq 1 ] || fail "merge $sha lands $n task files at once (all-in-one barrier)"
-  tf="$merged_tasks"
+landings=0
+for C in $(git rev-list --first-parent --topo-order --reverse HEAD); do
+  [ "$C" = "$root" ] && continue
+
+  flipped_idx=()
+  i=0
+  for df in "${doneflip[@]}"; do
+    if is_anc "$df" "$C" && ! is_anc "$df" "$base"; then
+      flipped_idx+=("$i")
+    fi
+    i=$((i + 1))
+  done
+
+  if [ "${#flipped_idx[@]}" -eq 0 ]; then
+    # A merge that lands no new done-flip still advances main's tip; a plain
+    # non-landing commit mid-branch does not (keep the range base anchored).
+    nparents=$(git rev-list --parents -n1 "$C" | wc -w)
+    [ "$nparents" -ge 3 ] && base="$C"
+    continue
+  fi
+
+  [ "${#flipped_idx[@]}" -eq 1 ] \
+    || fail "landing $C flips ${#flipped_idx[@]} task files at once (all-in-one barrier, not a rolling-window landing)"
+
+  tf="${tasks[${flipped_idx[0]}]}"
   nn=$(nn_of "$tf")
-  landed="$landed$nn "
+  changed=$(git diff --name-only "$base" "$C")
   touch_paths=$(grep '^Touch:' "$tf" | sed 's/^Touch:[[:space:]]*//' | tr ',' '\n' | sed 's/[[:space:]]//g' | grep -v '^$' || true)
   while IFS= read -r p; do
     [ -n "$p" ] || continue
@@ -50,16 +96,20 @@ for sha in $(git rev-list --merges HEAD); do
       .claude/*|.gitignore|specs/demo/SPEC.md|specs/demo/evidence/*|specs/demo/DRAIN-*) continue ;;
     esac
     printf '%s\n' "$touch_paths" | grep -qxF "$p" \
-      || fail "task $nn merge changed $p, outside its Touch [$(printf '%s' "$touch_paths" | tr '\n' ' ')]"
+      || fail "task $nn landing changed $p, outside its Touch [$(printf '%s' "$touch_paths" | tr '\n' ' ')]"
   done < <(printf '%s\n' "$changed")
+
+  landed="$landed$nn "
+  landings=$((landings + 1))
+  base="$C"
 done
 
 for t in "${tasks[@]}"; do
   nn=$(nn_of "$t")
   case "$landed" in
     *" $nn "*) : ;;
-    *) fail "task $nn ended done but no merge introduced its landing" ;;
+    *) fail "task $nn ended done but no landing introduced it" ;;
   esac
 done
 
-echo "assert: all checks passed (${#tasks[@]} tasks done, $merges merges, per-task Touch enforced)"
+echo "assert: all checks passed (${#tasks[@]} tasks done, $landings rolling-window landings, per-task Touch enforced)"
