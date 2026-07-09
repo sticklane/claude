@@ -41,6 +41,17 @@ report_case() { # report_case <letter> <label>
   case_fail=0
 }
 
+# Portable in-place sed. GNU sed has no BSD-style mandatory -i suffix arg, so
+# `sed -i '' EXPR file` (BSD) misparses '' as an empty script and EXPR as a
+# filename under GNU. Route in-place edits through a temp file, identical on
+# both; `cat >` back into the original preserves its mode and inode.
+sedi() { # sedi <sed-expression> <file>
+  local expr="$1" file="$2" tmp
+  tmp="$(mktemp)"
+  sed "$expr" "$file" >"$tmp" && cat "$tmp" >"$file"
+  rm -f "$tmp"
+}
+
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -80,7 +91,7 @@ EOF
   git -C "$dir" commit -qm "seed task"
 
   # Foreign flip: a different writer flips the task first and commits.
-  sed -i '' 's/^Status: pending$/Status: in-progress/' "$file"
+  sedi 's/^Status: pending$/Status: in-progress/' "$file"
   git -C "$dir" add specs/demo/tasks/01-demo.md
   git -C "$dir" commit -qm "foreign: flip to in-progress"
 
@@ -124,7 +135,7 @@ EOF
     grep -q '^Generation: 1$' "$owner"
 
   # Baton pass updates Generation: in place, its own commit.
-  sed -i '' 's/^Generation: 1$/Generation: 2/' "$owner"
+  sedi 's/^Generation: 1$/Generation: 2/' "$owner"
   git -C "$dir" add specs/demo/DRAIN-OWNER.md
   git -C "$dir" commit -qm "drain: baton pass, generation 2"
   assert "(b) owner lifecycle: generation update recorded" \
@@ -157,7 +168,7 @@ case_c() {
   # A foreign file is staged in the working tree when we make our
   # path-scoped queue-state commit (R5: git add <explicit paths> + commit
   # limited to those paths, never -a or bare `git add .`).
-  sed -i '' 's/^Status: pending$/Status: in-progress/' \
+  sedi 's/^Status: pending$/Status: in-progress/' \
     "$dir/specs/demo/tasks/01-demo.md"
   printf 'foreign change\n' >> "$dir/other.txt"
   git -C "$dir" add other.txt
