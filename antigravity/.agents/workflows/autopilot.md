@@ -61,6 +61,17 @@ folded into AGENTS.md, cited not restated).
    gate problem, apply the distill skill so the next launch doesn't repay
    for it.
 
+   **Exit checklist (fixed final message).** At scope exhaustion the run's
+   final message is a three-section **checklist**, one file path per entry,
+   carrying only what autopilot produces: (1) **defaults taken** — the
+   reversible-default decisions logged to the task file's `## Decisions`,
+   which the build workflow this run dispatches already produces, so
+   autopilot reads that section rather than editing it; (2) **the task's
+   blocker**, if any, with what unblocks it; and (3) **the next command**.
+   "Nothing needs you" is a valid checklist. This is autopilot's
+   three-section analogue of the drain workflow's six-section exit checklist
+   (cite drain, don't restate its sections).
+
 5. **Pre-cap baton (long runs).** The turn budget terminates the run — there
    is no "after the cap". At the last committed task verdict BEFORE ~80% of
    the budget, write drain's baton artifact (`DRAIN-BATON.md`: done/next log,

@@ -71,6 +71,13 @@ output` criterion will wrongly fail (or force destroying deliberately
 hand-adapted wording); write a content-coverage check instead (e.g. grep
 for the concepts/identifiers that must land).
 
+A version-bump acceptance criterion must assert the value **changed from
+the value at the task's own base commit** (e.g. compare `git show
+<base-commit>:<path>` against the current on-disk version), never a
+hard-coded pre-task literal — a sibling task can land first and bump the
+same file, so a pinned literal false-fails once the on-disk value has
+already moved past it.
+
 4. Order tasks so each leaves the build green — no task may depend on a
    later one to compile or pass tests. Assign each task's `Priority:` by
    this rubric:
@@ -106,6 +113,7 @@ for the concepts/identifiers that must land).
    grammar pinned in `specs/drain-rolling-window/SPEC.md`'s
    `## Parallelization` section — cite that paragraph rather than
    re-deriving the format.
+
 6. Sanity-check with the critic skill if the decomposition has nontrivial
    dependency structure.
 

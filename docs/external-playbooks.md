@@ -61,6 +61,55 @@ rather than restating it. Verified against primary sources, July 2026.
   rule is **never add a feedback-free reflect-and-retry loop**.
   [arXiv:2310.01798](https://arxiv.org/abs/2310.01798)
 
+## The new-SDLC spectrum (vibe coding → agentic engineering)
+
+"The New SDLC With Vibe Coding" (Osmani, Saboo, Kartakis — published via
+Kaggle's AI Agents course; the authors' framing is Google-affiliated).
+Its spine: vibe coding and agentic engineering are two ends of one
+spectrum, and "the differentiator is not which model you use but how much
+structure, verification, and human judgment surrounds the output" — with
+"set the bar at the eval, not the demo" as the verification rule the
+toolkit already lives by (/evals; cited, not adopted twice).
+[Kaggle whitepaper](https://www.kaggle.com/whitepaper-the-new-SDLC-with-vibe-coding),
+[Osmani's companion post](https://addyosmani.com/blog/new-sdlc-vibe-coding/)
+
+- **Adopted: rigor as a declared spectrum, not a constant.** Prototype
+  work legitimately skips gates production work must pay; the failure
+  mode is not declaring which one you're doing. → `specs/rigor-tier/`
+  (an optional `Rigor:` header scaling /build and /drain gates).
+- **Adopted: trajectory evals.** The paper's output-vs-trajectory split
+  promotes the recorded evals-v2 deferral
+  (`specs/archive/skill-evals/SPEC.md`) into an active seed →
+  `specs/trajectory-evals/` (transcript exposed to `assert.sh`, opt-in
+  per scenario).
+- **Adopted: first-pass success rate as the OpEx driver.** Retries, not
+  first attempts, are where spend compounds. →
+  `specs/first-pass-success-rate/`, riding agentprof's role markers and
+  the workboard cost view.
+- **Adopted: harness-health audit.** The paper's deployment checklist
+  (memory configured, permissions scoped, eval coverage, regression
+  suite wired), translated to dev-toolkit terms → `specs/harness-audit/`.
+- **Adopted with an altitude split: review routing.** The paper routes
+  code review to cheap models wholesale; the toolkit splits by altitude —
+  review of individual code blocks (style, conformance, mechanical
+  correctness) is scout-tier work, while review of APIs, architecture,
+  structure, and abstraction stays on a high-quality model (the critic's
+  deep-tier pin, unchanged). → token-discipline's dispatch-authoring
+  tier bullet.
+- **Adopted-partially: security in the default pipeline.** The paper
+  counts security remediation into vibe coding's hidden OpEx; the
+  toolkit's default critique path now names security-sensitive targets
+  explicitly and routes working diffs to the built-in /security-review
+  (the panel's dedicated security lens already existed). → /critique.
+- **Declined: a prototype alongside every spec.** /design already builds
+  throwaway prototypes where they pay — resolving an open tech choice; a
+  spike per brief is token spend the interview+scout stage makes
+  unnecessary.
+- **Noted: maintenance/legacy modernization as a first-class stage.**
+  The generic /idea → /breakdown → /drain pipeline covers migrations;
+  a characterization-tests-first workflow for untouchable code is
+  deferred until real demand.
+
 ## Code-vs-LLM ladder
 
 Where the three vendors converge on architecting generative-AI features
@@ -124,8 +173,12 @@ the verbatim research stays here.
 
 - OpenAI handoffs / parallel guardrail classifiers — harness-level
   mechanisms, not expressible as skills.
-- AgentOps telemetry (OpenTelemetry spans, KPI dashboards) — production
-  agent-ops, out of scope for a dev toolkit; /fleet covers the live view.
+- AgentOps telemetry (OpenTelemetry spans, production drift monitoring) —
+  production agent-ops, out of scope for a dev toolkit; /fleet covers the
+  live view. Scope narrowed 2026-07: dev-time transcript profiling and
+  dev-spend dashboards (`specs/agentprof-instrumentation/`,
+  `specs/workboard-weekly-cost-view/`) are in scope — the rejection binds
+  production OTel spans and runtime drift monitoring only.
 - "Single-agent-first" as a default — the toolkit's fan-out is justified
   by context economics (see token-discipline); kept only as a caution
   against gratuitous parallelism.
