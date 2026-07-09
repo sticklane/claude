@@ -136,12 +136,28 @@ assert_eq "stop-gate exits 0 when check.sh is missing" 0 "$RH_EXIT"
 assert_eq "missing check.sh warns with one stderr line" 1 "$(stderr_line_count)"
 mv "$REPO/scripts/check.sh.aside" "$REPO/scripts/check.sh"
 
-# --- stop-gate: check.sh unreadable -> exit 0 with warning ------------------
-
-chmod 000 "$REPO/scripts/check.sh"
+# --- stop-gate: check.sh present but unusable -> exit 0 with warning --------
+# The stop-gate fails open (one warning, exit 0) when scripts/check.sh exists
+# but can't be used. chmod 000 exercises that via the `! -r` guard for an
+# ordinary user, but root's DAC bypass makes any regular file readable, so
+# chmod 000 can't deny root. For root we substitute a broken symlink: no user
+# (root included) can resolve it, so `! -f` fires the SAME fail-open branch.
+# Non-root keeps chmod 000 so the `-r` guard itself stays covered.
+if [ "$(id -u)" -eq 0 ]; then
+  rm -f "$REPO/scripts/check.sh"
+  ln -s "$REPO/scripts/no-such-target" "$REPO/scripts/check.sh"
+else
+  chmod 000 "$REPO/scripts/check.sh"
+fi
 run_hook "$STOP_GATE" "$json_stop_false" "$REPO"
-assert_eq "stop-gate exits 0 when check.sh is unreadable" 0 "$RH_EXIT"
-assert_eq "unreadable check.sh warns with one stderr line" 1 "$(stderr_line_count)"
+assert_eq "stop-gate exits 0 when check.sh is unusable" 0 "$RH_EXIT"
+assert_eq "unusable check.sh warns with one stderr line" 1 "$(stderr_line_count)"
+# Restore a working, readable check.sh for the R13 hardening cases below.
+rm -f "$REPO/scripts/check.sh"
+cat > "$REPO/scripts/check.sh" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
 chmod 755 "$REPO/scripts/check.sh"
 
 # --- stop-gate: R13 hardening ------------------------------------------------

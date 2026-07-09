@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P3
 Budget: 2 turns
@@ -25,6 +25,6 @@ invocation examples so a human doesn't conclude the feature is broken.
 
 ## Acceptance
 
-- [ ] `grep -qi 'nodefraction' agentprof/README.md` → match
-- [ ] `grep -i 'nodefraction' agentprof/README.md | grep -q 'tool:'` → match (ties pruning to tool: frames)
-- [ ] `cd agentprof && bash scripts/check.sh` → exit 0
+- [x] `grep -qi 'nodefraction' agentprof/README.md` → match — verifier PASS, exit 0 (evidence/08-pprof-top-nodefraction-doc-note.md)
+- [x] `grep -i 'nodefraction' agentprof/README.md | grep -q 'tool:'` → match (ties pruning to tool: frames) — verifier PASS, exit 0 (same evidence file)
+- [x] `cd agentprof && bash scripts/check.sh` → exit 0 — verifier PASS: format-check ok, lint ok, tests ok

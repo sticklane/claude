@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: pending
+Status: in-progress
 Depends on: 02, 03, 04
 Priority: P3
 Budget: 16 turns
@@ -37,3 +37,24 @@ itself. Runs after tasks 02–04 so the moved prose is final.
 - [ ] `grep -c "agentprof:stage=" .claude/skills/drain/SKILL.md` → 5 and `grep -c "agentprof:role=" .claude/skills/drain/SKILL.md` → 5 (instrumentation markers survive)
 - [ ] `bash evals/lint-ultra-gate.sh` → exit 0
 - [ ] plugin.json version differs from `git show <this task's base commit>:.claude-plugin/plugin.json` (cite both values)
+
+## Deferred questions
+
+- [2026-07-09 /drain] You stopped this task's worker mid-edit (no commits
+  landed; uncommitted plan state preserved on the rescue/05-shrink-* branch).
+  Should the shrink of drain/SKILL.md (a) be re-dispatched later, (b) be
+  dropped (delete the task), or (c) be re-scoped first? It is cosmetic
+  (line-count convention), P3, and nothing depends on it.
+
+## Progress
+
+- [2026-07-09 /drain] Attempt 1 stopped BY THE USER mid-edit before any
+  commit. Done: pre-move token inventory (in the worker's plan). Remaining:
+  the whole move. Not counted as a failed attempt; routed to the batch
+  interview via Status: deferred.
+
+## Answers
+
+- [2026-07-09, maintainer] Re-dispatch now (option b): run the shrink.
+  Dispatch AFTER draft-auto-promotion 02/03 land (Touch overlap on
+  drain/reference.md; the shrink should move final prose).

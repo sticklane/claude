@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P3
 Budget: 2 turns
@@ -26,6 +26,6 @@ omission).
 
 ## Acceptance
 
-- [ ] `grep -n 'duration_ms' agentprof/SCHEMA.md | grep -q 'millisecond'` → match
-- [ ] `grep -n 'duration_ms' agentprof/README.md | grep -q 'millisecond'` → match
-- [ ] `cd agentprof && bash scripts/check.sh` → exit 0
+- [x] `grep -n 'duration_ms' agentprof/SCHEMA.md | grep -q 'millisecond'` → match (verifier PASS; evidence/06-schema-md-duration-ms-doc.md)
+- [x] `grep -n 'duration_ms' agentprof/README.md | grep -q 'millisecond'` → match (verifier PASS; evidence/06-schema-md-duration-ms-doc.md)
+- [x] `cd agentprof && bash scripts/check.sh` → exit 0 (format-check/lint/tests ok; evidence/06-schema-md-duration-ms-doc.md)
