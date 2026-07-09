@@ -176,7 +176,7 @@ already flipped by another writer fails the edit and returns drain to step
 `drain: task 03 in-progress`), push (guard in step 3), then re-read at HEAD
 and confirm your flip before dispatching — the worker's worktree is cut from
 this commit, so it must carry current statuses and any `## Answers`. Launch
-ONE background `implementation-worker` agent
+ONE `implementation-worker` agent — an awaited child, never detached —
 (`.claude/agents/implementation-worker.md` pins the tier structurally,
 independent of the calling session's model) with `isolation: worktree` using
 the worker prompt in [reference.md](reference.md) — the /build procedure plus
@@ -185,8 +185,8 @@ state; on ambiguity it stops with verdict DEFERRED and puts the exact
 question in its final message.** Prepend
 `<!-- agentprof:role=worker-attempt1 -->` as the first line of that worker's
 prompt — both the single-worker and the concurrent group-throughput launch
-are attempt-1 and share this role value. Wait for the completion notification
-— do not poll. (No background agents? reference.md has the headless fallback.
+are attempt-1 and share this role value. Await the child and collect its
+verdict — never fire-and-forget. (No subagent dispatch? reference.md has the headless fallback.
 Headless workers, unlike /build workers, never flip the task's `Status:
 done`: after a headless DONE verdict and the post-merge acceptance re-run,
 drain itself flips the status to `done` and commits.)
@@ -307,8 +307,8 @@ attempt counts as one; a `Relaunch-every: N` header in the drained SPEC.md
 overrides N) — or a **degradation override** on re-reading files already
 read, losing queue position, repeated failed corrections, or a compaction
 event. On fire: write the baton `specs/<slug>/DRAIN-BATON.md` (grammar +
-relaunch command in [reference.md](reference.md)), spawn a fresh detached
-generation via that relaunch command + NEW orchestrator flag set, report the
+relaunch command in [reference.md](reference.md)), spawn the successor
+generation (awaited where a parent can supervise; else headless), report the
 pass, and **end your turn at once, stating this session will not touch the
 queue again** (one-writer invariant). A **max-generations cap of 10** stops
 with the baton written + a needs-attention note instead of respawning. The
@@ -491,7 +491,7 @@ holds the script template — this skill only names the shape.
 
 The dependency graph compiles from the task files' `Depends on:` headers into
 a pipeline over dependency groups: a barrier only between groups, one
-background worker per task file (worktree isolation, the reference.md worker
+script-awaited worker per task file (worktree isolation, the reference.md worker
 prompt plus effort-tier language), a verifier per completed task, and drain's
 status-flip + commit after each verdict as above. The script checks
 `budget.remaining()` before each dispatch when targeted. Files remain the

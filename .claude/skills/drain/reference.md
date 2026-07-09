@@ -306,7 +306,7 @@ the RUN, not the work.
 
 ## Worker prompt (verbatim, fill the <>)
 
-For background agents with `isolation: worktree`. The worktree SHOULD be cut
+For worker agents dispatched as awaited children with `isolation: worktree`. The worktree SHOULD be cut
 from the commit drain just made; because some harnesses instead pin it to a
 tracking ref that can lag, the prompt's first step force-syncs the worktree
 to the default branch so the worker always builds on current state and its
@@ -346,11 +346,10 @@ path, resolved at dispatch:
 > such a file; confirm `git status` shows it untracked before committing.
 >
 > If the build procedure spawns a simplification, cleanup, or review
-> sub-reviewer as a separate background agent, do NOT block waiting on a
-> notification from it — a sub-agent's result may not route back to you.
-> Run that pass inline, or if you fan it out, read its output directly
-> rather than awaiting a notification, then finish close-out and deliver
-> your verdict.
+> sub-reviewer, run it as an AWAITED child: start it, wait for it, and
+> collect its result before close-out — never fire-and-forget, never
+> leave a child running past your own finish (the awaited-children
+> dispatch rule). Then finish close-out and deliver your verdict.
 >
 > The task file's `Budget:` line is a ceiling, not a target: when
 > remaining work clearly exceeds the remaining budget, stop with verdict
@@ -637,7 +636,9 @@ and `git worktree remove` the checkout.
 
 Drain's orchestrator session self-manages its own context: at a safe
 boundary (SKILL.md step 3a) it writes `specs/<slug>/DRAIN-BATON.md` and
-spawns a fresh detached generation of ITSELF, then ends its turn. This
+spawns the successor generation of ITSELF — awaited where an attended
+parent can supervise, via the detached headless command below only where
+none can — then ends its turn. This
 self-relaunch loop is bounded by a **max-generations cap of 10** (SKILL.md
 step 3a): on the 10th generation drain stops with the baton written and a
 needs-attention note instead of respawning. The
