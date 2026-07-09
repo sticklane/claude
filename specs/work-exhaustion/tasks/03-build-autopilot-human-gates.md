@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: blocked
+Status: pending
 Depends on: none
 Priority: P2
 Budget: 12 turns
@@ -84,3 +84,11 @@ Only the three files in the header. Do NOT touch `drain/SKILL.md` (task 01) or `
   BLOCKED verdict (not over-budget, not a sweep race), so it stops here per
   drain/SKILL.md step 3 and surfaces to the human via the batch interview's
   Blocked-items section.
+
+- [2026-07-09 /drain] Blocker re-diagnosed as environmental (headless
+  generation's permission layer; this attended session's workers edit
+  .claude/skills successfully — tasks 01/02 proof). Not counted as a
+  failed attempt. Branch preserved as
+  rescue/03-build-autopilot-human-gates-5b8de9e (human-gates.md portion
+  complete at 5b8de9e); re-dispatched attended with the task-02
+  workaround precedent cited.
