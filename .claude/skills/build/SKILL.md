@@ -127,8 +127,10 @@ line every time you enter it.
   invocation when it can't); where the Skill tool or plugin is unavailable,
   fall back to ONE subagent on the diff, prompted for high-confidence
   correctness/behavior findings only, capped at ≤1k tokens returned — run
-  it inline or read its output directly, never block on a background
-  notification (drain reference.md's sub-reviewer clause, cited not
+  it as an AWAITED child (synchronous dispatch, per token-discipline's
+  awaited-children rule): spawn it, wait for its result, collect it before
+  close-out; never fire-and-forget, never leave a child running past your
+  own finish (drain reference.md's sub-reviewer clause, cited not
   restated). For each finding: fix immediately iff it's a
   correctness/behavior defect AND the fix stays inside the task's `Touch:`
   — or, with no `Touch:` header, inside the files touched this session (the
