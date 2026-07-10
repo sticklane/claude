@@ -49,6 +49,41 @@ this sweep.
    `<!-- agentprof:stage=inventory -->` verbatim each time you enter it —
    agentprof reads it from this session's transcript to attribute
    cost/tokens/time to the stage until the next stage marker.
+   **Remote divergence check FIRST — before you read any `Status:` header
+   and before the owner-lease claim below.** A rejected `git push` is
+   drain's only pre-existing signal that another process is working this
+   repo, and it fires only after this session has already committed and
+   dispatched against a stale local view; so reconcile against the shared
+   truth up front. This runs once per lease claim (a fresh spec pass or a
+   re-claim after the interview reopens a deferred task), never continuously
+   inside an already-claimed spec's dispatch window — that residual gap is
+   accepted. Resolve the remote, then branch:
+   - **No remote configured** → skip silently and read the headers as
+     today, exactly like the push guard's no-remote case. This is its OWN
+     branch, distinct from a fetch failure.
+   - **Remote configured** → `git fetch <remote>`. If the fetch itself
+     fails (network/auth/DNS — not the no-remote case) → warn and keep
+     going on the local view, like the push guard's offline behavior; a
+     transient failure degrades to today's behavior and never blocks the
+     run. If the fetch succeeds, compare local `main` to `<remote>/main`:
+     - No commits on `<remote>/main` that local `main` lacks → proceed
+       unchanged; the common path adds no visible overhead.
+     - `<remote>/main` ahead and local `main` has no unpushed commits →
+       fast-forward local `main` (`git merge --ff-only <remote>/main`)
+       BEFORE reading the headers. Always safe (nothing local to lose), and
+       ordered this way on purpose so the header read, leases, and specs
+       see current shared state, not the pre-fetch view. Doing it after the
+       lease claim would defeat the check.
+     - Both sides hold commits the other lacks (true divergence) → HALT this
+       invocation before claiming the lease. Never auto-merge, force-push,
+       discard a side, or open a live/blocking prompt — drain runs
+       unattended by default, so a mid-run question would stall on an absent
+       human and freeze in-flight workers. Instead stop cleanly and report
+       the divergence (each side's commit count and subject lines) as this
+       run's final message, shaped like an end-of-run blocker, per
+       `.claude/rules/concurrent-sessions.md`, leaving the human to choose
+       take-theirs / merge-both / manual reconcile. An attended session MAY
+       ask instead, at its own discretion — not required here.
    Read only each task file's header lines (`Status`,
    `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies. `Budget`
    feeds the worker's over-budget stop; `Priority` is an optional
