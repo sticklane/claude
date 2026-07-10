@@ -28,66 +28,106 @@ any local check) — it is checking the actual shared source of truth,
 
 ## Solution
 
-Add a **remote divergence check** to drain's owner-lease claim (step 1),
-immediately before the write-if-absent / CAS lease claim: `git fetch
-<remote>` (silently skip if no remote is configured, same guard as the
-existing push guard), then compare local `main` against `<remote>/main`.
+Add a **remote divergence check** to drain's step 1, positioned to run
+**before step 1's Status-header read** (today's first action in step 1,
+ahead of the owner-lease claim) — not merely "before the lease claim,"
+since the lease claim already comes after the Status-header read today,
+and this check exists specifically so that read sees current state:
+`git fetch <remote>`, then compare local `main` against `<remote>/main`.
 
+- **No remote configured** → skip silently, identical to the existing
+  push guard's no-remote behavior.
+- **Remote configured but `git fetch` itself fails** (network down,
+  auth/DNS failure — distinct from "no remote configured") → warn and
+  continue with the local view, identical to the push guard's existing
+  offline/rejected behavior. This check degrades to today's behavior on
+  a transient failure; it does not block the run on connectivity issues.
 - **No new remote commits** (`git log main..<remote>/main` empty) →
   proceed exactly as today.
 - **New remote commits exist, no local unpushed commits**
   (`git log <remote>/main..main` empty) → fast-forward local `main` to
   `<remote>/main` (`git merge --ff-only`, always safe — this session has
-  nothing of its own to lose) before proceeding to inventory, so
+  nothing of its own to lose) before the Status-header read, so
   `Status:` lines, leases, and specs reflect current shared state.
 - **New remote commits exist AND local unpushed commits exist** (true
   divergence — this session has already committed work not yet on the
-  remote) → STOP. Do not merge automatically, do not force-push, do not
-  discard either side. Surface it to the user exactly as the
-  concurrent-sessions rule already prescribes for a detected collision
-  (`.claude/rules/concurrent-sessions.md`): report what diverged (commit
-  counts/subjects on each side), and let the user decide (their options
-  mirror what worked in the 2026-07-08 incident: take theirs, merge both,
-  or stop for manual reconciliation) — never guess.
+  remote) → HALT this drain invocation before claiming the lease. Do not
+  merge automatically, do not force-push, do not discard either side, and
+  do NOT attempt a live/blocking interactive prompt (drain is
+  `disable-model-invocation`, launched unattended by default — a
+  mid-run prompt would block on a human who may not be watching, and
+  freeze any in-flight rolling-window workers). Instead: stop the run
+  cleanly and emit the divergence (commit counts/subject lines on each
+  side) as this invocation's final message, in the same shape as an
+  end-of-run blocker report — the human who eventually reads it decides
+  next steps (mirroring what worked in the 2026-07-08 incident: take
+  theirs, merge both, or reconcile manually), per
+  `.claude/rules/concurrent-sessions.md`. An ATTENDED session (a human
+  actively watching, like the one that resolved the 2026-07-08 incident)
+  may additionally use AskUserQuestion in place of halting-and-reporting
+  if a human is confirmed present — that is this session's own judgment
+  call, not a behavior this spec mandates for unattended drain.
 
 This check re-runs **before every new owner-lease claim** within a single
 drain run (not just once at startup), since divergence can accumulate
-mid-session on a long-running queue (the 2026-07-08 incident's ~90 commits
-landed WHILE the direct-push session was actively dispatching, not before
-it started). It does not re-run mid-dispatch of an already-claimed spec —
-only at the natural per-spec checkpoint drain already has.
+mid-session on a long-running queue. This bounds the fix to per-spec-claim
+granularity: divergence that occurs entirely WITHIN one spec's dispatch/
+collect cycle (between its lease claim and release) is not caught until
+that spec's lease is released and the next claim happens — an accepted
+residual gap (R5), not a claim that this spec fully closes the exact
+2026-07-08 incident's window (it is not confirmed whether that incident's
+divergence accumulated within a single spec's claim or across several;
+this fix catches the latter, not necessarily the former).
 
 ## Requirements
 
-- **R1**: Before each owner-lease claim in step 1 (both the initial claim
-  for a fresh spec and any re-claim after the batch interview reopens a
-  deferred task), drain runs `git fetch <remote>` — skip silently if no
-  remote is configured, identical to the existing push guard's no-remote
-  behavior.
+- **R1**: Before step 1's Status-header read (both on a fresh spec's
+  first pass and any re-claim after the batch interview reopens a
+  deferred task), drain runs `git fetch <remote>`:
+  - No remote configured → skip silently (matches the push guard's
+    no-remote behavior).
+  - Remote configured but `git fetch` fails (network/auth/DNS) → warn
+    and continue with the local view (matches the push guard's existing
+    offline/rejected behavior) — this is NOT the same case as "no
+    remote configured" and must be handled as its own branch, not
+    conflated with it.
 - **R2**: If `<remote>/main` has no commits absent from local `main`,
   proceed unchanged — this is the common case and must add no visible
   overhead to the normal path.
 - **R3**: If `<remote>/main` has new commits and local `main` has no
   unpushed commits, fast-forward local `main` to `<remote>/main`
-  (`git merge --ff-only`) before proceeding — always safe, never loses
-  local work since there is none to lose.
+  (`git merge --ff-only`) BEFORE the Status-header read — always safe
+  (never loses local work since there is none to lose), and ordered
+  this way specifically so the Status-header read sees current state,
+  not the pre-fetch view.
 - **R4**: If `<remote>/main` has new commits AND local `main` has
-  unpushed commits (true divergence), drain stops before claiming the
-  lease: reports the divergence (each side's commit count and subject
-  lines) to the user and asks how to proceed, per
-  `.claude/rules/concurrent-sessions.md`. Drain never auto-merges,
-  auto-resolves conflicts, or force-pushes in this case.
+  unpushed commits (true divergence), drain HALTS this invocation before
+  claiming the lease — it does not attempt a live/blocking interactive
+  prompt (drain is unattended by default; a mid-run prompt could block on
+  an absent human and freeze in-flight workers). It reports the
+  divergence (each side's commit count and subject lines) as this
+  invocation's final message, in the same shape as an end-of-run blocker
+  report, per `.claude/rules/concurrent-sessions.md`. Drain never
+  auto-merges, auto-resolves conflicts, or force-pushes in this case. An
+  attended session may choose to use AskUserQuestion instead of halting,
+  at that session's own discretion — not a behavior this requirement
+  mandates.
 - **R5**: The check fires once per lease claim, not continuously during
   a spec's dispatch/collect cycle — a spec already claimed and being
   worked is not re-checked until its lease is released and the next
-  spec (or a re-claim) begins.
-- **R6**: `.claude/skills/drain/SKILL.md` stays a short contract + pointer
-  (the file is already at the repo's 500-line convention ceiling); the
-  full fetch/compare/fast-forward/stop procedure lives in
-  `reference.md`'s "Owner lease" section (extending it, not adding a new
-  top-level section) or a clearly-linked sibling section — implementer's
-  call on the cleanest fit, but SKILL.md's own net line delta must stay
-  small (a few lines, not a restatement of the procedure).
+  spec (or a re-claim) begins. This is an accepted, bounded gap: this
+  spec catches cross-spec-claim divergence, not divergence that
+  accumulates entirely within one spec's active dispatch window.
+- **R6**: `.claude/skills/drain/SKILL.md` stays within the repo's
+  500-line convention ceiling (currently 499 lines — already at the
+  ceiling). The new contract is capped at a single pointer line (not
+  "a few lines") naming the check and pointing to reference.md; if
+  adding even that one line would push the file over 500, the
+  implementer trims an equal or greater number of lines elsewhere in
+  SKILL.md (tightening existing prose, not deleting content) so the net
+  line delta is ≤0. The full fetch/compare/fast-forward/halt procedure
+  lives entirely in `reference.md`'s "Owner lease" section (extending
+  it, not adding a new top-level section).
 - **R7**: Port the equivalent contract to
   `antigravity/.agents/workflows/drain.md` in the same commit, in that
   mirror's own paraphrased voice per
@@ -119,21 +159,28 @@ only at the natural per-spec checkpoint drain already has.
 
 ## Acceptance criteria
 
-- [ ] `.claude/skills/drain/SKILL.md`'s owner-lease-claim step names the
-      remote divergence check (fetch, fast-forward-if-clean,
-      stop-if-diverged) in a few lines, pointing to reference.md for the
-      full procedure — `wc -l .claude/skills/drain/SKILL.md` stays at or
-      under 500 lines (R6).
-- [ ] `reference.md`'s "Owner lease" section (or a clearly cross-linked
-      sibling) contains the full fetch/compare/fast-forward/stop
-      procedure with the exact git commands (R1-R5).
+- [ ] `.claude/skills/drain/SKILL.md`'s step 1, before the Status-header
+      read, names the remote divergence check in a single pointer line
+      to reference.md — `wc -l .claude/skills/drain/SKILL.md` stays at
+      or under 500 lines; if the addition alone would exceed 500, a
+      compensating trim elsewhere in the file lands in the same commit
+      (R6).
+- [ ] `reference.md`'s "Owner lease" section contains the full fetch/
+      compare/fast-forward/halt procedure with exact git commands,
+      including the no-remote-vs-fetch-failure distinction (R1) and the
+      halt-not-live-prompt mechanism for true divergence (R4).
 - [ ] A fixture: local `main` behind `<remote>/main`, no local unpushed
-      commits → the documented procedure fast-forwards before proceeding
-      (inspectable on the reference.md prose, or exercised against a
-      scratch git repo if practical within budget) (R3).
+      commits → the documented procedure fast-forwards before the
+      Status-header read (inspectable on the reference.md prose, or
+      exercised against a scratch git repo if practical within budget)
+      (R3).
 - [ ] A fixture: local `main` AND `<remote>/main` both have commits the
-      other lacks (true divergence) → the documented procedure stops and
-      reports rather than merging/resolving automatically (R4).
+      other lacks (true divergence) → the documented procedure halts and
+      reports as a final-message blocker rather than merging/resolving
+      automatically or attempting a live interactive prompt (R4).
+- [ ] A fixture: remote configured but `git fetch` fails → the documented
+      procedure warns and continues with the local view, distinctly from
+      the no-remote-configured case (R1).
 - [ ] `grep -c 'fetch' .claude/skills/drain/reference.md` → at least one
       match in the Owner lease section referencing this check.
 - [ ] `antigravity/.agents/workflows/drain.md` carries the equivalent
