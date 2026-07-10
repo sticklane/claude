@@ -71,9 +71,14 @@ silently resolve them.
    history, not via an unchanged current-state block).
 6. Update SKILL.md's exit-checklist section 5 to exclude
    `Promotion-ready: true` drafts (list only ordinary un-gated drafts);
-   add them to section 6 (or a labeled addendum) as "already authored and
-   gated — will auto-promote the next time a drain run with a different
-   Run-token touches this spec."
+   add them to section 6 as a labeled addendum reading "already authored
+   and gated — will auto-promote the next time a drain run with a
+   different Run-token touches this spec." Do NOT add a new top-level
+   checklist section — SKILL.md documents this as a fixed
+   "seven-section checklist"; adding an eighth section would shift every
+   later section's number, which task 03's own "section 2" reference
+   (and this task's own "section 5"/"section 6" references) assume stay
+   stable.
 7. Update reference.md's two terminal readings ("drained, listing the
    drafts for human promotion" and "drained pending promotion") so a
    queue holding ONLY `Promotion-ready: true` drafts reports as genuinely
@@ -124,13 +129,13 @@ silently resolve them.
       pass — the batch interview answers a deferred task and returns to
       step 1 → the stub is STILL `Status: draft` at that re-entry, because
       the re-entry's `Run-token:` matches the stub's `Promoted-by-run:`.
-- [ ] `git diff HEAD~1 -- antigravity/` shows `antigravity/.agents/workflows/drain.md`
+- [ ] `git diff $(git merge-base main HEAD)..HEAD -- antigravity/` shows `antigravity/.agents/workflows/drain.md`
       changed, carrying the equivalent contract in paraphrased voice (a
       content-coverage check: fetch, Promotion-ready, Promoted-by-run,
       Run-token-mismatch conversion, Original-report strip).
-- [ ] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep '"version"'`
+- [ ] `git diff $(git merge-base main HEAD)..HEAD -- .claude-plugin/plugin.json | grep '"version"'`
       shows the version increased.
-- [ ] `git diff HEAD~1 -- docs/human-gates.md` → empty (R6 not silently
+- [ ] `git diff $(git merge-base main HEAD)..HEAD -- docs/human-gates.md` → empty (R6 not silently
       resolved).
-- [ ] `git diff HEAD~1 -- .claude/skills/drain/screen-stub.sh` → empty
+- [ ] `git diff $(git merge-base main HEAD)..HEAD -- .claude/skills/drain/screen-stub.sh` → empty
       (task 02's scope, not touched here).

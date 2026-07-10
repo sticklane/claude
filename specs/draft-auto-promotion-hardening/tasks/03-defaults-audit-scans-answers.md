@@ -52,6 +52,6 @@ only. Do not touch `.claude/skills/drain/reference.md`'s Act step (task
       DECISION-SHAPED stub promoted with a reversible default recorded
       under `## Answers` → the documented section-2 procedure surfaces it
       in the exit checklist, distinctly attributed to stub intake.
-- [ ] `git diff HEAD~1 -- .claude/skills/drain/SKILL.md` shows only
+- [ ] `git diff $(git merge-base main HEAD)..HEAD -- .claude/skills/drain/SKILL.md` shows only
       section 2's scan-source text changed — sections 5 and 6 (task 01's
       scope) are untouched by this diff.
