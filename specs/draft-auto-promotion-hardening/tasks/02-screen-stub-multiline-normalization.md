@@ -56,6 +56,6 @@ before applying them. Do not touch
 - [ ] A legitimate, benign multi-line stub Goal (no injection content) →
       still passes clean (no false positive introduced by the
       normalization).
-- [ ] `git diff HEAD~1 -- .claude/skills/drain/screen-stub.sh` shows only
+- [ ] `git diff $(git merge-base main HEAD)..HEAD -- .claude/skills/drain/screen-stub.sh` shows only
       the whitespace-normalization change — the regex patterns
       (`re_ignore`, `re_agent`, etc.) are byte-identical to before.
