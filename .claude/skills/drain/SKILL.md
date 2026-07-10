@@ -382,12 +382,24 @@ Original report` block, plus runnable criteria and `Touch:`/`Budget:`/
   `Depends on:`); a single-call rubric critic gates it (criteria runnable,
   `Touch:` complete with mirror obligations, Goal faithful without carrying
   the original's phrasing — OBSOLETE passes this same gate on its cited
-  closing evidence); drain — the sole queue writer — acts: PASS promotes
-  `draft` → `pending`, gate-confirmed OBSOLETE writes `Status: obsolete` + a
-  `Closed:` line, a DECISION-SHAPED stub with a justifiable reversible default
-  records it in `## Answers` and promotes, else the stub stays draft on the
-  exit checklist. Full regex list, rubric, and act rules in reference.md's
-  "Stub intake".
+  closing evidence); drain — the sole queue writer — acts. On PASS (and on a
+  DECISION-SHAPED stub with a justifiable reversible default recorded in `##
+Answers`) drain writes the authored content but does **NOT** flip
+  `draft` → `pending` this run: it leaves `Status: draft` and adds
+  `Promotion-ready: true` + `Promoted-by-run: <run-token>` (this invocation's
+  own `Run-token:`), so the stub is deferred past the authoring run and never
+  self-dispatches within it. Gate-confirmed OBSOLETE writes `Status:
+  obsolete` + a `Closed:` line; a stub that fails or is decision-shaped
+  without a defensible default stays draft (no marker) on the exit checklist.
+  A `Promotion-ready: true` stub is EXCLUDED from stub intake's own in-scope
+  scan from that point on — only step 1 owns it thereafter. Step 1 later
+  converts `Promotion-ready: true` → `Status: pending` — and strips `##
+Original report` in that same commit — ONLY when a drain invocation's own
+  `Run-token:` differs from the stub's `Promoted-by-run:` (a genuinely new
+  run, explicitly not gated on `DRAIN-BATON.md` presence), after the
+  remote-divergence check and owner-lease claim. Full regex list, rubric, act
+  rules, and the conversion procedure in reference.md's "Stub intake" and
+  "Draft status".
 
 Every promotion, closure, and refusal is audited on the exit checklist's
 "promoted this run" section (step 4). A human may demote any auto-promoted
@@ -458,14 +470,24 @@ checklist** for the human — **each entry names a file path**:
    task file.
 4. **NOT-READY specs** — each spec critique intake left NOT READY, its top
    findings, and its `SPEC.md` path.
-5. **Draft stubs awaiting promotion** — each `Status: draft` stub (discovered
-   work and un-promoted intake candidates), with its file, for a human to
-   promote `draft` → `pending`.
-6. **Promoted this run** — every stub stub intake acted on: each stub
-   promoted `draft` → `pending` (with the source of its authored criteria),
-   each `Status: obsolete` closure (with its `Closed:` evidence), and each
+5. **Draft stubs awaiting promotion** — each `Status: draft` stub that does
+   NOT carry `Promotion-ready: true` (discovered work and un-promoted intake
+   candidates genuinely awaiting human authorship/review), with its file, for
+   a human to promote `draft` → `pending`. `Promotion-ready: true` drafts are
+   EXCLUDED here — they are already authored and gated, not awaiting a human;
+   they appear only in section 6.
+6. **Promoted this run** — every stub stub intake acted on: each stub marked
+   `Promotion-ready: true` (with the source of its authored criteria), each
+   `Status: obsolete` closure (with its `Closed:` evidence), and each
    screen-refused or gate-failed stub, so every auto-promotion is audited —
-   with the task file for each.
+   with the task file for each. For every `Promotion-ready: true` stub, print
+   the exact `Demoted:` line a human would paste into that task file to
+   reverse the promotion, e.g. `Demoted: <ISO-date> — <one-line reason>`
+   (stub intake permanently respects a `Demoted:` line). As a labeled
+   addendum, list the `Promotion-ready: true` drafts distinctly from
+   ordinary drafts: they are "already authored and gated — will auto-promote
+   the next time a drain run with a different `Run-token` touches this spec,"
+   NOT "awaiting your promotion."
 7. **Next commands** — the exact commands to resume.
 
 One interview and one checklist per session; "Nothing needs you" is a valid
