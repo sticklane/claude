@@ -244,8 +244,8 @@ requirements beyond the Solution section's R1-R6.)
       a fixture: a stub promoted PASS in generation 1, followed by a
       baton pass to generation 2 → generation 2's stub intake does NOT
       re-screen, re-assess, or re-author that stub (its Goal/criteria are
-      byte-identical to generation 1's, and no new scout/critic dispatch
-      occurs against it) (R1).
+      byte-identical to generation 1's, and no new assessor/gate model
+      dispatch occurs against it) (R1).
 - [ ] reference.md explicitly states the owner-lease re-claim invariant:
       a re-claim of an already-held lease writes the session's EXISTING
       `Run-token:` back, never a freshly-minted one; only a launch with no
