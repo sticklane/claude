@@ -1,7 +1,7 @@
 # /drain reference
 
 Contents: When NOT to drain · Owner lease (DRAIN-OWNER.md format,
-liveness, reclaim) · Status field semantics · Stale-lock liveness
+liveness, reclaim, remote divergence check) · Status field semantics · Stale-lock liveness
 check · Worker prompt · Deferred question format · Relaunch-with-evidence
 prompt · Tournament · Headless fallback · Baton pass (self-relaunch) ·
 Critique intake · Stub intake (assess → gate → act) · Auto-breakdown
@@ -74,6 +74,62 @@ command adopts a FRESH existing owner instead of refusing, iff the
 baton's `Run-token:` line (Baton pass below) matches DRAIN-OWNER.md's. A
 mismatch means the predecessor died and a different drain claimed in the
 interim — treat it like any other startup and apply the FRESH refuse path.
+
+**Remote divergence check (before the Status-header read).** Runs at the
+top of step 1, BEFORE the `Status:` header read and BEFORE the owner-lease
+claim, on every fresh spec pass and on every re-claim after the batch
+interview reopens a deferred task (R1, R5). Drain's only pre-existing
+concurrency signal is a rejected `git push`, which fires after this session
+has already committed and dispatched against a stale view; this check reads
+the shared source of truth — `<remote>/main` — up front so the header read,
+lease, and dispatch decisions see current state. It fires **once per lease
+claim**, not continuously within a spec's dispatch/collect cycle;
+divergence that accumulates entirely inside one already-claimed spec's
+active window is an accepted, bounded residual gap (R5), caught only when
+that lease releases and the next claim's check runs.
+
+Resolve the remote (`git remote`, or the `main` upstream's remote), then:
+
+- **No remote configured** → skip the check silently and go straight to the
+  Status-header read, identical to the push guard's no-remote behavior
+  (SKILL.md step 3). This is a DISTINCT branch from a fetch failure below,
+  not to be conflated with it.
+- **Remote configured** → run `git fetch <remote>`.
+  - **`git fetch` itself fails** (network down, auth/DNS failure — NOT the
+    same case as "no remote configured") → warn and continue with the
+    local view, identical to the push guard's existing offline/rejected
+    behavior. The check degrades to today's behavior on a transient
+    failure; it never blocks the run on a connectivity problem.
+  - **Fetch succeeds** → compare local `main` against `<remote>/main`:
+    - **No new remote commits** (`git log main..<remote>/main` empty) →
+      proceed to the Status-header read exactly as today; the common case
+      adds no visible overhead (R2).
+    - **New remote commits, no local unpushed commits**
+      (`git log <remote>/main..main` empty) → **fast-forward local `main`
+      to `<remote>/main` BEFORE the Status-header read**:
+      `git merge --ff-only <remote>/main`. Always safe — this session has
+      committed nothing of its own to lose. The ordering is load-bearing:
+      the fast-forward MUST precede the header read, so `Status:` lines,
+      leases, and specs reflect current shared state and not the pre-fetch
+      view (R3). Placing it after the lease claim would defeat the purpose.
+    - **New remote commits AND local unpushed commits** — true divergence,
+      each side holding commits the other lacks — **HALT this drain
+      invocation before claiming the lease** (R4). Do NOT merge
+      automatically, do NOT force-push, do NOT discard either side, and do
+      NOT attempt a live/blocking interactive prompt (no `AskUserQuestion`
+      here): drain is `disable-model-invocation`, launched unattended by
+      default, so a mid-run prompt would block on a human who may not be
+      watching and freeze any in-flight rolling-window workers. Instead,
+      stop the run cleanly and emit the divergence as this invocation's
+      **final message, in the same shape as an end-of-run blocker report** —
+      each side's commit count and subject lines (`git log --oneline
+      <remote>/main..main` for the local-only side, `git log --oneline
+      main..<remote>/main` for the remote-only side) — per
+      `.claude/rules/concurrent-sessions.md`, so the human who reads it
+      decides next steps (take theirs, merge both, or reconcile manually,
+      as resolved the 2026-07-08 incident). An ATTENDED session may instead
+      use `AskUserQuestion` if a human is confirmed present — that session's
+      own judgment call, never a behavior this procedure mandates.
 
 ## Status field semantics
 

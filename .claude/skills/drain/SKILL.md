@@ -17,38 +17,36 @@ an orchestrator" pattern plus its walk-away contract
 **Exhaustion contract (R1).** So long as dispatchable work remains in the
 launched scope, the session never ends. The scope is drain's launch argument,
 unchanged; a **no-argument launch means the whole `specs/` queue**, consumed
-one spec at a time in a sequential walk. Lease discipline for that walk:
-claim a spec's `DRAIN-OWNER.md` when its dispatch begins (step 1) and
-release it (delete, committed) the moment that spec has **nothing left to
-dispatch** — every remaining task done, deferred, blocked, failed, or draft.
-Deferred questions live in committed task files, so nothing needs the lease
-held while the session works elsewhere; if the end-of-session interview
-(step 4) turns a deferred task back to `pending`, drain **re-claims that
-spec's lease before re-dispatching**. At most one dispatch lease is held at a
-time; the short-lived second lease that 3b — and critique intake — take while
-acting on another spec (claim → act → release) may transiently overlap. The
-per-spec concurrent-drain refusal and the per-run generations cap are
-unchanged. The session ends only when no spec in scope has dispatchable work.
+one spec at a time in a sequential walk. Claim a spec's `DRAIN-OWNER.md` when
+its dispatch begins (step 1) and release it (delete, committed) the moment
+that spec has **nothing left to dispatch** — every task done, deferred,
+blocked, failed, or draft. Deferred questions live in committed task files, so
+nothing needs the lease held while the session works elsewhere; if step 4's
+interview turns a deferred task back to `pending`, drain **re-claims that
+lease before re-dispatching**. At most one dispatch lease is held at a time;
+the short-lived second lease 3b and critique intake take while acting on
+another spec (claim → act → release) may transiently overlap. The per-spec
+concurrent-drain refusal and per-run generations cap are unchanged; the
+session ends only when no spec in scope has dispatchable work.
 
 First, the classification gate: drain is for queues that pass the
 peripheral/core test. If tasks touch core business logic, auth, payments,
 or migrations, run those attended via /build and drain only the rest —
 reference.md has the checklist.
 
-**Path-scoped commits, always.** Every queue-state commit drain makes —
-owner claim/release, status flips, Progress entries, Deferred questions,
-draft stubs, evidence — uses `git add <explicit paths>` and a `git commit`
-limited to those paths; never `-a`, never bare `git add .`, never an
-unscoped commit, in the shared checkout. A concurrent session's staged or
-working-tree changes must never ride along. Stated once here; every
-path-scoped commit below follows it without restating it.
+**Path-scoped commits, always.** Every queue-state commit drain makes — owner
+claim/release, status flips, Progress entries, Deferred questions, draft stubs,
+evidence — uses `git add <explicit paths>` and a `git commit` limited to those
+paths; never `-a`, `git add .`, or an unscoped commit in the shared checkout. A
+concurrent session's staged or working-tree changes must never ride along —
+every path-scoped commit below follows this without restating it.
 
 **Startup session sweep (advisory).** Before inventory, list other live
 sessions whose cwd resolves into this repo (`claude agents --json`, else
 `~/.claude/sessions/*.json` pid records probed with `kill -0`): one line per
-foreign live session, a "sweep unavailable" line on failure. Advisory only,
-never blocks dispatch — correctness comes from the owner-lease claim below,
-not this sweep (reference.md has the exact cwd filter).
+foreign live session, "sweep unavailable" on failure. Advisory only, never
+blocking — correctness comes from the owner-lease claim below, not this sweep
+(reference.md has the exact cwd filter).
 
 ## 1. Inventory
 
@@ -56,6 +54,12 @@ Emit `<!-- agentprof:stage=inventory -->` verbatim as this step's opening
 line every time you enter it — agentprof reads it from this session's
 transcript to attribute cost/tokens/time to this stage until the next stage
 marker.
+
+**Remote divergence check, before the Status-header read.** Fetch and
+reconcile local `main` against `<remote>/main` first — skip if no remote,
+warn on a fetch failure, fast-forward if only the remote moved, halt-and-
+report if both sides diverged — so the reads below see current shared state
+([reference.md](reference.md)'s "Owner lease", Remote divergence check).
 
 Read only the header fields of each task file
 (`Status`, `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies;
@@ -69,27 +73,25 @@ actionable ones `draft` → `pending` through a deterministic screen plus
 an adversarial gate, and a human audits every promotion via the exit
 checklist.
 
-**Claim the owner lease, before reporting the plan below.** The full
-procedure — write-if-absent with the pinned `DRAIN-OWNER.md` format, the
-compare-and-swap re-read confirming YOUR `Run-token:` is the one at HEAD,
-the FRESH-vs-stale liveness decision, the stale-lock reclaim (sweep only
-when a task's signals are stale AND `git worktree list` shows no worktree on
-its `task/NN-<slug>` branch), the baton-lineage adoption exception, and the
+**Claim the owner lease, before reporting the plan below.** The full procedure
+— DRAIN-OWNER.md format, compare-and-swap re-read confirming YOUR `Run-token:`
+at HEAD, FRESH-vs-stale liveness, stale-lock reclaim, baton-lineage exception,
 terminal release — is in [reference.md](reference.md)'s "Owner lease". In
 short: if `DRAIN-OWNER.md` is absent, write and commit it path-scoped (then
 push, guard in step 3) and CAS-confirm your token; if it exists and is
 **FRESH**, REFUSE and report unless this generation's baton `Run-token:`
-matches; if **ALL signals stale**, reclaim per the sweep above. Release
-(delete, path-scoped, committed, pushed) at the terminal report (step 4).
+matches; if **ALL signals stale**, reclaim (sweep only when a task's signals
+are stale AND `git worktree list` shows no worktree on its `task/NN-<slug>`
+branch). Release (delete, path-scoped, committed, pushed) at step 4's report.
 
 Report the plan in one block: dispatch order, what's already done, what's
-deferred/blocked and why. An `in-progress` task is a dead worker's lock only after the Stale-lock
-liveness check in reference.md confirms it (TaskList, then the worktree/`-t*`
-activity grace window); a task inside its window is parked, not swept. On
-confirmed death, preserve the run's branches as `rescue/NN-<slug>-<shortsha>`,
-snapshotting uncommitted worktree changes and force-removing each worktree
-first, then flip to `pending` and commit — slot machine, never resume a dead
-run (reference.md's Status field semantics has the full rescue procedure).
+deferred/blocked and why. An `in-progress` task is a dead worker's lock only
+after the Stale-lock liveness check in reference.md confirms it (TaskList,
+then the worktree/`-t*` activity grace window); a task inside its window is
+parked, not swept. On confirmed death, preserve the run's branches as
+`rescue/NN-<slug>-<shortsha>` — snapshot uncommitted worktree changes and
+force-remove each worktree first, then flip to `pending` and commit — slot
+machine, never resume a dead run (reference.md's Status field semantics).
 
 ## 2. Dispatch (a rolling window of W workers)
 
@@ -118,8 +120,8 @@ reorders the queue mid-run.
 
 **Rolling window of W workers.** Instead of a strict group barrier, drain
 keeps up to **W** workers in flight at once and tops the window up on every
-verdict. At W=1 this reduces to today's sequential drain: one worker,
-admitted alone, merged before the next is admitted.
+verdict. At W=1 this is today's sequential drain: one worker, admitted alone,
+merged before the next.
 
 **Window size W.** Default **1** (today's behavior); a `Parallel-window: N`
 header in the drained SPEC.md sets W=N, and an explicit /drain request
@@ -140,19 +142,17 @@ only **alone** (admitted only when the window is empty). **"Window empty"
 means zero live in-flight workers** — a suspected zombie does not count
 against emptiness (reference.md, R9.2).
 
-**`Group:` grammar.** The Parallelization section pins co-admissible groups
-one line per group, format `- Group: NN, NN[, NN...]`; two tasks run
-concurrently only if one `Group:` line names both, a task on no line runs
-alone. Pinned in specs/drain-rolling-window/SPEC.md and emitted by
-/breakdown — parsed, never re-derived from prose (the decision-coupling test
-governs what may share a line).
+**`Group:` grammar.** The Parallelization section pins co-admissible groups one
+line per group, format `- Group: NN, NN[, NN...]` — pinned in
+specs/drain-rolling-window/SPEC.md and emitted by /breakdown, parsed, never
+re-derived from prose (the decision-coupling test governs what may share a line).
 
 **Top-up on verdict, not on wave (R2).** After each verdict is collected and
 (for DONE) merged + pushed, drain **re-computes admission and refills the
 window** to W — no wave boundary, no all-members-one-commit flip: each
-admission is one committed `Status: in-progress` flip (below), so
-multi-session-coordination's CAS/push hygiene composes unchanged. Size the
-fleet by the task map; parallelism buys wall-clock time, not efficiency.
+admission is one committed `Status: in-progress` flip (below), so CAS/push
+hygiene composes unchanged. Size the fleet by the task map; parallelism buys
+wall-clock time, not efficiency.
 
 **Serial merge queue with mechanical rebase recovery (R3).** Merges stay
 strictly serial, in verdict-landing order. A branch that conflicts because a
@@ -162,12 +162,11 @@ shared checkout (merges on the default branch, workers in worktrees). A clean
 rebase proceeds to DONE bookkeeping; one that still conflicts stops the
 remaining merges and reports which landed cleanly, never slot-machine.
 
-**Runtime Touch enforcement at merge (R4).** Extend the merge-time
-whitelist diff (step 3): changed paths must be a **subset of the task's**
-`Touch:` list plus the task's own file plus the spec's
-`evidence/` dir. Any path outside that set is a **merge failure** (the
-slot-machine path), closing the gap where file ownership was enforced only
-at plan time and never mechanically at runtime.
+**Runtime Touch enforcement at merge (R4).** Extend the merge-time whitelist
+diff (step 3): changed paths must be a **subset of the task's** `Touch:` list
+plus the task's own file plus the spec's `evidence/` dir. Any path outside
+that set is a **merge failure** (the slot-machine path), closing the gap where
+ownership was enforced only at plan time, never mechanically at runtime.
 
 **The flip is compare-and-swap.** Re-read the task file immediately before
 flipping — an exact-match edit of the literal `Status: pending` line (a file
@@ -185,11 +184,12 @@ state; on ambiguity it stops with verdict DEFERRED and puts the exact
 question in its final message.** Prepend
 `<!-- agentprof:role=worker-attempt1 -->` as the first line of that worker's
 prompt — both the single-worker and the concurrent group-throughput launch
-are attempt-1 and share this role value. Await the child and collect its
-verdict — never fire-and-forget. (No subagent dispatch? reference.md has the headless fallback.
-Headless workers, unlike /build workers, never flip the task's `Status:
-done`: after a headless DONE verdict and the post-merge acceptance re-run,
-drain itself flips the status to `done` and commits.)
+are attempt-1 and share this role value. Await it and collect its verdict —
+never fire-and-forget. (No subagent dispatch? reference.md has the headless
+fallback. Headless
+workers, unlike /build workers, never flip the task's `Status: done`: after a
+headless DONE verdict and the post-merge acceptance re-run, drain itself flips
+the status to `done` and commits.)
 
 ## 3. Collect the verdict
 
@@ -258,42 +258,40 @@ so a per-session emission would misattribute later iterations.
   reference.md's "Environment kill" note has the detection signal and
   run-wide halt.
 
-**Record decisions.** A worker's verdict report may carry a fixed
-`Decisions:` section (the worker-prompt ambiguity clause in reference.md lets
-the worker take a **reversible default** itself instead of deferring). Drain
-appends each entry to the reporting task file under a `## Decisions` section,
-path-scoped and pushed. This is decision _logging_, not a blocker: gate-list
-decisions (irreversible, blast-radius, spend, authority) and any ambiguity
-with **no** reversible default still stop the worker with **DEFERRED** for
-step 4's interview. `Status: blocked` keeps its meaning — a technical failure
-needing amendment — and is **never** used for a decision.
+**Record decisions.** A worker's verdict may carry a fixed `Decisions:`
+section — the worker-prompt ambiguity clause in reference.md lets the worker
+take a **reversible default** itself instead of deferring. Drain appends each
+entry to the reporting task file under `## Decisions`, path-scoped and pushed.
+This is decision _logging_, not a blocker: gate-list decisions (irreversible,
+blast-radius, spend, authority) and any ambiguity with **no** reversible
+default still stop the worker with **DEFERRED** for step 4's interview.
+`Status: blocked` keeps its meaning — a technical failure needing amendment —
+and is **never** used for a decision.
 
-**Materialize discoveries.** Only the finally-routed verdict's report is
-recorded (a discarded or superseded attempt's `Discovered:` entries are
-dropped). Dedupe each entry by title against the source task's `##
-Discovered` and the owning spec's tasks/ dir, then make two path-scoped
-writes in the main checkout: append under a `## Discovered` section in the
-source task file, and scaffold a header-only `Status: draft` stub in that
-tasks/ dir (exact header in reference.md). Drafts are never dispatchable when
-written; stub intake later promotes them only after re-authoring the Goal in
-neutral words and passing the adversarial gate (untrusted-data applies;
+**Materialize discoveries.** Only the finally-routed verdict's report is recorded
+(a discarded or superseded attempt's `Discovered:` entries drop). Dedupe each entry
+by title against the source task's `## Discovered` and the owning spec's tasks/
+dir, then make two path-scoped writes in the main checkout: append under
+`## Discovered` in the source task file, and scaffold a header-only `Status: draft`
+stub in that tasks/ dir (exact header in reference.md). Drafts are never
+dispatchable when written; stub intake later promotes them only after re-authoring
+the Goal in neutral words and passing the adversarial gate (untrusted-data applies;
 docs/human-gates.md reason 4). Drain's final report lists drafts created.
 
 **Record stopping points.** At each non-done event — BLOCKED (including over
 budget), DEFERRED, a DONE candidate failing verification, tournament entry,
 terminal `Status: failed` — drain appends a `## Progress` entry to the
 main-checkout task file before any relaunch: one dated block, done vs
-remaining, sourced from the worker's `Done vs remaining:` line (or the
-verifier's report). The relaunch-with-evidence prompt cites it. (Uncommitted
-worktree writes are **preserved in the rescue snapshot** when a dead run is
-swept dirty; discarded branches stay discarded. This record survives because
-drain, the single writer, writes it in the main checkout.)
+remaining, from the worker's `Done vs remaining:` line (or the verifier's
+report), which the relaunch-with-evidence prompt cites. Uncommitted worktree
+writes are **preserved in the rescue snapshot** when a dead run is swept dirty;
+discarded branches stay discarded. This record survives because drain, the
+single writer, writes it in the main checkout.
 
-Keep verdicts, not transcripts. Log one line per task to the user as you
-go; /fleet shows the workers live. Loop to step 2 while anything is
-dispatchable. This session growing heavy mid-queue is the degradation
-override in step 3a — hand off via the baton, don't wait for a human to
-notice.
+Keep verdicts, not transcripts. Log one line per task as you go; /fleet shows
+the workers live. Loop to step 2 while anything is dispatchable. This session
+growing heavy mid-queue is step 3a's degradation override — hand off via the
+baton, don't wait for a human to notice.
 
 ## 3a. Baton pass (self-relaunch)
 

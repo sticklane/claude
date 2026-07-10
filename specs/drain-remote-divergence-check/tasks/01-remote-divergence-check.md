@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -79,25 +79,44 @@ and fetch-failure handling as a model. Do not touch
 
 ## Acceptance
 
-- [ ] `.claude/skills/drain/SKILL.md`'s step 1, before the Status-header
+- [x] `.claude/skills/drain/SKILL.md`'s step 1, before the Status-header
       read, names the remote divergence check in a single pointer line to
       reference.md.
-- [ ] `wc -l .claude/skills/drain/SKILL.md` stays strictly below 500 —
+      Evidence: SKILL.md line 58, inside "## 1. Inventory" before "Read only
+      the header fields", pointing to reference.md's "Owner lease", Remote
+      divergence check (verifier PASS, evidence/01-remote-divergence-check.md).
+- [x] `wc -l .claude/skills/drain/SKILL.md` stays strictly below 500 —
       confirm the commit paired the addition with an unconditional
       compensating trim (not landing at exactly 500).
-- [ ] `grep -c 'fetch' .claude/skills/drain/reference.md` → at least one
+      Evidence: `wc -l` → 497; base (9a03fd9) was 499, net delta -2 (genuine
+      headroom). Trim achieved by prose-tightening/reflow + a `Group:`-grammar
+      dedup (verbatim-restated in Admission) — no documented behavior deleted
+      (verifier PASS after a restore round).
+- [x] `grep -c 'fetch' .claude/skills/drain/reference.md` → at least one
       match in the Owner lease section referencing this check.
-- [ ] reference.md's Owner lease section states, in prose, all of: the
+      Evidence: `grep -c 'fetch'` → 4, all inside the new "Remote divergence
+      check" subsection under "## Owner lease".
+- [x] reference.md's Owner lease section states, in prose, all of: the
       no-remote-configured skip, the fetch-failure-with-configured-remote
       warn-and-continue (as two DISTINCT branches, not conflated), the
       fast-forward-before-the-header-read path, and the
       halt-and-report-as-final-message path for true divergence (never a
       live interactive prompt in the unattended default).
-- [ ] `git diff HEAD~1 -- antigravity/` → shows `antigravity/.agents/workflows/drain.md`
+      Evidence: reference.md lines 78-132 — four distinct branches present;
+      fetch-failure explicitly "a DISTINCT branch... not to be conflated";
+      ordering "load-bearing: the fast-forward MUST precede the header read";
+      halt path "do NOT attempt a live/blocking interactive prompt" (verifier
+      PASS).
+- [x] `git diff HEAD~1 -- antigravity/` → shows `antigravity/.agents/workflows/drain.md`
       changed, carrying the same core concepts (fetch before the header
       read, fast-forward-if-clean, halt-if-diverged) in its own paraphrased
       voice — a content-coverage grep, not a byte-identical diff.
-- [ ] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep '"version"'`
+      Evidence: 35 lines added in antigravity step 1 (Inventory), before its
+      header read, in paraphrased voice; covers fetch-before-header-read,
+      fast-forward-if-clean, halt-if-diverged (verifier PASS).
+- [x] `git diff HEAD~1 -- .claude-plugin/plugin.json | grep '"version"'`
       shows the version increased.
-- [ ] `git diff HEAD~1 -- .claude/skills/drain/screen-stub.sh` → empty (not
+      Evidence: version 0.8.29 → 0.8.30.
+- [x] `git diff HEAD~1 -- .claude/skills/drain/screen-stub.sh` → empty (not
       touched).
+      Evidence: `git diff 9a03fd9 -- .claude/skills/drain/screen-stub.sh` empty.
