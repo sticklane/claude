@@ -48,6 +48,18 @@ place, in the SAME commit as the baton write — see Baton pass below) and
 is deleted, committed, by the generation that completes the queue — the
 same one that deletes the baton.
 
+**Re-claim invariant (the `Run-token:` never rotates within a run).** Only a
+genuinely fresh launch — no baton to adopt — mints a new `Run-token:` (via
+`openssl rand -hex 8`). Every OTHER path that "re-claims" the lease writes
+the session's EXISTING held `Run-token:` back unchanged, never a freshly
+minted one: re-claiming after the batch interview reopens a deferred task,
+adopting an owner via the baton-lineage exception, or any step-1 re-entry
+within the run. This is what lets the Promotion-ready conversion (Draft
+status below) use a `Run-token:` mismatch as a reliable "different run"
+discriminator: a stub's `Promoted-by-run:` value stays equal to the running
+invocation's `Run-token:` for the entire authoring run, and differs only once
+a genuinely new launch takes over.
+
 **Owner liveness.** Newest of: (a) the committer timestamp of the last
 commit touching `specs/<slug>/`, (b) each of the spec's `in-progress`
 tasks' Stale-lock liveness signals (below) — compared against the same
@@ -203,25 +215,85 @@ test. Two terminal readings follow so step 4 never spins without a stopping
 condition:
 
 - A queue holding only `draft` + `done` tasks reports **drained, listing the
-  drafts for human promotion** — not "queue empty, nothing to do".
+  drafts for human promotion** — not "queue empty, nothing to do". But a draft
+  carrying `Promotion-ready: true` is NOT awaiting a human: it is already
+  authored and gated and will auto-promote on the next drain launch with a
+  different `Run-token`. So a queue whose only drafts ALL carry
+  `Promotion-ready: true` (no ordinary un-gated drafts, no blocked `pending`
+  tasks) reports as **genuinely drained** — it lists those drafts as
+  self-resolving on the next launch, not as blocked on a human.
 - A `pending` task whose only UNMET dependencies are all `draft` reports
-  **"drained pending promotion"** — a terminal condition, not a hang.
+  **"drained pending promotion"** — a terminal condition, not a hang. Where
+  every such `draft` dependency carries `Promotion-ready: true`, this is
+  likewise genuinely drained (the dependencies auto-promote next launch),
+  not blocked on a human.
 
-**Promotion runs through stub intake.** A draft is promoted
+**Promotion runs through stub intake, in two phases.** A draft is promoted
 `draft` → `pending` by drain's **stub intake** (the section below), not by
-hand: the deterministic screen (`screen-stub.sh`) refuses any
-instruction-shaped Goal, a scout-tier assessor re-authors the Goal in neutral
-words (the worker-reported original kept only as quoted data under an
-`## Original report` blockquote) and drafts runnable acceptance criteria, and
-a single-call rubric critic gates the result before drain writes it and flips
-the `Status:` line. An /idea or /breakdown pass may still author the criteria
-by hand. Untrusted-data still governs the flip — a promoted Goal becomes
-binding worker instructions — but the gate is now a hard mechanism (screen +
-mandatory Goal re-authoring) plus adversarial review, not a blanket stop:
-docs/human-gates.md **reason 4** ("a hard mechanism beats a soft rule where
-injection could escalate"), cited not restated. The human keeps the
-exit-checklist audit and may demote any auto-promoted task back to `draft`
-with a `Demoted:` line stub intake permanently respects.
+hand — but the authoring and the flip are deliberately split across two
+drain runs so a human sees the self-authored work before it self-executes.
+Phase one (the authoring run's stub intake): the deterministic screen
+(`screen-stub.sh`) refuses any instruction-shaped Goal, a scout-tier assessor
+re-authors the Goal in neutral words (the worker-reported original kept only
+as quoted data under an `## Original report` blockquote) and drafts runnable
+acceptance criteria, a single-call rubric critic gates the result, and on
+PASS drain writes the authored content plus `Promotion-ready: true` +
+`Promoted-by-run: <run-token>` — leaving `Status: draft`, so the stub is
+NOT dispatched in the authoring run. Phase two (**Promotion-ready
+conversion**, below): a later drain launch flips it to `pending`. An /idea or
+/breakdown pass may still author the criteria by hand. Untrusted-data still
+governs the eventual flip — a promoted Goal becomes binding worker
+instructions — but the gate is now a hard mechanism (screen + mandatory Goal
+re-authoring) plus adversarial review plus deferral of execution past the
+authoring run, not a blanket stop: docs/human-gates.md **reason 4** ("a hard
+mechanism beats a soft rule where injection could escalate"), cited not
+restated. The human keeps the exit-checklist audit and may demote any
+auto-promoted task back to `draft` with a `Demoted:` line stub intake
+permanently respects.
+
+**Promotion-ready conversion (step 1, the phase-two flip).** Converting a
+`Promotion-ready: true` stub to `Status: pending` is a step-1 committed
+queue-state write, gated ONLY by a `Run-token` mismatch: convert **only when
+THIS invocation's own `Run-token:` differs from the stub's `Promoted-by-run:`
+value**. This discriminator is explicitly **NOT** `DRAIN-BATON.md`
+presence/absence — baton presence does not encode a run boundary. A
+`DRAIN-BATON.md` exists only after a step-3a baton pass, so a fresh authoring
+generation has none for its entire life, including every one of its OWN
+step-1 re-entries (the deferred-answer loop, 3b's loop-back, critique
+intake's loop-back, the parked-liveness sweep) — all inside the SAME run that
+authored the promotion, with no baton and no human. Keying on baton presence
+would wrongly flip such a stub mid-authoring-run. Keying on `Run-token`
+instead: same generation and every step-1 re-entry within it → same token →
+never converts; a baton hop within the same run → same token (baton passes
+preserve the run's identity via the re-claim invariant above) → never
+converts; a genuinely new, unrelated drain launch → a freshly minted token →
+differs → converts. It is the only discriminator that distinguishes "still
+inside the run that authored this" from "a new run, launched after that run's
+terminal report was readable by a human."
+
+- **Ordering.** Like every committed queue-state write in step 1, the
+  conversion runs AFTER the remote-divergence check and AFTER this
+  invocation's owner-lease claim succeeds for that spec — never before the
+  lease claim (a conversion before the claim would let two racing fresh
+  launches both write against a spec neither yet owns). It skips re-running
+  assess/gate — those already ran and are recorded in the authoring run's
+  history.
+- **Strip `## Original report` in the SAME commit.** The commit that flips
+  `Promotion-ready: true` → `Status: pending` (and drops the
+  `Promoted-by-run:` line) ALSO strips the `## Original report` block from
+  the task file, in that one commit. This must be the conversion commit, not
+  a separate worktree edit: the dispatched worker's first action is
+  `git reset --hard <default-branch>`, which discards any uncommitted
+  worktree edit and re-syncs the worker to the current COMMITTED file — so a
+  worktree-only strip would not survive, and the worker would read the
+  untrusted original back under `## Original report`. This conversion commit
+  is the last committed write to the file before it becomes dispatchable, so
+  every subsequent worker `reset --hard` syncs to a version that never
+  carried the block. The audit trail is NOT lost: the original text remains
+  fully inspectable via `git log`/`git show` on the EARLIER commit that wrote
+  it — the authoring run's stub-intake Act-step commit (already required to
+  exist and citable on the exit checklist) — stripping it from the CURRENT
+  file state is not deleting it from history.
 
 **Stub format** (drain writes this in the main checkout; NN = highest task
 number already in the tasks/ dir + 1, chosen at collect time):
@@ -856,6 +928,16 @@ DRAIN-BATON.md's `Stub-intake-failed:` line — Baton pass above; a stub
 attempted and not promoted joins this run's in-session set immediately and
 survives a baton pass on that line).
 
+The **in-scope set narrows to exclude an already-promoted stub**: a
+`Status: draft` stub already carrying `Promotion-ready: true` (from an
+earlier Act step, this run or a prior one) is EXCLUDED from stub intake's
+scan from the moment of promotion onward — it is never re-screened,
+re-assessed, or re-authored again. From that point only step 1's
+**Promotion-ready conversion** (Draft status above) owns that stub. So a stub
+promoted in generation 1 and carried into generation 2 by a baton pass is
+byte-identical at generation 2 — no new assessor or gate dispatch fires
+against it.
+
 Order eligible stubs by `Priority` header (absent = P2) then lexicographic
 task-file path — step 2's tie-break.
 
@@ -899,15 +981,30 @@ immediately):
 
 - **PASS** → drain writes the authored Goal, acceptance criteria, and headers
   into the stub (the original Goal preserved as the `## Original report`
-  block) and flips `draft` → `pending`. The task then passes the normal
-  peripheral/core classification gate and dispatch tie-break like any other.
+  block) but does **NOT** flip `draft` → `pending` in this run. Instead it
+  leaves `Status: draft` and adds two committed header lines:
+  `Promotion-ready: true` (the marker) and `Promoted-by-run: <run-token>`,
+  stamped with THIS invocation's own `Run-token:` (the same identity value
+  the owner lease and baton carry). These two headers are committed, so they
+  persist with the same durability as `Stub-intake-failed:` — across every
+  step-1 re-entry (the deferred-answer loop, 3b's loop-back, critique
+  intake's loop-back, the parked-liveness sweep) and every baton generation
+  of the authoring run. Because `Status:` stays `draft`, drain's existing
+  machinery keeps the stub out of dispatch and out of the "anything
+  dispatchable" terminal test for the entire authoring run — no new
+  dispatchability state is invented. The stub is promoted to `pending` only
+  later, by the **Promotion-ready conversion** in a subsequent invocation's
+  step 1 (Draft status above), never here.
 - **OBSOLETE (gate-confirmed)** → `Status: obsolete` plus a `Closed:` line
   citing the evidence the gate checked (Status field semantics above).
 - **DECISION-SHAPED with a reversible default the assessment can justify** →
   record the default under `## Answers` (decision, rationale, how to reverse)
-  and promote as for PASS; **without** a defensible default → stays `draft`
-  and lands on the exit checklist as needing the human.
-- **FAIL** → stays `draft`, exit checklist, the critic's reason attached.
+  and write `Promotion-ready: true` + `Promoted-by-run: <run-token>` as for
+  PASS (again leaving `Status: draft`); **without** a defensible default →
+  stays `draft` with no marker and lands on the exit checklist as needing the
+  human.
+- **FAIL** → stays `draft` with no marker, exit checklist, the critic's
+  reason attached.
 
 Every promotion, closure, and refusal is audited in step 4's exit-checklist
 "promoted this run" section (stub, verdict, criteria source). A human may
