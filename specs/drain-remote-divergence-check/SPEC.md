@@ -202,3 +202,10 @@ this fix catches the latter, not necessarily the former).
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Single task (01-remote-divergence-check.md) — R7 requires the antigravity
+mirror and plugin bump to land in the same commit as the core SKILL.md/
+reference.md change, so this cannot be split into independently-landable
+tasks. No grouping applies.
