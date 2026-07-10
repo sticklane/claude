@@ -68,9 +68,9 @@ and the headless `--max-turns` cap; `Priority` is an optional tie-break
 (absent = P2). A task is **dispatchable** when `Status: pending` and
 every dependency is `done`. `Status: draft` stubs (discovered work,
 step 3) are never dispatchable directly — drain's **stub intake** (the
-exhaustion-triggered branch below, after critique intake) promotes
-actionable ones `draft` → `pending` through a deterministic screen plus
-an adversarial gate, and a human audits every promotion via the exit
+exhaustion-triggered branch below, after critique intake) screens and
+gates actionable ones, then defers their `draft` → `pending` flip past
+the authoring run (below); a human audits every promotion via the exit
 checklist.
 
 **Claim the owner lease, before reporting the plan below.** The full procedure
@@ -339,13 +339,12 @@ no `tasks/`, and **no `Breakdown-ready:` header**. Order eligible specs by
 owner lease, invoke **/critique** via the Skill tool, and route: **READY** →
 the critic writes `Breakdown-ready:` and 3b makes the spec dispatchable **in
 the same session** (release the lease, loop to step 1); **NOT READY** →
-findings recorded, spec to step 4's exit checklist, lease released. Genuinely
-lower priority than dispatch; never preempts a dispatchable task. Full
-procedure and the **at-most-once-per-run guard spanning every baton
-generation** (`DRAIN-BATON.md`'s `Intake-failed:` line) are in reference.md's
-"Critique intake". Draft TASK stubs are **not** critique intake — **stub
-intake** (below) promotes those through a screen plus an adversarial gate
-(docs/human-gates.md reason 4).
+findings recorded, spec to step 4's exit checklist, lease released. Lower
+priority than dispatch; never preempts a dispatchable task. Full procedure
+and the **at-most-once-per-run guard spanning every baton generation**
+(`DRAIN-BATON.md`'s `Intake-failed:` line) are in reference.md's "Critique
+intake". Draft TASK stubs are **not** critique intake — **stub intake**
+(below) screens and gates those (docs/human-gates.md reason 4).
 
 ## Stub intake (fires at the exhaustion trigger, after critique intake, before 3b)
 
@@ -355,17 +354,14 @@ opening line every time you enter it.
 At the same exhaustion trigger critique intake uses — nothing dispatchable,
 nothing in-progress, nothing parked — and evaluated **after critique intake
 and before 3b's auto-breakdown loop-back**, drain works its in-scope
-`Status: draft` stubs. This is the sibling of critique intake: genuinely
-lower priority than dispatch, it never preempts a dispatchable task. Each
-stub is attempted **at most once per stub per run, spanning every baton
-generation**, tracked by a `Stub-intake-failed:` baton line (grammar pinned
-in reference.md's "Baton pass"; task 02 owns reference.md and the screen
-script `.claude/skills/drain/screen-stub.sh`, do not edit them).
+`Status: draft` stubs: the sibling of critique intake, lower priority than
+dispatch, never preempting a dispatchable task. Each stub is attempted **at
+most once per stub per run, spanning every baton generation**, tracked by a
+`Stub-intake-failed:` baton line (grammar in reference.md's "Baton pass").
 
 **Contract.** For each in-scope draft stub, drain runs an assess → gate →
-act pipeline. The full pipeline (regex list, rubric, act rules) lives in
-[reference.md](reference.md)'s "Stub intake (assess → gate → act)", the
-detail home; SKILL.md carries this contract and pointer:
+act pipeline (full detail: [reference.md](reference.md)'s "Stub intake
+(assess → gate → act)"); SKILL.md carries this contract and pointer:
 
 - **Deterministic screen first (the hard layer).** Before any model reads a
   stub, `.claude/skills/drain/screen-stub.sh` runs its pinned regex list
@@ -382,38 +378,31 @@ Original report` block, plus runnable criteria and `Touch:`/`Budget:`/
   `Depends on:`); a single-call rubric critic gates it (criteria runnable,
   `Touch:` complete with mirror obligations, Goal faithful without carrying
   the original's phrasing — OBSOLETE passes this same gate on its cited
-  closing evidence); drain — the sole queue writer — acts. On PASS (and on a
-  DECISION-SHAPED stub with a justifiable reversible default recorded in `##
-Answers`) drain writes the authored content but does **NOT** flip
-  `draft` → `pending` this run: it leaves `Status: draft` and adds
-  `Promotion-ready: true` + `Promoted-by-run: <run-token>` (this invocation's
-  own `Run-token:`), so the stub is deferred past the authoring run and never
-  self-dispatches within it. Gate-confirmed OBSOLETE writes `Status:
-  obsolete` + a `Closed:` line; a stub that fails or is decision-shaped
-  without a defensible default stays draft (no marker) on the exit checklist.
-  A `Promotion-ready: true` stub is EXCLUDED from stub intake's own in-scope
-  scan from that point on — only step 1 owns it thereafter. Step 1 later
-  converts `Promotion-ready: true` → `Status: pending` — and strips `##
-Original report` in that same commit — ONLY when a drain invocation's own
-  `Run-token:` differs from the stub's `Promoted-by-run:` (a genuinely new
-  run, explicitly not gated on `DRAIN-BATON.md` presence), after the
-  remote-divergence check and owner-lease claim. Full regex list, rubric, act
-  rules, and the conversion procedure in reference.md's "Stub intake" and
-  "Draft status".
+  closing evidence); drain — the sole queue writer — acts. On PASS (and a
+  DECISION-SHAPED stub with a justifiable default in `## Answers`), drain
+  writes the authored content tagged `Promotion-ready: true` +
+  `Promoted-by-run: <this invocation's Run-token>` **WITHOUT** flipping
+  `Status` to `pending` this run — deferred past the authoring run,
+  excluded from stub intake's own re-scan from then on. Gate-confirmed
+  OBSOLETE writes `Status: obsolete` + a `Closed:` line; else stays draft,
+  untagged. Step 1 later converts `Promotion-ready: true` → `pending`
+  (stripping `## Original report` same commit) ONLY when a drain
+  invocation's own `Run-token:` differs from `Promoted-by-run:` — a
+  genuinely new run, NOT gated on `DRAIN-BATON.md` presence — after the
+  remote-divergence check and owner-lease claim. Full rules in
+  reference.md's "Stub intake" and "Draft status".
 
-Every promotion, closure, and refusal is audited on the exit checklist's
-"promoted this run" section (step 4). A human may demote any auto-promoted
-task back to draft with a `Demoted:` line that stub intake permanently
-respects.
+Every promotion, closure, and refusal is audited in step 4's checklist
+(below); a human may demote any auto-promoted task back to `draft` via a
+permanently-respected `Demoted:` line.
 
 ## 3b. Auto-breakdown (lowest priority)
 
 When step 1 finds nothing dispatchable, in-progress, or parked — the same
 trigger step 4 uses — check for a **not-yet-broken-down spec** before the
 batch interview: a spec dir with a `SPEC.md`, no `tasks/`, and a
-`Breakdown-ready: true` header (the token `/critique` writes on a READY
-verdict; `/idea` inherits it). Genuinely the lowest-priority action drain
-takes: it fires only once real dispatch is exhausted, never reordering a
+`Breakdown-ready: true` header (`/critique` writes it on READY; `/idea`
+inherits it) — fires only once dispatch is exhausted, never reordering a
 pending task.
 
 Eligible specs are ordered by `Priority` (absent = P2) then spec path — the
@@ -470,24 +459,17 @@ checklist** for the human — **each entry names a file path**:
    task file.
 4. **NOT-READY specs** — each spec critique intake left NOT READY, its top
    findings, and its `SPEC.md` path.
-5. **Draft stubs awaiting promotion** — each `Status: draft` stub that does
-   NOT carry `Promotion-ready: true` (discovered work and un-promoted intake
-   candidates genuinely awaiting human authorship/review), with its file, for
-   a human to promote `draft` → `pending`. `Promotion-ready: true` drafts are
-   EXCLUDED here — they are already authored and gated, not awaiting a human;
-   they appear only in section 6.
-6. **Promoted this run** — every stub stub intake acted on: each stub marked
-   `Promotion-ready: true` (with the source of its authored criteria), each
-   `Status: obsolete` closure (with its `Closed:` evidence), and each
-   screen-refused or gate-failed stub, so every auto-promotion is audited —
-   with the task file for each. For every `Promotion-ready: true` stub, print
-   the exact `Demoted:` line a human would paste into that task file to
-   reverse the promotion, e.g. `Demoted: <ISO-date> — <one-line reason>`
-   (stub intake permanently respects a `Demoted:` line). As a labeled
-   addendum, list the `Promotion-ready: true` drafts distinctly from
-   ordinary drafts: they are "already authored and gated — will auto-promote
-   the next time a drain run with a different `Run-token` touches this spec,"
-   NOT "awaiting your promotion."
+5. **Draft stubs awaiting promotion** — each un-tagged `Status: draft`
+   stub, with its file, for a human to promote `draft` → `pending`
+   (`Promotion-ready: true` stubs excluded — see section 6).
+6. **Promoted this run** — every stub stub intake acted on: each stub
+   tagged `Promotion-ready: true` (source of its criteria; already
+   authored and gated, auto-promotes next run with a different
+   `Run-token`, not awaiting a human — print its exact `Demoted:` line to
+   reverse it, e.g. `Demoted: <ISO-date> — <reason>`, permanently
+   respected), each `Status: obsolete` closure (`Closed:` evidence), and
+   each screen-refused or gate-failed stub — every auto-promotion audited,
+   task file for each.
 7. **Next commands** — the exact commands to resume.
 
 One interview and one checklist per session; "Nothing needs you" is a valid
