@@ -63,3 +63,7 @@ only. Do not touch `.claude/skills/drain/reference.md`'s Act step (task
       scope) are untouched by this diff.
       Evidence: verifier PASS; single hunk at lines 456-457, sections 5/6
       unchanged; file still 501 lines.
+
+## Discovered
+
+- The antigravity mirror (`antigravity/.agents/workflows/drain.md` section 2) still carried the old "Defaults taken" text after this task, and the spec's own acceptance criteria require the mirror to carry R1-R5, not just R1/R3. Task 03's Touch didn't include it (a gap in the breakdown). Closed directly by drain (not a new task): ported the same "(from stub intake)" wording into the mirror's section 2, and bumped plugin.json (0.8.31 → 0.8.32) in the same commit.
