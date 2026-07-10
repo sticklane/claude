@@ -327,3 +327,21 @@ requirements beyond the Solution section's R1-R6.)
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Three tasks, no dependency edges (`Depends on: none` for all three), but
+NOT all three are safe to run concurrently:
+
+- **Task 02** (`screen-stub.sh`) is fully independent — disjoint Touch
+  (a different file entirely), no shared design choice with 01 or 03.
+  Safe to run concurrently with either.
+- **Tasks 01 and 03** both Touch `.claude/skills/drain/SKILL.md`, in
+  different sections (01: stub-intake section + exit-checklist sections
+  5/6; 03: exit-checklist section 2 only) — textually non-overlapping,
+  but same-file Touch fails the standard disjoint-Touch parallelization
+  test conservatively. Serialize 01 before 03 in sequential drain (the
+  default); do not group them in a concurrent throughput dispatch.
+
+Sanctioned group for throughput mode: {01, 02} or {02, 03} — never {01, 03}
+together, and never all three concurrently.
