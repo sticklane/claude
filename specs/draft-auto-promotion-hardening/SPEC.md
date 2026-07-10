@@ -81,10 +81,23 @@ undiscoverable at the point of need and, by then, already late.
   Instead it adds two header lines: `Promotion-ready: true` (the marker)
   and `Promoted-by-run: <run-token>`, stamped with THIS invocation's own
   `Run-token:` (the same identity value already used by the owner-lease
-  and baton mechanisms — no new identity concept). Because `Status` stays
-  `draft`, the stub is excluded from dispatch and from the "anything
-  dispatchable" terminal test by drain's EXISTING machinery — no new
-  dispatchability state invented.
+  and baton mechanisms — a re-claim of an already-held lease, e.g. after
+  the deferred-answer loop, writes the SESSION'S EXISTING held
+  `Run-token:` back, never mints a new one; only a genuinely fresh launch
+  with no baton to adopt mints one via `openssl rand -hex 8` — this
+  invariant already holds implicitly in the owner-lease/baton design and
+  this spec's reference.md edit states it explicitly, since three
+  consecutive review rounds each found a different re-entry path breaking
+  R1's discriminator when left implicit). Because `Status` stays `draft`,
+  the stub is excluded from dispatch and from the "anything dispatchable"
+  terminal test by drain's EXISTING machinery — no new dispatchability
+  state invented. Stub intake's own re-scan is also updated: a
+  `Status: draft` stub already carrying `Promotion-ready: true` is
+  EXCLUDED from stub intake's in-scope set in every subsequent baton
+  generation of the same run (stub intake's existing "in-scope `Status:
+  draft` stubs" definition narrows to exclude it) — from the moment of
+  promotion onward, only step 1's conversion check owns that stub; it is
+  never re-assessed, re-screened, or re-authored by stub intake again.
   - **Conversion trigger (corrected a second time — the actual run
     boundary, not baton-presence)**: baton-presence/absence does NOT
     encode a run boundary — a `DRAIN-BATON.md` only exists after a step-3a
@@ -226,6 +239,17 @@ requirements beyond the Solution section's R1-R6.)
       that these headers — being committed — persist across every step-1
       re-entry and every baton generation of the authoring run, so the
       stub is never dispatched within that run (R1).
+- [ ] reference.md's stub-intake in-scope definition documents excluding
+      any `Status: draft` stub already carrying `Promotion-ready: true` —
+      a fixture: a stub promoted PASS in generation 1, followed by a
+      baton pass to generation 2 → generation 2's stub intake does NOT
+      re-screen, re-assess, or re-author that stub (its Goal/criteria are
+      byte-identical to generation 1's, and no new scout/critic dispatch
+      occurs against it) (R1).
+- [ ] reference.md explicitly states the owner-lease re-claim invariant:
+      a re-claim of an already-held lease writes the session's EXISTING
+      `Run-token:` back, never a freshly-minted one; only a launch with no
+      baton to adopt mints a new token (R1).
 - [ ] reference.md's step 1 procedure documents converting
       `Promotion-ready: true` stubs to `Status: pending` ONLY when THIS
       invocation's own `Run-token:` differs from the stub's
