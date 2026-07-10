@@ -670,8 +670,9 @@ For each in-scope draft stub, run an assess → gate → act pipeline:
   baton hop within the run → same token (baton passes preserve run identity)
   → never converts; a genuinely new launch → a freshly minted token → differs
   → converts. The conversion runs like any committed queue-state write in
-  step 1: AFTER the remote-divergence check and AFTER the owner-lease claim
-  succeeds, never before the claim, skipping re-run of assess/gate. In that
+  step 1: AFTER the remote-divergence check (the `git fetch` reconciliation)
+  and AFTER the owner-lease claim succeeds, never before the claim, skipping
+  re-run of assess/gate. In that
   SAME commit — the last committed write before the stub becomes dispatchable
   — drain also strips the `## Original report` block (dropping
   `Promoted-by-run:` too). It must ride the conversion commit, not a

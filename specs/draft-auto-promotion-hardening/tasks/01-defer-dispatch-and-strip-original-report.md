@@ -4,42 +4,12 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R1, R3, R5)
 Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, antigravity/.agents/workflows/drain.md, .claude-plugin/plugin.json
-
-<!-- PLAN (delete at close-out):
-Edit order (prose-only, no code):
-1. reference.md Act step (~897-915): PASS/DECISION-SHAPED writes
-   Promotion-ready:true + Promoted-by-run:<run-token>, NOT a pending flip;
-   headers persist across re-entries/generations like Stub-intake-failed:.
-2. reference.md in-scope def (~848-857): exclude Status:draft stubs already
-   carrying Promotion-ready:true from stub intake's own scan.
-3. reference.md Run-token/owner-lease (~44-70): state re-claim invariant —
-   re-claim writes session's EXISTING Run-token, only fresh launch mints one.
-4. reference.md Draft-status section (~205-224): update 2 terminal readings so
-   a queue of ONLY Promotion-ready drafts reads drained; rewrite the
-   "Promotion runs through stub intake" para to the two-phase model; add the
-   step-1 conversion procedure (Run-token mismatch, NOT baton presence; after
-   remote-divergence + owner-lease claim; strips ## Original report in the
-   SAME commit; audit trail via earlier Act-step commit).
-5. SKILL.md stub-intake contract (~365-395): mirror the Promotion-ready write
-   + in-scope exclusion (contract-level; detail stays in reference.md).
-6. SKILL.md exit checklist §5 (~461-463): exclude Promotion-ready drafts.
-   §6 (~464-468): add labeled addendum + literal Demoted: line format.
-   Keep seven-section count; no new top-level section.
-7. antigravity drain.md: mirror 1-6 in paraphrased voice (Act ~621-629,
-   in-scope ~588-590, terminal ~392-395, re-claim ~126-150, exit §5/§6
-   ~738-745, conversion procedure).
-8. plugin.json: 0.8.30 -> 0.8.31.
-What could go wrong: touching task-03 scope (exit §2 / Answers-vs-Decisions),
-screen-stub.sh, or human-gates.md — all forbidden. Discriminator MUST be
-Run-token mismatch, never DRAIN-BATON.md presence. Strip must be SAME commit
-as conversion, never a worktree-only edit.
--->
 
 ## Goal
 
@@ -125,47 +95,64 @@ silently resolve them.
 
 ## Acceptance
 
-- [ ] reference.md's Act step documents `Promotion-ready: true` +
+- [x] reference.md's Act step documents `Promotion-ready: true` +
       `Promoted-by-run: <run-token>` (not a `Status: pending` flip) as
       stub intake's PASS/DECISION-SHAPED outcome, persisting across every
       step-1 re-entry and baton generation of the authoring run.
-- [ ] reference.md's stub-intake in-scope definition documents excluding
+- [x] reference.md's stub-intake in-scope definition documents excluding
       any `Status: draft` stub already carrying `Promotion-ready: true`.
-- [ ] reference.md explicitly states the owner-lease re-claim invariant:
+- [x] reference.md explicitly states the owner-lease re-claim invariant:
       a re-claim writes the session's EXISTING `Run-token:` back, never a
       freshly-minted one.
-- [ ] reference.md's step 1 procedure documents converting
+- [x] reference.md's step 1 procedure documents converting
       `Promotion-ready: true` → `Status: pending` ONLY when the current
       invocation's own `Run-token:` differs from the stub's
       `Promoted-by-run:` value — explicitly NOT gated on `DRAIN-BATON.md`
       presence/absence — after the remote-divergence check and after the
       owner-lease claim succeeds.
-- [ ] reference.md documents the SAME commit performing this conversion
+- [x] reference.md documents the SAME commit performing this conversion
       also stripping `## Original report`, with the audit-trail-via-
       earlier-commit rationale stated explicitly.
-- [ ] SKILL.md's exit-checklist section 5 excludes `Promotion-ready: true`
+- [x] SKILL.md's exit-checklist section 5 excludes `Promotion-ready: true`
       drafts; they appear only in section 6, labeled distinctly from
       "awaiting your promotion."
-- [ ] reference.md's two terminal readings are updated so a queue holding
+- [x] reference.md's two terminal readings are updated so a queue holding
       ONLY `Promotion-ready: true` drafts reports as genuinely drained.
-- [ ] Section 6's "Promoted this run" format includes the literal
+- [x] Section 6's "Promoted this run" format includes the literal
       `Demoted:` line text to reverse each promotion.
-- [ ] A fixture (inspectable on the documented procedure): stub PASS in
+- [x] A fixture (inspectable on the documented procedure): stub PASS in
       generation 1, baton pass to generation 2 within the same run → the
       stub is still `Status: draft` with `Promotion-ready: true` at
       generation 2's step 1, not `pending`.
-- [ ] A fixture (inspectable on the documented procedure): stub PASS at
+- [x] A fixture (inspectable on the documented procedure): stub PASS at
       the exhaustion trigger, then — WITHIN THE SAME GENERATION, no baton
       pass — the batch interview answers a deferred task and returns to
       step 1 → the stub is STILL `Status: draft` at that re-entry, because
       the re-entry's `Run-token:` matches the stub's `Promoted-by-run:`.
-- [ ] `git diff $(git merge-base main HEAD)..HEAD -- antigravity/` shows `antigravity/.agents/workflows/drain.md`
+- [x] `git diff $(git merge-base main HEAD)..HEAD -- antigravity/` shows `antigravity/.agents/workflows/drain.md`
       changed, carrying the equivalent contract in paraphrased voice (a
       content-coverage check: fetch, Promotion-ready, Promoted-by-run,
       Run-token-mismatch conversion, Original-report strip).
-- [ ] `git diff $(git merge-base main HEAD)..HEAD -- .claude-plugin/plugin.json | grep '"version"'`
+- [x] `git diff $(git merge-base main HEAD)..HEAD -- .claude-plugin/plugin.json | grep '"version"'`
       shows the version increased.
-- [ ] `git diff $(git merge-base main HEAD)..HEAD -- docs/human-gates.md` → empty (R6 not silently
+- [x] `git diff $(git merge-base main HEAD)..HEAD -- docs/human-gates.md` → empty (R6 not silently
       resolved).
-- [ ] `git diff $(git merge-base main HEAD)..HEAD -- .claude/skills/drain/screen-stub.sh` → empty
+- [x] `git diff $(git merge-base main HEAD)..HEAD -- .claude/skills/drain/screen-stub.sh` → empty
       (task 02's scope, not touched here).
+
+## Evidence
+
+Independent verifier report: `../evidence/01-defer-dispatch-and-strip-original-report.md`
+(verdict PASS, 14/14 criteria). All prose criteria confirmed by quoted
+text in reference.md (Act step, in-scope exclusion, re-claim invariant,
+step-1 Run-token-mismatch conversion + same-commit `## Original report`
+strip with audit-via-earlier-commit rationale, both terminal readings),
+SKILL.md (fixed seven-section checklist; §5 excludes `Promotion-ready:
+true`, §6 carries them with the literal `Demoted:` line), and the
+antigravity mirror (equivalent contract, paraphrased). Both prose fixtures
+hold by construction from the Run-token discriminator. Git-diff criteria:
+antigravity/ changed with full coverage; `plugin.json` 0.8.30→0.8.31;
+`docs/human-gates.md` and `screen-stub.sh` diffs empty. Gates:
+`bash evals/lint-ultra-gate.sh` OK, `./specs/status.sh` parses,
+`claude plugin validate .` passed. Review skipped: docs-only (all four
+Touch paths are `.md`/`.json`, NON-product).
