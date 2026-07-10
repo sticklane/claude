@@ -118,16 +118,20 @@ this fix catches the latter, not necessarily the former).
   spec (or a re-claim) begins. This is an accepted, bounded gap: this
   spec catches cross-spec-claim divergence, not divergence that
   accumulates entirely within one spec's active dispatch window.
-- **R6**: `.claude/skills/drain/SKILL.md` stays within the repo's
-  500-line convention ceiling (currently 499 lines — already at the
-  ceiling). The new contract is capped at a single pointer line (not
-  "a few lines") naming the check and pointing to reference.md; if
-  adding even that one line would push the file over 500, the
-  implementer trims an equal or greater number of lines elsewhere in
-  SKILL.md (tightening existing prose, not deleting content) so the net
-  line delta is ≤0. The full fetch/compare/fast-forward/halt procedure
-  lives entirely in `reference.md`'s "Owner lease" section (extending
-  it, not adding a new top-level section).
+- **R6**: `.claude/skills/drain/SKILL.md` stays genuinely under the
+  repo's 500-line convention ("well under 500," per CLAUDE.md — 500 is
+  the hard ceiling, not a target to land on exactly) — currently 499
+  lines, already at that ceiling with zero headroom. The new contract is
+  capped at a single pointer line (not "a few lines") naming the check
+  and pointing to reference.md; this addition is UNCONDITIONALLY paired
+  with a compensating trim of an equal or greater number of lines
+  elsewhere in SKILL.md (tightening existing prose, not deleting
+  content) in the same commit, so the net line delta is ≤0 regardless of
+  whether the raw addition alone would cross 500 — the file must not
+  land at exactly 500 with no margin left for the next change. The full
+  fetch/compare/fast-forward/halt procedure lives entirely in
+  `reference.md`'s "Owner lease" section (extending it, not adding a new
+  top-level section).
 - **R7**: Port the equivalent contract to
   `antigravity/.agents/workflows/drain.md` in the same commit, in that
   mirror's own paraphrased voice per
@@ -152,19 +156,24 @@ this fix catches the latter, not necessarily the former).
 - Automatic conflict resolution for the true-divergence case (R4) — the
   2026-07-08 incident showed this genuinely needs a human's judgment call
   (which side's redundant work to discard), not a fixed algorithm.
-- Auto-breakdown (3b) and critique/stub intake's own lease claims — R1's
-  "before each owner-lease claim" already covers these, since they claim
-  the same `DRAIN-OWNER.md` mechanism; no separate requirement needed for
-  them specifically.
+- Auto-breakdown (3b) and critique/stub intake's own lease claims — a
+  DIFFERENT, accepted gap (parallel to R5's), not something R1 covers:
+  3b/critique-intake/stub-intake each claim their own target spec's lease
+  from inside their own section, then loop back to step 1 — so R1's fetch
+  fires at that subsequent step-1 entry, AFTER the lease for that spec is
+  already claimed, not before. Closing this ordering gap (making these
+  paths fetch before their own lease claim, not just before the next
+  step-1 pass) is out of scope for this spec; it would mean editing 3b's,
+  critique intake's, and stub intake's own procedures, not just step 1's.
 
 ## Acceptance criteria
 
 - [ ] `.claude/skills/drain/SKILL.md`'s step 1, before the Status-header
       read, names the remote divergence check in a single pointer line
-      to reference.md — `wc -l .claude/skills/drain/SKILL.md` stays at
-      or under 500 lines; if the addition alone would exceed 500, a
-      compensating trim elsewhere in the file lands in the same commit
-      (R6).
+      to reference.md — the commit pairs it with an unconditional
+      compensating trim elsewhere in the file, so `wc -l
+      .claude/skills/drain/SKILL.md` stays strictly below 500 (genuine
+      headroom left, not landing at exactly 500) (R6).
 - [ ] `reference.md`'s "Owner lease" section contains the full fetch/
       compare/fast-forward/halt procedure with exact git commands,
       including the no-remote-vs-fetch-failure distinction (R1) and the
