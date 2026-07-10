@@ -78,3 +78,25 @@
   their output per the conventions; implementation-worker defers entirely
   to the dispatch prompt. Add a fallback cap or document the
   dispatch-prompt-owns-it decision in the agent file. (2026-07-10)
+- **agent-console: duplicate `claude agents --json` spawn per board rebuild.**
+  `workboard.assemble()` fetches it (`.claude/skills/workboard/workboard.py:687`)
+  and `agents_view()` fetches it again (`agent-console/agent-console.py:541`) —
+  two subprocess spawns, each with an 8s timeout, on every rebuild. Share one
+  fetch per rebuild cycle. (2026-07-10, from archived-repo review; the GitHub
+  `sticklane/agent-console` repo is an archived stale snapshot — all fixes land
+  here)
+- **agent-console: `gh_visibility` has no negative caching.** The cache
+  timestamp advances only on success, so a present-but-failing `gh` re-runs a
+  12s-timeout `gh repo list` on every post-TTL rebuild — contradicts CLAUDE.md's
+  "off the hot path". Cache failures with a shorter TTL. (2026-07-10)
+- **agent-console: `set_priority` invalidates the wrong cache.**
+  `agent-console.py:2879` zeroes `_plugins_cache["ts"]` (self-described no-op)
+  forcing a needless plugin-list respawn instead of invalidating the board
+  cache it actually affects. (2026-07-10)
+- **agent-console: doc drift.** Docstring still says "Run: skills-dashboard.py"
+  (`agent-console.py:14`); README claims board cache "~20s" vs `BOARD_TTL = 45`
+  (`:310`); env naming split `AGENT_CONSOLE_PORT` (install.sh) vs runtime
+  `SKILLS_DASHBOARD_PORT`. Align all three. (2026-07-10)
+- **agent-console: test gaps beyond the mutation-endpoints spec.**
+  `parse_repos` is only ever mocked, never tested directly; `apply_priority`'s
+  insert-after-H1 branch is untested. (2026-07-10)
