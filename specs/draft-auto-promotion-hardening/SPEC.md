@@ -78,29 +78,49 @@ undiscoverable at the point of need and, by then, already late.
   writes the assessor-authored Goal, acceptance criteria, headers, and (for
   DECISION-SHAPED) the `## Answers` default into the stub file — exactly as
   today — but does **NOT** flip `Status: draft` → `pending` in this run.
-  Instead it adds a single new header line, `Promotion-ready: true`, and
-  records the stub on the exit checklist's "Promoted this run" section as
-  today (reframed: "authored and gated this run, ready for Status flip on
-  next launch" rather than "promoted"). Because `Status` stays `draft`,
-  the stub is — by drain's EXISTING, already-correct machinery, with no
-  new state to invent — automatically excluded from dispatch and from the
-  "anything dispatchable" terminal test (drafts already have this behavior
-  and their own terminal reading, "drained pending promotion";
-  `reference.md`'s Status field semantics is unchanged by this spec). This
-  exclusion is **run-scoped and survives every baton generation**: the
-  `Promotion-ready: true` header is a committed file, so it persists
-  through headless baton hops exactly as `Stub-intake-failed:` does — a
-  stub never becomes dispatchable in ANY generation of the run that
-  authored it, closing the baton-hop gap the first review pass missed.
-  Only a **genuinely fresh drain invocation that does NOT adopt an
-  existing baton** (the fresh-instance ritual's own existing check: no
-  `DRAIN-BATON.md` to adopt, or adopting one whose queue has already fully
-  drained) converts every `Promotion-ready: true` stub to `Status:
-  pending` at the START of its step 1, before inventory, WITHOUT
-  re-running assess/gate (already done and recorded) — this is the
-  structural human-audit point: a human had to launch that fresh
-  invocation, and by then the run that authored the promotion has already
-  emitted its terminal exit checklist for them to read.
+  Instead it adds a single new header line, `Promotion-ready: true`.
+  Because `Status` stays `draft`, the stub is excluded from dispatch and
+  from the "anything dispatchable" terminal test by drain's EXISTING
+  machinery — no new dispatchability state invented. This exclusion is
+  **run-scoped and survives every baton generation**: the header is a
+  committed file, persisting through headless baton hops exactly as
+  `Stub-intake-failed:` does — the stub never becomes dispatchable in ANY
+  generation of the run that authored it.
+  - **Conversion trigger (corrected)**: the signal for "this is a
+    genuinely fresh invocation, not a baton continuation" is the actual
+    existing check — no adoptable `DRAIN-BATON.md` for this spec (absent,
+    or present with a `Run-token:` that doesn't match, per the
+    baton-lineage exception) — not the fresh-instance ritual (R1a), which
+    is a different, baton-*adoption*-specific reconciliation step a
+    non-baton launch never runs.
+  - **Conversion timing (corrected)**: the `Promotion-ready: true` →
+    `Status: pending` conversion is a committed queue-state write, so it
+    follows the SAME ordering every other committed write in step 1 does —
+    after the remote-divergence check and after this invocation's owner-
+    lease claim succeeds for that spec, never before (a conversion before
+    the lease claim would let two racing fresh invocations both write
+    against a spec neither yet owns). It skips re-running assess/gate
+    (already done and recorded in the promoting run's history).
+  - **Exit-checklist and terminal-reading interaction (corrected)**: a
+    `Promotion-ready: true` draft is still `Status: draft`, so it is
+    still literally matched by exit-checklist section 5's scan ("each
+    `Status: draft` stub... for a human to promote") and by the
+    `reference.md` terminal readings that key on the presence of `draft`
+    tasks. Both must be updated to treat `Promotion-ready: true` drafts
+    as a DISTINCT category from an ordinary un-gated draft: section 5
+    lists ONLY drafts without the marker (genuinely awaiting human
+    authorship/review); a new section (or an addendum to section 6, which
+    already covers this run's stub-intake activity) lists
+    `Promotion-ready: true` drafts separately, labeled "already authored
+    and gated — will auto-promote on the next fresh (non-baton) launch,"
+    not "awaiting your promotion." The terminal-reading prose
+    (`reference.md`'s two existing readings — "drained, listing the
+    drafts for human promotion" for a queue of only `draft`+`done`, and
+    "drained pending promotion" for a `pending` task blocked only on
+    `draft` dependencies) is updated so a queue holding ONLY
+    `Promotion-ready: true` drafts (no ordinary drafts, no blocked
+    `pending` tasks) still reports as genuinely drained — not blocked on
+    a human — since these will resolve themselves on the next launch.
 - **R2 (fixes Finding 2)**: `screen-stub.sh`'s `check()` normalizes
   whitespace across the **whole stub file** (not a Goal-extracted
   substring — the script already `grep`s the whole file today, and this
@@ -110,20 +130,27 @@ undiscoverable at the point of need and, by then, already late.
   not weaken or narrow any existing regex; the fix is purely eliminating
   line-boundary blindness in `check()`'s input, not the patterns
   themselves.
-- **R3 (fixes Finding 3)**: The dispatched worker never sees the `##
-  Original report` block, while the audit trail keeps it. Concretely: the
-  main-checkout task file (git history, the audit trail every other part
-  of stub intake already relies on) keeps the `## Original report` block
-  exactly as today — nothing is removed from the committed file or from
-  what the exit checklist can cite. What changes is what the DISPATCHED
-  WORKER reads: the worker's own worktree copy of the task file has the
-  `## Original report` block stripped before the worker's session starts
-  (a mechanical edit to the file in the worktree, not a new artifact type
-  drain has to invent or maintain). No implementer choice between
-  strip-from-audit-trail and instruct-the-worker-to-ignore-it — this
-  spec's earlier "(a) vs (b)" framing is replaced by this one concrete
-  mechanism, since the audit-trail file and the worker-visible file are
-  now explicitly different copies.
+- **R3 (fixes Finding 3, redesigned)**: A worktree-only edit cannot work —
+  the dispatched worker's FIRST action is `git reset --hard
+  <default-branch>` (existing Worker prompt contract), which discards any
+  uncommitted edit drain made in that worktree and re-syncs the worker to
+  the current COMMITTED file, `## Original report` block included. The
+  worker will read whatever is actually committed to `main` at dispatch
+  time — there is no worktree-only view that survives that reset.
+  Therefore: strip the `## Original report` block from the task file IN
+  THE SAME COMMIT that performs R1's `Promotion-ready: true` → `Status:
+  pending` conversion (the fresh, non-baton-launch conversion point,
+  after the owner-lease claim) — this is the last committed write to the
+  file before it ever becomes dispatchable, so every subsequent worker
+  `reset --hard` syncs to a version that never had the block. The audit
+  trail is NOT lost: the block's content remains fully inspectable via
+  `git log`/`git show` on the EARLIER commit that originally wrote it (the
+  promoting run's own stub-intake Act-step commit, already required to
+  exist and be citable by the exit checklist) — stripping it from the
+  CURRENT file state at the promotion-to-pending point is not the same as
+  deleting it from history. No new artifact type, no worktree-preparation
+  step to invent (none exists to hook into); the strip rides on a commit
+  R1 already requires.
 - **R4 (fixes Finding 5)**: The exit checklist's "Defaults taken" section
   also scans stub-intake `## Answers` defaults (not only `## Decisions`),
   OR stub-intake's Act step writes its defaults under `## Decisions`
@@ -185,11 +212,30 @@ requirements beyond the Solution section's R1-R6.)
       file — persists across every baton generation of the authoring run,
       so the stub is never dispatched within that run regardless of how
       many baton hops occur (R1).
-- [ ] reference.md's fresh-instance-ritual / step-1 procedure documents
-      converting `Promotion-ready: true` stubs to `Status: pending`
-      ONLY when a drain invocation does not adopt an existing baton (no
-      `DRAIN-BATON.md` to adopt, or an already-fully-drained one) — and
-      that this conversion skips re-running assess/gate (R1).
+- [ ] reference.md's step 1 procedure documents converting
+      `Promotion-ready: true` stubs to `Status: pending` ONLY on a
+      genuinely fresh invocation (the real signal: no adoptable
+      `DRAIN-BATON.md` for this spec — absent, or present with a
+      non-matching `Run-token:` per the baton-lineage exception — NOT the
+      fresh-instance ritual R1a, which is a different, adoption-specific
+      step a non-baton launch never runs), AFTER the remote-divergence
+      check and AFTER this invocation's owner-lease claim succeeds (never
+      before the lease claim), skipping re-run of assess/gate (R1).
+- [ ] reference.md documents the SAME commit that performs this
+      conversion also stripping `## Original report` from the task file
+      (R1's conversion commit doubles as R3's strip point — not a
+      separate worktree edit, which the worker's `git reset --hard` would
+      discard) (R1, R3).
+- [ ] SKILL.md's exit-checklist section 5 ("Draft stubs awaiting
+      promotion") is documented as excluding `Promotion-ready: true`
+      drafts — they appear only in section 6 (or a labeled addendum),
+      marked as already-gated/auto-flipping, not "awaiting your
+      promotion" (R1).
+- [ ] reference.md's two terminal readings ("drained, listing the drafts
+      for human promotion" and "drained pending promotion") are updated so
+      a queue holding ONLY `Promotion-ready: true` drafts (no ordinary
+      drafts, no blocked `pending` tasks) reports as genuinely drained,
+      not blocked on a human (R1).
 - [ ] A fixture: a stub-intake PASS in generation 1, followed by a baton
       pass to generation 2 within the SAME run → the promoted stub is
       still `Status: draft` (with `Promotion-ready: true`) at the start of
@@ -201,12 +247,12 @@ requirements beyond the Solution section's R1-R6.)
       `screen-stub.sh` flags it (previously: screen exits clean,
       unflagged) — confirm the fix normalizes the WHOLE file, not a
       Goal-extracted substring (R2).
-- [ ] `git diff <base> -- <dispatch mechanism>` (the worker-prompt
-      construction or worktree-preparation step, wherever it lives) shows
-      a step that strips `## Original report` from the worker's own
-      worktree copy of a promoted task file, while a parallel check
-      confirms the main-checkout committed file still carries the block
-      unchanged (R3).
+- [ ] `git diff <base> -- .claude/skills/drain/reference.md` shows the
+      Promotion-ready→pending conversion procedure includes the
+      `## Original report` strip in the same documented commit — and the
+      prose explicitly states the audit trail survives via the EARLIER
+      stub-intake Act-step commit's git history, not via an unchanged
+      current-state block (R3).
 - [ ] The exit checklist's "Defaults taken" section's documented scan
       includes stub-intake `## Answers` defaults, OR stub-intake's Act
       step is documented as writing to `## Decisions` instead — either
