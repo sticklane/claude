@@ -38,8 +38,12 @@ re_tool='(push[[:space:]]+to[[:space:]]+(main|master)|git[[:space:]]+push|rm[[:s
 # 4. absolute paths outside the repo
 re_abspath='(^|[^[:alnum:]])(/etc/|/root/|/var/|/usr/|/bin/|/sbin/|/sys/|/proc/|/dev/|~/)'
 
+# Collapse all whitespace (including newlines) to single spaces so a pattern
+# split across a line break is caught — line-oriented grep alone is blind to it.
+normalized="$(tr -s '[:space:]' ' ' < "$file")"
+
 matched=""
-check() { grep -iEq "$2" "$file" && matched="$matched $1"; }
+check() { printf '%s' "$normalized" | grep -iEq "$2" && matched="$matched $1"; }
 check "ignore-instructions"    "$re_ignore"
 check "agent-imperative"       "$re_agent"
 check "tool-invocation"        "$re_tool"
