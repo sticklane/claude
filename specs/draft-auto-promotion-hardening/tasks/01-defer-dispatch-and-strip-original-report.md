@@ -11,6 +11,36 @@ Budget: 30 turns
 Spec: ../SPEC.md (requirements R1, R3, R5)
 Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, antigravity/.agents/workflows/drain.md, .claude-plugin/plugin.json
 
+<!-- PLAN (delete at close-out):
+Edit order (prose-only, no code):
+1. reference.md Act step (~897-915): PASS/DECISION-SHAPED writes
+   Promotion-ready:true + Promoted-by-run:<run-token>, NOT a pending flip;
+   headers persist across re-entries/generations like Stub-intake-failed:.
+2. reference.md in-scope def (~848-857): exclude Status:draft stubs already
+   carrying Promotion-ready:true from stub intake's own scan.
+3. reference.md Run-token/owner-lease (~44-70): state re-claim invariant —
+   re-claim writes session's EXISTING Run-token, only fresh launch mints one.
+4. reference.md Draft-status section (~205-224): update 2 terminal readings so
+   a queue of ONLY Promotion-ready drafts reads drained; rewrite the
+   "Promotion runs through stub intake" para to the two-phase model; add the
+   step-1 conversion procedure (Run-token mismatch, NOT baton presence; after
+   remote-divergence + owner-lease claim; strips ## Original report in the
+   SAME commit; audit trail via earlier Act-step commit).
+5. SKILL.md stub-intake contract (~365-395): mirror the Promotion-ready write
+   + in-scope exclusion (contract-level; detail stays in reference.md).
+6. SKILL.md exit checklist §5 (~461-463): exclude Promotion-ready drafts.
+   §6 (~464-468): add labeled addendum + literal Demoted: line format.
+   Keep seven-section count; no new top-level section.
+7. antigravity drain.md: mirror 1-6 in paraphrased voice (Act ~621-629,
+   in-scope ~588-590, terminal ~392-395, re-claim ~126-150, exit §5/§6
+   ~738-745, conversion procedure).
+8. plugin.json: 0.8.30 -> 0.8.31.
+What could go wrong: touching task-03 scope (exit §2 / Answers-vs-Decisions),
+screen-stub.sh, or human-gates.md — all forbidden. Discriminator MUST be
+Run-token mismatch, never DRAIN-BATON.md presence. Strip must be SAME commit
+as conversion, never a worktree-only edit.
+-->
+
 ## Goal
 
 Stub-intake PASS/DECISION-SHAPED no longer flips `Status: draft` →
