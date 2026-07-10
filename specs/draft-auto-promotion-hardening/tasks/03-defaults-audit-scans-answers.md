@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -45,13 +45,21 @@ only. Do not touch `.claude/skills/drain/reference.md`'s Act step (task
 
 ## Acceptance
 
-- [ ] SKILL.md's exit-checklist section 2 ("Defaults taken") documents
+- [x] SKILL.md's exit-checklist section 2 ("Defaults taken") documents
       scanning stub-intake `## Answers` defaults in addition to
       `## Decisions` entries.
-- [ ] A fixture (inspectable on the documented procedure): a
+      Evidence: verifier PASS (evidence/03-defaults-audit-scans-answers.md);
+      section 2 now reads "from `## Decisions` plus each DECISION-SHAPED
+      stub's `## Answers` default (from stub intake)".
+- [x] A fixture (inspectable on the documented procedure): a
       DECISION-SHAPED stub promoted with a reversible default recorded
       under `## Answers` → the documented section-2 procedure surfaces it
       in the exit checklist, distinctly attributed to stub intake.
-- [ ] `git diff $(git merge-base main HEAD)..HEAD -- .claude/skills/drain/SKILL.md` shows only
+      Evidence: verifier PASS; "(from stub intake)" tag scopes to the
+      decision-shaped stub default (cross-ref SKILL.md line ~382), not
+      every `## Answers` entry.
+- [x] `git diff $(git merge-base main HEAD)..HEAD -- .claude/skills/drain/SKILL.md` shows only
       section 2's scan-source text changed — sections 5 and 6 (task 01's
       scope) are untouched by this diff.
+      Evidence: verifier PASS; single hunk at lines 456-457, sections 5/6
+      unchanged; file still 501 lines.

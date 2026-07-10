@@ -453,8 +453,8 @@ deferred question aggregated across ALL specs drained this session (gated on
 checklist** for the human — **each entry names a file path**:
 
 1. **Deferred questions still unanswered** — the task file for each.
-2. **Defaults taken** — from the `## Decisions` sections drain recorded
-   (decision, default, how to reverse), with the task file for each.
+2. **Defaults taken** — from `## Decisions` plus each DECISION-SHAPED stub's
+   `## Answers` default (from stub intake): decision, default, how to reverse.
 3. **Blocked items** — each `Status: blocked` task, what unblocks it, and its
    task file.
 4. **NOT-READY specs** — each spec critique intake left NOT READY, its top
