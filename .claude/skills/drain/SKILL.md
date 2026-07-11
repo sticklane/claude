@@ -74,7 +74,9 @@ marker.
 reconcile local `main` against `<remote>/main` first — skip if no remote,
 warn on a fetch failure, fast-forward if only the remote moved, halt-and-
 report if both sides diverged — so the reads below see current shared state
-([reference.md](reference.md)'s "Owner lease", Remote divergence check).
+([reference.md](reference.md)'s "Owner lease", Remote divergence check —
+load only the named section: `grep -n` the heading and read that slice, not
+the whole 1,100-line file).
 
 Read only the header fields of each task file
 (`Status`, `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies;
@@ -128,7 +130,9 @@ full diffs, or raw test output.
 Before the first dispatch, ensure `.claude/worktrees/` is gitignored. The
 worker prompt force-syncs its worktree base against drain's committed flips,
 and on a never-pushed local run drain resyncs the tracking ref after each
-merge (reference.md's Worker prompt and Status field semantics).
+merge (reference.md's Worker prompt and Status field semantics —
+load only the named section: `grep -n` the heading and read that slice, not
+the whole file).
 
 When several tasks are dispatchable at once, apply the deterministic
 tie-break: lowest `Priority` value first (absent = P2), then greatest
@@ -383,7 +387,9 @@ reconcile DRAIN-OWNER.md against the baton (`Run-token:` + `Generation:`; a
 mismatch falls to step 1's refuse path), seed 3b's, critique intake's, and
 stub intake's attempted-and-failed sets from the baton's `Breakdown-failed:`
 / `Intake-failed:` / `Stub-intake-failed:` lines, then run ONE cheap
-verification to catch drift — is detailed in reference.md's "Baton pass". A
+verification to catch drift — is detailed in reference.md's "Baton pass"
+(load only the named section: `grep -n` the heading and read that slice, not
+the whole file). A
 headless generation reaching the batch interview writes its deferred
 questions into the baton and stops; the final generation deletes the baton
 when the queue completes.
