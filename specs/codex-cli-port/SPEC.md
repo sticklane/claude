@@ -289,8 +289,12 @@ Concretely:
   is explicitly a content-judgment check, not a scripted metric (a prior
   word-count-based draft of this criterion was dropped as neither
   necessary nor sufficient)
-- [ ] `diff <(ls antigravity/.agents/skills) <(ls codex/.agents/skills | grep -v -E '^(drain|build|autopilot|evals)$')`
-  produces no output (this includes `_shared` on both sides), AND
+- [ ] `diff <(ls antigravity/.agents/skills | grep -v -E '^drain$') <(ls codex/.agents/skills | grep -v -E '^(drain|build|autopilot|evals)$')`
+  produces no output (this includes `_shared` on both sides; the left-side
+  filter excludes `antigravity/.agents/skills/drain`, a non-skill script
+  bundle with no `SKILL.md` that supports
+  `antigravity/.agents/workflows/drain.md` — it is not one of the 15
+  already-working skills and was never symlinked), AND
   `find codex/.agents/skills -maxdepth 1 -type l` lists exactly the 15
   already-working skill names plus `_shared` (16 symlinks; no entry for
   drain, build, autopilot, or evals, which are real directories not
@@ -315,3 +319,23 @@ Concretely:
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Tasks 01 (root scaffold: symlinks + `codex/AGENTS.md` + plugin.json bump),
+02 (drain + build skill wrappers), and 03 (autopilot + evals skill
+wrappers) touch fully disjoint paths under `codex/.agents/skills/` and
+share no undecided design — the frontmatter shape, `agents/openai.yaml`
+policy key, and per-skill launch-authorization wording are all fixed by
+this spec's R2/R3 text, so no two tasks would make the same open choice.
+They form the first parallel-safe group.
+
+Tasks 04 (live verification script + `codex/README.md`) and 05 (CLAUDE.md
+mirror-convention update) both depend on the full structure from 01-03
+existing, but touch disjoint files (`codex/README.md` +
+`codex/verify-live.sh` vs. `CLAUDE.md`) and share no undecided design —
+05's description of the three-way relationship doesn't depend on 04's live
+verdicts. They form the second parallel-safe group, run after the first.
+
+- Group: 01, 02, 03
+- Group: 04, 05
