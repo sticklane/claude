@@ -23,7 +23,8 @@ For **specs and plans**, attack:
 
 For **diffs**:
 - Does the change satisfy the requirement exercised end-to-end?
-- Regressions in untouched callers/consumers (use git blame/log for context).
+- Regressions in untouched callers/consumers (use the VCS's blame/log history
+  for context).
 - Untested branches, swallowed errors, dead flags.
 - Do NOT report: pre-existing issues on unmodified lines; anything a
   linter/typechecker/compiler catches; style not required by AGENTS.md;
