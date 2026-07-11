@@ -184,6 +184,36 @@ absent, timeout, malformed reply) keeps the snippet frames and prints one
 stderr warning; informative frames and stack shape are never touched, and
 without the flag output is unchanged.
 
+## Frame denylist
+
+Secret scrubbing (above) only catches token-shaped strings in prompt text. It
+does not hide named identifiers you simply don't want in a shared profile —
+the clearest example is a private skill's name, which flows into a `skill:`
+frame straight from frame normalization, bypassing the prompt scrub entirely.
+The frame denylist closes that gap.
+
+If `~/.config/agentprof/frame-denylist` exists, it is read as one denied
+substring per line (blank lines ignored). At sample-emit time, **every**
+emitted frame string — project, turn, skill, agent, role/stage markers, and
+model — is checked, and any frame containing a listed substring is replaced
+wholesale with `(redacted)`. Point `--frame-denylist` at another path to
+override the location:
+
+```sh
+./agentprof claude --days 7 --frame-denylist ./my-denylist -o week.pb.gz
+```
+
+With no denylist file present, output is unchanged. The denylist file itself
+is **never committed** — it names the very strings you are trying to keep out
+of shared artifacts, so it lives only on your machine.
+
+**Pinned-evidence repo rule.** Any evidence profile committed under `specs/`
+in this repository MUST be generated with the frame denylist active, so that
+no private skill, project, or agent name is baked into a checked-in profile.
+When you pin a profile as evidence, run the emit with `--frame-denylist`
+pointing at your local denylist and confirm the redactions landed before
+committing.
+
 ## GCP billing
 
 `agentprof gcp` ingests a file of GCP billing standard-export rows as
