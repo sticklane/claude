@@ -324,14 +324,22 @@ func (s session) collect(reprimeThreshold int) ([]schema.Sample, []Turn, int, er
 	}
 
 	var out []schema.Sample
-	for _, r := range mainP.responses {
+	for i, r := range mainP.responses {
 		turn := fmt.Sprintf("%02d", r.turnIdx)
 		stack := []string{project, mainP.turns[r.turnIdx].frame, r.skill}
 		if r.stage != "" {
 			stack = append(stack, "stage:"+r.stage)
 		}
 		stack = append(stack, "main", r.model)
-		out = append(out, r.sample(stack, s.id, turn))
+		ms := r.sample(stack, s.id, turn)
+		// Re-prime (SPEC R1): a main-loop model call past the transcript's first
+		// (i > 0) that writes more than the threshold re-writes the whole cache
+		// after a TTL expiry. Subagents (handled below) are never marked, and
+		// threshold 0 disables the label.
+		if reprimeThreshold > 0 && i > 0 && r.usage.CacheCreationTokens > int64(reprimeThreshold) {
+			ms.Labels["reprime"] = "true"
+		}
+		out = append(out, ms)
 		out = append(out, r.toolSamples(stack, mainP.toolResults, s.id, turn)...)
 	}
 	for _, a := range s.agents {
