@@ -1,6 +1,6 @@
 # Task 01: Shared `runtimes/parse_headless.py` parser + Headless contract doc
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 35 turns
@@ -81,13 +81,13 @@ or `evals/run.sh` — those are tasks 02-04.
 
 ## Acceptance
 
-- [ ] `python3 -m unittest discover -s runtimes` → all tests pass
-- [ ] `python3 runtimes/parse_headless.py claude-code` → exit 0, stdout is
+- [x] `python3 -m unittest discover -s runtimes` → all tests pass
+- [x] `python3 runtimes/parse_headless.py claude-code` → exit 0, stdout is
       the joined claude-code Headless template with `<prompt>` intact
-- [ ] `python3 runtimes/parse_headless.py antigravity` → exit 0, stdout is
+- [x] `python3 runtimes/parse_headless.py antigravity` → exit 0, stdout is
       exactly `NONE`
-- [ ] `python3 runtimes/parse_headless.py totally-not-a-real-runtime` →
+- [x] `python3 runtimes/parse_headless.py totally-not-a-real-runtime` →
       exit 0, stdout matches the claude-code template, a warning is logged
       to stderr
-- [ ] `grep -q 'no fenced block' runtimes/README.md` → found (contract
+- [x] `grep -q 'no fenced block' runtimes/README.md` → found (contract
       documented)

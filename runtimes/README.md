@@ -80,3 +80,33 @@ they consult these pins and pass the mapped model through the harness's
 model parameter when spawning. Pins do NOT change the interactive
 session's own model, and do NOT reach the headless fallback path in v1
 (the frozen `## Headless` templates run their profile's default).
+
+## The `## Headless` section contract
+
+Every profile's `## Headless` section states how the toolkit relaunches a
+non-interactive session on that runtime (the drain/autopilot headless
+fallbacks and the eval runner consume it). The section takes exactly one of
+two shapes:
+
+1. **Exactly one fenced shell block**, whose first non-continuation line is
+   the base invocation using the literal token `<prompt>` as the placeholder
+   for the prompt argument (e.g. `claude -p "<prompt>" \` or
+   `gemini -p "<prompt>" \`). Backslash-continuation lines belong to that one
+   command; a consumer collapses them into a single invocation and
+   substitutes the real prompt, allowlist, turn cap, and model for the
+   placeholder tokens. The contract covers only the *foreground* invocation
+   (binary, prompt, flags) — process backgrounding (`nohup … &`) is a
+   drain-level wrapper applied uniformly around every runtime's template, not
+   a per-runtime concern, so a profile never mentions it.
+
+2. **No fenced block at all** — signaling that no scriptable relaunch exists
+   for this runtime, so relaunch is human-driven only (Antigravity's case:
+   the Agent Manager launches agents; there is nothing to run headlessly).
+
+`runtimes/parse_headless.py` is the single tool that enforces and derives
+this mechanically: given a runtime name it returns the joined template
+(placeholders intact) or the sentinel string `NONE` when the section has
+**no fenced block**, and it derives the match-shape regex used to parse an
+existing relaunch command back out of text. Consumers call it instead of
+re-implementing the parse, so adding a new runtime is just writing a
+conforming `runtimes/<name>.md` — no consumer edits.
