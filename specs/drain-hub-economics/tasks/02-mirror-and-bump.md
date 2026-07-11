@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 3 turns
@@ -30,9 +30,9 @@ bumped in THIS task's own commit; `claude plugin validate .` passes.
 
 ## Acceptance
 
-- [ ] `grep -qi 'hub-economics advisory' antigravity/.agents/workflows/drain.md` → hits
-- [ ] `claude plugin validate .` → passes
-- [ ] This task's own commit modifies the version line:
+- [x] `grep -qi 'hub-economics advisory' antigravity/.agents/workflows/drain.md` → hits (paraphrased block ported near startup/naming area, title literal)
+- [x] `claude plugin validate .` → passes ("✔ Validation passed")
+- [x] This task's own commit modifies the version line:
   `git show HEAD -- .claude-plugin/plugin.json | grep -q '^+.*"version"'`
   run immediately after the closing commit lands (immune to sibling-spec
-  bumps earlier in the run)
+  bumps earlier in the run) — bumped 0.8.44 → 0.8.45 in this commit
