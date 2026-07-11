@@ -1,6 +1,6 @@
 # Task 05: Antigravity workboard mirror sync + plugin version bump
 
-Status: in-progress
+Status: done
 Depends on: 02, 03
 Priority: P2
 Budget: 12 turns
@@ -56,11 +56,11 @@ deliberate paraphrase, not a mirror).
 
 ## Acceptance
 
-- [ ] `diff -q .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py` → no output (identical)
-- [ ] `diff -q .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py` → no output (identical)
-- [ ] `test -L antigravity/runtimes && readlink antigravity/runtimes` → prints `../runtimes` (a symlink, not a copied directory)
-- [ ] `git show <base-commit>:.claude-plugin/plugin.json | grep '"version"'` (where `<base-commit>` is this task's starting commit) differs from `grep '"version"' .claude-plugin/plugin.json` on the current tree (version bumped from its value at task start, not a hard-coded literal)
-- [ ] `python3 -m unittest discover -s antigravity/.agents/skills/workboard` → passes (mirrored tests run clean in place)
+- [x] `diff -q .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py` → no output (identical)
+- [x] `diff -q .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py` → no output (identical)
+- [x] `test -L antigravity/runtimes && readlink antigravity/runtimes` → prints `../runtimes` (a symlink, not a copied directory)
+- [x] `git show <base-commit>:.claude-plugin/plugin.json | grep '"version"'` (where `<base-commit>` is this task's starting commit) differs from `grep '"version"' .claude-plugin/plugin.json` on the current tree (version bumped from its value at task start, not a hard-coded literal)
+- [x] `python3 -m unittest discover -s antigravity/.agents/skills/workboard` → passes (mirrored tests run clean in place)
 
 ## Progress
 
