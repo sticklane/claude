@@ -68,6 +68,12 @@ namespace finding in agentprof's docs.
   `model` override to general-purpose; bare general-purpose at session
   model is reserved for judgment work. Cite the measured $/call inversion
   (general-purpose $0.067 vs pinned worker $0.057).
+  DELIVERED EXTERNALLY: this block lands via
+  `specs/drain-wake-cost/tasks/02-freehand-drain-doctrine.md`, the single
+  writer of token-discipline.md across all three agentprof specs (that
+  exclusivity is what lets the specs drain concurrently). No task in THIS
+  spec edits the rules file; this spec's acceptance verifies the block
+  exists before the spec closes.
 - R3 **Namespace finding verified and documented.** Confirm or refute the
   bare-vs-prefixed hypothesis against transcripts (which project dirs
   produced bare frames, and do they carry repo-local `.claude/agents/`
@@ -89,7 +95,7 @@ namespace finding in agentprof's docs.
 ## Acceptance criteria
 
 - [ ] Fable-model verifier mechanism named with transcript evidence from the pinned window, and the matching R1 outcome landed (version-boundary documentation, dispatch-site fix, or escalation policy) (R1)
-- [ ] `grep -q '0\.067' /Users/sjaconette/claude/.claude/rules/token-discipline.md` (the file already contains an unrelated "general-purpose" mention, so grep the new block's cited $/call figure instead) AND MANUAL: the block names the pinned agents as the default for mechanical fan-outs and reserves session-model general-purpose for judgment work (R2)
+- [ ] `grep -q '0\.067' /Users/sjaconette/claude/.claude/rules/token-discipline.md` (the file already contains an unrelated "general-purpose" mention, so grep the new block's cited $/call figure instead) AND MANUAL: the block names the pinned agents as the default for mechanical fan-outs and reserves session-model general-purpose for judgment work — verification only; the block itself lands via specs/drain-wake-cost/tasks/02 (explicit cross-spec dependency: this spec cannot CLOSE until that task ships, though all of its own tasks can run first) (R2)
 - [ ] Namespace explanation present in agentprof docs (`grep -riqE 'agentic:' /Users/sjaconette/claude/agentprof/README.md /Users/sjaconette/claude/agentprof/SCHEMA.md` hits) AND MANUAL: the hit explains the bare-vs-prefixed split (R3)
 - [ ] Any stale shadow agent copies found under R3 are deleted; if any `.claude/agents/*.md` file is edited — under ANY requirement, including an R1 outcome documented in verifier.md — the antigravity mirror + `.claude-plugin/plugin.json` bump ship in the same commit and `claude plugin validate .` passes (cross-cutting: /breakdown should assign this to one closing task with the union Touch) (R1, R3)
 - [ ] MANUAL (deferred, needs a week of runs): next 7-day profile shows verifier spend ≥90% on sonnet (absent documented escalations) and a falling general-purpose $/call
@@ -106,12 +112,18 @@ namespace finding in agentprof's docs.
 
 ## Parallelization
 
-- Group A (concurrent): 01 (verifier doc + memory note), 02
-  (token-discipline.md), 03 (agentprof docs) — pairwise-disjoint Touch, no
-  shared undecided design (each documents an independently-settled fact).
-- 04 runs alone after all three (conditional mirror/bump + deletions).
-- Cross-spec: 02 shares `.claude/rules/token-discipline.md` with
-  specs/drain-wake-cost task 02, and 04 shares
-  `.claude-plugin/plugin.json` + `antigravity/` with the other two
-  agentprof specs' closing tasks — do not drain these specs concurrently;
-  serialize the specs or let one drain own all three.
+- Group A (concurrent): 01 (verifier doc + memory note), 02 (agentprof
+  docs) — disjoint Touch, no shared undecided design.
+- 03 runs alone after both (conditional mirror/bump + deletions).
+- Cross-spec (all three agentprof specs are concurrently drainable):
+  - token-discipline.md has a single writer —
+    specs/drain-wake-cost/tasks/02. No task here touches it; the R2
+    acceptance line is verify-only and is this spec's one explicit
+    cross-spec close dependency.
+  - `.claude-plugin/plugin.json` is the one file all three specs' closing
+    tasks may bump; each carries the race-safe bump rule (rebase before
+    bumping; on conflict take the highest version and increment) so
+    concurrent hubs converge instead of colliding.
+  - All other cross-spec paths are disjoint (antigravity: drain.md here
+    only via drain-wake-cost; verifier skill mirror only here;
+    breakdown/build/idea mirrors only via orchestrator-share-audit).

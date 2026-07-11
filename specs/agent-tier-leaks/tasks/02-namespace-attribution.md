@@ -1,4 +1,4 @@
-# Task 03: Verify the bare-vs-prefixed namespace hypothesis; document in agentprof
+# Task 02: Verify the bare-vs-prefixed namespace hypothesis; document in agentprof
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
@@ -15,12 +15,12 @@ Touch: agentprof/README.md, agentprof/SCHEMA.md
 The bare-vs-`agentic:`-prefixed agent-frame split is confirmed or refuted
 against real transcripts, the answer is documented in agentprof's docs so
 future profile readers interpret it correctly, and any stale shadow agent
-copies discovered along the way are reported (deletion is task 04's call
+copies discovered along the way are reported (deletion is task 03's call
 if they're plugin-shadowing copies under `~/.claude/skills/` or similar).
 
 ## Touch
 
-agentprof docs only. Do NOT edit `.claude/agents/*` (tasks 01/04 own that
+agentprof docs only. Do NOT edit `.claude/agents/*` (tasks 01/03 own that
 side), and if a genuine agentprof code change looks warranted (e.g.
 emitting a namespace label), file it as a suggestion under ## Deferred
 questions for specs/agentprof-instrumentation — don't build it here.

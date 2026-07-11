@@ -139,8 +139,13 @@ drafters safe.
 ## Parallelization
 
 - None within the spec: 01 → 02 is a strict measure-then-act chain.
-- Cross-spec: 02's Touch (`.claude/skills/*`, `antigravity/`,
-  `.claude-plugin/plugin.json`) collides with the closing tasks of
-  specs/drain-wake-cost and specs/agent-tier-leaks — do not drain these
-  specs concurrently; serialize the specs or let one drain own all three.
-  Task 01 (findings only) is safe to run alongside anything.
+- Cross-spec (all three agentprof specs are concurrently drainable):
+  - This spec touches only the breakdown/build/idea skill files and their
+    mirrors — disjoint from drain-wake-cost (drain skill + evals) and
+    agent-tier-leaks (agents + agentprof docs + rules delivered via
+    drain-wake-cost task 02).
+  - `.claude-plugin/plugin.json` is the one shared file: task 02's bump
+    carries the race-safe rule (rebase before bumping; on conflict take
+    the highest version and increment) so concurrent hubs converge
+    instead of colliding.
+  - Task 01 (findings only) is safe to run alongside anything.

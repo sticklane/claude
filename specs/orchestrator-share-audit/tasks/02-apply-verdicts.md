@@ -50,7 +50,12 @@ implementing it here.
    landed / deferred+reason / certified-optimal).
 5. For any `.claude/skills/*` edit: port the change to the antigravity
    mirror (paraphrased port — content-coverage, not byte-identity), bump
-   `version` in `.claude-plugin/plugin.json`, and run the gates.
+   `version` in `.claude-plugin/plugin.json`, and run the gates. The bump
+   is race-safe against the other agentprof-spec drains: `git pull
+   --rebase` immediately before bumping, read the version from HEAD, set
+   next patch, commit, push; on a rejected push or version-line conflict,
+   take the highest version present and increment once more, then retry.
+   Never resolve by reverting another spec's bump.
 
 ## Acceptance
 

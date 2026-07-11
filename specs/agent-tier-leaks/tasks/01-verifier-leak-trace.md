@@ -24,10 +24,12 @@ outcome is (a) per the spec's Problem section — but confirm, don't assume.
 
 The verifier agent doc and a new memory note only. NEVER edit files under
 `~/.claude/plugins/cache/` (immutable versioned snapshots). Do NOT touch
-`.claude/rules/` (task 02) or `agentprof/` (task 03). If outcome (a)
+`.claude/rules/` (owned by specs/drain-wake-cost/tasks/02 — the single
+token-discipline.md writer across all three agentprof specs) or
+`agentprof/` (task 02). If outcome (a)
 holds and verifier.md itself needs no edit, the memory note alone is the
 documentation home — do not edit verifier.md just to have touched it (an
-agent-def edit triggers the task-04 mirror/bump obligation).
+agent-def edit triggers the task-03 mirror/bump obligation).
 
 ## Steps
 
@@ -49,7 +51,7 @@ agent-def edit triggers the task-04 mirror/bump obligation).
    pins until the install updates), and the check command; add a pointer
    line to `docs/memory.md`'s index if one exists. For (b)/(c): the
    dispatch-site fix or the escalation policy in verifier.md, and note in
-   ## Progress that task 04's mirror/bump now applies.
+   ## Progress that task 03's mirror/bump now applies.
 4. Report which outcome landed and the evidence trail in ## Progress.
 
 ## Acceptance

@@ -145,8 +145,18 @@ repo's mirror + plugin-bump gate.
   value and trigger rule live in the spec, not chosen per-task).
 - 03 runs alone after both (mirrors 01's final text; checks 02's rules
   analog).
-- Cross-spec: 02 shares `.claude/rules/token-discipline.md` with
-  specs/agent-tier-leaks task 02, and 03 shares
-  `.claude-plugin/plugin.json` + `antigravity/` with the closing tasks of
-  the other two agentprof specs — do not drain those specs concurrently
-  with this one; serialize the specs or let one drain own all three.
+- Cross-spec (all three agentprof specs are concurrently drainable):
+  - Task 02 here is the SINGLE writer of
+    `.claude/rules/token-discipline.md` across all three specs — it also
+    delivers agent-tier-leaks R2's tier-dispatch block (that spec's task
+    file for it was removed; its acceptance is verify-only against this
+    task's output). Explicit dependency: agent-tier-leaks cannot CLOSE
+    until task 02 here ships.
+  - `.claude-plugin/plugin.json` is the one file all three specs' closing
+    tasks may bump; each carries the race-safe bump rule (rebase before
+    bumping; on conflict take the highest version and increment) so
+    concurrent hubs converge instead of colliding.
+  - All other cross-spec paths are disjoint (antigravity/drain.md + evals
+    drain scenario: this spec only; breakdown/build/idea skill files +
+    mirrors: orchestrator-share-audit only; agents + agentprof docs:
+    agent-tier-leaks only).
