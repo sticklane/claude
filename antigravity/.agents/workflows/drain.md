@@ -37,6 +37,13 @@ involved, never a blanket stage-everything; a concurrent session's own
 staged or working-tree changes must never ride along. Stated once here;
 every commit below follows it without restating it.
 
+**Name the run (gen 1, best-effort).** At gen-1 startup, if the run/tab has
+no custom name already, name it the repo plus a compact descriptor of the
+specs being drained (e.g. `claude · drain: reprime-vis, model-pins`) using
+whatever naming surface the runtime offers (terminal title escape, Agent
+Manager run name); skip silently where none exists, and never re-name on
+baton generations.
+
 **Startup session sweep (advisory).** Before inventory, check whether
 another live session's working directory is this same repo — the Agent
 Manager's session list, or whatever runtime session record is available;

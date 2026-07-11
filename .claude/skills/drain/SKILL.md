@@ -48,6 +48,13 @@ paths; never `-a`, `git add .`, or an unscoped commit in the shared checkout. A
 concurrent session's staged or working-tree changes must never ride along —
 every path-scoped commit below follows this without restating it.
 
+**Name the shell (gen 1, best-effort).** At gen-1 startup, if the terminal
+tab has no custom name already (none set by the user this session), set it
+to the repo name plus a compact descriptor of the specs being drained:
+`printf '\033]0;%s · drain: %s\007' "$(basename "$(git rev-parse
+--show-toplevel)")" "<abbreviated spec slugs, comma-joined>"` — once, never
+re-set on baton generations (they inherit it), skip silently with no TTY.
+
 **Startup session sweep (advisory).** Before inventory, list other live
 sessions whose cwd resolves into this repo (`claude agents --json`, else
 `~/.claude/sessions/*.json` pid records probed with `kill -0`): one line per
