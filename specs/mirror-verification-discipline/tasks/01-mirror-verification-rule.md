@@ -1,6 +1,6 @@
 # Task 01: Add the mirror-verification always-on rule
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 30 turns
@@ -68,12 +68,12 @@ Do not edit any sibling rules file, AGENTS.md, CLAUDE.md, or plugin.json.
 
 ## Acceptance
 
-- [ ] `test -f .claude/rules/mirror-verification.md` → exits 0
-- [ ] `grep -qi "cross-reference" .claude/rules/mirror-verification.md && grep -qi "resolve" .claude/rules/mirror-verification.md` → both match (R2)
-- [ ] `grep -qi "closing" .claude/rules/mirror-verification.md && grep -qi "calendar" .claude/rules/mirror-verification.md` → both match (R3)
-- [ ] `grep -q "unattended-worker-tool-limits" .claude/rules/mirror-verification.md` → matches (R4)
-- [ ] `grep -q "antigravity-parity-gate" .claude/rules/mirror-verification.md && test -f specs/antigravity-parity-gate/SPEC.md` → both pass (R5)
-- [ ] `grep -q "codequality-antigravity-content-parity" .claude/rules/mirror-verification.md && test -f specs/codequality-antigravity-content-parity/SPEC.md` → both pass (R5)
-- [ ] `grep -q "antigravity-mirror-broken-refs" .claude/rules/mirror-verification.md && test -f specs/antigravity-mirror-broken-refs/SPEC.md` → both pass (R5)
-- [ ] `grep -q "runtimes/antigravity.md" .claude/rules/mirror-verification.md && test -f runtimes/antigravity.md` → both pass (R5)
-- [ ] Manual read-through (or a `critic`/`verifier` agent pass) confirms R6 (every runtime-specific mention is inside a citation/example aside, not an imperative sentence) and R1/R3 tone-and-ordering match — judgment check, not grep-able; do not skip it.
+- [x] `test -f .claude/rules/mirror-verification.md` → exits 0
+- [x] `grep -qi "cross-reference" .claude/rules/mirror-verification.md && grep -qi "resolve" .claude/rules/mirror-verification.md` → both match (R2)
+- [x] `grep -qi "closing" .claude/rules/mirror-verification.md && grep -qi "calendar" .claude/rules/mirror-verification.md` → both match (R3)
+- [x] `grep -q "unattended-worker-tool-limits" .claude/rules/mirror-verification.md` → matches (R4)
+- [x] `grep -q "antigravity-parity-gate" .claude/rules/mirror-verification.md && test -f specs/antigravity-parity-gate/SPEC.md` → both pass (R5)
+- [x] `grep -q "codequality-antigravity-content-parity" .claude/rules/mirror-verification.md && test -f specs/codequality-antigravity-content-parity/SPEC.md` → both pass (R5)
+- [x] `grep -q "antigravity-mirror-broken-refs" .claude/rules/mirror-verification.md && test -f specs/antigravity-mirror-broken-refs/SPEC.md` → both pass (R5)
+- [x] `grep -q "runtimes/antigravity.md" .claude/rules/mirror-verification.md && test -f runtimes/antigravity.md` → both pass (R5)
+- [x] Manual read-through (or a `critic`/`verifier` agent pass) confirms R6 (every runtime-specific mention is inside a citation/example aside, not an imperative sentence) and R1/R3 tone-and-ordering match — judgment check, not grep-able; do not skip it.
