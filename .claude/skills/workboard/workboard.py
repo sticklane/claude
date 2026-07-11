@@ -996,6 +996,40 @@ def extract_agent_tree(session_jsonl_path):
     return roots
 
 
+def scan_session_spawns(claude_home):
+    """Per-session agent spawn trees, following the scan_*() contract
+    (reference.md: records keyed with last_touched/last_ts). Returns a dict
+    mapping session id -> {"spawn_tree", "last_touched", "last_ts"}, so
+    assemble() can merge each tree onto that session's existing record
+    without any other scan_*() function changing shape (SPEC.md R5/R8).
+
+    `spawn_tree` is extract_agent_tree()'s output for that session's
+    transcript — `[]` for a session that spawned nothing. Read-only: it
+    parses the same `projects/<proj>/<sid>.jsonl` transcripts scan_sessions()
+    reads, never live state, and mutates nothing.
+    """
+    spawns = {}
+    projects = claude_home / "projects"
+    if not projects.is_dir():
+        return spawns
+    for proj_dir in projects.iterdir():
+        if not proj_dir.is_dir():
+            continue
+        for jl in proj_dir.glob("*.jsonl"):
+            last_ts, _ = _last_record_ts(jl)
+            if last_ts is None:
+                try:
+                    last_ts = jl.stat().st_mtime
+                except OSError:
+                    last_ts = None
+            spawns[jl.stem] = {
+                "spawn_tree": extract_agent_tree(jl),
+                "last_touched": last_ts,
+                "last_ts": last_ts,
+            }
+    return spawns
+
+
 def scan_todos(claude_home):
     """~/.claude/todos/*.json — in-session todo lists, when the install has them."""
     items = []
@@ -1582,6 +1616,12 @@ def default_claude_home():
 def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFAULT):
     claude_home = default_claude_home()
     sessions = scan_sessions(claude_home, stale_days)
+
+    # attach each session's agent spawn tree (SPEC.md R5/R8) — scan_session_spawns()
+    # is a separate read-only scan, so no other scan_*() output shape changes.
+    spawns = scan_session_spawns(claude_home)
+    for s in sessions:
+        s["spawn_tree"] = spawns.get(s["id"], {}).get("spawn_tree", [])
 
     # every repo a session touched joins the scan set; the git toplevel is
     # attached to each session so attention_items() can test toplevel EQUALITY
