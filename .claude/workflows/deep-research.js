@@ -2,7 +2,7 @@ export const meta = {
   name: 'deep-research',
   description: 'Repo-owned deep research — fan-out web searches, fetch sources, adversarially verify claims, synthesize a cited report. Mirrors the harness built-in with per-stage token tiering.',
   whenToUse: 'When the user wants a deep, multi-source, fact-checked research report on any topic. BEFORE invoking, check if the question is specific enough to research directly — if underspecified (e.g., "what car to buy" without budget/use-case/region), ask 2-3 clarifying questions to narrow scope. Then pass the refined question as args, weaving the answers in.',
-  phases: [{"title":"Scope","detail":"Decompose question (from args) into 5 search angles"},{"title":"Search","detail":"5 parallel WebSearch agents, one per angle — effort:low"},{"title":"Fetch","detail":"URL-dedup, fetch top 15 sources, extract falsifiable claims — effort:low"},{"title":"Verify","detail":"3-vote adversarial verification per claim (need 2/3 refutes to kill) — session model"},{"title":"Synthesize","detail":"Merge semantic dupes, rank by confidence, cite sources — session model"}],
+  phases: [{"title":"Scope","detail":"Decompose question (from args) into 5 search angles"},{"title":"Search","detail":"5 parallel WebSearch agents, one per angle — haiku + effort:low"},{"title":"Fetch","detail":"URL-dedup, fetch top 15 sources, extract falsifiable claims — haiku + effort:low"},{"title":"Verify","detail":"3-vote adversarial verification per claim (need 2/3 refutes to kill) — session model"},{"title":"Synthesize","detail":"Merge semantic dupes, rank by confidence, cite sources — session model"}],
 }
 
 // Marker FIRST so name resolution is observable in the progress log: if this
@@ -13,9 +13,12 @@ log('[repo-deep-research]')
 // Repo-owned deep-research: Scope → pipeline(Search → URL-dedup → Fetch+Extract)
 // → 3-vote Verify → Synthesize. Ported from the harness built-in; per-stage
 // tiering per .claude/rules/token-discipline.md "Dispatch authoring":
-//   - Search + Fetch/Extract are mechanical fan-out → effort:'low'.
+//   - Search + Fetch/Extract are mechanical fan-out → haiku + effort:'low'.
 //   - Scope (decomposition/routing), Verify (adversarial judgment), and
-//     Synthesize (merge/rank) keep the session model.
+//     Synthesize (merge/rank) keep the session model. Verify stays on the
+//     session model — its refuters are judgment work, not a mechanical stage,
+//     so it takes no model pin and no effort downgrade (SPEC R1's resolved
+//     open question: adversarial refutation is judgment, so no haiku pin).
 // All fan-out agent() calls are schema-constrained (structured output only).
 // Each agent returns structured output only — schema-capped, well under 2k tokens
 // per return (a distilled verdict/summary, never a transcript).
@@ -177,12 +180,12 @@ const VERIFY_PROMPT = (claim, v) =>
   "Default to refuted=true if uncertain.\n\nStructured output only. Evidence MUST be specific."
 
 // ─── Pipeline: search → dedup → fetch+extract (no barrier) ───
-// Search + Fetch/Extract run at effort:'low' — mechanical fan-out (token-discipline).
+// Search + Fetch/Extract run on haiku at effort:'low' — mechanical fan-out (token-discipline).
 const searchResults = await pipeline(
   scope.angles,
 
   angle => agent(SEARCH_PROMPT(angle), {
-    label: "search:" + angle.label, phase: "Search", schema: SEARCH_SCHEMA, effort: "low"
+    label: "search:" + angle.label, phase: "Search", schema: SEARCH_SCHEMA, model: "haiku", effort: "low"
   }).then(r => {
     if (!r) return null
     log(angle.label + ": " + r.results.length + " results")
@@ -216,6 +219,7 @@ const searchResults = await pipeline(
           label: "fetch:" + host,
           phase: "Fetch",
           schema: EXTRACT_SCHEMA,
+          model: "haiku",
           effort: "low",
         }).then(ext => {
           // User-skip → null; drop it (filtered by searchResults.flat().filter(Boolean))
