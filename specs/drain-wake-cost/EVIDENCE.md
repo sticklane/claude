@@ -4,7 +4,10 @@ Shared evidence base for `drain-wake-cost`, `orchestrator-share-audit`, and
 `agent-tier-leaks`. Source: `agentprof claude --days 7` over `~/.claude`
 transcripts — 137 sessions, 48,729 API calls, $4,998.94 API-equivalent.
 Analysis ran over the canonical samples JSONL
-(`agentprof claude --days 7 -o samples.jsonl`); "rewrite" below means a call
+(`agentprof claude --days 7 -o samples.jsonl`). The exact profile is pinned
+at `profile-2026-07-04-to-11.pb.gz` in this directory; to reproduce the
+sample window later use `agentprof claude --since 2026-07-04T00:00:00Z`
+(the rolling `--days 7` window will have moved on). "Rewrite" below means a call
 whose `cache_write_tokens` exceeded both `cache_read_tokens` and 50k — i.e.
 the prompt prefix was not served from cache and the whole context was
 re-written at 1.25× input rate.
