@@ -1,0 +1,16 @@
+{
+  "source": "https://ai.google.dev/gemini-api/docs/pricing",
+  "fetched": "2026-07-11",
+  "note": "Google's published Gemini API pricing. The Antigravity-observed model display string 'Gemini 3.5 Flash (Medium)' (gen_metadata field 21) is priced against Google's published Gemini Flash rate card (model gemini-2.5-flash, the current published Flash model) as the closest published pricing for the Flash family. Rates are USD per 1,000,000 tokens, numerically identical to micro-USD per token (same convention as internal/pricing/table.go's Claude rates).",
+  "models": {
+    "Gemini 3.5 Flash (Medium)": {
+      "priced_as": "gemini-2.5-flash",
+      "input_usd_per_mtok": 0.30,
+      "output_usd_per_mtok": 2.50,
+      "cached_input_usd_per_mtok": 0.03,
+      "verbatim_input": "$0.30 (text / image / video)",
+      "verbatim_output": "$2.50 (Output price (including thinking tokens))",
+      "verbatim_cached_input": "$0.03 (text / image / video)"
+    }
+  }
+}
