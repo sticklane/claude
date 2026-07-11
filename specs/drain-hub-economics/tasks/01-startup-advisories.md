@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 4 turns
@@ -39,10 +39,14 @@ it — this block cites it).
 
 ## Acceptance
 
-- [ ] `grep -qi 'hub-economics advisory' .claude/skills/drain/SKILL.md` → hits
-- [ ] MANUAL: block covers both advisories, gen-1 only, non-blocking,
+- [x] `grep -qi 'hub-economics advisory' .claude/skills/drain/SKILL.md` → hits
+  (verifier: matched; evidence/01-startup-advisories.md)
+- [x] MANUAL: block covers both advisories, gen-1 only, non-blocking,
   names the disclosed-model signal and the beyond-first-few-turns
   heuristic, recommends the deep-tier fresh-session relaunch
+  (verifier PASS: frontier-hub + heavy-hub, "never on baton generations",
+  non-blocking stated twice, cites wake-economics doctrine not restated;
+  evidence/01-startup-advisories.md)
 ## Deferred questions
 
 - [2026-07-11 /drain gen3] Acceptance criterion 3 (`wc -l

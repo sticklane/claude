@@ -63,6 +63,19 @@ foreign live session, "sweep unavailable" on failure. Advisory only, never
 blocking — correctness comes from the owner-lease claim below, not this sweep
 (reference.md has the exact cwd filter).
 
+**Hub-economics advisory (gen 1, never blocking).** Two advisory lines at
+gen-1 startup — never on baton generations, and neither ever blocks
+dispatch: (a) *frontier-hub* — when the model the harness disclosed in this
+session's system context maps to the **frontier tier** (`runtimes/` profiles
+carry the mapping; Claude default: `fable`), print one line citing the
+wake-economics doctrine (step 2) and recommending a relaunch on a deep-tier
+(`opus`) or lower hub via a fresh `/drain` session with the same argument —
+queue state is committed, so nothing is lost; skip silently where the runtime
+discloses no model. (b) *heavy-hub* — when the drain launch arrives beyond the
+session's first few turns (the observable heuristic), print one line
+recommending that same fresh-session relaunch. Advisory only: neither line
+blocks dispatch, and neither prints on baton generations.
+
 ## 1. Inventory
 
 Emit `<!-- agentprof:stage=inventory -->` verbatim as this step's opening
