@@ -52,6 +52,19 @@ per foreign live session found. This is advisory only and never blocks
 dispatch — correctness comes from the owner lease claimed in step 1, not
 this sweep.
 
+**Hub-economics advisory (gen 1, never blocking).** Two advisory lines at
+gen-1 startup — never on baton generations, and neither ever blocks
+dispatch: (a) *frontier-hub* — where the runtime discloses the session
+model and that model maps to the **frontier tier** (`runtimes/` profiles
+carry the mapping; Claude default: `fable`), print one line citing the
+wake-economics doctrine (step 2) and recommending a relaunch on a deep-tier
+(`opus`) or lower hub via a fresh drain run with the same argument — queue
+state is committed, so nothing is lost; skip silently where the runtime
+discloses no session model. (b) *heavy-hub* — when the drain launch arrives
+beyond the session's first few turns (the observable heuristic), print one
+line recommending that same fresh-session relaunch. Advisory only: neither
+line blocks dispatch, and neither prints on baton generations.
+
 1. **Inventory.** Open this step by emitting
    `<!-- agentprof:stage=inventory -->` verbatim each time you enter it —
    agentprof reads it from this session's transcript to attribute
