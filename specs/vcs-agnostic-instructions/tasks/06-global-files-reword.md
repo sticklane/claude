@@ -1,6 +1,6 @@
 # Task 06: Reword global CLAUDE.md files and antigravity README
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P3
 Budget: 8 turns

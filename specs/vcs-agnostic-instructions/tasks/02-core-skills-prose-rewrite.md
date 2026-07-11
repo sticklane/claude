@@ -1,6 +1,6 @@
 # Task 02: VCS-agnostic prose rewrite — build, breakdown, onboard, autopilot
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 24 turns
