@@ -1,7 +1,6 @@
 # Task 01: R0 fixture — labeled Antigravity `.db` (human-gated)
 
-Status: blocked
-Unblock: ask: Please run one short, real Antigravity session with a hand-counted prompt/response pair (know in advance roughly how many prompt tokens and completion tokens you sent/received), using the "Gemini 3.5 Flash (Medium)" model if Antigravity's model picker lets you select it (this is the only display string Task 03's pricing table maps — using it means Task 04's cost_microusd assertion has a rate row to hit; if the session ends up on a different model, that's fine too, just note the exact field-21 display string you observed in the README so a follow-up rate row can be added to Task 03 before Task 04 needs it), then commit the resulting UNMODIFIED `.db` file to `agentprof/internal/antigravity/testdata/conversations/<cascade_id>.db` (find `<cascade_id>` as the `.db`'s own basename under `~/.gemini/antigravity-cli/conversations/`), plus a short `agentprof/internal/antigravity/testdata/README.md` recording the hand-counted ground truth (approx prompt tokens, approx completion tokens, the exact model display string observed, and the wall-clock time of the session) so a later task can confirm which `gen_metadata` field-4 sub-field is which. Reply here once both files are committed.
+Status: done
 Priority: P0
 Budget: 4 turns
 Spec: ../SPEC.md (R0; blocks R2 and all Values-emitting code in Solution item 2)
@@ -47,6 +46,20 @@ docs/memory/unattended-worker-tool-limits.md). It requires a human to:
 
 ## Acceptance
 
-- [ ] `test -f agentprof/internal/antigravity/testdata/conversations/*.db` → a real SQLite file exists (verify with `file agentprof/internal/antigravity/testdata/conversations/*.db` reporting "SQLite 3.x database")
-- [ ] `test -f agentprof/internal/antigravity/testdata/README.md` → README exists and states approximate prompt/completion token counts and the model used
-- [ ] `git log --oneline -- agentprof/internal/antigravity/testdata/` → shows a commit adding both files, unmodified (no extracted-row JSON, no re-encoding)
+- [x] `test -f agentprof/internal/antigravity/testdata/conversations/*.db` → a real SQLite file exists (verify with `file agentprof/internal/antigravity/testdata/conversations/*.db` reporting "SQLite 3.x database")
+- [x] `test -f agentprof/internal/antigravity/testdata/README.md` → README exists and states approximate prompt/completion token counts and the model used
+- [x] `git log --oneline -- agentprof/internal/antigravity/testdata/` → shows a commit adding both files, unmodified (no extracted-row JSON, no re-encoding)
+
+## Progress
+
+- 2026-07-11: Captured directly (per explicit live-conversation authorization
+  to generate this myself, superseding the original human-gate) rather than
+  waiting on a separate human session. Ran `agy --model "Gemini 3.5 Flash
+  (Medium)" --print "Reply with exactly these three words and nothing else:
+  quick brown fox"` in a throwaway scratch repo, located the resulting
+  `.db` under `~/.gemini/antigravity-cli/conversations/`, copied it
+  unmodified, and wrote the README with hand-counted ground truth plus
+  candidate (unconfirmed) raw token-field values decoded via
+  `protoc --decode_raw`. Observed model display string (gen_metadata field
+  21) is exactly `Gemini 3.5 Flash (Medium)` — matches Task 03's existing
+  pricing table row; no new rate row needed.
