@@ -224,6 +224,36 @@ reads. No skill-text diff is warranted at a delegable step (R2: none found). No
 drafter restructure is pre-approved (breakdown fails the output+cache_write
 dominance precondition). Task 02 records these certifications.
 
+### Task 02 — verdict outcomes
+
+Task 02 mapped each verdict to its outcome branch (landed fix / deferral+reason
+/ certified-optimal) and confirmed the mapping independently against this doc's
+`tool:Read` recovery (§iii per skill) and the SPEC routing rule. Outcome, one
+line per skill:
+
+- **/breakdown — CERTIFIED-OPTIMAL (KEEP).** No doctrine-violating main-line
+  read (§(iii): all recovered reads are the spec/task files under decomposition,
+  none codebase looking-around), so no R2 skill-text fix; drafter restructure
+  NOT pre-approved because output+cache_write = 37.4% < cache_read 61.9% (§(i)/(iv))
+  — the routing-rule dominance precondition fails, so the 84% share is certified
+  as intrinsic coupling re-billing, not a delegation gap.
+- **/build — CERTIFIED-OPTIMAL (KEEP).** No doctrine violation (§(iii): 11 of
+  ~13 main-line source reads were edit-targets; the 2 unedited are interface/type
+  files an adjacent edit implements against), so no R2 fix; the breakdown-specific
+  drafter restructure does not apply, and 53.9% output+cache_write (§(i)) is
+  certified as intrinsic TDD implementation cost, not a delegable drafting step.
+- **/idea — CERTIFIED-OPTIMAL (KEEP).** No doctrine violation (§(iii): main-line
+  reads are the spec/skill artifacts being specified, codebase scouting is
+  delegated), so no R2 fix; restructure N/A, and the 70% share is certified as
+  intrinsic interview synthesis (cache_read 59.1%, §(i)) — measured NOT to be
+  user think-time (TTL-idle rewrites = $3.35, 4% of $81.50).
+
+No skill-file edit was warranted at any delegable step (R2: none found across all
+three), and no restructure met the routing rule's pre-approval bar, so no
+`.claude/skills/*` change ships from Task 02 — therefore no antigravity mirror
+port and no `.claude-plugin/plugin.json` bump are required. The R5 no-op guard is
+satisfied by the three number-backed certifications above.
+
 ---
 
 ## R4 — regression check
