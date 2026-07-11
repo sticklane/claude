@@ -98,7 +98,21 @@ of letting them default silently:
   orphaned children outliving the step that spawned them, no detached
   orchestrator generations where an attended parent can supervise
   instead. A worker that spawns its own verifier awaits it inline the
-  same way.
+  same way. Scoped exception, as of 2026-07-11 (a524797, "Maintainer
+  decision 2026-07-11 (explicit, supersedes this morning's attended-only
+  tightening): no pipeline step forces a human"): drain's
+  generation-boundary self-relaunch — the detached headless generation a
+  drain run spawns at its own baton pass to keep working the queue — is a
+  sanctioned carve-out from the "no orphaned children outliving the step
+  that spawned them" clause, not a violation of it. It is compliant
+  because it is a _continuation_ of an already-human-launched drain run,
+  not a new unauthorized launch (docs/human-gates.md: the human gates
+  govern a run's launch, not its self-chaining continuation on
+  already-granted scope), so no per-generation human checkpoint is
+  required. This is a point-in-time carve-out scoped to drain's relaunch
+  specifically — not a general reopening of detachment; a future
+  maintainer who retightens the policy should strike this sentence rather
+  than read it as the rule's permanent shape.
 
 - **Tier by stage type.** Mechanical stages (search, fetch, extract,
   grep-like scouting, conformance checks) run on Haiku / `effort: low`;
