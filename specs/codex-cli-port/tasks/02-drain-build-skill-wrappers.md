@@ -1,6 +1,6 @@
 # Task 02: drain + build codex skill wrappers
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 55 turns
