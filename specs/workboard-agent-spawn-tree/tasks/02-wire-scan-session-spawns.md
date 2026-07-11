@@ -1,6 +1,6 @@
 # Task 02: scan_session_spawns() wiring into assemble() and --json
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
@@ -54,6 +54,6 @@ modify `extract_agent_tree()`'s internals (Task 01's scope); call it as-is.
 
 ## Acceptance
 
-- [ ] `python3 -m unittest discover -s .claude/skills/workboard -p "test_workboard.py" -v 2>&1 | grep -E "test_scan_session_spawns|OK"` → new tests pass, suite reports `OK`.
-- [ ] `python3 .claude/skills/workboard/workboard.py --json | python3 -m json.tool > /dev/null && echo VALID_JSON` → prints `VALID_JSON` (wiring doesn't break the existing `--json` output).
-- [ ] A test or explicit diff check confirms every other `scan_*()` function's own return value is byte-identical before/after this change (R5) — cite the specific test name added in step 2 here once written.
+- [x] `python3 -m unittest discover -s .claude/skills/workboard -p "test_workboard.py" -v 2>&1 | grep -E "test_scan_session_spawns|OK"` → new tests pass, suite reports `OK`.
+- [x] `python3 .claude/skills/workboard/workboard.py --json | python3 -m json.tool > /dev/null && echo VALID_JSON` → prints `VALID_JSON` (wiring doesn't break the existing `--json` output).
+- [x] A test or explicit diff check confirms every other `scan_*()` function's own return value is byte-identical before/after this change (R5) — cite the specific test name added in step 2 here once written. Test: `test_scan_session_spawns_leaves_other_scans_unchanged` (in `test_workboard.py`, class `TestScanSessionSpawns`) captures `scan_sessions()` and `scan_todos()` output before and after `scan_session_spawns()` runs and asserts equality.

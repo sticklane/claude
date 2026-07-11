@@ -2023,5 +2023,96 @@ class TestExtractAgentTree(unittest.TestCase):
             self.assertEqual(tree[0]["status"], "failed")
 
 
+class TestScanSessionSpawns(unittest.TestCase):
+    """R5/R8: scan_session_spawns() runs extract_agent_tree() per session and
+    returns records keyed to the scan_*() contract (last_touched/last_ts) for
+    merge into each session record inside assemble(), without perturbing any
+    other scan_*() function's output."""
+
+    def _home_with_spawning_session(self, tmp, sid="sess-x"):
+        """Build a claude_home/projects/<proj>/ tree holding one session that
+        spawned a sub-agent. Returns (home_path, session_id)."""
+        home = Path(tmp)
+        proj = home / "projects" / "proj-x"
+        session_records = [
+            _agent_tool_use("TU_A", subagent_type="implementation-worker"),
+            _agent_tool_result("TU_A", "A", status="completed"),
+        ]
+        meta_a = {
+            "agentType": "implementation-worker",
+            "description": "did the work",
+            "toolUseId": "TU_A",
+            "spawnDepth": 1,
+        }
+        write_spawn_fixture(proj, sid, session_records, [("A", meta_a, [])])
+        return home, sid
+
+    def test_scan_session_spawns_record_carries_tree_and_ts(self):
+        # A spawning session's record exposes a non-empty spawn_tree plus the
+        # scan_*() contract keys last_touched/last_ts.
+        with tempfile.TemporaryDirectory() as tmp:
+            home, sid = self._home_with_spawning_session(tmp)
+
+            spawns = workboard.scan_session_spawns(home)
+
+            self.assertIn(sid, spawns)
+            rec = spawns[sid]
+            self.assertTrue(rec["spawn_tree"])  # non-empty
+            self.assertEqual(rec["spawn_tree"][0]["agentId"], "A")
+            self.assertIn("last_touched", rec)
+            self.assertIn("last_ts", rec)
+            self.assertIsNotNone(rec["last_ts"])
+
+    def test_scan_session_spawns_empty_tree_for_non_spawning_session(self):
+        # A session that never spawned a sub-agent still gets a record, with an
+        # empty spawn_tree (R3-consistent) — never an error.
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            proj = home / "projects" / "proj-y"
+            records = [
+                {"type": "user", "timestamp": OLD_TS, "message": {"content": "hi"}},
+            ]
+            write_spawn_fixture(proj, "sess-plain", records, [])
+
+            spawns = workboard.scan_session_spawns(home)
+
+            self.assertIn("sess-plain", spawns)
+            self.assertEqual(spawns["sess-plain"]["spawn_tree"], [])
+
+    def test_scan_session_spawns_output_is_json_serializable(self):
+        # R8: the per-session tree data is JSON-serializable so --json can carry
+        # it without a serialization error.
+        with tempfile.TemporaryDirectory() as tmp:
+            home, sid = self._home_with_spawning_session(tmp)
+
+            spawns = workboard.scan_session_spawns(home)
+            round_tripped = json.loads(json.dumps(spawns))
+
+            self.assertTrue(round_tripped[sid]["spawn_tree"])
+
+    def test_scan_session_spawns_leaves_other_scans_unchanged(self):
+        # R5: invoking scan_session_spawns() must not perturb any other
+        # scan_*() function's return value — it is read-only. Compare each
+        # other scan's output taken before and after the spawn scan runs.
+        with tempfile.TemporaryDirectory() as tmp:
+            home, _ = self._home_with_spawning_session(tmp)
+            (home / "todos").mkdir()
+            (home / "todos" / "sess-x-agent-1.json").write_text(
+                json.dumps({"todos": [{"status": "pending", "content": "do it"}]}),
+                encoding="utf-8",
+            )
+
+            before_sessions = workboard.scan_sessions(home, 14)
+            before_todos = workboard.scan_todos(home)
+
+            workboard.scan_session_spawns(home)
+
+            after_sessions = workboard.scan_sessions(home, 14)
+            after_todos = workboard.scan_todos(home)
+
+            self.assertEqual(before_sessions, after_sessions)
+            self.assertEqual(before_todos, after_todos)
+
+
 if __name__ == "__main__":
     unittest.main()
