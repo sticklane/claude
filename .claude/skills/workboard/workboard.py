@@ -44,6 +44,14 @@ SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parent.parent / "_shared"))
 import viz  # noqa: E402
 
+# runtimes/ ships alongside the toolkit's .claude/, four levels up from this
+# file (.claude/skills/workboard/workboard.py). parse_headless resolves each
+# profile relative to its own directory, so the regex table is always built
+# from the toolkit installation this scanner ships with — never from a
+# scanned target repo's tree.
+sys.path.insert(0, str(SCRIPT.parents[3] / "runtimes"))
+import parse_headless  # noqa: E402
+
 STALE_DAYS_DEFAULT = 7
 # A `task/*` worktree counts as a live drain only if its newest activity is
 # younger than this window (matches drain/reference.md's grace window). Older ⇒
@@ -554,7 +562,101 @@ def scan_handoffs(repo):
 
 
 BATON_GEN_RE = re.compile(r"generation[:\s]+(\d+)", re.IGNORECASE)
-BATON_CMD_RE = re.compile(r'claude\s+-p\s+"[^"]*"')
+
+
+def _build_runtime_regexes():
+    """Map every runtime profile name to its baton match-shape regex.
+
+    A profile with a scriptable ``## Headless`` template maps to the regex
+    derived from it by ``runtimes/parse_headless.py``; a profile with no
+    fenced template (e.g. antigravity) maps to ``None`` — it is a known
+    runtime with no scriptable relaunch (manual only). Non-profile ``*.md``
+    files in ``runtimes/`` (README) are skipped. Built once at import from
+    the toolkit's own ``runtimes/`` dir, not per scanned repo."""
+    table = {}
+    runtimes_dir = Path(parse_headless.__file__).resolve().parent
+    for f in sorted(runtimes_dir.glob("*.md")):
+        try:
+            text = f.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if not re.search(r"^## Headless\b", text, re.MULTILINE):
+            continue  # not a runtime profile (e.g. README.md)
+        template = parse_headless.headless_template(f.stem)
+        table[f.stem] = (
+            None
+            if template == parse_headless.NONE
+            else parse_headless.derive_match_regex(template)
+        )
+    return table
+
+
+#: {runtime-name: compiled regex or None}. None ⇒ manual-relaunch-only runtime.
+RUNTIME_REGEXES = _build_runtime_regexes()
+
+
+def resolve_repo_runtime(repo):
+    """Active runtime name for a scanned repo, matching drain's rule.
+
+    Reads ``<repo>/.claude/runtime.md`` — its first non-comment line
+    ``runtime: <name>`` selects the profile (convention in
+    ``runtimes/README.md``). An absent or malformed file defaults to
+    ``claude-code``, so a repo that never opts in keeps today's behavior."""
+    rt = Path(repo) / ".claude" / "runtime.md"
+    if not rt.exists():
+        return parse_headless.DEFAULT_RUNTIME
+    try:
+        text = rt.read_text(encoding="utf-8")
+    except OSError:
+        return parse_headless.DEFAULT_RUNTIME
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        m = re.match(r"runtime:\s*(\S+)", s, re.IGNORECASE)
+        return m.group(1) if m else parse_headless.DEFAULT_RUNTIME
+    return parse_headless.DEFAULT_RUNTIME
+
+
+def _parse_baton_command(text, runtime_name):
+    """Extract a baton's relaunch command for a repo on ``runtime_name``.
+
+    Returns ``(command, manual_relaunch, parse_warning)`` — exactly one of the
+    three is meaningfully set:
+
+    - The resolved runtime is manual-relaunch-only (no scriptable headless
+      template, e.g. antigravity): no regex is attempted; ``manual_relaunch``
+      names how to reopen it, ``command`` stays ``""``.
+    - Otherwise the resolved runtime's regex is tried first, then every other
+      known runtime's regex in a stable order; the first match is ``command``.
+    - No known shape matches: ``command`` stays ``""`` and ``parse_warning``
+      flags it for the needs-attention inbox.
+
+    An unresolvable ``runtime_name`` (no matching profile) falls back to
+    ``claude-code`` (R11) — never raises."""
+    if runtime_name not in RUNTIME_REGEXES:
+        runtime_name = parse_headless.DEFAULT_RUNTIME
+    if RUNTIME_REGEXES.get(runtime_name) is None:
+        return (
+            "",
+            f"No scriptable relaunch for {runtime_name} — "
+            f"reopen from {runtime_name}'s Agent Manager",
+            "",
+        )
+    order = [runtime_name] + [n for n in sorted(RUNTIME_REGEXES) if n != runtime_name]
+    for name in order:
+        rx = RUNTIME_REGEXES.get(name)
+        if rx is None:
+            continue
+        m = rx.search(text)
+        if m:
+            return m.group(0), "", ""
+    return (
+        "",
+        "",
+        "Relaunch command matches no known runtime shape — "
+        "check the baton's relaunch block",
+    )
 
 
 def _section_body(text, *heading_patterns):
@@ -574,18 +676,23 @@ def scan_batons(repo):
     """DRAIN-BATON.md = a parked drain generation to relaunch (self-managed,
     not a human handoff — the final generation deletes it)."""
     batons = []
+    runtime_name = resolve_repo_runtime(repo)
     for pattern in ("DRAIN-BATON.md", "specs/*/DRAIN-BATON.md"):
         for f in repo.glob(pattern):
             if any(part in SKIP_DIRS for part in f.parts):
                 continue
             text = read_text(f, 8_000)
             gm = BATON_GEN_RE.search(text)
-            cm = BATON_CMD_RE.search(text)
+            command, manual_relaunch, parse_warning = _parse_baton_command(
+                text, runtime_name
+            )
             batons.append(
                 {
                     "path": str(f.relative_to(repo)),
                     "generation": int(gm.group(1)) if gm else None,
-                    "command": cm.group(0) if cm else "",
+                    "command": command,
+                    "manual_relaunch": manual_relaunch,
+                    "parse_warning": parse_warning,
                     "needs_attention": _section_body(
                         text, "needs.?attention", "deferred"
                     ),
@@ -1382,6 +1489,22 @@ def attention_items(
                         "age_ts": b.get("mtime"),
                     }
                 )
+            # A baton whose relaunch command matched no known runtime shape
+            # can't be relaunched from its card; promote the parse_warning into
+            # the inbox the same way (R9) so it doesn't vanish silently.
+            if b.get("parse_warning"):
+                gen = b["generation"] if b["generation"] is not None else "?"
+                items.append(
+                    {
+                        "severity": "warning",
+                        "state": "needs-review",
+                        "repo": r["name"],
+                        "what": f"Drain baton (gen {gen}): unparsable relaunch command",
+                        "why": f"{b['parse_warning']} — {b['path']}",
+                        "cmd": "",
+                        "age_ts": b.get("mtime"),
+                    }
+                )
 
     for c in antigravity:
         if c["open"] > 0 and (now_ts() - c["last_ts"]) > stale_days * 86400:
@@ -1764,7 +1887,17 @@ def render_batons(batons):
             if b.get("needs_attention")
             else ""
         )
-        cmd = f" <code>{esc(b['command'])}</code>" if b.get("command") else ""
+        # A manual-relaunch runtime (no scriptable headless template) shows the
+        # reopen phrase where a scriptable card shows the command; a baton whose
+        # command matched no known shape shows the parse warning instead.
+        if b.get("manual_relaunch"):
+            cmd = f' <span class="baton-manual">{esc(b["manual_relaunch"])}</span>'
+        elif b.get("command"):
+            cmd = f" <code>{esc(b['command'])}</code>"
+        elif b.get("parse_warning"):
+            cmd = f' <span class="baton-warn">{esc(b["parse_warning"])}</span>'
+        else:
+            cmd = ""
         out.append(
             f'<p class="baton">🪧 drain baton · generation {esc(gen)} parked in '
             f"<code>{esc(b['path'])}</code> — relaunch to continue the queue "
