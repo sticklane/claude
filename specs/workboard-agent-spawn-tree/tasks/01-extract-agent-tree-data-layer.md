@@ -1,6 +1,6 @@
 # Task 01: extract_agent_tree() data layer
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 20 turns
@@ -58,5 +58,5 @@ tests; it does not wire the function into anything yet.
 
 ## Acceptance
 
-- [ ] `python3 -m unittest discover -s .claude/skills/workboard -p "test_workboard.py" -v 2>&1 | grep -E "test_extract_agent_tree_nests_grandchild_under_parent|test_extract_agent_tree_empty_for_no_agent_calls|test_extract_agent_tree_node_fields|OK"` → all three new tests pass and suite reports `OK`.
-- [ ] `python3 -c "import ast; tree=ast.parse(open('.claude/skills/workboard/workboard.py').read()); print(any(isinstance(n, ast.FunctionDef) and n.name=='extract_agent_tree' for n in ast.walk(tree)))"` → prints `True`.
+- [x] `python3 -m unittest discover -s .claude/skills/workboard -p "test_workboard.py" -v 2>&1 | grep -E "test_extract_agent_tree_nests_grandchild_under_parent|test_extract_agent_tree_empty_for_no_agent_calls|test_extract_agent_tree_node_fields|OK"` → all three new tests pass and suite reports `OK`.
+- [x] `python3 -c "import ast; tree=ast.parse(open('.claude/skills/workboard/workboard.py').read()); print(any(isinstance(n, ast.FunctionDef) and n.name=='extract_agent_tree' for n in ast.walk(tree)))"` → prints `True`.

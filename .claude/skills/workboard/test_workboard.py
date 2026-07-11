@@ -1836,5 +1836,192 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         )
 
 
+def _agent_tool_use(tool_use_id, subagent_type="scout", desc="do the thing", ts=OLD_TS):
+    """An assistant record spawning a sub-agent (real transcript shape:
+    message.content holds a tool_use block named "Agent")."""
+    return {
+        "type": "assistant",
+        "timestamp": ts,
+        "message": {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "Agent",
+                    "id": tool_use_id,
+                    "input": {"description": desc, "subagent_type": subagent_type},
+                }
+            ]
+        },
+    }
+
+
+def _agent_tool_result(
+    tool_use_id, agent_id, status="completed", ts="2020-01-01T00:05:00Z"
+):
+    """A user record returning a sub-agent result. The terminal outcome the
+    harness records lives in the top-level `toolUseResult.status`, alongside
+    the spawned `agentId` — mirrors real transcripts."""
+    return {
+        "type": "user",
+        "timestamp": ts,
+        "toolUseResult": {"status": status, "agentId": agent_id},
+        "message": {
+            "content": [
+                {"type": "tool_result", "tool_use_id": tool_use_id, "content": "ok"}
+            ]
+        },
+    }
+
+
+def write_spawn_fixture(root, session_id, session_records, subagents):
+    """Build a session transcript + its `subagents/` sibling dir, matching the
+    real on-disk layout: `<root>/<session_id>.jsonl` is the parent transcript;
+    `<root>/<session_id>/subagents/agent-<id>.{jsonl,meta.json}` are the
+    spawned sub-agents. `subagents` is a list of (agent_id, meta, records).
+    The subagents dir is only created when there is at least one sub-agent."""
+    proj = Path(root)
+    proj.mkdir(parents=True, exist_ok=True)
+    session_path = proj / f"{session_id}.jsonl"
+    session_path.write_text(
+        "\n".join(json.dumps(r) for r in session_records) + "\n", encoding="utf-8"
+    )
+    if subagents:
+        subdir = proj / session_id / "subagents"
+        subdir.mkdir(parents=True)
+        for aid, meta, recs in subagents:
+            (subdir / f"agent-{aid}.meta.json").write_text(
+                json.dumps(meta), encoding="utf-8"
+            )
+            body = "\n".join(json.dumps(r) for r in recs)
+            (subdir / f"agent-{aid}.jsonl").write_text(
+                (body + "\n") if body else "", encoding="utf-8"
+            )
+    return session_path
+
+
+class TestExtractAgentTree(unittest.TestCase):
+    """R1-R4: extract_agent_tree parses a session transcript's Agent/Task
+    spawns into a nested tree, recursing through each sub-agent's own
+    transcript so grandchildren nest under their parent."""
+
+    def test_extract_agent_tree_nests_grandchild_under_parent(self):
+        # Session spawns A (depth 1); A's own transcript spawns B (depth 2).
+        with tempfile.TemporaryDirectory() as tmp:
+            session_records = [
+                _agent_tool_use("TU_A", subagent_type="implementation-worker"),
+                _agent_tool_result("TU_A", "A"),
+            ]
+            meta_a = {
+                "agentType": "implementation-worker",
+                "description": "parent work",
+                "toolUseId": "TU_A",
+                "spawnDepth": 1,
+            }
+            agent_a_records = [
+                _agent_tool_use("TU_B", subagent_type="scout"),
+                _agent_tool_result("TU_B", "B"),
+            ]
+            meta_b = {
+                "agentType": "scout",
+                "description": "child work",
+                "toolUseId": "TU_B",
+                "spawnDepth": 2,
+            }
+            session_path = write_spawn_fixture(
+                tmp,
+                "sess-nest",
+                session_records,
+                [("A", meta_a, agent_a_records), ("B", meta_b, [])],
+            )
+
+            tree = workboard.extract_agent_tree(session_path)
+
+            root_ids = [n["agentId"] for n in tree]
+            self.assertEqual(root_ids, ["A"])  # B is NOT a root
+            child_ids = [c["agentId"] for c in tree[0]["children"]]
+            self.assertEqual(child_ids, ["B"])  # B nested under A
+            self.assertEqual(tree[0]["children"][0]["spawnDepth"], 2)
+
+    def test_extract_agent_tree_empty_for_no_agent_calls(self):
+        # A session that never spawned a sub-agent -> empty tree, no exception.
+        with tempfile.TemporaryDirectory() as tmp:
+            session_records = [
+                {
+                    "type": "user",
+                    "timestamp": OLD_TS,
+                    "message": {"content": "hi"},
+                },
+                {
+                    "type": "assistant",
+                    "timestamp": OLD_TS,
+                    "message": {"content": [{"type": "text", "text": "ok"}]},
+                },
+            ]
+            session_path = write_spawn_fixture(tmp, "sess-empty", session_records, [])
+
+            self.assertEqual(workboard.extract_agent_tree(session_path), [])
+
+    def test_extract_agent_tree_node_fields(self):
+        # Every node exposes the R2 minimum field set, with derived values.
+        with tempfile.TemporaryDirectory() as tmp:
+            session_records = [
+                _agent_tool_use("TU_A", desc="verify it", ts="2020-01-01T00:00:00Z"),
+                _agent_tool_result("TU_A", "A", status="completed"),
+            ]
+            meta_a = {
+                "agentType": "verifier",
+                "description": "verify it",
+                "toolUseId": "TU_A",
+                "spawnDepth": 1,
+            }
+            session_path = write_spawn_fixture(
+                tmp, "sess-fields", session_records, [("A", meta_a, [])]
+            )
+
+            tree = workboard.extract_agent_tree(session_path)
+
+            self.assertEqual(len(tree), 1)
+            node = tree[0]
+            for field in (
+                "agentId",
+                "agentType",
+                "description",
+                "status",
+                "spawnDepth",
+                "started_ts",
+            ):
+                self.assertIn(field, node)
+            self.assertEqual(node["agentId"], "A")
+            self.assertEqual(node["agentType"], "verifier")
+            self.assertEqual(node["description"], "verify it")
+            self.assertEqual(node["status"], "completed")
+            self.assertEqual(node["spawnDepth"], 1)
+            self.assertEqual(
+                node["started_ts"], workboard.iso_to_ts("2020-01-01T00:00:00Z")
+            )
+
+    def test_extract_agent_tree_maps_error_status_to_failed(self):
+        # A sub-agent whose recorded outcome is an error reads as "failed"
+        # (fleet's status vocabulary), distinguishing a broken branch (R2/R7).
+        with tempfile.TemporaryDirectory() as tmp:
+            session_records = [
+                _agent_tool_use("TU_A"),
+                _agent_tool_result("TU_A", "A", status="error"),
+            ]
+            meta_a = {
+                "agentType": "scout",
+                "description": "broke",
+                "toolUseId": "TU_A",
+                "spawnDepth": 1,
+            }
+            session_path = write_spawn_fixture(
+                tmp, "sess-fail", session_records, [("A", meta_a, [])]
+            )
+
+            tree = workboard.extract_agent_tree(session_path)
+
+            self.assertEqual(tree[0]["status"], "failed")
+
+
 if __name__ == "__main__":
     unittest.main()
