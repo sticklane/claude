@@ -1953,6 +1953,18 @@ def render_workboard(b: dict, cost: dict | None = None) -> str:
             + '<div class="sub">By project</div>'
             + _cost_rows(cost.get("by_project"))
         )
+        # One re-prime line: count + cost for the window (spec R4). Sourced from
+        # the `reprime` section of the summary JSON. Older caches carry no
+        # `reprime` section — the line is simply omitted (no error, no
+        # placeholder), so the panel renders exactly as before.
+        reprime = cost.get("reprime")
+        if reprime:
+            n = reprime.get("count", 0)
+            cost_body += (
+                '<div class="sub">Re-prime (7d)</div>'
+                f'<div class="line"><span class="trunc">{esc(str(n))} re-primes</span>'
+                f'<span class="meta">{_usd(reprime.get("cost_microusd", 0))}</span></div>'
+            )
     cost_panel = (
         f'<div class="panel" id="panel-cost"><div class="sub">Cost (7d) · '
         f"{cost_value}</div>{cost_body}</div>"
