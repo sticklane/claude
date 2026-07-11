@@ -15,7 +15,9 @@ task number — or the single line `nothing to reprioritize` when none qualify.
 
 Stdlib only. Read-only: never mutates anything it scans.
 
-See specs/prioritize/SPEC.md (R1, R2) for the requirements this implements.
+Implements the requirements from the source toolkit's
+specs/prioritize/SPEC.md (R1, R2); that spec is not part of a standalone
+Antigravity install.
 """
 
 import importlib.util
