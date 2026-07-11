@@ -72,8 +72,9 @@ hand-adapted wording); write a content-coverage check instead (e.g. grep
 for the concepts/identifiers that must land).
 
 A version-bump acceptance criterion must assert the value **changed from
-the value at the task's own base commit** (e.g. compare `git show
-<base-commit>:<path>` against the current on-disk version), never a
+the value at the task's own base commit** — compare the path's content at
+that base revision against the current on-disk version
+(e.g., under git: `git show <base-commit>:<path>`), never a
 hard-coded pre-task literal — a sibling task can land first and bump the
 same file, so a pinned literal false-fails once the on-disk value has
 already moved past it.
