@@ -31,6 +31,7 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 	nameTurns := fs.Bool("name-turns", false, "rename uninformative turn frames via one cached haiku call")
 	reprimeThreshold := fs.Int("reprime-threshold", claude.DefaultReprimeThreshold, "cache_write_tokens above which a non-first main-loop call is labeled reprime=true (0 disables)")
 	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (default stdout)")
+	frameDenylist := fs.String("frame-denylist", defaultFrameDenylist(), "path to a frame denylist file (one substring per line); any frame containing a listed string is redacted before emit")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -60,6 +61,12 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
+	denied, err := claude.LoadDenylist(*frameDenylist)
+	if err != nil {
+		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
+		return 1
+	}
+
 	samples, turns, skipped, err := claude.CollectWithReprime(*dir, cutoff, *reprimeThreshold)
 	if err != nil {
 		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
@@ -68,6 +75,9 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 	if skipped > 0 {
 		fmt.Fprintf(stderr, "skipped %d unparseable lines\n", skipped)
 	}
+	// Redact denylisted frames before any emit path (merge, summary, or direct);
+	// re-applied after --name-turns below since renaming rewrites turn frames.
+	claude.ScrubFrames(samples, denied)
 
 	if *mergePath != "" {
 		return mergeClaude(samples, *mergePath, *out, *summaryPath, stdout, stderr)
@@ -86,6 +96,7 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 	}
 	if *nameTurns {
 		nameTurnFrames(samples, turns, stderr)
+		claude.ScrubFrames(samples, denied)
 	}
 	if err := output.Write(samples, *out, stdout); err != nil {
 		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
@@ -214,4 +225,15 @@ func defaultClaudeDir() string {
 		return ".claude"
 	}
 	return filepath.Join(home, ".claude")
+}
+
+// defaultFrameDenylist is $HOME/.config/agentprof/frame-denylist. A missing
+// file is treated as no denylist (LoadDenylist), so this default is safe even
+// when nothing is configured.
+func defaultFrameDenylist() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(".config", "agentprof", "frame-denylist")
+	}
+	return filepath.Join(home, ".config", "agentprof", "frame-denylist")
 }
