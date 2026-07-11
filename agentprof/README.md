@@ -52,7 +52,23 @@ they additionally get a `wf:<workflowName>` frame (once per spawn chain,
 inherited by any agents the workflow agent spawns) to keep distinct workflows
 apart in the flame graph. Subagents whose spawn linkage can't be resolved
 (e.g. a missing meta file, or a workflow run that never appears in the
-transcript) land under an `(unlinked)` frame instead of a turn. For a
+transcript) land under an `(unlinked)` frame instead of a turn.
+
+Agent frames appear in two forms — bare (`agent:verifier`) and
+plugin-namespaced (`agent:agentic:verifier`) — and both are the *same*
+logical agent; the difference records where Claude Code resolved the
+definition from. A bare name means the agent was dispatched from a
+**repo-local `.claude/agents/` definition** (the norm in a checkout that
+carries its own `scout`/`verifier`/`critic`/`implementation-worker` files,
+such as the toolkit's dev checkout); the `agentic:` prefix means the same
+agent was served by the installed **`agentic` plugin**, whose namespace the
+transcript records verbatim. The adapter passes `agentType` straight through
+(`agent:` + agentType) with no normalization, so — unlike skill frames, which
+strip the plugin namespace so `agentic:build` and `build` collapse into one —
+agent frames keep theirs, and the two dispatch sources stay distinguishable.
+So expect bare frames from sessions whose cwd is a checkout with its own
+`.claude/agents/`, and prefixed frames from every other repo dispatching via
+the plugin; it is an attribution nuance, not a defect. For a
 terminal summary:
 
 ```sh
