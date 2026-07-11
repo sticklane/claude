@@ -1,6 +1,6 @@
 # Task 04: Closing gate — full test-suite sweep
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 3 turns
@@ -31,8 +31,8 @@ goes back to whichever task owns the failing path.
 
 ## Acceptance
 
-- [ ] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done` → no `FAIL` lines
-- [ ] `cd antigravity/.agents/skills/workboard && python3 -m pytest -q` → 93 passed
-- [ ] `cd antigravity/.agents/skills/list-specs && python3 -m pytest -q` → 30 passed
-- [ ] `cd antigravity/.agents/skills/prioritize && python3 -m pytest -q` → 17 passed
-- [ ] `cd antigravity/.agents/skills/_shared && python3 -m pytest -q` → 22 passed
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done` → no `FAIL` lines
+- [x] `cd antigravity/.agents/skills/workboard && python3 -m pytest -q` → 93 passed
+- [x] `cd antigravity/.agents/skills/list-specs && python3 -m pytest -q` → 30 passed
+- [x] `cd antigravity/.agents/skills/prioritize && python3 -m pytest -q` → 17 passed
+- [x] `cd antigravity/.agents/skills/_shared && python3 -m pytest -q` → 22 passed
