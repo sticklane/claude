@@ -69,9 +69,9 @@ and the headless `--max-turns` cap; `Priority` is an optional tie-break
 every dependency is `done`. `Status: draft` stubs (discovered work,
 step 3) are never dispatchable directly — drain's **stub intake** (the
 exhaustion-triggered branch below, after critique intake) screens and
-gates actionable ones, then defers their `draft` → `pending` flip past
-the authoring run (below); a human audits every promotion via the exit
-checklist.
+gates actionable ones, then flips gate-PASSED stubs `draft` → `pending`
+in the same run (maintainer decision 2026-07-11); a human audits every
+promotion via the exit checklist and may demote.
 
 **Claim the owner lease, before reporting the plan below.** The full procedure
 — DRAIN-OWNER.md format, compare-and-swap re-read confirming YOUR `Run-token:`
@@ -332,7 +332,7 @@ the workers live. Loop to step 2 while anything is dispatchable. This session
 growing heavy mid-queue is step 3a's degradation override — hand off via the
 baton, don't wait for a human to notice.
 
-## 3a. Baton pass (attended relaunch)
+## 3a. Baton pass (self-relaunch)
 
 Emit `<!-- agentprof:stage=baton-pass -->` verbatim as this step's opening
 line every time you enter it.
@@ -351,28 +351,26 @@ the hub can check, so a wider window W — which accumulates hub context faster
 per generation (each in-flight worker adds a verdict wake) — batons sooner
 (W=1→5 verdicts, W=3→3, W=5→2), keeping the hub small enough that per-verdict
 re-caching stays cheap (wake economics, step 2). On fire: write the baton `specs/<slug>/DRAIN-BATON.md` (grammar +
-relaunch instruction in [reference.md](reference.md)), report the pass with
-the relaunch command printed for the HUMAN to run in a fresh session, and
-**end your turn at once, stating this session will not touch the queue
-again** (one-writer invariant). Drain **never spawns its own successor** —
-no detached/headless generations, ever: the maintainer policy in
-`.claude/rules/token-discipline.md` ("Awaited children, never detached")
-covers orchestrator generations too, and a headless hub runs unsupervised
-merges and pushes no human sanctioned (policy tightened 2026-07-11). Every
-generation is therefore human-launched and attended; /drain remains a
-human-gate at every generation boundary, not just gen 1. A
-**max-generations cap of 10** stops with the baton written + a
-needs-attention note instead of offering another relaunch. The
+relaunch command in [reference.md](reference.md)), spawn the successor
+generation (awaited where a parent can supervise; else headless), report the
+pass, and **end your turn at once, stating this session will not touch the
+queue again** (one-writer invariant). A **max-generations cap of 10** stops
+with the baton written + a needs-attention note instead of respawning. The
 **baton is always the first escape**; the **/handoff** escape applies only
 where the baton cannot — once this generations cap is exhausted (or in
 attended /build), the session writes the /handoff file and leads its exit
-checklist (step 4) with the resume command instead of continuing degraded. The **fresh-instance ritual (R1a)** before any dispatch —
+checklist (step 4) with the resume command instead of continuing degraded.
+**Gen 1 is always attended**; passing `attended` in the /drain invocation
+makes every trigger OFFER the baton + relaunch command instead of
+self-relaunching. The **fresh-instance ritual (R1a)** before any dispatch —
 reconcile DRAIN-OWNER.md against the baton (`Run-token:` + `Generation:`; a
 mismatch falls to step 1's refuse path), seed 3b's, critique intake's, and
 stub intake's attempted-and-failed sets from the baton's `Breakdown-failed:`
 / `Intake-failed:` / `Stub-intake-failed:` lines, then run ONE cheap
-verification to catch drift — is detailed in reference.md's "Baton pass".
-The final generation deletes the baton when the queue completes.
+verification to catch drift — is detailed in reference.md's "Baton pass". A
+headless generation reaching the batch interview writes its deferred
+questions into the baton and stops; the final generation deletes the baton
+when the queue completes.
 
 ## Critique intake (fires at the exhaustion trigger, before 3b)
 
@@ -429,16 +427,15 @@ Original report` block, plus runnable criteria and `Touch:`/`Budget:`/
   closing evidence); drain — the sole queue writer — acts. On PASS (and a
   DECISION-SHAPED stub with a justifiable default in `## Answers`), drain
   writes the authored content tagged `Promotion-ready: true` +
-  `Promoted-by-run: <this invocation's Run-token>` **WITHOUT** flipping
-  `Status` to `pending` this run — deferred past the authoring run,
-  excluded from stub intake's own re-scan from then on. Gate-confirmed
-  OBSOLETE writes `Status: obsolete` + a `Closed:` line; else stays draft,
-  untagged. Step 1 later converts `Promotion-ready: true` → `pending`
-  (stripping `## Original report` same commit) ONLY when a drain
-  invocation's own `Run-token:` differs from `Promoted-by-run:` — a
-  genuinely new run, NOT gated on `DRAIN-BATON.md` presence — after the
-  remote-divergence check and owner-lease claim. Full rules in
-  reference.md's "Stub intake" and "Draft status".
+  `Promoted-by-run: <this invocation's Run-token>` (audit trail) AND flips
+  `Status` to `pending` in the same commit, stripping `## Original
+  report` — the stub is dispatchable this run (maintainer decision
+  2026-07-11; the earlier deferred-past-the-authoring-run split is
+  retired). Gate-confirmed OBSOLETE writes `Status: obsolete` + a
+  `Closed:` line; else stays draft, untagged. Step 1 converts any legacy
+  `Promotion-ready: true` draft left by a pre-2026-07-11 run to `pending`
+  unconditionally, after the remote-divergence check and owner-lease
+  claim. Full rules in reference.md's "Stub intake" and "Draft status".
 
 Every promotion, closure, and refusal is audited in step 4's checklist
 (below); a human may demote any auto-promoted task back to `draft` via a
@@ -511,13 +508,12 @@ checklist** for the human — **each entry names a file path**:
    stub, with its file, for a human to promote `draft` → `pending`
    (`Promotion-ready: true` stubs excluded — see section 6).
 6. **Promoted this run** — every stub stub intake acted on: each stub
-   tagged `Promotion-ready: true` (source of its criteria; already
-   authored and gated, auto-promotes next run with a different
-   `Run-token`, not awaiting a human — print its exact `Demoted:` line to
-   reverse it, e.g. `Demoted: <ISO-date> — <reason>`, permanently
-   respected), each `Status: obsolete` closure (`Closed:` evidence), and
-   each screen-refused or gate-failed stub — every auto-promotion audited,
-   task file for each.
+   promoted to `pending` (tagged `Promotion-ready: true`, source of its
+   criteria, whether it was dispatched this run — print its exact
+   `Demoted:` line to reverse it, e.g. `Demoted: <ISO-date> — <reason>`,
+   permanently respected), each `Status: obsolete` closure (`Closed:`
+   evidence), and each screen-refused or gate-failed stub — every
+   auto-promotion audited, task file for each.
 7. **Next commands** — the exact commands to resume.
 
 One interview and one checklist per session; "Nothing needs you" is a valid

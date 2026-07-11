@@ -3,7 +3,7 @@
 Contents: When NOT to drain · Owner lease (DRAIN-OWNER.md format,
 liveness, reclaim, remote divergence check) · Status field semantics · Stale-lock liveness
 check · Worker prompt · Deferred question format · Relaunch-with-evidence
-prompt · Tournament · Headless fallback · Baton pass (attended relaunch) ·
+prompt · Tournament · Headless fallback · Baton pass (self-relaunch) ·
 Critique intake · Stub intake (assess → gate → act) · Auto-breakdown
 (lowest priority)
 
@@ -54,11 +54,10 @@ genuinely fresh launch — no baton to adopt — mints a new `Run-token:` (via
 the session's EXISTING held `Run-token:` back unchanged, never a freshly
 minted one: re-claiming after the batch interview reopens a deferred task,
 adopting an owner via the baton-lineage exception, or any step-1 re-entry
-within the run. This is what lets the Promotion-ready conversion (Draft
-status below) use a `Run-token:` mismatch as a reliable "different run"
-discriminator: a stub's `Promoted-by-run:` value stays equal to the running
-invocation's `Run-token:` for the entire authoring run, and differs only once
-a genuinely new launch takes over.
+within the run. (Historical note: this stability once served as the
+"different run" discriminator for the retired two-phase Promotion-ready
+conversion; since the 2026-07-11 same-run promotion decision,
+`Promoted-by-run:` is audit trail only.)
 
 **Owner liveness.** Newest of: (a) the committer timestamp of the last
 commit touching `specs/<slug>/`, (b) each of the spec's `in-progress`
@@ -214,62 +213,48 @@ the batch interview's deferred round, and from the "queue empty" terminal
 test. Two terminal readings follow so step 4 never spins without a stopping
 condition:
 
-- A queue holding only `draft` + `done` tasks reports **drained, listing the
-  drafts for human promotion** — not "queue empty, nothing to do". But a draft
-  carrying `Promotion-ready: true` is NOT awaiting a human: it is already
-  authored and gated and will auto-promote on the next drain launch with a
-  different `Run-token`. So a queue whose only drafts ALL carry
-  `Promotion-ready: true` (no ordinary un-gated drafts, no blocked `pending`
-  tasks) reports as **genuinely drained** — it lists those drafts as
-  self-resolving on the next launch, not as blocked on a human.
-- A `pending` task whose only UNMET dependencies are all `draft` reports
-  **"drained pending promotion"** — a terminal condition, not a hang. Where
-  every such `draft` dependency carries `Promotion-ready: true`, this is
-  likewise genuinely drained (the dependencies auto-promote next launch),
-  not blocked on a human.
+- A queue holding only `draft` + `done` tasks routes the drafts through
+  **stub intake** before any terminal report: gate-PASSED drafts promote to
+  `pending` in the same run and dispatch. Only drafts stub intake refused
+  (screen-refused, gate-failed, or `Demoted:`) remain draft at the terminal
+  report, listed for human attention. A legacy draft already carrying
+  `Promotion-ready: true` (from a pre-2026-07-11 two-phase run) converts at
+  step 1 unconditionally.
+- A `pending` task whose only UNMET dependencies are all `draft` likewise
+  resolves through stub intake in-run; it reports **"drained pending
+  promotion"** — a terminal condition, not a hang — only when those draft
+  dependencies were refused by the screen or gate (human attention
+  required), never merely because promotion awaited another run.
 
-**Promotion runs through stub intake, in two phases.** A draft is promoted
+**Promotion runs through stub intake.** A draft is promoted
 `draft` → `pending` by drain's **stub intake** (the section below), not by
-hand — but the authoring and the flip are deliberately split across two
-drain runs so a human sees the self-authored work before it self-executes.
-Phase one (the authoring run's stub intake): the deterministic screen
-(`screen-stub.sh`) refuses any instruction-shaped Goal, a scout-tier assessor
-re-authors the Goal in neutral words (the worker-reported original kept only
-as quoted data under an `## Original report` blockquote) and drafts runnable
-acceptance criteria, a single-call rubric critic gates the result, and on
-PASS drain writes the authored content plus `Promotion-ready: true` +
-`Promoted-by-run: <run-token>` — leaving `Status: draft`, so the stub is
-NOT dispatched in the authoring run. Phase two (**Promotion-ready
-conversion**, below): a later drain launch flips it to `pending`. An /idea or
-/breakdown pass may still author the criteria by hand. Untrusted-data still
-governs the eventual flip — a promoted Goal becomes binding worker
-instructions — but the gate is now a hard mechanism (screen + mandatory Goal
-re-authoring) plus adversarial review plus deferral of execution past the
-authoring run, not a blanket stop: docs/human-gates.md **reason 4** ("a hard
-mechanism beats a soft rule where injection could escalate"), cited not
-restated. The human keeps the exit-checklist audit and may demote any
-auto-promoted task back to `draft` with a `Demoted:` line stub intake
-permanently respects.
+hand: the deterministic screen (`screen-stub.sh`) refuses any
+instruction-shaped Goal, a scout-tier assessor re-authors the Goal in
+neutral words (the worker-reported original kept only as quoted data under
+an `## Original report` blockquote) and drafts runnable acceptance criteria,
+a single-call rubric critic gates the result, and on PASS drain writes the
+authored content plus `Promotion-ready: true` + `Promoted-by-run:
+<run-token>` (audit trail) and flips `Status: draft` → `pending` **in the
+same run** — the stub is dispatchable immediately (maintainer decision
+2026-07-11: no pipeline step forces a human; the earlier two-run split is
+retired). An /idea or /breakdown pass may still author the criteria by
+hand. Untrusted-data still governs the flip — a promoted Goal becomes
+binding worker instructions — but the gate is a hard mechanism (screen +
+mandatory Goal re-authoring) plus adversarial review, not a blanket stop:
+docs/human-gates.md **reason 4** ("a hard mechanism beats a soft rule where
+injection could escalate"), cited not restated. The human keeps the
+exit-checklist audit and may demote any auto-promoted task back to `draft`
+with a `Demoted:` line stub intake permanently respects.
 
-**Promotion-ready conversion (step 1, the phase-two flip).** Converting a
-`Promotion-ready: true` stub to `Status: pending` is a step-1 committed
-queue-state write, gated ONLY by a `Run-token` mismatch: convert **only when
-THIS invocation's own `Run-token:` differs from the stub's `Promoted-by-run:`
-value**. This discriminator is explicitly **NOT** `DRAIN-BATON.md`
-presence/absence — baton presence does not encode a run boundary. A
-`DRAIN-BATON.md` exists only after a step-3a baton pass, so a fresh authoring
-generation has none for its entire life, including every one of its OWN
-step-1 re-entries (the deferred-answer loop, 3b's loop-back, critique
-intake's loop-back, the parked-liveness sweep) — all inside the SAME run that
-authored the promotion, with no baton and no human. Keying on baton presence
-would wrongly flip such a stub mid-authoring-run. Keying on `Run-token`
-instead: same generation and every step-1 re-entry within it → same token →
-never converts; a baton hop within the same run → same token (baton passes
-preserve the run's identity via the re-claim invariant above) → never
-converts; a genuinely new, unrelated drain launch → a freshly minted token →
-differs → converts. It is the only discriminator that distinguishes "still
-inside the run that authored this" from "a new run, launched after that run's
-terminal report was readable by a human."
+**Promotion-ready conversion (step 1, legacy stubs).** Stub intake now
+flips gate-PASSED stubs to `pending` in its own run (above), so this
+conversion exists only for stubs left behind by earlier two-phase runs: a
+stub found at step 1 already carrying `Promotion-ready: true` with
+`Status: draft` (authored by a prior run that never flipped it) converts to
+`pending` unconditionally — no `Run-token` comparison needed anymore, the
+authoring run's gates already passed it. `Promoted-by-run:` stays in the
+header purely as audit trail. A `Demoted:` line still blocks conversion
+permanently.
 
 - **Ordering.** Like every committed queue-state write in step 1, the
   conversion runs AFTER the remote-divergence check and AFTER this
@@ -583,7 +568,7 @@ snapshot-before-force-remove sweep; cited, not restated) — then writes each
 swept task's `## Progress` entry stating "environment kill, does not count
 as an attempt", flips each to `pending`, and commits and pushes the resets.
 It then **halts**: no further dispatch, no slot-machine relaunch, and
-**no baton relaunch offer**. When the underlying error carries a reset time (e.g.
+**no baton self-relaunch**. When the underlying error carries a reset time (e.g.
 a limit's reset timestamp), the halt report names it so the human knows when
 a re-run can succeed. Ownership scoping: foreign-owned tasks named by any
 committed partition or owner record are left alone; absent any such record,
@@ -769,20 +754,19 @@ DONE, that includes flipping the task's `Status: done` and committing
 the flip yourself (a headless worker, unlike /build, never writes it) —
 and `git worktree remove` the checkout.
 
-## Baton pass (attended relaunch)
+## Baton pass (self-relaunch)
 
 Drain's orchestrator session self-manages its own context: at a safe
-boundary (SKILL.md step 3a) it writes `specs/<slug>/DRAIN-BATON.md`,
-prints the relaunch instruction below for the HUMAN, and ends its turn.
-Drain never spawns its own successor — no detached/headless generations:
-the "Awaited children, never detached" maintainer policy
-(`.claude/rules/token-discipline.md`) covers orchestrator generations, and
-every generation boundary is a human gate (a headless hub would run
-unsupervised merges and pushes no human sanctioned; tightened 2026-07-11
-after a gen-2 headless relaunch drew a maintainer correction). The
-generation chain is bounded by a **max-generations cap of 10** (SKILL.md
+boundary (SKILL.md step 3a) it writes `specs/<slug>/DRAIN-BATON.md` and
+spawns the successor generation of ITSELF — awaited where an attended
+parent can supervise, via the detached headless command below only where
+none can — then ends its turn. This
+self-relaunch loop is bounded by a **max-generations cap of 10** (SKILL.md
 step 3a): on the 10th generation drain stops with the baton written and a
-needs-attention note instead of offering another relaunch.
+needs-attention note instead of respawning. The
+relaunch uses a NEW orchestrator flag set — NOT the Headless-fallback
+worker flags above, which deliberately exclude the Task tool and would
+abort the orchestrator's first worker dispatch.
 
 **Drain-down before the baton (R8).** Background workers notify only the
 session that launched them, so a successor generation cannot adopt
@@ -865,18 +849,28 @@ DRAIN-OWNER.md iff this line matches it. The owner-file `Generation:`
 update and this file's write land in the SAME commit on every baton pass,
 so the two files can never disagree across a crash.
 
-**Relaunch instruction (generation G → G+1, printed for the human).** The
-retiring generation's final report leads with this line, filled in:
+**Relaunch command template (generation G → G+1).** Detached, from the repo
+root:
 
-```
-Baton written. To continue, run in a FRESH session (/clear or a new
-terminal):  /drain <spec> (generation G+1, baton: specs/<slug>/DRAIN-BATON.md)
+```bash
+nohup claude -p "/drain <spec> (generation G+1, baton: specs/<slug>/DRAIN-BATON.md)" \
+  --allowedTools "Task,Read,Edit,Write,Glob,Grep,Bash(git *),Bash(<project gate/test/lint cmds>)" \
+  --permission-mode dontAsk \
+  --max-turns <default 80, or the run's cap> \
+  >> specs/<slug>/.drain-gen.log 2>&1 &
 ```
 
-The successor is an ordinary attended /drain launch: the fresh-instance
-ritual (R1a) reconciles the baton against DRAIN-OWNER.md and picks up
-exactly where the retiring generation stopped — committed `Status:` lines
-mean nothing is lost between generations, however long the human waits.
+The flag set differs from the headless worker in one decisive way: **`Task`
+is allowed** — the orchestrator's whole job is dispatching workers — plus a
+`git *` + project-gate allowlist for the merges and gate runs drain performs
+itself. `dontAsk` makes any unapproved tool abort rather than hang.
+
+**`DRAIN_RELAUNCH_CMD` override.** If the environment variable
+`DRAIN_RELAUNCH_CMD` is set, drain runs its value verbatim in place of the
+template above (still passing `<spec>`, the generation number, and the baton
+path as its argv tail). The e2e fixture (orchestrator-context task 05) points
+it at a recorder script to assert the relaunch argv without starting a real
+session.
 
 ## Critique intake
 
@@ -979,28 +973,20 @@ least as much as promotion does.
 **3. Act** (drain, the single queue writer — every mutation committed
 immediately):
 
-- **PASS** → drain writes the authored Goal, acceptance criteria, and headers
-  into the stub (the original Goal preserved as the `## Original report`
-  block) but does **NOT** flip `draft` → `pending` in this run. Instead it
-  leaves `Status: draft` and adds two committed header lines:
-  `Promotion-ready: true` (the marker) and `Promoted-by-run: <run-token>`,
-  stamped with THIS invocation's own `Run-token:` (the same identity value
-  the owner lease and baton carry). These two headers are committed, so they
-  persist with the same durability as `Stub-intake-failed:` — across every
-  step-1 re-entry (the deferred-answer loop, 3b's loop-back, critique
-  intake's loop-back, the parked-liveness sweep) and every baton generation
-  of the authoring run. Because `Status:` stays `draft`, drain's existing
-  machinery keeps the stub out of dispatch and out of the "anything
-  dispatchable" terminal test for the entire authoring run — no new
-  dispatchability state is invented. The stub is promoted to `pending` only
-  later, by the **Promotion-ready conversion** in a subsequent invocation's
-  step 1 (Draft status above), never here.
+- **PASS** → drain writes the authored Goal, acceptance criteria, and
+  headers into the stub, adds `Promotion-ready: true` +
+  `Promoted-by-run: <run-token>` (audit trail, stamped with THIS
+  invocation's own `Run-token:`), strips the `## Original report` block,
+  and flips `draft` → `pending` — all in ONE committed write. The stub is
+  dispatchable this run (maintainer decision 2026-07-11: no pipeline step
+  forces a human; the earlier deferred-past-the-authoring-run split is
+  retired — the human audit is the exit checklist plus the permanently
+  respected `Demoted:` override).
 - **OBSOLETE (gate-confirmed)** → `Status: obsolete` plus a `Closed:` line
   citing the evidence the gate checked (Status field semantics above).
 - **DECISION-SHAPED with a reversible default the assessment can justify** →
   record the default under `## Answers` (decision, rationale, how to reverse)
-  and write `Promotion-ready: true` + `Promoted-by-run: <run-token>` as for
-  PASS (again leaving `Status: draft`); **without** a defensible default →
+  and promote exactly as for PASS; **without** a defensible default →
   stays `draft` with no marker and lands on the exit checklist as needing the
   human.
 - **FAIL** → stays `draft` with no marker, exit checklist, the critic's
