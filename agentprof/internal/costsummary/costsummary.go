@@ -17,6 +17,12 @@ import (
 // value (project name, skill frame, agent frame, or model name) to a
 // sample_type -> total map; Totals sums each sample_type across all samples.
 // Field order fixes the JSON key order.
+//
+// by_model carries two non-model sentinel rows: `(tools)` holds the duration of
+// tool-duration samples (which have no model frame), and `<synthetic>` is the
+// explicitly-labeled row for synthetic pseudo-model samples — its bracketed name
+// marks it as non-model, and its `calls` are kept as-is rather than excluded
+// (SPEC R4). Neither key is ever `main`.
 type Summary struct {
 	ByProject     map[string]map[string]int64 `json:"by_project"`
 	BySkill       map[string]map[string]int64 `json:"by_skill"`
@@ -208,18 +214,35 @@ func agentType(stack []string) (string, bool) {
 	return "", false
 }
 
-// modelLeaf returns the last (leaf) frame that isn't a tool:/role:/stage:
-// frame — forward-compatible with the instrumentation spec's new frame kinds,
-// which are ignored here.
+// toolsSentinel is the by_model key for samples that carry no model frame —
+// tool-duration samples, whose model leaf was replaced by a tool:<name> frame.
+// Booking their duration here keeps the structural `main`/`agent:` frames out
+// of by_model, where they read as bogus "models" (SPEC R4).
+const toolsSentinel = "(tools)"
+
+// modelLeaf returns the model frame for a sample: the leaf frame after skipping
+// any trailing tool:/role:/stage: marker frames (forward-compatible with the
+// instrumentation spec's new frame kinds). A sample carries no model frame when
+// that leaf-most non-marker frame is structural — the `main` loop frame or an
+// `agent:` frame, which are the model slot's parents; such samples (main-loop
+// and subagent tool-duration samples) bucket under the (tools) sentinel so
+// `main` never appears as a by_model key (SPEC R4). The `<synthetic>` leaf is a
+// non-model pseudo-frame, but is left as-is: it keeps its own explicitly-labeled
+// by_model row (its bracketed name marks it as synthetic) rather than being
+// folded into (tools). The bool is always true for a non-empty stack — every
+// sample maps to some by_model bucket, a real model or (tools).
 func modelLeaf(stack []string) (string, bool) {
 	for i := len(stack) - 1; i >= 0; i-- {
 		f := stack[i]
 		if strings.HasPrefix(f, "tool:") || strings.HasPrefix(f, "role:") || strings.HasPrefix(f, "stage:") {
 			continue
 		}
+		if f == "main" || strings.HasPrefix(f, "agent:") {
+			return toolsSentinel, true
+		}
 		return f, true
 	}
-	return "", false
+	return toolsSentinel, true
 }
 
 // distinctSessions counts distinct non-empty Labels["session"] values across
