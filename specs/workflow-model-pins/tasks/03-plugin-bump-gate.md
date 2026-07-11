@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 3 turns
@@ -27,8 +27,8 @@ antigravity analog; creating ports would be a defect).
 
 ## Acceptance
 
-- [ ] `claude plugin validate .` → passes
-- [ ] plugin.json version differs from the value at this task's base
-  commit: `git show $(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD~3):.claude-plugin/plugin.json | grep '"version"'` vs current → changed
-- [ ] `git log --oneline --name-only -20 | grep -c '^antigravity/'` over
-  this spec's commits → 0 antigravity paths touched
+- [x] `claude plugin validate .` → passes — "✔ Validation passed" (see evidence/03-plugin-bump-gate.md)
+- [x] plugin.json version differs from the value at this task's base
+  commit: `git show $(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD~3):.claude-plugin/plugin.json | grep '"version"'` vs current → changed — base 0.8.40 → current 0.8.41
+- [x] `git log --oneline --name-only -20 | grep -c '^antigravity/'` over
+  this spec's commits → 0 antigravity paths touched — this task's diff touches only .claude-plugin/plugin.json + the task/evidence files
