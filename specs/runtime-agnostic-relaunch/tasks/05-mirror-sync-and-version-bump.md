@@ -1,6 +1,6 @@
 # Task 05: Antigravity workboard mirror sync + plugin version bump
 
-Status: pending
+Status: in-progress
 Depends on: 02, 03
 Priority: P2
 Budget: 12 turns
