@@ -103,8 +103,12 @@ Every worker runs at the **implementation-worker tier pin** on attempt 1
 (Claude default: `opus`; `runtimes/` profiles map it) — step 3 walks failures
 up the ladder (a single frontier-tier relaunch, then one frontier
 tournament), each delegating mechanical scouting to Haiku (`effort: low`)
-scouts and returning only a structured **verdict + evidence**, never its
-transcript (`.claude/rules/token-discipline.md`, Dispatch authoring).
+scouts and returning only a structured **verdict + evidence** capped at
+≤ 2k tokens, never its transcript (`.claude/rules/token-discipline.md`, Dispatch
+authoring). The cap is enforced in the worker prompt itself (reference.md's
+final-message contract) — status, merged-commit/branch, per-criterion
+pass/fail with one-line evidence, and deferred items only; no transcripts,
+full diffs, or raw test output.
 
 Before the first dispatch, ensure `.claude/worktrees/` is gitignored. The
 worker prompt force-syncs its worktree base against drain's committed flips,
@@ -122,6 +126,21 @@ reorders the queue mid-run.
 keeps up to **W** workers in flight at once and tops the window up on every
 verdict. At W=1 this is today's sequential drain: one worker, admitted alone,
 merged before the next.
+
+**Wake economics — keep the hub context small.** Awaited workers routinely run
+5–30 minutes, longer than the harness's 5-minute prompt-cache TTL, so every
+verdict-collection wake lands after the hub's cached prefix has expired and
+re-caches the **whole** hub context at the 1.25× cache-write input rate. The
+cost per wake is `context_tokens × input_rate × 1.25` — so the hub's *size*,
+not the number of wakes, is the cost lever: shrinking the hub context makes
+per-verdict re-caching noise, while a fat hub pays it on every worker. Measured
+shape (see ../EVIDENCE.md, 2026-07-04→11): median rewrite 187k tokens, 268
+TTL-expiry wakes costing $587 in one week — this is why the verdict cap above,
+the merge-time re-read ban below, and the context-budget baton (step 3a) all
+exist. Because the hub's judgment lives in the task files and pinned worker
+tiers rather than in the hub session's own model, run a dedicated drain hub on
+the default (`opus`) tier or below: a frontier hub model roughly doubles wake
+cost for no quality gain.
 
 **Window size W.** Default **1** (today's behavior); a `Parallel-window: N`
 header in the drained SPEC.md sets W=N, and an explicit /drain request
@@ -203,7 +222,18 @@ so a per-session emission would misattribute later iterations.
 '*/tasks/*.md'`): changes only in the worker's own task file and only in
   the allowed set — Status line, checkbox ticks, evidence lines, the plan
   block. Anything else is a post-verification edit riding in: treat it as a
-  merge failure (the slot-machine path below). Then merge the task branch
+  merge failure (the slot-machine path below). **MUST NOT (wake economics):
+  at merge/verdict time the hub never pulls the worker's *code diffs* or the
+  *worker's own check/test output* into its own context — a path-scoped
+  `git diff --stat` plus the ≤ 2k-token verdict is the ceiling; when the hub
+  genuinely needs file contents it dispatches a scout, never reading them
+  inline.** Explicitly EXEMPT (shipped machinery this ban must not weaken):
+  the append-only whitelist content diff over `tasks/` (the diff just above),
+  CAS re-reads of `Status:` header lines (step 2), `## Progress` /
+  `## Deferred` / `## Decisions` append edits, and the hub's OWN post-merge
+  project-gate run — its pass/fail plus the bounded output tail already
+  specified for relaunch evidence (reference.md's Relaunch-with-evidence
+  prompt, ~609). Then merge the task branch
   (it carries the task file with `Status: done` and ticked boxes, per
   /build; for queues using the `specs/<slug>/ layout` it also carries the
   verifier's `evidence/` file — for other layouts the task file's inline
@@ -309,11 +339,18 @@ line every time you enter it.
 
 At each safe boundary (a verdict just recorded and committed, or a 3b
 auto-breakdown attempt) evaluate the relaunch **trigger**: a generation
-budget — hand off every 4 recorded verdicts this session (an auto-breakdown
-attempt counts as one; a `Relaunch-every: N` header in the drained SPEC.md
-overrides N) — or a **degradation override** on re-reading files already
-read, losing queue position, repeated failed corrections, or a compaction
-event. On fire: write the baton `specs/<slug>/DRAIN-BATON.md` (grammar +
+budget — hand off after **`max(2, 6 − W)` recorded verdicts** this session,
+whichever comes first with the ~4-verdict boundary (an auto-breakdown attempt
+counts as one; a `Relaunch-every: N` header in the drained SPEC.md overrides
+it) — or a **degradation override** on re-reading files already read, losing
+queue position, repeated failed corrections, or a compaction event. The
+`max(2, 6 − W)` count is a deterministic, size-adaptive stand-in for the
+one-rule ideal "after ~4 verdicts OR when the hub's context is heavy, whichever
+comes first": the harness exposes no reliable in-session context-size signal
+the hub can check, so a wider window W — which accumulates hub context faster
+per generation (each in-flight worker adds a verdict wake) — batons sooner
+(W=1→5 verdicts, W=3→3, W=5→2), keeping the hub small enough that per-verdict
+re-caching stays cheap (wake economics, step 2). On fire: write the baton `specs/<slug>/DRAIN-BATON.md` (grammar +
 relaunch command in [reference.md](reference.md)), spawn the successor
 generation (awaited where a parent can supervise; else headless), report the
 pass, and **end your turn at once, stating this session will not touch the
