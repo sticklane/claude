@@ -1,6 +1,6 @@
 # Task 03: `drain/reference.md` baton grammar goes runtime-agnostic
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 20 turns
