@@ -73,7 +73,7 @@ timestamps and worktree/branch signals, never on what this session's
 **Reclaim (foreign-reclaim tightening).** When every signal is stale, a
 task is swept — per the Stale-lock liveness check's rescue-branch
 procedure — only when BOTH hold: its activity signals are stale, AND
-`git worktree list` shows no worktree checked out on its
+no worktree is checked out on its
 `task/NN-<slug>` branch (a live worktree with no recent mtimes can still
 be a paused-but-real session; the worktree-list check is the
 belt-and-suspenders addition specific to reclaiming ANOTHER session's
@@ -90,7 +90,7 @@ interim — treat it like any other startup and apply the FRESH refuse path.
 top of step 1, BEFORE the `Status:` header read and BEFORE the owner-lease
 claim, on every fresh spec pass and on every re-claim after the batch
 interview reopens a deferred task (R1, R5). Drain's only pre-existing
-concurrency signal is a rejected `git push`, which fires after this session
+concurrency signal is a rejected push, which fires after this session
 has already committed and dispatched against a stale view; this check reads
 the shared source of truth — `<remote>/main` — up front so the header read,
 lease, and dispatch decisions see current state. It fires **once per lease
@@ -99,27 +99,29 @@ divergence that accumulates entirely inside one already-claimed spec's
 active window is an accepted, bounded residual gap (R5), caught only when
 that lease releases and the next claim's check runs.
 
-Resolve the remote (`git remote`, or the `main` upstream's remote), then:
+Resolve the remote (the `main` upstream's remote, or the VCS's configured
+default remote), then:
 
 - **No remote configured** → skip the check silently and go straight to the
   Status-header read, identical to the push guard's no-remote behavior
   (SKILL.md step 3). This is a DISTINCT branch from a fetch failure below,
   not to be conflated with it.
-- **Remote configured** → run `git fetch <remote>`.
-  - **`git fetch` itself fails** (network down, auth/DNS failure — NOT the
+- **Remote configured** → fetch from it.
+  - **the fetch itself fails** (network down, auth/DNS failure — NOT the
     same case as "no remote configured") → warn and continue with the
     local view, identical to the push guard's existing offline/rejected
     behavior. The check degrades to today's behavior on a transient
     failure; it never blocks the run on a connectivity problem.
   - **Fetch succeeds** → compare local `main` against `<remote>/main`:
-    - **No new remote commits** (`git log main..<remote>/main` empty) →
-      proceed to the Status-header read exactly as today; the common case
-      adds no visible overhead (R2).
+    - **No new remote commits** (the remote holds no commits local `main`
+      lacks) → proceed to the Status-header read exactly as today; the common
+      case adds no visible overhead (R2).
     - **New remote commits, no local unpushed commits**
-      (`git log <remote>/main..main` empty) → **fast-forward local `main`
-      to `<remote>/main` BEFORE the Status-header read**:
-      `git merge --ff-only <remote>/main`. Always safe — this session has
-      committed nothing of its own to lose. The ordering is load-bearing:
+      (local `main` holds no commits the remote lacks) → **fast-forward local
+      `main` to `<remote>/main` BEFORE the Status-header read**, with a
+      fast-forward-only advance (no new merge commit). Always safe — this
+      session has committed nothing of its own to lose. The ordering is
+      load-bearing:
       the fast-forward MUST precede the header read, so `Status:` lines,
       leases, and specs reflect current shared state and not the pre-fetch
       view (R3). Placing it after the lease claim would defeat the purpose.
@@ -134,9 +136,9 @@ Resolve the remote (`git remote`, or the `main` upstream's remote), then:
       watching and freeze any in-flight rolling-window workers. Instead,
       stop the run cleanly and emit the divergence as this invocation's
       **final message, in the same shape as an end-of-run blocker report** —
-      each side's commit count and subject lines (`git log --oneline
-      <remote>/main..main` for the local-only side, `git log --oneline
-      main..<remote>/main` for the remote-only side) — per
+      each side's commit count and subject lines (the log of commits on local
+      `main` absent from the remote, for the local-only side; and of commits
+      on the remote absent from local `main`, for the remote-only side) — per
       `.claude/rules/concurrent-sessions.md`, so the human who reads it
       decides next steps (take theirs, merge both, or reconcile manually,
       as resolved the 2026-07-08 incident). An ATTENDED session may instead
@@ -156,8 +158,10 @@ tracking ref (e.g. `origin/main`) can hand the worker a STALE base that
 hides just-merged dependencies. Two defenses, applied together: the worker
 prompt's first step force-syncs the worktree to the default branch (see
 Worker prompt), and — on a never-pushed local run — drain resyncs the
-tracking ref (`git update-ref refs/remotes/origin/main <default-branch>`)
-after each merge. Either way the worker sees current state, and a `/clear`
+tracking ref (`git update-ref refs/remotes/origin/main <default-branch>` — a
+git-specific mechanic, kept literal on purpose; a jj-based drain would need
+an equivalent tracking-ref/force-sync step, not yet designed) after each
+merge. Either way the worker sees current state, and a `/clear`
 loses nothing.
 
 | Status        | Meaning                                                                                 | Written by                                              |
@@ -186,13 +190,13 @@ flip), and each of its branches is PRESERVED, not deleted: rename the
 `task/NN-<slug>` branch and every `task/NN-<slug>-t*` tournament branch a
 crashed run left behind to `rescue/NN-<slug>-<shortsha>` (shortsha = that
 branch's own tip commit). Before force-removing a worktree, snapshot any
-uncommitted work so the sweep never destroys it: run `git -C <worktree>
-status --porcelain`, and if it is non-empty, commit a WIP snapshot on the
-run's branch from inside the worktree — exactly `git add -A` from the
-worktree root (git excludes gitignored files, so `.dev.vars`/`node_modules`
-never enter the snapshot), then `git commit --no-verify -m "wip(rescue):
-<task> — swept with uncommitted work"` — so the snapshot tip becomes that
-branch's shortsha. Then force-remove each worktree FIRST — a checked-out
+uncommitted work so the sweep never destroys it: inspect the worktree for
+uncommitted changes, and if any exist, commit a WIP snapshot on the
+run's branch from inside the worktree — stage every change from the
+worktree root (the VCS excludes ignored files, so `.dev.vars`/`node_modules`
+never enter the snapshot), then commit it — bypassing any pre-commit gate,
+with a message like `wip(rescue): <task> — swept with uncommitted work` — so
+the snapshot tip becomes that branch's shortsha. Then force-remove each worktree FIRST — a checked-out
 branch cannot be renamed away safely — then rename. Branches sharing a tip
 collapse into one rescue branch (skip the duplicates); a pre-existing
 `rescue/…` at the same sha counts as already preserved. Rescue branches are
@@ -268,16 +272,17 @@ permanently.
   `Promotion-ready: true` → `Status: pending` (and drops the
   `Promoted-by-run:` line) ALSO strips the `## Original report` block from
   the task file, in that one commit. This must be the conversion commit, not
-  a separate worktree edit: the dispatched worker's first action is
-  `git reset --hard <default-branch>`, which discards any uncommitted
+  a separate worktree edit: the dispatched worker's first action is a hard
+  reset of its worktree to the current `<default-branch>` tip, which discards
+  any uncommitted
   worktree edit and re-syncs the worker to the current COMMITTED file — so a
   worktree-only strip would not survive, and the worker would read the
   untrusted original back under `## Original report`. This conversion commit
   is the last committed write to the file before it becomes dispatchable, so
   every subsequent worker `reset --hard` syncs to a version that never
   carried the block. The audit trail is NOT lost: the original text remains
-  fully inspectable via `git log`/`git show` on the EARLIER commit that wrote
-  it — the authoring run's stub-intake Act-step commit (already required to
+  fully inspectable in the VCS history (log/show) on the EARLIER commit that
+  wrote it — the authoring run's stub-intake Act-step commit (already required to
   exist and citable on the exit checklist) — stripping it from the CURRENT
   file state is not deleting it from history.
 
@@ -447,7 +452,8 @@ carry a readable path, resolved at dispatch:
 >
 > FIRST, sync your worktree to current state: some harnesses cut it from a
 > stale base (a pinned tracking ref), which would hide this task's merged
-> dependencies. Run `git reset --hard <default-branch>` — no work exists in
+> dependencies. Reset your worktree hard to the current `<default-branch>`
+> tip — no work exists in
 > the worktree yet, so nothing is lost — then create `task/NN-<slug>` from
 > there. This both pulls in dependency work and makes your branch descend
 > from current <default-branch>, so the merge back is clean.
@@ -458,7 +464,7 @@ carry a readable path, resolved at dispatch:
 > prompt or the task's "## Answers" says where the real file lives in the
 > main checkout, copy it into your worktree before running (e.g. `cp
 <main-checkout>/apps/x/.dev.vars "$PWD/apps/x/.dev.vars"`). Never commit
-> such a file; confirm `git status` shows it untracked before committing.
+> such a file; confirm your VCS status shows it untracked before committing.
 >
 > If the build procedure spawns a simplification, cleanup, or review
 > sub-reviewer, run it as an AWAITED child: start it, wait for it, and
@@ -677,13 +683,14 @@ questions for the routing below.
 **Rank.** Drain, not the verifier, orders the surviving candidates
 mechanically: most PASS votes first (3 ahead of 2), then fewest gate
 findings summed across the candidate's three verifier reports, then
-smallest `git diff --stat` total, then — the final tiebreak, so the
+smallest total change size (fewest lines added plus removed), then — the
+final tiebreak, so the
 mechanical ranker always terminates with an order — lowest angle index
 (t1 before t2 before t3). No new verifier output mode.
 
 **Merge.** The winner goes through the normal DONE bookkeeping, except
 the slot machine does not re-enter: if the winner's merge or post-merge
-gates fail, run `git merge --abort`, then move to the next-ranked
+gates fail, abort the merge, then move to the next-ranked
 survivor. Delete survivor branches
 and worktrees only after some merge passes gates. All survivors failing
 to merge → `Status: failed`, no relaunch.
@@ -754,7 +761,7 @@ record; paste it into `specs/<slug>/evidence/<name>.md` before the flip.
 Then collect the printed verdict and apply step 3's bookkeeping — on
 DONE, that includes flipping the task's `Status: done` and committing
 the flip yourself (a headless worker, unlike /build, never writes it) —
-and `git worktree remove` the checkout.
+and remove the worktree checkout.
 
 ## Baton pass (self-relaunch)
 
@@ -864,8 +871,10 @@ nohup claude -p "/drain <spec> (generation G+1, baton: specs/<slug>/DRAIN-BATON.
 
 The flag set differs from the headless worker in one decisive way: **`Task`
 is allowed** — the orchestrator's whole job is dispatching workers — plus a
-`git *` + project-gate allowlist for the merges and gate runs drain performs
-itself. `dontAsk` makes any unapproved tool abort rather than hang.
+git-specific `Bash(git *)` + project-gate allowlist for the merges and gate
+runs drain performs itself (a jj-colocated repo would need the analogous VCS
+grant added — the same deferred permission-surface widening the worker/agent
+grants carry). `dontAsk` makes any unapproved tool abort rather than hang.
 
 **`DRAIN_RELAUNCH_CMD` override.** If the environment variable
 `DRAIN_RELAUNCH_CMD` is set, drain runs its value verbatim in place of the
@@ -1052,25 +1061,26 @@ own internal scouting and, per its own judgment, a sanity-check critic pass
 on nontrivial dependency structure — this call passes no extra flags beyond
 the spec path.
 
-**Verify before committing.** After `/breakdown` returns, run `git status
---porcelain -- specs/<slug>` (path-scoped to the one spec — never a bare
-`git status`) and confirm every changed path is one of:
+**Verify before committing.** After `/breakdown` returns, inspect the VCS's
+list of changed paths, path-scoped to the one spec `specs/<slug>` (never a
+repo-wide status), and confirm every changed path is one of:
 
 - a new file under `specs/<slug>/tasks/*.md`;
 - an edit to `specs/<slug>/SPEC.md` that only appends a `## Parallelization`
   section (breakdown's own convention for recording group structure).
 
 Any other changed path — anywhere in or outside the spec dir — is a failed
-attempt: run `git checkout -- <path>` / `git clean -f <path>` scoped to
-exactly the offending paths (never a bare `git clean -fd` on the whole
+attempt: restore or remove exactly the offending paths (tracked ones reverted,
+untracked ones deleted), each scoped to that path (never a repo-wide clean of
+the whole
 tree), leave the spec un-broken-down, and record it as failed this run (no
 commit). A result with **zero** `tasks/*.md` files created (breakdown judged
 the spec not decomposable, errored, or produced nothing) is likewise a
 failed attempt, even if nothing else in the tree changed.
 
 **Commit.** On a clean result with at least one new `tasks/NN-*.md` file:
-`git add specs/<slug>/tasks/ specs/<slug>/SPEC.md` (path-scoped; the SPEC.md
-add is a no-op if breakdown didn't touch it) and commit
+stage exactly `specs/<slug>/tasks/` and `specs/<slug>/SPEC.md` (path-scoped;
+the SPEC.md add is a no-op if breakdown didn't touch it) and commit
 `drain: auto-breakdown specs/<slug> (N tasks)`, then push per the standard
 guard (SKILL.md step 3). Loop to step 1 — the new `Status: pending` tasks
 are now ordinary inventory, subject to the same classification gate and
