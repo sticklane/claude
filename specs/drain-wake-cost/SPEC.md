@@ -137,3 +137,16 @@ repo's mirror + plugin-bump gate.
 - Should the baton itself be slimmed at the same time (it is re-read by the
   successor generation and grows per generation)? Measure its size in a real
   run before deciding.
+
+## Parallelization
+
+- Group A (concurrent): 01 (drain skill files), 02 (token-discipline.md +
+  proposal artifact) — disjoint Touch, no shared undecided design (the cap
+  value and trigger rule live in the spec, not chosen per-task).
+- 03 runs alone after both (mirrors 01's final text; checks 02's rules
+  analog).
+- Cross-spec: 02 shares `.claude/rules/token-discipline.md` with
+  specs/agent-tier-leaks task 02, and 03 shares
+  `.claude-plugin/plugin.json` + `antigravity/` with the closing tasks of
+  the other two agentprof specs — do not drain those specs concurrently
+  with this one; serialize the specs or let one drain own all three.

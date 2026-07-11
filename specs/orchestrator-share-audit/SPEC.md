@@ -135,3 +135,12 @@ drafters safe.
   Decide in Phase 1 when the numbers are on the table.
 - Is /build's 78% dominated by its small sample ($74 total)? If the week's
   sample is too thin per skill, widen to `--days 30` for Phase 1.
+
+## Parallelization
+
+- None within the spec: 01 → 02 is a strict measure-then-act chain.
+- Cross-spec: 02's Touch (`.claude/skills/*`, `antigravity/`,
+  `.claude-plugin/plugin.json`) collides with the closing tasks of
+  specs/drain-wake-cost and specs/agent-tier-leaks — do not drain these
+  specs concurrently; serialize the specs or let one drain own all three.
+  Task 01 (findings only) is safe to run alongside anything.
