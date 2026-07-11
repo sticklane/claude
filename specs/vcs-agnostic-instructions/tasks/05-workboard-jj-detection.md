@@ -1,6 +1,6 @@
 # Task 05: workboard skill detects `.jj/` repo roots + VCS-agnostic reference.md
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 16 turns
