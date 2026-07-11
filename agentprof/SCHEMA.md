@@ -39,7 +39,7 @@ required.
   contributes 0 for it.
 - `labels`: **optional** map of string → string; becomes pprof string labels —
   dimensions you filter by (`-tagfocus`) rather than stack on, e.g. `session`,
-  `source`, `model_raw`, `currency`, `reprime`.
+  `source`, `model_raw`, `currency`, `reprime`, `agent_id`.
 
 ## The `reprime` label
 
@@ -61,6 +61,19 @@ Two calls are deliberately never marked, because neither is a *re*-prime:
 The label only ever takes the value `"true"`; unmarked samples carry no
 `reprime` key at all, so `-tagfocus reprime=true` selects exactly the
 re-primes (README's "Slicing" section has the worked query).
+
+## The `agent_id` label
+
+Every sample parsed from an agent sidecar transcript carries the pprof label
+`agent_id=<sidecar id>` — the id of the subagent instance that produced the
+call, taken from its `agent-<id>.jsonl` transcript basename. The label is
+per-instance, so two subagents of the *same* type in one turn stay
+distinguishable: they share a stack frame but carry distinct `agent_id`
+values. Main-loop model calls carry no `agent_id` key at all.
+
+`-tagfocus agent_id=<id>` isolates a single instance's cost; grouping samples
+by the label reveals fan-out width (how many instances a turn spawned) and
+true per-instance parallelism, which a type-only frame would collapse.
 
 ## Cost-summary sections: `reprime` and `sessions`
 

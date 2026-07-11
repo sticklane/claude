@@ -141,6 +141,7 @@ type agentFile struct {
 	frame     string
 	toolUseID string
 	runID     string
+	id        string // sidecar instance id (agent-*.jsonl basename sans prefix/suffix)
 }
 
 // session is one main transcript with its subagent transcripts.
@@ -183,7 +184,7 @@ func enumerate(dir string) ([]session, error) {
 			frame, toolUseID := readAgentMeta(meta)
 			sess.agents = append(sess.agents, agentFile{
 				path: path, frame: frame, toolUseID: toolUseID,
-				runID: workflowRunID(path),
+				runID: workflowRunID(path), id: agentID,
 			})
 			return nil
 		})
@@ -450,8 +451,13 @@ func (s session) collect(opts Options, home string) ([]schema.Sample, []Turn, St
 			} else {
 				stack = slices.Concat([]string{project, "(unlinked)"}, agentFrames)
 			}
-			out = append(out, r.sample(stack, s.id, turn))
+			ms := r.sample(stack, s.id, turn)
+			ms.Labels["agent_id"] = a.id
+			out = append(out, ms)
 			tsamps, pending := r.toolSamples(stack, ap.toolResults, s.id, turn, opts.KeepPending)
+			for i := range tsamps {
+				tsamps[i].Labels["agent_id"] = a.id
+			}
 			out = append(out, tsamps...)
 			stats.Pending += pending
 		}
