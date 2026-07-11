@@ -29,15 +29,16 @@ tokens on decisions; delegate consumption of raw material to subagents.
   guidance; it does not change the opt-in default above. The cross-vendor
   evidence for both the window and the rolling claim-next design is in
   docs/external-playbooks.md (cited, not restated).
-- **Drain-shaped freehand requests → recommend `/drain`.** When a freehand
-  request is drain-shaped ("drain the …", "work through the remaining tasks
-  in specs/…"), recommend the human launch `/drain` rather than improvising
-  an unstructured dispatch loop — the skill's window/baton/verdict machinery
-  is what keeps a dispatch loop cheap and safe, and improvised loops are how
-  the measured ~$1,406/week of unstructured orchestration happened
-  (specs/drain-wake-cost/EVIDENCE.md). `/drain` is human-gated
-  (`disable-model-invocation`): recommend it, never launch it on the human's
-  behalf.
+- **Drain-shaped freehand requests → route into `/drain`.** When the
+  human's live message is drain-shaped ("drain the …", "work through the
+  remaining tasks in specs/…"), invoke the `/drain` skill rather than
+  improvising an unstructured dispatch loop — the skill's window/baton/
+  verdict machinery is what keeps a dispatch loop cheap and safe, and
+  improvised loops are how the measured ~$1,406/week of unstructured
+  orchestration happened (specs/drain-wake-cost/EVIDENCE.md). The
+  drain-shaped live message IS the launch authorization (the skill's
+  launch contract; docs/human-gates.md); absent one, recommend `/drain`
+  and never launch it on the human's behalf.
 
 ## Model and effort matching
 

@@ -128,8 +128,9 @@ Resolve the remote (`git remote`, or the `main` upstream's remote), then:
       invocation before claiming the lease** (R4). Do NOT merge
       automatically, do NOT force-push, do NOT discard either side, and do
       NOT attempt a live/blocking interactive prompt (no `AskUserQuestion`
-      here): drain is `disable-model-invocation`, launched unattended by
-      default, so a mid-run prompt would block on a human who may not be
+      here): drain runs unattended by default (its launch contract means a
+      human authorized the run, not that one is watching), so a mid-run
+      prompt would block on a human who may not be
       watching and freeze any in-flight rolling-window workers. Instead,
       stop the run cleanly and emit the divergence as this invocation's
       **final message, in the same shape as an end-of-run blocker report** —
@@ -427,8 +428,9 @@ branch merges back cleanly. At dispatch time, resolve build's SKILL.md to
 a concrete path — `.claude/skills/build/SKILL.md` when the toolkit is
 in-repo, otherwise the plugin cache path found at dispatch — and
 substitute it for `<build-skill-path>` below. Workers cannot invoke
-`disable-model-invocation` skills, so the prompt must carry a readable
-path, resolved at dispatch:
+launch-gated execution skills (their context carries no live-user
+authorization — CLAUDE.md's execution-stage bullet), so the prompt must
+carry a readable path, resolved at dispatch:
 
 > Execute the task in <task-file> following the build skill's procedure
 > exactly, as written in <build-skill-path> (resolved at dispatch):
@@ -888,8 +890,8 @@ tie-break. For the chosen spec:
   compare-and-swap re-read to confirm your `Run-token:`, refuse and skip to
   the next eligible spec on a lost race). This is what stops two concurrent
   drains from racing to critique the same spec.
-- Invoke **/critique** on the spec via the Skill tool — model-invocable, no
-  `disable-model-invocation` flag, the same sanctioned in-session exception
+- Invoke **/critique** on the spec via the Skill tool — model-invocable
+  with no launch contract, the same sanctioned in-session exception
   3b's `/breakdown` invocation relies on.
 - **READY** → the critic writes the `Breakdown-ready:` marker; 3b's existing
   auto-breakdown path then makes the spec dispatchable **in the same

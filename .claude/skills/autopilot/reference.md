@@ -65,8 +65,9 @@ polling. At dispatch time,
 resolve build's SKILL.md to a concrete path —
 `.claude/skills/build/SKILL.md` when the toolkit is in-repo, otherwise
 the plugin cache path found at dispatch — and substitute it for
-`<build-skill-path>` (workers cannot invoke `disable-model-invocation`
-skills, so the prompt must carry a readable path). Prompt template:
+`<build-skill-path>` (workers cannot invoke launch-gated execution
+skills — no live-user authorization in their context — so the prompt
+must carry a readable path). Prompt template:
 
 > Execute the task in <file> following the build skill's procedure, as
 > written in <build-skill-path> (resolved at dispatch). Delegate your own
