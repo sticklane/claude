@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -59,7 +59,7 @@ gaps route to specs/agentprof-instrumentation as new task suggestions in
 
 ## Acceptance
 
-- [ ] `test -f /Users/sjaconette/claude/docs/orchestrator-share-findings.md` → exit 0, with all four elements per skill and a verdict each
-- [ ] `python3 /Users/sjaconette/claude/specs/orchestrator-share-audit/analyze.py` → runs clean against the checked-in .gz with no other inputs and prints the doc's headline numbers (paste a 5-line excerpt as evidence)
-- [ ] Every snapshot-derived number in the doc names its producing command; transcript-recovered filename sections are labeled unpinned
-- [ ] Findings doc ends with the regression-check command + thresholds
+- [x] `test -f /Users/sjaconette/claude/docs/orchestrator-share-findings.md` → exit 0, with all four elements per skill and a verdict each — verifier PASS; doc carries token-category split, rewrite subset, tool:Read-per-turn + unpinned filenames, and a KEEP verdict for each of breakdown/build/idea (evidence/01-findings.md)
+- [x] `python3 /Users/sjaconette/claude/specs/orchestrator-share-audit/analyze.py` → runs clean against the checked-in .gz with no other inputs and prints the doc's headline numbers — verifier ran it self-contained; prints breakdown $141.51 (cache_read 61.9%), build $57.55, idea $81.50, matching the doc (evidence/01-findings.md)
+- [x] Every snapshot-derived number in the doc names its producing command; transcript-recovered filename sections are labeled unpinned — verifier confirmed producing command per number and all three recovery subsections labeled "unpinned (raw transcripts, mutable)" (evidence/01-findings.md)
+- [x] Findings doc ends with the regression-check command + thresholds — verifier confirmed the `## R4 — regression check` section (capture+rerun command + 3 thresholds) is last (evidence/01-findings.md)
