@@ -12,9 +12,10 @@ it must stay cheap: metadata only, never transcripts.
 - List background tasks/agents via the harness task tools (`TaskList`; load
   it with ToolSearch if deferred). Capture per task: label/description, type,
   status, start time, end time if finished, and the output-file path.
-- `git worktree list --porcelain` — worktrees named for `task/NN-*` branches
-  are dispatched task workers (a drain queue or group, /build, /autopilot);
-  match them to tasks where possible, otherwise list them as their own rows.
+- Enumerate this session's isolated worktrees — e.g., under git: `git worktree
+  list --porcelain`. Worktrees named for `task/NN-*` branches are dispatched
+  task workers (a drain queue or group, /build, /autopilot); match them to
+  tasks where possible, otherwise list them as their own rows.
 - For each agent, take at most the last 2 lines of its output file
   (`tail -n 2`) as a snippet. Do NOT read transcripts or output files
   wholesale into context — that is exactly the pollution this toolkit exists

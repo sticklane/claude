@@ -8,10 +8,12 @@ other (docs/memory/concurrent-session-collision.md has the incident).
 
 - `claude agents --json` — a live session whose `cwd` resolves into this
   repo, with a different session id than yours, is another editor.
-- `git worktree list` — a single checkout entry means a shared tree, zero
-  isolation.
-- Recent file mtimes / unexplained `git status` entries — edits you didn't
-  make are a live collision, not a fluke.
+- List the VCS's checkouts/worktrees of this repo — a single checkout entry
+  means a shared tree with zero isolation (e.g., under git: `git worktree
+  list`).
+- Recent file mtimes / unexplained working-tree changes — edits you didn't
+  make are a live collision, not a fluke (e.g., under git: inspect the working
+  tree with `git status`).
 
 ## On detected collision
 

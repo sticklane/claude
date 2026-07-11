@@ -8,8 +8,9 @@ Get an adversarial second opinion on $ARGUMENTS. If no argument: an
 uncommitted diff exists → review that; otherwise the most recently touched
 SPEC.md or plan.
 
-1. Spawn the `critic` agent with a POINTER to the artifact (file path, or
-   "the output of `git diff HEAD`"), never the pasted content — the critic
+1. Spawn the `critic` agent with a POINTER to the artifact (file path, or a
+   pointer to the working diff — e.g., under git: `git diff HEAD`), never the
+   pasted content — the critic
    reads it in its own context. Include one line on what "wrong" looks like
    here (e.g., "this spec feeds /breakdown; ambiguity is the enemy"). If the
    artifact touches auth, payments, secrets, or user-data handling, name
