@@ -1,6 +1,6 @@
 # Task 01: Scaffold the codex/ project root
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 35 turns
@@ -67,8 +67,8 @@ mirrors, and the name is reserved for task 02's real
 
 ## Acceptance
 
-- [ ] `find codex/.agents/skills -maxdepth 1 -type l | wc -l` → `16`
-- [ ] `for n in _shared breakdown critic design distill factcheck gate handoff idea implementation-worker list-specs onboard prioritize scout verifier workboard; do test -e "codex/.agents/skills/$n/." || echo "BROKEN: $n"; done` → no output
-- [ ] `test -f codex/AGENTS.md && grep -q "antigravity/AGENTS.md" codex/AGENTS.md`
-- [ ] Version changed from base: `git show $(git merge-base HEAD main):.claude-plugin/plugin.json | grep '"version"'` differs from `grep '"version"' .claude-plugin/plugin.json` (never compare against a hard-coded literal — a sibling task may have already moved it)
-- [ ] `git show --stat HEAD -- .claude-plugin/plugin.json codex/` shows both paths touched in the same commit
+- [x] `find codex/.agents/skills -maxdepth 1 -type l | wc -l` → `16`
+- [x] `for n in _shared breakdown critic design distill factcheck gate handoff idea implementation-worker list-specs onboard prioritize scout verifier workboard; do test -e "codex/.agents/skills/$n/." || echo "BROKEN: $n"; done` → no output
+- [x] `test -f codex/AGENTS.md && grep -q "antigravity/AGENTS.md" codex/AGENTS.md`
+- [x] Version changed from base: `git show $(git merge-base HEAD main):.claude-plugin/plugin.json | grep '"version"'` differs from `grep '"version"' .claude-plugin/plugin.json` (never compare against a hard-coded literal — a sibling task may have already moved it)
+- [x] `git show --stat HEAD -- .claude-plugin/plugin.json codex/` shows both paths touched in the same commit
