@@ -22,7 +22,10 @@ bumped in THIS task's own commit; `claude plugin validate .` passes.
 
 1. Add the paraphrased block near the port's startup/naming area, title
    literal.
-2. Bump `.claude-plugin/plugin.json` version.
+2. Bump `.claude-plugin/plugin.json` version RELATIVE to the value read
+   at your own base (never a pinned literal — the agent-efficiency-guards
+   closing task bumps the same line; whichever lands second rebases and
+   still bumps cleanly).
 3. `claude plugin validate .`.
 
 ## Acceptance

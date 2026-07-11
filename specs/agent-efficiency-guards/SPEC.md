@@ -2,6 +2,7 @@
 
 Status: open
 Priority: P1
+Breakdown-ready: true
 
 ## Problem
 
@@ -60,7 +61,8 @@ stating the stop condition, not an essay. No code, no new mechanisms.
   completion notifications (or a Monitor until-loop where the harness
   offers it); chained short sleeps are the blocked-sleep antipattern in
   chunks and are banned. The drain worker prompt gains the same rule in
-  one line.
+  one line, and both lines contain the literal phrase "chained short
+  sleeps" (the acceptance anchor).
 - R3 **Re-read discipline.** The drain worker prompt gains: read a file
   at most once per edit round; after your own successful Edit/Write the
   harness confirms state — do not re-read to verify; re-read only the
@@ -70,17 +72,22 @@ stating the stop condition, not an essay. No code, no new mechanisms.
   named, never the whole artifact.
 - R4 **Worktree prefix stated at dispatch.** The drain worker prompt's
   worktree preamble states explicitly: every path you Read/Edit/Write
-  must be under your worktree root (your shell's initial $PWD); the main
-  checkout path (given for gitignored-file copies only) is read-only to
-  you — editing it will error and waste a turn.
+  must be under your worktree root (your shell's initial $PWD) — the
+  literal phrase "under your worktree root" is the acceptance anchor;
+  the main checkout path (given for gitignored-file copies only) must
+  never be edited — editing it errors and wastes a turn.
 - R5 **Scout stop-and-report rule.** `.claude/agents/scout.md` gains:
   if 3 targeted greps/globs don't locate the answer, report "not found
   where expected" with what WAS checked — never widen to repo-wide
   scans; never read the same file twice in one run.
-- R6 **Section-lookup pointers.** Drain SKILL.md's reference.md pointers
-  (worker prompt, owner lease, baton) name the exact section heading to
-  load (grep -n the heading, read that slice) instead of implying a full
-  read of a 1,100-line file.
+- R6 **Section-lookup pointers.** Exactly three drain SKILL.md pointers —
+  the ones citing reference.md's "Worker prompt", "Owner lease", and
+  "Baton pass" sections — gain the instruction to load only the named
+  section (locate the heading via `grep -n`, read that slice), instead of
+  implying a full read of a 1,100-line file. The added instruction
+  contains the literal phrase "load only the named section" at least once
+  (the acceptance anchor). The FIRST pointer citing each section receives
+  the instruction; other pointers are untouched.
 - R7 **Mirror + plugin hygiene.** Content-equivalent lines land in the
   antigravity drain workflow port for R1/R3/R4 (paraphrased port —
   content-coverage grep, not byte-diff); `.claude-plugin/plugin.json` is
@@ -101,20 +108,23 @@ stating the stop condition, not an essay. No code, no new mechanisms.
 - [ ] `grep -qi 'bare single command' .claude/skills/drain/reference.md && grep -qi 'bare single command' .claude/agents/verifier.md`
   (phrase absent from both today) AND MANUAL: the rule caps retries at
   one and requires reporting the blocked command (R1)
-- [ ] `grep -qi 'sleep' .claude/rules/token-discipline.md` hits in a new
-  dispatch-authoring bullet AND `grep -ci 'sleep' .claude/skills/drain/reference.md`
-  increased vs the file's base-commit value (R2)
+- [ ] `grep -qi 'chained short sleeps' .claude/rules/token-discipline.md && grep -qi 'chained short sleeps' .claude/skills/drain/reference.md`
+  (phrase absent from both today) (R2)
 - [ ] `grep -qi 'once per edit round' .claude/skills/drain/reference.md && grep -qi 'sections the critic named' .claude/skills/critique/SKILL.md`
   (both phrases absent today) (R3)
-- [ ] `grep -qi 'worktree root' .claude/skills/drain/reference.md` AND
-  MANUAL: it states main-checkout paths are read-only to the worker (R4)
+- [ ] `grep -qi 'under your worktree root' .claude/skills/drain/reference.md`
+  (phrase absent today — the pre-existing "worktree root" text at
+  reference.md:192 is a different section and does not match this longer
+  anchor) AND MANUAL: the preamble bans editing main-checkout paths (R4)
 - [ ] `grep -qi 'not found where expected' .claude/agents/scout.md`
   (phrase absent today) (R5)
-- [ ] MANUAL: each reference.md pointer in drain SKILL.md names its
-  target section heading (R6)
-- [ ] `grep -qi 'bare single command' antigravity/.agents/workflows/drain.md`
-  (content-coverage for R1/R3/R4 port) AND `claude plugin validate .`
-  passes AND the closing commit modifies the plugin version line (R7)
+- [ ] `grep -qi 'load only the named section' .claude/skills/drain/SKILL.md`
+  (phrase absent today) AND MANUAL: exactly the "Worker prompt", "Owner
+  lease", and "Baton pass" pointers carry it, first citation of each (R6)
+- [ ] `grep -qi 'bare single command' antigravity/.agents/workflows/drain.md && grep -qi 'once per edit round' antigravity/.agents/workflows/drain.md && grep -qi 'under your worktree root' antigravity/.agents/workflows/drain.md`
+  (content-coverage for the R1, R3, AND R4 port lines — each anchored)
+  AND `claude plugin validate .` passes AND the closing commit modifies
+  the plugin version line (R7)
 - [ ] `bash agentprof/scripts/check.sh` untouched-green (no code changed
   by this spec; guard against accidental code edits)
 
@@ -124,7 +134,14 @@ stating the stop condition, not an essay. No code, no new mechanisms.
 
 ## Parallelization
 
-Likely two tasks: (1) all `.claude/` text patches (R1–R6, single writer
-across small files — one session's diff), (2) closing gate (R7: mirror
-lines + bump + validate). Serialized; format grammar per
-specs/drain-rolling-window/SPEC.md's Parallelization section.
+Task map: 01 = R1–R6 (single writer across small files), 02 = R7 closing
+gate (mirror lines + bump + validate), depends on 01. Serialized — no
+Group lines (format grammar per specs/drain-rolling-window/SPEC.md's
+Parallelization section).
+
+Cross-spec contention: specs/drain-hub-economics's closing task also
+bumps `.claude-plugin/plugin.json` (single version line). Both closing
+tasks list it in `Touch:`, so drain's Touch-disjoint admission rule
+serializes them mechanically; each bumps RELATIVE to the version it
+reads at its own base (never a pinned literal), so whichever lands
+second still bumps cleanly after a rebase.
