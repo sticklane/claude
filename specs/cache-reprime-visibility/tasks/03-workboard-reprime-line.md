@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P2
 Budget: 6 turns
@@ -34,6 +34,8 @@ summary JSON shape.
 
 ## Acceptance
 
-- [ ] `bash agent-console/scripts/check.sh` → green (py_compile, render
+- [x] `bash agent-console/scripts/check.sh` → green (py_compile, render
   smoke test, unit tests) including the new fixture pair (reprime section
   present → line rendered; absent → gracefully omitted)
+  Evidence: verifier PASS — `check: PASS` (147 tests, incl. RenderReprimeLine
+  present/absent/None cases); see evidence/03-workboard-reprime-line.md.
