@@ -1,6 +1,6 @@
 # Task 02: drain + build codex skill wrappers
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 55 turns
@@ -66,12 +66,17 @@ owns those) or any symlinked skill directory (task 01 owns those).
 
 ## Acceptance
 
-- [ ] `test -f codex/.agents/skills/drain/SKILL.md && test -f codex/.agents/skills/drain/agents/openai.yaml`
-- [ ] `test -f codex/.agents/skills/build/SKILL.md && test -f codex/.agents/skills/build/agents/openai.yaml`
-- [ ] `grep -q "allow_implicit_invocation: false" codex/.agents/skills/drain/agents/openai.yaml`
-- [ ] `grep -q "allow_implicit_invocation: false" codex/.agents/skills/build/agents/openai.yaml`
-- [ ] A `verifier` agent judgment pass (dispatch it directly — this is a
+- [x] `test -f codex/.agents/skills/drain/SKILL.md && test -f codex/.agents/skills/drain/agents/openai.yaml` — PASS (both created)
+- [x] `test -f codex/.agents/skills/build/SKILL.md && test -f codex/.agents/skills/build/agents/openai.yaml` — PASS (both created)
+- [x] `grep -q "allow_implicit_invocation: false" codex/.agents/skills/drain/agents/openai.yaml` — PASS
+- [x] `grep -q "allow_implicit_invocation: false" codex/.agents/skills/build/agents/openai.yaml` — PASS
+- [x] A `verifier` agent judgment pass (dispatch it directly — this is a
   content-judgment check, not a scripted metric) confirms both SKILL.md
   bodies inline-cover their `.claude` counterpart's execution steps and
   each contains an explicit Codex-adapted launch-authorization paragraph
-  (not a stub merely pointing to another file)
+  (not a stub merely pointing to another file) — PASS: verifier confirmed
+  valid frontmatter, full step coverage (drain 339 lines: inventory/lease,
+  dispatch/window/admission, DONE/DEFERRED/BLOCKED+merge+push-guard, baton,
+  critique intake, stub intake, auto-breakdown, exit checklist; build 182
+  lines: load, plan, implement, verify, close-out), and a standalone
+  Codex-adapted launch-authorization paragraph in each (not a pointer stub)
