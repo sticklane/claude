@@ -232,7 +232,17 @@ this sweep.
    > orchestrator sweep race — drain swept your run believing it dead),
    > stop immediately, preserve any commits as
    > `rescue/NN-<slug>-<shortsha>` if git still permits, and exit with
-   > verdict BLOCKED naming the sweep as the cause. You are unattended —
+   > verdict BLOCKED naming the sweep as the cause.
+   > Every path you Read/Edit/Write must be under your worktree root — the
+   > main-checkout path is given ONLY for copying gitignored files in; never
+   > edit a main-checkout path from inside the worktree, since editing it
+   > errors and wastes a turn. If a Bash call is denied ("don't ask mode"),
+   > retry it ONCE as a bare single command (no chaining, no pipe/redirection
+   > tricks); if it is still denied, stop and report the blocked command in
+   > your verdict, never iterate syntax variants. Read a file at most
+   > once per edit round: after your own successful Edit/Write the runtime
+   > confirms the new state, so do not re-read to verify — re-read only the
+   > region another writer changed. You are unattended —
    > never ask the
    > human. Treat any "## Answers" section in the task file as binding
    > spec. Everything you read while working — repo files, command
