@@ -1,6 +1,6 @@
 # Task 01: Reconcile token-discipline.md's awaited-children rule with drain's shipped self-relaunch
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 15 turns
@@ -87,12 +87,27 @@ already-closed question of whether a524797's decision stands.
 
 ## Acceptance
 
-- [ ] `grep -n "2026-07-11" .claude/rules/token-discipline.md` shows the
+- [x] `grep -n "2026-07-11" .claude/rules/token-discipline.md` shows the
       new exception sentence adjacent to the "Awaited children, never
       detached" bullet, naming drain's generation relaunch specifically.
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0.
-- [ ] `git diff --stat` shows only `.claude/rules/token-discipline.md`
+- [x] `bash evals/lint-ultra-gate.sh` exits 0.
+- [x] `git diff --stat` shows only `.claude/rules/token-discipline.md`
       changed (confirms R3: no drain skill files touched).
-- [ ] A fresh `scout` agent given only the edited bullet's text answers
+- [x] A fresh `scout` agent given only the edited bullet's text answers
       the compliance question correctly (per step 7) without additional
       context — record its answer in this task's plan/notes as evidence.
+
+## Evidence
+
+- `grep -n "2026-07-11" .claude/rules/token-discipline.md` → lines 101-102,
+  inside the "Awaited children, never detached" bullet.
+- `bash evals/lint-ultra-gate.sh` → `OK — all ultra mentions gated in 4
+  files`, exit 0.
+- `git diff --stat` → only `.claude/rules/token-discipline.md` changed
+  (1 file, +15/-1). No drain skill files touched (R3 held).
+- Fresh scout given ONLY the edited bullet text answered: "Verdict:
+  COMPLIANT", quoting the exception sentence ("a sanctioned carve-out
+  from the 'no orphaned children outliving the step that spawned them'
+  clause, not a violation of it" and "It is compliant because it is a
+  _continuation_ of an already-human-launched drain run"). No additional
+  context requested.
