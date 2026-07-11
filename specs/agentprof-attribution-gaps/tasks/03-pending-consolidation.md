@@ -10,6 +10,24 @@ Budget: 8 turns
 Spec: ../SPEC.md (requirement R3)
 Touch: agentprof/internal/claude/, agentprof/testdata/, specs/agentprof-attribution-gaps/evidence/
 
+<!-- PLAN (delete at close-out):
+- API: add Options{ReprimeThreshold, KeepPending} + Stats{Skipped, Pending};
+  new CollectWithOptions returns Stats; Collect/CollectWithReprime delegate
+  (unchanged signatures so ~40 test callsites stay green).
+- toolSamples(modelStack, results, sess, turn, keepPending) -> ([]Sample, int):
+  unmatched calls consolidate into ONE tool:(pending) sample w/ pending_calls=N;
+  keepPending preserves today's per-call empty-values emission. int = unmatched
+  count (the parse-stat).
+- collect threads opts + accumulates Stats.Pending from both toolSamples sites.
+- Update duration_test TestPendingToolUseHasEmptyValues (asserts REPLACED
+  behavior) -> pending_calls:1; add pending_test.go for 3-in-one-turn + keep.
+- OUT OF TOUCH: cmd_claude.go --keep-pending flag + stderr parse-stat log
+  (cmd_claude.go not in Touch) -> Discovered. Library Option + Stats.Pending
+  is the in-scope surfacing; all 3 acceptance criteria are internal/claude only.
+- Evidence 14-day window + Agent-tool/TaskOutput real-transcript investigation:
+  needs $HOME/.claude outside worktree -> manual-pending with run: command.
+-->
+
 ## Goal
 
 Unmatched tool_use blocks no longer emit one empty-valued sample each
