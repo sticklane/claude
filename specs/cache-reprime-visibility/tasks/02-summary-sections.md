@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 8 turns
@@ -44,9 +44,12 @@ Build call site.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/costsummary/` → pass, including
+- [x] `cd agentprof && go test ./internal/costsummary/` → pass, including
   new fixtures asserting `reprime` (count, cache_write_tokens,
   cost_microusd, by_project) and `sessions` (p50_ctx, p90_ctx,
   main-loop-only)
-- [ ] `cd agentprof && go test ./...` → pass (no existing consumer broken)
-- [ ] `bash agentprof/scripts/check.sh` → green
+  — verifier: 13 tests pass incl. TestBuildReprimeSection*/TestBuildSessionsSection* (evidence/02-summary-sections.md)
+- [x] `cd agentprof && go test ./...` → pass (no existing consumer broken)
+  — verifier: all 14 packages ok; no existing Summary field name changed
+- [x] `bash agentprof/scripts/check.sh` → green
+  — verifier: format-check/lint/tests all ok
