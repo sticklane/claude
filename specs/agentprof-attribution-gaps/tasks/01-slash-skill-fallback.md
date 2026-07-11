@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -40,6 +40,10 @@ skill-frame decision.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/claude/` → pass including the
-  four fixture cases above
-- [ ] `bash agentprof/scripts/check.sh` → green
+- [x] `cd agentprof && go test ./internal/claude/` → pass including the
+  four fixture cases above — verifier PASS: all four fixture tests
+  (parallel→skill:parallel, /clear→(no skill), attributionSkill-wins,
+  /agentic:drain→skill:drain) drive real Collect and assert Stack[2]
+  (evidence/01-slash-skill-fallback.md)
+- [x] `bash agentprof/scripts/check.sh` → green — verifier PASS:
+  format-check ok, lint ok, tests ok (evidence/01-slash-skill-fallback.md)

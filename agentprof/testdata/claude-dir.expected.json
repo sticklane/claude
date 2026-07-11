@@ -44,7 +44,7 @@
     "main_turn02_dedup_msg_a2": [
       "proj",
       "t02 · /parallel specs/agentprof",
-      "(no skill)",
+      "skill:parallel",
       "main",
       "claude-fable-5"
     ],
