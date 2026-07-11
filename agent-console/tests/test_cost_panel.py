@@ -121,6 +121,39 @@ class RenderCostPanel(unittest.TestCase):
         self.assertIn("pending", html.lower())  # R7 explicit empty state
 
 
+_REPRIME = {
+    "count": 3,
+    "cache_write_tokens": 210_000,
+    "cost_microusd": 2_540_000,
+    "by_project": {
+        "alpha": {
+            "count": 3,
+            "cache_write_tokens": 210_000,
+            "cost_microusd": 2_540_000,
+        }
+    },
+}
+
+
+class RenderReprimeLine(unittest.TestCase):
+    def test_reprime_line_rendered_when_section_present(self):
+        summary = dict(_SUMMARY, reprime=_REPRIME)
+        html = ac.render_workboard(_board(), summary)
+        self.assertIn("3 re-prime", html.lower())  # count + label
+        self.assertIn("$2.54", html)  # 2_540_000 microusd -> $2.54
+
+    def test_reprime_line_absent_when_section_missing(self):
+        # older cache: summary has no `reprime` key -> panel renders as today
+        html = ac.render_workboard(_board(), _SUMMARY)
+        self.assertNotIn("re-prime", html.lower())
+        self.assertIn("Cost (7d)", html)  # rest of panel unaffected
+
+    def test_reprime_section_none_is_omitted_gracefully(self):
+        summary = dict(_SUMMARY, reprime=None)
+        html = ac.render_workboard(_board(), summary)  # no exception
+        self.assertNotIn("re-prime", html.lower())
+
+
 class WorkboardHandlerReadsSummary(unittest.TestCase):
     def test_missing_summary_page_load_is_200_pending(self):
         with (
