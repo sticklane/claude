@@ -5,7 +5,7 @@ Depends on: 02, 03
 Priority: P2
 Budget: 12 turns
 Spec: ../SPEC.md (closing task — no new requirement, ships CLAUDE.md's mirror/version-bump convention for this generation of `.claude/skills/` changes)
-Touch: antigravity/.agents/skills/workboard/workboard.py, antigravity/.agents/skills/workboard/test_workboard.py, .claude-plugin/plugin.json
+Touch: antigravity/.agents/skills/workboard/workboard.py, antigravity/.agents/skills/workboard/test_workboard.py, antigravity/runtimes, .claude-plugin/plugin.json
 
 ## Goal
 
@@ -38,7 +38,19 @@ deliberate paraphrase, not a mirror).
    `antigravity/.agents/skills/workboard/workboard.py`, byte-for-byte.
 3. Copy `.claude/skills/workboard/test_workboard.py` to
    `antigravity/.agents/skills/workboard/test_workboard.py`, byte-for-byte.
-4. Bump the `version` field in `.claude-plugin/plugin.json` (patch or minor
+4. Create `antigravity/runtimes` as a **relative symlink** to `../runtimes`
+   (i.e. `ln -s ../runtimes antigravity/runtimes`). Do NOT copy the
+   `runtimes/` subtree — this repo's established pattern (see the `codex/`
+   overlay, which symlinks into `antigravity/.agents/skills/*` rather than
+   copying) is reuse-via-symlink for exactly this situation, and it keeps
+   `runtimes/parse_headless.py` and the `.md` profiles single-sourced. This
+   symlink is what makes the byte-for-byte `workboard.py` copy actually
+   importable in place: its `SCRIPT.parents[3] / "runtimes"` resolution
+   (workboard.py:52) counts up from the mirror's own path
+   (`antigravity/.agents/skills/workboard/workboard.py` → `parents[3]` =
+   `antigravity/`), so it needs `antigravity/runtimes/parse_headless.py` to
+   exist — the symlink satisfies that without duplicating the file.
+5. Bump the `version` field in `.claude-plugin/plugin.json` (patch or minor
    bump — this spec changes skill behavior in two skills, workboard and
    drain).
 
@@ -46,5 +58,18 @@ deliberate paraphrase, not a mirror).
 
 - [ ] `diff -q .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py` → no output (identical)
 - [ ] `diff -q .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py` → no output (identical)
+- [ ] `test -L antigravity/runtimes && readlink antigravity/runtimes` → prints `../runtimes` (a symlink, not a copied directory)
 - [ ] `git show <base-commit>:.claude-plugin/plugin.json | grep '"version"'` (where `<base-commit>` is this task's starting commit) differs from `grep '"version"' .claude-plugin/plugin.json` on the current tree (version bumped from its value at task start, not a hard-coded literal)
 - [ ] `python3 -m unittest discover -s antigravity/.agents/skills/workboard` → passes (mirrored tests run clean in place)
+
+## Progress
+
+- 2026-07-11: First attempt returned DEFERRED — the byte-for-byte
+  `workboard.py` copy imports `parse_headless` via a path computed relative
+  to its own location, which resolves to `antigravity/runtimes/` when
+  mirrored, and that directory didn't exist (`ModuleNotFoundError` broke
+  all 110 mirrored tests). Resolved by the orchestrator: added a symlink
+  step (`antigravity/runtimes -> ../runtimes`) rather than copying the
+  `runtimes/` subtree, matching this repo's established symlink-for-reuse
+  pattern (the `codex/` overlay). Re-dispatching with the expanded `Touch`
+  and the new step/acceptance criterion above.
