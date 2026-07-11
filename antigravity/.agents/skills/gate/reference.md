@@ -91,6 +91,10 @@ printf '{"allow_tool": true}\n'
 exit 0
 ```
 
+The `*.git/*` entry is a **git-specific** pattern string (git keeps its
+metadata under `.git/`), not a VCS-agnostic one — a jj-colocated repo would
+add `*.jj/*` to protect the equivalent internal state.
+
 **TDD variant**: add the project's test glob (e.g. `*.test.ts`) to the case
 list after the failing tests are committed; remove it for test-authoring
 work. Shell writes (`sed -i`, `cat >`) bypass this matcher — pair with the
@@ -127,6 +131,12 @@ fi
 printf '{"allow_tool": true}\n'
 exit 0
 ```
+
+The `git push` entry in this deny pattern is a **git-specific** command
+string, not a VCS-agnostic one — a jj-based repo would match its own
+push/publish command (e.g. `jj git push`) instead. The pattern is left
+git-specific here by design; widening it is a permission-surface change out
+of scope for the phrasing pass.
 
 ## What replaces the Stop gate
 

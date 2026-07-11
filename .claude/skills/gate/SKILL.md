@@ -37,6 +37,15 @@ without disturbing it, archives a pre-existing pre-commit hook to
 archive), and stamps a Checks section into CLAUDE.md. It is idempotent —
 re-running is safe and byte-identical.
 
+> **The pre-commit hook mechanism is git-specific.** The installer writes a
+> **git** pre-commit hook (into `.git/hooks/`), so its commit-time
+> enforcement point exists only where the repo is git (or git-colocated). A
+> non-colocated jj repo has no git pre-commit hook to install into and needs
+> a different enforcement point — a jj-native hook equivalent or another
+> pre-write gate — which this skill does not yet provide (documented
+> limitation, not solved here). The Stop / PostToolUse / PreToolUse hooks are
+> harness-level (Claude Code), not VCS-specific, and are unaffected.
+
 What it installs (semantics in reference.md):
 
 1. **Stop gate**: re-runs `scripts/check.sh` on every stop attempt and

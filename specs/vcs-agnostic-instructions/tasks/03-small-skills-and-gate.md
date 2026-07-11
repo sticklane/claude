@@ -1,6 +1,6 @@
 # Task 03: VCS-agnostic prose rewrite — critique, fleet, concurrent-sessions, gate
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 20 turns
@@ -60,12 +60,12 @@ or any agents/*.md file — those belong to sibling tasks.
 
 ## Acceptance
 
-- [ ] `rg -Un --pcre2 '`git[^`]*`' .claude/skills/critique/SKILL.md .claude/skills/fleet/SKILL.md` —
+- [x] `rg -Un --pcre2 '`git[^`]*`' .claude/skills/critique/SKILL.md .claude/skills/fleet/SKILL.md` —
       every hit labeled "e.g., under git:" or removed.
-- [ ] `grep -n 'git worktree list\|git status' .claude/rules/concurrent-sessions.md` —
+- [x] `grep -n 'git worktree list\|git status' .claude/rules/concurrent-sessions.md` —
       any remaining hits are inside a labeled example, preceded by
       intent-level phrasing.
-- [ ] `grep -n 'git-specific\|pre-commit hook' .claude/skills/gate/SKILL.md` —
+- [x] `grep -n 'git-specific\|pre-commit hook' .claude/skills/gate/SKILL.md` —
       shows the limitation callout.
-- [ ] `grep -n 'git-specific' .claude/skills/gate/reference.md antigravity/.agents/skills/gate/reference.md` —
+- [x] `grep -n 'git-specific' .claude/skills/gate/reference.md antigravity/.agents/skills/gate/reference.md` —
       shows the pattern-string note in both copies.

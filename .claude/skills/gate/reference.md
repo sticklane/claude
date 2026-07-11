@@ -129,7 +129,10 @@ Swap the formatter per project (`gofmt -w`, `ruff format`, `cargo fmt --`).
 ## Protected files
 
 `.claude/hooks/protect-files.sh` — output built with jq so a hostile file
-path cannot inject JSON; tighten or extend the pattern list per repo:
+path cannot inject JSON; tighten or extend the pattern list per repo. Note
+that the `*.git/*` entry is a **git-specific** pattern string (git keeps its
+metadata under `.git/`), not a VCS-agnostic one — a jj-colocated repo would
+add `*.jj/*` to protect the equivalent internal state:
 
 ```bash
 #!/bin/bash
