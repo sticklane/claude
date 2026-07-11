@@ -1,6 +1,6 @@
 # Task 01: extract_agent_tree() data layer
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 20 turns
