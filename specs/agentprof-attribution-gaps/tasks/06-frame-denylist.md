@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 04, 05
 Priority: P1
 Budget: 8 turns
@@ -40,9 +40,27 @@ denylist test fixture must use an invented name (e.g. a fake skill
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/claude/` → pass including the
+- [x] `cd agentprof && go test ./internal/claude/` → pass including the
   skill-frame and project-frame redaction fixtures and the
   substring-absent assertion
-- [ ] `grep -qi 'denylist' agentprof/README.md` → hits (MANUAL: includes
+  — verifier PASS; denylist_test.go covers skill-frame + project-frame
+  redaction and substring-absent-in-JSONL (evidence/06-frame-denylist.md).
+- [x] `grep -qi 'denylist' agentprof/README.md` → hits (MANUAL: includes
   the pinned-evidence repo rule)
-- [ ] `bash agentprof/scripts/check.sh` → green
+  — README "Frame denylist" section documents the mechanism and the
+  "Pinned-evidence repo rule" (evidence/06-frame-denylist.md).
+- [x] `bash agentprof/scripts/check.sh` → green
+  — format-check ok, lint ok, tests ok (evidence/06-frame-denylist.md).
+
+## Decisions
+
+- Rewrite-pass location: Touch excludes internal/output/, so the pass lives in
+  internal/claude/ (ScrubFrames) and is applied in cmd_claude.go before every
+  output.Write. Reverse: move into output.Write if Touch is later widened.
+- Redaction marker `(redacted)` (parens) chosen distinct from scrub.go's
+  `[redacted]` so the two mechanisms stay separable in output. Reverse: change
+  the denylistMarker const.
+- Denylist applied at three points (after Collect; after nameTurns; over the
+  merged set) so merge/summary/unlinked/renamed-turn paths are all covered; the
+  merge-path scrub was added after a pre-commit critic finding that the rolling
+  cache re-emitted unscrubbed. Reverse: consolidate if emit paths are unified.

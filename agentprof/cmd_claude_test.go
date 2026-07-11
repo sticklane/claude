@@ -48,6 +48,43 @@ func TestClaudeCommandEmitsCanonicalJSONLOnStdout(t *testing.T) {
 	}
 }
 
+func TestClaudeMergeScrubsDenylistedFramesFromCachedSamples(t *testing.T) {
+	dir := t.TempDir()
+	// A rolling cache holding a frame written before the denylist existed.
+	cached := schema.Sample{
+		Time:   time.Now().Add(-time.Hour).UTC(),
+		Stack:  []string{"myproject", "00", "skill:zz-test-private", "main", "claude-haiku-4-5"},
+		Values: map[string]int64{"cost_micros": 1},
+	}
+	line, err := schema.MarshalLine(cached)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cachePath := filepath.Join(dir, "cache.jsonl")
+	if err := os.WriteFile(cachePath, append(line, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	denylistPath := filepath.Join(dir, "frame-denylist")
+	if err := os.WriteFile(denylistPath, []byte("zz-test\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	// Empty --claude-dir → zero fresh samples; the merge re-emits the cache.
+	code := run([]string{
+		"claude", "--claude-dir", t.TempDir(),
+		"--merge", cachePath,
+		"--frame-denylist", denylistPath,
+	}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr: %s", code, stderr.String())
+	}
+	if strings.Contains(stdout.String(), "zz-test") {
+		t.Errorf("denied substring leaked from the rolling cache into merged output:\n%s", stdout.String())
+	}
+}
+
 func TestClaudeCommandZeroSamplesExitsOneWithoutWritingFile(t *testing.T) {
 	emptyDir := t.TempDir()
 	out := filepath.Join(t.TempDir(), "cc.pb.gz")
