@@ -1,6 +1,6 @@
 # Task 02: VCS-agnostic prose rewrite — build, breakdown, onboard, autopilot
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 24 turns
@@ -48,10 +48,15 @@ or any agents/*.md file — those belong to sibling tasks.
 
 ## Acceptance
 
-- [ ] `rg -Un --pcre2 '`git[^`]*`' .claude/skills/build/SKILL.md .claude/skills/breakdown/SKILL.md .claude/skills/onboard/SKILL.md .claude/skills/autopilot/reference.md` —
+- [x] `rg -Un --pcre2 '`git[^`]*`' .claude/skills/build/SKILL.md .claude/skills/breakdown/SKILL.md .claude/skills/onboard/SKILL.md .claude/skills/autopilot/reference.md` —
       every hit's starting line contains "e.g., under git:" or is the named
-      `autopilot/reference.md` permissions block exemption.
-- [ ] `grep -n 'git show' .claude/skills/breakdown/SKILL.md` shows the line
-      now labeled as a git example, not the sole phrasing.
-- [ ] `git diff --stat antigravity/.agents/workflows/build.md antigravity/.agents/skills/breakdown/SKILL.md antigravity/.agents/skills/onboard/SKILL.md antigravity/.agents/workflows/autopilot.md` —
-      all four mirrors show a non-empty diff.
+      `autopilot/reference.md` permissions block exemption. Evidence: 6 hits,
+      each labeled "e.g., under git:" (grep -v of the label returns empty);
+      autopilot JSON permissions block untouched (no inline-backtick git hit).
+- [x] `grep -n 'git show' .claude/skills/breakdown/SKILL.md` shows the line
+      now labeled as a git example, not the sole phrasing. Evidence: line 99
+      reads "...against its current value (e.g., under git: `git show
+      <base-commit>:<path> | grep version`)".
+- [x] `git diff --stat antigravity/.agents/workflows/build.md antigravity/.agents/skills/breakdown/SKILL.md antigravity/.agents/skills/onboard/SKILL.md antigravity/.agents/workflows/autopilot.md` —
+      all four mirrors show a non-empty diff. Evidence: build (14), breakdown
+      (5), onboard (2), autopilot (3) lines changed.

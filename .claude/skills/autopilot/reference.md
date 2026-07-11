@@ -31,7 +31,10 @@ every teammate's attended sessions too. If the file exists, MERGE the
 }
 ```
 
-Adjust `allow` to the project's verified commands. Honesty about what this
+Adjust `allow` to the project's verified commands. The `Bash(git ...)`
+entries above are git-specific permission prefixes — a jj-based project
+would grant its own equivalents; the strings themselves are permission
+surface, not prose, and are left as-is. Honesty about what this
 buys: permission rules gate commands, not the filesystem — `Bash(npm run *)`
 can run any script someone adds to package.json, and a bare `Edit` allow
 covers any path. The allowlist prevents the obvious irreversible actions
@@ -129,7 +132,7 @@ hits `--max-turns`, not after — hitting the cap kills the process mid-thought.
   crossed, write the baton at the next safe point instead of starting more
   work.
 - **Advancement test:** count commits since the run launched
-  (`git log <launch-sha>..HEAD --oneline`). New commits since the previous
+  (e.g., under git: `git log <launch-sha>..HEAD --oneline`). New commits since the previous
   baton → respawn a fresh generation. Zero new commits since the previous
   baton → do NOT respawn (an identical generation just repeats the stall);
   stop and leave the baton with a needs-attention note for spec repair.
