@@ -1957,12 +1957,95 @@ def render_filter_tiles(data):
     )
 
 
+# Spawn-tree rendering (SPEC.md R6/R7). Reuses /fleet's status-chip
+# convention exactly (fleet/reference.md:29-30,181): glyph + word pairs with
+# the color on the glyph only and the word always present.
+_AGENT_CHIP_GLYPH = {"running": "▶", "completed": "✓", "failed": "✕"}
+
+
+def _agent_chip(status):
+    """Fleet-style status chip: `<span class="chip s-STATUS"><b>GLYPH</b>
+    WORD</span>` — matches fleet/reference.md:181. The glyph in <b> carries
+    the color; the word is always present and inherits the chip's ink."""
+    glyph = _AGENT_CHIP_GLYPH.get(status, "▶")
+    return f'<span class="chip s-{esc(status)}"><b>{glyph}</b> {esc(status)}</span>'
+
+
+def _fmt_dur(seconds):
+    """Compact elapsed duration like '11m 12s' / '1h 5m' / '8s'."""
+    seconds = int(max(0, seconds))
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    if h:
+        return f"{h}h {m}m"
+    if m:
+        return f"{m}m {s}s"
+    return f"{s}s"
+
+
+def _agent_time_html(node):
+    """Start age + elapsed for one spawn-tree node. A still-running node (no
+    ended_ts) measures elapsed against now."""
+    start = node.get("started_ts")
+    if not start:
+        return ""
+    end = node.get("ended_ts")
+    dur = _fmt_dur((end if end else now_ts()) - start)
+    return f'<span class="a-time">started {esc(age_str(start))} ago · {esc(dur)}</span>'
+
+
+def _count_spawn_nodes(nodes):
+    return sum(1 + _count_spawn_nodes(n.get("children") or []) for n in nodes)
+
+
+def _spawn_nodes_html(nodes):
+    """Recursive nested <ul>/<li>: each node is one row (<div class="agent-node
+    ...">), children nest in a further <ul> so indentation reflects spawnDepth.
+    A failed node gets a row-level `failed` modifier class on top of its chip's
+    s-failed — distinct styling that is not color alone."""
+    out = []
+    for node in nodes:
+        status = node.get("status") or "running"
+        row_cls = "agent-node failed" if status == "failed" else "agent-node"
+        atype = esc(node.get("agentType") or "agent")
+        desc = esc(node.get("description") or "")
+        children = node.get("children") or []
+        child_html = f"<ul>{_spawn_nodes_html(children)}</ul>" if children else ""
+        out.append(
+            f'<li><div class="{row_cls}">'
+            f'<span class="a-type">{atype}</span>'
+            f'<span class="a-desc">{desc}</span>'
+            f"{_agent_chip(status)}{_agent_time_html(node)}</div>"
+            f"{child_html}</li>"
+        )
+    return "".join(out)
+
+
+def _spawn_tree_html(session):
+    """Collapsible per-session spawn tree, or "" when the session spawned
+    nothing (the common case — no markup, no regression, R6)."""
+    tree = session.get("spawn_tree") or []
+    if not tree:
+        return ""
+    n = _count_spawn_nodes(tree)
+    label = esc(session.get("prompt") or session.get("id") or "session")
+    return (
+        f'<details class="spawn-tree"><summary>{label} — '
+        f"{n} agent{'' if n == 1 else 's'} spawned</summary>"
+        f'<ul class="spawn-root">{_spawn_nodes_html(tree)}</ul></details>'
+    )
+
+
 def _session_timeline_html(sessions, by_session=None):
     """Sessions rendered via the shared viz.timeline() Gantt instead of a
     flat table; state values (active/recent/idle/stale) all map through
     viz.canonical_status without falling through to "open". When spend data
     is available, each session's label is prefixed with its cost badge (R6);
-    viz.timeline() escapes labels, so the badge is plain text (R10)."""
+    viz.timeline() escapes labels, so the badge is plain text (R10).
+
+    Sessions carrying a non-empty spawn_tree (Task 02) additionally render a
+    collapsible indented agent tree below the timeline (R6/R7); sessions
+    without one add no markup at all."""
     if not sessions:
         return '<p class="muted-text">no sessions recorded</p>'
     by_session = by_session or {}
@@ -1979,7 +2062,8 @@ def _session_timeline_html(sessions, by_session=None):
                 "tooltip": f"{s['branch'] or '?'} · last active {age_str(s['last_ts'])} ago",
             }
         )
-    return viz.timeline(rows)
+    trees = "".join(_spawn_tree_html(s) for s in sessions)
+    return viz.timeline(rows) + trees
 
 
 _TASK_NUM_RE = re.compile(r"^(\d+)-")
@@ -2263,6 +2347,25 @@ td {{ padding:6px 10px 6px 0; border-top:1px solid var(--grid);
 .chip {{ display:inline-block; font-size:11px; padding:1px 8px; margin-left:6px;
   border:1px solid var(--border); border-radius:999px; color:var(--ink-2); }}
 .chip.warning {{ color:var(--warning); border-color:var(--warning); }}
+/* fleet-style status chips (fleet/reference.md): color on the glyph only,
+   the word stays in ink so status is never carried by color alone. */
+.chip b {{ font-weight:600; }}
+.chip.s-running b {{ color:var(--blue); }}
+.chip.s-completed b {{ color:var(--good); }}
+.chip.s-failed b {{ color:var(--critical); }}
+/* collapsible per-session spawn tree (R6/R7) */
+.spawn-tree {{ margin-top:10px; }}
+.spawn-tree > summary {{ cursor:pointer; font-size:12px; color:var(--ink-2); }}
+.spawn-tree ul {{ list-style:none; margin:4px 0 0; padding-left:18px; }}
+.spawn-tree ul.spawn-root {{ padding-left:0; }}
+.agent-node {{ display:flex; align-items:baseline; gap:8px; padding:2px 0;
+  font-size:12px; }}
+.agent-node .a-type {{ font-weight:600; }}
+.agent-node .a-desc {{ color:var(--ink-2); overflow-wrap:anywhere; }}
+.agent-node .a-time {{ margin-left:auto; color:var(--muted);
+  font-variant-numeric:tabular-nums; white-space:nowrap; }}
+.agent-node.failed {{ border-left:2px solid var(--critical);
+  padding-left:6px; }}
 .repo {{ background:var(--surface); border:1px solid var(--border);
   border-radius:10px; padding:12px 16px; margin-bottom:12px; }}
 .repo summary {{ cursor:pointer; list-style:none; display:flex; align-items:center;

@@ -7,6 +7,7 @@ fake ~/.gemini/antigravity/brain store — the real one is never touched.
 
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -677,6 +678,124 @@ class TestSessionTimelineRendering(unittest.TestCase):
         )
 
         self.assertIn("viz-bar viz-stale", html)
+
+
+class TestSpawnTreeRendering(unittest.TestCase):
+    """R6/R7: a session carrying a non-empty spawn_tree renders a collapsible
+    indented tree — one row per agent, indented by spawnDepth, a fleet-style
+    status chip per node, and distinct styling on failed branches. Sessions
+    without a spawn tree render exactly as before (no regression).
+
+    The fixture below is the deterministic source of truth: it is built in
+    memory here, never scanned from live session data on disk."""
+
+    def _data(self, repos=None, orphan_sessions=None):
+        return {
+            "totals": {
+                "repos": len(repos or []),
+                "specs_open": 0,
+                "tasks_open": 0,
+                "sessions_active": 0,
+                "attention": 0,
+            },
+            "generated_at": "now",
+            "stale_days": 7,
+            "inbox": [],
+            "ready": {"items": [], "blocked_unresolved": []},
+            "repos": repos or [],
+            "antigravity": [],
+            "todos": [],
+            "orphan_sessions": orphan_sessions or [],
+        }
+
+    def _session(self, spawn_tree, state="active"):
+        return {
+            "id": "s1",
+            "cwd": "/r/demo",
+            "branch": "main",
+            "prompt": "do the thing",
+            "last_ts": 100.0,
+            "start_ts": 1.0,
+            "end_ts": 100.0,
+            "bytes": 10,
+            "state": state,
+            "spawn_tree": spawn_tree,
+        }
+
+    def _fixture_tree(self):
+        # root (running) with one failed child at spawnDepth 1
+        return [
+            {
+                "agentId": "aaa",
+                "agentType": "implementation-worker",
+                "description": "build the parser",
+                "status": "running",
+                "spawnDepth": 0,
+                "started_ts": 10.0,
+                "ended_ts": None,
+                "children": [
+                    {
+                        "agentId": "bbb",
+                        "agentType": "verifier",
+                        "description": "verify the parser",
+                        "status": "failed",
+                        "spawnDepth": 1,
+                        "started_ts": 20.0,
+                        "ended_ts": 40.0,
+                        "children": [],
+                    }
+                ],
+            }
+        ]
+
+    def test_render_spawn_tree_indented_chipped_with_failed_branch(self):
+        tree = self._fixture_tree()
+        html = workboard.render_html(self._data(orphan_sessions=[self._session(tree)]))
+
+        # one row per tree node: 2 nodes -> 2 agent-node rows
+        self.assertEqual(html.count('class="agent-node'), 2)
+
+        # both agents appear by type/description
+        self.assertIn("implementation-worker", html)
+        self.assertIn("verifier", html)
+
+        # indentation reflecting spawnDepth: the child is nested inside a
+        # further <ul> beneath its parent's <li>
+        self.assertIn("spawn-tree", html)
+        self.assertRegex(html, r"<li>.*<ul>.*verifier.*</ul>.*</li>")
+
+        # a fleet-style status chip per node (glyph + word, class name).
+        # Acceptance criterion 2: assert via re, inline, that the fragment
+        # carries the fleet chip class.
+        chips = re.findall(r'class="chip s-(running|completed|failed)"', html)
+        self.assertIn("running", chips)  # root node chip
+        self.assertIn("failed", chips)  # failed child chip
+        self.assertEqual(len(chips), 2)  # one chip per node
+
+        # fleet convention: glyph + word, word always present
+        self.assertRegex(html, r'class="chip s-failed"><b>[^<]+</b>\s*failed')
+
+        # failed branch gets a distinct row-level modifier class, not color
+        # alone (s-failed on the chip PLUS a modifier on the row div)
+        self.assertRegex(html, r'class="agent-node[^"]*\bfailed\b')
+
+    def test_render_no_regression_when_spawn_tree_empty(self):
+        # The common case (no spawn tree) must render exactly as before the
+        # feature: an empty list and an absent key both emit zero spawn-tree
+        # markup, so the session section is unchanged (R6, no regression).
+        empty = self._session(spawn_tree=[])
+        absent = self._session(spawn_tree=[])
+        del absent["spawn_tree"]
+
+        html_empty = workboard.render_html(self._data(orphan_sessions=[empty]))
+        html_absent = workboard.render_html(self._data(orphan_sessions=[absent]))
+
+        self.assertEqual(html_empty, html_absent)
+        # no spawn-tree markup injected for the common case (the CSS rule
+        # names always ship; what must be absent is the rendered elements)
+        self.assertNotIn('class="spawn-tree"', html_empty)
+        self.assertNotIn('class="agent-node', html_empty)
+        self.assertNotIn('class="chip s-', html_empty)
 
 
 class TestSpecDagRendering(unittest.TestCase):
