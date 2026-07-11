@@ -1,6 +1,6 @@
 # Task 03: `drain/reference.md` baton grammar goes runtime-agnostic
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 20 turns
@@ -63,8 +63,8 @@ the human-driven thing this task's `NONE` case also says.
 
 ## Acceptance
 
-- [ ] `sed -n '/## Baton pass/,/## Critique intake/p' .claude/skills/drain/reference.md | grep -c 'nohup claude -p "\/drain'` → `0`
-- [ ] `sed -n '/## Baton pass/,/## Critique intake/p' .claude/skills/drain/reference.md | grep -c 'runtimes/parse_headless.py'` → `1` or more
-- [ ] `grep -c 'DRAIN_RELAUNCH_CMD' .claude/skills/drain/reference.md` → unchanged from before this task (override section still present, still describes a verbatim escape hatch)
-- [ ] Manual read-through: the ~704-708 pointer and the rewritten baton
+- [x] `sed -n '/## Baton pass/,/## Critique intake/p' .claude/skills/drain/reference.md | grep -c 'nohup claude -p "\/drain'` → `0`
+- [x] `sed -n '/## Baton pass/,/## Critique intake/p' .claude/skills/drain/reference.md | grep -c 'runtimes/parse_headless.py'` → `1` or more
+- [x] `grep -c 'DRAIN_RELAUNCH_CMD' .claude/skills/drain/reference.md` → unchanged from before this task (override section still present, still describes a verbatim escape hatch)
+- [x] Manual read-through: the ~704-708 pointer and the rewritten baton
       section describe the same runtime-resolution rule (no contradiction)
