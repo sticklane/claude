@@ -53,3 +53,9 @@ Build call site.
   — verifier: all 14 packages ok; no existing Summary field name changed
 - [x] `bash agentprof/scripts/check.sh` → green
   — verifier: format-check/lint/tests all ok
+
+
+## Decisions
+
+- 2026-07-11 (worker, reversible): sessions section accumulates calls/cost AND ctx percentiles over main-loop samples only (literal task Goal reading); to include subagent calls in calls/cost, drop the agentType filter in sessionStats.
+- 2026-07-11 (worker, reversible): percentile = nearest-rank (ceil); swap for linear interpolation if preferred (task 04 documents).
