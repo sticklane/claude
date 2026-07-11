@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -65,7 +65,11 @@ the rules doc is the doctrine home), do NOT edit `~/.claude/CLAUDE.md`
 
 ## Acceptance
 
-- [ ] `grep -qi 'drain-shaped' /Users/sjaconette/claude/.claude/rules/token-discipline.md` → exit 0 (bare "drain" already appears in the file — the new block must use the "drain-shaped" phrasing), and the block recommends launching /drain for such freehand requests (quote it as evidence)
-- [ ] `grep -q '0\.067' /Users/sjaconette/claude/.claude/rules/token-discipline.md` → exit 0, and MANUAL: the tier-dispatch block names the pinned agents as the default for mechanical fan-outs and reserves session-model general-purpose for judgment work (quote it as evidence)
-- [ ] `test -f /Users/sjaconette/claude/specs/drain-wake-cost/global-claude-line.md` → exit 0, and the file is marked MANUAL (attended)
-- [ ] `grep -qiE 'auto-?invoke|auto-?trigger' /Users/sjaconette/claude/.claude/rules/token-discipline.md || true` — MANUAL sanity: the new block must NOT instruct auto-invoking drain (it is disable-model-invocation)
+- [x] `grep -qi 'drain-shaped' /Users/sjaconette/claude/.claude/rules/token-discipline.md` → exit 0 (bare "drain" already appears in the file — the new block must use the "drain-shaped" phrasing), and the block recommends launching /drain for such freehand requests (quote it as evidence)
+  - Evidence: verifier PASS (evidence/02-freehand-drain-doctrine.md) — new "Delegation defaults" bullet "**Drain-shaped freehand requests → recommend `/drain`.** … recommend the human launch `/drain` rather than improvising an unstructured dispatch loop".
+- [x] `grep -q '0\.067' /Users/sjaconette/claude/.claude/rules/token-discipline.md` → exit 0, and MANUAL: the tier-dispatch block names the pinned agents as the default for mechanical fan-outs and reserves session-model general-purpose for judgment work (quote it as evidence)
+  - Evidence: verifier PASS (evidence/02-freehand-drain-doctrine.md) — new "Model and effort matching" block "**Freehand fan-out …** uses the typed pinned agents (scout/verifier/implementation-worker) … bare general-purpose at the session model is reserved for judgment work … $0.067/call … vs … $0.057/call"; placed after the four rungs, "does not change them".
+- [x] `test -f /Users/sjaconette/claude/specs/drain-wake-cost/global-claude-line.md` → exit 0, and the file is marked MANUAL (attended)
+  - Evidence: verifier PASS (evidence/02-freehand-drain-doctrine.md) — file created, opens "**MANUAL (attended): for Steven to apply.**".
+- [x] `grep -qiE 'auto-?invoke|auto-?trigger' /Users/sjaconette/claude/.claude/rules/token-discipline.md || true` — MANUAL sanity: the new block must NOT instruct auto-invoking drain (it is disable-model-invocation)
+  - Evidence: verifier PASS (evidence/02-freehand-drain-doctrine.md) — underlying grep exit 1 (no match anywhere); both new blocks state "recommend it, never launch it on the human's behalf" / "never launch it automatically".
