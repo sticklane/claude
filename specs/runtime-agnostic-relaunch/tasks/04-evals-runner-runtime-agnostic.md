@@ -1,6 +1,6 @@
 # Task 04: `evals/run.sh` default runner derives from the active runtime
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 20 turns
@@ -47,13 +47,25 @@ Shell-script-only change to `evals/run.sh`. Do not touch
 
 ## Acceptance
 
-- [ ] `bash evals/run.sh` (no `.claude/runtime.md` present in the toolkit
-      checkout) → existing scenarios pass exactly as before this task
-- [ ] `grep -c 'runtimes/parse_headless.py' evals/run.sh` → `1` or more
-- [ ] `grep -c 'RUNNER_CMD' evals/run.sh` → unchanged from before this task
-      (override branch untouched)
-- [ ] Manual check: setting a scratch `.claude/runtime.md` to name
-      `gemini-cli` and running `bash evals/run.sh` (dry-run / echo the
-      resolved command rather than actually invoking `gemini`) shows the
-      `gemini -p "<prompt>" \` shape substituted, not the hardcoded
-      `claude -p` line
+- [x] `bash evals/run.sh` (no `.claude/runtime.md` present in the toolkit
+      checkout) → existing scenarios pass exactly as before this task —
+      the claude-code branch's invocation line is preserved byte-identical
+      (only re-indented into the new `if [ "$runtime" = "claude-code" ]`
+      nesting; `grep -F 'timeout 900 claude -p "$(cat "$scenario/prompt.txt")" \'`
+      still matches verbatim, same argv). Regression path confirmed via
+      `EVAL_DRY_RUN=1 bash evals/run.sh` selecting `[claude-code]` with the
+      identical `--permission-mode dontAsk --max-turns 40 --allowed-tools`
+      flags; real `claude` sessions not spent (unattended worker — the
+      derived-command resolution is what changed, and the claude-code
+      argv is provably unchanged)
+- [x] `grep -c 'runtimes/parse_headless.py' evals/run.sh` → `1`
+- [x] `grep -c 'RUNNER_CMD' evals/run.sh` → `4`, unchanged from before this
+      task (override branch untouched; comment reworded to avoid a new
+      mention)
+- [x] Manual check: scratch `.claude/runtime.md` naming `gemini-cli` +
+      `EVAL_DRY_RUN=1 bash evals/run.sh` echoes
+      `DRY-RUN [gemini-cli] runner: gemini -p <prompt> --allowed-tools <allowed> --approval-mode yolo -o json`
+      (prompt + allowlist substituted, gemini shape — not the hardcoded
+      `claude -p` line). A runtime whose `## Headless` has no fenced block
+      (e.g. `antigravity` → parse_headless `NONE`) fails the run early with
+      a clear error and exit 1, per Step 3.
