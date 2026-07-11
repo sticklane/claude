@@ -969,3 +969,32 @@ func TestCollectAgentWorktreeDirFoldsIntoOwningProject(t *testing.T) {
 		t.Errorf("worktree agent-dir project frame = %q, want owning project %q", got, "myrepo")
 	}
 }
+
+// Two same-typed (scout) subagents run in one session: agent-A and agent-WS.
+// Each of their samples must carry an agent_id label keyed to the sidecar
+// instance, so the two instances stay distinguishable; main-loop samples
+// carry no agent_id at all.
+func TestSubagentSamplesCarryDistinctAgentID(t *testing.T) {
+	samples, _ := collectFixture(t)
+
+	agentIDs := map[string]bool{}
+	for _, s := range samples {
+		if id, ok := s.Labels["agent_id"]; ok {
+			agentIDs[id] = true
+		}
+	}
+	if !agentIDs["A"] {
+		t.Errorf("no sample carries agent_id=A; got agent_ids %v", agentIDs)
+	}
+	if !agentIDs["WS"] {
+		t.Errorf("no sample carries agent_id=WS; got agent_ids %v", agentIDs)
+	}
+
+	main := findByStack(samples, []string{"proj", "t01 · start", "skill:build", "main", "claude-fable-5"})
+	if len(main) != 1 {
+		t.Fatalf("got %d main-loop samples, want 1", len(main))
+	}
+	if id, ok := main[0].Labels["agent_id"]; ok {
+		t.Errorf("main-loop sample carries agent_id=%q, want none", id)
+	}
+}
