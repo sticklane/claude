@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 12 turns
@@ -53,9 +53,9 @@ text, report it under ## Deferred questions rather than fixing it here.
 
 ## Acceptance
 
-- [ ] `grep -qiE '2k tokens' /Users/sjaconette/claude/antigravity/.agents/workflows/drain.md && grep -qiE 'TTL|cache' /Users/sjaconette/claude/antigravity/.agents/workflows/drain.md` → exit 0 (content-coverage, not diff-identity)
-- [ ] `bash /Users/sjaconette/claude/evals/lint-ultra-gate.sh` → exit 0
-- [ ] `cd /Users/sjaconette/claude && claude plugin validate .` → pass
-- [ ] `git -C /Users/sjaconette/claude log --oneline -- .claude-plugin/plugin.json` shows a version-bump commit belonging to this spec (match the spec slug in the message; no fixed HEAD~N window)
-- [ ] Evals drain scenario updated for the dual trigger (name the file + quote the changed lines as evidence)
+- [x] `grep -qiE '2k tokens' /Users/sjaconette/claude/antigravity/.agents/workflows/drain.md && grep -qiE 'TTL|cache' /Users/sjaconette/claude/antigravity/.agents/workflows/drain.md` → exit 0 (content-coverage, not diff-identity) — verifier PASS, evidence/03-ship-gate.md (both greps exit 0; 5/5 contracts present)
+- [x] `bash /Users/sjaconette/claude/evals/lint-ultra-gate.sh` → exit 0 — verifier PASS: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", evidence/03-ship-gate.md
+- [x] `cd /Users/sjaconette/claude && claude plugin validate .` → pass — verifier PASS: "✔ Validation passed", evidence/03-ship-gate.md
+- [x] `git -C /Users/sjaconette/claude log --oneline -- .claude-plugin/plugin.json` shows a version-bump commit belonging to this spec (match the spec slug in the message; no fixed HEAD~N window) — verifier PASS: commit 0b38a03 "bump plugin version 0.8.33 -> 0.8.34 (drain-wake-cost dw/03)", evidence/03-ship-gate.md
+- [x] Evals drain scenario updated for the dual trigger (name the file + quote the changed lines as evidence) — verifier PASS: evals/drain/01-rolling-window/setup.sh documents max(2,6-W)=4; assert.sh Check 5 asserts no DRAIN-BATON.md written + clean lease/baton end state; bash -n clean, evidence/03-ship-gate.md
 - [ ] MANUAL (attended, human-launched — /drain is disable-model-invocation, unattended workers cannot run it): a /drain run over a 2-task demo spec completes with hub verdicts each ≤ 2k tokens and no reading of task-file bodies by the hub after dispatch (Status/header lines and the tasks/ whitelist diff are fine) — inspect transcript
