@@ -71,3 +71,13 @@ this task's own parent `../SPEC.md`.
       `specs/codex-port-launch-authorization-parity/SPEC.md`.
 - [ ] `grep -q "Breakdown-ready: true" specs/codex-cli-port/SPEC.md` passes
       (step 4's closing commit landed).
+
+## Progress
+
+- 2026-07-11: Worker returned DEFERRED — `specs/codex-cli-port/SPEC.md` was
+  untracked in the parent checkout with no git history, so the
+  false→true round-trip and its acceptance diff had no committed
+  baseline to operate against. Resolved by the orchestrator: committed
+  `specs/codex-cli-port/` (commit b75b5e6) to establish the baseline.
+  No source changes were made by the deferred worker; re-dispatching
+  against the now-committed baseline.
