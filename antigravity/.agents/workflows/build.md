@@ -75,6 +75,15 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    (all acceptance passing), DEFERRED (a question a human must
    answer), or BLOCKED (stuck after the fix attempts) — rather than
    thrashing.
+   Stopping blocked (the **same-edit** rule): when the session must stop on
+   an external blocker it cannot clear (missing creds, an undeployed
+   dependency, a product decision only the user can make), write
+   `Status: blocked` AND its `Unblock:` line into the task file in the SAME
+   edit, never a bare `blocked` with no recorded move. Pick the narrowest
+   type: `Unblock: run: <cmd>` when a command checks or clears it,
+   `Unblock: agent: <prompt>` when clearing needs an agent's judgment,
+   `Unblock: ask: <exact question>` only for a genuine human decision. The
+   `Unblock:` line sits on the line immediately after `Status:`.
    Heavy-context escape: attended build has no baton (that is the drain
    workflow's degradation response); when the session itself has grown
    heavy — not just one stuck fix — apply the handoff skill to write a

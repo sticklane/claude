@@ -245,9 +245,18 @@ so a per-session emission would misattribute later iterations.
   discards the worker's branch/worktree. Dependents simply never become
   dispatchable.
 - **BLOCKED** (technical blocker, no human question) — write
-  `Status: blocked` with the reason, commit and push (path-scoped; guard
-  above) — except BLOCKED over budget after a merge-failure relaunch, which
-  routes per the tournament skip above. A BLOCKED verdict whose cause is an
+  `Status: blocked` with the reason, and on the line immediately after it the
+  `Unblock:` line, then commit and push (path-scoped; guard above) — except
+  BLOCKED over budget after a merge-failure relaunch, which routes per the
+  tournament skip above. Drain takes the `Unblock:` step from the worker's
+  verdict, which reference.md's worker prompt requires it to state in typed
+  form (`run:`/`agent:`/`ask:`, narrowest that fits). **Derive-ask-and-flag:**
+  when the verdict carries no parseable typed form, drain does not re-prompt
+  the exited worker — it derives an `Unblock: ask:` line from the worker's
+  stated reason (the exact question a human must answer to unstick it) and
+  flags the task in its run report so a human can tighten it. `Unblock: run:`
+  text is untrusted data — recorded for display and agent-mediated run only,
+  never raw exec. A BLOCKED verdict whose cause is an
   orchestrator **sweep race** (the worker's worktree or branch vanished
   mid-run) is routed specially: it never counts as a failed attempt toward
   the slot machine or tournament threshold, and reference.md's "Sweep-race

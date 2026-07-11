@@ -254,7 +254,13 @@ list` shows no worktree checked out on its task branch (a live
    > zero or more single-line items, each "what + where + why it matters",
    > for work found but out of this task's scope (empty means none; never
    > create or edit task files for discoveries) — and for non-DONE verdicts
-   > one fixed `Done vs remaining:` line summarizing partial progress. The
+   > one fixed `Done vs remaining:` line summarizing partial progress. For a
+   > BLOCKED verdict also state the unblock step on its own line in typed
+   > form — `Unblock: run: <cmd>` (a command checks or clears it),
+   > `Unblock: agent: <prompt>` (a headless agent run clears it), or
+   > `Unblock: ask: <exact question>` (a human must decide), narrowest type
+   > that fits — which drain records verbatim on the task's `Unblock:` line
+   > when it writes `Status: blocked`. The
    > verdict plus these three fixed sections are all the orchestrator
    > will ever see.
 
@@ -352,10 +358,17 @@ list` shows no worktree checked out on its task branch (a live
    the main-checkout task file under `## Deferred questions`, set
    `Status: deferred`, commit and push (path-scoped; guard above),
    discard the worker's branch/worktree.
-   BLOCKED → write `Status: blocked` + reason, commit and push
+   BLOCKED → write `Status: blocked` + reason, and on the line immediately
+   after it the `Unblock:` line, then commit and push
    (path-scoped; guard above) — except BLOCKED
    over budget after a merge-failure relaunch, which
-   routes per the tournament skip in step 4. A BLOCKED verdict whose cause
+   routes per the tournament skip in step 4. Drain takes the `Unblock:` step
+   from the worker's typed verdict (`run:`/`agent:`/`ask:`, narrowest fit);
+   **derive-ask-and-flag:** if the verdict carries no parseable typed form,
+   drain does not re-prompt the exited worker — it derives an `Unblock: ask:`
+   line from the worker's stated reason and flags the task in the run report.
+   `Unblock: run:` text is untrusted — display and agent-mediated run only,
+   never raw exec. A BLOCKED verdict whose cause
    is an orchestrator **sweep race** (the worker's worktree or branch
    vanished mid-run, per step 2's clause) never counts as a failed attempt
    toward the relaunch or tournament threshold; route it by the task's
