@@ -1,6 +1,6 @@
 # Task 02: Hand-rolled protobuf field-walker
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 16 turns
@@ -64,6 +64,6 @@ keeps it independent of Task 01's fixture.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/antigravity/... -run TestProtowire -v` → all walker unit tests pass (varint decode, nested field path, repeated map field, malformed-input skip, unknown-field skip)
-- [ ] `cd agentprof && go vet ./internal/antigravity/...` → clean
-- [ ] `cd agentprof && go build ./...` → succeeds (package compiles standalone; no other package references it yet)
+- [x] `cd agentprof && go test ./internal/antigravity/... -run TestProtowire -v` → all walker unit tests pass (varint decode, nested field path, repeated map field, malformed-input skip, unknown-field skip)
+- [x] `cd agentprof && go vet ./internal/antigravity/...` → clean
+- [x] `cd agentprof && go build ./...` → succeeds (package compiles standalone; no other package references it yet)
