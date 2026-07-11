@@ -1,6 +1,6 @@
 # Task 02: Mirror `screen-stub.sh` and fix `drain.md`'s stale `.claude/` references
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 8 turns
@@ -50,10 +50,10 @@ the four files task 01 owns.
 
 ## Acceptance
 
-- [ ] `find antigravity -iname "screen-stub*"` → finds
+- [x] `find antigravity -iname "screen-stub*"` → finds
       `antigravity/.agents/skills/drain/screen-stub.sh`
-- [ ] `diff .claude/skills/drain/screen-stub.sh antigravity/.agents/skills/drain/screen-stub.sh` → no output (verbatim mirror)
-- [ ] `grep -n 'screen-stub' antigravity/.agents/workflows/drain.md` → shows `.agents/skills/drain/screen-stub.sh`, no `.claude/`-rooted path
-- [ ] `grep -n '\.claude/rules' antigravity/.agents/workflows/drain.md` → no output
-- [ ] `ls antigravity/.agents/skills/drain/` → contains `screen-stub.sh` and `README.md`; no `SKILL.md`
-- [ ] `bash tests/test_antigravity_parity.sh` → exits 0
+- [x] `diff .claude/skills/drain/screen-stub.sh antigravity/.agents/skills/drain/screen-stub.sh` → no output (verbatim mirror)
+- [x] `grep -n 'screen-stub' antigravity/.agents/workflows/drain.md` → shows `.agents/skills/drain/screen-stub.sh`, no `.claude/`-rooted path
+- [x] `grep -n '\.claude/rules' antigravity/.agents/workflows/drain.md` → no output
+- [x] `ls antigravity/.agents/skills/drain/` → contains `screen-stub.sh` and `README.md`; no `SKILL.md`
+- [x] `bash tests/test_antigravity_parity.sh` → exits 0
