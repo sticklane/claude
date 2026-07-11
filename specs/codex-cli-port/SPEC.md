@@ -70,6 +70,20 @@ burden CLAUDE.md already tracks for the antigravity mirror ("mirror the
 change there in the same commit" — CLAUDE.md:73-80) without first checking
 whether the skills tier even needs duplicating.
 
+Resolved research finding (see
+`specs/codex-port-launch-authorization-parity/SPEC.md` for the full
+quote chain, not duplicated here): Codex's own documentation
+(learn.chatgpt.com/docs/build-skills) describes exactly two invocation
+pathways — agent-autonomous description-match selection (which
+`allow_implicit_invocation: false` blocks) and human-typed explicit
+invocation (`$skill-name` / `/skills`, which the flag leaves untouched).
+No third "the model self-invokes explicitly" pathway is documented
+anywhere. Because those two pathways are exhaustive, the single flag
+already gives all four workflow-only stages a sufficient and uniform
+launch guarantee: nothing the model can do reaches a stage the human did
+not type. This is why R3 adapts one live-authorization-contract paragraph
+to Codex's mechanism rather than inventing per-skill gating differences.
+
 ## Solution
 
 Reuse, don't duplicate — but reuse through ONE unified discovery root, not
@@ -197,7 +211,17 @@ Concretely:
   adaptation per docs/memory/workboard-mirror-verbatim.md's prose-mirror
   convention — content-coverage checked, not byte-diffed) — not a stub that
   merely says "see antigravity" (Codex needs the procedure inline since it
-  has no workflow-file fallback to read from).
+  has no workflow-file fallback to read from). Additionally, for
+  `drain`/`build`/`autopilot` specifically, the inlined SKILL.md content
+  must include a live-authorization-contract paragraph — but adapted to
+  name Codex's actual gating mechanism rather than quoting `.claude/`'s own
+  tool names verbatim: `allow_implicit_invocation: false` blocks automatic
+  description-match selection, so the agent cannot self-launch the stage; a
+  human must type the invocation explicitly (`$drain`/`$build`/`$autopilot`
+  in the TUI or `codex exec`, or via the `/skills` command). `evals`'s
+  SKILL.md is explicitly unaffected here — its "human-only, paid headless
+  sessions" framing already states an unconditional guarantee, so there is
+  nothing to add to it.
 - R4: `codex/.agents/skills/` contains exactly the four real directories
   (`drain`, `build`, `autopilot`, `evals`) plus one symlink per
   already-working `antigravity/.agents/skills/*` entry, INCLUDING
