@@ -713,7 +713,9 @@ autopilot reference's headless rule). The template below is the
 active runtime profile's rendering — Claude Code's; other runtimes substitute
 their profile's `## Headless` template, selected per `runtimes/README.md`
 (toolkit repo; absent in plugin installs and eval fixtures, where the
-claude-code defaults apply). One task at a time, from the repo root:
+claude-code defaults apply) — the same runtime resolution the baton section
+below (`## Baton pass`) now applies mechanically via
+`runtimes/parse_headless.py`. One task at a time, from the repo root:
 
 ```bash
 git worktree add -b task/NN-<slug> ../<repo>-task-NN
@@ -858,23 +860,59 @@ DRAIN-OWNER.md iff this line matches it. The owner-file `Generation:`
 update and this file's write land in the SAME commit on every baton pass,
 so the two files can never disagree across a crash.
 
-**Relaunch command template (generation G → G+1).** Detached, from the repo
-root:
+**Relaunch command template (generation G → G+1).** The invocation is not
+hardcoded to `claude`. Resolve the repo's active runtime
+(`.claude/runtime.md`, default `claude-code`, per `runtimes/README.md`'s
+selection rule) and fetch that runtime's non-interactive command shape with
 
 ```bash
-nohup claude -p "/drain <spec> (generation G+1, baton: specs/<slug>/DRAIN-BATON.md)" \
-  --allowedTools "Task,Read,Edit,Write,Glob,Grep,Bash(git *),Bash(<project gate/test/lint cmds>)" \
-  --permission-mode dontAsk \
-  --max-turns <default 80, or the run's cap> \
+python3 runtimes/parse_headless.py <runtime>
+```
+
+(the shared parser task 01 added; `runtimes/` is absent in plugin installs
+and eval fixtures, where the `claude-code` defaults apply). It prints the
+runtime's `## Headless` template with its placeholders (`<prompt>`,
+`<allowlist>`, `<turn cap>`, `<tier alias>`) intact — or the sentinel
+`NONE` when the runtime has no scriptable relaunch.
+
+*Scriptable runtime (a template is returned).* Substitute drain's own values
+into the template's placeholders:
+
+- `<prompt>` → `/drain <spec> (generation G+1, baton: specs/<slug>/DRAIN-BATON.md)`.
+- `<allowlist>` → the ORCHESTRATOR allowlist, **not** the headless worker's:
+  `"Task,Read,Edit,Write,Glob,Grep,Bash(git *),Bash(<project gate/test/lint cmds>)"`.
+  It differs from the headless worker's in one decisive way: **`Task` is
+  allowed** — the orchestrator's whole job is dispatching workers — plus a
+  git-specific `Bash(git *)` + project-gate allowlist for the merges and gate
+  runs drain performs itself (a jj-colocated repo would need the analogous VCS
+  grant added — the same deferred permission-surface widening the worker/agent
+  grants carry).
+- `<turn cap>` (the template's `--max-turns`) → default 80, or the run's cap.
+- `<tier alias>` (the template's `--model` flag, when it carries one) → the
+  orchestrator generation runs at the session tier; leave the runtime
+  template's own model placeholder as its profile renders it.
+
+These are drain-level values inserted into the runtime template's own flag
+placeholders — not new backgrounding behavior. Then wrap the substituted
+foreground command in drain's own fixed POSIX backgrounding wrapper — this
+`nohup … &` wrapper is drain-level orchestration, not part of the runtime's
+`## Headless` contract, so it stays constant across every runtime — and run
+it detached from the repo root:
+
+```bash
+nohup <substituted runtime command> \
   >> specs/<slug>/.drain-gen.log 2>&1 &
 ```
 
-The flag set differs from the headless worker in one decisive way: **`Task`
-is allowed** — the orchestrator's whole job is dispatching workers — plus a
-git-specific `Bash(git *)` + project-gate allowlist for the merges and gate
-runs drain performs itself (a jj-colocated repo would need the analogous VCS
-grant added — the same deferred permission-surface widening the worker/agent
-grants carry). `dontAsk` makes any unapproved tool abort rather than hang.
+`dontAsk` (which every runtime's headless template already carries) makes any
+unapproved tool abort rather than hang.
+
+*No scriptable relaunch (`NONE`).* When the parser returns `NONE`
+(Antigravity today), there is no shell command to render — the grammar is a
+plain-language instruction instead: **No scriptable relaunch for `<runtime>`
+— reopen generation G+1 from `<runtime>`'s Agent Manager, pointed at
+`DRAIN-BATON.md`.** The baton is already written and committed at this
+point, so a human simply restarts drain there.
 
 **`DRAIN_RELAUNCH_CMD` override.** If the environment variable
 `DRAIN_RELAUNCH_CMD` is set, drain runs its value verbatim in place of the
