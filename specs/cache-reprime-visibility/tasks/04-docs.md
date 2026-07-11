@@ -35,3 +35,8 @@ internal/costsummary tests for ground truth), never the reverse.
 - [x] `grep -qi 'reprime' agentprof/SCHEMA.md && grep -qi 'reprime' agentprof/README.md` → both hit (verifier PASS; evidence/04-docs.md)
 - [x] `grep -qi 'tagfocus reprime' agentprof/README.md` → example present: `go tool pprof -tagfocus reprime=true week.pb.gz` (verifier PASS; evidence/04-docs.md)
 - [x] `bash agentprof/scripts/check.sh` → green: format-check ok, lint ok, tests ok (exit 0; verifier PASS; evidence/04-docs.md)
+
+
+## Discovered
+
+- 2026-07-11: SCHEMA.md lacks a summary-output-JSON overview (only input schema + the new reprime/sessions sections documented) — stub: tasks/05-schema-summary-overview.md
