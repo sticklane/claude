@@ -110,4 +110,17 @@ while [ "$i" -lt "${#tasks[@]}" ]; do
   i=$((i + 1))
 done
 
-echo "assert: all checks passed (${#tasks[@]} tasks done, $landings distinct landings, per-task Touch enforced)"
+# Check 5 (dual baton trigger): with Parallel-window: 2 the size-adaptive baton
+# budget is max(2, 6-W) = max(2, 4) = 4 recorded verdicts. This 2-task run
+# records only 2 verdicts (< 4), so it must complete in a SINGLE generation and
+# never write a baton. A DRAIN-BATON.md added anywhere in history means the
+# generation budget was mis-applied (ignoring W, or the pre-01/02 fixed every-4
+# miscount). A completed drain also releases its owner lease and leaves no baton
+# in the tree.
+if git log --diff-filter=A --format=%H -- specs/demo/DRAIN-BATON.md | grep -q .; then
+  fail "a DRAIN-BATON.md was written (baton fired) though max(2,6-2)=4 > 2 verdicts — dual trigger mis-applied"
+fi
+[ -e specs/demo/DRAIN-BATON.md ] && fail "DRAIN-BATON.md left in tree after queue drained"
+[ -e specs/demo/DRAIN-OWNER.md ] && fail "DRAIN-OWNER.md lease not released after queue drained"
+
+echo "assert: all checks passed (${#tasks[@]} tasks done, $landings distinct landings, per-task Touch enforced, single generation / no baton)"
