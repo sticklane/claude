@@ -76,11 +76,12 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "skipped %d unparseable lines\n", skipped)
 	}
 	// Redact denylisted frames before any emit path (merge, summary, or direct);
-	// re-applied after --name-turns below since renaming rewrites turn frames.
+	// re-applied after --name-turns below since renaming rewrites turn frames,
+	// and again over the merged set (which folds in the unscrubbed rolling cache).
 	claude.ScrubFrames(samples, denied)
 
 	if *mergePath != "" {
-		return mergeClaude(samples, *mergePath, *out, *summaryPath, stdout, stderr)
+		return mergeClaude(samples, denied, *mergePath, *out, *summaryPath, stdout, stderr)
 	}
 
 	if len(samples) == 0 {
@@ -117,13 +118,17 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 // bypassed (R2): a missing cache is zero samples, an empty fresh pass is not an
 // error, and an empty merged result writes a valid empty JSONL file directly
 // rather than routing through output.Write's zero-sample error.
-func mergeClaude(fresh []schema.Sample, mergePath, out, summaryPath string, stdout, stderr io.Writer) int {
+func mergeClaude(fresh []schema.Sample, denied []string, mergePath, out, summaryPath string, stdout, stderr io.Writer) int {
 	existing, err := readCache(mergePath)
 	if err != nil {
 		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
 		return 1
 	}
 	merged := merge.Merge(existing, fresh, time.Now())
+	// The rolling cache may hold frames written before the denylist existed (or
+	// before a substring was added), so scrub the merged set — not just fresh —
+	// before it reaches output.Write or the cost summary.
+	claude.ScrubFrames(merged, denied)
 	if len(merged) == 0 {
 		if err := writeEmptyJSONL(out, stdout); err != nil {
 			fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
