@@ -10,6 +10,21 @@ Budget: 5 turns
 Spec: ../SPEC.md (requirement R4)
 Touch: agentprof/internal/costsummary/, agentprof/testdata/, specs/agentprof-attribution-gaps/evidence/
 
+<!-- PLAN (delete at close-out)
+1. RED: add costsummary_test.go tests — main-loop tool-duration sample
+   ([...,"main","tool:Bash"], duration_ms) → by_model has "(tools)", no
+   "main" key; subagent tool sample ([...,"agent:scout","tool:Read"]) →
+   "(tools)", no agent: key; <synthetic> leaf keeps its own labeled row.
+2. GREEN: modelLeaf returns "(tools)" sentinel when the leaf-most non-marker
+   frame is structural (`main` or `agent:` — the model's parents), else the
+   model. hasModel now always true for non-empty stacks.
+3. <synthetic> choice = explicitly labeled (keeps its own bracketed row,
+   calls preserved); document in code comment + ByModel doc note.
+4. evidence/05-panel-check.md: agent-console _cost_rows iterates
+   (dim or {}).items() generically — GENERIC-ITERATION, no fix needed.
+-->
+
+
 ## Goal
 
 `modelLeaf()` (costsummary.go:~100) returns a sentinel for samples with no
