@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 6 turns
@@ -33,10 +33,10 @@ Text only — NO antigravity/ (task 02), NO plugin.json (task 02), no code.
 
 ## Acceptance
 
-- [ ] `grep -qi 'bare single command' .claude/skills/drain/reference.md && grep -qi 'bare single command' .claude/agents/verifier.md` → hits (R1)
-- [ ] `grep -qi 'chained short sleeps' .claude/rules/token-discipline.md && grep -qi 'chained short sleeps' .claude/skills/drain/reference.md` → hits (R2)
-- [ ] `grep -qi 'once per edit round' .claude/skills/drain/reference.md && grep -qi 'sections the critic named' .claude/skills/critique/SKILL.md` → hits (R3)
-- [ ] `grep -qi 'under your worktree root' .claude/skills/drain/reference.md` → hits (R4)
-- [ ] `grep -qi 'not found where expected' .claude/agents/scout.md` → hits (R5)
-- [ ] `grep -qi 'load only the named section' .claude/skills/drain/SKILL.md` → hits AND MANUAL: on the first pointer citing each of the three sections (R6)
-- [ ] `bash agentprof/scripts/check.sh` → green (no code changed)
+- [x] `grep -qi 'bare single command' .claude/skills/drain/reference.md && grep -qi 'bare single command' .claude/agents/verifier.md` → hits (R1) — verifier PASS; retry capped at one, blocked command reported in both (evidence/01-skill-text-guards.md)
+- [x] `grep -qi 'chained short sleeps' .claude/rules/token-discipline.md && grep -qi 'chained short sleeps' .claude/skills/drain/reference.md` → hits (R2) — verifier PASS (evidence/01-skill-text-guards.md)
+- [x] `grep -qi 'once per edit round' .claude/skills/drain/reference.md && grep -qi 'sections the critic named' .claude/skills/critique/SKILL.md` → hits (R3) — verifier PASS (evidence/01-skill-text-guards.md)
+- [x] `grep -qi 'under your worktree root' .claude/skills/drain/reference.md` → hits (R4) — verifier PASS; preamble bans editing main-checkout paths (evidence/01-skill-text-guards.md)
+- [x] `grep -qi 'not found where expected' .claude/agents/scout.md` → hits (R5) — verifier PASS (evidence/01-skill-text-guards.md)
+- [x] `grep -qi 'load only the named section' .claude/skills/drain/SKILL.md` → hits AND MANUAL: on the first pointer citing each of the three sections (R6) — verifier PASS; 3 occurrences = first cite of Owner lease/Worker prompt/Baton pass, later cites untouched (evidence/01-skill-text-guards.md)
+- [x] `bash agentprof/scripts/check.sh` → green (no code changed) — verifier PASS: format-check/lint/tests ok (evidence/01-skill-text-guards.md)

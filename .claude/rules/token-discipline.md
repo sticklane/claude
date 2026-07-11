@@ -114,6 +114,12 @@ of letting them default silently:
   maintainer who retightens the policy should strike this sentence rather
   than read it as the rule's permanent shape.
 
+- **Await, don't poll.** Await background children via the harness's
+  completion notifications (or a `Monitor` until-loop where the harness
+  offers one); never poll them with chained short sleeps — after the
+  harness blocks a `sleep`, chaining shorter sleeps is the same
+  blocked-sleep antipattern in chunks, and is banned.
+
 - **Tier by stage type.** Mechanical stages (search, fetch, extract,
   grep-like scouting, conformance checks) run on Haiku / `effort: low`;
   judgment stages (implementation, verification, judging, synthesis) keep

@@ -466,6 +466,11 @@ carry a readable path, resolved at dispatch:
 <main-checkout>/apps/x/.dev.vars "$PWD/apps/x/.dev.vars"`). Never commit
 > such a file; confirm your VCS status shows it untracked before committing.
 >
+> Every path you Read/Edit/Write must be under your worktree root (your
+> shell's initial $PWD) — the main-checkout path above is given ONLY for
+> copying gitignored files in; never edit a main-checkout path from inside
+> the worktree, since editing it errors and wastes a turn.
+>
 > If the build procedure spawns a simplification, cleanup, or review
 > sub-reviewer, run it as an AWAITED child: start it, wait for it, and
 > collect its result before close-out — never fire-and-forget, never
@@ -481,6 +486,17 @@ carry a readable path, resolved at dispatch:
 > preserve any commits as `rescue/NN-<slug>-<shortsha>` if git still
 > permits, and exit with verdict BLOCKED naming the sweep as the cause. Do
 > not try to recreate the worktree.
+>
+> If a Bash call is denied ("don't ask mode"), retry it ONCE as a
+> bare single command (no chaining, no `&&`/pipe/redirection tricks); if it
+> is still denied, stop and report the blocked command in your verdict,
+> never iterate syntax variants. Await background children via the harness's
+> completion notifications (or a `Monitor` until-loop where the harness
+> offers one); never poll them with chained short sleeps — that is the
+> blocked-sleep antipattern in chunks. Read a file at most
+> once per edit round: after your own successful Edit/Write the harness
+> confirms the new state, so do not re-read to verify — re-read only the
+> region another writer changed.
 >
 > You are unattended — never ask the human anything. If the task file has
 > an "## Answers" section, treat it as binding spec. If you hit ambiguity
