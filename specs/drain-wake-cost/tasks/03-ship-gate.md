@@ -43,7 +43,12 @@ text, report it under ## Deferred questions rather than fixing it here.
    exercise (or at least not contradict) the dual baton trigger — same
    obligation drain-rolling-window R7 carried for window semantics.
 5. Bump `version` in `.claude-plugin/plugin.json` (skill behavior
-   changed).
+   changed) — race-safe, since other agentprof-spec drains may bump the
+   same line concurrently: `git pull --rebase` immediately before the
+   bump, read the version from HEAD, set next patch, commit, push; if the
+   push is rejected or the rebase conflicts on the version line, resolve
+   by taking the highest version present and incrementing once more, then
+   retry. Never resolve by reverting another spec's bump.
 6. Run both gates; fix only mirror/manifest/evals defects they surface.
 
 ## Acceptance
