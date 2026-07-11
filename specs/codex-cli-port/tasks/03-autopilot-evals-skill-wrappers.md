@@ -1,6 +1,6 @@
 # Task 03: autopilot + evals codex skill wrappers
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 35 turns
@@ -55,11 +55,11 @@ those) or any symlinked skill directory (task 01 owns those).
 
 ## Acceptance
 
-- [ ] `test -f codex/.agents/skills/autopilot/SKILL.md && test -f codex/.agents/skills/autopilot/agents/openai.yaml`
-- [ ] `test -f codex/.agents/skills/evals/SKILL.md && test -f codex/.agents/skills/evals/agents/openai.yaml`
-- [ ] `grep -q "allow_implicit_invocation: false" codex/.agents/skills/autopilot/agents/openai.yaml`
-- [ ] `grep -q "allow_implicit_invocation: false" codex/.agents/skills/evals/agents/openai.yaml`
-- [ ] A `verifier` agent judgment pass confirms both SKILL.md bodies
+- [x] `test -f codex/.agents/skills/autopilot/SKILL.md && test -f codex/.agents/skills/autopilot/agents/openai.yaml`
+- [x] `test -f codex/.agents/skills/evals/SKILL.md && test -f codex/.agents/skills/evals/agents/openai.yaml`
+- [x] `grep -q "allow_implicit_invocation: false" codex/.agents/skills/autopilot/agents/openai.yaml`
+- [x] `grep -q "allow_implicit_invocation: false" codex/.agents/skills/evals/agents/openai.yaml`
+- [x] A `verifier` agent judgment pass confirms both SKILL.md bodies
   inline-cover their `.claude` counterpart's execution steps, that
   autopilot's body contains an explicit Codex-adapted launch-authorization
   paragraph, and that evals' body does NOT need one (its existing framing
