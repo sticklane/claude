@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 20 turns
@@ -59,7 +59,7 @@ implementing it here.
 
 ## Acceptance
 
-- [ ] Each verdict in the findings doc has an appended outcome line (landed / deferred with reason / certified-optimal backed by task-01 numbers) — quote them as evidence (R3, R5)
-- [ ] For each doctrine violation the findings named, `git -C /Users/sjaconette/claude log -p` shows a skill-text diff at that step, or the findings state none were found (R2)
-- [ ] If any `.claude/skills/*` file changed: `bash /Users/sjaconette/claude/evals/lint-ultra-gate.sh` → exit 0, `cd /Users/sjaconette/claude && claude plugin validate .` → pass, mirror updated (content-coverage grep for the new concepts) and plugin.json version bumped in the same commit
-- [ ] MANUAL (deferred, needs post-change runs): next 7-day profile shows /breakdown orchestrator share materially below the 84% baseline, or the findings doc justified keeping it
+- [x] Each verdict in the findings doc has an appended outcome line (landed / deferred with reason / certified-optimal backed by task-01 numbers) — quote them as evidence (R3, R5) — findings §"Task 02 — verdict outcomes": three CERTIFIED-OPTIMAL (KEEP) lines for /breakdown (37.4% out+cw < 61.9% cache_read), /build (53.9% out+cw intrinsic TDD), /idea (59.1% cache_read, TTL-idle 4%); verifier PASS (evidence/02-apply-verdicts.md)
+- [x] For each doctrine violation the findings named, `git -C /Users/sjaconette/claude log -p` shows a skill-text diff at that step, or the findings state none were found (R2) — findings state zero doctrine violations for all three; `git diff --name-only 7f38b01..HEAD` = docs/orchestrator-share-findings.md only, no skill diff needed; verifier PASS
+- [x] If any `.claude/skills/*` file changed: `bash /Users/sjaconette/claude/evals/lint-ultra-gate.sh` → exit 0, `cd /Users/sjaconette/claude && claude plugin validate .` → pass, mirror updated (content-coverage grep for the new concepts) and plugin.json version bumped in the same commit — VACUOUS: no `.claude/skills/*`, antigravity, or plugin.json file changed (git diff --name-only confirms docs-only); verifier PASS
+- [ ] MANUAL (deferred, needs post-change runs): next 7-day profile shows /breakdown orchestrator share materially below the 84% baseline, or the findings doc justified keeping it — needs a human to re-run agentprof after 7 days of usage (R4 command + thresholds in findings doc); the findings justify KEEP, so no reduction is expected
