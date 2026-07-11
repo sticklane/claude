@@ -1,6 +1,6 @@
 # Task 04: `evals/run.sh` default runner derives from the active runtime
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 20 turns

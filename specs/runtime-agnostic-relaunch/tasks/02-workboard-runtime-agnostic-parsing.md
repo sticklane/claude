@@ -1,6 +1,6 @@
 # Task 02: `workboard.py` per-runtime baton parsing
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 40 turns

@@ -1,6 +1,6 @@
 # Task 07: End-to-end verification sweep and plugin.json version bump
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03, 04, 05, 06
 Priority: P1
 Budget: 16 turns
