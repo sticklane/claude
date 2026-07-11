@@ -102,6 +102,16 @@ every time you enter it.
    one stuck fix — write a `/handoff` file and lead the report with its resume
    command instead of continuing degraded. This is the escape available to an
    attended run where the baton cannot apply.
+7. Stopping blocked (the **same-edit** rule): when the session must stop on
+   an external blocker it cannot clear — missing creds, an undeployed
+   dependency, a product decision only the user can make — write
+   `Status: blocked` AND its `Unblock:` line into the task file in the **same
+   edit**, never a bare `blocked` with no recorded move. Pick the narrowest
+   type (breakdown's grammar): `Unblock: run: <cmd>` when a shell command can
+   check or clear it, `Unblock: agent: <prompt>` when clearing needs an
+   agent's judgment, `Unblock: ask: <exact question>` only for a genuine human
+   decision, quoting the exact question. The `Unblock:` line goes on the line
+   immediately after `Status:`.
 
 ## 4. Close out
 
