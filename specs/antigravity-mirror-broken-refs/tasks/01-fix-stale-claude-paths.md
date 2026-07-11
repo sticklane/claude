@@ -1,6 +1,6 @@
 # Task 01: Fix stale `.claude/skills/<name>` path references in the antigravity mirror
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 6 turns
@@ -41,7 +41,7 @@ or an inline shell command). Do not touch any other file under
 
 ## Acceptance
 
-- [ ] `grep -rn '\.claude/skills/' antigravity/.agents/skills/workboard/reference.md antigravity/.agents/skills/workboard/test_workboard.py antigravity/.agents/skills/list-specs/test_list_specs.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → no output
-- [ ] `cd antigravity/.agents/skills/workboard && python3 -m pytest -q` → 93 passed
-- [ ] `cd antigravity/.agents/skills/list-specs && python3 -m pytest -q` → 30 passed
-- [ ] `cd antigravity/.agents/skills/prioritize && python3 -m pytest -q` → 17 passed
+- [x] `grep -rn '\.claude/skills/' antigravity/.agents/skills/workboard/reference.md antigravity/.agents/skills/workboard/test_workboard.py antigravity/.agents/skills/list-specs/test_list_specs.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → no output
+- [x] `cd antigravity/.agents/skills/workboard && python3 -m pytest -q` → 93 passed
+- [x] `cd antigravity/.agents/skills/list-specs && python3 -m pytest -q` → 30 passed
+- [x] `cd antigravity/.agents/skills/prioritize && python3 -m pytest -q` → 17 passed
