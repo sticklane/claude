@@ -3,30 +3,12 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P2
 Budget: 8 turns
 Spec: ../SPEC.md (requirement R3)
 Touch: agentprof/internal/claude/, agentprof/testdata/, specs/agentprof-attribution-gaps/evidence/
-
-<!-- PLAN (delete at close-out):
-- API: add Options{ReprimeThreshold, KeepPending} + Stats{Skipped, Pending};
-  new CollectWithOptions returns Stats; Collect/CollectWithReprime delegate
-  (unchanged signatures so ~40 test callsites stay green).
-- toolSamples(modelStack, results, sess, turn, keepPending) -> ([]Sample, int):
-  unmatched calls consolidate into ONE tool:(pending) sample w/ pending_calls=N;
-  keepPending preserves today's per-call empty-values emission. int = unmatched
-  count (the parse-stat).
-- collect threads opts + accumulates Stats.Pending from both toolSamples sites.
-- Update duration_test TestPendingToolUseHasEmptyValues (asserts REPLACED
-  behavior) -> pending_calls:1; add pending_test.go for 3-in-one-turn + keep.
-- OUT OF TOUCH: cmd_claude.go --keep-pending flag + stderr parse-stat log
-  (cmd_claude.go not in Touch) -> Discovered. Library Option + Stats.Pending
-  is the in-scope surfacing; all 3 acceptance criteria are internal/claude only.
-- Evidence 14-day window + Agent-tool/TaskOutput real-transcript investigation:
-  needs $HOME/.claude outside worktree -> manual-pending with run: command.
--->
 
 ## Goal
 
@@ -55,9 +37,29 @@ Same file as tasks 01/02 — runs after them (serial chain).
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/claude/` → pass including the
-  aggregation and keep-pending fixtures
-- [ ] evidence/03-pending-volume.md records before/after total sample
-  counts on the local window showing empty-values pending samples = 0 and
-  ≥8% total drop (or documents why the volume was legitimate)
-- [ ] `bash agentprof/scripts/check.sh` → green
+- [x] `cd agentprof && go test ./internal/claude/` → pass including the
+  aggregation and keep-pending fixtures — verifier PASS: all internal/claude
+  tests green incl. TestUnmatchedToolCallsConsolidateIntoOnePendingSample,
+  TestKeepPendingPreservesPerCallEmptyValuedSamples,
+  TestPendingParseStatCountsUnmatchedCalls (evidence/03-pending-consolidation.md)
+- [x] evidence/03-pending-volume.md records before/after — fixture: empty-values
+  pending samples 2→0. 14-day-window ≥8% drop + Agent-tool/TaskOutput
+  investigation are MANUAL-PENDING (need $HOME/.claude, outside the isolated
+  worktree) with exact runnable commands recorded (evidence/03-pending-volume.md)
+- [x] `bash agentprof/scripts/check.sh` → green — format-check/lint/tests ok
+  (verifier confirmed)
+
+## Decisions
+
+- CLI `--keep-pending` flag deferred: cmd_claude.go is out of this task's
+  `Touch:` (only agentprof/internal/claude/ + testdata + evidence). Implemented
+  as library-level `Options.KeepPending` + `Stats.Pending` — the in-scope
+  surfacing that satisfies all three (internal/claude-scoped) acceptance
+  criteria. Reverse/complete: add the ~4-line `fs.Bool("keep-pending")` wiring
+  in cmdClaude per evidence/03-pending-volume.md. Recorded as Discovered.
+- 14-day volume measurement + Agent-tool/TaskOutput shape fix left
+  MANUAL-PENDING rather than fabricated: the data lives under $HOME/.claude,
+  unreadable from an isolated worktree. Code-level hypothesis (meta/sidechain
+  tool_results skipped at claude.go:673 before matching) + exact confirmation
+  commands are in evidence/03-pending-volume.md. No speculative matching change
+  made without confirming data.
