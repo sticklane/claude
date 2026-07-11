@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 12 turns
@@ -56,6 +56,9 @@ agent-def edit triggers the task-03 mirror/bump obligation).
 
 ## Acceptance
 
-- [ ] Mechanism named with transcript evidence from the pinned window (session IDs + the plugin version or override found — quote in evidence lines)
-- [ ] Exactly one R1 outcome landed; for (a): `test -f /Users/sjaconette/claude/docs/memory/verifier-tier-leak.md` → exit 0 and it names the version boundary and the immutable-cache mechanism
-- [ ] Evidence line confirming no files under `~/.claude/plugins/cache/` were modified (`find ~/.claude/plugins/cache/agentic-toolkit -newer /Users/sjaconette/claude/specs/agent-tier-leaks/SPEC.md -type f | wc -l` → 0)
+- [x] Mechanism named with transcript evidence from the pinned window (session IDs + the plugin version or override found — quote in evidence lines)
+  - Evidence: sessions 5dcdc5c4/b5cd2c76/7e277508/ee0f4482 transcripts reference `cache/agentic-toolkit/agentic/0.6.2`; that snapshot pins `model: inherit` → resolved to the session's fable-5 model (5dcdc5c4: 527 fable main-line msgs); 5 verifier dispatches carried no explicit model override. Verifier re-derived the grep independently. See evidence/01-verifier-leak-trace.md.
+- [x] Exactly one R1 outcome landed; for (a): `test -f /Users/sjaconette/claude/docs/memory/verifier-tier-leak.md` → exit 0 and it names the version boundary and the immutable-cache mechanism
+  - Evidence: outcome (a) — `docs/memory/verifier-tier-leak.md` created; names the boundary (`inherit` ≤0.7.0 → `sonnet` ≥0.8.3; repo pin at commit 01062e9/0.7.15) and the immutable-cache mechanism. Verifier PASS (literal `test -f` targets the main-checkout path which materializes on merge; substance confirmed in-tree). See evidence/01-verifier-leak-trace.md.
+- [x] Evidence line confirming no files under `~/.claude/plugins/cache/` were modified (`find ~/.claude/plugins/cache/agentic-toolkit -newer /Users/sjaconette/claude/specs/agent-tier-leaks/SPEC.md -type f | wc -l` → 0)
+  - Evidence: literal find → 1, sole hit `0.8.13/.in_use/25950` is a live-`claude` PID lock marker (harness runtime churn, not content); `find … -not -path '*/.in_use/*'` → 0. No plugin content modified. Verifier confirmed via `ps -p 25950`. See evidence/01-verifier-leak-trace.md.
