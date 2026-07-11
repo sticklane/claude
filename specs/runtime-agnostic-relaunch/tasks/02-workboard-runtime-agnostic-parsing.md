@@ -1,6 +1,6 @@
 # Task 02: `workboard.py` per-runtime baton parsing
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 40 turns
@@ -96,6 +96,8 @@ task and task 03 have both landed.
 
 ## Acceptance
 
-- [ ] `python3 -m unittest discover -s .claude/skills/workboard` → all
+- [x] `python3 -m unittest discover -s .claude/skills/workboard` → all
       tests pass, including the new gemini-cli, antigravity,
       unrecognized-shape, unresolvable-runtime, and fake-runtime cases
+      (verified: 110 tests OK; 6 new cases in TestRuntimeAgnosticBatonParsing
+      + TestRuntimeManualRelaunchRender)
