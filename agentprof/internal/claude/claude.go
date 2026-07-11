@@ -74,6 +74,7 @@ func CollectWithReprime(dir string, cutoff time.Time, reprimeThreshold int) ([]s
 	if err != nil {
 		return nil, nil, 0, err
 	}
+	home := resolveHome()
 	var samples []schema.Sample
 	var turns []Turn
 	skipped := 0
@@ -85,7 +86,7 @@ func CollectWithReprime(dir string, cutoff time.Time, reprimeThreshold int) ([]s
 		if !in {
 			continue
 		}
-		s, ts, n, err := sess.collect(reprimeThreshold)
+		s, ts, n, err := sess.collect(reprimeThreshold, home)
 		if err != nil {
 			return nil, nil, 0, err
 		}
@@ -161,6 +162,57 @@ func enumerate(dir string) ([]session, error) {
 	return sessions, nil
 }
 
+// tmpDirRe matches mktemp-shaped directory basenames (`tmp.` + a random
+// suffix); agentDirRe matches an agent sidecar/worktree directory basename
+// (`agent-<hex>`); worktreeSuffixRe matches the trailing
+// `/.claude/worktrees/agent-<hex>` segment whose prefix names the owning
+// project (R2).
+var (
+	tmpDirRe         = regexp.MustCompile(`^tmp\.[A-Za-z0-9]{6,}$`)
+	agentDirRe       = regexp.MustCompile(`^agent-[0-9a-fA-F]+$`)
+	worktreeSuffixRe = regexp.MustCompile(`/\.claude/worktrees/agent-[0-9a-fA-F]+$`)
+)
+
+// resolveHome returns the user's home directory for project normalization,
+// consulting the AGENTPROF_HOME override before os.UserHomeDir() so tests can
+// pin it hermetically (R2). "" if neither resolves.
+func resolveHome() string {
+	if h := os.Getenv("AGENTPROF_HOME"); h != "" {
+		return h
+	}
+	h, _ := os.UserHomeDir()
+	return h
+}
+
+// normalizeProject maps a session's project frame (the basename of the main
+// transcript's first cwd, or the munged projects/ dir name when no cwd is
+// present) to a canonical form (R2): the home directory -> "(home)",
+// mktemp-shaped dirs -> "(tmp)", and agent sidecar dirs (agent-<hex>) fold
+// into their owning project when the cwd reveals a
+// .../<owner>/.claude/worktrees/agent-<hex> layout, else drop==true (the
+// session emits no samples and is counted). Any other cwd keeps its basename.
+func normalizeProject(firstCwd, munged, home string) (name string, drop bool) {
+	if firstCwd == "" {
+		return munged, false
+	}
+	if home != "" && filepath.Clean(firstCwd) == filepath.Clean(home) {
+		return "(home)", false
+	}
+	base := filepath.Base(firstCwd)
+	switch {
+	case tmpDirRe.MatchString(base):
+		return "(tmp)", false
+	case agentDirRe.MatchString(base):
+		if loc := worktreeSuffixRe.FindStringIndex(filepath.ToSlash(firstCwd)); loc != nil {
+			if owner := filepath.Base(firstCwd[:loc[0]]); owner != "." && owner != string(filepath.Separator) {
+				return owner, false
+			}
+		}
+		return "", true
+	}
+	return base, false
+}
+
 // workflowRunID extracts <runId> from a path containing a
 // .../subagents/workflows/<runId>/... segment, or "" for non-workflow paths.
 func workflowRunID(path string) string {
@@ -230,14 +282,17 @@ type spawnCtx struct {
 // directory name under projects/). Main-transcript samples get
 // [project, turn, skill, "main", model]; each subagent's samples get its
 // resolved spawn prefix + [agent:{type}, model], or the R5 unlinked stack.
-func (s session) collect(reprimeThreshold int) ([]schema.Sample, []Turn, int, error) {
+func (s session) collect(reprimeThreshold int, home string) ([]schema.Sample, []Turn, int, error) {
 	mainP, err := parseTranscript(s.mainPath)
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	project := s.mungedDir
-	if mainP.firstCwd != "" {
-		project = filepath.Base(mainP.firstCwd)
+	project, drop := normalizeProject(mainP.firstCwd, s.mungedDir, home)
+	if drop {
+		// Agent sidecar dir with no resolvable owning project (R2): emit no
+		// samples and count the drop as a parse stat rather than minting
+		// agent-<hex> as a project.
+		return nil, nil, 1, nil
 	}
 	skipped := mainP.skipped
 
