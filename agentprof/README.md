@@ -121,6 +121,19 @@ Other useful label filters: `-tagfocus priced=false` finds spend on models
 the pricing table doesn't recognize; `-tagfocus source=gcp` isolates one
 source in a mixed profile (below).
 
+The `agentprof claude` adapter labels prompt-cache re-primes — non-first
+main-loop calls whose cache write exceeds `--reprime-threshold` (default
+50000) — with `reprime=true`, so a single tagfocus finds every re-prime and
+what it cost:
+
+```sh
+go tool pprof -tagfocus reprime=true week.pb.gz
+```
+
+A session's first call and every subagent cold start are never marked (a
+fresh cache is not a re-prime); [SCHEMA.md](SCHEMA.md)'s "The `reprime` label"
+section has the full rule.
+
 `--focus` filters by stack frame instead — e.g. only samples under one
 project:
 
