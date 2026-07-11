@@ -82,11 +82,59 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
           "$(cat "$scenario/prompt.txt")" 2>&1 \
           | tee "$EVAL_DIR/session.log") || session_rc=$?
     else
-      (cd "$EVAL_DIR" && timeout 900 claude -p "$(cat "$scenario/prompt.txt")" \
-          --permission-mode dontAsk --max-turns 40 --allowed-tools "$allowed" 2>&1 \
-          | tee "$EVAL_DIR/session.log") || session_rc=$?
+      # No override set: the default runner derives from the repo's active
+      # runtime profile. Absent .claude/runtime.md — or one naming
+      # claude-code — keeps today's exact hardcoded `claude -p` line: the
+      # inline Claude default, a byte-identical regression path. Any other
+      # runtime substitutes the scenario prompt (and allowlist) into that
+      # runtime's `## Headless` template, resolved via parse_headless.py.
+      # Set EVAL_DRY_RUN=1 to echo the resolved runner instead of invoking
+      # it (previewing the derived command without a live session).
+      runtime="claude-code"
+      if [ -f "$ROOT/.claude/runtime.md" ]; then
+        rt_line="$(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/.claude/runtime.md" | head -n 1)"
+        case "$rt_line" in
+          runtime:*) runtime="$(printf '%s' "${rt_line#runtime:}" | tr -d '[:space:]')" ;;
+        esac
+      fi
+
+      if [ "$runtime" = "claude-code" ]; then
+        if [ -n "${EVAL_DRY_RUN:-}" ]; then
+          printf 'DRY-RUN [claude-code] runner: claude -p "<prompt>" --permission-mode dontAsk --max-turns 40 --allowed-tools %q\n' "$allowed"
+        else
+          (cd "$EVAL_DIR" && timeout 900 claude -p "$(cat "$scenario/prompt.txt")" \
+              --permission-mode dontAsk --max-turns 40 --allowed-tools "$allowed" 2>&1 \
+              | tee "$EVAL_DIR/session.log") || session_rc=$?
+        fi
+      else
+        template="$(cd "$ROOT" && python3 runtimes/parse_headless.py "$runtime")"
+        if [ "$template" = "NONE" ]; then
+          echo "eval: runtime '$runtime' has no scriptable headless relaunch (parse_headless.py returned NONE); evals require one" >&2
+          exit 1
+        fi
+        # Word-split the joined template, then replace the placeholder
+        # tokens with the concrete prompt/allowlist as single argv
+        # elements (so a prompt with spaces is never re-split).
+        read -r -a runner <<<"$template"
+        prompt_text="$(cat "$scenario/prompt.txt")"
+        for i in "${!runner[@]}"; do
+          case "${runner[$i]}" in
+            '"<prompt>"'|'<prompt>')       runner[$i]="$prompt_text" ;;
+            '"<allowlist>"'|'<allowlist>') runner[$i]="$allowed" ;;
+          esac
+        done
+        if [ -n "${EVAL_DRY_RUN:-}" ]; then
+          printf 'DRY-RUN [%s] runner:' "$runtime"; printf ' %q' "${runner[@]}"; printf '\n'
+        else
+          (cd "$EVAL_DIR" && ALLOWED_TOOLS="$allowed" timeout 900 "${runner[@]}" 2>&1 \
+              | tee "$EVAL_DIR/session.log") || session_rc=$?
+        fi
+      fi
     fi
-    if [ "$session_rc" -ne 0 ]; then
+    if [ -n "${EVAL_DRY_RUN:-}" ]; then
+      verdict="PASS"
+      reason=""
+    elif [ "$session_rc" -ne 0 ]; then
       reason="session failed (timeout or non-zero exit)"
     elif ! (cd "$EVAL_DIR" && bash "$scenario/assert.sh"); then
       reason="assert.sh failed"
