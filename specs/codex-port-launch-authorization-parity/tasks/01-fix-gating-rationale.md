@@ -1,6 +1,6 @@
 # Task 01: Align codex-cli-port's gating rationale with the live-authorization-contract split
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 6 turns
@@ -60,17 +60,21 @@ this task's own parent `../SPEC.md`.
 
 ## Acceptance
 
-- [ ] `git log --all -p -- specs/codex-cli-port/SPEC.md` shows a commit
+- [x] `git log --all -p -- specs/codex-cli-port/SPEC.md` shows a commit
       from this task whose diff contains a removed `-Breakdown-ready: true`
       line and an added `+Breakdown-ready: false` line, as a standalone
       commit (not bundled with the R3 or Problem-section edits).
-- [ ] `grep -n "live-authorization-contract" specs/codex-cli-port/SPEC.md`
+      Verified: commit fc60f17, numstat 1/1 (standalone).
+- [x] `grep -n "live-authorization-contract" specs/codex-cli-port/SPEC.md`
       finds a match inside the `- R3:` bullet.
-- [ ] `specs/codex-cli-port/SPEC.md`'s Problem section contains the
+      Verified: line 216, within the R3 bullet (209-224, R4 at 225).
+- [x] `specs/codex-cli-port/SPEC.md`'s Problem section contains the
       resolved-research paragraph, citing
       `specs/codex-port-launch-authorization-parity/SPEC.md`.
-- [ ] `grep -q "Breakdown-ready: true" specs/codex-cli-port/SPEC.md` passes
+      Verified: paragraph at line 73, before `## Solution` (line 87).
+- [x] `grep -q "Breakdown-ready: true" specs/codex-cli-port/SPEC.md` passes
       (step 4's closing commit landed).
+      Verified: closing commit da57871.
 
 ## Progress
 
