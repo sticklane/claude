@@ -65,10 +65,10 @@ func TestToolCallDurationClampsNegativeDeltaToZero(t *testing.T) {
 	}
 }
 
-// TestPendingToolUseHasEmptyValues covers R2: a tool_use with no matching
-// tool_result produces a tool:(pending) leaf and an EMPTY Values map (no
-// duration_ms key), asserted directly on the parsed sample slice.
-func TestPendingToolUseHasEmptyValues(t *testing.T) {
+// TestPendingToolUseConsolidatesWithCount covers R3: a lone tool_use with no
+// matching tool_result produces one tool:(pending) leaf carrying pending_calls=1
+// and no fabricated duration_ms, asserted directly on the parsed sample slice.
+func TestPendingToolUseConsolidatesWithCount(t *testing.T) {
 	dir := writeMain(t,
 		`{"type":"user","timestamp":"2026-07-01T09:00:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"role":"user","content":"go"}}`,
 		toolUseLine("2026-07-01T09:00:10.000Z"),
@@ -82,8 +82,11 @@ func TestPendingToolUseHasEmptyValues(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("got %d tool:(pending) samples, want 1; all: %v", len(got), stacks(samples))
 	}
-	if len(got[0].Values) != 0 {
-		t.Errorf("pending sample Values = %v, want empty map (no fabricated duration)", got[0].Values)
+	if n := got[0].Values["pending_calls"]; n != 1 {
+		t.Errorf("pending_calls = %d, want 1", n)
+	}
+	if _, ok := got[0].Values["duration_ms"]; ok {
+		t.Errorf("pending sample has duration_ms; want none (no fabricated duration)")
 	}
 }
 

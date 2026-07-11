@@ -236,6 +236,9 @@ func TestCollectTotalsMatchExpectedFixtureData(t *testing.T) {
 		"cost_microusd":      expected.TotalCostMicroUSD,
 		"calls":              10,
 		"duration_ms":        expected.TotalDurationMs,
+		// R3: the two unmatched tool_uses (toolu_A, toolu_WS) each consolidate
+		// into a tool:(pending) sample carrying pending_calls=1.
+		"pending_calls": 2,
 	}
 	if !reflect.DeepEqual(totals, want) {
 		t.Errorf("totals = %v, want %v", totals, want)
