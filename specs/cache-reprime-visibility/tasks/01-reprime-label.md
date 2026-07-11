@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 8 turns
@@ -42,9 +42,12 @@ transcript order, then per-subagent blocks (claude.go:311-342) — track
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/claude/` → pass, including the
+- [x] `cd agentprof && go test ./internal/claude/` → pass, including the
   four-case fixture above (mid-session main-loop >50k gets `reprime=true`;
   main-loop first call, subagent first call, and sub-threshold calls do
   not)
-- [ ] `cd agentprof && go run . claude --help 2>&1 | grep -q reprime-threshold` → flag documented
-- [ ] `bash agentprof/scripts/check.sh` → green
+  — verifier: `go test ./internal/claude/` ok; `TestCollectMarksReprimeOnlyOnMidSessionMainLoopCallsAboveThreshold` exercises all four cases (+ threshold=0 companion). Evidence: evidence/01-reprime-label.md
+- [x] `cd agentprof && go run . claude --help 2>&1 | grep -q reprime-threshold` → flag documented
+  — verifier: `-reprime-threshold int ... (default 50000)` present. Evidence: evidence/01-reprime-label.md
+- [x] `bash agentprof/scripts/check.sh` → green
+  — verifier: format-check ok, lint ok, tests ok. Evidence: evidence/01-reprime-label.md
