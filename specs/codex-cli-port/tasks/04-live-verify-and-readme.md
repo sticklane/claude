@@ -1,6 +1,6 @@
 # Task 04: Live verification script + codex/README.md
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03
 Priority: P1
 Budget: 65 turns
