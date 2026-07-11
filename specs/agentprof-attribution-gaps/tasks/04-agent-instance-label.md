@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 03
 Priority: P2
 Budget: 4 turns
@@ -33,7 +33,11 @@ entry.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/claude/` → pass including the
-  distinct-ids fixture
-- [ ] `grep -qi 'agent_id' agentprof/SCHEMA.md` → hits
-- [ ] `bash agentprof/scripts/check.sh` → green
+- [x] `cd agentprof && go test ./internal/claude/` → pass including the
+  distinct-ids fixture — verifier: `ok`, `TestSubagentSamplesCarryDistinctAgentID`
+  asserts agent_id=A and agent_id=WS distinct + main-loop none; red→green confirmed
+  at test-only commit a49abf2 (evidence/04-agent-instance-label.md)
+- [x] `grep -qi 'agent_id' agentprof/SCHEMA.md` → hits — verifier: new "## The
+  `agent_id` label" section documents source/semantics/-tagfocus (evidence/04-agent-instance-label.md)
+- [x] `bash agentprof/scripts/check.sh` → green — verifier: format-check ok, lint
+  ok, tests ok (evidence/04-agent-instance-label.md)
