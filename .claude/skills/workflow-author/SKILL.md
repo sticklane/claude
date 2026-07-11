@@ -27,7 +27,8 @@ annotated templates (`tournament.js`, `queue-wave.js`).
    pure literal, then a body using `agent()` / `parallel()` / `pipeline()` /
    `phase()`. Default to `pipeline()`; every `parallel()` barrier needs a
    one-line justification comment naming the cross-item dependency that
-   forces it.
+   forces it. Tier every stage's `model`/`effort` by kind per **Stage
+   tiering** below — this applies to every script, queue-state or not.
 3. **Apply the doctrine guards** (below) — mandatory for any script that
    reads or writes queue state. Refuse to emit a queue-state script without
    them.
@@ -37,6 +38,26 @@ annotated templates (`tournament.js`, `queue-wave.js`).
    parsing prose out of agent text.
 5. **Hand off:** tell the user where the file landed and that it runs only
    under the ultracode opt-in or when they invoke it by name.
+
+## Stage tiering
+
+Applies to EVERY generated script, not just queue-state ones — a
+deep-research-shaped fan-out is exactly where this bites. Tier each stage by
+kind and make the choice both-or-neither, visible in the script:
+
+- **Mechanical stages** (search, fetch, extract, grep-like scouting,
+  conformance checks) pass BOTH `model` (a cheap-tier alias, e.g. `haiku`)
+  AND `effort: 'low'`. Effort is not price — a low-`effort` call still bills
+  the session's model, so a mechanical stage that sets only `effort` inherits
+  the frontier model and is the tier ladder half-applied (token-discipline.md,
+  "Tier by stage type" / "Model and effort matching").
+- **Judgment stages** (implementation, verification, judging, synthesis) omit
+  `model` deliberately so they inherit the session model — never pin them to
+  a cheap tier.
+
+Give every `agent()` call a one-line comment naming which kind it is (e.g.
+`// Mechanical stage: pin model + effort` / `// Judgment stage: inherit
+session model`), so the both-or-neither choice is auditable in the script.
 
 ## Doctrine guards
 
