@@ -1,6 +1,6 @@
 # Task 03: Gemini pricing table (`PriceGemini`)
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -57,6 +57,6 @@ review says otherwise, since it's the smaller diff.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/pricing/... -v` → passes, including the mapped `"Gemini 3.5 Flash (Medium)"` case and the unmapped-string `priced=false` case
-- [ ] `cd agentprof && go build ./...` → succeeds
-- [ ] `git show HEAD:internal/pricing/testdata/` (or equivalent) → shows the committed rate fixture with its pricing source/date noted
+- [x] `cd agentprof && go test ./internal/pricing/... -v` → passes, including the mapped `"Gemini 3.5 Flash (Medium)"` case and the unmapped-string `priced=false` case
+- [x] `cd agentprof && go build ./...` → succeeds
+- [x] `git show HEAD:internal/pricing/testdata/` (or equivalent) → shows the committed rate fixture with its pricing source/date noted
