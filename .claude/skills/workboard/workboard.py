@@ -134,7 +134,7 @@ def find_repos(roots, max_depth):
         base_depth = len(root.parts)
         for dirpath, dirnames, _ in os.walk(root):
             depth = len(Path(dirpath).parts) - base_depth
-            if (Path(dirpath) / ".git").exists():
+            if (Path(dirpath) / ".git").exists() or (Path(dirpath) / ".jj").exists():
                 p = str(Path(dirpath).resolve())
                 if p not in seen:
                     seen.add(p)

@@ -2233,5 +2233,20 @@ class TestScanSessionSpawns(unittest.TestCase):
             self.assertEqual(before_todos, after_todos)
 
 
+class TestFindReposDetectsJj(unittest.TestCase):
+    """find_repos treats a `.jj/`-only directory as a repo root, like `.git/`.
+
+    Antigravity's runtime prioritizes `.jj` over `.git` in colocated repos, so
+    a jj-only checkout must be discovered, not misread as "not a repo".
+    """
+
+    def test_jj_only_directory_is_detected_as_repo_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "jjrepo"
+            (repo / ".jj").mkdir(parents=True)
+            found = {p.resolve() for p in workboard.find_repos([tmp], max_depth=5)}
+            self.assertIn(repo.resolve(), found)
+
+
 if __name__ == "__main__":
     unittest.main()

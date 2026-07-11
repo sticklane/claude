@@ -1,6 +1,6 @@
 # Task 05: workboard skill detects `.jj/` repo roots + VCS-agnostic reference.md
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 16 turns
@@ -53,12 +53,12 @@ touch any other skill.
 
 ## Acceptance
 
-- [ ] `python3 -m unittest discover -s .claude/skills/workboard` passes,
+- [x] `python3 -m unittest discover -s .claude/skills/workboard` passes,
       including the new `.jj/`-detection test.
-- [ ] `python3 -m unittest discover -s antigravity/.agents/skills/workboard`
+- [x] `python3 -m unittest discover -s antigravity/.agents/skills/workboard`
       passes, including the same test.
-- [ ] `diff -q .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py`
+- [x] `diff -q .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py`
       reports no difference.
-- [ ] `rg -Un --pcre2 '`git[^`]*`' .claude/skills/workboard/reference.md antigravity/.agents/skills/workboard/reference.md` —
+- [x] `rg -Un --pcre2 '`git[^`]*`' .claude/skills/workboard/reference.md antigravity/.agents/skills/workboard/reference.md` —
       every remaining hit is a bare field-name mention, not shell-executable
       command syntax.
