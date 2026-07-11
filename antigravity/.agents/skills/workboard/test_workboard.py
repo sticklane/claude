@@ -1,6 +1,6 @@
 """Tests for workboard's Antigravity abandon mechanism.
 
-Run: python3 -m unittest discover -s .agents/skills/workboard
+Run: python3 -m unittest discover -s .claude/skills/workboard
 Stdlib-only, like the scanner. Each test builds a throwaway HOME with a
 fake ~/.gemini/antigravity/brain store — the real one is never touched.
 """
@@ -264,6 +264,139 @@ class TestScanBatons(unittest.TestCase):
             (Path(tmp) / "specs" / "demo").mkdir(parents=True)
 
             self.assertEqual(workboard.scan_batons(Path(tmp)), [])
+
+
+def _baton_with_relaunch(relaunch_cmd):
+    """A DRAIN-BATON.md body whose Relaunch fenced block is `relaunch_cmd`."""
+    return (
+        "# Drain baton: demo\n\nGeneration: 4\n\n"
+        f"## Relaunch\n```bash\n{relaunch_cmd}\n```\n\n"
+        "## Needs attention\n- none\n"
+    )
+
+
+def _write_repo_baton(root, runtime_name, relaunch_cmd, slug="demo"):
+    """Build a scratch repo: .claude/runtime.md naming `runtime_name` (or none
+    when it is None) plus specs/<slug>/DRAIN-BATON.md carrying `relaunch_cmd`."""
+    root = Path(root)
+    if runtime_name is not None:
+        (root / ".claude").mkdir(parents=True, exist_ok=True)
+        (root / ".claude" / "runtime.md").write_text(
+            f"runtime: {runtime_name}\n", encoding="utf-8"
+        )
+    spec = root / "specs" / slug
+    spec.mkdir(parents=True, exist_ok=True)
+    (spec / "DRAIN-BATON.md").write_text(
+        _baton_with_relaunch(relaunch_cmd), encoding="utf-8"
+    )
+    return spec / "DRAIN-BATON.md"
+
+
+class TestRuntimeAgnosticBatonParsing(unittest.TestCase):
+    """R3/R4/R5/R9/R11: scan_batons resolves the repo's active runtime and
+    parses the relaunch command with that runtime's shape, falling back
+    through the other known runtimes."""
+
+    def test_gemini_baton_command_extracted_not_empty(self):
+        # R3/R4: a gemini -p-shaped baton in a gemini-cli repo extracts, where
+        # the old hardcoded claude-only regex would have produced "".
+        cmd = 'gemini -p "/drain specs/demo (generation 5, baton: x)" --approval-mode yolo'
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_repo_baton(tmp, "gemini-cli", cmd)
+
+            batons = workboard.scan_batons(Path(tmp))
+
+            self.assertEqual(len(batons), 1)
+            self.assertIn("gemini -p", batons[0]["command"])
+            self.assertIn("/drain specs/demo", batons[0]["command"])
+            self.assertFalse(batons[0].get("manual_relaunch"))
+            self.assertFalse(batons[0].get("parse_warning"))
+
+    def test_antigravity_runtime_sets_manual_relaunch_not_blank_command(self):
+        # R5: antigravity has no scriptable headless template → manual_relaunch
+        # set, command stays "", no regex attempted.
+        cmd = 'claude -p "/drain specs/demo (generation 5)"'  # ignored: manual runtime
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_repo_baton(tmp, "antigravity", cmd)
+
+            batons = workboard.scan_batons(Path(tmp))
+
+            self.assertEqual(len(batons), 1)
+            self.assertEqual(batons[0]["command"], "")
+            self.assertTrue(batons[0].get("manual_relaunch"))
+            self.assertIn("antigravity", batons[0]["manual_relaunch"].lower())
+
+    def test_unrecognized_shape_sets_parse_warning_and_surfaces_in_inbox(self):
+        # R9: a relaunch command matching no known runtime → command "",
+        # parse_warning set, promoted into the needs-attention inbox.
+        cmd = 'someothercli --go "do the thing"'
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_repo_baton(tmp, None, cmd)  # no runtime.md → claude-code
+
+            batons = workboard.scan_batons(Path(tmp))
+            self.assertEqual(len(batons), 1)
+            self.assertEqual(batons[0]["command"], "")
+            self.assertTrue(batons[0].get("parse_warning"))
+
+            repo = make_repo_record(path=tmp)
+            repo["batons"] = batons
+            inbox = workboard.attention_items([repo], [], [], stale_days=7)
+            warn_items = [
+                i
+                for i in inbox
+                if "baton" in i["what"].lower() and "relaunch" in i["what"].lower()
+            ]
+            self.assertEqual(len(warn_items), 1)
+
+    def test_unresolvable_runtime_falls_back_to_claude_code_no_exception(self):
+        # R11: a runtime.md naming a nonexistent profile falls back to
+        # claude-code's regex; a claude -p baton still extracts, no raise.
+        cmd = 'claude -p "/drain specs/demo (generation 5, baton: x)"'
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_repo_baton(tmp, "no-such-runtime-xyz", cmd)
+
+            batons = workboard.scan_batons(Path(tmp))
+
+            self.assertEqual(len(batons), 1)
+            self.assertIn("claude -p", batons[0]["command"])
+            self.assertIn("/drain specs/demo", batons[0]["command"])
+            self.assertFalse(batons[0].get("parse_warning"))
+
+    def test_fake_runtime_extracted_with_no_parsing_logic_changes(self):
+        # R9/R10: a brand-new runtimes/fake-runtime.md profile (a distinct
+        # `fakecli run "..."` shape) parses purely from the profile — this
+        # test adds only a fixture, touching no parsing logic.
+        cmd = 'fakecli run "/drain specs/demo (generation 5, baton: x)"'
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_repo_baton(tmp, "fake-runtime", cmd)
+
+            batons = workboard.scan_batons(Path(tmp))
+
+            self.assertEqual(len(batons), 1)
+            self.assertIn("fakecli run", batons[0]["command"])
+            self.assertIn("/drain specs/demo", batons[0]["command"])
+
+
+class TestRuntimeManualRelaunchRender(unittest.TestCase):
+    """R5: a manual_relaunch baton shows its reopen phrase in the HTML card."""
+
+    def test_manual_relaunch_phrase_rendered(self):
+        html = workboard.render_batons(
+            [
+                {
+                    "path": "specs/demo/DRAIN-BATON.md",
+                    "generation": 4,
+                    "command": "",
+                    "manual_relaunch": "No scriptable relaunch for antigravity "
+                    "— reopen from antigravity's Agent Manager",
+                    "needs_attention": "",
+                    "mtime": 1.0,
+                }
+            ]
+        )
+
+        self.assertIn("Agent Manager", html)
+        self.assertNotIn("<code></code>", html)
 
 
 class TestRenderBatons(unittest.TestCase):
