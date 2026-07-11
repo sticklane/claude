@@ -529,8 +529,14 @@ path, resolved at dispatch:
 > scope (an empty section means none; NEVER create or edit task files for
 > discoveries — report only). For non-DONE verdicts also carry one fixed
 > `Done vs remaining:` line summarizing partial progress. If BLOCKED, one
-> paragraph on why. If DEFERRED, the question(s) verbatim — the verdict
-> plus these three fixed sections are all the orchestrator will ever see.
+> paragraph on why AND, on its own line, the unblock step in typed form —
+> `Unblock: run: <cmd>` (a command checks or clears it), `Unblock: agent:
+> <prompt>` (a headless agent run clears it), or `Unblock: ask: <exact
+> question>` (a human must decide), narrowest type that fits; drain records
+> it verbatim on the task's `Unblock:` line when it writes `Status: blocked`,
+> and derives an `ask:` from your reason if you omit it. If DEFERRED, the
+> question(s) verbatim — the verdict plus these three fixed sections are all
+> the orchestrator will ever see.
 
 Gate interaction: in a repo with gate's Stop hook installed, worker
 verdicts DEFERRED/BLOCKED (and the verifier's INCOMPLETE) pass the gate
