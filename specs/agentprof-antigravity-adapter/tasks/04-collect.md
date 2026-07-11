@@ -1,6 +1,6 @@
 # Task 04: `internal/antigravity.Collect` — join, Stack/Labels, token mapping
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03
 Priority: P1
 Budget: 24 turns
