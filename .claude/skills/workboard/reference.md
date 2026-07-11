@@ -56,7 +56,9 @@ Top-level keys: `generated_at`, `stale_days`, `totals` (`repos`,
 runnable shell command — on items with a one-command fix), `repos[]` (`path`,
 `name`, `git`, `specs[]`, `handoffs[]`, `batons[]`, `sessions[]`), `sessions[]`,
 `orphan_sessions[]` (sessions whose cwd is outside every scanned repo),
-`antigravity[]`, `todos[]`.
+`antigravity[]`, `todos[]`. Each session record also carries `spawn_tree` —
+the nested agent-spawn tree for that session (see `scan_session_spawns` under
+Extending); `[]` for a session that spawned no sub-agents.
 
 ## Extending
 
@@ -65,3 +67,10 @@ records with a `last_touched`/`last_ts`, wired into `assemble()` and (if it
 can demand a human decision) `attention_items()`. Keep every source
 artifact-first — parse files on disk, never live transcripts or APIs — per
 the labs' guidance collected in `docs/agent-dashboards.md`.
+
+`scan_session_spawns(claude_home)` is an instance of this contract keyed to
+sessions rather than repos: it returns `{session_id -> {spawn_tree,
+last_touched, last_ts}}`, running `extract_agent_tree()` over each
+`projects/<proj>/<sid>.jsonl` transcript. `assemble()` merges each
+`spawn_tree` onto that session's existing record; because it is a separate
+read-only scan, no other `scan_*()` function's output shape changes.
