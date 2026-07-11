@@ -78,3 +78,7 @@ admission rules, merge serialization, CAS flip, or whitelist content diff
 - [x] Merge step contains the MUST NOT with all four exemptions (quote the passage as evidence) — PASS; SKILL.md step 3 DONE bullet, all four exemptions verbatim (evidence/01-drain-skill-text.md)
 - [x] Session-model sentence present in SKILL.md (quote as evidence) — PASS; SKILL.md wake-economics paragraph recommends default (opus) tier or below (evidence/01-drain-skill-text.md)
 - [x] `bash /Users/sjaconette/claude/evals/lint-ultra-gate.sh` → exit 0 — PASS; "OK — all ultra mentions gated in 4 files" (evidence/01-drain-skill-text.md)
+
+## Discovered
+
+- drain SKILL.md now 547 lines, over the ≤500 CLAUDE.md convention (was 510 pre-task; R3/R4/R6 additive while machinery removal forbidden) — follow-up stub 04 (drafted)
