@@ -147,7 +147,14 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    spec's tasks/ dir (the format in the drain workflow's step 3) —
    written only on the user's yes; no silent queue writes. If anything was
    learned the hard way, apply the distill skill. Tell the user to start
-   the next task in a NEW conversation.
+   the next task in a NEW conversation. Then, only when the just-completed
+   task file sits at a `specs/<slug>/tasks/*.md` path AND a sibling
+   `tasks/*.md` in that directory carries a `Status: pending` header, add
+   one line pointing the user at the drain workflow over `specs/<slug>` for
+   continuous work through the remaining tasks — alongside, not replacing,
+   the new-conversation instruction. When the path is not that layout, or
+   the only siblings are `Status: blocked` (or there are none), add no such
+   line — it is a printed pointer, not a loop, so do not over-fire it.
 
 ## Ultra path
 
