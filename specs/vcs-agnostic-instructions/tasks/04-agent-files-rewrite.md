@@ -1,6 +1,6 @@
 # Task 04: VCS-agnostic prose rewrite — verifier, critic, scout agents
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 16 turns

@@ -1,6 +1,6 @@
 # Task 03: VCS-agnostic prose rewrite — critique, fleet, concurrent-sessions, gate
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 20 turns

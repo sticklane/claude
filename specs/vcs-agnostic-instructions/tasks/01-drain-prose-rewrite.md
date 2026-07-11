@@ -1,6 +1,6 @@
 # Task 01: VCS-agnostic prose rewrite — drain skill
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 35 turns
