@@ -433,6 +433,11 @@ type turnRec struct {
 	prompt    string
 	replyHead string
 	candidate bool
+	// cmdFrame is the skill frame implied by this turn's opening
+	// <command-name> tag ("skill:<name>"), used as the sample frame when a
+	// line in the turn carries no attributionSkill. "" when the turn opened
+	// with no command tag or with a non-skill harness builtin (R1 fallback).
+	cmdFrame string
 }
 
 // parsed is everything one transcript contributes: deduped responses, turns
@@ -499,6 +504,29 @@ func normalizeSkillFrame(attributionSkill string) string {
 	return "skill:" + attributionSkill
 }
 
+// builtinDenylist are harness builtins that echo a <command-name> tag but are
+// not skills, so a turn they open gets no skill-frame fallback (R1).
+var builtinDenylist = map[string]bool{
+	"clear": true, "model": true, "reload-plugins": true, "rate-limit-options": true,
+}
+
+// commandSkillFrame maps a turn's <command-name> value (e.g. "/agentic:drain")
+// to the skill frame it implies ("skill:drain"), stripping the leading slash
+// and plugin namespace exactly like normalizeSkillFrame. It returns "" when the
+// command is empty or a non-skill harness builtin, so the turn keeps whatever
+// frame its lines' attributionSkill dictates.
+func commandSkillFrame(cmdName string) string {
+	name := strings.TrimPrefix(strings.TrimSpace(cmdName), "/")
+	if name == "" {
+		return ""
+	}
+	frame := normalizeSkillFrame(name) // strips a plugin: namespace
+	if builtinDenylist[strings.TrimPrefix(frame, "skill:")] {
+		return ""
+	}
+	return frame
+}
+
 // parseTranscript reads one transcript and returns its deduped responses (one
 // per unique message.id, falling back to top-level requestId; lines with
 // neither key each count), turn frames, and tool_use references. The
@@ -563,17 +591,25 @@ func parseTranscript(path string) (parsed, error) {
 					prevTs, hasPrev = ts, true
 				}
 			}
-			if prompt, cmdExtracted, ok := turnPrompt(l.Message.Content); ok {
+			if prompt, cmdName, ok := turnPrompt(l.Message.Content); ok {
 				sn := snippet(prompt)
 				p.turns = append(p.turns, turnRec{
-					frame:  turnFrame(len(p.turns), sn),
-					prompt: headRunes(prompt, 500),
-					candidate: (!cmdExtracted && len(strings.Fields(prompt)) <= 4) ||
+					frame:    turnFrame(len(p.turns), sn),
+					prompt:   headRunes(prompt, 500),
+					cmdFrame: commandSkillFrame(cmdName),
+					candidate: (cmdName == "" && len(strings.Fields(prompt)) <= 4) ||
 						strings.Contains(sn, redactedMarker),
 				})
 			}
 			continue
 		case "assistant":
+			// R1 fallback: with no attributionSkill, a line inherits the skill
+			// frame implied by its turn's opening <command-name> tag.
+			if l.AttributionSkill == "" {
+				if cf := p.turns[len(p.turns)-1].cmdFrame; cf != "" {
+					skill = cf
+				}
+			}
 			if text, ok := contentText(l.Message.Content); ok {
 				if m := roleMarkerRe.FindStringSubmatch(text); m != nil {
 					activeRole = m[1]
@@ -661,27 +697,29 @@ var excludedPrefixes = []string{
 
 // turnPrompt reports whether a user line's message.content opens a turn (R1)
 // and, if so, its scrubbed collapsed prompt text after R2 command-tag
-// extraction, plus whether that extraction fired.
-func turnPrompt(raw json.RawMessage) (text string, cmdExtracted, ok bool) {
+// extraction, plus the raw <command-name> value ("" when no tag matched) so
+// the caller can derive both the turn's skill-frame fallback and whether the
+// extraction fired.
+func turnPrompt(raw json.RawMessage) (text, cmdName string, ok bool) {
 	text, ok = contentText(raw)
 	if !ok {
-		return "", false, false
+		return "", "", false
 	}
 	if m := commandNameRe.FindStringSubmatch(text); m != nil {
+		cmdName = m[1]
 		extracted := m[1]
 		if a := commandArgsRe.FindStringSubmatch(text); a != nil && strings.TrimSpace(a[1]) != "" {
 			extracted += " " + a[1]
 		}
 		text = extracted
-		cmdExtracted = true
 	}
 	text = strings.Join(strings.Fields(text), " ") // collapse whitespace runs
 	for _, prefix := range excludedPrefixes {
 		if strings.HasPrefix(text, prefix) {
-			return "", false, false
+			return "", "", false
 		}
 	}
-	return scrub(text), cmdExtracted, true
+	return scrub(text), cmdName, true
 }
 
 // contentText extracts prompt text from message.content: the string itself

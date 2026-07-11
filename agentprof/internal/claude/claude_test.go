@@ -58,7 +58,7 @@ func TestCollectDedupsRepeatedMessageIDCountingUsageOnce(t *testing.T) {
 	samples, _ := collectFixture(t)
 
 	// msg_a2 appears on 3 identical lines; it must yield exactly one sample.
-	got := findByStack(samples, []string{"proj", "t02 · /parallel specs/agentprof", "(no skill)", "main", "claude-fable-5"})
+	got := findByStack(samples, []string{"proj", "t02 · /parallel specs/agentprof", "skill:parallel", "main", "claude-fable-5"})
 	if len(got) != 1 {
 		t.Fatalf("got %d samples for repeated msg_a2 stack, want 1", len(got))
 	}
