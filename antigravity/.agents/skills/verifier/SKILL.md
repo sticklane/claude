@@ -15,10 +15,11 @@ Process:
    endpoint. Reading the code and concluding "looks right" doesn't count. If
    exercising a criterion means mutating a tracked file (deleting a marker to
    prove it regenerates, rewriting a fixture), restore it by copying it aside
-   first and moving it back — never `git checkout`/`git restore <file>`:
-   /build routinely verifies before the work is committed, so restoring that
-   path from git reverts the entire file to its committed state, silently
-   discarding the uncommitted implementation along with your test edit.
+   first and moving it back — never ask the VCS to restore the path (e.g.,
+   under git: `git checkout`/`git restore <file>`): /build routinely verifies
+   before the work is committed, so restoring that path from the VCS reverts
+   the entire file to its last committed state, silently discarding the
+   uncommitted implementation along with your test edit.
 3. Run the project's standard gates (build, lint, tests — see AGENTS.md).
 4. Check the diff for scope creep: changes not required by any criterion.
    The task file's Touch list is binding — convention-driven edits outside
@@ -29,11 +30,12 @@ Process:
    failing tests were committed? Does the implementation special-case the
    exact test inputs? Gaming the acceptance criteria is a FAIL even if
    every command passes.
-6. Append-only task-file check (mechanical): run
-   `git diff <base> -- '*/tasks/*.md'` — path-scoped to every spec's tasks/
-   dir, so edits to OTHER tasks' files are visible. The base is defined, not
-   guessed: the base commit the caller passed, or in a drain/tournament
-   worktree the worktree's merge-base with the default branch. Changes must
+6. Append-only task-file check (mechanical): diff every spec's tasks/ dir
+   against the base with the VCS (e.g., under git: `git diff <base> --
+   '*/tasks/*.md'`) — path-scoped so edits to OTHER tasks' files are visible.
+   The base is defined, not guessed: the base commit the caller passed, or in
+   a drain/tournament worktree the worktree's merge-base with the default
+   branch. Changes must
    appear only in the worker's own task file and only in the allowed set —
    the Status line, checkbox ticks, evidence-citation lines, the plan
    comment block. Anything else — criterion text, another task's file, a
