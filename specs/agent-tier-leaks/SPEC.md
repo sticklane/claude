@@ -103,3 +103,15 @@ namespace finding in agentprof's docs.
   so "drift" = version skew between snapshots, never a separate editable
   dir. R1's fix is documentation or a forward version bump, never a cache
   edit.
+
+## Parallelization
+
+- Group A (concurrent): 01 (verifier doc + memory note), 02
+  (token-discipline.md), 03 (agentprof docs) — pairwise-disjoint Touch, no
+  shared undecided design (each documents an independently-settled fact).
+- 04 runs alone after all three (conditional mirror/bump + deletions).
+- Cross-spec: 02 shares `.claude/rules/token-discipline.md` with
+  specs/drain-wake-cost task 02, and 04 shares
+  `.claude-plugin/plugin.json` + `antigravity/` with the other two
+  agentprof specs' closing tasks — do not drain these specs concurrently;
+  serialize the specs or let one drain own all three.
