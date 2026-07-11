@@ -2,7 +2,7 @@
 
 Status: open
 Priority: P2
-Breakdown-ready: false
+Breakdown-ready: true
 
 ## Problem
 
