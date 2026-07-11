@@ -838,6 +838,198 @@ def scan_sessions(claude_home, stale_days):
     return sessions
 
 
+# ------------------------------------------------------ agent spawn tree
+
+# Harness tool names that spawn a sub-agent (Task is the legacy alias).
+_AGENT_TOOL_NAMES = ("Agent", "Task")
+
+
+def _normalize_agent_status(raw):
+    """Map a harness-recorded `toolUseResult.status` onto fleet's status
+    vocabulary (running / completed / failed).
+
+    Fleet derives status from the harness's own record of the run: an
+    errored/BLOCKED outcome is `failed`, a clean terminal outcome is
+    `completed`, and anything still in flight is `running`. The transcript
+    equivalent of that record is the tool_result's `toolUseResult.status`:
+      - "error" / "blocked" / "failed"       -> failed
+      - "completed" / "deferred" / "success" -> completed
+      - "async_launched" / absent / other    -> running (spawned, but no
+        terminal outcome is recorded in the spawning transcript — a
+        background launch records only "async_launched" there)
+    """
+    if raw in ("error", "blocked", "failed"):
+        return "failed"
+    if raw in ("completed", "deferred", "success", "done"):
+        return "completed"
+    return "running"
+
+
+def _agent_spawn_calls(path):
+    """Every Agent/Task `tool_use` in one transcript, paired with its
+    `tool_result`, in file order. Returns a list of dicts:
+      {"tool_use_id", "started_ts", "ended_ts", "result_status"}.
+    A missing/unreadable file yields []. A spawn with no matching
+    `tool_result` keeps ended_ts=None and result_status=None (still running).
+    The terminal outcome is read from the result record's top-level
+    `toolUseResult.status`."""
+    calls = []  # ordered by first appearance of the tool_use
+    by_id = {}  # tool_use_id -> its call dict
+    try:
+        f = open(path, "r", encoding="utf-8", errors="replace")
+    except OSError:
+        return calls
+    with f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            ts = iso_to_ts(rec.get("timestamp", "") or "")
+            content = (rec.get("message") or {}).get("content")
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                btype = block.get("type")
+                if btype == "tool_use" and block.get("name") in _AGENT_TOOL_NAMES:
+                    tuid = block.get("id")
+                    if not tuid or tuid in by_id:
+                        continue
+                    call = {
+                        "tool_use_id": tuid,
+                        "started_ts": ts,
+                        "ended_ts": None,
+                        "result_status": None,
+                    }
+                    calls.append(call)
+                    by_id[tuid] = call
+                elif btype == "tool_result":
+                    call = by_id.get(block.get("tool_use_id"))
+                    if call is None:
+                        continue
+                    if call["ended_ts"] is None:
+                        call["ended_ts"] = ts
+                    tur = rec.get("toolUseResult")
+                    if isinstance(tur, dict) and call["result_status"] is None:
+                        call["result_status"] = tur.get("status")
+    return calls
+
+
+def extract_agent_tree(session_jsonl_path):
+    """Parse a session transcript's Agent/Task spawns into a nested tree.
+
+    Returns a list of root node dicts — the sub-agents spawned directly by the
+    session — each of the shape:
+        {agentId, agentType, description, status, spawnDepth,
+         started_ts, ended_ts, children: [...]}
+    and recurses through every sub-agent's own transcript so a sub-agent that
+    itself spawned further sub-agents nests its grandchildren beneath it
+    (SPEC.md R1/R4).
+
+    On-disk layout (confirmed on this machine): the parent transcript is
+    `<proj>/<sessionId>.jsonl`; its sub-agents live flat in a sibling
+    `<proj>/<sessionId>/subagents/` directory as `agent-<agentId>.jsonl` +
+    `agent-<agentId>.meta.json` pairs. The meta carries `agentType`,
+    `description`, `toolUseId` (the parent tool_use that spawned it), and
+    `spawnDepth`; the `agentId` is the filename stem. Parent→child linkage is
+    by `toolUseId`: a sub-agent is a child of whichever transcript contains a
+    tool_use whose id equals that sub-agent's `toolUseId`.
+
+    A session that spawned nothing — or whose subagents directory is absent —
+    returns [] with no error (R3). This function is pure: it only reads the
+    transcripts under the session directory and never mutates anything.
+    """
+    session_jsonl_path = Path(session_jsonl_path)
+    subdir = session_jsonl_path.parent / session_jsonl_path.stem / "subagents"
+    if not subdir.is_dir():
+        return []
+
+    metas = {}  # agentId -> meta dict
+    tuid_to_aid = {}  # spawning toolUseId -> agentId
+    suffix = ".meta.json"
+    for mp in sorted(subdir.glob("agent-*.meta.json")):
+        aid = mp.name[len("agent-") : -len(suffix)]
+        try:
+            meta = json.loads(read_text(mp, 20_000))
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(meta, dict):
+            continue
+        metas[aid] = meta
+        tuid = meta.get("toolUseId")
+        if tuid:
+            tuid_to_aid[tuid] = aid
+
+    visited = set()  # cycle guard: never recurse into one agent twice
+
+    def build(aid, call):
+        meta = metas.get(aid, {})
+        node = {
+            "agentId": aid,
+            "agentType": meta.get("agentType"),
+            "description": meta.get("description"),
+            "status": _normalize_agent_status(call.get("result_status")),
+            "spawnDepth": meta.get("spawnDepth"),
+            "started_ts": call.get("started_ts"),
+            "ended_ts": call.get("ended_ts"),
+            "children": [],
+        }
+        if aid in visited:
+            return node
+        visited.add(aid)
+        for child_call in _agent_spawn_calls(subdir / f"agent-{aid}.jsonl"):
+            caid = tuid_to_aid.get(child_call["tool_use_id"])
+            if caid is not None and caid in metas:
+                node["children"].append(build(caid, child_call))
+        return node
+
+    roots = []
+    for call in _agent_spawn_calls(session_jsonl_path):
+        aid = tuid_to_aid.get(call["tool_use_id"])
+        if aid is not None and aid in metas:
+            roots.append(build(aid, call))
+    return roots
+
+
+def scan_session_spawns(claude_home):
+    """Per-session agent spawn trees, following the scan_*() contract
+    (reference.md: records keyed with last_touched/last_ts). Returns a dict
+    mapping session id -> {"spawn_tree", "last_touched", "last_ts"}, so
+    assemble() can merge each tree onto that session's existing record
+    without any other scan_*() function changing shape (SPEC.md R5/R8).
+
+    `spawn_tree` is extract_agent_tree()'s output for that session's
+    transcript — `[]` for a session that spawned nothing. Read-only: it
+    parses the same `projects/<proj>/<sid>.jsonl` transcripts scan_sessions()
+    reads, never live state, and mutates nothing.
+    """
+    spawns = {}
+    projects = claude_home / "projects"
+    if not projects.is_dir():
+        return spawns
+    for proj_dir in projects.iterdir():
+        if not proj_dir.is_dir():
+            continue
+        for jl in proj_dir.glob("*.jsonl"):
+            last_ts, _ = _last_record_ts(jl)
+            if last_ts is None:
+                try:
+                    last_ts = jl.stat().st_mtime
+                except OSError:
+                    last_ts = None
+            spawns[jl.stem] = {
+                "spawn_tree": extract_agent_tree(jl),
+                "last_touched": last_ts,
+                "last_ts": last_ts,
+            }
+    return spawns
+
+
 def scan_todos(claude_home):
     """~/.claude/todos/*.json — in-session todo lists, when the install has them."""
     items = []
@@ -1425,6 +1617,12 @@ def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFA
     claude_home = default_claude_home()
     sessions = scan_sessions(claude_home, stale_days)
 
+    # attach each session's agent spawn tree (SPEC.md R5/R8) — scan_session_spawns()
+    # is a separate read-only scan, so no other scan_*() output shape changes.
+    spawns = scan_session_spawns(claude_home)
+    for s in sessions:
+        s["spawn_tree"] = spawns.get(s["id"], {}).get("spawn_tree", [])
+
     # every repo a session touched joins the scan set; the git toplevel is
     # attached to each session so attention_items() can test toplevel EQUALITY
     # for human coverage (not the old path-prefix, which over-matched parents).
@@ -1759,12 +1957,95 @@ def render_filter_tiles(data):
     )
 
 
+# Spawn-tree rendering (SPEC.md R6/R7). Reuses /fleet's status-chip
+# convention exactly (fleet/reference.md:29-30,181): glyph + word pairs with
+# the color on the glyph only and the word always present.
+_AGENT_CHIP_GLYPH = {"running": "▶", "completed": "✓", "failed": "✕"}
+
+
+def _agent_chip(status):
+    """Fleet-style status chip: `<span class="chip s-STATUS"><b>GLYPH</b>
+    WORD</span>` — matches fleet/reference.md:181. The glyph in <b> carries
+    the color; the word is always present and inherits the chip's ink."""
+    glyph = _AGENT_CHIP_GLYPH.get(status, "▶")
+    return f'<span class="chip s-{esc(status)}"><b>{glyph}</b> {esc(status)}</span>'
+
+
+def _fmt_dur(seconds):
+    """Compact elapsed duration like '11m 12s' / '1h 5m' / '8s'."""
+    seconds = int(max(0, seconds))
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    if h:
+        return f"{h}h {m}m"
+    if m:
+        return f"{m}m {s}s"
+    return f"{s}s"
+
+
+def _agent_time_html(node):
+    """Start age + elapsed for one spawn-tree node. A still-running node (no
+    ended_ts) measures elapsed against now."""
+    start = node.get("started_ts")
+    if not start:
+        return ""
+    end = node.get("ended_ts")
+    dur = _fmt_dur((end if end else now_ts()) - start)
+    return f'<span class="a-time">started {esc(age_str(start))} ago · {esc(dur)}</span>'
+
+
+def _count_spawn_nodes(nodes):
+    return sum(1 + _count_spawn_nodes(n.get("children") or []) for n in nodes)
+
+
+def _spawn_nodes_html(nodes):
+    """Recursive nested <ul>/<li>: each node is one row (<div class="agent-node
+    ...">), children nest in a further <ul> so indentation reflects spawnDepth.
+    A failed node gets a row-level `failed` modifier class on top of its chip's
+    s-failed — distinct styling that is not color alone."""
+    out = []
+    for node in nodes:
+        status = node.get("status") or "running"
+        row_cls = "agent-node failed" if status == "failed" else "agent-node"
+        atype = esc(node.get("agentType") or "agent")
+        desc = esc(node.get("description") or "")
+        children = node.get("children") or []
+        child_html = f"<ul>{_spawn_nodes_html(children)}</ul>" if children else ""
+        out.append(
+            f'<li><div class="{row_cls}">'
+            f'<span class="a-type">{atype}</span>'
+            f'<span class="a-desc">{desc}</span>'
+            f"{_agent_chip(status)}{_agent_time_html(node)}</div>"
+            f"{child_html}</li>"
+        )
+    return "".join(out)
+
+
+def _spawn_tree_html(session):
+    """Collapsible per-session spawn tree, or "" when the session spawned
+    nothing (the common case — no markup, no regression, R6)."""
+    tree = session.get("spawn_tree") or []
+    if not tree:
+        return ""
+    n = _count_spawn_nodes(tree)
+    label = esc(session.get("prompt") or session.get("id") or "session")
+    return (
+        f'<details class="spawn-tree"><summary>{label} — '
+        f"{n} agent{'' if n == 1 else 's'} spawned</summary>"
+        f'<ul class="spawn-root">{_spawn_nodes_html(tree)}</ul></details>'
+    )
+
+
 def _session_timeline_html(sessions, by_session=None):
     """Sessions rendered via the shared viz.timeline() Gantt instead of a
     flat table; state values (active/recent/idle/stale) all map through
     viz.canonical_status without falling through to "open". When spend data
     is available, each session's label is prefixed with its cost badge (R6);
-    viz.timeline() escapes labels, so the badge is plain text (R10)."""
+    viz.timeline() escapes labels, so the badge is plain text (R10).
+
+    Sessions carrying a non-empty spawn_tree (Task 02) additionally render a
+    collapsible indented agent tree below the timeline (R6/R7); sessions
+    without one add no markup at all."""
     if not sessions:
         return '<p class="muted-text">no sessions recorded</p>'
     by_session = by_session or {}
@@ -1781,7 +2062,8 @@ def _session_timeline_html(sessions, by_session=None):
                 "tooltip": f"{s['branch'] or '?'} · last active {age_str(s['last_ts'])} ago",
             }
         )
-    return viz.timeline(rows)
+    trees = "".join(_spawn_tree_html(s) for s in sessions)
+    return viz.timeline(rows) + trees
 
 
 _TASK_NUM_RE = re.compile(r"^(\d+)-")
@@ -2065,6 +2347,25 @@ td {{ padding:6px 10px 6px 0; border-top:1px solid var(--grid);
 .chip {{ display:inline-block; font-size:11px; padding:1px 8px; margin-left:6px;
   border:1px solid var(--border); border-radius:999px; color:var(--ink-2); }}
 .chip.warning {{ color:var(--warning); border-color:var(--warning); }}
+/* fleet-style status chips (fleet/reference.md): color on the glyph only,
+   the word stays in ink so status is never carried by color alone. */
+.chip b {{ font-weight:600; }}
+.chip.s-running b {{ color:var(--blue); }}
+.chip.s-completed b {{ color:var(--good); }}
+.chip.s-failed b {{ color:var(--critical); }}
+/* collapsible per-session spawn tree (R6/R7) */
+.spawn-tree {{ margin-top:10px; }}
+.spawn-tree > summary {{ cursor:pointer; font-size:12px; color:var(--ink-2); }}
+.spawn-tree ul {{ list-style:none; margin:4px 0 0; padding-left:18px; }}
+.spawn-tree ul.spawn-root {{ padding-left:0; }}
+.agent-node {{ display:flex; align-items:baseline; gap:8px; padding:2px 0;
+  font-size:12px; }}
+.agent-node .a-type {{ font-weight:600; }}
+.agent-node .a-desc {{ color:var(--ink-2); overflow-wrap:anywhere; }}
+.agent-node .a-time {{ margin-left:auto; color:var(--muted);
+  font-variant-numeric:tabular-nums; white-space:nowrap; }}
+.agent-node.failed {{ border-left:2px solid var(--critical);
+  padding-left:6px; }}
 .repo {{ background:var(--surface); border:1px solid var(--border);
   border-radius:10px; padding:12px 16px; margin-bottom:12px; }}
 .repo summary {{ cursor:pointer; list-style:none; display:flex; align-items:center;

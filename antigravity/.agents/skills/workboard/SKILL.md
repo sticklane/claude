@@ -48,6 +48,12 @@ python3 <this skill dir>/workboard.py [ROOTS ...] --json
 and relay the **needs-attention inbox** as a short list — that is the
 actionable part; don't re-narrate the repo cards.
 
+Each session on the dashboard also carries a collapsible **spawn tree** of
+the sub-agents it launched, each node badged with its status (running,
+completed, or failed) using the same status chips the fleet view uses — so a
+session that fanned out scouts, critics, or workers shows that nested work
+inline rather than as an opaque single row.
+
 - No ROOTS → it scans `~/code ~/src ~/projects ~/dev ~/repos ~/work`, the
   cwd, plus every repo any Claude Code session has touched. It also reads
   `~/.gemini/antigravity*/brain/` conversation artifacts, so Antigravity's

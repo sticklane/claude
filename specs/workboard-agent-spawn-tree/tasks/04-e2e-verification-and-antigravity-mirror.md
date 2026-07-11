@@ -1,6 +1,6 @@
 # Task 04: end-to-end verification and antigravity mirror sync
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 18 turns
@@ -84,9 +84,9 @@ work is mirroring 01-03's already-landed changes into
 
 ## Acceptance
 
-- [ ] End-to-end: a real (or, per step 2, fixture-backed) session with at least one Agent tool_use renders as a spawn-tree node with correct status in `render_html()`'s output — cite the specific test name or manual check performed here once done.
-- [ ] `diff .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py` → no output.
-- [ ] `diff <(grep -v "unittest discover -s" .claude/skills/workboard/test_workboard.py) <(grep -v "unittest discover -s" antigravity/.agents/skills/workboard/test_workboard.py)` → no output (excludes only the one known tree-specific run-path comment line; every other line must match).
-- [ ] `grep -l "spawn_tree\|extract_agent_tree\|scan_session_spawns" antigravity/.agents/skills/workboard/reference.md` → file listed (content-coverage check, not diff — `reference.md` is field-level docs, expected to carry the code identifiers verbatim).
-- [ ] `grep -il "spawn.tree" antigravity/.agents/skills/workboard/SKILL.md` → file listed (case-insensitive prose-phrase check, not an identifier grep — `SKILL.md` is a paraphrased user-facing port and is not expected to carry code tokens like `spawn_tree` verbatim).
-- [ ] `python3 -m unittest discover -s antigravity/.agents/skills/workboard -p "test_workboard.py" -v 2>&1 | tail -5` → reports `OK`.
+- [x] End-to-end: a real (or, per step 2, fixture-backed) session with at least one Agent tool_use renders as a spawn-tree node with correct status in `render_html()`'s output — cite the specific test name or manual check performed here once done. Evidence: live manual check — ran `workboard.py --json` over default scan roots (real toolkit sessions, no fixture needed) and passed the output through `render_html()`; the rendered HTML carried 42 `class="spawn-tree"` collapsible `<details>` nodes and status chips across all three states (`s-running`×569, `s-completed`×186, `s-failed`×1), confirming real spawned sub-agents render as tree nodes with correct status. Regression backstop: existing test `test_render_spawn_tree_indented_chipped_with_failed_branch` (passes in both trees).
+- [x] `diff .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py` → no output.
+- [x] `diff <(grep -v "unittest discover -s" .claude/skills/workboard/test_workboard.py) <(grep -v "unittest discover -s" antigravity/.agents/skills/workboard/test_workboard.py)` → no output (excludes only the one known tree-specific run-path comment line; every other line must match).
+- [x] `grep -l "spawn_tree\|extract_agent_tree\|scan_session_spawns" antigravity/.agents/skills/workboard/reference.md` → file listed (content-coverage check, not diff — `reference.md` is field-level docs, expected to carry the code identifiers verbatim).
+- [x] `grep -il "spawn.tree" antigravity/.agents/skills/workboard/SKILL.md` → file listed (case-insensitive prose-phrase check, not an identifier grep — `SKILL.md` is a paraphrased user-facing port and is not expected to carry code tokens like `spawn_tree` verbatim).
+- [x] `python3 -m unittest discover -s antigravity/.agents/skills/workboard -p "test_workboard.py" -v 2>&1 | tail -5` → reports `OK`.
