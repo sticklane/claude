@@ -1,6 +1,6 @@
 # Task 06: Reword global CLAUDE.md files and antigravity README
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P3
 Budget: 8 turns
@@ -36,7 +36,7 @@ repo. Do not touch any other file.
 
 ## Acceptance
 
-- [ ] `grep -n 'git pre-commit hook' /Users/sjaconette/CLAUDE.md /Users/sjaconette/.claude/CLAUDE.md` —
+- [x] `grep -n 'git pre-commit hook' /Users/sjaconette/CLAUDE.md /Users/sjaconette/.claude/CLAUDE.md` —
       returns no hits.
-- [ ] `grep -n 'git add .agents\|git commit -m' antigravity/README.md` —
+- [x] `grep -n 'git add .agents\|git commit -m' antigravity/README.md` —
       returns no hits.
