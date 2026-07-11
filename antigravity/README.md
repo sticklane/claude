@@ -11,7 +11,7 @@ From your project's root:
 ```bash
 cp -r ~/agentic-toolkit/antigravity/.agents .
 cp ~/agentic-toolkit/antigravity/AGENTS.md .        # merge if you have one
-git add .agents AGENTS.md && git commit -m "Add agentic development toolkit"
+# then commit the .agents directory and AGENTS.md to your repo
 ```
 
 (Older Antigravity builds read `.agent/` instead of `.agents/` — if skills
