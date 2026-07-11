@@ -1,6 +1,6 @@
 # Task 03: render collapsible spawn-tree view per session
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P1
 Budget: 16 turns
@@ -53,5 +53,5 @@ the time this task starts.
 
 ## Acceptance
 
-- [ ] `python3 -m unittest discover -s .claude/skills/workboard -p "test_workboard.py" -v 2>&1 | grep -E "test_render.*spawn|test_render.*no_regression|OK"` → new rendering tests pass, suite reports `OK`. This is the real gate for R6/R7; the fixture built in step 2 is the deterministic source of truth, not any live scan of real session data.
-- [ ] Within the same fixture-based test added in step 2, assert (via Python's `re` module, inline in the test) that the rendered HTML fragment contains a fleet-style chip class matching `class="chip s-(running|completed|failed)"` — confirms a status chip actually renders for the fixture's spawn-tree node, fully deterministic (no dependency on whatever real session data happens to be on disk at build time).
+- [x] `python3 -m unittest discover -s .claude/skills/workboard -p "test_workboard.py" -v 2>&1 | grep -E "test_render.*spawn|test_render.*no_regression|OK"` → new rendering tests pass, suite reports `OK`. This is the real gate for R6/R7; the fixture built in step 2 is the deterministic source of truth, not any live scan of real session data.
+- [x] Within the same fixture-based test added in step 2, assert (via Python's `re` module, inline in the test) that the rendered HTML fragment contains a fleet-style chip class matching `class="chip s-(running|completed|failed)"` — confirms a status chip actually renders for the fixture's spawn-tree node, fully deterministic (no dependency on whatever real session data happens to be on disk at build time).
