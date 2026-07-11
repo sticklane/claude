@@ -1,6 +1,6 @@
 # Task 01: VCS-agnostic prose rewrite — drain skill
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 35 turns
@@ -50,11 +50,22 @@ not this one's).
 
 ## Acceptance
 
-- [ ] `rg -Un --pcre2 '`git[^`]*`' .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` — every
+- [x] `rg -Un --pcre2 '`git[^`]*`' .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` — every
       hit's starting line either contains the literal substring "e.g., under
       git:" or is one of the two named exempt lines (the `git update-ref`
       line and the `--allowedTools` line); no other hit remains.
-- [ ] `grep -n 'git update-ref' .claude/skills/drain/reference.md` still
+      Evidence: only two hits remain — reference.md:161 (the `git update-ref`
+      exempt line, decision 4) and SKILL.md:236 (starting line carries
+      "e.g., under git:"). All other backtick-wrapped git spans rewritten to
+      intent-level phrasing.
+- [x] `grep -n 'git update-ref' .claude/skills/drain/reference.md` still
       returns the line unchanged, now carrying a git-specific-mechanic label.
-- [ ] `git diff --stat antigravity/.agents/workflows/drain.md` shows a
+      Evidence: line 161 unchanged (`git update-ref refs/remotes/origin/main
+      <default-branch>`) now labeled "— a git-specific mechanic, kept literal
+      on purpose; a jj-based drain would need an equivalent
+      tracking-ref/force-sync step, not yet designed".
+- [x] `git diff --stat antigravity/.agents/workflows/drain.md` shows a
       non-empty diff (the mirror was updated in this same commit).
+      Evidence: 35 insertions / 32 deletions; same intent-level rewrite
+      applied, no exempt carve-out lines present in the mirror to preserve
+      (no `git update-ref` plumbing line, no `--allowedTools` block).
