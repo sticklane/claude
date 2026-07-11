@@ -41,3 +41,8 @@ costsummary (task 05) or the denylist/emit hygiene (task 06).
   `t.Setenv("AGENTPROF_HOME", …)` (evidence/02-project-normalization.md)
 - [x] `bash agentprof/scripts/check.sh` → green — verifier: format-check ok,
   lint ok, tests ok (evidence/02-project-normalization.md)
+
+## Decisions
+
+- 2026-07-11 — Home injection uses env override `AGENTPROF_HOME` (consulted before `os.UserHomeDir()`) rather than a new function parameter: `Collect`/`CollectWithReprime` callers live outside this task's Touch. SPEC allows "param OR env override"; env satisfies hermeticity. Reverse: add a param overload later without breaking the env path.
+- 2026-07-11 — Dropped agent-dir counter folds into the existing `skipped` parse-stat return rather than a new return value (same signature-stability reason). Reverse: promote to a dedicated stats field when a future task widens the parser's return shape (task 03's pending-count parse-stat is a natural point).
