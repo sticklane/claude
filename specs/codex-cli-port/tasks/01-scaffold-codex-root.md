@@ -1,6 +1,6 @@
 # Task 01: Scaffold the codex/ project root
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 35 turns

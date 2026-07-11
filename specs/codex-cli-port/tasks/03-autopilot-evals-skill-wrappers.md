@@ -1,6 +1,6 @@
 # Task 03: autopilot + evals codex skill wrappers
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 35 turns
