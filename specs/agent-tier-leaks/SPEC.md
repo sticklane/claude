@@ -11,11 +11,16 @@ locked to haiku (8,637 calls, $52), implementation-worker locked to opus —
 and two paths leaking around them:
 
 1. **Verifier ran $74 of its $187 on fable-5** despite
-   `.claude/agents/verifier.md` pinning `model: sonnet`. Possible sources:
-   the plugin-served agent definition differing from the repo-local one, a
-   dispatch path passing an explicit model override (e.g. drain's
-   "one tier up" relaunch, or /build sessions overriding), or verifier-role
-   work dispatched through a different agent type. Unconfirmed.
+   `.claude/agents/verifier.md` pinning `model: sonnet`. Likely mechanism
+   (identified during spec critique, needs confirmation against the
+   transcripts): the plugin cache holds immutable per-version snapshots at
+   `~/.claude/plugins/cache/agentic-toolkit/agentic/<version>/`, and the
+   0.6.2/0.7.0 snapshots carry `model: inherit` — a session on an old
+   plugin version dispatches verifiers at the session's frontier model.
+   0.8.3+ (the newest cache snapshot at critique time was 0.8.13) already
+   pin `model: sonnet`, so the fix likely shipped; what remains is confirming the leak sessions predate
+   0.8.3 and that no other override path (e.g. drain's "one tier up"
+   relaunch) contributes.
 2. **general-purpose is the second-largest sink overall**: $1,126 across
    16,771 calls at $0.067/call — costlier per call than the opus-pinned
    implementation-worker — because it inherits the calling session's
@@ -41,18 +46,28 @@ namespace finding in agentprof's docs.
 ## Requirements
 
 - R1 **Verifier leak traced and closed.** Identify the sessions/dispatch
-  sites behind the fable-model verifier spend (profile labels → transcript
-  lookup), name the mechanism, and fix it: plugin definition aligned to
-  `model: sonnet`, or the overriding dispatch path corrected, or — if the
-  override is deliberate (e.g. escalation retry) — the escalation rule
-  written into the verifier agent docs so it's a policy, not a leak.
+  sites behind the fable-model verifier spend (profile `session` labels →
+  transcript lookup, e.g. `go tool pprof -tagfocus session=<id>` against
+  the pinned profile at
+  ../drain-wake-cost/profile-2026-07-04-to-11.pb.gz; regenerate samples
+  with `agentprof claude --since 2026-07-04T00:00:00Z` — the rolling
+  `--days 7` window no longer covers the leak sessions). Name the
+  mechanism and land ONE of: (a) confirmation the leak is the pre-0.8.3
+  `model: inherit` snapshots — then the deliverable is documenting the
+  version boundary and the stale-cache mechanism in the verifier agent doc
+  or plugin release notes (the cache snapshots themselves are immutable;
+  do not edit them); (b) an overriding dispatch path corrected; (c) a
+  deliberate escalation (e.g. tier-up retry) written into the verifier
+  agent docs as policy.
 - R2 **Tier-dispatch doctrine for freehand fan-outs.** One short block in
-  this repo's CLAUDE.md (or the doctrine doc the skills already cite):
-  mechanical fan-out work dispatched outside a skill uses the typed pinned
-  agents (scout/verifier/implementation-worker) or passes an explicit
-  cheap-tier `model` override to general-purpose; bare general-purpose at
-  session model is reserved for judgment work. Cite the measured $/call
-  inversion (general-purpose $0.067 vs pinned worker $0.057).
+  `.claude/rules/token-discipline.md` (the doctrine home the skills already
+  cite; CLAUDE.md gets at most a pointer line, per the repo's
+  cite-don't-restate convention): mechanical fan-out work dispatched
+  outside a skill uses the typed pinned agents
+  (scout/verifier/implementation-worker) or passes an explicit cheap-tier
+  `model` override to general-purpose; bare general-purpose at session
+  model is reserved for judgment work. Cite the measured $/call inversion
+  (general-purpose $0.067 vs pinned worker $0.057).
 - R3 **Namespace finding verified and documented.** Confirm or refute the
   bare-vs-prefixed hypothesis against transcripts (which project dirs
   produced bare frames, and do they carry repo-local `.claude/agents/`
@@ -73,15 +88,18 @@ namespace finding in agentprof's docs.
 
 ## Acceptance criteria
 
-- [ ] Fable-model verifier mechanism named with transcript evidence, and the corresponding fix landed (plugin def, dispatch site, or documented escalation policy) (R1)
-- [ ] `grep -qiE 'general-purpose' /Users/sjaconette/claude/CLAUDE.md || grep -riqE 'general-purpose' /Users/sjaconette/claude/.claude/docs/` — tier-dispatch doctrine present and it names the pinned agents as the default for mechanical fan-outs (R2)
-- [ ] Namespace explanation present in agentprof docs (`grep -riqE 'agentic:' /Users/sjaconette/claude/agentprof/README.md /Users/sjaconette/claude/agentprof/SCHEMA.md` returns a hit in a bare-vs-prefixed context) (R3)
-- [ ] Any stale shadow agent copies found under R3 are deleted (R3)
+- [ ] Fable-model verifier mechanism named with transcript evidence from the pinned window, and the matching R1 outcome landed (version-boundary documentation, dispatch-site fix, or escalation policy) (R1)
+- [ ] `grep -q '0\.067' /Users/sjaconette/claude/.claude/rules/token-discipline.md` (the file already contains an unrelated "general-purpose" mention, so grep the new block's cited $/call figure instead) AND MANUAL: the block names the pinned agents as the default for mechanical fan-outs and reserves session-model general-purpose for judgment work (R2)
+- [ ] Namespace explanation present in agentprof docs (`grep -riqE 'agentic:' /Users/sjaconette/claude/agentprof/README.md /Users/sjaconette/claude/agentprof/SCHEMA.md` hits) AND MANUAL: the hit explains the bare-vs-prefixed split (R3)
+- [ ] Any stale shadow agent copies found under R3 are deleted; if any `.claude/agents/*.md` file is edited — under ANY requirement, including an R1 outcome documented in verifier.md — the antigravity mirror + `.claude-plugin/plugin.json` bump ship in the same commit and `claude plugin validate .` passes (cross-cutting: /breakdown should assign this to one closing task with the union Touch) (R1, R3)
 - [ ] MANUAL (deferred, needs a week of runs): next 7-day profile shows verifier spend ≥90% on sonnet (absent documented escalations) and a falling general-purpose $/call
 
 ## Open questions
 
-- Does the plugin build/packaging step source agent definitions from this
-  repo's `.claude/agents/` verbatim, or from a separate plugin dir that can
-  drift? Answer determines whether R1's fix is a sync step or a one-off
+- (Resolved during critique) The plugin sources agent definitions from this
+  repo's `.claude/agents/` (`plugin.json` enumerates them; marketplace
+  source is `./`); the installed dispatch path uses immutable per-version
+  cache snapshots under `~/.claude/plugins/cache/agentic-toolkit/agentic/`,
+  so "drift" = version skew between snapshots, never a separate editable
+  dir. R1's fix is documentation or a forward version bump, never a cache
   edit.
