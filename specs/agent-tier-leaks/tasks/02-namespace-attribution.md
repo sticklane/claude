@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -51,6 +51,11 @@ but run it if anything under `agentprof/` beyond the two docs gets touched.
 
 ## Acceptance
 
-- [ ] `grep -riqE 'agentic:' /Users/sjaconette/claude/agentprof/README.md /Users/sjaconette/claude/agentprof/SCHEMA.md` → exit 0
-- [ ] MANUAL: the hit explains the bare-vs-prefixed split with the confirmed mechanism (quote it as evidence)
-- [ ] Evidence lines naming the transcripts checked (session IDs) and which agent-definition source each side traced to
+- [x] `grep -riqE 'agentic:' /Users/sjaconette/claude/agentprof/README.md /Users/sjaconette/claude/agentprof/SCHEMA.md` → exit 0
+  - Evidence: exit 0; README.md L58/L63/L67 carry the new agent-frame paragraph (`agent:agentic:verifier`, `` `agentic:` prefix ``, `agentic:build`).
+- [x] MANUAL: the hit explains the bare-vs-prefixed split with the confirmed mechanism (quote it as evidence)
+  - Evidence: README.md paragraph states bare = "dispatched from a **repo-local `.claude/agents/` definition**", prefixed = "served by the installed **`agentic` plugin**", same logical agent; mechanism grounded in adapter code `internal/claude/claude.go:178` (`frame = "agent:" + meta.AgentType`, verbatim passthrough) vs skill-frame namespace-stripping at claude.go:465-477.
+- [x] Evidence lines naming the transcripts checked (session IDs) and which agent-definition source each side traced to
+  - BARE: session `eed20d5f-829c-4a98-94ea-1e780af8aede` (cwd `/Users/sjaconette/claude`) dispatched `subagent_type: implementation-worker`/`critic`/`scout` (bare) → repo-local `~/claude/.claude/agents/` (critic.md, implementation-worker.md, scout.md, verifier.md present). Also `61ec4803-...` (hub, Jul 3-4) with bare skill attribution `drain`/`idea`.
+  - PREFIXED: session `5dcdc5c4-7776-4ac7-a064-8ed03a36fbd8` (cwd `/Users/sjaconette/fooszone`, no repo-local `.claude/agents/`) dispatched `subagent_type: agentic:critic`/`agentic:verifier` → installed `agentic` plugin. Also `b4bdc20a-...`/`9acb6dc5-...` (hub, Jul 6-7, prefixed).
+  - Shadow-copy check (Step 3): `~/.claude/agents/` exists but is EMPTY; `~/hub/.claude/agents/` does not exist (hub's `.claude/skills/` holds only hub-specific meal-planning/priorities). No stale shadow copies of toolkit agents found; nothing to flag for deletion.
