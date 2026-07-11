@@ -1,6 +1,6 @@
 # Task 03: render collapsible spawn-tree view per session
 
-Status: pending
+Status: in-progress
 Depends on: 02
 Priority: P1
 Budget: 16 turns
