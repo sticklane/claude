@@ -6,6 +6,8 @@
 package costsummary
 
 import (
+	"math"
+	"sort"
 	"strings"
 
 	"github.com/sticklane/agentprof/internal/schema"
@@ -22,6 +24,31 @@ type Summary struct {
 	ByModel       map[string]map[string]int64 `json:"by_model"`
 	Totals        map[string]int64            `json:"totals"`
 	SessionsAdded int                         `json:"sessions_added"`
+	Reprime       Reprime                     `json:"reprime"`
+	Sessions      map[string]SessionStat      `json:"sessions"`
+}
+
+// Reprime rolls up the samples labeled reprime=true (cache-reprime SPEC R2):
+// how many there are, how much prompt cache they re-wrote, their cost, and a
+// per-project breakdown ({count, cache_write_tokens, cost_microusd} per project).
+type Reprime struct {
+	Count            int64                       `json:"count"`
+	CacheWriteTokens int64                       `json:"cache_write_tokens"`
+	CostMicrousd     int64                       `json:"cost_microusd"`
+	ByProject        map[string]map[string]int64 `json:"by_project"`
+}
+
+// SessionStat is one session's context-size profile (cache-reprime SPEC R3),
+// computed over that session's MAIN-LOOP model calls only (subagent calls carry
+// the parent's session label but are excluded — main-loop context is the cost
+// driver; see the spec's Open questions). p50/p90 are over per-call context
+// size (cache_read_tokens + input_tokens).
+type SessionStat struct {
+	Project      string `json:"project"`
+	Calls        int64  `json:"calls"`
+	CostMicrousd int64  `json:"cost_microusd"`
+	P50Ctx       int64  `json:"p50_ctx"`
+	P90Ctx       int64  `json:"p90_ctx"`
 }
 
 // Build aggregates forGrouping into the by-dimension groups and totals, and
@@ -57,7 +84,94 @@ func Build(forGrouping, fresh []schema.Sample) Summary {
 		}
 	}
 	s.SessionsAdded = distinctSessions(fresh)
+	s.Reprime = reprimeRollup(forGrouping)
+	s.Sessions = sessionStats(forGrouping)
 	return s
+}
+
+// reprimeRollup sums the samples labeled reprime=true over forGrouping (SPEC R2).
+func reprimeRollup(forGrouping []schema.Sample) Reprime {
+	r := Reprime{ByProject: map[string]map[string]int64{}}
+	for _, smp := range forGrouping {
+		if smp.Labels["reprime"] != "true" || len(smp.Stack) == 0 {
+			continue
+		}
+		write := smp.Values["cache_write_tokens"]
+		cost := smp.Values["cost_microusd"]
+		r.Count++
+		r.CacheWriteTokens += write
+		r.CostMicrousd += cost
+		proj := smp.Stack[0]
+		add(r.ByProject, proj, "count", 1)
+		add(r.ByProject, proj, "cache_write_tokens", write)
+		add(r.ByProject, proj, "cost_microusd", cost)
+	}
+	return r
+}
+
+// sessionStats builds the per-session context-size profile over MAIN-LOOP model
+// calls only — samples with no agent: frame that carry a "calls" value (tool and
+// subagent samples are excluded) (SPEC R3).
+func sessionStats(forGrouping []schema.Sample) map[string]SessionStat {
+	type acc struct {
+		project string
+		calls   int64
+		cost    int64
+		ctx     []int64
+	}
+	accs := map[string]*acc{}
+	for _, smp := range forGrouping {
+		if len(smp.Stack) == 0 {
+			continue
+		}
+		if _, isCall := smp.Values["calls"]; !isCall {
+			continue
+		}
+		if _, hasAgent := agentType(smp.Stack); hasAgent {
+			continue
+		}
+		sess := smp.Labels["session"]
+		if sess == "" {
+			continue
+		}
+		a := accs[sess]
+		if a == nil {
+			a = &acc{project: smp.Stack[0]}
+			accs[sess] = a
+		}
+		a.calls += smp.Values["calls"]
+		a.cost += smp.Values["cost_microusd"]
+		a.ctx = append(a.ctx, smp.Values["cache_read_tokens"]+smp.Values["input_tokens"])
+	}
+	out := map[string]SessionStat{}
+	for sess, a := range accs {
+		sort.Slice(a.ctx, func(i, j int) bool { return a.ctx[i] < a.ctx[j] })
+		out[sess] = SessionStat{
+			Project:      a.project,
+			Calls:        a.calls,
+			CostMicrousd: a.cost,
+			P50Ctx:       percentile(a.ctx, 50),
+			P90Ctx:       percentile(a.ctx, 90),
+		}
+	}
+	return out
+}
+
+// percentile returns the nearest-rank percentile p (0-100) of sorted (ascending)
+// values; 0 for an empty slice.
+func percentile(sorted []int64, p float64) int64 {
+	n := len(sorted)
+	if n == 0 {
+		return 0
+	}
+	rank := int(math.Ceil(p / 100 * float64(n)))
+	if rank < 1 {
+		rank = 1
+	}
+	if rank > n {
+		rank = n
+	}
+	return sorted[rank-1]
 }
 
 // add folds value v for sample_type st into group[name], creating the inner map
