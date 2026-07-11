@@ -43,8 +43,9 @@ reference.md has the checklist.
 
 **Path-scoped commits, always.** Every queue-state commit drain makes — owner
 claim/release, status flips, Progress entries, Deferred questions, draft stubs,
-evidence — uses `git add <explicit paths>` and a `git commit` limited to those
-paths; never `-a`, `git add .`, or an unscoped commit in the shared checkout. A
+evidence — stages an explicit list of paths and commits only those paths;
+never stages everything (no `-a`, no all-paths add) or makes an unscoped commit
+in the shared checkout. A
 concurrent session's staged or working-tree changes must never ride along —
 every path-scoped commit below follows this without restating it.
 
@@ -95,7 +96,7 @@ short: if `DRAIN-OWNER.md` is absent, write and commit it path-scoped (then
 push, guard in step 3) and CAS-confirm your token; if it exists and is
 **FRESH**, REFUSE and report unless this generation's baton `Run-token:`
 matches; if **ALL signals stale**, reclaim (sweep only when a task's signals
-are stale AND `git worktree list` shows no worktree on its `task/NN-<slug>`
+are stale AND no worktree is checked out on its `task/NN-<slug>`
 branch). Release (delete, path-scoped, committed, pushed) at step 4's report.
 
 Report the plan in one block: dispatch order, what's already done, what's
@@ -189,8 +190,8 @@ wall-clock time, not efficiency.
 
 **Serial merge queue with mechanical rebase recovery (R3).** Merges stay
 strictly serial, in verdict-landing order. A branch that conflicts because a
-sibling merged after its base was cut gets one `git rebase main` in a
-**scratch worktree** (throwaway) — never `git checkout` a task branch in the
+sibling merged after its base was cut gets one rebase onto `main` in a
+**scratch worktree** (throwaway) — never checks out a task branch in the
 shared checkout (merges on the default branch, workers in worktrees). A clean
 rebase proceeds to DONE bookkeeping; one that still conflicts stops the
 remaining merges and reports which landed cleanly, never slot-machine.
@@ -231,15 +232,16 @@ opening line every time you enter it; it re-fires on every loop iteration,
 so a per-session emission would misattribute later iterations.
 
 - **DONE** — before merging, re-run the verifier's append-only whitelist
-  diff over `merge-base..branch`, path-scoped to every spec's tasks/ dir
-  (`git diff $(git merge-base <default-branch> <branch>)..<branch> --
-'*/tasks/*.md'`): changes only in the worker's own task file and only in
+  diff over the branch's changes since its merge-base, path-scoped to every
+  spec's tasks/ dir (e.g., under git: `git diff $(git merge-base
+  <default-branch> <branch>)..<branch> -- '*/tasks/*.md'`): changes only in the worker's own task file and only in
   the allowed set — Status line, checkbox ticks, evidence lines, the plan
   block. Anything else is a post-verification edit riding in: treat it as a
   merge failure (the slot-machine path below). **MUST NOT (wake economics):
   at merge/verdict time the hub never pulls the worker's *code diffs* or the
   *worker's own check/test output* into its own context — a path-scoped
-  `git diff --stat` plus the ≤ 2k-token verdict is the ceiling; when the hub
+  diff summary (file names and line counts, no content) plus the ≤ 2k-token
+  verdict is the ceiling; when the hub
   genuinely needs file contents it dispatches a scout, never reading them
   inline.** Explicitly EXEMPT (shipped machinery this ban must not weaken):
   the append-only whitelist content diff over `tasks/` (the diff just above),
@@ -253,7 +255,7 @@ so a per-session emission would misattribute later iterations.
   verifier's `evidence/` file — for other layouts the task file's inline
   evidence is the artifact) and run the project gates. Once gates pass,
   delete every `rescue/NN-<slug>-*` branch for this task. Then **push `main`
-  immediately after this commit** (`git push`) so the merged, verifier-PASSED
+  immediately after this commit** so the merged, verifier-PASSED
   work is backed up the moment it lands. **Push guard (canonical; build
   cites this, and drain's own rolling-window merges follow it, extended to
   every drain bookkeeping commit — not only DONE merges — since a concurrent
@@ -265,7 +267,7 @@ so a per-session emission would misattribute later iterations.
   applies to the owner claim/release commits (step 1), every flip (step 2),
   and the Deferred/Blocked/discovery commits below. The worker never pushes
   — only the orchestrator session, after each of its own commits.
-  If the merge or gates fail: run `git merge --abort` first, then slot
+  If the merge or gates fail: abort the in-progress merge first, then slot
   machine — discard the branch and relaunch once, one tier up from the pin
   (Claude default: `opus` → `fable`, the frontier-tier retry sanctioned in
   `.claude/rules/token-discipline.md`), dispatching `implementation-worker`

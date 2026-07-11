@@ -57,7 +57,7 @@ this sweep.
    agentprof reads it from this session's transcript to attribute
    cost/tokens/time to the stage until the next stage marker.
    **Remote divergence check FIRST — before you read any `Status:` header
-   and before the owner-lease claim below.** A rejected `git push` is
+   and before the owner-lease claim below.** A rejected push is
    drain's only pre-existing signal that another process is working this
    repo, and it fires only after this session has already committed and
    dispatched against a stale local view; so reconcile against the shared
@@ -68,7 +68,7 @@ this sweep.
    - **No remote configured** → skip silently and read the headers as
      today, exactly like the push guard's no-remote case. This is its OWN
      branch, distinct from a fetch failure.
-   - **Remote configured** → `git fetch <remote>`. If the fetch itself
+   - **Remote configured** → fetch from it. If the fetch itself
      fails (network/auth/DNS — not the no-remote case) → warn and keep
      going on the local view, like the push guard's offline behavior; a
      transient failure degrades to today's behavior and never blocks the
@@ -76,8 +76,9 @@ this sweep.
      - No commits on `<remote>/main` that local `main` lacks → proceed
        unchanged; the common path adds no visible overhead.
      - `<remote>/main` ahead and local `main` has no unpushed commits →
-       fast-forward local `main` (`git merge --ff-only <remote>/main`)
-       BEFORE reading the headers. Always safe (nothing local to lose), and
+       fast-forward local `main` (a fast-forward-only advance, no new merge
+       commit) BEFORE reading the headers. Always safe (nothing local to
+       lose), and
        ordered this way on purpose so the header read, leases, and specs
        see current shared state, not the pre-fetch view. Doing it after the
        lease claim would defeat the check.
@@ -148,8 +149,8 @@ this sweep.
    `Run-token` matches (adopt the existing owner; a mismatch means the
    predecessor died and a different run claimed in the interim — apply
    the refuse path instead). ALL signals stale → reclaim: sweep any of
-   the spec's in-progress tasks whose activity is stale AND `git worktree
-list` shows no worktree checked out on its task branch (a live
+   the spec's in-progress tasks whose activity is stale AND no worktree is
+   checked out on its task branch (a live
    worktree with no recent mtimes can still be a paused-but-real
    session), then replace DRAIN-OWNER.md with your own claim in one
    path-scoped commit. Release: the terminal report (queue empty / only
@@ -195,11 +196,11 @@ list` shows no worktree checked out on its task branch (a live
    file**, then push (guard in step 3) — the worktree is cut
    from this commit, so it must carry current statuses and any
    `## Answers`. After committing, re-read the file at HEAD and confirm
-   your own flip is present before dispatching. Create the worktree
-   (`git worktree add -b task/NN-<slug> ../<repo>-task-NN` — this cuts from
-   the current commit, so it is always fresh; if a runtime instead pins the
-   worktree base to a lagging tracking ref, force-sync it to the default
-   branch before working), then give
+   your own flip is present before dispatching. Isolate the task in its own
+   worktree on branch `task/NN-<slug>`, cut from the current commit so it is
+   always fresh (if a runtime instead pins the worktree base to a lagging
+   tracking ref, force-sync it to the default branch before working), then
+   give
    the user one Agent Manager launch — a fresh agent at the worker tier
    (Pro-class in the picker)
    on that worktree
@@ -336,15 +337,16 @@ list` shows no worktree checked out on its task branch (a live
    it; it re-fires on every loop iteration, so a per-session emission would
    misattribute later iterations.
    DONE → before merging, re-run the append-only
-   whitelist diff over `merge-base..branch`, path-scoped to every
-   spec's tasks/ dir (`git diff $(git merge-base <default-branch>
-<branch>)..<branch> -- '*/tasks/*.md'`): changes only in the
+   whitelist diff over the branch's changes since its merge-base, path-scoped
+   to every spec's tasks/ dir (e.g., under git: `git diff $(git merge-base
+   <default-branch> <branch>)..<branch> -- '*/tasks/*.md'`): changes only in the
    worker's own task file and only in the allowed set — Status line,
    checkbox ticks, evidence lines, the plan block; anything else is a
    post-verification edit riding in — treat it as a merge failure.
    **MUST NOT (wake economics): at merge/verdict time the drain session never
    pulls the worker's *code diffs* or the *worker's own check/test output*
-   into its own context — a path-scoped `git diff --stat` plus the ≤ 2k-token
+   into its own context — a path-scoped diff summary (file names and line
+   counts, no content) plus the ≤ 2k-token
    verdict is the ceiling; when it genuinely needs file contents it dispatches
    a scout, never reading them inline.** Explicitly EXEMPT (shipped machinery
    this ban must not weaken): the append-only whitelist content diff over
@@ -355,7 +357,7 @@ list` shows no worktree checked out on its task branch (a live
    **Merges stay strictly serial** — one branch at a time, in
    verdict-landing order, never two at once even with W>1. If a branch's
    merge conflicts because a sibling merged after this branch's base was
-   cut, attempt exactly one `git rebase main` in a throwaway scratch
+   cut, attempt exactly one rebase onto `main` in a throwaway scratch
    worktree cut for the rebase: a clean rebase proceeds to the DONE
    bookkeeping below, and a persistent conflict routes to the cross-task
    interference handling (the branch is treated as a merge failure below —
@@ -369,7 +371,7 @@ list` shows no worktree checked out on its task branch (a live
    the project gates; once gates pass, delete every `rescue/NN-<slug>-*`
    branch for the task (the dead run's forensic branches are no longer
    needed once it has shipped). Then **push `main` immediately after this
-   commit** (`git push`) so the merged, verifier-PASSED work is backed
+   commit** so the merged, verifier-PASSED work is backed
    up the moment it lands. **Push guard (canonical; build cites this, and drain's own rolling-window merges
    follow it, extended here to every bookkeeping commit — not only
    DONE merges — since a concurrent session's rebase-pull has been
@@ -382,7 +384,7 @@ list` shows no worktree checked out on its task branch (a live
    each, not only after a DONE merge. The worker never
    pushes (its "do not push" clause is unchanged) — only the orchestrator,
    after each of its own commits. On merge/gate
-   failure run `git merge --abort` (a failed merge leaves the checkout
+   failure abort the merge (a failed merge leaves the checkout
    wedged in a conflicted state), discard the branch, and relaunch once,
    one tier up in the model picker (Pro-class → the strongest model in
    the picker, the frontier rung — a retry after a deep-tier (Pro-class)
@@ -529,7 +531,8 @@ list` shows no worktree checked out on its task branch (a live
    so a spec a prior generation already failed to auto-breakdown or left NOT
    READY at intake — or a stub it already failed to promote — is not retried
    this generation either — (3) read
-   the task files' `Status:` lines, (4) `git log --oneline -15`, then (5)
+   the task files' `Status:` lines, (4) the recent VCS history (the last
+   ~15 commits), then (5)
    run ONE cheap verification (the project check or the last-flipped
    task's acceptance
    command) before dispatching. Max-generations cap: 10. The final
@@ -554,9 +557,8 @@ list` shows no worktree checked out on its task branch (a live
    budget; attempt 1 must have returned DONE to reach a merge, so only
    attempt 2 can be.
    - Sweep: delete any existing `task/NN-<slug>-t*` branches/worktrees,
-     then create three fresh ones with
-     `git worktree add -b task/NN-<slug>-t1 ../<repo>-task-NN-t1` (and
-     likewise `-t2`, `-t3`).
+     then create three fresh worktrees, one per branch — `task/NN-<slug>-t1`
+     (and likewise `-t2`, `-t3`).
    - Generate: give the user three Agent Manager launches, each on the
      strongest model in the picker — the frontier rung, the same tier the
      relaunch already used; tournament entrants are attempts 3+, continuing
@@ -593,11 +595,11 @@ layout` the winner's branch already carries the worker's evidence
      collected.
    - Rank (the workflow, not the verifier): most PASS votes first (3
      ahead of 2), then fewest gate findings summed across the
-     candidate's three verifier reports, then smallest
-     `git diff --stat` total, then lowest angle index (t1 before t2
+     candidate's three verifier reports, then smallest total change size
+     (fewest lines added plus removed), then lowest angle index (t1 before t2
      before t3) as the final tiebreak.
    - Merge: winner via the normal DONE bookkeeping, but no relaunch —
-     on merge/gate failure run `git merge --abort`, then move to the
+     on merge/gate failure abort the merge, then move to the
      next-ranked survivor; delete
      survivor branches/worktrees only after a merge passes gates. All
      survivors failing to merge → `Status: failed`.
@@ -711,18 +713,19 @@ For each in-scope draft stub, run an assess → gate → act pipeline:
   it to `pending` unconditionally — its gates already passed; no `Run-token`
   comparison (that discriminator is retired). A `Demoted:` line still blocks
   conversion permanently. The conversion runs like any committed queue-state
-  write in step 1: AFTER the remote-divergence check (the `git fetch`
+  write in step 1: AFTER the remote-divergence check (the fetch
   reconciliation) and AFTER the owner-lease claim succeeds, never before the
   claim, skipping re-run of assess/gate. In that
   SAME commit — the last committed write before the stub becomes dispatchable
   — drain also strips the `## Original report` block (dropping
   `Promoted-by-run:` too). It must ride the conversion commit, not a
-  worktree-only edit: the dispatched worker's first action is `git reset
-  --hard <default-branch>`, which discards uncommitted worktree edits and
+  worktree-only edit: the dispatched worker's first action is a hard reset of
+  its worktree to the current `<default-branch>` tip, which discards
+  uncommitted worktree edits and
   re-syncs the worker to the committed file, so a worktree-only strip would
   put the untrusted original back in front of the worker. The audit trail
-  survives via `git log`/`git show` on the EARLIER Act-step commit that wrote
-  the block, not via an unchanged current-state block.
+  survives in the VCS history (log/show) on the EARLIER Act-step commit that
+  wrote the block, not via an unchanged current-state block.
 
 Every promotion, closure, and refusal is audited on the exit checklist's
 "Promoted this run" section (step 5). A human may demote any auto-promoted
@@ -772,8 +775,8 @@ workflow already relies on for its own adversarial pass). Let it run its
 own scouting and, per its own judgment, a sanity-check on nontrivial
 dependency structure.
 
-Verify before committing: `git status --porcelain -- specs/<slug>`
-(path-scoped to the one spec) must show only new files under
+Verify before committing: the VCS's list of changed paths, path-scoped to
+the one spec `specs/<slug>`, must show only new files under
 `specs/<slug>/tasks/*.md` and/or an appended `## Parallelization` section
 in that `SPEC.md`. Anything else — or zero task files created — is a
 failed attempt: discard the stray changes scoped to exactly the
