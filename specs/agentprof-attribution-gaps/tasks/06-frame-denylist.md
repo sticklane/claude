@@ -10,6 +10,28 @@ Budget: 8 turns
 Spec: ../SPEC.md (requirement R6)
 Touch: agentprof/internal/claude/, agentprof/cmd_claude.go, agentprof/testdata/, agentprof/README.md
 
+<!-- PLAN (worker, task/06-frame-denylist):
+Touch excludes internal/output/, so the rewrite pass lives in internal/claude/
+and is wired in cmd_claude.go before output.Write. All enumerated frames
+(project, turn, skill, stage, main, model, role, agent) are Sample.Stack
+elements (claude.go:418-452); schema.MarshalLine emits Stack — scrubbing Stack
+covers every enumerated frame.
+Files:
+1. internal/claude/denylist.go — LoadDenylist(path) ([]string,error): one
+   substring per line, trim, skip blanks; missing file -> nil,nil. ScrubFrames(
+   samples, denied): any Stack frame containing a denied substring -> "(redacted)"
+   (marker with parens, distinct from scrub.go's [redacted]).
+2. internal/claude/denylist_test.go — RED first: skill-frame redaction +
+   substring-absent-in-JSONL; project-frame redaction; empty/nil denylist ->
+   unchanged; LoadDenylist blank-line skip + missing-file. Invented name
+   skill:zz-test-private.
+3. cmd_claude.go — add --frame-denylist flag (default ~/.config/agentprof/
+   frame-denylist via defaultFrameDenylist()); load once, ScrubFrames after
+   Collect (covers merge/summary/unlinked) and again after nameTurns before the
+   direct output.Write (covers renamed turn frames).
+4. README.md — denylist mechanism + pinned-evidence repo rule.
+-->
+
 ## Goal
 
 If `~/.config/agentprof/frame-denylist` exists (one string per line;
