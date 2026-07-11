@@ -90,6 +90,58 @@ func TestBuildGroupsSamplesByModel(t *testing.T) {
 	}
 }
 
+func TestBuildToolDurationSamplesBucketUnderToolsNotMain(t *testing.T) {
+	// A main-loop tool-duration sample is the model-call stack with its model
+	// leaf replaced by tool:<name> (how toolSamples emits it); it carries
+	// duration only and no model frame. It must bucket under (tools), and
+	// `main` must never appear as a by_model key (SPEC R4).
+	samples := []schema.Sample{
+		sample("s1", []string{"proj", "t01 · x", "skill:build", "main", "tool:Bash"},
+			map[string]int64{"duration_ms": 1500}),
+	}
+	s := Build(samples, nil)
+	if _, ok := s.ByModel["main"]; ok {
+		t.Errorf("by_model must not contain a \"main\" key; got %v", s.ByModel)
+	}
+	if got := s.ByModel["(tools)"]["duration_ms"]; got != 1500 {
+		t.Errorf("by_model[(tools)][duration_ms] = %d, want 1500", got)
+	}
+}
+
+func TestBuildSubagentToolDurationSamplesBucketUnderTools(t *testing.T) {
+	// A subagent tool-duration sample bottoms out at an agent: frame, not a
+	// model — it also carries no model frame and must bucket under (tools),
+	// never leaking the agent: frame into by_model.
+	samples := []schema.Sample{
+		sample("s1", []string{"proj", "t01 · x", "skill:build", "main", "agent:scout", "tool:Read"},
+			map[string]int64{"duration_ms": 400}),
+	}
+	s := Build(samples, nil)
+	if got := s.ByModel["(tools)"]["duration_ms"]; got != 400 {
+		t.Errorf("by_model[(tools)][duration_ms] = %d, want 400", got)
+	}
+	if _, ok := s.ByModel["agent:scout"]; ok {
+		t.Errorf("by_model must not contain an agent: key; got %v", s.ByModel)
+	}
+}
+
+func TestBuildSyntheticKeepsOwnLabeledModelRow(t *testing.T) {
+	// <synthetic> is a non-model leaf. Chosen behavior (R4): explicitly
+	// labeled — it keeps its own distinctly-named by_model row, neither merged
+	// into (tools) nor dropped, with its calls preserved.
+	samples := []schema.Sample{
+		sample("s1", []string{"proj", "t01 · x", "skill:build", "main", "<synthetic>"},
+			map[string]int64{"calls": 5}),
+	}
+	s := Build(samples, nil)
+	if got := s.ByModel["<synthetic>"]["calls"]; got != 5 {
+		t.Errorf("by_model[<synthetic>][calls] = %d, want 5 (synthetic keeps its own labeled row)", got)
+	}
+	if _, ok := s.ByModel["(tools)"]; ok {
+		t.Errorf("<synthetic> must not be folded into (tools); got %v", s.ByModel)
+	}
+}
+
 func TestBuildSumsTotalsAcrossAllSamples(t *testing.T) {
 	s := Build(groupingFixture(), groupingFixture())
 	if got := s.Totals["input_tokens"]; got != 1000 {
