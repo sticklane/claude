@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 6 turns
@@ -35,7 +35,9 @@ costsummary (task 05) or the denylist/emit hygiene (task 06).
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/claude/` → pass including the
+- [x] `cd agentprof && go test ./internal/claude/` → pass including the
   three normalization fixtures (hermetic — no dependence on the real
-  $HOME)
-- [ ] `bash agentprof/scripts/check.sh` → green
+  $HOME) — verifier: all four normalization tests pass, each pins home via
+  `t.Setenv("AGENTPROF_HOME", …)` (evidence/02-project-normalization.md)
+- [x] `bash agentprof/scripts/check.sh` → green — verifier: format-check ok,
+  lint ok, tests ok (evidence/02-project-normalization.md)
