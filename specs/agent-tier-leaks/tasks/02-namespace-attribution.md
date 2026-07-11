@@ -59,3 +59,7 @@ but run it if anything under `agentprof/` beyond the two docs gets touched.
   - BARE: session `eed20d5f-829c-4a98-94ea-1e780af8aede` (cwd `/Users/sjaconette/claude`) dispatched `subagent_type: implementation-worker`/`critic`/`scout` (bare) → repo-local `~/claude/.claude/agents/` (critic.md, implementation-worker.md, scout.md, verifier.md present). Also `61ec4803-...` (hub, Jul 3-4) with bare skill attribution `drain`/`idea`.
   - PREFIXED: session `5dcdc5c4-7776-4ac7-a064-8ed03a36fbd8` (cwd `/Users/sjaconette/fooszone`, no repo-local `.claude/agents/`) dispatched `subagent_type: agentic:critic`/`agentic:verifier` → installed `agentic` plugin. Also `b4bdc20a-...`/`9acb6dc5-...` (hub, Jul 6-7, prefixed).
   - Shadow-copy check (Step 3): `~/.claude/agents/` exists but is EMPTY; `~/hub/.claude/agents/` does not exist (hub's `.claude/skills/` holds only hub-specific meal-planning/priorities). No stale shadow copies of toolkit agents found; nothing to flag for deletion.
+
+## Discovered
+
+- Temporal attribution drift in hub transcripts (bare frames Jul 3-4, prefixed Jul 6+), consistent with hub moving to the installed plugin in early July — benign nuance covered by the doc's mechanism, no action

@@ -73,3 +73,7 @@ the rules doc is the doctrine home), do NOT edit `~/.claude/CLAUDE.md`
   - Evidence: verifier PASS (evidence/02-freehand-drain-doctrine.md) — file created, opens "**MANUAL (attended): for Steven to apply.**".
 - [x] `grep -qiE 'auto-?invoke|auto-?trigger' /Users/sjaconette/claude/.claude/rules/token-discipline.md || true` — MANUAL sanity: the new block must NOT instruct auto-invoking drain (it is disable-model-invocation)
   - Evidence: verifier PASS (evidence/02-freehand-drain-doctrine.md) — underlying grep exit 1 (no match anywhere); both new blocks state "recommend it, never launch it on the human's behalf" / "never launch it automatically".
+
+## Discovered
+
+- agent-tier-leaks R2 is verify-only against this task's output; its merge (landed) is the unblock for that spec's close dependency — operational note, no action
