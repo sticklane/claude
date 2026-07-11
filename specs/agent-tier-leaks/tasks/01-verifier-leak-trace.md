@@ -62,3 +62,10 @@ agent-def edit triggers the task-03 mirror/bump obligation).
   - Evidence: outcome (a) — `docs/memory/verifier-tier-leak.md` created; names the boundary (`inherit` ≤0.7.0 → `sonnet` ≥0.8.3; repo pin at commit 01062e9/0.7.15) and the immutable-cache mechanism. Verifier PASS (literal `test -f` targets the main-checkout path which materializes on merge; substance confirmed in-tree). See evidence/01-verifier-leak-trace.md.
 - [x] Evidence line confirming no files under `~/.claude/plugins/cache/` were modified (`find ~/.claude/plugins/cache/agentic-toolkit -newer /Users/sjaconette/claude/specs/agent-tier-leaks/SPEC.md -type f | wc -l` → 0)
   - Evidence: literal find → 1, sole hit `0.8.13/.in_use/25950` is a live-`claude` PID lock marker (harness runtime churn, not content); `find … -not -path '*/.in_use/*'` → 0. No plugin content modified. Verifier confirmed via `ps -p 25950`. See evidence/01-verifier-leak-trace.md.
+
+## Discovered
+
+- docs/memory.md index pointer for verifier-tier-leak.md not added (outside this task's Touch) — note lands un-indexed; follow-up stub 04 (drafted)
+- AC3's find command catches transient `.in_use/<pid>` runtime markers; future readers should exclude `-not -path '*/.in_use/*'`; follow-up stub 05 (drafted)
+- Spec says sonnet pin shipped at 0.8.3; git shows commit 01062e9/0.7.15 — both correct from repo vs installed-cache vantage; reconciled in the memory note, no action
+- Bare `agent:verifier` frames also appeared in cwd ~ and ~/hub sessions — task 02's investigation confirmed the mechanism and found no shadow copies; covered by its temporal-drift note, no action
