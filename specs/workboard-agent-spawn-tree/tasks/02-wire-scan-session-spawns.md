@@ -1,6 +1,6 @@
 # Task 02: scan_session_spawns() wiring into assemble() and --json
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 12 turns
