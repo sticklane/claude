@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P2
 Budget: 4 turns
@@ -32,6 +32,6 @@ internal/costsummary tests for ground truth), never the reverse.
 
 ## Acceptance
 
-- [ ] `grep -qi 'reprime' agentprof/SCHEMA.md && grep -qi 'reprime' agentprof/README.md` → both hit
-- [ ] `grep -qi 'tagfocus reprime' agentprof/README.md` → example present
-- [ ] `bash agentprof/scripts/check.sh` → green (no code changed)
+- [x] `grep -qi 'reprime' agentprof/SCHEMA.md && grep -qi 'reprime' agentprof/README.md` → both hit (verifier PASS; evidence/04-docs.md)
+- [x] `grep -qi 'tagfocus reprime' agentprof/README.md` → example present: `go tool pprof -tagfocus reprime=true week.pb.gz` (verifier PASS; evidence/04-docs.md)
+- [x] `bash agentprof/scripts/check.sh` → green: format-check ok, lint ok, tests ok (exit 0; verifier PASS; evidence/04-docs.md)
