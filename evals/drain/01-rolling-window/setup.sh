@@ -6,6 +6,12 @@
 # The two tasks are dependency-free and Touch-disjoint (src/alpha.sh vs
 # src/beta.sh), each a trivial bash-script deliverable a worker finishes in
 # a couple of turns.
+#
+# Dual baton trigger: with Parallel-window: 2 the size-adaptive baton budget
+# is max(2, 6-W) = max(2, 4) = 4 recorded verdicts, so this 2-task (2-verdict)
+# run must complete within a SINGLE generation — no baton pass, no relaunch.
+# assert.sh's check 5 enforces exactly that (no DRAIN-BATON.md ever written,
+# clean lease/baton end state), exercising the dual trigger's threshold.
 set -eu
 
 cd "$EVAL_DIR"

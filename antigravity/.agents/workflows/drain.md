@@ -175,7 +175,9 @@ list` shows no worktree checked out on its task branch (a live
    the toolkit's `runtimes/antigravity.md` Role pins) — retries escalate
    to the frontier rung, per step 4's relaunch and tournament — and each is told to
    delegate its own mechanical scouting to Haiku (`effort: low`) scouts and
-   to return only a structured **verdict + evidence**, never its transcript
+   to return only a structured **verdict + evidence capped at ≤ 2k tokens** —
+   never its transcript, a full diff, or raw test output, none of which the hub
+   pulls into its own context (wake economics, below)
    (`.claude/rules/token-discipline.md`, Dispatch authoring). **The flip
    is compare-and-swap.** Re-read the task file immediately before
    flipping — the flip is an exact-match edit of the literal
@@ -246,7 +248,8 @@ list` shows no worktree checked out on its task branch (a live
    > the text of Goal, Steps, Touch, Budget, and every acceptance
    > criterion is read-only, and ## Progress / ## Deferred questions
    > are drain-written sections: report that content, never write it.
-   > Final message: verdict
+   > Final message (capped at ≤ 2k tokens — never a transcript, full diff, or
+   > raw test output the hub would have to pull into its context): verdict
    > (DONE/BLOCKED/DEFERRED), acceptance evidence per criterion, branch,
    > files changed, a fixed `Decisions:` section — zero or more single-line
    > items, each naming the decision, the reversible default you took, and
@@ -275,6 +278,23 @@ list` shows no worktree checked out on its task branch (a live
    request at /drain invocation overrides it. Hard cap W ≤ 5: concurrency
    multiplies token spend, so size the window by the task map, never the
    cap.
+
+   **Wake economics — keep the drain session's context small.** Awaited
+   workers routinely run 5–30 minutes, longer than the harness's 5-minute
+   prompt-cache TTL, so every verdict-collection wake lands after the drain
+   session's cached prefix has expired and re-caches its **whole** context at
+   the 1.25× cache-write rate. Cost per wake is `context_tokens × input_rate ×
+   1.25`, so the session's *size* — not the number of wakes — is the cost
+   lever: a lean drain session makes per-verdict re-caching noise, while a fat
+   one pays it on every worker. Measured shape (../EVIDENCE.md,
+   2026-07-04→11): median rewrite 187k tokens, 268 TTL-expiry wakes costing
+   $587 in one week — which is why the ≤ 2k-token verdict cap above, the
+   merge-time re-read ban (step 3), and the size-adaptive baton (step 3's
+   baton pass) all exist. Because the workflow's judgment lives in the
+   committed task files and the pinned worker tiers, not in the drain
+   session's own model, run the drain-bookkeeping session itself on the
+   default (Pro-class) tier or below — a frontier model for this session
+   roughly doubles wake cost for no quality gain.
 
    **Window admission.** A task enters the window only when it is
    dispatchable (step 1) AND co-admissible with everything already in
@@ -315,6 +335,16 @@ list` shows no worktree checked out on its task branch (a live
    worker's own task file and only in the allowed set — Status line,
    checkbox ticks, evidence lines, the plan block; anything else is a
    post-verification edit riding in — treat it as a merge failure.
+   **MUST NOT (wake economics): at merge/verdict time the drain session never
+   pulls the worker's *code diffs* or the *worker's own check/test output*
+   into its own context — a path-scoped `git diff --stat` plus the ≤ 2k-token
+   verdict is the ceiling; when it genuinely needs file contents it dispatches
+   a scout, never reading them inline.** Explicitly EXEMPT (shipped machinery
+   this ban must not weaken): the append-only whitelist content diff over
+   `tasks/` (the diff just above), CAS re-reads of `Status:` header lines
+   (step 2), the `## Progress` / `## Deferred questions` / `## Decisions`
+   append edits, and the session's OWN post-merge project-gate run — its
+   pass/fail plus the bounded output tail already used as relaunch evidence.
    **Merges stay strictly serial** — one branch at a time, in
    verdict-landing order, never two at once even with W>1. If a branch's
    merge conflicts because a sibling merged after this branch's base was
@@ -449,10 +479,16 @@ list` shows no worktree checked out on its task branch (a live
    At each safe boundary (a
    verdict just recorded and committed, or a 4a auto-breakdown attempt)
    evaluate the same relaunch trigger
-   as `.claude`'s drain: a generation budget — every 4 recorded verdicts
-   this session (an auto-breakdown attempt, success or failure, counts as
-   one; default; a `Relaunch-every: N` header in the drained
-   spec's SPEC.md header block overrides N) — or a degradation override on
+   as `.claude`'s drain: a generation budget — hand off after
+   **`max(2, 6 − W)` recorded verdicts** this session (W is the window size,
+   so a wider window batons sooner: W=1→5, W=3→3, W=5→2; an auto-breakdown
+   attempt, success or failure, counts as one; a `Relaunch-every: N` header in
+   the drained spec's SPEC.md header block overrides N) — a deterministic,
+   size-adaptive stand-in for the ideal "after ~4 verdicts OR when the
+   session's context is heavy, whichever comes first" (the harness exposes no
+   reliable in-session context-size signal, and a wider W accumulates hub
+   context faster per generation, so it batons sooner to keep per-verdict
+   re-caching cheap — wake economics, step 2) — or a degradation override on
    re-reading files already read, losing queue position, repeated failed
    corrections, or a compaction event. When it fires, drain first enters
    **drain-down (R8)**: it stops admitting new tasks and waits for every
