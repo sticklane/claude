@@ -97,10 +97,12 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    what the code does, only how; remove comments describing obvious code,
    redundant abstractions, and defensive handling for impossible cases;
    re-run the acceptance commands after. Pre-commit review, one pass with
-   no re-review after fixes: compute the skip gate first with
-   `git add -A && git diff <base> --numstat` (staging first surfaces new
-   untracked files; `<base>` is the commit HEAD was at when the task
-   started), classifying each path NON-product when it matches `docs/**`,
+   no re-review after fixes: compute the skip gate first by staging all
+   changes and diffing against the base revision for per-path line counts
+   (staging first surfaces new untracked files; `<base>` is the revision
+   recorded when the task started;
+   e.g., under git: `git add -A && git diff <base> --numstat`),
+   classifying each path NON-product when it matches `docs/**`,
    `**/*.md`, `tests/**`, `test/**`, `**/test_*`, `**/*_test.*`,
    `**/*.test.*`, `**/*.spec.*`, `**/*.json`, `**/*.yaml`, `**/*.yml`,
    `**/*.toml`, `**/*.lock`; skip straight to commit — recording
@@ -132,8 +134,8 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    step 2). Commit code + task file referencing the task — plus the
    `evidence/` file when an evidence path was passed; otherwise note
    that evidence was not persisted and keep the one-line evidence
-   inline in the task file as the artifact. Then **push `main` on
-   completion** (`git push`) — subject to the drain workflow's canonical push guard
+   inline in the task file as the artifact. Then **publish the default
+   branch on completion** (e.g., under git: `git push`) — subject to the drain workflow's canonical push guard
    (upstream-configured only, non-fatal, never `--force`; a failed push
    warns and continues since the commit already landed locally). Open a
    PR only if asked. The
