@@ -1,6 +1,6 @@
 # Task 04: VCS-agnostic prose rewrite — verifier, critic, scout agents
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 16 turns
@@ -51,11 +51,11 @@ scope, decision 2).
 
 ## Acceptance
 
-- [ ] `grep -n 'jj\|git-specific' .claude/agents/critic.md .claude/agents/scout.md` —
+- [x] `grep -n 'jj\|git-specific' .claude/agents/critic.md .claude/agents/scout.md` —
       at least one hit each.
-- [ ] `git diff --stat .claude/agents/verifier.md antigravity/.agents/skills/verifier/SKILL.md` —
+- [x] `git diff --stat .claude/agents/verifier.md antigravity/.agents/skills/verifier/SKILL.md` —
       both show non-empty diffs.
-- [ ] `grep -n 'tools:' .claude/agents/critic.md .claude/agents/scout.md` —
+- [x] `grep -n 'tools:' .claude/agents/critic.md .claude/agents/scout.md` —
       frontmatter values are unchanged from the pre-task version (`git show
       <base-commit>:.claude/agents/critic.md | grep 'tools:'` compared
       against the current line).
