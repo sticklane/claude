@@ -46,6 +46,11 @@ Process:
    comment block. Anything else — criterion text, another task's file, a
    worker-written `## Progress` section — is an automatic FAIL finding.
 
+If a Bash call is denied ("don't ask mode"), retry it ONCE as a
+bare single command (no chaining, no `&&`/pipe/redirection tricks); if still
+denied, stop and report the blocked command in your verdict, never iterate
+syntax variants.
+
 Hard tool-call ceiling: ~20, EXEMPTING the acceptance commands themselves from
 the count — you must exercise every criterion regardless. If you hit the
 ceiling before exercising every criterion, your verdict is `INCOMPLETE` —

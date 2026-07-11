@@ -30,7 +30,8 @@ SPEC.md or plan.
    findings as optional. Apply fixes only if the user asks or the pipeline
    step you're in requires READY.
 5. After fixes, re-run the critic on the changed artifact — a critique you
-   didn't re-check is a claim, not a verification.
+   didn't re-check is a claim, not a verification. Between rounds the author
+   re-reads only the sections the critic named, never the whole artifact.
 
 ## Ultra path
 

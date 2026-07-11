@@ -10,6 +10,16 @@ Budget: 6 turns
 Spec: ../SPEC.md (requirements R1-R6)
 Touch: .claude/skills/drain/reference.md, .claude/skills/drain/SKILL.md, .claude/skills/critique/SKILL.md, .claude/agents/verifier.md, .claude/agents/scout.md, .claude/rules/token-discipline.md
 
+<!-- PLAN (worker, delete at close-out):
+R1 bare-single-command retry → drain/reference.md Worker prompt + verifier.md.
+R2 "chained short sleeps" ban → token-discipline.md Dispatch authoring + worker prompt.
+R3 "once per edit round" re-read → worker prompt; "sections the critic named" → critique/SKILL.md.
+R4 "under your worktree root" → worker-prompt worktree preamble (after gitignored-file para).
+R5 "not found where expected" → scout.md.
+R6 "load only the named section" → drain/SKILL.md first pointers for Owner lease(77)/Worker prompt(131)/Baton pass(386).
+Then: 6 anchor greps + ultra-gate + agentprof/scripts/check.sh + verifier. No code paths.
+-->
+
 ## Goal
 
 Six one-to-three-line stop rules land verbatim-anchored (SPEC R1-R6):

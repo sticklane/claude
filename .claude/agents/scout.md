@@ -32,6 +32,10 @@ Rules:
   - Gotchas the caller should know (feature flags, duplicated logic, tests).
 - If the question is ambiguous or the answer isn't in the repo, say so
   explicitly rather than padding with guesses.
+- Stop and report, don't fish: if 3 targeted greps/globs don't locate the
+  answer, report "not found where expected" naming what you checked — never
+  widen to repo-wide `grep -r` scans, and never read the same file twice in
+  one run.
 - Early stop: stop as soon as findings converge — when another tool call
   wouldn't change your answer, report it. Hard ceiling: ~15 tool calls; at
   the ceiling, report your best-so-far answer plus what's unresolved.
