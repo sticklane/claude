@@ -69,7 +69,7 @@ context file.
 
 Walk the user through the Terminal Execution Policy settings (Antigravity
 has no checked-in permissions file): recommend Auto mode, plus deny-list
-entries for `git push`, deploy commands, and anything destructive, so
+entries for pushing to the remote (e.g., under git: `git push`), deploy commands, and anything destructive, so
 unattended runs can't take irreversible actions.
 
 ## 5. Offer the next layer

@@ -31,8 +31,8 @@ session, a "sweep unavailable" line on failure, never blocking.
 Read the task file (and its spec's Requirements section if referenced). Mark
 the task's Status as `in-progress` (a bare SPEC.md has no Status field — skip
 the bookkeeping steps for it and work from its acceptance criteria directly).
-Record `git rev-parse HEAD` now — it is the base the verifier's append-only
-task-file diff runs against in step 3. Do NOT preload the codebase: for anything
+Record the current revision identifier now — the base the verifier's
+append-only task-file diff runs against in step 3 (e.g., under git: `git rev-parse HEAD`). Do NOT preload the codebase: for anything
 unclear about existing code, fan out `scout` agents and work from their
 reports. Read a file directly only when you're about to edit it.
 
@@ -131,9 +131,10 @@ line every time you enter it.
   code, redundant abstractions, and defensive handling for cases that can't
   happen. Re-run the acceptance commands after.
 - Pre-commit review (one pass, no re-review after fixes): compute the skip
-  gate first — `git add -A && git diff <step0-base> --numstat` (staging
-  first surfaces brand-new untracked files; `<step0-base>` is the
-  `git rev-parse HEAD` recorded in step 0). Classify each path NON-product
+  gate first — stage all changes and diff against the step-0 base revision
+  for per-path line counts; staging first surfaces brand-new untracked
+  files, and `<step0-base>` is the base revision recorded in step 0
+  (e.g., under git: `git add -A && git diff <step0-base> --numstat`). Classify each path NON-product
   when it matches `docs/**`, `**/*.md`, `tests/**`, `test/**`, `**/test_*`,
   `**/*_test.*`, `**/*.test.*`, `**/*.spec.*`, `**/*.json`, `**/*.yaml`,
   `**/*.yml`, `**/*.toml`, `**/*.lock`. Skip the review — record
@@ -169,8 +170,8 @@ line every time you enter it.
 - Commit code + task file with a message referencing the task — plus the
   verifier's `evidence/` file when an evidence path was passed; otherwise
   note that evidence was not persisted and keep the one-line evidence
-  inline in the task file as the artifact. Then **push `main` on
-  completion** (`git push`) — subject to drain/SKILL.md's canonical push guard
+  inline in the task file as the artifact. Then **publish the default branch
+  on completion** (e.g., under git: `git push`) — subject to drain/SKILL.md's canonical push guard
   (upstream-configured only, non-fatal, never `--force`; a failed push
   warns and continues since the commit already landed locally). Open a PR
   only if the user asked.

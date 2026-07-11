@@ -74,7 +74,8 @@ stays small.
 ## 4. Permissions
 
 `.claude/settings.json` allowlist covering exactly the verified commands
-(test/lint/build, git add/commit) with `deny` on `git push` — the autopilot
+(test/lint/build, plus staging and committing) with a `deny` on publishing
+to the remote (e.g., under git: `git push`) — the autopilot
 skill's reference.md (in-repo at .claude/skills/autopilot/reference.md, or
 in the agentic plugin's install directory) has the template and
 syntax rules. Merge into any existing settings file rather than overwriting,

@@ -25,7 +25,8 @@ folded into AGENTS.md, cited not restated).
    - Runnable acceptance criteria in the task file (no criteria → no
      autonomy).
    - Gates installed (/gate hooks) so edits are checked deterministically.
-   - Terminal Execution Policy: deny list covers `git push`, deploys, and
+   - Terminal Execution Policy: deny list covers pushing to the remote
+     (e.g., under git: `git push`), deploys, and
      destructive commands (Settings → Antigravity → Terminal Execution
      Policy). Risk-rate each tool by reversibility and blast radius when
      scoping the policy — auto-allow only what discarding the branch fully
