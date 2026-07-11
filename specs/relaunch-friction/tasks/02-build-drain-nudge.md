@@ -1,6 +1,6 @@
 # Task 02: Give build a sibling-task /drain nudge at end-of-run
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 40 turns
