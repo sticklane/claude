@@ -10,7 +10,7 @@ One deliberate write exists: `--abandon <conv-id>` / `--abandon-stale` drop
 a `.workboard-abandoned` marker file into an Antigravity conversation dir so
 the scanner skips it permanently. Antigravity's own artifacts (`task.md`,
 metadata) are never modified; undo = delete the marker. Tests:
-`python3 -m unittest discover -s .claude/skills/workboard`.
+`python3 -m unittest discover -s .agents/skills/workboard`.
 
 | Source | Path | What it yields |
 |---|---|---|

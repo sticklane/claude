@@ -1,7 +1,7 @@
 """Tests for list_specs.py: scan + bucket + classify + render.
 
-Run: python3 -m unittest discover -s .claude/skills/list-specs
-or:  pytest .claude/skills/list-specs/test_list_specs.py -v
+Run: python3 -m unittest discover -s .agents/skills/list-specs
+or:  pytest .agents/skills/list-specs/test_list_specs.py -v
 
 Stdlib-only, like workboard.py. Each test builds a real specs/ tree under a
 tmp dir (tempfile.TemporaryDirectory) and calls the script's functions
