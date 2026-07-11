@@ -332,7 +332,7 @@ the workers live. Loop to step 2 while anything is dispatchable. This session
 growing heavy mid-queue is step 3a's degradation override — hand off via the
 baton, don't wait for a human to notice.
 
-## 3a. Baton pass (self-relaunch)
+## 3a. Baton pass (attended relaunch)
 
 Emit `<!-- agentprof:stage=baton-pass -->` verbatim as this step's opening
 line every time you enter it.
@@ -351,26 +351,28 @@ the hub can check, so a wider window W — which accumulates hub context faster
 per generation (each in-flight worker adds a verdict wake) — batons sooner
 (W=1→5 verdicts, W=3→3, W=5→2), keeping the hub small enough that per-verdict
 re-caching stays cheap (wake economics, step 2). On fire: write the baton `specs/<slug>/DRAIN-BATON.md` (grammar +
-relaunch command in [reference.md](reference.md)), spawn the successor
-generation (awaited where a parent can supervise; else headless), report the
-pass, and **end your turn at once, stating this session will not touch the
-queue again** (one-writer invariant). A **max-generations cap of 10** stops
-with the baton written + a needs-attention note instead of respawning. The
+relaunch instruction in [reference.md](reference.md)), report the pass with
+the relaunch command printed for the HUMAN to run in a fresh session, and
+**end your turn at once, stating this session will not touch the queue
+again** (one-writer invariant). Drain **never spawns its own successor** —
+no detached/headless generations, ever: the maintainer policy in
+`.claude/rules/token-discipline.md` ("Awaited children, never detached")
+covers orchestrator generations too, and a headless hub runs unsupervised
+merges and pushes no human sanctioned (policy tightened 2026-07-11). Every
+generation is therefore human-launched and attended; /drain remains a
+human-gate at every generation boundary, not just gen 1. A
+**max-generations cap of 10** stops with the baton written + a
+needs-attention note instead of offering another relaunch. The
 **baton is always the first escape**; the **/handoff** escape applies only
 where the baton cannot — once this generations cap is exhausted (or in
 attended /build), the session writes the /handoff file and leads its exit
-checklist (step 4) with the resume command instead of continuing degraded.
-**Gen 1 is always attended**; passing `attended` in the /drain invocation
-makes every trigger OFFER the baton + relaunch command instead of
-self-relaunching. The **fresh-instance ritual (R1a)** before any dispatch —
+checklist (step 4) with the resume command instead of continuing degraded. The **fresh-instance ritual (R1a)** before any dispatch —
 reconcile DRAIN-OWNER.md against the baton (`Run-token:` + `Generation:`; a
 mismatch falls to step 1's refuse path), seed 3b's, critique intake's, and
 stub intake's attempted-and-failed sets from the baton's `Breakdown-failed:`
 / `Intake-failed:` / `Stub-intake-failed:` lines, then run ONE cheap
-verification to catch drift — is detailed in reference.md's "Baton pass". A
-headless generation reaching the batch interview writes its deferred
-questions into the baton and stops; the final generation deletes the baton
-when the queue completes.
+verification to catch drift — is detailed in reference.md's "Baton pass".
+The final generation deletes the baton when the queue completes.
 
 ## Critique intake (fires at the exhaustion trigger, before 3b)
 
