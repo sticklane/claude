@@ -75,14 +75,27 @@ order cannot resolve are surfaced, not guessed.
 - Skills that spawn agents follow the "Dispatch authoring" section of
   `.claude/rules/token-discipline.md` (tier by stage type, capped returns,
   bounded loops, single-call judge) — cite it, don't restate it.
-- `.claude/` is the source of truth; `antigravity/` is a mirrored port
-  (skills near-identical, agents→skills, human-only skills→workflows,
-  hooks in Antigravity's JSON shape). When a skill changes here, mirror the
-  change there in the same commit. A spec whose tasks change `.claude/skills/`
-  files must carry the mirror + plugin.json bump in some task's `Touch:`
-  (typically one closing task) — drained workers can't touch unlisted paths,
-  so an unlisted mirror silently ships un-mirrored (bit queue 5's
-  shared-viz spec; workboard-cli's closing task 04 is the model).
+- `.claude/` is the source of truth; the port chain is `.claude/` →
+  `antigravity/` → `codex/`. `antigravity/` is a full mirrored port (real
+  copies: skills near-identical, agents→skills, human-only skills→workflows,
+  hooks in Antigravity's JSON shape). `codex/` is a thin overlay on top of
+  `antigravity/`: `codex/.agents/skills/` symlinks the ~15 already-working
+  `antigravity/.agents/skills/*` directories plus `_shared`, and adds only
+  the four explicit-invocation-only skill wrappers —
+  `drain`/`build`/`autopilot`/`evals` — as real content. When a skill
+  changes here, mirror the change into `antigravity/` in the same commit. A
+  spec whose tasks change `.claude/skills/` files must carry the mirror +
+  plugin.json bump in some task's `Touch:` (typically one closing task) —
+  drained workers can't touch unlisted paths, so an unlisted mirror silently
+  ships un-mirrored (bit queue 5's shared-viz spec; workboard-cli's closing
+  task 04 is the model). For the codex leg: a task whose `Touch:` changes one
+  of the four `.claude/skills/{drain,build,autopilot,evals}/SKILL.md` files
+  must also carry the matching `codex/.agents/skills/<name>/SKILL.md` update
+  in its `Touch:` (those four are real content, not symlinks); a task that
+  renames or removes any already-working `antigravity/.agents/skills/*`
+  directory must also update the matching symlink under
+  `codex/.agents/skills/`, since a dangling symlink silently drops that skill
+  from Codex's discovery root.
 - `.claude-plugin/` distributes the toolkit as plugin `agentic` (marketplace
   `agentic-toolkit`); its skills manifest points at the `.claude/skills/`
   directory, so adding a skill needs no manifest edit (keep both manifest
