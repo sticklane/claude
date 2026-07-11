@@ -7,6 +7,7 @@ fake ~/.gemini/antigravity/brain store — the real one is never touched.
 
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -677,6 +678,124 @@ class TestSessionTimelineRendering(unittest.TestCase):
         )
 
         self.assertIn("viz-bar viz-stale", html)
+
+
+class TestSpawnTreeRendering(unittest.TestCase):
+    """R6/R7: a session carrying a non-empty spawn_tree renders a collapsible
+    indented tree — one row per agent, indented by spawnDepth, a fleet-style
+    status chip per node, and distinct styling on failed branches. Sessions
+    without a spawn tree render exactly as before (no regression).
+
+    The fixture below is the deterministic source of truth: it is built in
+    memory here, never scanned from live session data on disk."""
+
+    def _data(self, repos=None, orphan_sessions=None):
+        return {
+            "totals": {
+                "repos": len(repos or []),
+                "specs_open": 0,
+                "tasks_open": 0,
+                "sessions_active": 0,
+                "attention": 0,
+            },
+            "generated_at": "now",
+            "stale_days": 7,
+            "inbox": [],
+            "ready": {"items": [], "blocked_unresolved": []},
+            "repos": repos or [],
+            "antigravity": [],
+            "todos": [],
+            "orphan_sessions": orphan_sessions or [],
+        }
+
+    def _session(self, spawn_tree, state="active"):
+        return {
+            "id": "s1",
+            "cwd": "/r/demo",
+            "branch": "main",
+            "prompt": "do the thing",
+            "last_ts": 100.0,
+            "start_ts": 1.0,
+            "end_ts": 100.0,
+            "bytes": 10,
+            "state": state,
+            "spawn_tree": spawn_tree,
+        }
+
+    def _fixture_tree(self):
+        # root (running) with one failed child at spawnDepth 1
+        return [
+            {
+                "agentId": "aaa",
+                "agentType": "implementation-worker",
+                "description": "build the parser",
+                "status": "running",
+                "spawnDepth": 0,
+                "started_ts": 10.0,
+                "ended_ts": None,
+                "children": [
+                    {
+                        "agentId": "bbb",
+                        "agentType": "verifier",
+                        "description": "verify the parser",
+                        "status": "failed",
+                        "spawnDepth": 1,
+                        "started_ts": 20.0,
+                        "ended_ts": 40.0,
+                        "children": [],
+                    }
+                ],
+            }
+        ]
+
+    def test_render_spawn_tree_indented_chipped_with_failed_branch(self):
+        tree = self._fixture_tree()
+        html = workboard.render_html(self._data(orphan_sessions=[self._session(tree)]))
+
+        # one row per tree node: 2 nodes -> 2 agent-node rows
+        self.assertEqual(html.count('class="agent-node'), 2)
+
+        # both agents appear by type/description
+        self.assertIn("implementation-worker", html)
+        self.assertIn("verifier", html)
+
+        # indentation reflecting spawnDepth: the child is nested inside a
+        # further <ul> beneath its parent's <li>
+        self.assertIn("spawn-tree", html)
+        self.assertRegex(html, r"<li>.*<ul>.*verifier.*</ul>.*</li>")
+
+        # a fleet-style status chip per node (glyph + word, class name).
+        # Acceptance criterion 2: assert via re, inline, that the fragment
+        # carries the fleet chip class.
+        chips = re.findall(r'class="chip s-(running|completed|failed)"', html)
+        self.assertIn("running", chips)  # root node chip
+        self.assertIn("failed", chips)  # failed child chip
+        self.assertEqual(len(chips), 2)  # one chip per node
+
+        # fleet convention: glyph + word, word always present
+        self.assertRegex(html, r'class="chip s-failed"><b>[^<]+</b>\s*failed')
+
+        # failed branch gets a distinct row-level modifier class, not color
+        # alone (s-failed on the chip PLUS a modifier on the row div)
+        self.assertRegex(html, r'class="agent-node[^"]*\bfailed\b')
+
+    def test_render_no_regression_when_spawn_tree_empty(self):
+        # The common case (no spawn tree) must render exactly as before the
+        # feature: an empty list and an absent key both emit zero spawn-tree
+        # markup, so the session section is unchanged (R6, no regression).
+        empty = self._session(spawn_tree=[])
+        absent = self._session(spawn_tree=[])
+        del absent["spawn_tree"]
+
+        html_empty = workboard.render_html(self._data(orphan_sessions=[empty]))
+        html_absent = workboard.render_html(self._data(orphan_sessions=[absent]))
+
+        self.assertEqual(html_empty, html_absent)
+        # no spawn-tree markup injected for the common case (the CSS rule
+        # names always ship; what must be absent is the rendered elements)
+        self.assertNotIn('class="spawn-tree"', html_empty)
+        self.assertNotIn('class="agent-node', html_empty)
+        self.assertNotIn('class="chip s-', html_empty)
 
 
 class TestSpecDagRendering(unittest.TestCase):
@@ -1834,6 +1953,284 @@ class TestNeedsAnswerInbox(unittest.TestCase):
             html.index('data-category="needs-answer"'),
             html.index('data-category="blocked"'),
         )
+
+
+def _agent_tool_use(tool_use_id, subagent_type="scout", desc="do the thing", ts=OLD_TS):
+    """An assistant record spawning a sub-agent (real transcript shape:
+    message.content holds a tool_use block named "Agent")."""
+    return {
+        "type": "assistant",
+        "timestamp": ts,
+        "message": {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "Agent",
+                    "id": tool_use_id,
+                    "input": {"description": desc, "subagent_type": subagent_type},
+                }
+            ]
+        },
+    }
+
+
+def _agent_tool_result(
+    tool_use_id, agent_id, status="completed", ts="2020-01-01T00:05:00Z"
+):
+    """A user record returning a sub-agent result. The terminal outcome the
+    harness records lives in the top-level `toolUseResult.status`, alongside
+    the spawned `agentId` — mirrors real transcripts."""
+    return {
+        "type": "user",
+        "timestamp": ts,
+        "toolUseResult": {"status": status, "agentId": agent_id},
+        "message": {
+            "content": [
+                {"type": "tool_result", "tool_use_id": tool_use_id, "content": "ok"}
+            ]
+        },
+    }
+
+
+def write_spawn_fixture(root, session_id, session_records, subagents):
+    """Build a session transcript + its `subagents/` sibling dir, matching the
+    real on-disk layout: `<root>/<session_id>.jsonl` is the parent transcript;
+    `<root>/<session_id>/subagents/agent-<id>.{jsonl,meta.json}` are the
+    spawned sub-agents. `subagents` is a list of (agent_id, meta, records).
+    The subagents dir is only created when there is at least one sub-agent."""
+    proj = Path(root)
+    proj.mkdir(parents=True, exist_ok=True)
+    session_path = proj / f"{session_id}.jsonl"
+    session_path.write_text(
+        "\n".join(json.dumps(r) for r in session_records) + "\n", encoding="utf-8"
+    )
+    if subagents:
+        subdir = proj / session_id / "subagents"
+        subdir.mkdir(parents=True)
+        for aid, meta, recs in subagents:
+            (subdir / f"agent-{aid}.meta.json").write_text(
+                json.dumps(meta), encoding="utf-8"
+            )
+            body = "\n".join(json.dumps(r) for r in recs)
+            (subdir / f"agent-{aid}.jsonl").write_text(
+                (body + "\n") if body else "", encoding="utf-8"
+            )
+    return session_path
+
+
+class TestExtractAgentTree(unittest.TestCase):
+    """R1-R4: extract_agent_tree parses a session transcript's Agent/Task
+    spawns into a nested tree, recursing through each sub-agent's own
+    transcript so grandchildren nest under their parent."""
+
+    def test_extract_agent_tree_nests_grandchild_under_parent(self):
+        # Session spawns A (depth 1); A's own transcript spawns B (depth 2).
+        with tempfile.TemporaryDirectory() as tmp:
+            session_records = [
+                _agent_tool_use("TU_A", subagent_type="implementation-worker"),
+                _agent_tool_result("TU_A", "A"),
+            ]
+            meta_a = {
+                "agentType": "implementation-worker",
+                "description": "parent work",
+                "toolUseId": "TU_A",
+                "spawnDepth": 1,
+            }
+            agent_a_records = [
+                _agent_tool_use("TU_B", subagent_type="scout"),
+                _agent_tool_result("TU_B", "B"),
+            ]
+            meta_b = {
+                "agentType": "scout",
+                "description": "child work",
+                "toolUseId": "TU_B",
+                "spawnDepth": 2,
+            }
+            session_path = write_spawn_fixture(
+                tmp,
+                "sess-nest",
+                session_records,
+                [("A", meta_a, agent_a_records), ("B", meta_b, [])],
+            )
+
+            tree = workboard.extract_agent_tree(session_path)
+
+            root_ids = [n["agentId"] for n in tree]
+            self.assertEqual(root_ids, ["A"])  # B is NOT a root
+            child_ids = [c["agentId"] for c in tree[0]["children"]]
+            self.assertEqual(child_ids, ["B"])  # B nested under A
+            self.assertEqual(tree[0]["children"][0]["spawnDepth"], 2)
+
+    def test_extract_agent_tree_empty_for_no_agent_calls(self):
+        # A session that never spawned a sub-agent -> empty tree, no exception.
+        with tempfile.TemporaryDirectory() as tmp:
+            session_records = [
+                {
+                    "type": "user",
+                    "timestamp": OLD_TS,
+                    "message": {"content": "hi"},
+                },
+                {
+                    "type": "assistant",
+                    "timestamp": OLD_TS,
+                    "message": {"content": [{"type": "text", "text": "ok"}]},
+                },
+            ]
+            session_path = write_spawn_fixture(tmp, "sess-empty", session_records, [])
+
+            self.assertEqual(workboard.extract_agent_tree(session_path), [])
+
+    def test_extract_agent_tree_node_fields(self):
+        # Every node exposes the R2 minimum field set, with derived values.
+        with tempfile.TemporaryDirectory() as tmp:
+            session_records = [
+                _agent_tool_use("TU_A", desc="verify it", ts="2020-01-01T00:00:00Z"),
+                _agent_tool_result("TU_A", "A", status="completed"),
+            ]
+            meta_a = {
+                "agentType": "verifier",
+                "description": "verify it",
+                "toolUseId": "TU_A",
+                "spawnDepth": 1,
+            }
+            session_path = write_spawn_fixture(
+                tmp, "sess-fields", session_records, [("A", meta_a, [])]
+            )
+
+            tree = workboard.extract_agent_tree(session_path)
+
+            self.assertEqual(len(tree), 1)
+            node = tree[0]
+            for field in (
+                "agentId",
+                "agentType",
+                "description",
+                "status",
+                "spawnDepth",
+                "started_ts",
+            ):
+                self.assertIn(field, node)
+            self.assertEqual(node["agentId"], "A")
+            self.assertEqual(node["agentType"], "verifier")
+            self.assertEqual(node["description"], "verify it")
+            self.assertEqual(node["status"], "completed")
+            self.assertEqual(node["spawnDepth"], 1)
+            self.assertEqual(
+                node["started_ts"], workboard.iso_to_ts("2020-01-01T00:00:00Z")
+            )
+
+    def test_extract_agent_tree_maps_error_status_to_failed(self):
+        # A sub-agent whose recorded outcome is an error reads as "failed"
+        # (fleet's status vocabulary), distinguishing a broken branch (R2/R7).
+        with tempfile.TemporaryDirectory() as tmp:
+            session_records = [
+                _agent_tool_use("TU_A"),
+                _agent_tool_result("TU_A", "A", status="error"),
+            ]
+            meta_a = {
+                "agentType": "scout",
+                "description": "broke",
+                "toolUseId": "TU_A",
+                "spawnDepth": 1,
+            }
+            session_path = write_spawn_fixture(
+                tmp, "sess-fail", session_records, [("A", meta_a, [])]
+            )
+
+            tree = workboard.extract_agent_tree(session_path)
+
+            self.assertEqual(tree[0]["status"], "failed")
+
+
+class TestScanSessionSpawns(unittest.TestCase):
+    """R5/R8: scan_session_spawns() runs extract_agent_tree() per session and
+    returns records keyed to the scan_*() contract (last_touched/last_ts) for
+    merge into each session record inside assemble(), without perturbing any
+    other scan_*() function's output."""
+
+    def _home_with_spawning_session(self, tmp, sid="sess-x"):
+        """Build a claude_home/projects/<proj>/ tree holding one session that
+        spawned a sub-agent. Returns (home_path, session_id)."""
+        home = Path(tmp)
+        proj = home / "projects" / "proj-x"
+        session_records = [
+            _agent_tool_use("TU_A", subagent_type="implementation-worker"),
+            _agent_tool_result("TU_A", "A", status="completed"),
+        ]
+        meta_a = {
+            "agentType": "implementation-worker",
+            "description": "did the work",
+            "toolUseId": "TU_A",
+            "spawnDepth": 1,
+        }
+        write_spawn_fixture(proj, sid, session_records, [("A", meta_a, [])])
+        return home, sid
+
+    def test_scan_session_spawns_record_carries_tree_and_ts(self):
+        # A spawning session's record exposes a non-empty spawn_tree plus the
+        # scan_*() contract keys last_touched/last_ts.
+        with tempfile.TemporaryDirectory() as tmp:
+            home, sid = self._home_with_spawning_session(tmp)
+
+            spawns = workboard.scan_session_spawns(home)
+
+            self.assertIn(sid, spawns)
+            rec = spawns[sid]
+            self.assertTrue(rec["spawn_tree"])  # non-empty
+            self.assertEqual(rec["spawn_tree"][0]["agentId"], "A")
+            self.assertIn("last_touched", rec)
+            self.assertIn("last_ts", rec)
+            self.assertIsNotNone(rec["last_ts"])
+
+    def test_scan_session_spawns_empty_tree_for_non_spawning_session(self):
+        # A session that never spawned a sub-agent still gets a record, with an
+        # empty spawn_tree (R3-consistent) — never an error.
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            proj = home / "projects" / "proj-y"
+            records = [
+                {"type": "user", "timestamp": OLD_TS, "message": {"content": "hi"}},
+            ]
+            write_spawn_fixture(proj, "sess-plain", records, [])
+
+            spawns = workboard.scan_session_spawns(home)
+
+            self.assertIn("sess-plain", spawns)
+            self.assertEqual(spawns["sess-plain"]["spawn_tree"], [])
+
+    def test_scan_session_spawns_output_is_json_serializable(self):
+        # R8: the per-session tree data is JSON-serializable so --json can carry
+        # it without a serialization error.
+        with tempfile.TemporaryDirectory() as tmp:
+            home, sid = self._home_with_spawning_session(tmp)
+
+            spawns = workboard.scan_session_spawns(home)
+            round_tripped = json.loads(json.dumps(spawns))
+
+            self.assertTrue(round_tripped[sid]["spawn_tree"])
+
+    def test_scan_session_spawns_leaves_other_scans_unchanged(self):
+        # R5: invoking scan_session_spawns() must not perturb any other
+        # scan_*() function's return value — it is read-only. Compare each
+        # other scan's output taken before and after the spawn scan runs.
+        with tempfile.TemporaryDirectory() as tmp:
+            home, _ = self._home_with_spawning_session(tmp)
+            (home / "todos").mkdir()
+            (home / "todos" / "sess-x-agent-1.json").write_text(
+                json.dumps({"todos": [{"status": "pending", "content": "do it"}]}),
+                encoding="utf-8",
+            )
+
+            before_sessions = workboard.scan_sessions(home, 14)
+            before_todos = workboard.scan_todos(home)
+
+            workboard.scan_session_spawns(home)
+
+            after_sessions = workboard.scan_sessions(home, 14)
+            after_todos = workboard.scan_todos(home)
+
+            self.assertEqual(before_sessions, after_sessions)
+            self.assertEqual(before_todos, after_todos)
 
 
 if __name__ == "__main__":

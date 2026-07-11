@@ -56,7 +56,10 @@ Top-level keys: `generated_at`, `stale_days`, `totals` (`repos`,
 runnable shell command — on items with a one-command fix), `repos[]` (`path`,
 `name`, `git`, `specs[]`, `handoffs[]`, `batons[]`, `sessions[]`), `sessions[]`,
 `orphan_sessions[]` (sessions whose cwd is outside every scanned repo),
-`antigravity[]`, `todos[]`.
+`antigravity[]`, `todos[]`. Every session record additionally carries a
+`spawn_tree` field — the nested tree of sub-agents that session spawned
+(see `scan_session_spawns` under Extending); it is `[]` for a session that
+launched no sub-agents.
 
 ## Extending
 
@@ -65,3 +68,14 @@ records with a `last_touched`/`last_ts`, wired into `assemble()` and (if it
 can demand a human decision) `attention_items()`. Keep every source
 artifact-first — parse files on disk, never live transcripts or APIs — per
 the labs' guidance collected in `docs/agent-dashboards.md`.
+
+`scan_session_spawns(claude_home)` follows this contract but keys on
+sessions instead of repos: it returns `{session_id -> {spawn_tree,
+last_touched, last_ts}}`, calling `extract_agent_tree()` on each
+`projects/<proj>/<sid>.jsonl` transcript to build that session's nested
+agent-spawn tree from its `Agent`/`Task` tool-use records. `assemble()`
+attaches each `spawn_tree` onto the matching session record; being a
+separate read-only pass, it leaves every other `scan_*()` output shape
+untouched. The rendered dashboard shows each non-empty tree as a
+collapsible node list reusing fleet's status chips (running / completed /
+failed).
