@@ -59,6 +59,8 @@ phase('build')
 const angles = ['minimal-diff', 'test-first', 'design-forward']
 // parallel(): the rank phase compares candidates against each other, so all
 // three must exist before any ranking can start — a true cross-item barrier.
+// Judgment stage (implementation): omit model — inherits the session model
+// (Stage tiering). Mechanical stages would pin model + effort instead.
 const builds = await parallel(angles.map(angle => () =>
   agent(
     `Execute the task file ${task} taking the ${angle} angle. Work only in ` +
@@ -161,6 +163,9 @@ const queue = await agent(
   'List every specs/*/tasks/*.md with its Status: and Depends on: headers.',
   {
     phase: 'inventory',
+    // Mechanical stage (grep-like scouting): pin BOTH model and effort so it
+    // bills at cheap-tier rates, not the session model's (Stage tiering).
+    model: 'haiku', effort: 'low',
     schema: {
       type: 'object',
       required: ['tasks'],
@@ -194,6 +199,8 @@ const results = await pipeline(wave, async t => {
   if (budget.remaining() < 2) {
     return { task: t.path, verdict: 'SKIPPED', reason: 'budget exhausted (human-set at launch)' }
   }
+  // Judgment stage (implementation): omit model deliberately so it inherits
+  // the session model — never pin a judgment stage to a cheap tier.
   const built = await agent(
     `Execute the task file ${t.path}: mark its Status: in-progress, implement ` +
     `to its acceptance criteria, commit to a branch. Return DONE or BLOCKED.`,
