@@ -3,7 +3,7 @@
 Contents: When NOT to drain · Owner lease (DRAIN-OWNER.md format,
 liveness, reclaim, remote divergence check) · Status field semantics · Stale-lock liveness
 check · Worker prompt · Deferred question format · Relaunch-with-evidence
-prompt · Tournament · Headless fallback · Baton pass (self-relaunch) ·
+prompt · Tournament · Headless fallback · Baton pass (attended relaunch) ·
 Critique intake · Stub intake (assess → gate → act) · Auto-breakdown
 (lowest priority)
 
@@ -583,7 +583,7 @@ snapshot-before-force-remove sweep; cited, not restated) — then writes each
 swept task's `## Progress` entry stating "environment kill, does not count
 as an attempt", flips each to `pending`, and commits and pushes the resets.
 It then **halts**: no further dispatch, no slot-machine relaunch, and
-**no baton self-relaunch**. When the underlying error carries a reset time (e.g.
+**no baton relaunch offer**. When the underlying error carries a reset time (e.g.
 a limit's reset timestamp), the halt report names it so the human knows when
 a re-run can succeed. Ownership scoping: foreign-owned tasks named by any
 committed partition or owner record are left alone; absent any such record,
@@ -769,19 +769,20 @@ DONE, that includes flipping the task's `Status: done` and committing
 the flip yourself (a headless worker, unlike /build, never writes it) —
 and `git worktree remove` the checkout.
 
-## Baton pass (self-relaunch)
+## Baton pass (attended relaunch)
 
 Drain's orchestrator session self-manages its own context: at a safe
-boundary (SKILL.md step 3a) it writes `specs/<slug>/DRAIN-BATON.md` and
-spawns the successor generation of ITSELF — awaited where an attended
-parent can supervise, via the detached headless command below only where
-none can — then ends its turn. This
-self-relaunch loop is bounded by a **max-generations cap of 10** (SKILL.md
+boundary (SKILL.md step 3a) it writes `specs/<slug>/DRAIN-BATON.md`,
+prints the relaunch instruction below for the HUMAN, and ends its turn.
+Drain never spawns its own successor — no detached/headless generations:
+the "Awaited children, never detached" maintainer policy
+(`.claude/rules/token-discipline.md`) covers orchestrator generations, and
+every generation boundary is a human gate (a headless hub would run
+unsupervised merges and pushes no human sanctioned; tightened 2026-07-11
+after a gen-2 headless relaunch drew a maintainer correction). The
+generation chain is bounded by a **max-generations cap of 10** (SKILL.md
 step 3a): on the 10th generation drain stops with the baton written and a
-needs-attention note instead of respawning. The
-relaunch uses a NEW orchestrator flag set — NOT the Headless-fallback
-worker flags above, which deliberately exclude the Task tool and would
-abort the orchestrator's first worker dispatch.
+needs-attention note instead of offering another relaunch.
 
 **Drain-down before the baton (R8).** Background workers notify only the
 session that launched them, so a successor generation cannot adopt
@@ -864,28 +865,18 @@ DRAIN-OWNER.md iff this line matches it. The owner-file `Generation:`
 update and this file's write land in the SAME commit on every baton pass,
 so the two files can never disagree across a crash.
 
-**Relaunch command template (generation G → G+1).** Detached, from the repo
-root:
+**Relaunch instruction (generation G → G+1, printed for the human).** The
+retiring generation's final report leads with this line, filled in:
 
-```bash
-nohup claude -p "/drain <spec> (generation G+1, baton: specs/<slug>/DRAIN-BATON.md)" \
-  --allowedTools "Task,Read,Edit,Write,Glob,Grep,Bash(git *),Bash(<project gate/test/lint cmds>)" \
-  --permission-mode dontAsk \
-  --max-turns <default 80, or the run's cap> \
-  >> specs/<slug>/.drain-gen.log 2>&1 &
+```
+Baton written. To continue, run in a FRESH session (/clear or a new
+terminal):  /drain <spec> (generation G+1, baton: specs/<slug>/DRAIN-BATON.md)
 ```
 
-The flag set differs from the headless worker in one decisive way: **`Task`
-is allowed** — the orchestrator's whole job is dispatching workers — plus a
-`git *` + project-gate allowlist for the merges and gate runs drain performs
-itself. `dontAsk` makes any unapproved tool abort rather than hang.
-
-**`DRAIN_RELAUNCH_CMD` override.** If the environment variable
-`DRAIN_RELAUNCH_CMD` is set, drain runs its value verbatim in place of the
-template above (still passing `<spec>`, the generation number, and the baton
-path as its argv tail). The e2e fixture (orchestrator-context task 05) points
-it at a recorder script to assert the relaunch argv without starting a real
-session.
+The successor is an ordinary attended /drain launch: the fresh-instance
+ritual (R1a) reconciles the baton against DRAIN-OWNER.md and picks up
+exactly where the retiring generation stopped — committed `Status:` lines
+mean nothing is lost between generations, however long the human waits.
 
 ## Critique intake
 

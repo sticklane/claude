@@ -507,8 +507,10 @@ list` shows no worktree checked out on its task branch (a live
    comma-separated draft-stub task-file paths stub intake attempted and did
    NOT promote this run (screen-refused, gated FAIL, or decision-shaped with
    no defensible default), across every generation so far, likewise appended
-   to but never cleared) and **stop** — an Antigravity run cannot self-relaunch
-   `claude`, so the human re-launches /drain from the Agent Manager
+   to but never cleared) and **stop** — no drain generation self-relaunches, in any
+   harness (maintainer policy: awaited children, never detached — a
+   headless hub would run unsupervised merges; tightened 2026-07-11), so
+   the human re-launches /drain from the Agent Manager
    pointing at the baton (write the baton's `Run-token:` line as the
    owner lease's `Run-token` — the sole lineage proof; a fresh process
    otherwise has no way to prove it's the legitimate heir). The next
