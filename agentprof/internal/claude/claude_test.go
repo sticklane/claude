@@ -398,6 +398,64 @@ func TestCollectSkillFrameCollapsesNamespacedAndBareIntoOneFrame(t *testing.T) {
 	}
 }
 
+// userCommandLine builds a turn-opening user line whose prompt is a single
+// <command-name> tag, matching the harness's slash-command echo.
+func userCommandLine(cmd string) string {
+	return `{"type":"user","timestamp":"2026-07-01T09:04:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"role":"user","content":"<command-name>` + cmd + `</command-name>"}}`
+}
+
+// skillFrameOfSingle Collects dir, asserts exactly one sample, and returns its
+// skill frame (Stack[2]).
+func skillFrameOfSingle(t *testing.T, dir string) string {
+	t.Helper()
+	samples, _, _, err := claude.Collect(dir, anyCutoff)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("got %d samples, want 1", len(samples))
+	}
+	return samples[0].Stack[2]
+}
+
+// TestCollectCommandNameSuppliesSkillFrameWhenAttributionAbsent covers the R1
+// fallback: a turn opened by <command-name>/parallel with no attributionSkill
+// frames its samples as skill:parallel.
+func TestCollectCommandNameSuppliesSkillFrameWhenAttributionAbsent(t *testing.T) {
+	dir := writeMain(t, userCommandLine("/parallel"), assistantLine("m1"))
+	if got := skillFrameOfSingle(t, dir); got != "skill:parallel" {
+		t.Errorf("command-name fallback frame = %q, want %q", got, "skill:parallel")
+	}
+}
+
+// TestCollectBuiltinCommandKeepsNoSkillFrame covers the builtin denylist: a
+// non-skill harness builtin (/clear) opens no skill-frame fallback.
+func TestCollectBuiltinCommandKeepsNoSkillFrame(t *testing.T) {
+	dir := writeMain(t, userCommandLine("/clear"), assistantLine("m1"))
+	if got := skillFrameOfSingle(t, dir); got != "(no skill)" {
+		t.Errorf("builtin /clear frame = %q, want %q", got, "(no skill)")
+	}
+}
+
+// TestCollectAttributionSkillWinsOverCommandName covers precedence: a present
+// attributionSkill always beats the command-name fallback.
+func TestCollectAttributionSkillWinsOverCommandName(t *testing.T) {
+	dir := writeMain(t, userCommandLine("/parallel"), assistantLineWithSkill("m1", "build"))
+	if got := skillFrameOfSingle(t, dir); got != "skill:build" {
+		t.Errorf("attributionSkill precedence frame = %q, want %q", got, "skill:build")
+	}
+}
+
+// TestCollectNamespacedCommandNameStripsPluginPrefix covers namespace
+// stripping: /agentic:drain falls back to skill:drain, matching
+// normalizeSkillFrame.
+func TestCollectNamespacedCommandNameStripsPluginPrefix(t *testing.T) {
+	dir := writeMain(t, userCommandLine("/agentic:drain"), assistantLine("m1"))
+	if got := skillFrameOfSingle(t, dir); got != "skill:drain" {
+		t.Errorf("namespaced command-name frame = %q, want %q", got, "skill:drain")
+	}
+}
+
 func TestCollectAssignsSyntheticTurnZeroToSamplesBeforeFirstPrompt(t *testing.T) {
 	dir := writeMain(t,
 		assistantLine("m1"),
