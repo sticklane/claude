@@ -54,12 +54,35 @@ type Turn struct {
 // R1). A threshold of 0 disables the label entirely.
 const DefaultReprimeThreshold = 50000
 
+// Options tunes Collect beyond its defaults (CollectWithOptions).
+type Options struct {
+	// ReprimeThreshold is the cache_write_tokens ceiling for reprime labeling
+	// (see CollectWithReprime); 0 disables the label.
+	ReprimeThreshold int
+	// KeepPending preserves today's per-call tool:(pending) emission — one
+	// empty-valued sample per unmatched tool_use — instead of consolidating
+	// the unmatched calls of a response into a single pending_calls sample
+	// (R3 debug escape hatch).
+	KeepPending bool
+}
+
+// Stats carries diagnostic parse counters surfaced alongside the samples.
+type Stats struct {
+	// Skipped counts unparseable lines and dropped agent-sidecar sessions.
+	Skipped int
+	// Pending counts tool_use blocks with no matched tool_result — the
+	// consolidated tool:(pending) volume, logged so result-matching
+	// regressions stay visible (R3).
+	Pending int
+}
+
 // Collect walks dir (a ~/.claude-shaped tree) and returns one sample per
 // deduped assistant API response, per-turn naming context, plus the count of
 // unparseable lines skipped. A session is included iff the max mtime across
 // its main transcript and subagent files is not before cutoff; an in-window
 // session contributes all its files. Reprime labeling uses the default
-// threshold; callers needing a custom threshold use CollectWithReprime.
+// threshold; callers needing a custom threshold use CollectWithReprime, and
+// callers needing the parse Stats or the KeepPending flag use CollectWithOptions.
 func Collect(dir string, cutoff time.Time) ([]schema.Sample, []Turn, int, error) {
 	return CollectWithReprime(dir, cutoff, DefaultReprimeThreshold)
 }
@@ -70,31 +93,41 @@ func Collect(dir string, cutoff time.Time) ([]schema.Sample, []Turn, int, error)
 // reprimeThreshold gets label reprime=true (SPEC R1). Subagent samples and the
 // main loop's first call are never marked; reprimeThreshold 0 disables it.
 func CollectWithReprime(dir string, cutoff time.Time, reprimeThreshold int) ([]schema.Sample, []Turn, int, error) {
+	samples, turns, stats, err := CollectWithOptions(dir, cutoff, Options{ReprimeThreshold: reprimeThreshold})
+	return samples, turns, stats.Skipped, err
+}
+
+// CollectWithOptions is Collect with tunable Options, returning parse Stats
+// (skipped-line and consolidated pending-call counts) instead of a bare skipped
+// int. Unmatched tool_use blocks consolidate into one tool:(pending) sample per
+// response carrying pending_calls, unless Options.KeepPending is set (R3).
+func CollectWithOptions(dir string, cutoff time.Time, opts Options) ([]schema.Sample, []Turn, Stats, error) {
 	sessions, err := enumerate(dir)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, Stats{}, err
 	}
 	home := resolveHome()
 	var samples []schema.Sample
 	var turns []Turn
-	skipped := 0
+	var stats Stats
 	for _, sess := range sessions {
 		in, err := sess.inWindow(cutoff)
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, nil, Stats{}, err
 		}
 		if !in {
 			continue
 		}
-		s, ts, n, err := sess.collect(reprimeThreshold, home)
+		s, ts, st, err := sess.collect(opts, home)
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, nil, Stats{}, err
 		}
 		samples = append(samples, s...)
 		turns = append(turns, ts...)
-		skipped += n
+		stats.Skipped += st.Skipped
+		stats.Pending += st.Pending
 	}
-	return samples, turns, skipped, nil
+	return samples, turns, stats, nil
 }
 
 // agentFile is one subagent transcript plus its stack frame
@@ -282,28 +315,28 @@ type spawnCtx struct {
 // directory name under projects/). Main-transcript samples get
 // [project, turn, skill, "main", model]; each subagent's samples get its
 // resolved spawn prefix + [agent:{type}, model], or the R5 unlinked stack.
-func (s session) collect(reprimeThreshold int, home string) ([]schema.Sample, []Turn, int, error) {
+func (s session) collect(opts Options, home string) ([]schema.Sample, []Turn, Stats, error) {
 	mainP, err := parseTranscript(s.mainPath)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, Stats{}, err
 	}
 	project, drop := normalizeProject(mainP.firstCwd, s.mungedDir, home)
 	if drop {
 		// Agent sidecar dir with no resolvable owning project (R2): emit no
 		// samples and count the drop as a parse stat rather than minting
 		// agent-<hex> as a project.
-		return nil, nil, 1, nil
+		return nil, nil, Stats{Skipped: 1}, nil
 	}
-	skipped := mainP.skipped
+	stats := Stats{Skipped: mainP.skipped}
 
 	byPath := map[string]parsed{s.mainPath: mainP}
 	agentByPath := map[string]agentFile{}
 	for _, a := range s.agents {
 		p, err := parseTranscript(a.path)
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, nil, Stats{}, err
 		}
-		skipped += p.skipped
+		stats.Skipped += p.skipped
 		byPath[a.path] = p
 		agentByPath[a.path] = a
 	}
@@ -391,11 +424,13 @@ func (s session) collect(reprimeThreshold int, home string) ([]schema.Sample, []
 		// (i > 0) that writes more than the threshold re-writes the whole cache
 		// after a TTL expiry. Subagents (handled below) are never marked, and
 		// threshold 0 disables the label.
-		if reprimeThreshold > 0 && i > 0 && r.usage.CacheCreationTokens > int64(reprimeThreshold) {
+		if opts.ReprimeThreshold > 0 && i > 0 && r.usage.CacheCreationTokens > int64(opts.ReprimeThreshold) {
 			ms.Labels["reprime"] = "true"
 		}
 		out = append(out, ms)
-		out = append(out, r.toolSamples(stack, mainP.toolResults, s.id, turn)...)
+		tsamps, pending := r.toolSamples(stack, mainP.toolResults, s.id, turn, opts.KeepPending)
+		out = append(out, tsamps...)
+		stats.Pending += pending
 	}
 	for _, a := range s.agents {
 		prefix, turnIdx, linked := resolve(a, 0)
@@ -416,7 +451,9 @@ func (s session) collect(reprimeThreshold int, home string) ([]schema.Sample, []
 				stack = slices.Concat([]string{project, "(unlinked)"}, agentFrames)
 			}
 			out = append(out, r.sample(stack, s.id, turn))
-			out = append(out, r.toolSamples(stack, ap.toolResults, s.id, turn)...)
+			tsamps, pending := r.toolSamples(stack, ap.toolResults, s.id, turn, opts.KeepPending)
+			out = append(out, tsamps...)
+			stats.Pending += pending
 		}
 	}
 
@@ -429,7 +466,7 @@ func (s session) collect(reprimeThreshold int, home string) ([]schema.Sample, []
 			Prompt: tr.prompt, ReplyHead: tr.replyHead, Candidate: tr.candidate,
 		})
 	}
-	return out, turns, skipped, nil
+	return out, turns, stats, nil
 }
 
 // response is one deduped assistant API response.
@@ -964,28 +1001,45 @@ func (r response) sample(stack []string, sessionID, turn string) schema.Sample {
 	return schema.Sample{Time: r.time, Stack: stack, Values: values, Labels: labels}
 }
 
-// toolSamples emits one sample per tool_use block in the response (SPEC R1/R2),
-// each a sibling of the model-call sample: modelStack with the model-name leaf
-// replaced by tool:<name>. A call with a matching tool_result in results carries
-// duration_ms = clamp0(result_ts - r.time) (the tool_use message ts is r.time,
-// the same assistant line); an unmatched call gets a tool:(pending) leaf and an
-// empty Values map — no fabricated duration.
-func (r response) toolSamples(modelStack []string, results map[string]time.Time, sessionID, turn string) []schema.Sample {
+// toolSamples emits the tool: samples for one response's tool_use blocks (SPEC
+// R1/R3), each a sibling of the model-call sample: modelStack with the
+// model-name leaf replaced by tool:<name>. A call with a matching tool_result in
+// results carries duration_ms = clamp0(result_ts - r.time) (the tool_use message
+// ts is r.time, the same assistant line). Unmatched calls consolidate into a
+// single tool:(pending) sample carrying pending_calls = <count> — no fabricated
+// duration; with keepPending each unmatched call instead keeps its own
+// empty-valued tool:(pending) sample (today's per-call debug emission). The
+// returned int is the number of unmatched calls, surfaced as a parse-stat so
+// result-matching regressions stay visible.
+func (r response) toolSamples(modelStack []string, results map[string]time.Time, sessionID, turn string, keepPending bool) ([]schema.Sample, int) {
 	var out []schema.Sample
+	var pending int64
 	for _, tc := range r.toolCalls {
-		leaf := "tool:(pending)"
-		values := map[string]int64{}
 		if resultTs, ok := results[tc.id]; ok {
-			leaf = "tool:" + tc.name
-			values["duration_ms"] = clamp0(resultTs.Sub(r.time))
+			out = append(out, r.toolSample(modelStack, "tool:"+tc.name, sessionID, turn,
+				map[string]int64{"duration_ms": clamp0(resultTs.Sub(r.time))}))
+			continue
 		}
-		stack := slices.Clone(modelStack)
-		stack[len(stack)-1] = leaf
-		labels := map[string]string{"source": "claude-code", "session": sessionID}
-		if turn != "" {
-			labels["turn"] = turn
+		pending++
+		if keepPending {
+			out = append(out, r.toolSample(modelStack, "tool:(pending)", sessionID, turn, map[string]int64{}))
 		}
-		out = append(out, schema.Sample{Time: r.time, Stack: stack, Values: values, Labels: labels})
 	}
-	return out
+	if pending > 0 && !keepPending {
+		out = append(out, r.toolSample(modelStack, "tool:(pending)", sessionID, turn,
+			map[string]int64{"pending_calls": pending}))
+	}
+	return out, int(pending)
+}
+
+// toolSample builds one tool: sample: modelStack cloned with its leaf replaced
+// by leaf, carrying values and the standard source/session/turn labels.
+func (r response) toolSample(modelStack []string, leaf, sessionID, turn string, values map[string]int64) schema.Sample {
+	stack := slices.Clone(modelStack)
+	stack[len(stack)-1] = leaf
+	labels := map[string]string{"source": "claude-code", "session": sessionID}
+	if turn != "" {
+		labels["turn"] = turn
+	}
+	return schema.Sample{Time: r.time, Stack: stack, Values: values, Labels: labels}
 }
