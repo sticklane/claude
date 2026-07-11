@@ -1,6 +1,6 @@
 # Task 03: Mark `prioritize/` as workflow-support and fix its stale spec comment
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 5 turns
@@ -40,7 +40,7 @@ owns that file) or `antigravity/.agents/workflows/prioritize.md`.
 
 ## Acceptance
 
-- [ ] `ls antigravity/.agents/skills/prioritize/` → contains `README.md`;
+- [x] `ls antigravity/.agents/skills/prioritize/` → contains `README.md`;
       no `SKILL.md`
-- [ ] `grep -n 'specs/prioritize/SPEC.md' antigravity/.agents/skills/prioritize/prioritize_scan.py` → either no output, or output that no longer reads as if that spec ships with the mirror
-- [ ] `cd antigravity/.agents/skills/prioritize && python3 -m pytest -q` → 17 passed
+- [x] `grep -n 'specs/prioritize/SPEC.md' antigravity/.agents/skills/prioritize/prioritize_scan.py` → either no output, or output that no longer reads as if that spec ships with the mirror
+- [x] `cd antigravity/.agents/skills/prioritize && python3 -m pytest -q` → 17 passed
