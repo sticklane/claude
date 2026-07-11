@@ -1,6 +1,6 @@
 # Task 01: Align codex-cli-port's gating rationale with the live-authorization-contract split
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 6 turns
