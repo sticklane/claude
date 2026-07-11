@@ -1,6 +1,6 @@
 # Task 05: CLAUDE.md three-way mirror-convention update
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 20 turns
@@ -57,7 +57,7 @@ Only `CLAUDE.md`. This task does not touch anything under `codex/` or
 
 ## Acceptance
 
-- [ ] `grep -q "codex/" CLAUDE.md` and the mirror-convention paragraph
+- [x] `grep -q "codex/" CLAUDE.md` and the mirror-convention paragraph
   mentions all three of `.claude/`, `antigravity/`, and `codex/`
-- [ ] `diff <(ls antigravity/.agents/skills | grep -v -E '^drain$') <(ls codex/.agents/skills | grep -v -E '^(drain|build|autopilot|evals)$')` produces no output
-- [ ] `find codex/.agents/skills -maxdepth 1 -type l | wc -l` → `16`
+- [x] `diff <(ls antigravity/.agents/skills | grep -v -E '^drain$') <(ls codex/.agents/skills | grep -v -E '^(drain|build|autopilot|evals)$')` produces no output
+- [x] `find codex/.agents/skills -maxdepth 1 -type l | wc -l` → `16`
