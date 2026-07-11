@@ -838,6 +838,164 @@ def scan_sessions(claude_home, stale_days):
     return sessions
 
 
+# ------------------------------------------------------ agent spawn tree
+
+# Harness tool names that spawn a sub-agent (Task is the legacy alias).
+_AGENT_TOOL_NAMES = ("Agent", "Task")
+
+
+def _normalize_agent_status(raw):
+    """Map a harness-recorded `toolUseResult.status` onto fleet's status
+    vocabulary (running / completed / failed).
+
+    Fleet derives status from the harness's own record of the run: an
+    errored/BLOCKED outcome is `failed`, a clean terminal outcome is
+    `completed`, and anything still in flight is `running`. The transcript
+    equivalent of that record is the tool_result's `toolUseResult.status`:
+      - "error" / "blocked" / "failed"       -> failed
+      - "completed" / "deferred" / "success" -> completed
+      - "async_launched" / absent / other    -> running (spawned, but no
+        terminal outcome is recorded in the spawning transcript — a
+        background launch records only "async_launched" there)
+    """
+    if raw in ("error", "blocked", "failed"):
+        return "failed"
+    if raw in ("completed", "deferred", "success", "done"):
+        return "completed"
+    return "running"
+
+
+def _agent_spawn_calls(path):
+    """Every Agent/Task `tool_use` in one transcript, paired with its
+    `tool_result`, in file order. Returns a list of dicts:
+      {"tool_use_id", "started_ts", "ended_ts", "result_status"}.
+    A missing/unreadable file yields []. A spawn with no matching
+    `tool_result` keeps ended_ts=None and result_status=None (still running).
+    The terminal outcome is read from the result record's top-level
+    `toolUseResult.status`."""
+    calls = []  # ordered by first appearance of the tool_use
+    by_id = {}  # tool_use_id -> its call dict
+    try:
+        f = open(path, "r", encoding="utf-8", errors="replace")
+    except OSError:
+        return calls
+    with f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            ts = iso_to_ts(rec.get("timestamp", "") or "")
+            content = (rec.get("message") or {}).get("content")
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                btype = block.get("type")
+                if btype == "tool_use" and block.get("name") in _AGENT_TOOL_NAMES:
+                    tuid = block.get("id")
+                    if not tuid or tuid in by_id:
+                        continue
+                    call = {
+                        "tool_use_id": tuid,
+                        "started_ts": ts,
+                        "ended_ts": None,
+                        "result_status": None,
+                    }
+                    calls.append(call)
+                    by_id[tuid] = call
+                elif btype == "tool_result":
+                    call = by_id.get(block.get("tool_use_id"))
+                    if call is None:
+                        continue
+                    if call["ended_ts"] is None:
+                        call["ended_ts"] = ts
+                    tur = rec.get("toolUseResult")
+                    if isinstance(tur, dict) and call["result_status"] is None:
+                        call["result_status"] = tur.get("status")
+    return calls
+
+
+def extract_agent_tree(session_jsonl_path):
+    """Parse a session transcript's Agent/Task spawns into a nested tree.
+
+    Returns a list of root node dicts — the sub-agents spawned directly by the
+    session — each of the shape:
+        {agentId, agentType, description, status, spawnDepth,
+         started_ts, ended_ts, children: [...]}
+    and recurses through every sub-agent's own transcript so a sub-agent that
+    itself spawned further sub-agents nests its grandchildren beneath it
+    (SPEC.md R1/R4).
+
+    On-disk layout (confirmed on this machine): the parent transcript is
+    `<proj>/<sessionId>.jsonl`; its sub-agents live flat in a sibling
+    `<proj>/<sessionId>/subagents/` directory as `agent-<agentId>.jsonl` +
+    `agent-<agentId>.meta.json` pairs. The meta carries `agentType`,
+    `description`, `toolUseId` (the parent tool_use that spawned it), and
+    `spawnDepth`; the `agentId` is the filename stem. Parent→child linkage is
+    by `toolUseId`: a sub-agent is a child of whichever transcript contains a
+    tool_use whose id equals that sub-agent's `toolUseId`.
+
+    A session that spawned nothing — or whose subagents directory is absent —
+    returns [] with no error (R3). This function is pure: it only reads the
+    transcripts under the session directory and never mutates anything.
+    """
+    session_jsonl_path = Path(session_jsonl_path)
+    subdir = session_jsonl_path.parent / session_jsonl_path.stem / "subagents"
+    if not subdir.is_dir():
+        return []
+
+    metas = {}  # agentId -> meta dict
+    tuid_to_aid = {}  # spawning toolUseId -> agentId
+    suffix = ".meta.json"
+    for mp in sorted(subdir.glob("agent-*.meta.json")):
+        aid = mp.name[len("agent-") : -len(suffix)]
+        try:
+            meta = json.loads(read_text(mp, 20_000))
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(meta, dict):
+            continue
+        metas[aid] = meta
+        tuid = meta.get("toolUseId")
+        if tuid:
+            tuid_to_aid[tuid] = aid
+
+    visited = set()  # cycle guard: never recurse into one agent twice
+
+    def build(aid, call):
+        meta = metas.get(aid, {})
+        node = {
+            "agentId": aid,
+            "agentType": meta.get("agentType"),
+            "description": meta.get("description"),
+            "status": _normalize_agent_status(call.get("result_status")),
+            "spawnDepth": meta.get("spawnDepth"),
+            "started_ts": call.get("started_ts"),
+            "ended_ts": call.get("ended_ts"),
+            "children": [],
+        }
+        if aid in visited:
+            return node
+        visited.add(aid)
+        for child_call in _agent_spawn_calls(subdir / f"agent-{aid}.jsonl"):
+            caid = tuid_to_aid.get(child_call["tool_use_id"])
+            if caid is not None and caid in metas:
+                node["children"].append(build(caid, child_call))
+        return node
+
+    roots = []
+    for call in _agent_spawn_calls(session_jsonl_path):
+        aid = tuid_to_aid.get(call["tool_use_id"])
+        if aid is not None and aid in metas:
+            roots.append(build(aid, call))
+    return roots
+
+
 def scan_todos(claude_home):
     """~/.claude/todos/*.json — in-session todo lists, when the install has them."""
     items = []
