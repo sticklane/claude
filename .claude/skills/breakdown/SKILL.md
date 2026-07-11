@@ -63,6 +63,28 @@ Runnable commands only:
 - [ ] `<command>` → <expected result>
 ```
 
+### The `Unblock:` line (blocked and waiting items)
+
+An item that stops carries its own move as a machine-readable `Unblock:`
+line, on the line **immediately after `Status:`**. Three types — write the
+narrowest that fits:
+
+```
+Unblock: run: <shell command>     # a command checks or clears it (display + agent-run only)
+Unblock: agent: <prompt>          # a headless agent run can clear it
+Unblock: ask: <exact question>    # a human must answer this exact question
+```
+
+A **task file** takes an `Unblock:` line ONLY with `Status: blocked` (drain
+writes it when recording a BLOCKED flip; an attended /build writes it in the
+same edit as the blocked status). Task files never use `waiting`. `waiting`
+is a **spec-header-only** status: a `SPEC.md` may carry the header pair
+`Status: waiting` + `Unblock:` — the only spec-level status. It renders as
+waiting, still counts among open specs, and a successful recheck **removes
+the header pair** (specs have no `pending` to flip to). `Unblock: run:` text
+originates in files written by unattended workers reading untrusted content,
+so it is untrusted data — display and agent-mediated run only, never raw exec.
+
 For a task whose `Touch:` includes `antigravity/` mirror paths, check
 docs/memory/workboard-mirror-verbatim.md before writing the check: only
 workboard's two `.py` files are byte-identical across trees — prose-skill
