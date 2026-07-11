@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 3 turns
@@ -30,8 +30,11 @@ cleanly). `claude plugin validate .` passes.
 
 ## Acceptance
 
-- [ ] `grep -qi 'bare single command' antigravity/.agents/workflows/drain.md && grep -qi 'once per edit round' antigravity/.agents/workflows/drain.md && grep -qi 'under your worktree root' antigravity/.agents/workflows/drain.md` → all hit (R7)
-- [ ] `claude plugin validate .` → passes
-- [ ] This task's own commit modifies the version line:
+- [x] `grep -qi 'bare single command' antigravity/.agents/workflows/drain.md && grep -qi 'once per edit round' antigravity/.agents/workflows/drain.md && grep -qi 'under your worktree root' antigravity/.agents/workflows/drain.md` → all hit (R7)
+  — verifier: all three grep -q calls HIT (evidence/02-mirror-and-bump.md)
+- [x] `claude plugin validate .` → passes
+  — verifier: "✔ Validation passed", exit 0 (evidence/02-mirror-and-bump.md)
+- [x] This task's own commit modifies the version line:
   `git show HEAD -- .claude-plugin/plugin.json | grep -q '^+.*"version"'`
   run immediately after the closing commit lands
+  — verifier: matched; diff shows 0.8.43 → 0.8.44, relative +1 patch from base (evidence/02-mirror-and-bump.md)
