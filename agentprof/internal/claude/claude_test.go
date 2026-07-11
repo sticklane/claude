@@ -631,6 +631,94 @@ func TestCollectMarkerlessTranscriptKeepsByteIdenticalStacks(t *testing.T) {
 	}
 }
 
+// assistantLineCacheWrite is an assistant model-call line with a specific
+// cache_creation_input_tokens (cache_write), a distinct prompt-opened turn, and
+// a distinct model, so the emitted sample is locatable by stack.
+func assistantLineCacheWrite(msgID, prompt string, cacheWrite int64) string {
+	return `{"type":"user","timestamp":"2026-07-01T09:04:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"role":"user","content":"` + prompt + `"}}` + "\n" +
+		`{"type":"assistant","timestamp":"2026-07-01T09:05:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"id":"` + msgID +
+		`","model":"claude-fable-5","usage":{"input_tokens":10,"output_tokens":1,"cache_creation_input_tokens":` + fmt.Sprintf("%d", cacheWrite) + `}}}`
+}
+
+// writeReprimeFixture builds a session with three main-loop model calls (first
+// >50k write, a later >50k write, a later <50k write) plus one subagent whose
+// only call writes >50k under the same session label. Returns the claude dir.
+func writeReprimeFixture(t *testing.T) string {
+	t.Helper()
+	dir := writeMain(t,
+		assistantLineCacheWrite("m1", "alpha", 60000), // first main-loop call, >50k
+		assistantLineCacheWrite("m2", "bravo", 60000), // later main-loop call, >50k
+		assistantLineCacheWrite("m3", "charlie", 100), // later main-loop call, <50k
+	)
+	sub := filepath.Join(dir, "projects", "-z-app", "sess-z", "subagents")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	agent := `{"type":"assistant","timestamp":"2026-07-01T09:10:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"id":"m_sub","model":"claude-haiku-4-5","usage":{"input_tokens":5,"output_tokens":1,"cache_creation_input_tokens":70000}}}`
+	if err := os.WriteFile(filepath.Join(sub, "agent-S.jsonl"), []byte(agent+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	meta := `{"agentId":"agent-S","agentType":"scout","toolUseId":"toolu_nowhere","spawnDepth":1}`
+	if err := os.WriteFile(filepath.Join(sub, "agent-S.meta.json"), []byte(meta+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func reprimeLabel(samples []schema.Sample, stack []string) (string, bool) {
+	got := findByStack(samples, stack)
+	if len(got) != 1 {
+		return "", false
+	}
+	v, ok := got[0].Labels["reprime"]
+	return v, ok
+}
+
+// TestCollectMarksReprimeOnlyOnMidSessionMainLoopCallsAboveThreshold covers R1:
+// a mid-session main-loop call writing >50k cache tokens gets reprime=true,
+// while the main loop's first call (also >50k), a subagent's first call (>50k,
+// same session), and a sub-threshold later call all stay unmarked.
+func TestCollectMarksReprimeOnlyOnMidSessionMainLoopCallsAboveThreshold(t *testing.T) {
+	dir := writeReprimeFixture(t)
+
+	samples, _, _, err := claude.CollectWithReprime(dir, anyCutoff, 50000)
+	if err != nil {
+		t.Fatalf("CollectWithReprime: %v", err)
+	}
+
+	first := []string{"app", "t01 · alpha", "(no skill)", "main", "claude-fable-5"}
+	if v, ok := reprimeLabel(samples, first); ok {
+		t.Errorf("main loop's first call was marked reprime=%q; first call must never be marked", v)
+	}
+	mid := []string{"app", "t02 · bravo", "(no skill)", "main", "claude-fable-5"}
+	if v, _ := reprimeLabel(samples, mid); v != "true" {
+		t.Errorf("mid-session >50k main-loop call reprime=%q, want %q; all: %v", v, "true", stacks(samples))
+	}
+	sub := []string{"app", "t03 · charlie", "(no skill)", "main", "claude-fable-5"}
+	if v, ok := reprimeLabel(samples, sub); ok {
+		t.Errorf("sub-threshold later call was marked reprime=%q; must be unmarked", v)
+	}
+	agent := []string{"app", "(unlinked)", "agent:scout", "claude-haiku-4-5"}
+	if v, ok := reprimeLabel(samples, agent); ok {
+		t.Errorf("subagent first call was marked reprime=%q; subagents are never marked", v)
+	}
+}
+
+// TestCollectReprimeThresholdZeroDisablesLabel covers R1: threshold 0 disables
+// the label entirely, so even a mid-session >50k main-loop call is unmarked.
+func TestCollectReprimeThresholdZeroDisablesLabel(t *testing.T) {
+	dir := writeReprimeFixture(t)
+
+	samples, _, _, err := claude.CollectWithReprime(dir, anyCutoff, 0)
+	if err != nil {
+		t.Fatalf("CollectWithReprime: %v", err)
+	}
+	mid := []string{"app", "t02 · bravo", "(no skill)", "main", "claude-fable-5"}
+	if v, ok := reprimeLabel(samples, mid); ok {
+		t.Errorf("threshold 0 must disable reprime, got reprime=%q", v)
+	}
+}
+
 func stacks(samples []schema.Sample) []string {
 	var out []string
 	for _, s := range samples {
