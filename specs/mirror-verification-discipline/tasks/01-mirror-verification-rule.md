@@ -1,6 +1,6 @@
 # Task 01: Add the mirror-verification always-on rule
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 30 turns
