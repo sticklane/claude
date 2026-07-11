@@ -1,6 +1,6 @@
 # Task 02: Hand-rolled protobuf field-walker
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 16 turns
