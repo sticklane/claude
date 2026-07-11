@@ -29,6 +29,7 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 	mergePath := fs.String("merge", "", "JSONL rolling-cache path: merge fresh samples in, evicting samples older than 7d")
 	summaryPath := fs.String("summary", "", "write the pre-aggregated Cost (7d) summary JSON to this path")
 	nameTurns := fs.Bool("name-turns", false, "rename uninformative turn frames via one cached haiku call")
+	reprimeThreshold := fs.Int("reprime-threshold", claude.DefaultReprimeThreshold, "cache_write_tokens above which a non-first main-loop call is labeled reprime=true (0 disables)")
 	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (default stdout)")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -59,7 +60,7 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	samples, turns, skipped, err := claude.Collect(*dir, cutoff)
+	samples, turns, skipped, err := claude.CollectWithReprime(*dir, cutoff, *reprimeThreshold)
 	if err != nil {
 		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
 		return 1
