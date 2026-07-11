@@ -865,3 +865,104 @@ func keys(m map[string]bool) []string {
 	sort.Strings(out)
 	return out
 }
+
+// writeOneSessionAtCwd builds a single-session ~/.claude tree whose sole main
+// transcript records firstCwd, returning the tree root. Used by the R2
+// project-normalization tests; mungedName is the projects/ subdir (only
+// consulted when no cwd is present, so its value is irrelevant here).
+func writeOneSessionAtCwd(t *testing.T, mungedName, cwd string) string {
+	t.Helper()
+	dir := t.TempDir()
+	proj := filepath.Join(dir, "projects", mungedName)
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	line := fmt.Sprintf(`{"type":"assistant","timestamp":"2026-07-01T09:00:00Z","cwd":%q,"sessionId":"sess-z","message":{"id":"m1","model":"claude-fable-5","usage":{"input_tokens":10,"output_tokens":1}}}`, cwd)
+	if err := os.WriteFile(filepath.Join(proj, "sess-z.jsonl"), []byte(line+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// TestCollectHomeDirProjectMapsToHomeFrame covers R2: a session whose cwd is
+// the (injected) home directory frames its project as "(home)", never the home
+// basename. AGENTPROF_HOME pins home so the test is hermetic on any machine.
+func TestCollectHomeDirProjectMapsToHomeFrame(t *testing.T) {
+	home := "/home/testuser"
+	t.Setenv("AGENTPROF_HOME", home)
+	dir := writeOneSessionAtCwd(t, "-home-testuser", home)
+
+	samples, _, _, err := claude.Collect(dir, anyCutoff)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("got %d samples, want 1", len(samples))
+	}
+	if got := samples[0].Stack[0]; got != "(home)" {
+		t.Errorf("home-dir project frame = %q, want %q", got, "(home)")
+	}
+}
+
+// TestCollectMktempProjectMapsToTmpFrame covers R2: an mktemp-shaped cwd
+// (tmp.<suffix>) frames its project as "(tmp)".
+func TestCollectMktempProjectMapsToTmpFrame(t *testing.T) {
+	t.Setenv("AGENTPROF_HOME", "/home/testuser")
+	dir := writeOneSessionAtCwd(t, "-tmp-x", "/private/tmp/tmp.aB3xY9Qr")
+
+	samples, _, _, err := claude.Collect(dir, anyCutoff)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("got %d samples, want 1", len(samples))
+	}
+	if got := samples[0].Stack[0]; got != "(tmp)" {
+		t.Errorf("mktemp project frame = %q, want %q", got, "(tmp)")
+	}
+}
+
+// TestCollectAgentSidecarDirEmitsNoProjectAndCountsDrop covers R2: an
+// agent-<hex> sidecar cwd with no resolvable owning project emits no samples
+// (never minting agent-<hex> as a project) and increments the parse-stat
+// counter surfaced via the skipped return.
+func TestCollectAgentSidecarDirEmitsNoProjectAndCountsDrop(t *testing.T) {
+	t.Setenv("AGENTPROF_HOME", "/home/testuser")
+	dir := writeOneSessionAtCwd(t, "-orphan", "/some/place/agent-a571c48f410951a76")
+
+	samples, _, skipped, err := claude.Collect(dir, anyCutoff)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	for _, s := range samples {
+		if strings.HasPrefix(s.Stack[0], "agent-") {
+			t.Errorf("agent sidecar dir minted as project %q; want dropped", s.Stack[0])
+		}
+	}
+	if len(samples) != 0 {
+		t.Errorf("got %d samples for unresolvable agent-dir session, want 0 (dropped)", len(samples))
+	}
+	if skipped < 1 {
+		t.Errorf("dropped agent-dir not counted: skipped = %d, want >= 1", skipped)
+	}
+}
+
+// TestCollectAgentWorktreeDirFoldsIntoOwningProject covers R2's fold path: an
+// agent-<hex> cwd under <owner>/.claude/worktrees/ resolves to the owning
+// project's basename rather than being dropped.
+func TestCollectAgentWorktreeDirFoldsIntoOwningProject(t *testing.T) {
+	t.Setenv("AGENTPROF_HOME", "/home/testuser")
+	cwd := "/home/testuser/myrepo/.claude/worktrees/agent-aac2beba65fb04a6e"
+	dir := writeOneSessionAtCwd(t, "-worktree", cwd)
+
+	samples, _, _, err := claude.Collect(dir, anyCutoff)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("got %d samples, want 1", len(samples))
+	}
+	if got := samples[0].Stack[0]; got != "myrepo" {
+		t.Errorf("worktree agent-dir project frame = %q, want owning project %q", got, "myrepo")
+	}
+}
