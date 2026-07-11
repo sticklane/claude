@@ -1,6 +1,6 @@
 # Task 05: CLAUDE.md three-way mirror-convention update
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 20 turns
