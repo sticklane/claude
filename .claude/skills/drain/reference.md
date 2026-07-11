@@ -519,9 +519,12 @@ path, resolved at dispatch:
 > in your report, never in files. A verifier diff over all tasks/ dirs
 > enforces this mechanically.
 >
-> Your final message must be only: verdict (DONE / BLOCKED / DEFERRED),
-> acceptance evidence per criterion (command + result), branch name,
-> files changed, a fixed `Decisions:` section — zero or more single-line
+> Your final message must be only (and capped at ≤ 2k tokens — status,
+> merged-commit/branch, per-criterion pass/fail with one-line evidence, and
+> deferred items; never a transcript, a full diff, or raw test output, which
+> the hub must not pull into its context): verdict (DONE / BLOCKED /
+> DEFERRED), acceptance evidence per criterion (command + result), branch
+> name, files changed, a fixed `Decisions:` section — zero or more single-line
 > items, each naming the decision, the reversible default you took, and
 > how to reverse it (an empty section means none) — and a fixed
 > `Discovered:` section — zero or more single-line items, each "what +

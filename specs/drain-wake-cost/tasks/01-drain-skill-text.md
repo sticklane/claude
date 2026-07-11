@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -71,10 +71,10 @@ admission rules, merge serialization, CAS flip, or whitelist content diff
 
 ## Acceptance
 
-- [ ] `grep -qiE 'context.{0,40}(budget|heavy|trigger)' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md` → exit 0, and the baton section states the dual trigger as one evaluable rule (cite the line in evidence)
-- [ ] `grep -qiE 'final message.{0,120}2k tokens|verdict.{0,120}2k tokens|2k tokens.{0,120}(final message|verdict)' /Users/sjaconette/claude/.claude/skills/drain/reference.md` → exit 0
-- [ ] `grep -qiE '2k tokens' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md` → exit 0
-- [ ] `grep -q '1\.25' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md && grep -qiE 'TTL' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md` → exit 0
-- [ ] Merge step contains the MUST NOT with all four exemptions (quote the passage as evidence)
-- [ ] Session-model sentence present in SKILL.md (quote as evidence)
-- [ ] `bash /Users/sjaconette/claude/evals/lint-ultra-gate.sh` → exit 0
+- [x] `grep -qiE 'context.{0,40}(budget|heavy|trigger)' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md` → exit 0, and the baton section states the dual trigger as one evaluable rule (cite the line in evidence) — PASS; SKILL.md step 3a states "after ~4 verdicts OR when the hub's context is heavy, whichever comes first" with chosen fallback `max(2,6−W)` + rationale (evidence/01-drain-skill-text.md)
+- [x] `grep -qiE 'final message.{0,120}2k tokens|verdict.{0,120}2k tokens|2k tokens.{0,120}(final message|verdict)' /Users/sjaconette/claude/.claude/skills/drain/reference.md` → exit 0 — PASS; sole match is reference.md:522 final-message contract, not the pre-existing assessor "1–2k tokens" line (evidence/01-drain-skill-text.md)
+- [x] `grep -qiE '2k tokens' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md` → exit 0 — PASS; SKILL.md:107 dispatch line names the same cap (evidence/01-drain-skill-text.md)
+- [x] `grep -q '1\.25' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md && grep -qiE 'TTL' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md` → exit 0 — PASS; wake-economics paragraph carries TTL + 1.25× + cost model (evidence/01-drain-skill-text.md)
+- [x] Merge step contains the MUST NOT with all four exemptions (quote the passage as evidence) — PASS; SKILL.md step 3 DONE bullet, all four exemptions verbatim (evidence/01-drain-skill-text.md)
+- [x] Session-model sentence present in SKILL.md (quote as evidence) — PASS; SKILL.md wake-economics paragraph recommends default (opus) tier or below (evidence/01-drain-skill-text.md)
+- [x] `bash /Users/sjaconette/claude/evals/lint-ultra-gate.sh` → exit 0 — PASS; "OK — all ultra mentions gated in 4 files" (evidence/01-drain-skill-text.md)
