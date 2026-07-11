@@ -29,6 +29,15 @@ tokens on decisions; delegate consumption of raw material to subagents.
   guidance; it does not change the opt-in default above. The cross-vendor
   evidence for both the window and the rolling claim-next design is in
   docs/external-playbooks.md (cited, not restated).
+- **Drain-shaped freehand requests → recommend `/drain`.** When a freehand
+  request is drain-shaped ("drain the …", "work through the remaining tasks
+  in specs/…"), recommend the human launch `/drain` rather than improvising
+  an unstructured dispatch loop — the skill's window/baton/verdict machinery
+  is what keeps a dispatch loop cheap and safe, and improvised loops are how
+  the measured ~$1,406/week of unstructured orchestration happened
+  (specs/drain-wake-cost/EVIDENCE.md). `/drain` is human-gated
+  (`disable-model-invocation`): recommend it, never launch it on the human's
+  behalf.
 
 ## Model and effort matching
 
@@ -62,6 +71,17 @@ tiers are opt-in: profile rows are recommended pin values, not active
 defaults). Pins bind Agent-tool dispatch and the headless fallback
 templates alike — headless workers pass the same tier alias through the
 template's `--model` flag.
+
+**Freehand fan-out (dispatch outside a skill).** Mechanical fan-out work
+dispatched outside a skill uses the typed pinned agents
+(scout/verifier/implementation-worker) or passes an explicit cheap-tier
+`model` override to general-purpose; bare general-purpose at the session
+model is reserved for judgment work. This applies the rungs above to
+freehand dispatch — it does not change them. The default matters because
+general-purpose inherits the session's frontier model, so at $0.067/call it
+ran *costlier* than the opus-pinned implementation-worker at $0.057/call over
+the 2026-07 agentprof week (specs/drain-wake-cost/EVIDENCE.md) — a mechanical
+fan-out on the session's frontier model is the tier ladder inverted.
 
 ## Dispatch authoring
 
