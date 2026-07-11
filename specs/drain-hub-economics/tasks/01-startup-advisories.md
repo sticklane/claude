@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: deferred
+Status: pending
 Depends on: none
 Priority: P1
 Budget: 4 turns
@@ -43,8 +43,6 @@ it — this block cites it).
 - [ ] MANUAL: block covers both advisories, gen-1 only, non-blocking,
   names the disclosed-model signal and the beyond-first-few-turns
   heuristic, recommends the deep-tier fresh-session relaunch
-- [ ] `wc -l < .claude/skills/drain/SKILL.md` → still < 500
-
 ## Deferred questions
 
 - [2026-07-11 /drain gen3] Acceptance criterion 3 (`wc -l
@@ -65,3 +63,13 @@ it — this block cites it).
   satisfiable now; only criterion 3 blocks DONE. Task 02 (mirror-and-bump)
   depends on this task, so the whole drain-hub-economics spec is stalled
   until this is resolved.
+
+
+## Answers
+
+- [2026-07-11, Steven via interview] Criterion 3 (<500 lines) RELAXED —
+  removed from acceptance (option a). drain SKILL.md already exceeded the
+  convention (561 lines) before this task; the advisory block lands anyway.
+  The extraction back under 500 is tracked by the EXISTING draft
+  specs/drain-wake-cost/tasks/04-skill-length-drift.md — do not create a
+  duplicate stub, and do not attempt the extraction in this task.
