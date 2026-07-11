@@ -22,11 +22,11 @@ metadata) are never modified; undo = delete the marker. Tests:
 | Live sessions | `~/.claude/sessions/<pid>.json` | sessionId → pid; `active` iff the pid is alive (`kill -0`) |
 | Todos | `~/.claude/todos/*.json` (when the install has them) | open in-session todo lists |
 | Antigravity | `~/.gemini/antigravity*/brain/<conversation>/` | `task.md` checkbox counts + `task.md.metadata.json` summary/updatedAt; conversations containing a `.workboard-abandoned` marker are skipped |
-| Git | `git -C <repo> …` | branch, dirty count, ahead/behind upstream, worktrees, last-commit time |
+| Git | the repo's VCS, queried in-repo | branch, dirty count, ahead/behind upstream, worktrees, last-commit time |
 
 `CLAUDE_CONFIG_DIR` overrides `~/.claude`. Repo discovery: walk the given
 roots (depth ≤ `--max-depth`, pruning `node_modules`, venvs, dot-dirs), plus
-`git rev-parse --show-toplevel` of every session `cwd` — so a repo you only
+the repo root of every session `cwd` — so a repo you only
 ever touched via Claude Code still appears.
 
 ## State model
