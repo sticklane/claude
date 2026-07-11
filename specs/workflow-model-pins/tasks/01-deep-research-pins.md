@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 4 turns
@@ -34,6 +34,6 @@ One file. Do NOT touch the workflow-author skill (task 02) or plugin.json
 
 ## Acceptance
 
-- [ ] `node --check .claude/workflows/deep-research.js` → exits 0
-- [ ] `grep -n 'model' .claude/workflows/deep-research.js` → hits inside the Search and Fetch agent() opts (MANUAL: confirm Verify/Synthesize/Scope agent() calls carry no model opt)
-- [ ] `grep -c 'model: "haiku"' .claude/workflows/deep-research.js` → ≥2
+- [x] `node --check .claude/workflows/deep-research.js` → exits 0 (verifier: exit 0; evidence/01-deep-research-pins.md)
+- [x] `grep -n 'model' .claude/workflows/deep-research.js` → model: keys only at lines 188 (Search) and 222 (Fetch); Scope/Verify/Synthesize opts carry no model opt (verifier MANUAL confirmed; evidence/01-deep-research-pins.md)
+- [x] `grep -c 'model: "haiku"' .claude/workflows/deep-research.js` → 2 (verifier; evidence/01-deep-research-pins.md)
