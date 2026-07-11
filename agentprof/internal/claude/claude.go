@@ -49,12 +49,27 @@ type Turn struct {
 	Candidate bool
 }
 
+// DefaultReprimeThreshold is the cache_write_tokens ceiling above which a
+// non-first main-loop model call is labeled reprime=true (cache-reprime SPEC
+// R1). A threshold of 0 disables the label entirely.
+const DefaultReprimeThreshold = 50000
+
 // Collect walks dir (a ~/.claude-shaped tree) and returns one sample per
 // deduped assistant API response, per-turn naming context, plus the count of
 // unparseable lines skipped. A session is included iff the max mtime across
 // its main transcript and subagent files is not before cutoff; an in-window
-// session contributes all its files.
+// session contributes all its files. Reprime labeling uses the default
+// threshold; callers needing a custom threshold use CollectWithReprime.
 func Collect(dir string, cutoff time.Time) ([]schema.Sample, []Turn, int, error) {
+	return CollectWithReprime(dir, cutoff, DefaultReprimeThreshold)
+}
+
+// CollectWithReprime is Collect with a tunable reprime threshold: a main-loop
+// model-call sample (stack has no agent: frame) that is not the main loop's
+// first model call in its transcript and whose cache_write_tokens exceeds
+// reprimeThreshold gets label reprime=true (SPEC R1). Subagent samples and the
+// main loop's first call are never marked; reprimeThreshold 0 disables it.
+func CollectWithReprime(dir string, cutoff time.Time, reprimeThreshold int) ([]schema.Sample, []Turn, int, error) {
 	sessions, err := enumerate(dir)
 	if err != nil {
 		return nil, nil, 0, err
@@ -70,7 +85,7 @@ func Collect(dir string, cutoff time.Time) ([]schema.Sample, []Turn, int, error)
 		if !in {
 			continue
 		}
-		s, ts, n, err := sess.collect()
+		s, ts, n, err := sess.collect(reprimeThreshold)
 		if err != nil {
 			return nil, nil, 0, err
 		}
@@ -215,7 +230,7 @@ type spawnCtx struct {
 // directory name under projects/). Main-transcript samples get
 // [project, turn, skill, "main", model]; each subagent's samples get its
 // resolved spawn prefix + [agent:{type}, model], or the R5 unlinked stack.
-func (s session) collect() ([]schema.Sample, []Turn, int, error) {
+func (s session) collect(reprimeThreshold int) ([]schema.Sample, []Turn, int, error) {
 	mainP, err := parseTranscript(s.mainPath)
 	if err != nil {
 		return nil, nil, 0, err
