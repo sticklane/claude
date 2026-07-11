@@ -1,6 +1,6 @@
 # Task 04: Live verification script + codex/README.md
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P1
 Budget: 65 turns
@@ -76,13 +76,47 @@ not modify beyond that conditional symlink) the structure built by tasks
 
 ## Acceptance
 
-- [ ] `test -f codex/README.md` and it names the confirmed invocation
+- [x] `test -f codex/README.md` and it names the confirmed invocation
   convention and contains a "What degrades" heading
-- [ ] `test -f codex/verify-live.sh` and it is executable
+- [x] `test -f codex/verify-live.sh` and it is executable
   (`test -x codex/verify-live.sh`)
-- [ ] Running `./codex/verify-live.sh` from the repo root exits, and its
+- [x] Running `./codex/verify-live.sh` from the repo root exits, and its
   output is reflected in `codex/README.md`'s verification section
-- [ ] End-to-end: the exact invocation documented in `codex/README.md`, run
+- [x] End-to-end: the exact invocation documented in `codex/README.md`, run
   fresh from the repo root, returns a correct scoped result for a
   list-specs-shaped prompt (or the manual-pending note is present if no
   `codex` binary is available)
+
+## Evidence
+
+Live-run against this repo's real root on `codex-cli 0.144.1`
+(`/opt/homebrew/bin/codex`), via `./codex/verify-live.sh` under
+`--sandbox read-only`:
+
+- **R5(a) discovery root — WORKS, cwd/`--cd`-relative.** `codex exec --cd
+  codex "list the specs in this project and their status"` surfaced skills
+  from `codex/.agents/skills/`; the git root has no `.agents/`, so a
+  git-root-relative reading would have found nothing. No fallback symlink
+  applied — repo-root `.agents` left untouched per this task's Touch rule.
+- **R5(b) symlinked skill auto-triggers — WORKS.** The prompt auto-selected
+  `list-specs` by description match, `cat`-ed its `SKILL.md` through the
+  `antigravity/` symlink, ran the bundled `list_specs.py`, and returned the
+  correct scoped result for `codex/` (`no specs/ directory found`, since
+  `codex/` has no `specs/` subdir). This doubles as the end-to-end
+  acceptance run (real repo, not a scratch copy).
+- **R5(c-neg) drain does NOT auto-trigger — WORKS as intended.** A
+  drain-shaped natural-language prompt did not auto-select `drain`;
+  `allow_implicit_invocation: false` kept it out of the available-skill
+  list (model reported the `$drain` skill "isn't exposed in this session's
+  available-skill list").
+- **R5(c-pos) explicit `$drain` — PARTIAL.** `$drain` in `codex exec` was
+  treated as literal text — the explicit-invocation skill mechanism is not
+  exposed in `codex exec` (matches upstream openai/codex
+  #19695/#10585/#23454). The `SKILL.md` file was still reachable and read on
+  disk (its Launch-authorization rule surfaced verbatim), just not via
+  `$`-invocation. Documented as an experimental/best-effort outcome in
+  `codex/README.md`, not softened.
+
+All four results recorded in `codex/README.md`'s "Live verification" table
+and "What degrades on Codex" section. Files added: `codex/README.md`,
+`codex/verify-live.sh` (executable). Repo-root `.agents` not created.
