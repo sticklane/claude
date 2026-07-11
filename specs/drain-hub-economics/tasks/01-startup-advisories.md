@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: pending
+Status: deferred
 Depends on: none
 Priority: P1
 Budget: 4 turns
@@ -44,3 +44,24 @@ it — this block cites it).
   names the disclosed-model signal and the beyond-first-few-turns
   heuristic, recommends the deep-tier fresh-session relaunch
 - [ ] `wc -l < .claude/skills/drain/SKILL.md` → still < 500
+
+## Deferred questions
+
+- [2026-07-11 /drain gen3] Acceptance criterion 3 (`wc -l
+  .claude/skills/drain/SKILL.md` → still < 500) is unsatisfiable as
+  written: the file is ALREADY 561 lines before this task, and this task
+  only adds a "Hub-economics advisory" block (growing it further). The
+  task's Touch is the single file `.claude/skills/drain/SKILL.md`, so
+  there is no in-scope path to drop below 500 without deleting load-bearing
+  procedure (and the wake-economics doctrine text is explicitly off-limits;
+  `reference.md` is outside Touch, so content cannot be extracted there
+  within scope). Human decision needed — pick one: (a) drop/relax
+  criterion 3 (accept that drain SKILL.md already exceeds the 500-line
+  convention and this task is not the vehicle to fix it — the advisory
+  block is small); or (b) authorize a companion refactor task that extracts
+  drain SKILL.md body content into `reference.md` to get under 500,
+  widening Touch accordingly, sequenced before or alongside this task.
+  Blocking: criteria 1 (marker grep) and 2 (manual coverage) are
+  satisfiable now; only criterion 3 blocks DONE. Task 02 (mirror-and-bump)
+  depends on this task, so the whole drain-hub-economics spec is stalled
+  until this is resolved.
