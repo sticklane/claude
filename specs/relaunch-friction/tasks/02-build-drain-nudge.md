@@ -1,6 +1,6 @@
 # Task 02: Give build a sibling-task /drain nudge at end-of-run
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 40 turns
@@ -97,20 +97,43 @@ loop/continuation mode — out of scope per spec Solution #2.
 
 ## Acceptance
 
-- [ ] `grep -n "drain specs/<slug>" .claude/skills/build/SKILL.md` (or the
+- [x] `grep -n "drain specs/<slug>" .claude/skills/build/SKILL.md` (or the
       exact wording chosen) is present in the end-of-run section, visibly
       guarded by a sibling-`Status:` check rather than unconditional.
-- [ ] `grep -n "drain" antigravity/.agents/workflows/build.md` shows the
+      (Match at line 191, in the `/clear` end-of-run bullet, guarded by
+      "at least one sibling `tasks/*.md` ... has a `Status: pending`".)
+- [x] `grep -n "drain" antigravity/.agents/workflows/build.md` shows the
       mirrored nudge concept near its own end-of-run section (content
       coverage, not a byte-identical diff — this mirror is a paraphrased
       port per docs/memory/workboard-mirror-verbatim.md).
-- [ ] `git show HEAD:.claude-plugin/plugin.json | grep version` differs
+      (Nudge sentence at line 153, in the NEW-conversation end-of-run step.)
+- [x] `git show HEAD:.claude-plugin/plugin.json | grep version` differs
       from the same grep at this task's base commit (version bumped, not
-      compared to a hard-coded literal).
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0.
-- [ ] Your own hand-trace of the four scenario fixtures (step 8) shows the
+      compared to a hard-coded literal). (0.8.38 → 0.8.39.)
+- [x] `bash evals/lint-ultra-gate.sh` exits 0.
+      ("lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0.)
+- [x] Your own hand-trace of the four scenario fixtures (step 8) shows the
       nudge firing only for the pending-sibling case and not the other
       three — record the trace result as evidence in this task's notes.
+
+## Hand-trace evidence (step 8)
+
+Traced the edited SKILL.md guard ("path matches `specs/<slug>/tasks/*.md`
+AND ≥1 sibling `tasks/*.md` has `Status: pending`") against the four
+scenario shapes:
+
+1. Pending sibling — `specs/foo/tasks/01.md` completed, sibling `02.md`
+   has `Status: pending`: path matches AND a pending sibling exists →
+   NUDGE fires. ✓ (expected: fires)
+2. No sibling — `specs/foo/tasks/01.md` is the only file: path matches but
+   no sibling has `Status: pending` → NO nudge. ✓ (expected: no nudge)
+3. Blocked-only sibling — sibling `02.md` has `Status: blocked`: path
+   matches but no `pending` sibling (only blocked) → NO nudge. ✓
+4. Not under `specs/<slug>/tasks/` — e.g. a loose `docs/TASKS.md`: path
+   fails the layout guard → NO nudge. ✓
+
+Nudge fires only for case 1; the other three correctly suppress it. No
+fixtures were committed (logic trace against the diff, per step 8).
 
 ## Manual verification (human, after merge — not gating this task's Status)
 
