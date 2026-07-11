@@ -63,3 +63,11 @@ Same file as tasks 01/02 — runs after them (serial chain).
   tool_results skipped at claude.go:673 before matching) + exact confirmation
   commands are in evidence/03-pending-volume.md. No speculative matching change
   made without confirming data.
+
+## Discovered
+
+- cmd_claude.go --keep-pending CLI flag + parse-stat log line not wired
+  (out of task 03 Touch) → tasks/07-keep-pending-cli-wiring.md
+- claude.go:673 result-matching skips tool_result on IsMeta/IsSidechain
+  before matching — suspected source of ~8,854 pending-sample volume →
+  tasks/08-pending-match-meta-sidechain-investigation.md
