@@ -3,27 +3,12 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 5 turns
 Spec: ../SPEC.md (requirement R4)
 Touch: agentprof/internal/costsummary/, agentprof/testdata/, specs/agentprof-attribution-gaps/evidence/
-
-<!-- PLAN (delete at close-out)
-1. RED: add costsummary_test.go tests — main-loop tool-duration sample
-   ([...,"main","tool:Bash"], duration_ms) → by_model has "(tools)", no
-   "main" key; subagent tool sample ([...,"agent:scout","tool:Read"]) →
-   "(tools)", no agent: key; <synthetic> leaf keeps its own labeled row.
-2. GREEN: modelLeaf returns "(tools)" sentinel when the leaf-most non-marker
-   frame is structural (`main` or `agent:` — the model's parents), else the
-   model. hasModel now always true for non-empty stacks.
-3. <synthetic> choice = explicitly labeled (keeps its own bracketed row,
-   calls preserved); document in code comment + ByModel doc note.
-4. evidence/05-panel-check.md: agent-console _cost_rows iterates
-   (dim or {}).items() generically — GENERIC-ITERATION, no fix needed.
--->
-
 
 ## Goal
 
@@ -53,7 +38,16 @@ and make the minimal edit). Parallel-safe against tasks 01–04
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/costsummary/` → pass including
-  the no-`main`-key fixture
-- [ ] evidence/05-panel-check.md records the agent-console check result
-- [ ] `bash agentprof/scripts/check.sh` → green
+- [x] `cd agentprof && go test ./internal/costsummary/` → pass including
+  the no-`main`-key fixture — `ok github.com/sticklane/agentprof/internal/costsummary`; TestBuildToolDurationSamplesBucketUnderToolsNotMain asserts no `main` key + `(tools)` holds duration_ms=1500
+- [x] evidence/05-panel-check.md records the agent-console check result —
+  GENERIC-ITERATION (`_cost_rows` iterates `(dim or {}).items()`); no panel fix needed
+- [x] `bash agentprof/scripts/check.sh` → green — format-check ok / lint ok / tests ok
+
+## Decisions
+
+- `<synthetic>` by_model handling: chose **explicitly labeled** over
+  excluded-from-calls. It keeps its own distinctly-named `<synthetic>` row
+  (bracketed name marks it non-model) with `calls` preserved. Reversible:
+  to switch to calls-exclusion, skip the `calls` sample_type for `<synthetic>`
+  in Build's by_model add loop.
