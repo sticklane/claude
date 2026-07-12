@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Discovered-from: specs/agent-tier-leaks/tasks/01-verifier-leak-trace.md
 Spec: ../SPEC.md
 Blocking: no
@@ -22,9 +22,12 @@ mistaken for a real regression.
 
 ## Acceptance
 
-- [ ] `grep -q 'in_use' specs/agent-tier-leaks/SPEC.md` succeeds (the note is
+- [x] `grep -q 'in_use' specs/agent-tier-leaks/SPEC.md` succeeds (the note is
   present in the spec).
-- [ ] `grep -q "not -path '\*/.in_use" specs/agent-tier-leaks/SPEC.md`
+  - Evidence: grep → exit 0 (match at SPEC.md ~line 66). Verifier PASS. See evidence/05-ac3-inuse-exclusion.md.
+- [x] `grep -q "not -path '\*/.in_use" specs/agent-tier-leaks/SPEC.md`
   succeeds (the note carries the exclusion flag as guidance).
-- [ ] MANUAL: the note sits with AC3 / task-01's plugin-cache criterion so a
+  - Evidence: grep → exit 0 (match at SPEC.md ~line 68). Verifier PASS. See evidence/05-ac3-inuse-exclusion.md.
+- [x] MANUAL: the note sits with AC3 / task-01's plugin-cache criterion so a
   reader of that check finds it (reviewer confirms placement).
+  - Evidence: note block sits directly under R1's requirement bullet (SPEC.md lines 62-69), labeled "Note (AC3 plugin-cache-untouched false positive)"; accurately describes the mtime scan, the `.in_use/<pid>` false positive, and the `-not -path '*/.in_use/*'` fix. Verifier PASS. See evidence/05-ac3-inuse-exclusion.md.
