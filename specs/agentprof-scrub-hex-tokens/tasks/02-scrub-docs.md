@@ -1,6 +1,6 @@
 # Task 02: Document the keyword-gated hex rule
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 4 turns
@@ -30,6 +30,6 @@ classes); do NOT touch scrub.go/scrub_test.go (task 01, already landed).
 
 ## Acceptance
 
-- [ ] `grep -ci 'keyword-gated' agentprof/README.md` → ≥ 1
-- [ ] `sed -n '/secret scrubbing/,/^## /Ip' agentprof/README.md | grep -ci 'hex'` → ≥ 1 (documented in the right section)
-- [ ] `bash agentprof/scripts/check.sh` → green
+- [x] `grep -ci 'keyword-gated' agentprof/README.md` → ≥ 1 — returns 1
+- [x] `sed -n '/secret scrubbing/,/^## /Ip' agentprof/README.md | grep -ci 'hex'` → ≥ 1 (documented in the right section) — returns 5
+- [x] `bash agentprof/scripts/check.sh` → green — format-check/lint/tests all ok, exit 0
