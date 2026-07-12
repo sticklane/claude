@@ -9,6 +9,17 @@
 # Failed fixtures are kept (path printed) for forensics; passing ones
 # are deleted.
 #
+# Runtime: the active runtime (`.claude/runtime.md`, default claude-code)
+# picks the headless template via runtimes/parse_headless.py — see that
+# file's `## Headless` contract. Provisioning always writes BOTH layouts
+# (.claude/skills/ and .agents/skills/) regardless of which runtime runs,
+# so a fixture is runtime-portable: switch `.claude/runtime.md` to `codex`
+# and re-run without re-provisioning. Antigravity has no `## Headless`
+# section (no scriptable relaunch), so it cannot run through this path —
+# runtimes/parse_headless.py returns NONE and this script exits 1 rather
+# than fabricate a run (a repo's `.claude/runtime.md` should not name
+# antigravity for evals; see docs/memory/unattended-worker-tool-limits.md).
+#
 # Compat: scenario setup.sh/assert.sh run under bare `bash`, and macOS's
 # system bash is 3.2 — write them to bash 3.2, no `declare -A` or other
 # bash-4+ syntax.
@@ -65,6 +76,24 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     mkdir -p "$EVAL_DIR/.claude/skills"
     cp -r "$ROOT/.claude/skills/$skill" "$EVAL_DIR/.claude/skills/"
     cp -r "$ROOT/.claude/agents" "$EVAL_DIR/.claude/"
+
+    # Also provision the Agent Skills layout (.agents/skills/) that
+    # Antigravity and Codex discover from, unconditionally and regardless
+    # of the resolved runtime below — cheap, and harmless for a
+    # claude-code run. Source real content, dereferencing symlinks
+    # (-L) since codex/.agents/skills/<name> is often a relative symlink
+    # into antigravity/ whose target would otherwise dangle outside
+    # $EVAL_DIR. Prefer codex's copy (covers the four launch-gated
+    # skills' codex-specific SKILL.md); fall back to antigravity's.
+    agents_skill_src="$ROOT/codex/.agents/skills/$skill"
+    [ -e "$agents_skill_src" ] || agents_skill_src="$ROOT/antigravity/.agents/skills/$skill"
+    if [ -e "$agents_skill_src" ]; then
+      mkdir -p "$EVAL_DIR/.agents/skills"
+      cp -rL "$agents_skill_src" "$EVAL_DIR/.agents/skills/$skill"
+      if [ -d "$ROOT/antigravity/.agents/skills/_shared" ]; then
+        cp -rL "$ROOT/antigravity/.agents/skills/_shared" "$EVAL_DIR/.agents/skills/"
+      fi
+    fi
 
     allowed="$DEFAULT_ALLOWED"
     [ -f "$scenario/allowed-tools.txt" ] && allowed="$(head -n 1 "$scenario/allowed-tools.txt")"
