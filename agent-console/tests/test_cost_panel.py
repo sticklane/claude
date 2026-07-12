@@ -154,6 +154,33 @@ class RenderReprimeLine(unittest.TestCase):
         self.assertNotIn("re-prime", html.lower())
 
 
+_UNTYPED_FANOUT = {
+    "calls": 128,
+    "cost_microusd": 1_230_000,
+    "by_model": {"claude-fable-5": {"calls": 100, "cost_microusd": 1_200_000}},
+    "max_depth": 4,
+}
+
+
+class RenderUntypedFanoutLine(unittest.TestCase):
+    def test_untyped_fanout_line_rendered_when_section_present(self):
+        summary = dict(_SUMMARY, untyped_fanout=_UNTYPED_FANOUT)
+        html = ac.render_workboard(_board(), summary)
+        self.assertIn("untyped", html.lower())  # label present
+        self.assertIn("$1.23", html)  # 1_230_000 microusd -> $1.23
+
+    def test_untyped_fanout_line_absent_when_section_missing(self):
+        # older cache: summary has no `untyped_fanout` key -> panel as today
+        html = ac.render_workboard(_board(), _SUMMARY)
+        self.assertNotIn("untyped", html.lower())
+        self.assertIn("Cost (7d)", html)  # rest of panel unaffected
+
+    def test_untyped_fanout_none_is_omitted_gracefully(self):
+        summary = dict(_SUMMARY, untyped_fanout=None)
+        html = ac.render_workboard(_board(), summary)  # no exception
+        self.assertNotIn("untyped", html.lower())
+
+
 class WorkboardHandlerReadsSummary(unittest.TestCase):
     def test_missing_summary_page_load_is_200_pending(self):
         with (
