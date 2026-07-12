@@ -29,3 +29,7 @@ existing tool-invocation and ignore-instructions rules unchanged.
   — PASS: `screen-stub-fixtures/run.sh` → "PASS (positive refused via abs-path-outside-repo only; negative clean)", exit 0 (evidence/02-screen-fix.md).
 - [x] MANUAL: deleting the abspath rule would fail the positive fixture (rule isolation demonstrated in the test's assertions)
   — PASS: verifier neutralized re_abspath in a scratch copy → run.sh then FAILED ("expected exit 1, got 0"), then restored; the test asserts the positive matches abs-path-outside-repo AND ONLY that rule (evidence/02-screen-fix.md).
+
+## Decisions
+
+- 2026-07-12 — extended the `re_abspath` imperative-verb list beyond SPEC R2's named seven (read/write/copy/run/execute/open/delete) with synonyms (exec/remove/cat/move/access/fetch/load/save/dump/exfiltrate/upload/download) to cover common instruction-shaped path-access phrasings; SPEC named those seven with "e.g." so this is within intent. Reverse: shrink the `re_abspath` verb alternation back to the seven named verbs.
