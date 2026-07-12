@@ -1575,24 +1575,17 @@ def _new_model_agg():
     return agg
 
 
-def compute_spend(claude_home, session_ids):
+def _run_spend(argv, id_set):
     """Shell out to agentprof and join its per-(session, model) summary rows to
-    the sessions workboard assembled. Any failure — missing binary, timeout,
-    non-zero exit, invalid JSON — degrades to an unavailable structure with a
-    `reason` rather than raising, so the dashboard never breaks (R8)."""
-    binary = _locate_agentprof()
+    the ids in `id_set`. Shared by the Claude and Antigravity spend calls, which
+    differ only in `argv` (subcommand + directory flag) and the id-space they
+    filter against. Any failure — missing binary, timeout, non-zero exit,
+    invalid JSON — degrades to an unavailable structure with a `reason` rather
+    than raising, so the dashboard never breaks (R8)."""
+    binary = argv[0]
     try:
         proc = subprocess.run(
-            [
-                binary,
-                "claude",
-                "-o",
-                "summary",
-                "--days",
-                "3650",
-                "--claude-dir",
-                str(claude_home),
-            ],
+            argv,
             capture_output=True,
             text=True,
             timeout=SPEND_TIMEOUT_SEC,
@@ -1620,7 +1613,7 @@ def compute_spend(claude_home, session_ids):
     by_model = {}
     for row in rows:
         sid = row.get("session")
-        if sid not in session_ids:
+        if sid not in id_set:
             continue
         model = row.get("model")
         cost = int(row.get("cost_microusd", 0))
@@ -1645,6 +1638,87 @@ def compute_spend(claude_home, session_ids):
         "by_session": by_session,
         "available": True,
         "reason": None,
+    }
+
+
+def compute_spend(claude_home, session_ids):
+    """Shell out to `agentprof claude` and join its per-(session, model) summary
+    rows to the Claude sessions workboard assembled (R5/R8)."""
+    binary = _locate_agentprof()
+    argv = [
+        binary,
+        "claude",
+        "-o",
+        "summary",
+        "--days",
+        "3650",
+        "--claude-dir",
+        str(claude_home),
+    ]
+    return _run_spend(argv, session_ids)
+
+
+def compute_antigravity_spend(antigravity_dir, cascade_ids):
+    """Shell out to `agentprof antigravity` and join its per-(session, model)
+    summary rows to the Antigravity cascade ids workboard assembled (R4). The
+    id-space here is the cascade-conversation ids — filtering against the
+    Claude-only `session_ids` would silently zero every Antigravity row out,
+    which is the id-space bug R4 exists to fix."""
+    binary = _locate_agentprof()
+    argv = [
+        binary,
+        "antigravity",
+        "-o",
+        "summary",
+        "--antigravity-dir",
+        str(antigravity_dir),
+        "--days",
+        "3650",
+    ]
+    return _run_spend(argv, cascade_ids)
+
+
+def merge_spend(claude_spend, antigravity_spend):
+    """Merge two harness spend structures into one drop-in replacement for what
+    `compute_spend` returns (R4), so `render_spend_section` needs no changes.
+
+    `by_model` is the concatenation of both harnesses' lists, RE-SORTED by
+    `(-cost_microusd, model)` (not two separately-sorted blocks). `by_session`
+    is the union of both dicts (cascade ids and Claude session ids are disjoint
+    UUID spaces, so no key collision). Top-level `available` is the OR of the
+    two harnesses. Per-harness availability is preserved under
+    `claude_available`/`claude_reason` and
+    `antigravity_available`/`antigravity_reason`, so a failure in one harness
+    never blanks out the rows the other already populated."""
+    c_avail = bool(claude_spend.get("available"))
+    a_avail = bool(antigravity_spend.get("available"))
+    by_model = sorted(
+        list(claude_spend.get("by_model") or [])
+        + list(antigravity_spend.get("by_model") or []),
+        key=lambda m: (-m["cost_microusd"], m["model"]),
+    )
+    by_session = {
+        **(claude_spend.get("by_session") or {}),
+        **(antigravity_spend.get("by_session") or {}),
+    }
+    available = c_avail or a_avail
+    reason = None
+    if not available:
+        reasons = [
+            r
+            for r in (claude_spend.get("reason"), antigravity_spend.get("reason"))
+            if r
+        ]
+        reason = "; ".join(reasons) if reasons else None
+    return {
+        "by_model": by_model,
+        "by_session": by_session,
+        "available": available,
+        "reason": reason,
+        "claude_available": c_avail,
+        "claude_reason": claude_spend.get("reason"),
+        "antigravity_available": a_avail,
+        "antigravity_reason": antigravity_spend.get("reason"),
     }
 
 
@@ -1736,6 +1810,15 @@ def default_claude_home():
     return Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
 
 
+def default_antigravity_dir():
+    """Antigravity CLI conversation-database directory — mirrors the agentprof
+    binary's own `defaultAntigravityDir` (`$HOME/.gemini/antigravity-cli`), so
+    the workboard and the binary agree on where the cascade DBs live."""
+    return Path(
+        os.environ.get("ANTIGRAVITY_DIR", Path.home() / ".gemini" / "antigravity-cli")
+    )
+
+
 def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFAULT):
     claude_home = default_claude_home()
     sessions = scan_sessions(claude_home, stale_days)
@@ -1797,7 +1880,12 @@ def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFA
         "todos": todos,
         "inbox": inbox,
         "ready": ready,
-        "spend": compute_spend(claude_home, {s["id"] for s in sessions}),
+        "spend": merge_spend(
+            compute_spend(claude_home, {s["id"] for s in sessions}),
+            compute_antigravity_spend(
+                default_antigravity_dir(), {c["id"] for c in antigravity}
+            ),
+        ),
         "liveness_unknown": _last_liveness_unknown,
         "totals": {
             "repos": len(repos),
