@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -70,14 +70,21 @@ sessions — this task is drain-specific).
 
 ## Acceptance
 
-- [ ] EVIDENCE.md has a "Task 05 findings" section stating which hypothesis
+- [x] EVIDENCE.md has a "Task 05 findings" section stating which hypothesis
       (2a/2b/both) the transcript evidence supported, with session-id +
       quote/paraphrase citations
-- [ ] `.claude/skills/drain/SKILL.md` and/or `reference.md` diff reflects
+      — verifier confirmed: hypothesis 2b for `55ae834e` (baton-pass marker
+      never emitted across 9 verdicts/6+ hrs), `80161f1c`/`c2cec1dd` diagnosed
+      as distinct, out-of-scope failure modes; "2a was not supported."
+- [x] `.claude/skills/drain/SKILL.md` and/or `reference.md` diff reflects
       the chosen fix, with the "3a. Baton pass" section still describing a
       single coherent rule (no contradictory trigger text left behind)
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0 (drain is one of the four
+      — verifier confirmed step 3's closing + step 3a's opening read as one
+      coherent, non-contradictory rule.
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (drain is one of the four
       gated skills)
+      — verifier confirmed: `lint-ultra-gate: OK — all ultra mentions gated
+      in 4 files`.
 - [ ] MANUAL (deferred, needs another week of runs): a follow-up
       `agentprof claude --days 7` after this change ships shows drain-tagged
       sessions' share of ≥3-reprime sessions below the 29.4% measured in

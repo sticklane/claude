@@ -279,16 +279,23 @@ discarded (this record survives because drain, the single writer, writes it in
 the main checkout).
 
 Keep verdicts, not transcripts; log one line per task as you go (/fleet shows
-workers live). Loop to step 2 while anything is dispatchable. This session
-growing heavy mid-queue is step 3a's degradation override — hand off via the
-baton.
+workers live). **Every recorded verdict ends here, not at step 2**: before
+doing anything else — before dispatching the next worker, before touching the
+queue again — evaluate 3a's relaunch trigger below. Looping back to step 2
+without that check first is a process violation, not a discretionary skip:
+a 2026-07 transcript audit found a drain generation that ran 9 verdicts over
+6+ hours with the 3a check never once evaluated, because nothing forced it
+between verdicts (specs/drain-wake-cost/EVIDENCE.md, "Task 05 findings").
+Only after 3a clears — trigger not met, or fired and this generation's turn
+has ended — does the hub loop to step 2 while anything is dispatchable.
 
 ## 3a. Baton pass (self-relaunch)
 
 Emit `<!-- agentprof:stage=baton-pass -->` verbatim as this step's opening
-line every time you enter it. At each safe boundary (a verdict just recorded and
-committed, or a 3b
-auto-breakdown attempt) evaluate the relaunch **trigger**: hand off after
+line every time you enter it — and you enter it after EVERY recorded verdict
+(step 3's closing line sends you here unconditionally) or 3b auto-breakdown
+attempt, never only when it happens to feel like a good moment. Evaluate the
+relaunch **trigger**: hand off after
 **`max(2, 6 − W)` recorded verdicts** this session (an auto-breakdown attempt
 counts as one; a `Relaunch-every: N` header overrides it), or on a
 **degradation override** — re-reading files already read, losing queue
