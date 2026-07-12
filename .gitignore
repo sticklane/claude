@@ -3,3 +3,7 @@
 # Python bytecode
 __pycache__/
 *.pyc
+
+# SQLite WAL sidecars (created transiently by any read of a WAL-mode .db fixture)
+*.db-wal
+*.db-shm
