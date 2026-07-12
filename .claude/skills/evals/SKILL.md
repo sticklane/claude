@@ -23,6 +23,10 @@ scenario is a directory
 - `allowed-tools.txt` (optional) — one flag value on one line, replacing
   the runner's default allowlist for this scenario (fan-out skills add
   `Task` here; the default deliberately lacks it).
+- `teardown.sh` (optional) — reverses external live-service state the
+  scenario seeded (scratch tasks, notes). Runs whenever setup.sh was
+  attempted, pass or fail; a teardown failure fails the scenario, since
+  leaked scratch state must be loud.
 
 ## 1. Scaffold if no evalset exists
 
@@ -43,6 +47,12 @@ the runner builds a fresh fixture, copies `.claude/skills/<skill>/` and
 the prompt there under `timeout 900` with a fixed allowlist — a
 deliberate, documented exception to the toolkit's self-contained-prompt
 rule, because exercising the real skill text is the entire point.
+
+External repos host their own evalsets by overriding the source roots:
+`EVALS_ROOT=<repo>/evals SKILLS_ROOT=<repo>/skills ./evals/run.sh` —
+agents provision from SKILLS_ROOT's sibling `agents/` when present
+(`AGENTS_ROOT` overrides). `MAX_TURNS` raises the claude-code turn cap
+(default 40) for MCP-heavy skills.
 
 ## 3. Interpret failures
 

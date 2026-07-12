@@ -3,11 +3,19 @@
 #
 # For each scenario evals/<skill>/<NN-name>/ (optionally filtered to one
 # skill): build a fresh fixture via setup.sh, provision the skill under
-# test plus the toolkit's agents into it, run the scenario prompt
+# test plus the source repo's agents into it, run the scenario prompt
 # headlessly, then grade with assert.sh. Prints one pass/fail line per
 # scenario and a summary; exits non-zero if any scenario failed.
 # Failed fixtures are kept (path printed) for forensics; passing ones
 # are deleted.
+#
+# Env knobs: EVALS_ROOT (scenario dir), SKILLS_ROOT (skill provisioning
+# source, for external repos' evals), AGENTS_ROOT (agents provisioning
+# source; defaults to SKILLS_ROOT's sibling agents/, skipped if absent),
+# MAX_TURNS (claude-code runner turn cap, default 40). A scenario may
+# ship an optional teardown.sh — run whenever setup.sh was attempted,
+# pass or fail, to reverse external live-service state; its failure
+# fails the scenario.
 #
 # Runtime: the active runtime (`.claude/runtime.md`, default claude-code)
 # picks the headless template via runtimes/parse_headless.py — see that
@@ -33,8 +41,19 @@ DEFAULT_ALLOWED='Read,Edit,Write,Glob,Grep,Bash(git *)'
 
 # EVALS_ROOT override: scenario discovery scans
 # $EVALS_ROOT/<skill>/<NN-name>/ instead of this checkout's evals/.
-# Skill provisioning still sources from the toolkit checkout ($ROOT).
 EVALS_ROOT="${EVALS_ROOT:-$ROOT/evals}"
+
+# SKILLS_ROOT override: provision the skill under test from another
+# repo's skills dir (e.g. SKILLS_ROOT=~/automation/skills) instead of
+# this checkout's .claude/skills/. AGENTS_ROOT defaults to the sibling
+# agents/ dir of SKILLS_ROOT and is skipped when absent, so external
+# repos without agent definitions just don't get one provisioned.
+SKILLS_ROOT="${SKILLS_ROOT:-$ROOT/.claude/skills}"
+AGENTS_ROOT="${AGENTS_ROOT:-$(dirname "$SKILLS_ROOT")/agents}"
+
+# MAX_TURNS override for the claude-code runner (MCP-heavy skills may
+# need headroom beyond the default).
+MAX_TURNS="${MAX_TURNS:-40}"
 
 # Isolate git from the user's global config (signing, hooks, templates)
 # for every setup.sh and claude invocation: null the global config and
@@ -44,7 +63,7 @@ export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
 
 filter="${1:-}"
-if [ -n "$filter" ] && [ ! -d "$ROOT/.claude/skills/$filter" ]; then
+if [ -n "$filter" ] && [ ! -d "$SKILLS_ROOT/$filter" ]; then
   echo "unknown skill: $filter" >&2
   exit 1
 fi
@@ -66,16 +85,19 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
 
   EVAL_DIR="$(mktemp -d)"
   verdict="FAIL"
-  if [ ! -d "$ROOT/.claude/skills/$skill" ]; then
+  setup_ran=0
+  if [ ! -d "$SKILLS_ROOT/$skill" ]; then
     reason="unknown skill"
-  elif ! EVAL_DIR="$EVAL_DIR" bash "$scenario/setup.sh"; then
+  elif ! { setup_ran=1; EVAL_DIR="$EVAL_DIR" bash "$scenario/setup.sh"; }; then
     reason="setup.sh failed"
   else
     # Provision the skill under test (real skill text is the point of
-    # the eval) and the toolkit's agents, which fan-out skills spawn.
+    # the eval) and the source repo's agents, which fan-out skills
+    # spawn (skipped when the repo has none). -L dereferences symlinked
+    # skill dirs (external repos often symlink into ~/.claude/skills).
     mkdir -p "$EVAL_DIR/.claude/skills"
-    cp -r "$ROOT/.claude/skills/$skill" "$EVAL_DIR/.claude/skills/"
-    cp -r "$ROOT/.claude/agents" "$EVAL_DIR/.claude/"
+    cp -rL "$SKILLS_ROOT/$skill" "$EVAL_DIR/.claude/skills/"
+    [ -d "$AGENTS_ROOT" ] && cp -r "$AGENTS_ROOT" "$EVAL_DIR/.claude/agents"
 
     # Also provision the Agent Skills layout (.agents/skills/) that
     # Antigravity and Codex discover from, unconditionally and regardless
@@ -129,10 +151,10 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
 
       if [ "$runtime" = "claude-code" ]; then
         if [ -n "${EVAL_DRY_RUN:-}" ]; then
-          printf 'DRY-RUN [claude-code] runner: claude -p "<prompt>" --permission-mode dontAsk --max-turns 40 --allowed-tools %q\n' "$allowed"
+          printf 'DRY-RUN [claude-code] runner: claude -p "<prompt>" --permission-mode dontAsk --max-turns %s --allowed-tools %q\n' "$MAX_TURNS" "$allowed"
         else
           (cd "$EVAL_DIR" && timeout 900 claude -p "$(cat "$scenario/prompt.txt")" \
-              --permission-mode dontAsk --max-turns 40 --allowed-tools "$allowed" 2>&1 \
+              --permission-mode dontAsk --max-turns "$MAX_TURNS" --allowed-tools "$allowed" 2>&1 \
               | tee "$EVAL_DIR/session.log") || session_rc=$?
         fi
       else
@@ -170,6 +192,22 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     else
       verdict="PASS"
       reason=""
+    fi
+  fi
+
+  # Optional teardown.sh: reverses external (live-service) state the
+  # scenario seeded. Runs whenever setup.sh was attempted — even on
+  # FAIL, and even when setup itself failed partway — but never in
+  # dry-run. A teardown failure means scratch state may have leaked,
+  # which must be loud: it fails the scenario.
+  if [ "$setup_ran" -eq 1 ] && [ -f "$scenario/teardown.sh" ] && [ -z "${EVAL_DRY_RUN:-}" ]; then
+    if ! EVAL_DIR="$EVAL_DIR" bash "$scenario/teardown.sh"; then
+      if [ "$verdict" = "PASS" ]; then
+        verdict="FAIL"
+        reason="teardown.sh failed"
+      else
+        reason="$reason; teardown.sh also failed"
+      fi
     fi
   fi
 
