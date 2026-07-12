@@ -1,40 +1,54 @@
 Run-token: e83f34f07094a4fa
-Generation: 2
-Spec: specs/drain-forward-progress
+Generation: 3
+Spec: specs/prose-review
 Breakdown-failed:
 Intake-failed:
 Stub-intake-failed:
 
 ## Done / next
 
-Gen 1 recorded 5 verdicts (all DONE, all merged + pushed):
-- cache-reprime-visibility/tasks/05 (SCHEMA.md overview) — DONE, merged, lease released (spec fully drained)
-- agentprof-attribution-gaps/tasks/07 (--keep-pending CLI) — DONE, merged; reversible decision logged
-- agentprof-attribution-gaps/tasks/08 (meta/sidechain pending match) — DONE, merged; decision + manual-pending note logged; lease released (spec fully drained)
-- drain-forward-progress/tasks/01 (intake contract R1/R3/R4) — DONE, merged, ultra-gate green
-- drain-forward-progress/tasks/02 (screen-stub abspath rule fix R2) — DONE, merged, fixtures+ultra-gate green; reversible decision logged
+Gen 2 recorded 4 verdicts (all DONE, all merged + pushed) and batoned at the
+clean spec-completion-review boundary (within the W=1 budget of 5):
+- drain-forward-progress/tasks/03-mirror-bump — DONE, merged (dfp fully drained, lease released); codex-wrapper-update decision logged, ultra-gate green
+- spec-completion-review/tasks/01-drain-step — DONE, merged; ultra-gate green; discovery materialized (flip-message format transition, stub 04)
+- spec-completion-review/tasks/02-build-parity — DONE, merged; ultra-gate green; discovery materialized (build-mirror gap, stub 05)
+- spec-completion-review/tasks/03-mirror-bump — DONE, merged (scr fully drained, lease released); soft-reset decision logged; plugin.json now 0.8.48
 
-NEXT (gen 2): drain-forward-progress/tasks/03-mirror-bump (closing task R4+R5;
-deps 01,02 both done → dispatchable NOW). Touch: antigravity/.agents/workflows/drain.md,
-codex/.agents/skills/drain/SKILL.md, .claude-plugin/plugin.json. It is the mirror+bump
-closing task and is ULTRA-PATH-adjacent (codex drain SKILL.md) — its worker must run
-`bash evals/lint-ultra-gate.sh` before committing. drain-forward-progress MUST fully
-complete and merge (incl. 03) BEFORE any spec-completion-review task dispatches (both
-specs edit drain SKILL.md/reference.md).
+The spec-completion-review machinery is now MERGED (SKILL.md carries a
+"## Spec-completion review" step; build SKILL.md carries the bare-SPEC
+parity sentence). Gen 3 loads the UPDATED drain SKILL.md fresh, so it applies
+that step naturally. Per the human's standing instruction: do NOT retro-apply
+it to specs drained before it merged (cache-reprime, agentprof-attr, dfp,
+AND spec-completion-review itself — scr built the machinery, it is not a
+"drained-after" spec). Apply it to prose-review and later.
 
-Then: spec-completion-review (01,02 group per SPEC, 03 closing) → prose-review
-(01,02 group, 03 after both, 04 after 01+03, retrofits 05-13 after 03 with W=3 allowed).
+NEXT (gen 3): drain specs/prose-review (13 tasks). Per its SPEC Parallelization:
+- Group: 01, 02 (co-admissible); at W=1 run serially, 01 then 02.
+- 03 after 01 AND 02 (closing-ish for the core).
+- 04 after 01 AND 03 (mirror+bump closing — bumps plugin.json relative to base).
+- Retrofit tasks 05-13 after 03: Group: 05..13 (pairwise-disjoint Touch).
+  You MAY run W=3 for the retrofit group only (explicit throughput authorization
+  in the human's standing chain; baton budget then = max(2,6-3) = 3 verdicts/gen).
+VERIFY the exact dependency/group lines against specs/prose-review/SPEC.md and
+each task header at inventory — the above is from the baton map, re-read to confirm.
 
-## Anomalies
+## Anomalies / carry-forward
 
-- prose-review retrofits 05-13 have CROSS-REPO Touch (other repos on this machine);
-  follow docs/memory/drain-dispatch-lessons.md cross-repo procedure (worktree the target
-  repo too); each carries a mandatory CI paths-ignore precondition before committing in
-  the target repo; task 09 (portfolio-tracker) auto-pushes/auto-deploys on commit — if
-  its precondition fails, BLOCK rather than commit.
-- If spec-completion-review machinery lands, it adds a spec-review step; do NOT
-  retro-apply it to specs drained before it merged (cache-reprime, agentprof-attr, dfp).
-- Two FOREIGN owner leases live and untouched: specs/draft-auto-promotion/DRAIN-OWNER.md,
-  specs/work-exhaustion/DRAIN-OWNER.md — not in scope, leave alone.
-- Baton budget: W=1 → 5 verdicts per generation (max(2,6-W)); W=3 during retrofit group → 3.
-- Generations cap = 10.
+- prose-review retrofits 05-13 have CROSS-REPO Touch (other repos on this machine).
+  Follow docs/memory/drain-dispatch-lessons.md cross-repo procedure (worktree the
+  TARGET repo too, not just this one). Each retrofit carries a MANDATORY CI
+  paths-ignore precondition before committing in the target repo.
+  Task 09 (portfolio-tracker) AUTO-PUSHES/AUTO-DEPLOYS on commit — if its
+  paths-ignore precondition fails, BLOCK the task rather than commit.
+- Draft stubs created by gen 2 (for final-exhaustion stub intake / exit checklist):
+  - specs/spec-completion-review/tasks/04-flip-message-format-transition.md (Blocking: no)
+  - specs/spec-completion-review/tasks/05-build-mirror-gap.md (Blocking: no) — the
+    build SKILL.md spec-completion sentence ships un-mirrored to antigravity/codex
+    build ports; needs a human Touch amendment or new task (drain can't edit Touch).
+  Pre-existing drafts also in scope at exhaustion: agent-tier-leaks/04,05;
+  drain-wake-cost/04; orchestrator-share-audit/03.
+- Two FOREIGN owner leases live and untouchable: specs/draft-auto-promotion/DRAIN-OWNER.md,
+  specs/work-exhaustion/DRAIN-OWNER.md. Never touch specs/agentprof-antigravity-adapter.
+- Baton budget: W=1 → 5 verdicts/gen; W=3 (retrofit window) → 3 verdicts/gen.
+- Generations cap = 10 (currently gen 3). plugin.json at 0.8.48; prose-review/04
+  closing task bumps relative to its own base.
