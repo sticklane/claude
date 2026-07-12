@@ -1903,7 +1903,70 @@ def _unblock_missing(i: dict) -> bool:
     )
 
 
-def render_workboard(b: dict, cost: dict | None = None) -> str:
+# Session-refresh budget arms (spec session-refresh-automation): a live session
+# is flagged over EITHER arm. Pinned from the 30-day profile — 3 is the re-prime
+# median (the behavior being changed) and 250k sits in the heavy context tail.
+REPRIME_BUDGET = 3
+CTX_BUDGET = 250_000
+
+
+def _reprime_flags(
+    b: dict, summary: dict | None, summary_mtime: float | None
+) -> list[dict]:
+    """Needs-attention inbox items for live sessions over a session-refresh
+    budget arm (R4): `reprime_count` >= REPRIME_BUDGET OR `p90_ctx` >= CTX_BUDGET.
+
+    The join is the live-session scan's ids against the summary's `sessions`
+    keys, exactly — a live session absent from the summary is not flagged. Each
+    flag names the session, which arm tripped, the re-prime count + cost, and
+    the summary file's mtime (the freshness bound). Older summary JSON without
+    `reprime_count` treats that arm as 0; the p90_ctx arm still evaluates."""
+    sessions = (summary or {}).get("sessions") or {}
+    if not sessions:
+        return []
+    stamp = _dt(summary_mtime) if summary_mtime else "unknown"
+    flags = []
+    for r in b.get("repos", []):
+        for s in r.get("sessions", []):
+            if s.get("state") != "active":
+                continue
+            sess = sessions.get(s.get("sid"))
+            if not sess:  # not tracked in the summary -> never flagged
+                continue
+            count = sess.get("reprime_count", 0) or 0
+            ctx = sess.get("p90_ctx", 0) or 0
+            arms = []
+            if count >= REPRIME_BUDGET:
+                arms.append("re-prime")
+            if ctx >= CTX_BUDGET:
+                arms.append("context")
+            if not arms:
+                continue
+            dollars = (sess.get("reprime_cost_microusd", 0) or 0) / 1_000_000
+            flags.append(
+                {
+                    "sev": "warning",
+                    "state": "over-budget",
+                    "item": f"session {s['sid']} over budget",
+                    "repo": r["name"],
+                    "why": (
+                        f"{' + '.join(arms)} budget tripped — {count} re-primes, "
+                        f"${dollars:,.2f}; summary {stamp}"
+                    ),
+                    "age": summary_mtime or 0,
+                    "cmd": "",
+                    "unblock": None,
+                    "deferred_questions": [],
+                }
+            )
+    return flags
+
+
+def render_workboard(
+    b: dict, cost: dict | None = None, summary_mtime: float | None = None
+) -> str:
+    inbox_items = list(b["inbox"]) + _reprime_flags(b, cost, summary_mtime)
+
     def chip(state):
         return f'<span class="chip {esc(state)}">{esc(state)}</span>'
 
@@ -1978,10 +2041,10 @@ def render_workboard(b: dict, cost: dict | None = None) -> str:
             tile(b["n_active"], "active sessions", 'data-panel="active"'),
             tile(cost_value, "cost (7d)", 'data-panel="cost"'),
             tile(
-                len(b["inbox"]),
+                len(inbox_items),
                 "needs attention",
                 'data-scroll="#inbox"',
-                "alert" if b["inbox"] else "",
+                "alert" if inbox_items else "",
             ),
         ]
     )
@@ -2036,11 +2099,11 @@ def render_workboard(b: dict, cost: dict | None = None) -> str:
             f'<div class="age">{_ago(i["age"])}</div></div>'
         )
 
-    if not b["inbox"]:
+    if not inbox_items:
         inbox = '<div class="inbox"><div class="zero">Nothing needs you.</div></div>'
     else:
-        answer_items = [i for i in b["inbox"] if _is_answer_item(i)]
-        rest_items = [i for i in b["inbox"] if not _is_answer_item(i)]
+        answer_items = [i for i in inbox_items if _is_answer_item(i)]
+        rest_items = [i for i in inbox_items if not _is_answer_item(i)]
         inbox = ""
         if answer_items:  # grouped first, visually distinct, no dispatch (R6)
             arows = "".join(inbox_row(i, answerable=True) for i in answer_items)
@@ -2240,7 +2303,7 @@ def render_workboard(b: dict, cost: dict | None = None) -> str:
 
     readout = (
         f"<b>{b['n_repos']}</b> repos&nbsp;&nbsp;<b>{b['n_open_tasks']}</b> open&nbsp;&nbsp;"
-        f"<b>{len(b['inbox'])}</b> need you"
+        f"<b>{len(inbox_items)}</b> need you"
     )
     health = "".join(
         f'<div class="health">source check · {esc(h)}</div>'
@@ -2990,6 +3053,15 @@ def _read_cost_summary() -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+def _cost_summary_mtime() -> float | None:
+    """The summary file's last-modified time — the freshness bound the workboard
+    re-prime flag surfaces. None when the file is absent/unstatable (R7)."""
+    try:
+        return _cost_summary_path().stat().st_mtime
+    except OSError:
+        return None
+
+
 def _agentprof_refresh_script() -> Path:
     """`agentprof/scripts/refresh-profile.sh` for this checkout, derived from
     this file's own location — same pattern as `_skills_root()`."""
@@ -3095,7 +3167,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(render_skills(collect()).encode("utf-8"))
             elif path == "/workboard":
                 self._send(
-                    render_workboard(get_board(), _read_cost_summary()).encode("utf-8")
+                    render_workboard(
+                        get_board(), _read_cost_summary(), _cost_summary_mtime()
+                    ).encode("utf-8")
                 )
             elif path == "/dispatches":
                 self._send(render_dispatches(_load_records()).encode("utf-8"))
