@@ -676,9 +676,11 @@ func parseTranscript(path string) (parsed, error) {
 			if run, ok := workflowRun(l.ToolUseResult, l.Message.Content); ok {
 				p.runs = append(p.runs, run)
 			}
-			if l.IsMeta || l.IsSidechain {
-				continue
-			}
+			// Match tool_results BEFORE the meta/sidechain skip: an Agent-tool
+			// result frequently lands on an isMeta/isSidechain user line, and
+			// dropping those left the originating tool_use unmatched and counted
+			// pending (task 08). prevTs, the model-call duration anchor, still
+			// only advances on non-skipped lines (the skip semantics above).
 			if ids := toolResultIDs(l.Message.Content); len(ids) > 0 {
 				if ts, err := time.Parse(time.RFC3339Nano, l.Timestamp); err == nil {
 					for _, id := range ids {
@@ -686,8 +688,13 @@ func parseTranscript(path string) (parsed, error) {
 							p.toolResults[id] = ts
 						}
 					}
-					prevTs, hasPrev = ts, true
+					if !l.IsMeta && !l.IsSidechain {
+						prevTs, hasPrev = ts, true
+					}
 				}
+			}
+			if l.IsMeta || l.IsSidechain {
+				continue
 			}
 			if prompt, cmdName, ok := turnPrompt(l.Message.Content); ok {
 				sn := snippet(prompt)
