@@ -27,3 +27,7 @@ frontmatter, ...); synced Google payload gitignored.
 - [x] `bash bin/install-vale` (second run) → no-op, exits 0 — verifier: exit 0, `~/.vale.ini` and `vale/styles/Google` mtimes unchanged (genuine no-op)
 - [x] `test -f ~/.vale.ini && grep -q '/vale/styles' ~/.vale.ini` → absolute path present — verifier: exit 0, absolute StylesPath rendered
 - [x] `git check-ignore vale/styles/Google >/dev/null` → synced payload ignored; `git ls-files vale/ | grep -q accept.txt` → vocab tracked — verifier: both exit 0; 0 Google files tracked, template + accept.txt tracked
+
+## Discovered
+
+- 2026-07-11 — Worker's in-worktree `bin/install-vale` run left `~/.vale.ini` StylesPath pointing at the ephemeral worktree; the installer's exists-and-differs guard then preserved the stale path. RESOLVED at merge: drain re-ran `bash bin/install-vale --force` from the main checkout (StylesPath now /Users/sjaconette/claude/vale/styles). No follow-up work; noted as a known side effect of worktree-isolated installer runs.
