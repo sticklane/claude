@@ -1,4 +1,5 @@
-Status: draft
+Status: obsolete
+Closed: 2026-07-12 — stub-intake gate-confirmed OBSOLETE. The frame-naming requirement (resolved `tool:<name>` leaf for completed tool_use/tool_result pairs; explicit `tool:(pending)` leaf for in-flight unresolved calls) is already pinned by specs/agentprof-instrumentation/SPEC.md R1 (lines 152-156) and R2 (lines 157-160), so a separate frame-naming-check is redundant. The stub's referenced specs/agentprof-frame-naming/SPEC.md does not exist (confirmed via find).
 Discovered-from: specs/orchestrator-share-audit/tasks/01-findings.md
 Spec: ../SPEC.md
 Blocking: no
