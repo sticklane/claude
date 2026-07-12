@@ -1,6 +1,6 @@
 # Task 04: untyped_fanout guard metric
 
-Status: pending
+Status: in-progress
 Depends on: ../../session-refresh-automation/tasks/02-per-session-reprime-fields.md, ../../session-refresh-automation/tasks/05-workboard-reprime-flag.md
 Priority: P2
 Budget: 12 turns
