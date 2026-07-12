@@ -40,27 +40,48 @@ Attended /build of a bare SPEC.md gets the same step at its close-out
 
 ## Requirements
 
-- R1 **Trigger and scope.** Drain runs the spec-completion review exactly
-  once per spec per run, at the lease-release boundary, only when ≥1 task
-  completed DONE this run. Diff = merge-base(first status-flip commit,
-  main)..main restricted to the union of the spec's tasks' `Touch:` paths
-  (product paths only). The build skip gate applies verbatim (NON-product
-  classification + <25 product lines → record
-  `spec review skipped: <reason>` in the spec's evidence/ and release the
-  lease as today).
+- R1 **Trigger, scope, idempotency.** Drain runs the spec-completion
+  review at the lease-release boundary, only when ≥1 task completed DONE
+  this run. Ordering is pinned: run review → commit the evidence line →
+  release the lease; the committed evidence file
+  (`specs/<slug>/evidence/spec-review.md`, carrying either
+  `spec review:` or `spec review skipped:`) is the idempotency token — a
+  generation (or resumed run) finding it already committed SKIPS the
+  review, which is what makes "once per spec per run" hold across baton
+  generations without a new baton line. Diff base: the status-flip
+  commit message becomes a PINNED contract (drop the current "e.g."):
+  `drain: <spec-slug> task NN in-progress`; recovery command =
+  `git log --reverse --format=%H --grep='^drain: <slug> task .* in-progress' -- 'specs/<slug>/tasks/'`,
+  first match; a spec with no such commit (drained before this ships)
+  skips with that stated reason. Diff =
+  merge-base(<that commit>, main)..main restricted to the union of the
+  spec's tasks' `Touch:` paths (product paths only). The build skip gate
+  applies verbatim (NON-product classification + <25 product lines →
+  the `spec review skipped: <reason>` evidence line, then release as
+  today); the hub computes it from `git diff --numstat` (names + counts
+  only — matching build's parse; never file contents).
 - R2 **Review-fix worker.** One worker (implementation-worker tier pin),
-  worktree-isolated, awaited: reviews the diff for high-confidence
-  correctness/behavior defects only (style excluded — /simplify territory;
-  uncertain findings excluded), fixes them within the union Touch,
-  re-runs the union of the spec's per-task gate commands, commits to
-  `task/<slug>-spec-review`, returns the ≤2k verdict (findings found /
-  fixed / discovered-out). Zero findings is a valid verdict and produces
-  the evidence line, not silence.
-- R3 **Merge + bookkeeping.** The fix branch merges through step 3's
-  existing machinery (whitelist diff over tasks/, runtime Touch
-  enforcement against the union Touch, serial merge, gates, push).
-  Uncertain/out-of-scope findings materialize as draft stubs via the
-  existing discoveries path. The exit checklist gains a line per spec:
+  worktree-isolated, awaited: reviews the diff — via `/code-review` at
+  the `low` effort tier where invocable (matching build's per-task pass;
+  build SKILL.md:~143), else the fallback subagent shape build already
+  defines — keeping ONLY high-confidence correctness/behavior findings
+  ("high-confidence" is the FINDING FILTER, not an effort tier; style
+  excluded — /simplify territory; uncertain findings excluded), fixes
+  them within the union Touch, re-runs the union of the spec's per-task
+  gate commands, commits to `task/<slug>-spec-review`, returns the ≤2k
+  verdict (findings found / fixed / discovered-out). Zero findings is a
+  valid verdict and produces the evidence line, not silence.
+- R3 **Merge + bookkeeping (task-file coupling nulled).** The fix branch
+  merges through step 3's serial merge + gates + push, with the
+  task-file-coupled parts explicitly ADAPTED: the review branch has NO
+  task file, so the runtime-Touch allowed set is the union Touch plus
+  the spec's `evidence/` dir ONLY (the "task's own file" term is null),
+  the append-only whitelist diff over `'*/tasks/*.md'` must be EMPTY
+  (any tasks/ change on this branch is a merge failure), and NONE of the
+  DONE bookkeeping runs (no Status flip, no checkbox ticks, no plan-block
+  handling — there is no task). Uncertain/out-of-scope findings
+  materialize as draft stubs via the existing discoveries path. The exit
+  checklist gains a line per spec:
   `spec review: N findings, M fixed, K stubbed` (or the skip reason).
 - R4 **Attended parity.** /build on a bare SPEC.md (no tasks/) runs the
   same review at close-out using its existing pre-commit review
