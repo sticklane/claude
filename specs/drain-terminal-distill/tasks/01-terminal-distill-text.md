@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 7 turns
@@ -33,7 +33,7 @@ serializes mechanically).
 
 ## Acceptance
 
-- [ ] `grep -qi 'terminal distill' .claude/skills/drain/SKILL.md` → hit AND MANUAL: once-per-session guard, ~648 rewrite, 3a pointer only, no second insertion
-- [ ] `grep -qi 'terminal-capture' CLAUDE.md` → hit (0 today, verified)
-- [ ] `grep -qi 'Agent-filed blockers' .claude/skills/distill/SKILL.md && grep -qi 'Agent-filed blockers' antigravity/.agents/skills/distill/SKILL.md` → hits (0 in both today)
-- [ ] `bash evals/lint-ultra-gate.sh` → OK
+- [x] `grep -qi 'terminal distill' .claude/skills/drain/SKILL.md` → hit AND MANUAL: once-per-session guard, ~648 rewrite, 3a pointer only, no second insertion — verifier PASS (step 4 "Terminal distill (R1), at most once per session"; closing Next line "(self-chains per conventions)" covers both terminal states; 3a single-clause pointer, ordinary batons don't distill, no second insertion)
+- [x] `grep -qi 'terminal-capture' CLAUDE.md` → hit (0 today, verified) — verifier PASS: self-chain bullet gained the terminal-capture carve-out sentence
+- [x] `grep -qi 'Agent-filed blockers' .claude/skills/distill/SKILL.md && grep -qi 'Agent-filed blockers' antigravity/.agents/skills/distill/SKILL.md` → hits (0 in both today) — verifier PASS: §1a in both, content-equivalent port in same commit 5647f5b
+- [x] `bash evals/lint-ultra-gate.sh` → OK — "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0; drain SKILL.md at exactly 500 lines (≤500 cap held)
