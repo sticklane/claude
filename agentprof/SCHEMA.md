@@ -75,11 +75,29 @@ values. Main-loop model calls carry no `agent_id` key at all.
 by the label reveals fan-out width (how many instances a turn spawned) and
 true per-instance parallelism, which a type-only frame would collapse.
 
-## Cost-summary sections: `reprime` and `sessions`
+## Cost-summary sections: `by_model`, `reprime`, and `sessions`
 
 Alongside the profile, `agentprof` emits a pre-aggregated "Cost (7d)" summary
-JSON (consumed by the workboard cost panel). Two of its sections roll up the
-views the `reprime` label and main-loop attribution make possible:
+JSON (consumed by the workboard cost panel). It rolls samples up by project,
+skill, agent type, and model (`by_project` / `by_skill` / `by_agent_type` /
+`by_model`), each a `{bucket: {metric: total}}` map summing every sample in the
+bucket. The `by_model` bucketing has two non-model sentinel rows worth calling
+out:
+
+- `(tools)` — duration-only tool samples have no model frame (the model slot
+  holds the `tool:` leaf), so they aggregate here rather than under any model.
+  This covers both main-loop tool calls and subagent tool calls.
+- `<synthetic>` — the row for synthetic pseudo-model samples (a message whose
+  model resolves to the literal `<synthetic>`, e.g. a zero-usage dedup
+  fallback); its bracketed name marks it non-model and its `calls` are kept
+  rather than excluded.
+
+Every other `by_model` key is a real model leaf (`claude-fable-5`,
+`claude-haiku-4-5`, …). No `by_model` key is ever `main` — the main-loop marker
+is a stack frame, not a model.
+
+Two further sections roll up the views the `reprime` label and main-loop
+attribution make possible:
 
 - `reprime` — the re-prime rollup over every sample labeled `reprime=true`:
   `count` (how many), `cache_write_tokens` (prompt cache re-written),
