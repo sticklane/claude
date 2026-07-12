@@ -118,6 +118,10 @@ order cannot resolve are surfaced, not guessed.
   version) is confirmed satisfiable from the file as it exists — unverified
   criteria pass vacuously or stall drains
   (docs/memory/anchored-acceptance-criteria.md).
+- Human-actionable blockers an agent can't clear go in the repo-root
+  `HUMAN.md` under its `## Agent-filed blockers` section — grammar and
+  filing rules in `.claude/rules/human-blockers.md` (cite it, don't
+  restate it).
 
 ## Testing changes
 
