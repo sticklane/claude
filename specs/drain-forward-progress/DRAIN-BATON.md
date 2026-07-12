@@ -1,72 +1,73 @@
 Run-token: e83f34f07094a4fa
-Generation: 6
+Generation: 7
 Spec: specs/prose-review
 Breakdown-failed:
-Intake-failed: specs/build-doc-currency-check, specs/codequality-agent-console-mutation-coverage, specs/codequality-antigravity-content-parity, specs/codequality-shared-header-parsing, specs/domain-knowledge-base, specs/idea-research-freshness, specs/narrow-autopilot
+Intake-failed: specs/build-doc-currency-check, specs/codequality-agent-console-mutation-coverage, specs/codequality-antigravity-content-parity, specs/codequality-shared-header-parsing, specs/domain-knowledge-base, specs/idea-research-freshness, specs/narrow-autopilot, specs/retire-static-dashboards, specs/rigor-tier, specs/trajectory-evals
 Stub-intake-failed:
 
 ## Done / next
 
-Gen 5 recorded 5 units (W=1 budget 5) and batoned. Work this gen — all inline
-(this environment exposes NO agent-dispatch/Task tool; see Anomalies):
+Gen 6 recorded 5 units (W=1 budget 5) and batoned. NEW THIS GEN: this
+generation HAD the Agent-dispatch tool (implementation-worker/critic/scout/
+verifier all present) — unlike gens 4-5 — and dispatched real awaited
+worktree workers. The two pending doc tasks are now BUILT + merged.
 
-1. critique-intake large-codebase-context-guide → READY. All mechanical gate
-   anchors verified present (tests/test_doc_links.sh enforces the mermaid
-   fence; token-discipline "Delegation defaults" section present; existing
-   guides establish the pattern). Deps conditional (idea-research-freshness
-   `Verified:` "if landed"), not hard. Wrote Breakdown-ready: true.
-2. auto-breakdown large-codebase-context-guide → 1 task: task 01 (guide +
-   token-discipline bullet), Status: pending, Depends on: none — DISPATCHABLE.
-   No antigravity mirror needed (.claude/rules/ and docs/guides/ aren't
-   mirrored — verified). Lease released.
-3. critique-intake model-routing-multi-vendor-citations → READY. All quotes
-   and URLs supplied verbatim in the spec; insertion anchor
-   "## Rules and skills this page explains" present (line 71); "Cross-vendor
-   grounding" absent. Minor: AC6 references absent .claude/runtime.md
-   (vacuously satisfied). Wrote Breakdown-ready: true.
-4. auto-breakdown model-routing-multi-vendor-citations → 1 task: task 01
-   (add ## Cross-vendor grounding section), Status: pending — DISPATCHABLE.
-   Lease released.
-5. critique-intake narrow-autopilot → NOT READY (6 findings in
-   specs/narrow-autopilot/critique-findings.md). Added to Intake-failed.
-   High-blast-radius skill-retirement (deletes /autopilot, edits ultra-path
-   build/SKILL.md + drain/reference.md, whole-repo sweep, plugin bump). Key
-   findings: R6/AC7 grep `grep -rln '\bautopilot\b' .claude/ ...` returns 887
-   files (only 19 tracked; ~868 are transient .claude/worktrees/*) — scope it
-   to `git grep -ln` so it's deterministic; line anchors drifted
-   (drain/reference.md:388→:776, onboard:74→:79); AC2 verbatim-check not
-   runnable; no ultra-gate AC; R7 antigravity fold underspecified (no
-   antigravity autopilot mirror exists); live sequencing dep on
-   build-doc-currency-check (itself NOT READY).
+Units this gen:
+1. DISPATCH large-codebase-context-guide/tasks/01 → DONE. Worker built the
+   guide + token-discipline bullet. Merged a92182b. Whitelist+Touch checks
+   passed. doc-links gate 16/0. spec-completion review SKIPPED (docs-only,
+   union Touch all .md) — evidence at specs/large-codebase-context-guide/
+   evidence/spec-review.md. Lease released. One manual-pending AC (human
+   post-merge readability of the MCP-server decision guide) left unticked.
+2. DISPATCH model-routing-multi-vendor-citations/tasks/01 → DONE. Worker
+   added the ## Cross-vendor grounding section (OpenAI/DeepMind/DeepSeek
+   citations). Merged c943395. Checks passed. doc-links 16/0.
+   spec-completion review SKIPPED (docs-only) — evidence at
+   specs/model-routing-multi-vendor-citations/evidence/spec-review.md. Lease
+   released. Manual-pending AC (human verifies each external URL resolves +
+   quote verbatim) unticked. Worker skipped R7 Verified: stamp (the
+   idea-research-freshness convention hasn't shipped) — reversible.
+3. CRITIQUE-INTAKE retire-static-dashboards → NOT READY (3 findings in
+   specs/retire-static-dashboards/critique-findings.md). Key: R1+AC use
+   recursive `grep -rn '\bfleet\b' .claude/` which sweeps 2524 transient
+   .claude/worktrees/ matches vs 9 tracked → scope to `git grep`; two closing
+   ACs gate on /fleet E2E + paid evals/run.sh with no manual-pending path;
+   missing lint-ultra-gate AC for the drain/SKILL.md edit.
+4. CRITIQUE-INTAKE rigor-tier → NOT READY (5 findings in
+   specs/rigor-tier/critique-findings.md). Key: missing lint-ultra-gate AC
+   (edits idea+build+drain SKILL.md); absent codex mirror obligation for
+   build+drain; list-specs antigravity mirror omitted from R8; vacuous R8 AC
+   + non-runnable "version higher than before"; R4 behavior graded by string
+   presence only.
+5. CRITIQUE-INTAKE trajectory-evals → NOT READY (4 findings in
+   specs/trajectory-evals/critique-findings.md). Key: absent
+   codex/.agents/skills/evals/SKILL.md mirror (ships stale +
+   self-contradictory — its line 41 says grader returns "never a transcript",
+   which v2 contradicts); R4 AC uses `||` where requirement is AND
+   (SKILL.md:11 can ship stale); plugin.json AC wrong path
+   (.claude-plugin/plugin.json, not top-level) + non-runnable bump check; R3
+   "passes" clause needs explicit manual-pending.
 
-DISPATCHABLE WORK NOW EXISTS for gen 6 (was empty at gen 5 start):
-- specs/large-codebase-context-guide/tasks/01-write-guide-and-rule-bullet.md
-  (pending, Depends on: none)
-- specs/model-routing-multi-vendor-citations/tasks/01-add-cross-vendor-grounding-section.md
-  (pending, Depends on: none)
-Both are P2 single-task doc deliverables, gated on tests/test_doc_links.sh +
-grep ACs, each with one manual-pending human URL/readability criterion. Gen 6
-dispatches these (W=1) BEFORE any further critique/stub intake — dispatch
-outranks exhaustion-phase work. BUT only a generation WITH agent-dispatch can
-build them (see Anomalies).
+DISPATCHABLE WORK for gen 7: NONE currently pending. Both doc tasks done.
+prose-review 04-13 remain GATED on 03 (deferred). No Breakdown-ready spec
+lacks tasks/ (the two this run had were built).
 
-prose-review remains FULLY GATED on 03's deferred answer (still deferred, no
-## Answers). 04 depends on 01+03; retrofits 05-13 depend on 03. Lease HELD,
-now bumped to Generation 6 (pre-seeded specs/prose-review/DRAIN-OWNER.md).
-
-EXHAUSTION PHASE for gen 6 (after dispatching the two pending tasks above):
-1. Critique intake, one spec/pass, ≤once per spec per run, skipping the 7
-   Intake-failed specs. Remaining eligible (Priority then path):
-   retire-static-dashboards, rigor-tier, trajectory-evals,
-   workboard-auto-triage (P2), then first-pass-success-rate, harness-audit
-   (P3). (large-codebase-context-guide and model-routing-multi-vendor-citations
-   are now broken-down, no longer draft-spec candidates.)
-2. Stub intake (screen-stub.sh FIRST per stub): agent-tier-leaks/tasks/04,05;
-   drain-wake-cost/tasks/04; orchestrator-share-audit/tasks/03;
-   spec-completion-review/tasks/04,05. scr/05 (build-mirror gap) likely
-   DECISION-SHAPED or refused per gen 2.
-3. 3b auto-breakdown: none pending (the two Breakdown-ready specs this gen
-   already have tasks/).
+EXHAUSTION PHASE for gen 7 (resume here — W=1 budget 5):
+1. Critique intake, one spec/pass, ≤once per spec per run, skipping the 10
+   Intake-failed specs above. Remaining eligible (Priority then path):
+   workboard-auto-triage (P2), then first-pass-success-rate,
+   harness-audit (P3).
+2. Stub intake (screen-stub.sh FIRST per stub) over the 6 in-scope draft
+   stubs: specs/agent-tier-leaks/tasks/04-memory-index-pointer.md and
+   05-ac3-inuse-exclusion.md; specs/drain-wake-cost/tasks/04-skill-length-drift.md;
+   specs/orchestrator-share-audit/tasks/03-frame-naming-check.md;
+   specs/spec-completion-review/tasks/04-flip-message-format-transition.md and
+   05-build-mirror-gap.md. scr/05 (build-mirror gap) likely DECISION-SHAPED
+   or refused per gen 2. Ultra-path stubs (agent-tier-leaks, drain-wake-cost,
+   spec-completion-review touch drain/build machinery) — if promoted, the
+   authored task must carry a lint-ultra-gate AC where it edits an ultra-path
+   SKILL.md.
+3. 3b auto-breakdown: none pending.
 4. Batch interview LAST: prose-review 03 deferred question (verbatim below) +
    exit checklist. A headless generation writes it into this baton and stops.
 
@@ -99,38 +100,45 @@ BLOCK rather than commit if its precondition fails.
 
 ## Anomalies / carry-forward
 
-- ENVIRONMENT LIMITATION (gen 5, NEW): this drain generation ran in a context
-  with NO agent-dispatch tool (no Task/Agent/Team tool in base or deferred
-  set — searched exhaustively). Consequences: (a) implementation-workers
-  CANNOT be dispatched — the two pending tasks above cannot be BUILT by a
-  generation in this same environment; (b) /critique and /breakdown were run
-  INLINE (in the hub session's own context via the Skill tool) rather than
-  via the critic agent — verdicts are sound but this spends hub context, off
-  the wake-economics ideal; (c) a successor generation CANNOT be auto-spawned.
-  Per auto-memory (feedback_no_headless_sessions: "human launches every
-  generation"), gen 6 is HUMAN-LAUNCHED. A human must relaunch drain for
-  gen 6, ideally in an environment where the Task/Agent tool IS available so
-  the two pending doc tasks can be built (else gen 6 repeats this limitation
-  and can only do more inline critique/breakdown/stub-intake, never build).
-- SPEC-COMPLETION REVIEW OBLIGATION (carried): prose-review had tasks 01+02
-  complete DONE in an earlier generation, so when it eventually reaches
-  nothing-left-to-dispatch and its lease releases, the spec-completion review
-  MUST run first (evidence file specs/prose-review/evidence/spec-review.md is
-  the idempotency token — still NOT written). Do NOT retro-apply to specs
-  drained before the machinery merged (cache-reprime, agentprof-attr,
-  drain-forward-progress, spec-completion-review itself). Gen 5 drained NO
-  prose-review tasks (fully gated), so no review fired this gen.
-- vale side effect: any worker that runs bin/install-vale inside its worktree
-  repoints machine-global ~/.vale.ini StylesPath at that worktree; after
-  merging/discarding such a branch, re-run `bash bin/install-vale --force`
-  from /Users/sjaconette/claude and confirm `grep '^StylesPath' ~/.vale.ini`
-  shows /Users/sjaconette/claude/vale/styles. (No such worker ran this gen.)
+- ENVIRONMENT (gen 6, RESOLVED vs gens 4-5): gen 6 had the Agent-dispatch
+  tool and dispatched real worktree workers + critic agents (critique intake
+  ran via the critic AGENT, not inline — cheaper than gen 5's inline path).
+  STRUCTURAL: gen 6 was spawned by a top-level Agent-capable PARENT and thus
+  had the tool; generations spawned as a drain's OWN children lack it
+  (nested-subagent limit). Therefore gen 6 did NOT self-spawn — it returned
+  this baton pointer to its parent, which spawns gen 7 DIRECTLY. Gen 7 must be
+  launched the same way (top-level / human-launched) to retain dispatch
+  ability; a nested launch repeats the gens-4-5 limitation.
+- SPEC-COMPLETION REVIEW OBLIGATION (still carried): prose-review had tasks
+  01+02 complete DONE earlier this run, so when it eventually reaches
+  nothing-left-to-dispatch and its lease truly releases (after 03 answered and
+  04-13 drained), the spec-completion review MUST run first (idempotency token
+  specs/prose-review/evidence/spec-review.md still NOT written). Gen 6 did NOT
+  force it: 03 unresolved → spec not fully drained → obligation deferred. Do
+  NOT retro-apply to specs drained before the machinery merged (cache-reprime,
+  agentprof-attr, drain-forward-progress, spec-completion-review itself). The
+  two doc specs this gen correctly ran their reviews (both docs-only skips).
+- prose-review lease HELD across gen 6, now bumped to Generation 7
+  (specs/prose-review/DRAIN-OWNER.md). It is a parked baton lease carrying the
+  deferred question + spec-completion obligation, NOT actively dispatching.
+- vale side effect (carry): any worker that runs bin/install-vale inside its
+  worktree repoints machine-global ~/.vale.ini StylesPath at that worktree;
+  after merging/discarding such a branch, re-run `bash bin/install-vale
+  --force` from /Users/sjaconette/claude and confirm `grep '^StylesPath'
+  ~/.vale.ini` shows /Users/sjaconette/claude/vale/styles. (No such worker ran
+  gen 6.)
 - Two FOREIGN owner leases live and untouchable: specs/draft-auto-promotion/,
   specs/work-exhaustion/. Never touch specs/agentprof-antigravity-adapter.
-- Foreign worktrees/branches in the shared checkout (task/01-verifier-leak-trace,
-  task/02-namespace-attribution, task/03-closing-gate, task/03-ship-gate) —
-  other sessions' work; never sweep them. Untracked slack-relay/ dir belongs
-  to another session.
+- Foreign worktrees/branches may exist in the shared checkout (other sessions'
+  work: task/01-verifier-leak-trace, task/02-namespace-attribution,
+  task/03-closing-gate, task/03-ship-gate); never sweep them. Untracked
+  slack-relay/ dir belongs to another session.
 - plugin.json at 0.8.48; prose-review/04 closing task bumps relative to base.
-- Generations cap = 10 (this baton hands to gen 6). Remote/main in sync at
-  gen 5 handoff (0 ahead / 0 behind, verified).
+- Generations cap = 10 (this baton hands to gen 7; 3 generations remain after
+  gen 7). Remote/main in sync at gen 6 handoff (0 ahead / 0 behind, verified;
+  all gen-6 commits pushed).
+- KNOWN PRE-EXISTING GATE (discovered gen 6): tests/test_antigravity_parity.sh
+  fails at HEAD with "prose-review" — a pre-existing antigravity mirror-parity
+  gap for the prose-review skill, unrelated to gen-6 work (verified in a
+  detached worktree at base). Not swept, not fixed; flagged for a human /
+  future spec. doc-links + all other tests pass.
