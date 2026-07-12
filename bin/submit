@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# The toolkit repo's "submit a change" flow: push the current branch, then
+# refresh every locally-installed copy of the skills/agents this repo
+# mirrors to (Claude Code's plugin cache; Antigravity and Codex need no
+# refresh — see bin/refresh-plugins for why).
+#
+# git has no native post-push hook, so this wrapper exists instead of a
+# pre-push hook: a pre-push hook runs BEFORE the push lands on the remote,
+# which is too early for a marketplace-sourced (GitHub) plugin refresh to
+# see the new content. Run `bin/submit` in place of `git push` when you want
+# your local install to pick up what you just shipped.
+#
+# Usage: bin/submit [git push args...]   (defaults to `git push` with no args)
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+echo "== pushing =="
+git push "$@"
+
+echo
+"$repo_root/bin/refresh-plugins"
