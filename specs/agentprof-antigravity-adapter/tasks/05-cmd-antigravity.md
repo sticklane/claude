@@ -1,6 +1,6 @@
 # Task 05: `cmd_antigravity.go` subcommand + main.go wiring
 
-Status: in-progress
+Status: done
 Depends on: 04
 Priority: P1
 Budget: 10 turns
@@ -52,7 +52,7 @@ New `cmd_antigravity.go` + its test, plus the one-line addition to
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./... -run TestCmdAntigravity -v` → both new tests pass
-- [ ] `cd agentprof && go build ./...` → succeeds with `cmd_antigravity.go` wired into `main.go`
-- [ ] `cd agentprof && go build -o agentprof . && ./agentprof antigravity -o summary --antigravity-dir internal/antigravity/testdata --days 3650` → exits 0, prints a JSON array matching `summaryRow`'s shape (same shape as `agentprof claude -o summary`)
-- [ ] `cd agentprof && ./agentprof antigravity -o summary --antigravity-dir /tmp/does-not-exist --days 3650; echo "exit=$?"` → exit 1, stderr contains "no samples found"
+- [x] `cd agentprof && go test ./... -run TestCmdAntigravity -v` → both new tests pass
+- [x] `cd agentprof && go build ./...` → succeeds with `cmd_antigravity.go` wired into `main.go`
+- [x] `cd agentprof && go build -o agentprof . && ./agentprof antigravity -o summary --antigravity-dir internal/antigravity/testdata --days 3650` → exits 0, prints a JSON array matching `summaryRow`'s shape (same shape as `agentprof claude -o summary`)
+- [x] `cd agentprof && ./agentprof antigravity -o summary --antigravity-dir /tmp/does-not-exist --days 3650; echo "exit=$?"` → exit 1, stderr contains "no samples found"

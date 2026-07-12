@@ -31,6 +31,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdVertex(args[1:], stdout, stderr)
 	case "otel":
 		return cmdOtel(args[1:], stdout, stderr)
+	case "antigravity":
+		return cmdAntigravity(args[1:], stdout, stderr)
 	case "build":
 		return cmdBuild(args[1:], stdout, stderr)
 	default:
@@ -66,6 +68,7 @@ Subcommands:
   gcp      emit canonical samples from a GCP billing export file
   vertex   emit canonical samples from a Vertex AI request-response logging export
   otel     emit canonical samples from an OTLP/JSON trace export
+  antigravity  emit canonical samples from Antigravity CLI conversation databases
   build    convert canonical sample JSONL into a pprof profile
 
 Flags:
