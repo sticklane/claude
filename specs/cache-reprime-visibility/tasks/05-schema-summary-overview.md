@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Promotion-ready: true
 Promoted-by-run: attended-2026-07-11-sjaconette
 Discovered-from: specs/cache-reprime-visibility/tasks/04-docs.md
@@ -32,11 +32,14 @@ struct in `agentprof/internal/costsummary/costsummary.go` before writing.
 
 ## Acceptance
 
-- [ ] `grep -c 'sessions_added' agentprof/SCHEMA.md` ≥ 1 AND
+- [x] `grep -c 'sessions_added' agentprof/SCHEMA.md` ≥ 1 AND
   `grep -qi 'Cost-summary top-level keys' agentprof/SCHEMA.md` (the new
   overview section's heading — gate-verified absent today; the section
   itself is the deliverable. `by_agent_type` already appears at
   SCHEMA.md:82 and is NOT an anchor)
-- [ ] MANUAL: every field of the `Summary` struct appears in the overview
+  — verifier: grep -c → 1, heading match exit 0 (evidence/05-schema-summary-overview.md)
+- [x] MANUAL: every field of the `Summary` struct appears in the overview
   section, none invented
-- [ ] `bash agentprof/scripts/check.sh` → green (docs only)
+  — verifier: struct has 8 JSON fields (costsummary.go:26-35); new section lists exactly those 8, none invented
+- [x] `bash agentprof/scripts/check.sh` → green (docs only)
+  — verifier: format-check ok / lint ok / tests ok, exit 0
