@@ -2,6 +2,7 @@
 
 Status: open
 Priority: P1
+Breakdown-ready: true
 
 ## Problem
 
@@ -15,9 +16,12 @@ multiple worker Decisions, critic findings, a screen false-positive, and
 a spec-defect deferral, and no /distill ran. Steven's ask (2026-07-12):
 "we should auto distill when autonomous work completes either because we
 run out, or because we hit the generation limit." /distill is
-model-invocable (a light artifact stage with no launch contract), so this
-is a self-chain drain already has precedent for (3b's /breakdown, critique
-intake's /critique — the sanctioned in-session Skill-tool exception).
+model-invocable (a light artifact stage with no launch contract), but the
+self-chain conventions' condition (a) — a critic-READY artifact — cannot
+apply to it (distill consumes a run, it ships no gated artifact), so
+unlike 3b's /breakdown and critique intake's /critique, this needs an
+explicit new terminal-capture carve-out in CLAUDE.md's self-chain bullet
+(R1 adds it).
 The timing is also exactly right for cache economics: distill batches
 CLAUDE.md/rules writes "at session end" (token-discipline, Cache
 economics) — a drain terminal state IS session end.
@@ -75,7 +79,11 @@ an interview; "nothing worth keeping" stays a valid outcome.
   candidate learning that needs a human decision is filed as a `decide`
   entry under the repo HUMAN.md's `## Agent-filed blockers` section
   (human-blockers-doc grammar) and named in the summary; repo-file
-  routing is otherwise unchanged. The paragraph also extends the harvest
+  routing is otherwise unchanged. Detection ADOPTS drain's
+  "AskUserQuestion where available, else…" idiom (drain SKILL.md:~594) —
+  distill itself has NO interview today, so this paragraph adds the
+  behavior; do not hunt for an existing clause in distill.
+  The paragraph also extends the harvest
   step for orchestrated runs: sources include the run's committed
   artifacts (task-file `## Decisions`/`## Progress` entries,
   critique-findings files, screen/sweep incidents, the exit checklist),
@@ -84,11 +92,11 @@ an interview; "nothing worth keeping" stays a valid outcome.
   gets the content-equivalent paragraph in the same commit (codex
   reaches it via symlink — no codex work).
 - R4 **Mirror + plugin closing.** Content-equivalent lines in the
-  antigravity drain workflow (and its distill port if one exists —
-  check; distill may be ported as a skill) and the codex drain wrapper
-  where its text covers the terminal sequence; plugin bump in the
-  closing task's own commit; `claude plugin validate .` and
-  `bash evals/lint-ultra-gate.sh` green (drain is ultra-path).
+  antigravity drain workflow and the codex drain wrapper where its text
+  covers the terminal sequence (the antigravity DISTILL port is owned by
+  R3/task 01, not here); plugin bump in the closing task's own commit;
+  `claude plugin validate .` and `bash evals/lint-ultra-gate.sh` green
+  (drain is ultra-path).
 
 ## Out of scope
 
