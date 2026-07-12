@@ -10,9 +10,15 @@ fixture-relative paths, no `$EVAL_DIR` variables), `assert.sh` (runs
 with CWD the fixture; exit 0 = pass, non-zero with output explaining
 what failed). Both scripts run under bare `bash`, and macOS's system bash
 is 3.2 — write them to bash 3.2 (no `declare -A` or other bash-4+ syntax),
-or they misbehave silently rather than erroring. Antigravity has no headless CLI, so the run step hands the
-user Agent Manager launches instead of `claude -p`; `allowed-tools.txt`
-has no Antigravity equivalent and is ignored here.
+or they misbehave silently rather than erroring. Antigravity DOES have a
+headless CLI (`agy -p`, the `antigravity-cli` package's binary) but it is
+NOT safe to drive here yet: live-tested 2026-07-12, it did not confine
+itself to the invoking directory and instead edited real tracked files
+elsewhere in the checkout (see `runtimes/antigravity.md`'s Headless
+section, "UNSAFE for isolated/unattended use" — the same finding
+`evals/run.sh` hard-blocks on). The run step below stays the manual
+Agent Manager launch until that's resolved; `allowed-tools.txt` still has
+no Antigravity equivalent and is ignored here.
 
 1. **Scaffold if no evalset exists.** Create `evals/<skill>/01-<name>/`
    with the three files: a minimal fixture the skill can act on, the
@@ -30,7 +36,8 @@ has no Antigravity equivalent and is ignored here.
 3. **Hand the user the launch.** One Agent Manager launch per scenario:
    a fresh conversation rooted at the fixture directory whose first
    message is the contents of `prompt.txt`. Wait for the user to report
-   the session finished — do not grade a run that is still going.
+   the session finished — do not grade a run that is still going. (Not
+   `agy -p` yet — see the workspace-scoping caveat above.)
 4. **Grade.** With CWD the fixture directory, invoke the scenario's
    assert.sh by absolute path from the toolkit repo — the fixture does
    not contain it — e.g.

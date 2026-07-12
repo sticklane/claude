@@ -5,98 +5,191 @@ Describes how the abstract tiers and surfaces map onto Antigravity. The
 workflows, AGENTS.md, hooks); this profile describes it, it does not
 replace it.
 
-"Antigravity" always means the `antigravity` CLI (confirmed installed
-locally at `~/.antigravity/antigravity/bin/antigravity`, v1.107.0) plus the
-Agent Manager GUI it opens — never the GUI alone. The CLI ships a `chat`
-subcommand; see `## Headless` below for exactly what that does and does
-not enable.
+"Antigravity" always means the `antigravity-cli` package (binary `agy`)
+plus the Agent Manager GUI — never the GUI alone. **Name collision, verify
+before use**: this machine also has the Antigravity.app *bundle's own*
+launcher scripts symlinked as `antigravity` and `agy` under
+`~/.antigravity/antigravity/bin/`, and that directory sits earlier in
+`$PATH` than Homebrew's `/opt/homebrew/bin/agy` — so a plain `agy` can
+silently resolve to the wrong tool. The two are easy to tell apart:
+`agy --version` on the real `antigravity-cli` prints one bare line (e.g.
+`1.1.1`); the app-bundle impostor prints three (an app version like
+`1.107.0`, a commit hash, an arch). If in doubt, use the full path
+(`/opt/homebrew/bin/agy` on this machine) rather than the bare command.
 
 ## Tiers
 
-| Tier          | Model                                             | Notes                                                                                         |
-| ------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| scout-tier    | Flash-class model                                 | The port's own vocabulary (`antigravity/README.md`): "pick a Flash-class model for scouting". |
-| session-tier  | the session model                                 | Whatever model the Agent Manager conversation is running.                                     |
-| deep-tier     | the strongest model available in the model picker | Recommended pin value — opt-in, not an active default.                                        |
-| frontier-tier | the strongest model available in the model picker | No distinct rung above deep-tier; recommended pin value — opt-in, not an active default.      |
+| Tier          | Model                                              | Notes                                                                             |
+| ------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| scout-tier    | `Gemini 3.5 Flash (Low)`, via `--model`              | Cheap, fast reconnaissance — cheapest entry in `agy models`' output.               |
+| session-tier  | the CLI's configured default model (no `--model`)   | Whatever the interactive session runs.                                             |
+| deep-tier     | `Claude Opus 4.6 (Thinking)` or `Gemini 3.1 Pro (High)`, via `--model` | Recommended pin value — opt-in, not an active default. Either is a legitimate flagship-tier pin; `agy models` lists both plus `Claude Sonnet 4.6 (Thinking)` and `GPT-OSS 120B (Medium)`. |
+| frontier-tier | same as deep-tier                                   | No distinct rung above deep-tier exposed by the CLI; recommended pin value — opt-in, not an active default. |
 
 The two deep-tier rows are recommended pin values, not active defaults
-(selection and override convention in [README.md](README.md)).
-Antigravity has no stable CLI model id to pin: model choice is a
-human selection in the Agent Manager model picker, so a tier pin here
-is a convention for the human dispatcher, not a flag a script passes.
+(selection and override convention in [README.md](README.md)). Model
+names are exact strings from `agy models`' output (confirmed live,
+`antigravity-cli` 1.1.1, 2026-07-12) — pass them to `--model` verbatim,
+quoted; re-verify against `agy models` before pinning, since the roster
+changes as models are added/retired. Unlike the picker-only model in this
+profile's previous version, `--model` genuinely lets a script pin a model
+— no live test of `--model` accepting these exact strings has been run
+yet (only `-p` with no `--model` override was confirmed); treat the exact
+invocation as unverified until checked.
 
 ## Role pins
 
-Gemini/Antigravity mapping of the routing defaults adopted in
+Antigravity mapping of the routing defaults adopted in
 [claude-code.md](claude-code.md) "Role pins" (spec:
-model-routing-native-config). All rows are picker conventions for the
-human dispatcher — Antigravity has no flag or frontmatter to pin a
-model programmatically.
+model-routing-native-config). Antigravity has no `opusplan`-style
+plan/execution split; per-role pins pass via `--model` (confirmed to
+exist as a flag; exact value acceptance unverified — see Tiers above).
 
-| Role                                                                  | Antigravity default (model picker)                                            |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| session default                                                       | the Agent Manager conversation's model (no plan/execution split exists)       |
-| implementation workers                                                | Pro-class — deep-tier adopted default, mirroring claude-code's `opus` pin    |
-| explore / codebase-search                                             | Flash-class — the cheapest Flash variant in the picker                        |
-| verifier (acceptance evidence; advisory reviewer lane)                | Flash-class                                                                   |
-| spec/plan/diff critic                                                 | Pro-class — deep-tier work; a critic pass costs ~1% of a wrong implementation |
-| distill workflow                                                      | Pro-class / the strongest model in the picker                                 |
-| retry escalation (attempt 2, verifier evidence in prompt)             | the strongest model in the picker — a retry after a deep-tier (Pro-class) attempt failed |
-| tournament escalation (attempts 3+, after the frontier retry failed)  | the strongest model in the picker — Antigravity's frontier rung               |
+| Role                                                                 | Antigravity default                                                                      |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| session default                                                       | the CLI's configured default model (no plan/execution split exists)                          |
+| implementation workers                                                | `Claude Opus 4.6 (Thinking)`, via `--model` — deep-tier adopted default, mirroring claude-code's `opus` pin |
+| explore / codebase-search                                             | `Gemini 3.5 Flash (Low)`, via `--model`                                                      |
+| verifier (acceptance evidence; advisory reviewer lane)                | `Gemini 3.5 Flash (Low)`, via `--model`                                                      |
+| spec/plan/diff critic                                                 | `Claude Opus 4.6 (Thinking)` — deep-tier work; a critic pass costs ~1% of a wrong implementation |
+| distill workflow                                                      | `Claude Opus 4.6 (Thinking)`                                                                 |
+| retry escalation (attempt 2, verifier evidence in prompt)             | `Gemini 3.1 Pro (High)` — same tier as attempt 1; the CLI exposes no rung above deep-tier, so the retry re-runs with the verifier's failure evidence instead of a stronger model |
+| tournament escalation (attempts 3+, after the retry failed)           | `Gemini 3.1 Pro (High)` — the CLI exposes no rung above deep-tier, so the frontier rung collapses onto it |
 
 ## Headless
 
-No fenced block (README.md's `## Headless` contract, shape 2: no
-scriptable relaunch) — confirmed live, not assumed, 2026-07-12 against
-`antigravity` v1.107.0. The CLI's `chat` subcommand
-(`antigravity chat [prompt] -m agent`) is real, but it is a
-**fire-and-forget window launcher, not a synchronous completion API**:
-run against a scratch fixture, it returned immediately (exit 0, empty
-stdout — no captured response) while spawning a full Electron GUI
-session (main process, renderer, GPU process, language server) that
-runs the agent asynchronously inside a window. No flag blocks for the
-result or writes it anywhere a caller could poll, so there is no
-scriptable relaunch whose output this toolkit's consumers (the eval
-runner's grade-the-response pattern, drain/autopilot's headless
-fallback) could capture. Anything the toolkit would run headlessly in
-that sense still becomes an agent the human starts from the Agent
-Manager (or via `chat` as a scripted trigger for that same GUI session —
-see `## Orchestration`) with the corresponding workflow.
+Non-interactive mode is `agy -p` / `--print` (confirmed live,
+`antigravity-cli` 1.1.1, 2026-07-12 — both a plain reply and a real
+skill invocation: `list-specs` auto-triggered by description match, ran
+its bundled `specs/status.sh`, and returned an accurate report, from a
+scratch fixture and from this repo's `antigravity/` port root):
+
+```bash
+/opt/homebrew/bin/agy -p "<prompt>" --mode accept-edits --sandbox
+```
+
+**The absolute path is load-bearing, not decoration.** A bare `agy` was
+tried first and failed live: invoked from inside a subprocess (the eval
+runner), it silently resolved to the app-bundle impostor (`Warning: 'p' is
+not in the list of known options, but still passed to Electron/Chromium`),
+returned in ~2s instead of blocking for a real model turn, and produced no
+usable output — the PATH-shadow risk noted above is not theoretical, it
+reproduced on the first real end-to-end attempt. Use the absolute path
+confirmed on this machine; re-resolve it (`brew --prefix`, or wherever
+`antigravity-cli` installs) rather than assuming this path on another
+machine.
+
+**UNSAFE for isolated/unattended use as currently understood — do not
+wire into evals or any automated fixture-based caller yet.** Live-tested
+end to end via the eval runner (`(cd "$EVAL_DIR" && /opt/homebrew/bin/agy
+-p ...)`, `$EVAL_DIR` a fresh `mktemp -d` with its own `git init`):
+the process did NOT confine itself to `$EVAL_DIR`. It instead edited real,
+tracked files in this toolkit's own checkout
+(`tests/fixtures/workboard/demo-repo/specs/demo/{SPEC.md,tasks/01-thing.md}`,
+plus created a new `02-other-thing.md`) — a path with no filesystem
+relationship to `$EVAL_DIR` at all. Reverted cleanly (uncommitted,
+`git checkout --` + `rm` the new file; the affected test still passes),
+but this means real, undesired file mutation in a shared checkout is a
+live, reproduced risk, not a theoretical one. Leading theory, unconfirmed:
+`-p` reused a stale "last active workspace" from an unrelated manual test
+run minutes earlier in this same repo (`agy` invoked from `antigravity/`),
+rather than scoping to the invoking cwd — consistent with the top-level
+CLI's own `-r`/`--reuse-window` "last active window" language and the
+GUI's session-reuse model bleeding into `-p` mode. `--new-project`
+("Create a new project for this session") is an untested candidate fix —
+it was not tried before this finding surfaced, to avoid a second
+uncontrolled mutation. Until workspace scoping is confirmed reliable
+(`--new-project`, `--add-dir`, or another mechanism forcing a fresh,
+isolated workspace per invocation), do NOT point `.claude/runtime.md` at
+`antigravity` for `evals/run.sh`, and do NOT use this template for any
+unattended/parallel caller — codex and claude-code do not share this
+defect (both confirmed to confine themselves to their invoking
+cwd/`--cd`).
+
+- `<prompt>` — a self-contained single-agent prompt, same contract as the
+  claude-code template. Passed via `-p`/`--print` (`--prompt` is a
+  documented alias for the same flag).
+- `<allowlist>` — no per-tool allowlist flag exists. `--sandbox` ("Run in
+  a sandbox with terminal restrictions enabled") is the closest analogue
+  — coarse-grained, not a tool-by-tool list, same gap the codex and
+  gemini-cli profiles note for their own runtimes. `--mode accept-edits`
+  auto-approves edits without prompting; `--dangerously-skip-permissions`
+  bypasses ALL tool-permission prompts (claude-code's `bypassPermissions`
+  analogue — sandboxed use only, per its own `--help` naming). There is
+  no `dontAsk`-equivalent that aborts on an unapproved tool instead of
+  auto-approving or hanging.
+- `<turn cap>` — no CLI flag; `--print-timeout` (default `5m0s`) bounds
+  wall-clock wait instead of a turn count.
+- `<tier alias>` — `--model "<exact name from agy models>"` for the Role
+  pins ladder above (unverified — see Tiers).
+- **Discovery walks up to find the workspace root**, not strictly
+  cwd/`--cd`-relative like Codex: invoked from `antigravity/` in this
+  repo, it treated `/Users/sjaconette/claude` (one level up, the git
+  root) as "the project" in its own summary, while still finding and
+  running the skill that only exists under `antigravity/.agents/skills/`
+  — i.e. it discovered skills relative to the actual invocation cwd even
+  while reporting a workspace root above it. Run it from (or `--add-dir`
+  into) `antigravity/`, matching Codex's `--cd codex` convention, until a
+  more precise discovery-root test is run.
+- **Skill invocation** works the same way Codex's does (both consume the
+  Agent Skills standard antigravity defines): no custom slash commands,
+  reached by natural-language description match. Unlike Codex's
+  explicit-`$name` invocation (confirmed unreliable there), whether an
+  explicit invocation syntax exists and works here has not been tested —
+  the one live check exercised auto-trigger only.
+- **Structured output**: no `--json`/`-o` flag in `agy --help`; the
+  response prints as prose/markdown to stdout, sometimes pointing at a
+  generated artifact file under `~/.gemini/antigravity-cli/brain/<uuid>/`
+  (confirmed live — see Orchestration).
 
 ## Orchestration
 
 - **Primitive**: none scripted — sequential markdown workflows
-  (`.agents/workflows/`) executed inside one conversation.
-- **Invocation surface**: primarily human-dispatched Agent Manager
-  parallelism — a fan-out orchestration degrades to a human launch list
-  (the human starts each worker agent from the Agent Manager). A script
-  can now also trigger one of those sessions itself:
-  `antigravity chat "<prompt>" -m agent -n` (confirmed live) opens a
-  new-window agent session programmatically — a real scripted
-  alternative to manually opening the Agent Manager, useful as
-  autopilot's "fire-and-forget, this machine" mechanism. It stays
-  launch-only, though: no blocking and no captured result (see
-  `## Headless`), so a script still can't learn the outcome without a
-  human checking the window or a separate polling mechanism this
-  profile does not define.
-- **Structured output**: none — workflow args and agent returns are
-  free text; no schema validation.
-- **Resume**: Agent Manager conversation history plus on-disk artifacts
-  (task files, `brain/` artifacts); no journaled replay.
-- **Parallelism cap**: however many agents the human chooses to launch;
-  no programmatic cap.
+  (`.agents/workflows/`) executed inside one conversation, same as
+  before this correction; `agy -p` (above) is a way to *drive* one
+  headlessly, not a different orchestration primitive.
+- **Invocation surface**: `agy -p "<prompt>"` per worker (confirmed
+  live), same shape as the gemini-cli and codex profiles — shell scripts
+  wrapping one call per parallel task; no native fan-out primitive to
+  hand a multi-stage script to. The Agent Manager GUI remains available
+  for human-dispatched parallelism when a human wants to watch.
+- **Structured output**: none — no `--json` flag; responses are
+  free-text/markdown, sometimes with a linked artifact file (see
+  Headless). No schema validation.
+- **Resume**: `--continue`/`-c` (most recent conversation) or
+  `--conversation <id>` (resume by id) reattach a previous session,
+  confirmed present in `--help` (not live-tested); a wrapper owns any
+  cross-worker resume logic. `brain/<uuid>/` artifact directories
+  (confirmed live, under `~/.gemini/antigravity-cli/brain/`) persist
+  generated files across a session.
+- **Parallelism cap**: whatever the wrapper imposes; nothing built in.
 
 ## Notes
 
 - **Config locations**: repo — `.agents/skills/`, `.agents/workflows/`,
   `AGENTS.md` (always-on rules), `.agents/hooks.json`; global —
-  `~/.gemini/config/skills/`. Older Antigravity builds read `.agent/`
-  instead of `.agents/`.
-- **Permission-mode equivalents**: the Terminal Execution Policy in the
-  Settings UI — Off / Auto / Turbo plus a command deny list. There is
-  no repo-checked-in allowlist; for unattended runs, set the deny list
-  in Settings (see `antigravity/README.md`).
+  `~/.gemini/config/skills/`, `~/.gemini/antigravity-cli/brain/`
+  (generated-artifact storage, confirmed live). Older Antigravity builds
+  read `.agent/` instead of `.agents/`.
+- **Permission-mode equivalents**: `--mode plan` ≈ read-only planning,
+  `--mode accept-edits` ≈ `acceptEdits`, `--dangerously-skip-permissions`
+  ≈ `bypassPermissions` (sandboxed use only, per its own naming),
+  `--sandbox` layers terminal restrictions on top of any mode. The GUI's
+  Terminal Execution Policy (Settings UI: Off/Auto/Turbo + a command deny
+  list) is the separate interactive-session equivalent; there is no
+  repo-checked-in allowlist file either way.
+- **The `agy`/`antigravity` name collision is machine-specific but
+  real**: confirmed on this machine (`~/.antigravity/antigravity/bin`
+  before `/opt/homebrew/bin` in `$PATH`); verify PATH order or use an
+  absolute path before trusting a bare `agy` invocation elsewhere.
 - **Reference port**: `antigravity/README.md` carries the full
   concept-mapping table; `docs/porting.md` summarizes it alongside the
   other runtimes.
+- **Verification**: `-p`, model listing, and one real skill auto-trigger
+  (`list-specs`) were confirmed live against `antigravity-cli` 1.1.1
+  (Homebrew cask, installed 2026-07-11) on 2026-07-12. `--model`,
+  `--mode`, `--dangerously-skip-permissions`, `--continue`/
+  `--conversation`, and exact discovery-root semantics are documented
+  from `--help` output but not yet exercised live — re-verify before
+  relying on them, same caution the gemini-cli and codex profiles take
+  for their own unverified flags.
