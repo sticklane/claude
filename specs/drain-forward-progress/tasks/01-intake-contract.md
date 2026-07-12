@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 6 turns
@@ -27,7 +27,7 @@ run `bash evals/lint-ultra-gate.sh` before committing.
 
 ## Acceptance
 
-- [ ] `grep -qi 'Intake-refused' .claude/skills/drain/SKILL.md && grep -qi 'Intake-refused' .claude/skills/drain/reference.md` → hits (0 today, verified)
-- [ ] `grep -qi 'may not return ACTIONABLE-without-criteria' .claude/skills/drain/reference.md` → hit (0 today)
-- [ ] `grep -c '2026-07-11' .claude/skills/drain/reference.md` ≥ 1 AND MANUAL: three stubs cited as worked examples; lifecycle clear-on-promotion stated
-- [ ] `bash evals/lint-ultra-gate.sh` → OK
+- [x] `grep -qi 'Intake-refused' .claude/skills/drain/SKILL.md && grep -qi 'Intake-refused' .claude/skills/drain/reference.md` → hits (0 today, verified) — verifier: both hit, exit 0 (evidence/01-intake-contract.md)
+- [x] `grep -qi 'may not return ACTIONABLE-without-criteria' .claude/skills/drain/reference.md` → hit (0 today) — verifier: matched reference.md:1025
+- [x] `grep -c '2026-07-11' .claude/skills/drain/reference.md` ≥ 1 AND MANUAL: three stubs cited as worked examples; lifecycle clear-on-promotion stated — verifier: count 7; "R4 — worked authoring examples (2026-07-11)" cites tasks/05, /07, /08; clear-on-promotion stated
+- [x] `bash evals/lint-ultra-gate.sh` → OK — verifier: "OK — all ultra mentions gated in 4 files", exit 0
