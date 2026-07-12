@@ -70,3 +70,49 @@ Bare vs `agentic:`-prefixed agent frames (e.g. `agent:verifier` vs
 `agent:agentic:verifier`) both appear; hypothesis: bare = repo-local
 `.claude/agents/` in the toolkit dev checkout, prefixed = plugin-served.
 Unconfirmed — see agent-tier-leaks R3.
+
+## Follow-up (2026-07-12): post-fix verification — the dual baton trigger has NOT materially reduced reprime pileup
+
+Answers this spec's deferred MANUAL acceptance criterion ("re-run `agentprof
+claude --days 7`; main-line rewrite cost inside drain-shaped sessions
+materially down vs the $587 TTL-expiry baseline"). Verdict: **not down** —
+the session-level failure rate got worse, not better.
+
+Method: `agentprof claude --days 7` re-run 2026-07-12 (window
+2026-07-05→2026-07-12, 137 sessions, 334 reprime events —
+`cache_write_tokens` > 50k on a non-first main-loop call, agentprof's
+built-in `--reprime-threshold`). Sessions split into pre-/post-fix cohorts
+by first-event timestamp against 2026-07-11T08:07:54Z, the commit time of
+task 01's dual-trigger text (`1d59c04`).
+
+| Cohort | Sessions | Reprime rate /1k calls | Sessions ≥3 reprimes | Total cost |
+|---|---|---|---|---|
+| Pre-fix | 87 | 6.50 | 26.4% | $2,823 |
+| Post-fix | 51 | 5.59 | **29.4%** | $2,077 |
+
+The per-call rate improved slightly, but the share of sessions that blow
+past the general session-refresh doctrine's 3-reprime budget got *worse*.
+The single worst session in the entire 7-day window (`6fddf102`, 18
+reprimes, $463) started 2026-07-11T16:36 — 8 hours after the fix landed.
+
+Two distinct failure modes, both post-fix:
+
+1. **Drain sessions themselves still pile up.** Three confirmed
+   `skill:drain` sessions post-fix (`55ae834e`: 11 reprimes/$115,
+   `80161f1c`: 9/$207, `c2cec1dd`: 3/$173) — the shipped trigger (a
+   verdict-count formula standing in for context size, per R1's own text:
+   "the harness exposes no reliable in-session context-size signal the hub
+   can check") is not firing early enough in practice.
+2. **Freehand/non-drain long sessions dominate the rest.** `6fddf102`
+   (extended multi-topic `agent:claude` session, 18 reprimes/$463),
+   `789d8a1a` (a recurring ~15-minute poll loop under `skill:human-tasks`,
+   9 reprimes), `a7660966`/`14fe4310` (long critique/breakdown chains, 7
+   and 8 reprimes) — these are the "freehand and watch-then-act sessions
+   drain's border doesn't reach" that `token-discipline.md`'s general
+   session-refresh doctrine is supposed to cover, and that doctrine is
+   model-remembered, not structurally enforced. Tracked separately as
+   `specs/session-refresh-hook` (new).
+
+Raw reprime-count-per-session breakdown and the pre/post split script are
+reproducible from a fresh `agentprof claude --days 7` run; this entry
+records the headline numbers, not a re-runnable artifact.

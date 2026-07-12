@@ -125,7 +125,7 @@ repo's mirror + plugin-bump gate.
 - [ ] Doctrine line recommending /drain for drain-shaped freehand requests present in this repo's CLAUDE.md or cited rules doc (MANUAL confirm the recommend-the-skill context), and the proposed global `~/.claude/CLAUDE.md` one-liner delivered as a MANUAL (attended) step (R5)
 - [ ] Session-model sentence present in SKILL.md (R6)
 - [ ] `bash /Users/sjaconette/claude/evals/lint-ultra-gate.sh` → exit 0; `claude plugin validate .` → pass; antigravity mirror regenerated, `.claude-plugin/plugin.json` version bumped, and /evals drain scenario updated for the dual baton trigger in the shipping commits (R7)
-- [ ] MANUAL (deferred, needs a week of runs): re-run `agentprof claude --days 7`; main-line rewrite cost inside drain-shaped sessions materially down vs the $587 TTL-expiry baseline
+- [x] MANUAL (deferred, needs a week of runs): re-run `agentprof claude --days 7`; main-line rewrite cost inside drain-shaped sessions materially down vs the $587 TTL-expiry baseline — **FAILED, re-verified 2026-07-12**: post-fix sessions ≥3 reprimes rose 26.4%→29.4%; see EVIDENCE.md "Follow-up (2026-07-12)". Task 05 investigates.
 - [ ] End-to-end: a /drain run over a 2-task demo spec completes with hub verdicts each ≤ 2k tokens and no reading of task-file *bodies* by the hub after dispatch (Status/header lines and the tasks/ whitelist diff are fine) — inspect transcript
 
 ## Open questions
