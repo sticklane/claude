@@ -403,7 +403,7 @@ go tool pprof -top custom.pb.gz
 
 | Command                                                                   | What it does                                                               |
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `agentprof claude [--claude-dir PATH] [--days N] [--name-turns] [--reprime-threshold N] [--frame-denylist PATH] [-o out]` | Claude Code transcripts → samples. Defaults: `~/.claude`, 30 days, `--reprime-threshold 50000` (0 disables), denylist `~/.config/agentprof/frame-denylist`, stdout. |
+| `agentprof claude [--claude-dir PATH] [--days N \| --since RFC3339] [--merge cache.jsonl] [--summary costs.json] [--name-turns] [--reprime-threshold N] [--frame-denylist PATH] [-o out]` | Claude Code transcripts → samples. Defaults: `~/.claude`, 30 days (`--since` is the mutually-exclusive absolute cutoff), `--reprime-threshold 50000` (0 disables), denylist `~/.config/agentprof/frame-denylist`, stdout. `--merge` keeps a 7-day rolling JSONL cache; `--summary` writes the pre-aggregated Cost JSON the workboard panel reads. |
 | `agentprof gcp <billing.json> [--frame-labels k1,k2] [-o out]`            | GCP billing export rows → samples.                                         |
 | `agentprof vertex <logs.json> [-o out]`                                   | Vertex AI request-response logging rows → samples.                         |
 | `agentprof build <samples.jsonl>... -o out.pb.gz`                         | Canonical-schema JSONL → pprof profile.                                    |
