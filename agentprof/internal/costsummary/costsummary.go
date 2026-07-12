@@ -160,21 +160,21 @@ func untypedFanout(forGrouping []schema.Sample) UntypedFanout {
 // transparent — skipped without breaking adjacency. 0 means the stack passes
 // through no untyped frame at all.
 func untypedRunDepth(stack []string) int {
-	max, run := 0, 0
+	longest, run := 0, 0
 	for _, f := range stack {
 		if !strings.HasPrefix(f, "agent:") {
 			continue
 		}
 		if _, ok := untypedAgents[f]; ok {
 			run++
-			if run > max {
-				max = run
+			if run > longest {
+				longest = run
 			}
 		} else {
 			run = 0
 		}
 	}
-	return max
+	return longest
 }
 
 // reprimeRollup sums the samples labeled reprime=true over forGrouping (SPEC R2).
