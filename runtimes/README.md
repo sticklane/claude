@@ -102,8 +102,16 @@ two shapes:
    a per-runtime concern, so a profile never mentions it.
 
 2. **No fenced block at all** — signaling that no scriptable relaunch exists
-   for this runtime, so relaunch is human-driven only (Antigravity's case:
-   the Agent Manager launches agents; there is nothing to run headlessly).
+   for this runtime, so relaunch is human-driven only
+   (`runtimes/fake-runtime-no-headless.md` is a synthetic fixture of this
+   shape; no real ported runtime in this repo is in this state as of
+   2026-07-12 — antigravity was believed to be until live-testing found
+   `agy -p`, the antigravity-cli binary, actually works headlessly). A
+   fenced block existing is necessary but not sufficient for a consumer
+   to treat a runtime as safe for isolated/unattended use — see
+   `runtimes/antigravity.md`'s Headless section for a case where it
+   isn't yet (live-tested: didn't confine itself to the invoking
+   directory).
 
 `runtimes/parse_headless.py` is the single tool that enforces and derives
 this mechanically: given a runtime name it returns the joined template

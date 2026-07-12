@@ -32,9 +32,26 @@ class HeadlessTemplateTests(unittest.TestCase):
         self.assertTrue(template.startswith('gemini -p "<prompt>"'), template)
         self.assertIn("--approval-mode", template)
 
-    def test_antigravity_has_no_fenced_block_returns_none_sentinel(self):
+    def test_antigravity_returns_joined_single_line_template(self):
+        # Corrected 2026-07-12: antigravity DOES have a scriptable headless
+        # relaunch (`agy -p`, the antigravity-cli package) — confirmed live,
+        # not the GUI-launcher `chat` subcommand this profile originally
+        # (wrongly) described. See runtimes/fake-runtime-no-headless.md for
+        # the NONE-sentinel fixture this test used before the correction.
+        template = parse_headless.headless_template("antigravity")
+        self.assertNotIn("\n", template)
+        self.assertNotIn("\\", template)
+        # Absolute path is deliberate, not incidental: a bare `agy` was
+        # live-tested and found to resolve to a same-named app-bundle
+        # impostor on PATH — see runtimes/antigravity.md's Headless section.
+        self.assertTrue(template.startswith("/"), template)
+        self.assertIn('agy -p "<prompt>"', template)
+        self.assertIn("--sandbox", template)
+
+    def test_no_headless_profile_returns_none_sentinel(self):
         self.assertEqual(
-            parse_headless.headless_template("antigravity"), parse_headless.NONE
+            parse_headless.headless_template("fake-runtime-no-headless"),
+            parse_headless.NONE,
         )
 
     def test_unresolvable_runtime_falls_back_to_claude_code(self):
@@ -88,9 +105,20 @@ class MatchRegexTests(unittest.TestCase):
     def test_regex_is_none_for_no_scriptable_relaunch_runtime(self):
         self.assertIsNone(
             parse_headless.derive_match_regex(
-                parse_headless.headless_template("antigravity")
+                parse_headless.headless_template("fake-runtime-no-headless")
             )
         )
+
+    def test_regex_matches_antigravity_shape(self):
+        regex = parse_headless.derive_match_regex(
+            parse_headless.headless_template("antigravity")
+        )
+        self.assertIsNotNone(regex.search('/opt/homebrew/bin/agy -p "port the thing"'))
+        # A bare `agy` (no path) must NOT match — the absolute path is the
+        # whole point (PATH-shadow risk; see runtimes/antigravity.md).
+        self.assertIsNone(regex.search('agy -p "port the thing"'))
+        # An antigravity regex must NOT claim a claude command.
+        self.assertIsNone(regex.search('claude -p "x"'))
 
 
 if __name__ == "__main__":

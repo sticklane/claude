@@ -36,10 +36,13 @@ that introduced it (parity-gate rationale: `antigravity-parity-gate`).
 
 Resolving a cross-reference under a target runtime can require exercising
 that runtime interactively, and some runtimes expose no scriptable,
-non-interactive harness to do it from (e.g. `runtimes/antigravity.md`
-records no headless command template — its agents are human-launched). An
-unattended or drained worker therefore cannot always complete this step. In
-that case the worker marks the criterion manual-pending with the reason
-stated — rather than deferring or guessing — and the orchestrator or a human
-runs the live check post-merge (unattended workers lack the tools for
+non-interactive harness to do it from (e.g. `runtimes/fake-runtime-no-headless.md`
+records no headless command template at all — antigravity did too until
+2026-07-12, when live-testing found `agy -p`, the real antigravity-cli
+binary, is a genuine scriptable headless relaunch; `runtimes/antigravity.md`
+now documents it). An unattended or drained worker therefore cannot always
+complete this step for a runtime with no headless template. In that case
+the worker marks the criterion manual-pending with the reason stated —
+rather than deferring or guessing — and the orchestrator or a human runs
+the live check post-merge (unattended workers lack the tools for
 interactive and gated steps: `docs/memory/unattended-worker-tool-limits.md`).
