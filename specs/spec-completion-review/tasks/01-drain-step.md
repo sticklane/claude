@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 7 turns
@@ -30,7 +30,7 @@ drain admission serializes via Touch; do not hand-merge its content.
 
 ## Acceptance
 
-- [ ] `grep -qi 'spec-completion review' .claude/skills/drain/SKILL.md && grep -qi 'spec review skipped' .claude/skills/drain/SKILL.md` → hits
-- [ ] `grep -qi 'drain: <spec-slug> task NN in-progress' .claude/skills/drain/SKILL.md` → pinned contract present (MANUAL: "e.g." dropped at that site)
-- [ ] MANUAL: ordering, idempotency token, numstat-only hub, nulled task-file coupling, checklist line all present per R1/R2/R3/R5
-- [ ] `bash evals/lint-ultra-gate.sh` → OK
+- [x] `grep -qi 'spec-completion review' .claude/skills/drain/SKILL.md && grep -qi 'spec review skipped' .claude/skills/drain/SKILL.md` → hits — verifier: both hit (evidence/01-drain-step.md)
+- [x] `grep -qi 'drain: <spec-slug> task NN in-progress' .claude/skills/drain/SKILL.md` → pinned contract present (MANUAL: "e.g." dropped at that site) — verifier: hit; flip site now pins the contract ("not an example")
+- [x] MANUAL: ordering, idempotency token, numstat-only hub, nulled task-file coupling, checklist line all present per R1/R2/R3/R5 — verifier: all present (SKILL.md spec-review section + reference.md worker section)
+- [x] `bash evals/lint-ultra-gate.sh` → OK — verifier: prints OK, exit 0
