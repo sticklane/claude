@@ -1,4 +1,5 @@
 Status: draft
+Intake-refused: assess — decision-shaped: relocate drain SKILL.md heavy prose to reference.md to restore the "well under 500 lines" convention (and precisely which sections move) vs. accept the documented length drift — a maintainer judgment with no mechanical reversible default that accomplishes the stub's actual goal; the "just defer/document" default does not do the relocation work the stub describes (2026-07-12)
 Discovered-from: specs/drain-wake-cost/tasks/01-drain-skill-text.md
 Spec: ../SPEC.md
 Blocking: no
