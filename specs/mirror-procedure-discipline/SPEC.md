@@ -231,3 +231,5 @@ since R5/R6 tasks cite the rule's bucket classification and append to the
 manifest R3/R4 create. After that, all 13 audit tasks (11 antigravity + 2
 Codex) form one large concurrent-safe group, suitable for `/drain` with a
 rolling window.
+
+- Group: 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14
