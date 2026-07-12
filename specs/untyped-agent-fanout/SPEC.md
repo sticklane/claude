@@ -40,13 +40,21 @@ audit.
 
 ## Requirements
 
-- R1 **Trace the dispatch sites.** Using the 2026-07-11 window's
-  `agent_id` labels and the source transcripts, identify what dispatched
-  each `agent:claude` chain (skill text, freehand orchestrator prompt,
-  FleetView default, or harness behavior) in the two affected sessions.
-  Record findings in `specs/untyped-agent-fanout/EVIDENCE.md`: per chain,
-  the dispatch site, the depth, the model inherited, and the cost. Any
-  committed profile evidence follows the pinned-evidence denylist rule.
+- R1 **Trace the dispatch sites.** The two affected sessions are
+  `6fddf102-f06a-4562-bc20-14742aa17582` (home-directory orchestrator)
+  and `80161f1c-8c2c-4bc3-a8d5-a4afb10ce3d4` (fooszone /drain). Their
+  full sample set is pinned at
+  `specs/untyped-agent-fanout/evidence-samples-2026-07-11.jsonl.gz`
+  (screened: zero 24+-char hex runs, no home-path strings; regenerate
+  with `agentprof claude --since 2026-07-11T18:00:00-05:00` while
+  `~/.claude` transcripts still cover the window). Using the pinned
+  samples' `agent_id` labels and — where they still exist — the source
+  transcripts, identify what dispatched each `agent:claude` chain (skill
+  text, freehand orchestrator prompt, FleetView default, or harness
+  behavior). Record findings in `specs/untyped-agent-fanout/EVIDENCE.md`:
+  per chain, the dispatch site, the depth, the model inherited, and the
+  cost. Any further committed profile evidence follows the
+  pinned-evidence denylist rule.
 - R2 **Fix the sources.** For each R1 site that is toolkit-owned text
   (skill, agent definition, rule, dispatch template), change it to name a
   typed pinned agent or pass an explicit model/effort override. Sites not
@@ -67,7 +75,11 @@ audit.
   `untyped_fanout` section: calls and `cost_microusd` through untyped
   agent frames (`agent:claude`, `agent:general-purpose`, with and without
   plugin namespace), split by model, plus a `max_depth` observed for
-  untyped-under-untyped chains. Existing sections and field names are
+  untyped-under-untyped chains. Edge rule for depth (also the R3 hook's
+  warn condition): count adjacent untyped `agent:` frames in one sample's
+  stack, ignoring intervening `wf:`/`stage:`/role markers; a TYPED agent
+  frame breaks the chain (`agent:claude > agent:scout > agent:claude`
+  is depth 1 twice, not depth 2). Existing sections and field names are
   unchanged (additive only, like the `reprime` section). The
   agent-console workboard cost panel renders one line from it (count +
   cost for the window), omitting it gracefully when the section is
@@ -89,9 +101,16 @@ audit.
   sessions (R1)
 - [ ] Every toolkit-owned site in EVIDENCE.md has a landed text fix
   referenced by commit, or a written no-fix rationale (R2)
-- [ ] `grep -ci 'untyped' .claude/rules/token-discipline.md` ≥ 1 (word
-  confirmed absent at authoring time) with the no-nesting line in the
-  "Dispatch authoring" section (R3)
+- [ ] `sed -n '/## Dispatch authoring/,/^## /p' .claude/rules/token-discipline.md | grep -ci 'untyped'`
+  ≥ 1 (word confirmed absent from the whole file at authoring time) —
+  placement inside the "Dispatch authoring" section is part of the
+  check (R3)
+- [ ] If any task's R2/R3 fix edits a `.claude/skills/*` or
+  `.claude/agents/*` file, that task's `Touch:` also carries the
+  `antigravity/` mirror and a `.claude-plugin/plugin.json` version bump,
+  and `claude plugin validate .` passes (per CLAUDE.md's mirror rule;
+  conditional because R2's targets are unknown until R1 traces them)
+  (R2, R3)
 - [ ] Hook path: either the hook script exists with a runnable test
   (violating Agent input → warning emitted; typed or overridden input →
   silent), or the feasibility limitation is recorded beside the doctrine
@@ -106,10 +125,9 @@ audit.
 
 ## Open questions
 
-- Whether `max_depth` should count only untyped-under-untyped edges or
-  any chain containing an untyped frame — default to the former (it is
-  the guarded behavior); note the choice in SCHEMA.md if it surfaces
-  there.
+None — the depth edge rule is pinned in R4 (typed frames break the
+chain; `wf:`/`stage:`/role markers are transparent), and SCHEMA.md
+documents it if the section surfaces there.
 
 ## Parallelization
 

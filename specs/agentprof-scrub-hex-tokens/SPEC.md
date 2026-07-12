@@ -13,8 +13,11 @@ matches neither — no known prefix, no uppercase — so it reaches turn
 frames verbatim. Observed 2026-07-11: a 40-char lowercase-hex Todoist API
 token pasted into an automation-session prompt appeared un-redacted in a
 turn frame, flowing into the rolling profiles the launchd refresh job
-generates and the workboard serves. (Rotation of that token is filed in
-HUMAN.md; this spec closes the class.)
+generates and the workboard serves. The observed frame's exact preceding
+bytes were `Todoist token: ` — the keyword `token` plus a colon and space
+immediately before the hex run — so the keyword-gated rule below redacts
+this incident's shape verbatim. (Rotation of that token is filed in
+HUMAN.md.)
 
 The gap is not an oversight to fix with a blanket hex rule: git SHAs are
 40-char lowercase hex too, and README documents that UUIDs, git SHAs, and
@@ -34,6 +37,13 @@ documented — over-redaction of a frame costs readability (recoverable via
 `--name-turns`, which renames `[redacted]` frames); under-redaction leaks
 a credential into served artifacts.
 
+Residual risk, stated plainly: this closes the keyword-adjacent subclass
+only. A bare hex paste with no secret keyword in the window remains
+unredactable by shape — it is byte-for-byte indistinguishable from a git
+SHA, which README's carve-out deliberately preserves. The rest of the
+class is carried operationally: token rotation on discovery, paste
+hygiene, and the frame denylist for known-value strings.
+
 Rejected alternative: unconditionally redacting all 24+/32+ hex runs —
 it would blank every SHA-bearing turn frame, and `--name-turns` recovery
 is best-effort (it failed on this machine's stale-auth scratch config on
@@ -42,17 +52,24 @@ is best-effort (it failed on this machine's stale-auth scratch config on
 ## Requirements
 
 - R1 **Keyword-gated hex class in scrub.** `scrub()` gains class (c),
-  applied after (a) and before or after (b) — order must not change
-  (a)/(b) behavior: a maximal `[0-9a-fA-F]{24,}` run is replaced with
+  applied strictly after (a) and (b) — a keyword-adjacent hex sub-run
+  inside a larger mixed-case token run is therefore consumed by (b)'s
+  whole-run redaction first, and (c) only sees text (a)/(b) left behind:
+  a maximal `[0-9a-fA-F]{24,}` run is replaced with
   `[redacted]` iff a secret keyword (case-insensitive: `token`, `key`,
   `secret`, `password`, `bearer`, `credential`, `api[-_]?key`) appears in
   the 40 characters preceding the run's token-run start. Runs already
   inside a `[redacted]` replacement are not double-processed.
 - R2 **Behavior-pinning tests.** Table-driven tests in `scrub_test.go`
-  covering at minimum: keyword+40-hex → redacted; bare 40-hex SHA in
+  covering at minimum: the observed incident's shape verbatim — a prompt
+  containing `Todoist token: ` followed by a SYNTHETIC 40-char
+  lowercase-hex value (never the real one) → redacted; keyword+40-hex →
+  redacted; bare 40-hex SHA in
   prose (no keyword in window) → untouched; keyword more than the window
   before the run → untouched; 24-hex with keyword → redacted; 23-hex with
-  keyword → untouched; mixed-case hex with keyword → redacted; existing
+  keyword → untouched; mixed-case hex with keyword → redacted; a keyword
+  followed by a larger mixed-case token run embedding a hex sub-run →
+  one whole-run `[redacted]` (pins the (b)-before-(c) order); existing
   class (a)/(b) cases unchanged (no edits to existing test expectations).
 - R3 **Docs.** README's "Turn frames: secret scrubbing and naming"
   section documents the keyword-gated hex rule and its deliberate
