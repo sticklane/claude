@@ -1,0 +1,15 @@
+{
+  "by_project": {},
+  "reprime": { "count": 0, "cache_write_tokens": 0, "cost_microusd": 0 },
+  "sessions": {
+    "test-session": {
+      "project": "home",
+      "calls": 60,
+      "cost_microusd": 8100000,
+      "p50_ctx": 180000,
+      "p90_ctx": 300000,
+      "reprime_count": 1,
+      "reprime_cost_microusd": 0
+    }
+  }
+}
