@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 03
 Priority: P2
 Budget: 4 turns
@@ -24,5 +24,5 @@ check in the evidence file.
 
 ## Acceptance
 
-- [ ] `test -s specs/prose-review/evidence/retrofit-tasks-app.md` → before/after Vale AND rubric counts + CI-precondition line present (MANUAL: content)
-- [ ] MANUAL: after-state shows rubric findings resolved; residual Vale findings itemized as domain jargon
+- [x] `test -s specs/prose-review/evidence/retrofit-tasks-app.md` → before/after Vale AND rubric counts + CI-precondition line present (MANUAL: content) — evidence: specs/prose-review/evidence/retrofit-tasks-app.md (CI-precondition PASS; Vale 16/22/27 → 11/6/14; rubric item-7/stale-ref/item-8-9 before→after)
+- [x] MANUAL: after-state shows rubric findings resolved; residual Vale findings itemized as domain jargon — evidence: retrofit-tasks-app.md "Rubric findings (AFTER: all resolved)" + "Residual Vale findings — itemized as domain jargon" sections
