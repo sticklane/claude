@@ -84,6 +84,16 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    `Unblock: agent: <prompt>` when clearing needs an agent's judgment,
    `Unblock: ask: <exact question>` only for a genuine human decision. The
    `Unblock:` line sits on the line immediately after `Status:`.
+   **HUMAN.md pair (R3), this attended workflow only:** that intra-file
+   `Status:`+`Unblock:` atomicity is UNCHANGED, and the SAME COMMIT also adds
+   a matching entry to the repo-root `HUMAN.md`'s `## Agent-filed blockers`
+   section, typed to the `Unblock:` line (`run`→`run`, `ask`→`ask`, a
+   credentials/access blocker → `provision`; grammar in
+   `.claude/rules/human-blockers.md`). An `Unblock: agent:` stop is
+   agent-clearable, not a human blocker, so it files no entry. This is
+   attended-scope only: a drained/unattended worker NEVER writes `HUMAN.md` —
+   it returns its BLOCKED verdict and the orchestrator (not the worker) files
+   the entry.
    Heavy-context escape: attended build has no baton (that is the drain
    workflow's degradation response); when the session itself has grown
    heavy — not just one stuck fix — apply the handoff skill to write a
