@@ -23,3 +23,7 @@ task's own commit; validate + ultra-gate green.
 - [x] `grep -qi 'spec-completion review' antigravity/.agents/workflows/drain.md` → hit (0 today, verified) — new 4b section + exit-checklist line; verifier confirmed HIT (commit 2e4213a)
 - [x] `claude plugin validate .` → passes AND `bash evals/lint-ultra-gate.sh` → OK — both green post-commit; verifier confirmed "✔ Validation passed" and "lint-ultra-gate: OK — all ultra mentions gated in 4 files"
 - [x] `git show HEAD -- .claude-plugin/plugin.json | grep -q '^+.*"version"'` right after this task's commit → hit — `+  "version": "0.8.48",` in HEAD (2e4213a); verifier confirmed HIT
+
+## Decisions
+
+- [2026-07-12 /drain gen2] Worker folded the task-file done-flip into the single implementation commit (soft-reset) rather than a separate bookkeeping commit — acceptance criterion 3 checks `git show HEAD` for the plugin.json version bump, so a trailing bookkeeping commit would have shadowed it out of HEAD. Reverse: `git reset --soft <base>` and re-split into two commits (re-breaks criterion 3's literal HEAD check).
