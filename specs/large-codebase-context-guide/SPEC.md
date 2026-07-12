@@ -1,5 +1,7 @@
 # Large-codebase context guide: document, don't build — recommend existing MCP servers over new tooling
 
+Breakdown-ready: true
+
 ## Problem
 
 The user's own framing is the thesis: codebase pre-indexing for large
