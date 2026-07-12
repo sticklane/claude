@@ -293,6 +293,36 @@ func TestBuildSessionsSectionContextPercentilesMainLoopOnly(t *testing.T) {
 	}
 }
 
+func TestBuildSessionsSectionPerSessionReprimeAggregates(t *testing.T) {
+	samples := []schema.Sample{
+		// session s1: two reprime-labeled main-loop calls plus one plain call.
+		reprimeSample("s1", "proj", 70000, 100),
+		reprimeSample("s1", "proj", 60000, 150),
+		mainCall("s1", "proj", 100, 0, 10),
+		// session s2: a plain main-loop call, no re-primes.
+		mainCall("s2", "beta", 50, 0, 5),
+	}
+	s := Build(samples, nil)
+	s1, ok := s.Sessions["s1"]
+	if !ok {
+		t.Fatal("sessions missing key 's1'")
+	}
+	if s1.ReprimeCount != 2 {
+		t.Errorf("sessions[s1].reprime_count = %d, want 2", s1.ReprimeCount)
+	}
+	if s1.ReprimeCostMicrousd != 250 {
+		t.Errorf("sessions[s1].reprime_cost_microusd = %d, want 250 (100+150)", s1.ReprimeCostMicrousd)
+	}
+	s2, ok := s.Sessions["s2"]
+	if !ok {
+		t.Fatal("sessions missing key 's2'")
+	}
+	if s2.ReprimeCount != 0 || s2.ReprimeCostMicrousd != 0 {
+		t.Errorf("sessions[s2] reprime_count/reprime_cost_microusd = %d/%d, want 0/0 (session had no re-primes)",
+			s2.ReprimeCount, s2.ReprimeCostMicrousd)
+	}
+}
+
 func TestBuildSessionsSectionNonNilWhenEmpty(t *testing.T) {
 	s := Build(nil, nil)
 	if s.Sessions == nil {
