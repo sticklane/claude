@@ -29,3 +29,7 @@ report, saved to ../evidence/e2e-readme-review.md.
   everywhere today) → hit
 - [ ] `vale README.md AGENTS.md` → exit 0 in this repo
 - [ ] `test -s specs/prose-review/evidence/e2e-readme-review.md` → e2e report exists with all three passes (MANUAL: content)
+
+## Progress
+
+- 2026-07-11 — Attempt 1 (opus) returned DONE with all 3 criteria passing, but FAILED merge on R4 runtime Touch enforcement: branch changed `vale/.vale.ini.template` (6 lines, Google.EmDash disable) which is outside Touch (`templates/, .claude/skills/gate/, vale/styles/config/vocabularies/House/accept.txt`). Worker's own rationale: bare `vale README.md AGENTS.md` cannot exit 0 without centrally disabling Google.EmDash (22 errors from the house spaced-em-dash style), and accept-vocab cannot suppress a rule-level check. Done: stanza in templates/check.sh.tmpl, accept.txt tuning, e2e evidence. Remaining: achieve C2 within Touch or defer the Touch-amendment question. Branch discarded per slot machine.
