@@ -1,5 +1,25 @@
 # Combined queue — wave plan (canonical, single copy)
 
+**Queue 6 (planned 2026-07-12)** — the three overnight-review specs:
+agentprof-scrub-hex-tokens (shx), session-refresh-automation (sra),
+untyped-agent-fanout (uaf). 11 tasks, one repo-wide drain. Contention
+points and their machine-expressed resolution: token-discipline.md
+(uaf 03 carries a cross-spec `Depends on:` path to sra 01),
+costsummary + agent-console (uaf 04 → sra 02 and sra 05). Groups are
+per-spec as always: sra 01+02, sra 04+05, uaf 03+04. plugin.json bumps
+never co-run (sra 04 is the only bump in its group; uaf 03 in its; uaf
+02's is conditional and solo-ordered behind uaf 01).
+
+| Wave | Tasks (parallel within a wave) |
+|---|---|
+| 1 | shx 01; uaf 01 runs solo whenever admitted (read-only trace) |
+| 2 | shx 02 |
+| 3 | sra 01; sra 02 |
+| 4 | sra 04; sra 05 |
+| 5 | sra 03 |
+| 6 | uaf 02 |
+| 7 | uaf 03; uaf 04 |
+
 **Queue 5 (drained 2026-07-05)** — shared-viz-renderer (4 tasks: shared
 `_shared/viz.py` renderer + golden tests; /workboard wired to
 viz.timeline/viz.dag; byte-identical vendor into ~/agent-console with a

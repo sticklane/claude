@@ -20,9 +20,10 @@ with the 30-day evidence cited from ../SPEC.md, not restated.
 
 Only the one rule file. Do NOT touch `.claude/skills/` (task 04 owns the
 handoff skill) or anything under `agentprof/` or `agent-console/`.
-Cross-spec caution: `specs/untyped-agent-fanout/tasks/03-*` also edits
-this file — the two specs must not be drained concurrently through their
-rule-editing tasks.
+Cross-spec: `specs/untyped-agent-fanout/tasks/03-*` also edits this file
+and declares a cross-spec `Depends on:` path to THIS task, so a single
+repo-wide drain serializes them (this one lands first). No action needed
+here.
 
 ## Steps
 

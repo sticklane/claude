@@ -19,9 +19,10 @@ count and cost, and the summary file's mtime (the freshness bound).
 ## Touch
 
 agent-console only. The summary fields it reads landed in task 02; do NOT
-touch `agentprof/`. Cross-spec caution:
-`specs/untyped-agent-fanout/tasks/04-*` also edits agent-console's cost
-panel — do not drain the two concurrently.
+touch `agentprof/`. Cross-spec: `specs/untyped-agent-fanout/tasks/04-*`
+also edits agent-console's cost panel and declares a cross-spec
+`Depends on:` path to THIS task — one repo-wide drain serializes them
+(this one lands first).
 
 ## Steps
 
