@@ -1,7 +1,7 @@
 # Task 03: Depth-guard doctrine, hook if feasible
 
 Status: pending
-Depends on: none
+Depends on: ../../session-refresh-automation/tasks/01-wake-budget-doctrine.md
 Priority: P2
 Budget: 10 turns
 Spec: ../SPEC.md (requirement R3)
@@ -19,9 +19,12 @@ task never stalls on the harness.
 
 ## Touch
 
-Cross-spec caution: `specs/session-refresh-automation/tasks/01-*` also
-edits token-discipline.md — do not drain the two specs' rule-editing
-tasks concurrently. `antigravity/` and the plugin bump apply ONLY if a
+The token-discipline.md collision with
+`specs/session-refresh-automation/tasks/01-*` is expressed as the
+cross-spec `Depends on:` path above (drain grammar per specs/QUEUE.md) —
+this task admits only after that one lands, so one repo-wide drain
+serializes them; its "Session refresh" subsection will already exist
+when this task edits the same file. `antigravity/` and the plugin bump apply ONLY if a
 hook ships (hooks are mirrored in Antigravity's JSON shape per
 CLAUDE.md); a doctrine-only outcome touches just the rule file.
 

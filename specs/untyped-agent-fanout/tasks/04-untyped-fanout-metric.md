@@ -1,7 +1,7 @@
 # Task 04: untyped_fanout guard metric
 
 Status: pending
-Depends on: none
+Depends on: ../../session-refresh-automation/tasks/02-per-session-reprime-fields.md, ../../session-refresh-automation/tasks/05-workboard-reprime-flag.md
 Priority: P2
 Budget: 12 turns
 Spec: ../SPEC.md (requirement R4)
@@ -20,9 +20,12 @@ gracefully when the section is absent.
 
 ## Touch
 
-Cross-spec caution: `specs/session-refresh-automation/tasks/02-*` and
-`05-*` also edit costsummary/agent-console respectively — do not drain
-those concurrently with this task. Do NOT touch
+The costsummary/agent-console collisions with
+`specs/session-refresh-automation/tasks/02-*` and `05-*` are expressed
+as the cross-spec `Depends on:` paths above — this task admits only
+after both land, so one repo-wide drain serializes them and this task
+builds on the shipped `reprime_count` fields instead of merge-racing
+them. Do NOT touch
 `agentprof/internal/claude/` (stacks already carry the full nested agent
 chain).
 

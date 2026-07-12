@@ -18,9 +18,10 @@ summary JSON parses as before. SCHEMA.md documents the fields.
 
 costsummary package + SCHEMA.md only. Do NOT touch
 `agentprof/internal/claude/` (the reprime label is shipped and correct)
-or `agent-console/` (task 05 consumes these fields). Cross-spec caution:
-`specs/untyped-agent-fanout/tasks/04-*` also edits costsummary — do not
-drain the two specs' summary tasks concurrently.
+or `agent-console/` (task 05 consumes these fields). Cross-spec:
+`specs/untyped-agent-fanout/tasks/04-*` also edits costsummary and
+declares a cross-spec `Depends on:` path to THIS task — one repo-wide
+drain serializes them (this one lands first).
 
 ## Steps
 
