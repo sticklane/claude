@@ -75,7 +75,7 @@ values. Main-loop model calls carry no `agent_id` key at all.
 by the label reveals fan-out width (how many instances a turn spawned) and
 true per-instance parallelism, which a type-only frame would collapse.
 
-## Cost-summary sections: `by_model`, `reprime`, and `sessions`
+## Cost-summary sections: `by_model`, `reprime`, `sessions`, and `untyped_fanout`
 
 Alongside the profile, `agentprof` emits a pre-aggregated "Cost (7d)" summary
 JSON (consumed by the workboard cost panel). It rolls samples up by project,
@@ -117,6 +117,26 @@ from the percentiles. Main-loop context is the cost driver a growing session
 pays for on every turn; folding a subagent's small, independent context into
 the numbers would mask how heavy the main line itself has become.
 
+A guard section tracks untyped catch-all dispatch:
+
+- `untyped_fanout` — the calls and cost flowing through samples whose stack
+  passes through an **untyped** catch-all agent frame, plus the deepest nesting
+  observed: `calls`, `cost_microusd`, `by_model` (the same `{metric: total}`
+  rollup keyed by model leaf, over the counted samples only), and `max_depth`.
+  The untyped set is an **exact-match** enumeration — `agent:claude`,
+  `agent:agentic:claude`, `agent:general-purpose`,
+  `agent:agentic:general-purpose` — never a prefix match. Any other `agent:*`
+  frame is **typed** (e.g. `agent:scout`, or `agent:claude-code-guide`, which
+  merely shares the `agent:claude` prefix): it is excluded from the rollup and
+  breaks a depth chain. `max_depth` is the longest run of **adjacent** untyped
+  frames in one sample's stack (frames, not edges): a typed agent frame breaks
+  the run, while `wf:`/`stage:`/role markers between untyped frames are
+  transparent — skipped without breaking adjacency. So
+  `agent:claude > agent:claude` is depth 2, whereas
+  `agent:claude > agent:scout > agent:claude` is depth 1 (two separate
+  single-frame runs). This surfaces an untyped-under-untyped fan-out regression
+  in the weekly numbers rather than the next ad-hoc audit.
+
 ## Cost-summary top-level keys
 
 The full "Cost (7d)" summary JSON has these top-level keys (every field of the
@@ -137,6 +157,9 @@ The full "Cost (7d)" summary JSON has these top-level keys (every field of the
 - `sessions` — per-session context-size profiles keyed by session id
   (`project`, `calls`, `cost_microusd`, `p50_ctx`, `p90_ctx`,
   `reprime_count`, `reprime_cost_microusd`); see above.
+- `untyped_fanout` — the untyped catch-all dispatch guard metric (`calls`,
+  `cost_microusd`, `by_model`, `max_depth`) over the exact-match untyped set;
+  see above.
 
 ## Well-known metrics and pprof units
 
