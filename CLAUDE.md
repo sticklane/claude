@@ -48,8 +48,13 @@ order cannot resolve are surfaced, not guessed.
   of reach, and execution stages additionally require that the user's
   live request named them (their launch-authorization contract), and
   (c) the user has not scoped the request to the current stage; announce
-  the invocation in one line before it happens. This bullet is the
-  canonical gating explanation — skills cite it rather than restating it.
+  the invocation in one line before it happens. A **terminal-capture**
+  self-chain — drain's terminal distill fired when autonomous work ends —
+  is always in-scope regardless of (a)–(c), gated by the terminal state
+  itself rather than a critic-READY artifact: distill consumes a run and
+  ships no gated artifact, so condition (a) can never apply to it. This
+  bullet is the canonical gating explanation — skills cite it rather than
+  restating it.
 - SKILL.md bodies stay well under 500 lines; procedures as numbered steps or
   checklists; heavy reference goes in a separate file, loaded on demand.
 - SKILL.md files put execution-critical contracts in their first 30 lines —

@@ -301,7 +301,9 @@ reference.md), spawn the successor generation (awaited where a parent can
 supervise; else headless), report the pass, and **end your turn at once,
 stating this session will not touch the queue again** (one-writer invariant). A
 **max-generations cap of 10** stops with the baton written + a needs-attention
-note instead of respawning. The **baton is always the first escape**;
+note instead of respawning; that cap generation still runs step 4, so its
+terminal distill fires on the cap path too — ordinary baton passes never distill
+(no second insertion here). The **baton is always the first escape**;
 **/handoff** applies only where the baton cannot — once the cap is exhausted
 (or in attended /build), the session writes the /handoff file and leads its
 exit checklist (step 4) with the resume command. **Gen 1 is always attended**;
@@ -438,8 +440,7 @@ like `blocked`. Once no parked tasks remain:
   commit, return to step 1 (gating on the status, not the questions block,
   stops answered questions being re-asked).
 - **Queue empty**: report the run (per-task verdict + acceptance evidence +
-  merged branches); if any verdict exposed a decomposition or spec problem, run
-  /distill before the next queue.
+  merged branches). The terminal distill below then fires.
 - **Only blocked/failed remain**: report each blocker with its evidence and
   stop — those need amending (back to /breakdown) or an attended /build.
 - **Specs that failed auto-breakdown this run** (3b): report each with its
@@ -447,40 +448,39 @@ like `blocked`. Once no parked tasks remain:
   amendment, not a retry.
 
 **Exit checklist (R4), once per session at scope exhaustion.** The batch
-interview and the session's final message are fused: the interview asks every
-deferred question aggregated across ALL specs drained this session (gated on
-`Status: deferred`, above), and the final message is a fixed **seven-section
-checklist** for the human, **each entry naming a file path** — full per-section
-content in [reference.md](reference.md)'s "Exit checklist (seven sections)"
-(load only the named section):
-
-1. Deferred questions still unanswered.
-2. Defaults taken (`## Decisions` + DECISION-SHAPED stubs' `## Answers`).
-3. Blocked items and what unblocks each.
-4. NOT-READY specs (critique intake) with top findings.
-5. Draft stubs awaiting promotion (un-tagged `Status: draft`).
-6. Promoted this run — every stub intake acted on (promotions with their
-   `Demoted:` reversal line, `Status: obsolete` closures, and refused stubs
-   with their quoted `Intake-refused:` line).
-7. Next commands to resume.
+interview (every deferred question aggregated across ALL specs drained this
+session, gated on `Status: deferred`, above) and the final message are fused;
+the final message is a fixed **seven-section checklist** for the human, **each
+entry naming a file path** — full per-section content in
+[reference.md](reference.md)'s "Exit checklist (seven sections)" (load only the
+named section): §1 deferred questions · §2 defaults taken · §3 blocked items ·
+§4 NOT-READY specs · §5 draft stubs awaiting promotion · §6 promoted this run ·
+§7 next commands.
 
 Each released spec's **spec-completion review** outcome (`spec review:` /
-`spec review skipped:` line, from `specs/<slug>/evidence/spec-review.md`) rides
-the checklist too. One interview and one checklist per session; "Nothing needs
-you" is a valid checklist.
+`spec review skipped:`) rides the checklist too. One interview and one checklist
+per session; "Nothing needs you" is a valid checklist.
+
+**Terminal distill (R1), at most once per session.** After the exit checklist
+is delivered and lease/baton cleanup committed, drain self-chains into /distill
+via the Skill tool — one-line announcement, unconditional ("nothing worth
+keeping" reports through /distill, not by skipping it). Both terminal states —
+queue exhaustion and 3a's max-generations cap — route through this one step; the
+once-per-session guard prevents a double fire; CLAUDE.md's terminal-capture
+carve-out sanctions the self-chain (no critic-READY artifact applies).
 
 **HUMAN.md filing (R2).** In that SAME commit wave the ORCHESTRATOR (never a
 dispatched worker) files each open human-actionable item into repo-root
 `HUMAN.md`'s `## Agent-filed blockers` (five types → `ask`/`run`/`decide`; the
-interview DELETES an answered entry in its `## Answers` commit; manual-pending
-NOT drain-scanned) — mapping in [reference.md](reference.md)'s "HUMAN.md filing (R2)".
+interview deletes an answered entry in its `## Answers` commit; manual-pending NOT
+drain-scanned) — mapping in [reference.md](reference.md)'s "HUMAN.md filing (R2)".
 
-Artifacts: drain mutates task files in the main checkout only (`Status`,
-`## Deferred questions`/`## Answers`/`## Progress`/`## Decisions`, `draft`
-stubs, a promoted stub's Goal/report strip or an obsolete's `Closed:` line)
-plus repo-root `HUMAN.md` (above), committing every mutation, merges
-`task/NN-*` branches, and — via 3b — invokes `/breakdown` for critic-READY
-specs. Next: /distill after a drained queue.
+Artifacts: drain mutates task files in the main checkout (`Status`, Deferred/
+Answers/Progress/Decisions blocks, `draft` stubs, promoted-stub strip or an
+obsolete's `Closed:` line) plus repo-root `HUMAN.md`, committing every mutation;
+merges `task/NN-*` branches; via 3b invokes `/breakdown` for critic-READY specs.
+Next: /distill self-chains in-session at both terminal states — queue exhaustion
+and the max-generations cap (self-chains per conventions).
 
 ## Ultra path
 
