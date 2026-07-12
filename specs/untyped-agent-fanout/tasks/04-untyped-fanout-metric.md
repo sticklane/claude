@@ -7,6 +7,28 @@ Budget: 12 turns
 Spec: ../SPEC.md (requirement R4)
 Touch: agentprof/internal/costsummary/, agentprof/SCHEMA.md, agent-console/
 
+<!-- PLAN (delete at close-out)
+Files, in order:
+1. costsummary_test.go — RED: TestBuildUntypedFanout* cases: depth-2
+   adjacent claude chain counts w/ max_depth 2; claude>scout>claude ->
+   max_depth 1 (typed breaks run); claude-code-guide excluded entirely;
+   by_model splits on modelLeaf; wf:/stage:/role transparent; single
+   untyped frame counts calls/cost; empty -> non-nil ByModel, max_depth 0.
+2. costsummary.go — GREEN: add UntypedFanout struct {calls, cost_microusd,
+   by_model, max_depth} to Summary (additive, after Sessions); compute fn
+   untypedFanout(forGrouping): per sample untypedRunDepth() scanning agent:
+   frames only (untyped exact-set increments run, other agent: resets,
+   non-agent transparent); fold calls+cost into totals+by_model[modelLeaf]
+   when present; max_depth = max run over samples with a run. Recomputed
+   from forGrouping so --merge path is respected like reprime/sessions.
+3. SCHEMA.md — document untyped_fanout section, exact-match set, edge rule.
+4. agent-console.py render_workboard — one line from untyped_fanout (count
+   + cost), omitted when absent; RED renderer tests present/absent first.
+Design: sample counts toward calls/cost iff it passes through >=1 untyped
+frame (reversible; "through untyped agent frames"). max_depth over adjacent
+run length (frames not edges).
+-->
+
 ## Goal
 
 The cost summary gains an additive `untyped_fanout` section — `calls`,
