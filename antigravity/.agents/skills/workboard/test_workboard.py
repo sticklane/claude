@@ -1648,6 +1648,245 @@ class TestSpend(unittest.TestCase):
         )
 
 
+class TestAntigravitySpend(unittest.TestCase):
+    """R4: shell out to `agentprof antigravity`, filter its summary rows by the
+    Antigravity cascade ids (a DIFFERENT id-space than Claude session ids), and
+    expose them for the merged rollup. Failures never raise."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self._old_bin = os.environ.get("AGENTPROF_BIN")
+
+    def tearDown(self):
+        if self._old_bin is None:
+            os.environ.pop("AGENTPROF_BIN", None)
+        else:
+            os.environ["AGENTPROF_BIN"] = self._old_bin
+        self._tmp.cleanup()
+
+    def _cascade_rows(self):
+        return [
+            {
+                "session": "cascade-abc",
+                "model": "gemini-3-pro",
+                "input_tokens": 100,
+                "output_tokens": 10,
+                "cache_read_tokens": 5,
+                "cache_write_tokens": 2,
+                "cost_microusd": 4000,
+                "priced": True,
+            },
+            {
+                "session": "other-cascade",
+                "model": "gemini-3-pro",
+                "input_tokens": 9999,
+                "output_tokens": 9999,
+                "cache_read_tokens": 0,
+                "cache_write_tokens": 0,
+                "cost_microusd": 9999,
+                "priced": True,
+            },
+        ]
+
+    def test_cascade_id_row_contributes_nonzero_spend(self):
+        # A row whose `session` IS a member of the passed cascade_ids must
+        # contribute — this is the id-space bug R4 fixes: filtering by the
+        # Claude-only session_ids would zero this out.
+        os.environ["AGENTPROF_BIN"] = make_agentprof_stub(
+            self.tmp, json.dumps(self._cascade_rows())
+        )
+
+        spend = workboard.compute_antigravity_spend(self.tmp, {"cascade-abc"})
+
+        self.assertIs(spend["available"], True)
+        self.assertEqual(spend["by_session"]["cascade-abc"]["cost_microusd"], 4000)
+        by_model = {m["model"]: m for m in spend["by_model"]}
+        self.assertEqual(by_model["gemini-3-pro"]["cost_microusd"], 4000)
+
+    def test_rows_outside_cascade_ids_are_dropped(self):
+        os.environ["AGENTPROF_BIN"] = make_agentprof_stub(
+            self.tmp, json.dumps(self._cascade_rows())
+        )
+
+        spend = workboard.compute_antigravity_spend(self.tmp, {"cascade-abc"})
+
+        self.assertNotIn("other-cascade", spend["by_session"])
+        by_model = {m["model"]: m for m in spend["by_model"]}
+        # other-cascade's 9999 must not leak into the aggregate
+        self.assertEqual(by_model["gemini-3-pro"]["cost_microusd"], 4000)
+
+    def test_invokes_binary_with_antigravity_argv(self):
+        argv_out = self.tmp / "argv.txt"
+        os.environ["AGENTPROF_BIN"] = make_agentprof_stub(
+            self.tmp, json.dumps([]), argv_out=argv_out
+        )
+        ag_dir = self.tmp / "ag-home"
+
+        workboard.compute_antigravity_spend(ag_dir, {"cascade-abc"})
+
+        argv = argv_out.read_text().splitlines()
+        self.assertEqual(
+            argv,
+            [
+                "antigravity",
+                "-o",
+                "summary",
+                "--antigravity-dir",
+                str(ag_dir),
+                "--days",
+                "3650",
+            ],
+        )
+
+    def test_missing_binary_yields_unavailable_without_exception(self):
+        os.environ["AGENTPROF_BIN"] = "/nonexistent/agentprof"
+
+        spend = workboard.compute_antigravity_spend(self.tmp, {"cascade-abc"})
+
+        self.assertIs(spend["available"], False)
+        self.assertTrue(spend["reason"])
+        self.assertEqual(spend["by_model"], [])
+        self.assertEqual(spend["by_session"], {})
+
+
+class TestMergeSpend(unittest.TestCase):
+    """R4: merge Claude + Antigravity spend into one drop-in structure so
+    `render_spend_section` needs no changes — concatenate-and-resort by_model,
+    union by_session, OR availability, and degrade each harness independently."""
+
+    def _model(self, model, cost, priced=True):
+        return {
+            "model": model,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_microusd": cost,
+            "priced": priced,
+        }
+
+    def _avail(self, by_model, by_session):
+        return {
+            "by_model": by_model,
+            "by_session": by_session,
+            "available": True,
+            "reason": None,
+        }
+
+    def _unavail(self, reason):
+        return {
+            "by_model": [],
+            "by_session": {},
+            "available": False,
+            "reason": reason,
+        }
+
+    def test_by_model_is_concatenated_and_resorted_by_cost(self):
+        # Each harness list is internally sorted, but a cheaper Claude model
+        # ahead of a costlier Antigravity model must be re-sorted across the
+        # merge — not left as two separately-sorted blocks.
+        claude = self._avail([self._model("claude-z", 300)], {})
+        antig = self._avail([self._model("gemini-a", 500)], {})
+
+        merged = workboard.merge_spend(claude, antig)
+
+        self.assertEqual(
+            [m["model"] for m in merged["by_model"]], ["gemini-a", "claude-z"]
+        )
+
+    def test_by_session_is_union_of_both(self):
+        claude = self._avail([], {"claude-s1": {"cost_microusd": 1}})
+        antig = self._avail([], {"cascade-c1": {"cost_microusd": 2}})
+
+        merged = workboard.merge_spend(claude, antig)
+
+        self.assertIn("claude-s1", merged["by_session"])
+        self.assertIn("cascade-c1", merged["by_session"])
+
+    def test_available_is_or_of_both_harnesses(self):
+        claude = self._avail([self._model("claude-z", 300)], {"s1": {}})
+        antig = self._unavail("agentprof antigravity boom")
+
+        merged = workboard.merge_spend(claude, antig)
+
+        self.assertIs(merged["available"], True)
+        self.assertIs(merged["claude_available"], True)
+        self.assertIs(merged["antigravity_available"], False)
+        self.assertTrue(merged["antigravity_reason"])
+
+    def test_broken_antigravity_does_not_blank_claude_rows(self):
+        claude = self._avail(
+            [self._model("claude-z", 300)], {"claude-s1": {"cost_microusd": 300}}
+        )
+        antig = self._unavail("boom")
+
+        merged = workboard.merge_spend(claude, antig)
+
+        self.assertEqual([m["model"] for m in merged["by_model"]], ["claude-z"])
+        self.assertIn("claude-s1", merged["by_session"])
+
+    def test_broken_claude_does_not_blank_antigravity_rows(self):
+        claude = self._unavail("boom")
+        antig = self._avail(
+            [self._model("gemini-a", 500)], {"cascade-c1": {"cost_microusd": 500}}
+        )
+
+        merged = workboard.merge_spend(claude, antig)
+
+        self.assertEqual([m["model"] for m in merged["by_model"]], ["gemini-a"])
+        self.assertIn("cascade-c1", merged["by_session"])
+
+    def test_both_unavailable_reports_unavailable_with_reason(self):
+        merged = workboard.merge_spend(
+            self._unavail("claude down"), self._unavail("antigravity down")
+        )
+
+        self.assertIs(merged["available"], False)
+        self.assertTrue(merged["reason"])
+
+    def test_real_failed_antigravity_call_preserves_claude_spend(self):
+        # End-to-end: a genuine subprocess failure on the Antigravity side must
+        # not blank the rows the Claude call populated.
+        tmpdir = tempfile.TemporaryDirectory()
+        try:
+            tmp = Path(tmpdir.name)
+            old_bin = os.environ.get("AGENTPROF_BIN")
+            try:
+                claude_rows = [
+                    {
+                        "session": "s1",
+                        "model": "claude-haiku-4-5-20251001",
+                        "input_tokens": 1,
+                        "output_tokens": 1,
+                        "cache_read_tokens": 0,
+                        "cache_write_tokens": 0,
+                        "cost_microusd": 1000,
+                        "priced": True,
+                    }
+                ]
+                os.environ["AGENTPROF_BIN"] = make_agentprof_stub(
+                    tmp, json.dumps(claude_rows)
+                )
+                claude = workboard.compute_spend(tmp, {"s1"})
+                os.environ["AGENTPROF_BIN"] = "/nonexistent/agentprof"
+                antig = workboard.compute_antigravity_spend(tmp, {"cascade-abc"})
+            finally:
+                if old_bin is None:
+                    os.environ.pop("AGENTPROF_BIN", None)
+                else:
+                    os.environ["AGENTPROF_BIN"] = old_bin
+
+            merged = workboard.merge_spend(claude, antig)
+
+            self.assertIs(merged["available"], True)
+            self.assertGreater(len(merged["by_model"]), 0)
+            self.assertIn("s1", merged["by_session"])
+            self.assertIs(merged["antigravity_available"], False)
+        finally:
+            tmpdir.cleanup()
+
+
 class TestSpendRendering(unittest.TestCase):
     """R6/R7/R8-hint/R10: render the spend data — per-session cost badges, the
     "Spend by model" table, and a hint line when spend is unavailable."""
