@@ -47,6 +47,16 @@ then a commit limited to them); never `-a`, `git add .`, or an unscoped
 commit. A concurrent session's staged or working-tree changes must never ride
 along. Stated once; every commit below follows it.
 
+**Name the run (gen 1, best-effort).** At gen-1 startup, if the run has no
+custom name already (none set by the user this session), label it in Codex's
+Agent Manager naming surface — or, in a `codex exec`/TUI shell that owns a
+TTY, set the terminal tab title — to the repo name plus a compact descriptor
+of the specs being drained: the repo basename then `· drain: <abbreviated
+spec slugs, comma-joined>` (where a TTY exists, `printf '\033]0;%s · drain:
+%s\007' "$(basename "$(git rev-parse --show-toplevel)")" "<slugs>"`). Set it
+once; never re-set on baton generations (they inherit it); skip silently with
+no naming surface or TTY.
+
 **Startup session sweep (advisory).** Before inventory, list other live
 sessions whose working directory resolves into this repo (the runtime's
 session list; one line per foreign session, "sweep unavailable" on failure).
@@ -123,7 +133,11 @@ longer than the prompt-cache TTL, so every verdict wake re-caches the whole
 hub context. The hub's *size*, not the number of wakes, is the cost lever —
 which is why the verdict cap, the merge-time re-read ban, and the baton all
 exist. Run the drain hub on the default tier or below; a frontier hub model
-roughly doubles wake cost for no quality gain.
+roughly doubles wake cost for no quality gain. Same lever when the hub must
+consult the longer shared drain doctrine (docs/human-gates.md, the
+antigravity reference this Codex leg overlays): load only the named section —
+locate its heading with a `grep -n` and read that slice, not the whole
+file.
 
 **The flip is compare-and-swap.** Re-read the task file immediately before
 flipping — an exact-match edit of the literal `Status: pending` line (a file
@@ -136,6 +150,17 @@ detached — with worktree isolation, running the /build procedure plus the
 defer contract: **the worker never asks the human and never edits queue state;
 on ambiguity it stops with verdict DEFERRED and puts the exact question in its
 final message.** Await it and collect its verdict — never fire-and-forget.
+
+The dispatch carries three Codex-adapted worktree guards, addressed to the
+worker: every path you Read/Edit/Write must be under your worktree root (your
+shell's initial $PWD) — the main-checkout path is handed to you only for
+copying gitignored files in, and editing it errors and wastes a turn; on a
+Bash permission denial, retry ONCE as a bare single command (no chaining,
+pipe, or redirection tricks) and, if still denied, stop and report the
+blocked command rather than iterating syntax variants; and read a file at
+most once per edit round — after your own successful Edit/Write the harness
+confirms the new state, so never re-read to verify, re-reading only the
+region another writer changed.
 
 ## 3. Collect the verdict
 
