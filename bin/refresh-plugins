@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Refreshes locally-installed copies of this repo's skills/agents across every
+# runtime it's mirrored to, after new content has landed on the remote.
+#
+# Claude Code caches the "agentic" plugin's content at install time
+# (~/.claude/plugins/cache/agentic-toolkit/agentic/<version>/), sourced from
+# the agentic-toolkit marketplace (GitHub: sticklane/claude). That cache is
+# stale until the marketplace is re-synced and the plugin reinstalled — this
+# only picks up content that's actually on the remote, so run this AFTER
+# pushing, not instead of it (see bin/submit for the wrapper that does both).
+#
+# Antigravity and Codex are live-file runtimes: they read antigravity/ and
+# codex/ directly from this repo's working tree on every invocation, with no
+# install/cache step of their own — nothing to refresh there. That's not a
+# gap in this script; there is genuinely nothing to clear.
+
+set -euo pipefail
+
+echo "== Claude Code: agentic@agentic-toolkit =="
+if command -v claude >/dev/null 2>&1; then
+  claude plugin marketplace update agentic-toolkit
+  claude plugin install agentic@agentic-toolkit
+
+  cache_root="$HOME/.claude/plugins/cache/agentic-toolkit/agentic"
+  current="$(claude plugin list 2>/dev/null | grep -o 'agentic@agentic-toolkit.*[0-9]\+\.[0-9]\+\.[0-9]\+' | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+$' | head -1 || true)"
+  if [ -n "$current" ] && [ -d "$cache_root" ]; then
+    echo "-- pruning stale cached versions (keeping $current) --"
+    for dir in "$cache_root"/*/; do
+      version="$(basename "$dir")"
+      if [ "$version" != "$current" ]; then
+        echo "removing stale cache: $dir"
+        rm -rf "$dir"
+      fi
+    done
+  else
+    echo "-- could not determine current installed version; skipping stale-cache prune --"
+  fi
+else
+  echo "claude CLI not found on PATH — skipping"
+fi
+
+echo "== Antigravity (agy): live-file runtime, nothing to refresh =="
+echo "== Codex: live-file runtime, nothing to refresh =="
+
+echo "done."
