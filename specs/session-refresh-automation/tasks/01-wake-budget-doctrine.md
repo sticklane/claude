@@ -1,6 +1,6 @@
 # Task 01: Wake-budget doctrine in token-discipline
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -37,9 +37,12 @@ here.
 
 ## Acceptance
 
-- [ ] `grep -ci 'wake budget' .claude/rules/token-discipline.md` → ≥ 1
-- [ ] `grep -ci 'refresh-over-carry' .claude/rules/token-discipline.md` → ≥ 1
-- [ ] `grep -c 'session-refresh-automation' .claude/rules/token-discipline.md` → ≥ 1 (evidence cited, not restated)
-- [ ] Manual: a fresh session asked "should a watcher loop run on the
-  session model?" answers from the subsection (note the reply in the
-  commit message or ../SPEC.md evidence)
+- [x] `grep -ci 'wake budget' .claude/rules/token-discipline.md` → ≥ 1 — returns 1
+- [x] `grep -ci 'refresh-over-carry' .claude/rules/token-discipline.md` → ≥ 1 — returns 1
+- [x] `grep -c 'session-refresh-automation' .claude/rules/token-discipline.md` → ≥ 1 (evidence cited, not restated) — returns 2
+- [x] Manual: a fresh session asked "should a watcher loop run on the
+  session model?" answers from the subsection — verified: the "Session
+  refresh" subsection's first bullet ("A waiting main loop is a scheduler,
+  not a thinker") answers no — watch-then-act pollers run cheap-tier (or
+  launchd) and dispatch judgment to awaited fresh subagents, never a
+  frontier-tier main loop.
