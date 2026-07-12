@@ -53,27 +53,47 @@ the source — the section lists OPEN items only, it is not a log.
   content above or below the section.
 - R2 **Drain writes and clears.** Drain's exit checklist step ALSO
   files every human-actionable item into the repo's HUMAN.md in the
-  same commit wave — deferred questions (`ask`), `Unblock: ask:` blocked
-  tasks (`ask`), `Unblock: run:` blocked tasks (`run`), decision-shaped
-  or gate-refused stubs (`decide`), manual-pending evidence lines
-  (`run`), NOT-READY specs from critique intake (`decide`). The batch
-  interview, when an answer flips a deferred task back to pending,
-  DELETES the task's entry in the same commit as the `## Answers` write.
-  The checklist message itself is unchanged (it summarizes; HUMAN.md
-  persists).
-- R3 **Build writes on blocked stops.** /build's same-edit blocked rule
-  (Status: blocked + Unblock: in one edit) extends to a three-part
-  same-edit: the HUMAN.md entry lands in the same commit, typed to match
-  the Unblock: line.
-- R4 **Workboard surfaces it.** agent-console's needs-attention inbox
-  parses `- [ ]` entries under `## Agent-filed blockers` from each
-  scanned repo's HUMAN.md and lists them (date, repo, type, ask) above
-  spec/task rows; checked (`- [x]`) entries are skipped. Graceful when
-  the file or section is absent.
+  same commit wave — FIVE types, each mapping onto an existing checklist
+  section: deferred questions (`ask`, §1), `Unblock: ask:` blocked tasks
+  (`ask`, §3), `Unblock: run:` blocked tasks (`run`, §3),
+  decision-shaped or gate-refused stubs (`decide`, §2/§5/§6), NOT-READY
+  specs from critique intake (`decide`, §4). Manual-pending evidence
+  items are NOT drain-scanned (drain never reads evidence bodies; no
+  marker exists) — the attended session or worker-verdict flow that
+  records a manual-pending item files its `run` entry itself, per R1's
+  grammar. The batch interview, when an answer flips a deferred task
+  back to pending, DELETES the task's entry in the same commit as the
+  `## Answers` write. The checklist message itself is unchanged (it
+  summarizes; HUMAN.md persists).
+- R3 **Attended build writes on blocked stops.** /build's same-edit
+  blocked rule (Status: blocked + Unblock: in ONE edit — that intra-file
+  atomicity is unchanged) extends to a same-COMMIT pair: a second edit
+  adds the HUMAN.md entry, typed to match the Unblock: line, and both
+  files land in one commit. Scope: ATTENDED /build only — a drained
+  worker returns its BLOCKED verdict and drain (R2) files the entry;
+  a worker writing HUMAN.md would rightly fail drain's merge-time Touch
+  whitelist.
+- R4 **Workboard surfaces it.** The HUMAN.md scanner and inbox category
+  land in `.claude/skills/workboard/workboard.py` — the single source of
+  scan/inbox logic (agent-console.py only adapts what
+  `workboard.assemble()` emits; it needs no change beyond what the
+  adapter already passes through). The scanner parses `- [ ]` entries
+  under `## Agent-filed blockers` from each scanned repo's HUMAN.md into
+  `attention_items` (date, repo, type, ask) above spec/task rows;
+  checked (`- [x]`) entries are skipped; absent file or section is
+  graceful. `workboard.py` and `test_workboard.py` are BYTE-IDENTICAL
+  mirrored files (docs/memory/workboard-mirror-verbatim.md): the
+  antigravity copies are ported with `cp` + `diff -q` in the same
+  commit.
 - R5 **Prior-art alignment.** ~/automation/HUMAN.md gains the
   `## Agent-filed blockers` section (empty, below its narrative) so the
-  one existing HUMAN.md conforms; its narrative is untouched.
-  (Cross-repo task; automation's own commit conventions.)
+  one existing HUMAN.md conforms; its narrative is untouched. The task
+  records automation's HEAD SHA before editing; verification diffs
+  against THAT base, scoped to the file
+  (`git -C ~/automation diff <recorded-base> -- HUMAN.md`), asserting
+  additions-only and all additions inside the new section — immune to
+  concurrent commits in that actively-drained repo. (Cross-repo task;
+  automation's own commit conventions.)
 - R6 **Mirror + plugin closing.** Drain/build SKILL.md changes mirror to
   the antigravity ports and the codex drain/build wrappers per the
   port-chain convention; plugin version bumped in the closing task's own
@@ -97,16 +117,23 @@ the source — the section lists OPEN items only, it is not a log.
   (anchor 0-hit everywhere today — verified 2026-07-12) AND
   `grep -qi 'human-blockers' CLAUDE.md` (pointer line) (R1)
 - [ ] `grep -qi 'Agent-filed blockers' .claude/skills/drain/SKILL.md` →
-  hit AND MANUAL: exit-checklist step files all six item types and the
-  interview deletes entries on answer, same commit (R2)
+  hit AND MANUAL: exit-checklist step files the FIVE drain-collected
+  types (mapped to checklist sections) and the interview deletes entries
+  on answer, same commit (R2)
 - [ ] `grep -qi 'Agent-filed blockers' .claude/skills/build/SKILL.md` →
-  hit AND MANUAL: blocked stop is a three-part same-edit (R3)
-- [ ] `bash agent-console/scripts/check.sh` → green including a fixture
-  pair (HUMAN.md with two open + one checked entry → two inbox rows;
-  repo without HUMAN.md → no rows, no error) (R4)
+  hit AND MANUAL: blocked stop is a same-commit two-edit pair, attended
+  scope stated (R3)
+- [ ] `python3 -m pytest .claude/skills/workboard/test_workboard.py -q` →
+  pass including a fixture pair (HUMAN.md with two open + one checked
+  entry → two inbox rows; repo without HUMAN.md → no rows, no error);
+  `bash agent-console/scripts/check.sh` stays green (adapter unchanged
+  or minimally extended);
+  `diff -q .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py` →
+  identical (byte-mirror rule) (R4)
 - [ ] `grep -qi 'Agent-filed blockers' /Users/sjaconette/automation/HUMAN.md`
-  → hit; narrative above unchanged (`git -C ~/automation diff HEAD~1 --stat`
-  shows only the section append) (R5)
+  → hit AND `git -C ~/automation diff <recorded-base> -- HUMAN.md` shows
+  additions only, all inside the new section (base SHA recorded in this
+  spec's evidence/) (R5)
 - [ ] `claude plugin validate .` passes; `bash evals/lint-ultra-gate.sh`
   OK; plugin version bumped in the closing task's own commit;
   `grep -qi 'Agent-filed blockers' antigravity/.agents/workflows/drain.md`
@@ -124,8 +151,10 @@ Task map (/breakdown owns final shape): 01 = R1 rule + CLAUDE.md pointer;
 drain queue may still hold drain-SKILL.md-touching tasks
 (drain-wake-cost/04 extraction); Touch-disjoint admission serializes,
 and this spec's 02 should dispatch after that extraction merges to avoid
-churning a file mid-relocation); 03 = R4 agent-console inbox; 04 = R5
-automation cross-repo append; 05 = R6 closing mirror/bump. 01, 03, 04
-pairwise-disjoint.
+churning a file mid-relocation); 03 = R4 workboard.py scanner + tests +
+byte-identical antigravity workboard.py/test_workboard.py mirrors in its
+Touch; 04 = R5 automation cross-repo append; 05 = R6 closing mirror/bump
+(drain/build SKILL.md ports + plugin bump covering 02 AND 03's skill
+changes). 01, 03, 04 pairwise-disjoint.
 
 - Group: 01, 03, 04
