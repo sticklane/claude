@@ -37,33 +37,52 @@ an interview; "nothing worth keeping" stays a valid outcome.
 
 ## Requirements
 
-- R1 **Exhaustion-path auto-distill.** Drain SKILL.md step 4: after the
-  exit checklist is delivered (and any lease/baton cleanup committed),
-  the session invokes /distill via the Skill tool — the same sanctioned
-  in-session exception 3b uses — announced in one line. The existing
-  conditional suggestion at ~600 is replaced by this unconditional
-  terminal step (a run with nothing to distill reports "nothing worth
-  keeping" through distill itself, not by skipping it). Distill's file
-  writes commit per its own conventions; the run's final message appends
-  distill's one-line-per-learning summary after the checklist.
-- R2 **Generation-cap-path auto-distill.** SKILL.md 3a: the generation
-  that hits the max-generations cap runs the same terminal distill after
-  writing the baton + needs-attention note and before ending its turn —
-  the cap is precisely when accumulated lessons would otherwise strand.
-  A mid-run baton pass (normal generation handoff) does NOT distill; only
-  the cap stop and exhaustion do — intermediate generations' lessons
-  survive in committed artifacts the terminal distill mines.
-- R3 **Unattended-safe distill contract.** One paragraph in distill
-  SKILL.md (or its terminal-invocation clause in drain): when invoked
-  from an unattended context, distill never uses AskUserQuestion; a
+- R1 **One terminal distill, in step 4.** Drain SKILL.md step 4: after
+  the exit checklist is delivered (and any lease/baton cleanup
+  committed), the session invokes /distill via the Skill tool, announced
+  in one line — AT MOST ONCE PER SESSION. This is a NEW explicit
+  self-chain carve-out, not a reuse of 3b's: the self-chain conventions'
+  condition (a) (critic-READY artifact) cannot apply to distill (it
+  consumes a run, it doesn't ship a gated artifact), so CLAUDE.md's
+  self-chain bullet gains one sentence sanctioning terminal-capture
+  self-chains (drain's terminal distill) gated by the terminal state
+  itself rather than a READY verdict. The existing conditional
+  suggestion at ~600 is replaced by this unconditional terminal step
+  (a run with nothing to distill reports "nothing worth keeping"
+  through distill, not by skipping it), and the closing
+  "Next pipeline step: /distill after a drained queue" line (~648) is
+  rewritten to state distill self-chains in-session at terminal states
+  ("(self-chains per conventions)" marking), covering both exhaustion
+  and the cap stop. Distill's file writes commit per its own
+  conventions; the run's final message appends distill's
+  one-line-per-learning summary after the checklist.
+- R2 **Cap path reaches the same distill via step 4.** The
+  max-generations cap stop already routes through step 4 (SKILL.md
+  ~396-398: the cap generation "leads its exit checklist (step 4) with
+  the resume command") — so the cap path gets the terminal distill FROM
+  R1's step-4 insertion, not from a second one. 3a gains only a
+  one-line pointer noting the cap generation's distill fires in step 4.
+  Ordinary mid-run baton passes do NOT distill (they are not step-4
+  entries); intermediate generations' lessons survive in committed
+  artifacts the terminal distill mines. The once-per-session guard in
+  R1 is the double-fire protection.
+- R3 **Unattended-safe distill contract — pinned to distill SKILL.md.**
+  One paragraph in `.claude/skills/distill/SKILL.md` (governing distill
+  wherever invoked; NOT the drain-side clause): distill uses
+  AskUserQuestion only where an interactive human is available (the
+  skill's existing "where available, else…" idiom is the detection
+  mechanism — no new signal invented); otherwise it never asks — a
   candidate learning that needs a human decision is filed as a `decide`
   entry under the repo HUMAN.md's `## Agent-filed blockers` section
   (human-blockers-doc grammar) and named in the summary; repo-file
-  routing (CLAUDE.md line / rules file / docs/memory topic / skill) is
-  otherwise unchanged. Distill sources for a drain run explicitly include
-  the run's committed artifacts: task-file `## Decisions`/`## Progress`
-  entries, critique-findings files, screen/sweep incidents, and the exit
-  checklist.
+  routing is otherwise unchanged. The paragraph also extends the harvest
+  step for orchestrated runs: sources include the run's committed
+  artifacts (task-file `## Decisions`/`## Progress` entries,
+  critique-findings files, screen/sweep incidents, the exit checklist),
+  not only the session transcript. distill SKILL.md is a ported skill:
+  the antigravity distill port (`antigravity/.agents/skills/distill/SKILL.md`)
+  gets the content-equivalent paragraph in the same commit (codex
+  reaches it via symlink — no codex work).
 - R4 **Mirror + plugin closing.** Content-equivalent lines in the
   antigravity drain workflow (and its distill port if one exists —
   check; distill may be ported as a skill) and the codex drain wrapper
@@ -84,14 +103,23 @@ an interview; "nothing worth keeping" stays a valid outcome.
 
 - [ ] `grep -qi 'terminal distill' .claude/skills/drain/SKILL.md`
   (anchor 0-hit everywhere today — verified 2026-07-12) AND MANUAL: step
-  4 invokes /distill unconditionally after the exit checklist, one-line
-  announcement, replacing the ~600 conditional suggestion (R1)
-- [ ] MANUAL: 3a's cap stop runs the same terminal distill; ordinary
-  baton passes explicitly do not (R2)
-- [ ] `grep -qi 'never uses AskUserQuestion' .claude/skills/distill/SKILL.md || grep -qi 'never uses AskUserQuestion' .claude/skills/drain/SKILL.md`
-  (phrase 0-hit today) AND MANUAL: unattended learnings needing judgment
-  route to HUMAN.md `decide` entries; run-artifact sources enumerated
-  (R3)
+  4 invokes /distill unconditionally after the exit checklist, at most
+  once per session, one-line announcement, replacing the ~600
+  conditional suggestion; the ~648 closing line rewritten with the
+  "(self-chains per conventions)" marking covering both terminal states
+  (R1)
+- [ ] `grep -qi 'terminal-capture' CLAUDE.md` (0-hit today) AND MANUAL:
+  the self-chain bullet's new sentence sanctions terminal-capture
+  self-chains without a critic-READY artifact (R1)
+- [ ] MANUAL: 3a carries only the one-line pointer (cap path distills
+  via step 4); ordinary baton passes explicitly do not distill;
+  no second insertion exists (R2)
+- [ ] `grep -qi 'Agent-filed blockers' .claude/skills/distill/SKILL.md`
+  (0-hit in distill today) AND MANUAL: interactive-detection uses the
+  existing where-available idiom; run-artifact harvest sources
+  enumerated (R3)
+- [ ] `grep -qi 'Agent-filed blockers' antigravity/.agents/skills/distill/SKILL.md`
+  → content-equivalent paragraph ported (R3)
 - [ ] `grep -qi 'terminal distill' antigravity/.agents/workflows/drain.md`
   (0 today) AND `claude plugin validate .` passes AND
   `bash evals/lint-ultra-gate.sh` OK AND plugin version line modified in
@@ -99,14 +127,19 @@ an interview; "nothing worth keeping" stays a valid outcome.
 
 ## Open questions
 
-(none — invocation mechanism reuses 3b's sanctioned exception; the
-unattended interview problem routes through human-blockers-doc's grammar)
+(none — invocation is a NEW explicit terminal-capture carve-out added to
+CLAUDE.md's self-chain bullet (R1), not a reuse of 3b's critic-READY
+exception; the unattended interview problem routes through
+human-blockers-doc's grammar with the existing where-available idiom as
+the detection mechanism)
 
 ## Parallelization
 
 Task map (/breakdown owns final shape): 01 = R1+R2+R3 skill text (drain
-SKILL.md + distill SKILL.md — single writer); 02 = R4 closing
-mirror/bump. Serialized. Cross-spec caution: drain SKILL.md is also
+SKILL.md + distill SKILL.md + CLAUDE.md carve-out sentence +
+antigravity distill port — single writer); 02 = R4 closing
+mirror/bump (antigravity drain workflow + codex drain wrapper check +
+plugin). Serialized. Cross-spec caution: drain SKILL.md is also
 touched by human-blockers-doc/02 and drain-wake-cost/04 (extraction) —
 Touch-disjoint admission serializes; prefer dispatch AFTER the extraction
 merges. R3 depends conceptually on human-blockers-doc/01's rule existing;
