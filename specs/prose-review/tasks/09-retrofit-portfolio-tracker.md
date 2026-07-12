@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 03
 Priority: P2
 Budget: 4 turns
@@ -27,8 +27,8 @@ satisfiable, stop with the finding recorded instead of committing.
 
 ## Acceptance
 
-- [ ] `test -s specs/prose-review/evidence/retrofit-portfolio-tracker.md` → before/after Vale AND rubric counts + CI-precondition line present (MANUAL: content)
-- [ ] Fixes committed and pushed in the target repo (portfolio-tracker), now that the CI precondition is confirmed satisfied
+- [x] `test -s specs/prose-review/evidence/retrofit-portfolio-tracker.md` → before/after Vale AND rubric counts + CI-precondition line present (MANUAL: content) — evidence at specs/prose-review/evidence/retrofit-portfolio-tracker.md (BEFORE README 8/14/17, AFTER 6/10/17; rubric + reader-test recorded; precondition PASS)
+- [x] Fixes committed and pushed in the target repo (portfolio-tracker), now that the CI precondition is confirmed satisfied — portfolio-tracker origin/main commit 913a433 (README.md, 6 insertions/6 deletions); no deploy fired (gh run list confirms)
 
 ## Progress
 
