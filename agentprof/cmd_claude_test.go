@@ -48,6 +48,40 @@ func TestClaudeCommandEmitsCanonicalJSONLOnStdout(t *testing.T) {
 	}
 }
 
+func TestClaudeReportsUnmatchedToolCallsOnStderr(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	code := run([]string{"claude", "--claude-dir", "testdata/claude-dir"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr: %s", code, stderr.String())
+	}
+	// The fixture holds tool_use blocks with no matching tool_result; a real run
+	// must surface those unmatched calls as a parse-stat on stderr.
+	if !strings.Contains(stderr.String(), "unmatched tool call") {
+		t.Errorf("stderr = %q, want it to report the unmatched (pending) tool calls", stderr.String())
+	}
+}
+
+func TestClaudeKeepPendingEmitsPerCallPendingSamples(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	code := run([]string{"claude", "--claude-dir", "testdata/claude-dir", "--keep-pending"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr: %s", code, stderr.String())
+	}
+	out := stdout.String()
+	// --keep-pending restores per-call emission: unmatched calls keep their own
+	// tool:(pending) sample with no consolidated pending_calls value.
+	if !strings.Contains(out, "tool:(pending)") {
+		t.Errorf("stdout = %q, want at least one tool:(pending) sample", out)
+	}
+	if strings.Contains(out, "pending_calls") {
+		t.Errorf("stdout = %q, want no consolidated pending_calls value under --keep-pending", out)
+	}
+}
+
 func TestClaudeMergeScrubsDenylistedFramesFromCachedSamples(t *testing.T) {
 	dir := t.TempDir()
 	// A rolling cache holding a frame written before the denylist existed.

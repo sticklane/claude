@@ -30,6 +30,7 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 	summaryPath := fs.String("summary", "", "write the pre-aggregated Cost (7d) summary JSON to this path")
 	nameTurns := fs.Bool("name-turns", false, "rename uninformative turn frames via one cached haiku call")
 	reprimeThreshold := fs.Int("reprime-threshold", claude.DefaultReprimeThreshold, "cache_write_tokens above which a non-first main-loop call is labeled reprime=true (0 disables)")
+	keepPending := fs.Bool("keep-pending", false, "keep one tool:(pending) sample per unmatched tool call instead of consolidating them into a single pending_calls count")
 	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (default stdout)")
 	frameDenylist := fs.String("frame-denylist", defaultFrameDenylist(), "path to a frame denylist file (one substring per line); any frame containing a listed string is redacted before emit")
 	if err := fs.Parse(args); err != nil {
@@ -67,13 +68,23 @@ func cmdClaude(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	samples, turns, skipped, err := claude.CollectWithReprime(*dir, cutoff, *reprimeThreshold)
+	samples, turns, stats, err := claude.CollectWithOptions(*dir, cutoff, claude.Options{
+		ReprimeThreshold: *reprimeThreshold,
+		KeepPending:      *keepPending,
+	})
 	if err != nil {
 		fmt.Fprintf(stderr, "agentprof claude: %v\n", err)
 		return 1
 	}
-	if skipped > 0 {
-		fmt.Fprintf(stderr, "skipped %d unparseable lines\n", skipped)
+	if stats.Skipped > 0 {
+		fmt.Fprintf(stderr, "skipped %d unparseable lines\n", stats.Skipped)
+	}
+	if stats.Pending > 0 {
+		disposition := "consolidated into tool:(pending)"
+		if *keepPending {
+			disposition = "kept as tool:(pending)"
+		}
+		fmt.Fprintf(stderr, "%d unmatched tool call(s) %s\n", stats.Pending, disposition)
 	}
 	// Redact denylisted frames before any emit path (merge, summary, or direct);
 	// re-applied after --name-turns below since renaming rewrites turn frames,

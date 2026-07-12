@@ -235,9 +235,9 @@ attribution hierarchy stays stable across machines and transcript quirks:
 - **Pending tool calls.** A `tool_use` block with no matching `tool_result`
   can't be given a duration, so unmatched calls in a response aggregate into a
   single `tool:(pending)` sample carrying a `pending_calls` count instead of one
-  duration-less sample per call. The library option `Options.KeepPending`
-  restores the old behavior (one `tool:(pending)` sample per unmatched call);
-  there is no CLI flag for it.
+  duration-less sample per call. The `--keep-pending` flag (library option
+  `Options.KeepPending`) restores the old behavior (one `tool:(pending)` sample
+  per unmatched call). Real runs report the unmatched-call count on stderr.
 
 Duration-only tool samples (matched and pending alike) have no model leaf — the
 model slot holds the `tool:` frame — so they aggregate under the cost-summary
@@ -403,7 +403,7 @@ go tool pprof -top custom.pb.gz
 
 | Command                                                                   | What it does                                                               |
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `agentprof claude [--claude-dir PATH] [--days N \| --since RFC3339] [--merge cache.jsonl] [--summary costs.json] [--name-turns] [--reprime-threshold N] [--frame-denylist PATH] [-o out]` | Claude Code transcripts → samples. Defaults: `~/.claude`, 30 days (`--since` is the mutually-exclusive absolute cutoff), `--reprime-threshold 50000` (0 disables), denylist `~/.config/agentprof/frame-denylist`, stdout. `--merge` keeps a 7-day rolling JSONL cache; `--summary` writes the pre-aggregated Cost JSON the workboard panel reads. |
+| `agentprof claude [--claude-dir PATH] [--days N \| --since RFC3339] [--merge cache.jsonl] [--summary costs.json] [--name-turns] [--reprime-threshold N] [--keep-pending] [--frame-denylist PATH] [-o out]` | Claude Code transcripts → samples. Defaults: `~/.claude`, 30 days (`--since` is the mutually-exclusive absolute cutoff), `--reprime-threshold 50000` (0 disables), denylist `~/.config/agentprof/frame-denylist`, stdout. `--merge` keeps a 7-day rolling JSONL cache; `--summary` writes the pre-aggregated Cost JSON the workboard panel reads; `--keep-pending` keeps one `tool:(pending)` sample per unmatched tool call instead of consolidating them. |
 | `agentprof gcp <billing.json> [--frame-labels k1,k2] [-o out]`            | GCP billing export rows → samples.                                         |
 | `agentprof vertex <logs.json> [-o out]`                                   | Vertex AI request-response logging rows → samples.                         |
 | `agentprof build <samples.jsonl>... -o out.pb.gz`                         | Canonical-schema JSONL → pprof profile.                                    |

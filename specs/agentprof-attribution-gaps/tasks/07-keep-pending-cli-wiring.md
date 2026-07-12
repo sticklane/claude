@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Promotion-ready: true
 Promoted-by-run: attended-2026-07-11-sjaconette
 Discovered-from: specs/agentprof-attribution-gaps/tasks/03-pending-consolidation.md
@@ -33,7 +33,7 @@ assertions may need updating if the flag changes output shape
 
 ## Acceptance
 
-- [ ] `cd agentprof && go run . claude --help 2>&1 | grep -q keep-pending` → hit
-- [ ] `cd agentprof && go test ./...` → pass (incl. root cmd tests)
-- [ ] `grep -qi 'keep-pending' agentprof/README.md` → hit
-- [ ] `bash agentprof/scripts/check.sh` → green
+- [x] `cd agentprof && go run . claude --help 2>&1 | grep -q keep-pending` → hit — verifier PASS; `-keep-pending` flag present with usage text (evidence/07-keep-pending-cli-wiring.md)
+- [x] `cd agentprof && go test ./...` → pass (incl. root cmd tests) — verifier PASS; all 15 packages ok incl. 2 new cmd tests
+- [x] `grep -qi 'keep-pending' agentprof/README.md` → hit — verifier PASS; hits in Commands table + Pending-tool-calls note
+- [x] `bash agentprof/scripts/check.sh` → green — verifier PASS; format-check ok / lint ok / tests ok
