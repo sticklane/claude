@@ -32,6 +32,31 @@ type Summary struct {
 	SessionsAdded int                         `json:"sessions_added"`
 	Reprime       Reprime                     `json:"reprime"`
 	Sessions      map[string]SessionStat      `json:"sessions"`
+	UntypedFanout UntypedFanout               `json:"untyped_fanout"`
+}
+
+// UntypedFanout is the guard metric for untyped agent dispatch (SPEC R4): the
+// calls and cost_microusd flowing through samples whose stack passes through an
+// untyped catch-all agent frame, split by model, plus the deepest adjacent
+// untyped-frame run observed. The untyped set is the EXACT-match enumeration
+// untypedAgents below — any other agent:* frame (e.g. agent:claude-code-guide,
+// which merely shares the agent:claude prefix) is typed: excluded from the
+// rollup and breaking a depth chain. Additive only, like Reprime.
+type UntypedFanout struct {
+	Calls        int64                       `json:"calls"`
+	CostMicrousd int64                       `json:"cost_microusd"`
+	ByModel      map[string]map[string]int64 `json:"by_model"`
+	MaxDepth     int64                       `json:"max_depth"`
+}
+
+// untypedAgents is the exact-match set of untyped catch-all agent frames — the
+// default-when-no-name types whose nested dispatch compounds the caller's model
+// (SPEC R4). Membership is exact, never a prefix match.
+var untypedAgents = map[string]struct{}{
+	"agent:claude":                  {},
+	"agent:agentic:claude":          {},
+	"agent:general-purpose":         {},
+	"agent:agentic:general-purpose": {},
 }
 
 // Reprime rolls up the samples labeled reprime=true (cache-reprime SPEC R2):
@@ -96,7 +121,60 @@ func Build(forGrouping, fresh []schema.Sample) Summary {
 	s.SessionsAdded = distinctSessions(fresh)
 	s.Reprime = reprimeRollup(forGrouping)
 	s.Sessions = sessionStats(forGrouping)
+	s.UntypedFanout = untypedFanout(forGrouping)
 	return s
+}
+
+// untypedFanout rolls up the calls and cost of samples that pass through an
+// untyped catch-all agent frame, split by model, and records the deepest
+// adjacent untyped-frame run observed (SPEC R4). Computed from forGrouping, so
+// the --merge rolling-window path is respected exactly like reprimeRollup.
+func untypedFanout(forGrouping []schema.Sample) UntypedFanout {
+	uf := UntypedFanout{ByModel: map[string]map[string]int64{}}
+	for _, smp := range forGrouping {
+		depth := untypedRunDepth(smp.Stack)
+		if depth == 0 {
+			continue
+		}
+		if int64(depth) > uf.MaxDepth {
+			uf.MaxDepth = int64(depth)
+		}
+		model, _ := modelLeaf(smp.Stack)
+		if v, ok := smp.Values["calls"]; ok {
+			uf.Calls += v
+			add(uf.ByModel, model, "calls", v)
+		}
+		if v, ok := smp.Values["cost_microusd"]; ok {
+			uf.CostMicrousd += v
+			add(uf.ByModel, model, "cost_microusd", v)
+		}
+	}
+	return uf
+}
+
+// untypedRunDepth returns the length of the longest run of adjacent untyped
+// agent frames in stack (SPEC R4 edge rule). Only agent: frames matter: an
+// untyped-set frame extends the current run, any other agent: frame (a typed
+// agent, e.g. agent:scout or agent:claude-code-guide) breaks it, and every
+// non-agent frame (wf:/stage:/role markers, model, main, project) is
+// transparent — skipped without breaking adjacency. 0 means the stack passes
+// through no untyped frame at all.
+func untypedRunDepth(stack []string) int {
+	max, run := 0, 0
+	for _, f := range stack {
+		if !strings.HasPrefix(f, "agent:") {
+			continue
+		}
+		if _, ok := untypedAgents[f]; ok {
+			run++
+			if run > max {
+				max = run
+			}
+		} else {
+			run = 0
+		}
+	}
+	return max
 }
 
 // reprimeRollup sums the samples labeled reprime=true over forGrouping (SPEC R2).
