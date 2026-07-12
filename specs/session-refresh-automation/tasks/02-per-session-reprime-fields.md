@@ -1,6 +1,6 @@
 # Task 02: Per-session reprime fields in the cost summary
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 10 turns
@@ -36,7 +36,7 @@ drain serializes them (this one lands first).
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/costsummary/` → pass, including the new per-session reprime test
-- [ ] `cd agentprof && go build -o agentprof . && ./agentprof claude --days 7 --summary /tmp/s.json -o /dev/null && jq -e '.sessions | to_entries[0].value | has("reprime_count") and has("reprime_cost_microusd")' /tmp/s.json` → true
-- [ ] `grep -c 'reprime_count' agentprof/SCHEMA.md` → ≥ 1
-- [ ] `bash agentprof/scripts/check.sh` → green
+- [x] `cd agentprof && go test ./internal/costsummary/` → pass, including the new per-session reprime test — verifier: 17/17 pass incl. TestBuildSessionsSectionPerSessionReprimeAggregates (evidence/02-per-session-reprime-fields.md)
+- [x] `cd agentprof && go build -o agentprof . && ./agentprof claude --days 7 --summary /tmp/s.json -o /dev/null && jq -e '.sessions | to_entries[0].value | has("reprime_count") and has("reprime_cost_microusd")' /tmp/s.json` → true — verifier: prints `true` (evidence/02-per-session-reprime-fields.md)
+- [x] `grep -c 'reprime_count' agentprof/SCHEMA.md` → ≥ 1 — verifier: 2 (evidence/02-per-session-reprime-fields.md)
+- [x] `bash agentprof/scripts/check.sh` → green — verifier: format-check/lint/tests ok, exit 0 (evidence/02-per-session-reprime-fields.md)

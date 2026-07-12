@@ -49,12 +49,16 @@ type Reprime struct {
 // the parent's session label but are excluded — main-loop context is the cost
 // driver; see the spec's Open questions). p50/p90 are over per-call context
 // size (cache_read_tokens + input_tokens).
+// ReprimeCount and ReprimeCostMicrousd aggregate this session's own samples
+// labeled reprime=true — the per-session slice of the top-level Reprime rollup.
 type SessionStat struct {
-	Project      string `json:"project"`
-	Calls        int64  `json:"calls"`
-	CostMicrousd int64  `json:"cost_microusd"`
-	P50Ctx       int64  `json:"p50_ctx"`
-	P90Ctx       int64  `json:"p90_ctx"`
+	Project             string `json:"project"`
+	Calls               int64  `json:"calls"`
+	CostMicrousd        int64  `json:"cost_microusd"`
+	P50Ctx              int64  `json:"p50_ctx"`
+	P90Ctx              int64  `json:"p90_ctx"`
+	ReprimeCount        int64  `json:"reprime_count"`
+	ReprimeCostMicrousd int64  `json:"reprime_cost_microusd"`
 }
 
 // Build aggregates forGrouping into the by-dimension groups and totals, and
@@ -120,10 +124,12 @@ func reprimeRollup(forGrouping []schema.Sample) Reprime {
 // subagent samples are excluded) (SPEC R3).
 func sessionStats(forGrouping []schema.Sample) map[string]SessionStat {
 	type acc struct {
-		project string
-		calls   int64
-		cost    int64
-		ctx     []int64
+		project     string
+		calls       int64
+		cost        int64
+		ctx         []int64
+		reprimeN    int64
+		reprimeCost int64
 	}
 	accs := map[string]*acc{}
 	for _, smp := range forGrouping {
@@ -148,16 +154,22 @@ func sessionStats(forGrouping []schema.Sample) map[string]SessionStat {
 		a.calls += smp.Values["calls"]
 		a.cost += smp.Values["cost_microusd"]
 		a.ctx = append(a.ctx, smp.Values["cache_read_tokens"]+smp.Values["input_tokens"])
+		if smp.Labels["reprime"] == "true" {
+			a.reprimeN++
+			a.reprimeCost += smp.Values["cost_microusd"]
+		}
 	}
 	out := map[string]SessionStat{}
 	for sess, a := range accs {
 		sort.Slice(a.ctx, func(i, j int) bool { return a.ctx[i] < a.ctx[j] })
 		out[sess] = SessionStat{
-			Project:      a.project,
-			Calls:        a.calls,
-			CostMicrousd: a.cost,
-			P50Ctx:       percentile(a.ctx, 50),
-			P90Ctx:       percentile(a.ctx, 90),
+			Project:             a.project,
+			Calls:               a.calls,
+			CostMicrousd:        a.cost,
+			P50Ctx:              percentile(a.ctx, 50),
+			P90Ctx:              percentile(a.ctx, 90),
+			ReprimeCount:        a.reprimeN,
+			ReprimeCostMicrousd: a.reprimeCost,
 		}
 	}
 	return out
