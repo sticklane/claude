@@ -1,14 +1,36 @@
-# /prose-review: check writing style for AI-writing antipatterns
+# /prose-review: house technical-writing system (Diátaxis + Vale/Google + AI-antipattern rubric + reader test)
+
+Status: open
+Priority: P1
 
 ## Problem
 
-No skill in this toolkit reviews prose quality. `/code-review` and
-`/simplify` are code-only; `/critique` is adversarial review of a spec's
-*content* (gaps, ambiguity, missing requirements), not its *style* — a
-scout confirmed no sibling exists and grep for "writing style"/"prose"/
-"antipattern" across `.claude/` turns up nothing on-topic. Six vendors'
-own published guidance, verified this session, converges on a checkable
-rubric of AI-writing antipatterns:
+The toolkit's technical writing reads badly and nothing checks it. Steven's
+verdict (2026-07-11): "I just don't like how any of our tech writing comes
+out" — /idea output excepted. The failure mode is structural: agent-written
+docs optimize for coverage and correctness, producing dense inventories —
+parenthetical cite-chains, changelog-speak, bullets where paragraphs belong
+— because no skill reviews prose quality and no framework guides authoring.
+`/code-review` and `/simplify` are code-only; `/critique` reviews a spec's
+*content*, not its *style*.
+
+Three public, battle-tested frameworks cover the layers we lack, and one
+session-verified rubric covers the AI-specific failure modes:
+
+**Structure — Diátaxis** (diataxis.fr): the tutorials / how-to / reference /
+explanation quadrant framework, adopted by Django, Canonical, Cloudflare,
+and Python. Its core claim matches our failure mode exactly: mixing
+explanation into reference makes both worse.
+
+**Sentences — Google Developer Documentation Style Guide**
+(developers.google.com/style), enforced mechanically by **Vale** (vale.sh,
+brew 3.15.1, verified available 2026-07-11; not currently installed — no
+binary, no `~/.vale.ini`): a prose linter whose ready-made Google package
+turns the style guide into a deterministic gate, matching this repo's
+gates-beat-prose-rules doctrine.
+
+**AI-writing antipatterns** — six vendors' own published guidance, verified
+this session, converges on a checkable rubric:
 - **Anthropic**: avoid list/bullet overuse ("DO NOT use ordered lists...
   unless... discrete items" — write "flowing prose using complete
   paragraphs"), avoid over-formatting ("avoids over-formatting with bold
@@ -35,22 +57,51 @@ rubric of AI-writing antipatterns:
   Workspace style-*matching* features and generic prompt-clarity advice)
   — contributes no rubric items, noted honestly rather than padded.
 
+**Comprehension — the reader test**, distilled from Anthropic's official
+`doc-coauthoring` skill (github.com/anthropics/skills): a fresh-context
+agent reads the doc cold and reports where it stumbles. Distilled, not
+installed — it is a procedure, not code, and a plugin dependency would add
+per-session token load for one stage (decision: Steven, 2026-07-11
+interview).
+
+System-wide application comes free: the skill ships in the `agentic`
+plugin, which every session on this machine loads; the Vale config is
+user-level (`~/.vale.ini`). No per-repo setup beyond the optional gate.
+
 ## Solution
 
-A new skill, `/prose-review`, reviewing a target (a file path, a diff, or
-pasted text) against a **fixed, cited rubric** written directly into the
-skill's own doctrine (`.claude/skills/prose-review/reference.md`) — no
-research is dispatched at invocation time; the rubric is stable content,
-verified once, not re-derived per run (unlike `/domain-knowledge`'s
-live-research design, this is closer to `/simplify`'s fixed-checklist
-shape). It reports findings ranked by severity, each citing which rubric
-item it violates, with a suggested rewrite — matching `/code-review`'s
-reporting shape (`ReportFindings`-style) but for prose instead of code.
+One skill, `/prose-review`, in `.claude/skills/prose-review/`, with the
+doctrine in its `reference.md` — no research dispatched at invocation; the
+rubric and style bindings are stable, verified content (like `/simplify`'s
+fixed checklist, unlike `/domain-knowledge`'s live research).
+
+Two faces, one skill: **review mode** (the default and the only
+model-invocable behavior) runs Vale first (deterministic pass), then the
+nine-item rubric (judgment pass), then — for orientation docs — the reader
+test, reporting findings ranked by severity in `/code-review`'s reporting
+shape. **Authoring doctrine** (the rest of reference.md) is what an agent
+loads *before* writing human-facing docs: the Diátaxis quadrant bound to
+this machine's doc locations, and the Google-style essentials Vale can't
+check (audience-first ordering, one-idea paragraphs).
+
+Mechanics: `bin/install-vale` (idempotent) installs Vale via Homebrew,
+writes `~/.vale.ini` pointing at this repo's `vale/` StylesPath, and runs
+`vale sync` to pull the Google package; the repo tracks the config template
+and the House vocabulary (accept list for toolkit jargon: drain, baton,
+worktree, agentprof, Diátaxis, ...) and gitignores the synced package
+payload. The gate skill's check template gains an OPT-IN vale stanza;
+machine-parsed prose (task files, specs/, SKILL.md bodies) is exempt
+by default — Vale targets human-orientation docs (README.md, AGENTS.md,
+docs/*.md).
+
+A bulk retrofit wave (decision: Steven, 2026-07-11 interview) brings every
+`std`-marked repo in `~/REPOS.md` up to the standard: one task per repo,
+run the review, apply fixes to that repo's orientation docs, commit there.
 
 ## Requirements
 
-- **R1**: `.claude/skills/prose-review/reference.md` documents exactly
-  these nine rubric items, each with its source vendor(s) and the
+- **R1 (rubric)**: `.claude/skills/prose-review/reference.md` documents
+  exactly these nine rubric items, each with its source vendor(s) and the
   verified quote backing it (from Problem): (1) list/bullet overuse where
   prose reads better, (2) excessive hedging/disclaimers/AI-reminders,
   (3) sycophancy, (4) over-formatting (bold/headers beyond what aids
@@ -60,109 +111,136 @@ reporting shape (`ReportFindings`-style) but for prose instead of code.
   noted as contributing no rubric item, not silently omitted. **Rubric
   item 1 explicitly excludes structured technical documents** — a spec's
   `## Requirements`/`## Acceptance criteria` sections, API references, or
-  any list whose items are genuinely discrete/enumerable (this repo's own
-  `specs/*/SPEC.md` files are the concrete example) are not "list
-  overuse"; item 1 targets narrative/explanatory prose being fragmented
-  into bullets where flowing paragraphs would read better, per the exact
-  carve-out Anthropic's own guidance already states ("unless... you're
-  presenting truly discrete items").
-- **R2**: `.claude/skills/prose-review/SKILL.md` takes a target (file
-  path / diff / pasted text) and checks it against all nine items,
-  reporting findings ranked by severity — file:line (or quoted excerpt for
-  pasted text), which rubric item, a one-line reason, and a suggested
-  rewrite. Zero findings is a valid, explicitly reported outcome ("no
-  antipatterns found"), not silence.
-- **R3**: `/prose-review` is read-only by default (report only) — this is
-  its only model-invocable behavior. An optional `--fix` flag applies the
-  suggested rewrites to the target file directly; `--fix` requires a file
-  path target specifically — given a diff or pasted-text target, `--fix`
-  errors rather than guessing where to write output. (Note: earlier
-  drafts of this spec claimed `--fix` "matches `/code-review`'s existing
-  `--fix` convention" — that claim doesn't hold up: `/code-review` is a
-  harness/plugin built-in with no on-disk SKILL.md, invoked with a tier
-  arg like `low`, not option flags, per `build/SKILL.md:86`; `--fix`'s
-  design here stands on its own, not on an unverifiable parity claim.)
-- **R4**: The **default, read-only report mode** is model-invocable (no
-  `disable-model-invocation`) — same risk class as `/critique`/
-  `/simplify`. **`--fix` is human-invoked only** (the flag must be typed
-  explicitly by a human in the same message that invokes the skill,
-  never inferred/added automatically by the model from a vague request)
-  — this is a `SKILL.md` behavioral instruction, not a runtime guard (a
-  flag can't distinguish human-typed from model-typed arguments at
-  invocation time); enforcement is the same "the model doesn't self-grant
-  the mutating path" discipline `disable-model-invocation` skills rely
-  on elsewhere in this repo, applied here as an instruction rather than a
-  frontmatter flag since the read-only mode must stay model-invocable.
-  Auto-rewriting a file based on a 9-item subjective rubric is real
-  mutation risk (a false positive on item 1 could damage exactly the kind
-  of structured spec content R1 carves out, if that carve-out is ever
-  misjudged), and this repo's own convention reserves autonomous mutation
-  for stages with much stronger gates than a style rubric provides.
-- **R5**: Per CLAUDE.md's mirroring convention,
-  `antigravity/.agents/skills/prose-review/` is created in the same
-  commit with equivalent content (a plain review skill, no
-  Claude-Code-specific mechanism, ports cleanly).
-- **R6**: `.claude-plugin/plugin.json`'s `version` is bumped (new skill).
+  any list whose items are genuinely discrete/enumerable are not "list
+  overuse"; item 1 targets narrative/explanatory prose fragmented into
+  bullets where flowing paragraphs would read better, per Anthropic's own
+  carve-out ("unless... you're presenting truly discrete items").
+- **R2 (review mode)**: `.claude/skills/prose-review/SKILL.md` takes a
+  target (file path / diff / pasted text) and reports findings ranked by
+  severity — file:line (or quoted excerpt), which rubric item or Vale rule,
+  a one-line reason, and a suggested rewrite. The Vale pass runs FIRST when
+  the target is a file and `vale` is installed (its findings merge into the
+  report, attributed to their Vale rule); Vale absent → judgment passes
+  still run, with one line noting the deterministic pass was skipped. Zero
+  findings is a valid, explicitly reported outcome.
+- **R3 (--fix)**: read-only by default. An optional `--fix` flag applies
+  suggested rewrites directly; `--fix` requires a file-path target — given
+  a diff or pasted text it errors rather than guessing where to write.
+- **R4 (invocation gate)**: the read-only report mode is model-invocable —
+  same risk class as `/critique`/`/simplify`. **`--fix` is human-typed
+  only** (never inferred/added by the model from a vague request) — a
+  SKILL.md behavioral instruction, since a flag cannot distinguish
+  human-typed from model-typed arguments; auto-rewriting from a subjective
+  rubric is real mutation risk (a misjudged item-1 carve-out could damage
+  structured spec content).
+- **R5 (authoring doctrine)**: reference.md carries a Diátaxis section
+  binding the four quadrants to this machine's doc locations (README.md =
+  explanation + how-to for humans; AGENTS.md = reference/orientation map;
+  docs/ = explanation and reference; SKILL.md bodies = how-to/reference
+  for agents — each with the "what does the reader need RIGHT NOW"
+  question that picks the quadrant), plus the Google-style essentials Vale
+  cannot check. SKILL.md's description carries authoring trigger phrases
+  ("write the README", "draft docs", "improve this doc") in addition to
+  review triggers, and instructs loading the doctrine BEFORE writing.
+  Root CLAUDE.md gains one pointer line citing the skill for human-facing
+  doc edits.
+- **R6 (reader test)**: reference.md documents the distilled reader-test
+  procedure — spawn one fresh-context agent (session tier, no prior
+  context) that reads the target cold and answers: what is this, what
+  would I do first, where did I stumble, what question is unanswered; its
+  stumble report merges into the review findings. Review mode runs it for
+  orientation docs (README/AGENTS.md) by default, skips it for diffs and
+  pasted text.
+- **R7 (Vale install)**: `bin/install-vale` idempotently: installs Vale
+  via Homebrew when absent, writes `~/.vale.ini` from the repo's tracked
+  template (StylesPath in this repo's `vale/`, `Packages = Google`,
+  vocabulary `House`), and runs `vale sync`. The repo tracks
+  `vale/.vale.ini.template` and
+  `vale/styles/config/vocabularies/House/accept.txt` (toolkit jargon);
+  synced package payload is gitignored. Re-running the installer is safe
+  (idempotent, never clobbers a user-customized `~/.vale.ini` without a
+  `--force` flag).
+- **R8 (gate opt-in + self-application)**: the gate skill's check-script
+  template gains an optional, commented-out vale stanza (lint
+  orientation docs only — README.md, AGENTS.md, docs/*.md — never task
+  files, specs/, or skill bodies). This repo opts in: after vocabulary
+  tuning, `vale README.md AGENTS.md` exits 0 here.
+- **R9 (retrofit wave)**: one task per `std`-marked repo in `~/REPOS.md`
+  (enumerated at /breakdown time): run `/prose-review` over that repo's
+  orientation docs, apply the fixes IN that repo (its own commit
+  conventions), and record the before/after finding counts in this spec's
+  evidence/. Repos whose docs already pass produce a zero-findings
+  evidence entry, not silence.
+- **R10 (mirror + plugin)**: `antigravity/.agents/skills/prose-review/`
+  is created in the same commit as the skill with content-equivalent
+  doctrine (plain review/authoring skill, ports cleanly);
+  `.claude-plugin/plugin.json` version bumped in the closing task's own
+  commit. The codex leg needs no wrapper (not one of the four
+  explicit-invocation stages; it reaches Codex via the antigravity
+  symlink overlay automatically).
 
 ## Out of scope
 
+- A global PostToolUse hook linting every `*.md` edit machine-wide
+  (decided against, 2026-07-11 interview — noise on machine-parsed files;
+  no user-level hook surface exists today and this spec does not create
+  one).
+- Installing Anthropic's `doc-coauthoring` plugin or adding the
+  anthropics/skills marketplace (reader test is distilled instead).
 - Auto-triggering `/prose-review` from within `/build`'s or `/idea`'s own
-  flow — this spec adds a standalone, explicitly-invoked skill only; wiring
-  it into another skill's completion step is separate follow-up work.
-- Re-researching the rubric at invocation time, or keeping it "fresh" via
-  `idea-research-freshness`'s `Verified:` convention — the rubric is
-  vendor style-doctrine, not a fast-moving fact set; revisiting it is a
-  human call, not an automated staleness check.
-- Reviewing code comments or docstrings as a distinct target type — this
-  spec scopes to prose documents/specs/PR-description-shaped text; code
-  itself stays `/code-review`'s job.
-- Adding a tenth rubric item from a source not verified this session
-  (e.g. third-party "AI writing tells" listicles) — R1's nine items are
-  exactly what verified primary-source quotes support.
+  flow — wiring it into other skills' completion steps is follow-up work.
+- Re-researching the rubric at invocation time — vendor style doctrine is
+  not a fast-moving fact set; revisiting it is a human call.
+- Reviewing code comments or docstrings — code stays `/code-review`'s job.
+- Task files, specs/, and other machine-parsed prose as Vale targets.
+- Non-orientation documents in retrofit repos (only README/AGENTS.md/
+  CLAUDE.md-adjacent orientation prose).
 
 ## Acceptance criteria
 
-Fixtures live under a new
-`.claude/skills/prose-review/test-fixtures/` directory, created as part
-of this spec's implementation with exactly this pinned content (not left
-for the verifying agent to invent):
-
-- `bullet-overuse.md`: a narrative explanation of a product feature (not
-  a spec/Requirements-shaped document) broken into 5+ single-sentence
-  bullets where the same content reads naturally as 2-3 prose sentences,
-  and containing no hedging/sycophancy/repetition/vague language.
-- `hedging.md`: three sentences using "there's no one-size-fits-all
-  solution," "I should note that," and "as an AI, I don't have personal
-  opinions, but," with no bullets and no other antipatterns.
-- `clean.md`: direct, concrete, plain-paragraph prose (e.g. a factual
-  changelog entry) with none of the nine items present.
-- `structured-spec.md`: a copy of this repo's own `## Requirements`
-  section style (numbered `- **R1**:` bullets) — used to prove R1's
-  carve-out.
-
-- [ ] `.claude/skills/prose-review/reference.md` documents all nine
-      rubric items with their source vendor(s) and verified quote.
-- [ ] `/prose-review test-fixtures/bullet-overuse.md` reports a finding
-      tagged rubric item 1, and no finding tagged items 2-9.
-- [ ] `/prose-review test-fixtures/hedging.md` reports a finding tagged
-      rubric item 2, and no finding tagged item 1.
-- [ ] `/prose-review test-fixtures/clean.md` reports "no antipatterns
-      found" explicitly — zero findings, not a silent empty response.
-- [ ] `/prose-review test-fixtures/structured-spec.md` reports **no**
-      finding tagged rubric item 1 (proves R1's structured-document
-      carve-out holds).
-- [ ] `/prose-review --fix test-fixtures/bullet-overuse.md` (typed
-      explicitly, per R4) rewrites that file in place to flowing prose;
-      `/prose-review test-fixtures/bullet-overuse.md` (no `--fix`) leaves
-      it unchanged, printing findings only.
-- [ ] `/prose-review --fix` given a diff or pasted-text target (not a
-      file path) errors per R3, rather than silently no-op'ing or
-      guessing a write target.
-- [ ] `antigravity/.agents/skills/prose-review/` exists with equivalent
-      content (R5).
-- [ ] `.claude-plugin/plugin.json`'s `version` is higher than before this
-      change (R6).
+- [ ] `grep -qi 'DeepMind' .claude/skills/prose-review/reference.md` AND
+  `grep -c 'developers.google.com/style\|diataxis.fr' .claude/skills/prose-review/reference.md`
+  ≥ 2 AND MANUAL: all nine rubric items present with vendor quotes, item-1
+  carve-out stated (R1) — phrases verified absent from the (nonexistent)
+  target today: the skill directory does not exist yet, so no criterion
+  here can pass vacuously
+- [ ] MANUAL: review of a fixture doc seeded with known violations (one
+  per rubric item) reports ≥7 of 9 with correct item attribution; a clean
+  fixture reports "no antipatterns found" (R2)
+- [ ] MANUAL: `--fix` on a pasted-text target errors; `--fix` never
+  applied without the human having typed it (R3, R4)
+- [ ] `grep -qi 'right now' .claude/skills/prose-review/reference.md` AND
+  MANUAL: Diátaxis quadrant table binds all four quadrants to house doc
+  locations; CLAUDE.md carries the pointer line (R5)
+- [ ] `grep -qi 'stumble' .claude/skills/prose-review/reference.md` AND
+  MANUAL: reader-test procedure spawns a fresh-context agent and merges
+  its report (R6)
+- [ ] `bash bin/install-vale && vale --version` exits 0; run twice —
+  second run is a no-op (idempotent); `test -f ~/.vale.ini` (R7)
+- [ ] `vale README.md AGENTS.md` exits 0 in this repo after tuning;
+  gate template contains the commented vale stanza (R8)
+- [ ] One evidence file per retrofitted repo under
+  specs/prose-review/evidence/ recording before/after finding counts;
+  each retrofit repo's orientation docs pass `vale` (R9)
+- [ ] `claude plugin validate .` passes; antigravity mirror dir exists
+  with content-equivalent doctrine (content-coverage grep on 'Diátaxis'
+  there); plugin version line modified in the closing task's own commit
+  (`git show <closing-commit> -- .claude-plugin/plugin.json | grep -q '^+.*"version"'`)
+  (R10)
+- [ ] End-to-end: `/prose-review README.md` in this repo produces a
+  ranked findings report (or explicit zero-findings) that includes the
+  Vale pass, the rubric pass, and a reader-test stumble report
 
 ## Open questions
 
-(none)
+(none — enforcement mode, dependency handling, retrofit scope, and spec
+shape all resolved in the 2026-07-11 interview; Vale config layout decided
+in Solution: user-level `~/.vale.ini` pointing at this repo's tracked
+`vale/` StylesPath)
+
+## Parallelization
+
+(/breakdown owns the task map; likely shape: skill+doctrine → vale
+install/config → gate/self-application → retrofit fan-out (one task per
+repo, cross-repo Touch per docs/memory/drain-dispatch-lessons.md) →
+closing mirror/bump gate.)
