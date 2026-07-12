@@ -1,6 +1,6 @@
 # Task 03: Depth-guard doctrine, hook if feasible
 
-Status: pending
+Status: in-progress
 Depends on: ../../session-refresh-automation/tasks/01-wake-budget-doctrine.md
 Priority: P2
 Budget: 10 turns
