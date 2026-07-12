@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# install-vale [--force]
+#
+# Idempotently sets up Vale (vale.sh) for the agentic toolkit's /prose-review:
+#   1. installs the `vale` binary via Homebrew when it is absent,
+#   2. writes ~/.vale.ini from vale/.vale.ini.template, substituting the
+#      ABSOLUTE resolved StylesPath (<this repo>/vale/styles) — a relative
+#      value would break runs from other repos since Vale resolves StylesPath
+#      relative to the config file's directory,
+#   3. runs `vale sync` to pull the Google package into the StylesPath.
+#
+# Idempotent: a second run installs nothing, rewrites nothing, and re-syncs
+# nothing. It never clobbers a user-customized ~/.vale.ini — pass --force to
+# overwrite one that differs from the template.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+STYLES="$REPO/vale/styles"
+TEMPLATE="$REPO/vale/.vale.ini.template"
+CONFIG="$HOME/.vale.ini"
+
+FORCE=0
+if [ "${1:-}" = "--force" ]; then
+  FORCE=1
+elif [ -n "${1:-}" ]; then
+  echo "install-vale: unknown argument '$1' (only --force is supported)" >&2
+  exit 2
+fi
+
+if [ ! -f "$TEMPLATE" ]; then
+  echo "install-vale: template not found: $TEMPLATE" >&2
+  exit 1
+fi
+
+# 1. Install the binary if absent.
+if ! command -v vale >/dev/null 2>&1; then
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "install-vale: Homebrew not found; install it (or vale) manually, then rerun" >&2
+    exit 1
+  fi
+  echo "install-vale: installing vale via Homebrew..."
+  brew install vale
+fi
+
+# 2. Render ~/.vale.ini with the absolute StylesPath.
+rendered="$(sed "s#__STYLESPATH__#${STYLES}#g" "$TEMPLATE")"
+if [ ! -f "$CONFIG" ]; then
+  printf '%s\n' "$rendered" > "$CONFIG"
+  echo "install-vale: wrote $CONFIG"
+elif [ "$(cat "$CONFIG")" = "$rendered" ]; then
+  : # already current — no-op
+elif [ "$FORCE" -eq 1 ]; then
+  printf '%s\n' "$rendered" > "$CONFIG"
+  echo "install-vale: overwrote $CONFIG (--force)"
+else
+  echo "install-vale: $CONFIG exists and differs from the template; leaving it untouched (rerun with --force to overwrite)" >&2
+fi
+
+# 3. Sync the Google package (skip when already present, unless --force).
+if [ ! -d "$STYLES/Google" ] || [ "$FORCE" -eq 1 ]; then
+  echo "install-vale: running vale sync..."
+  vale sync
+fi
+
+echo "install-vale: done"
