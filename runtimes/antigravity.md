@@ -5,6 +5,12 @@ Describes how the abstract tiers and surfaces map onto Antigravity. The
 workflows, AGENTS.md, hooks); this profile describes it, it does not
 replace it.
 
+"Antigravity" always means the `antigravity` CLI (confirmed installed
+locally at `~/.antigravity/antigravity/bin/antigravity`, v1.107.0) plus the
+Agent Manager GUI it opens — never the GUI alone. The CLI ships a `chat`
+subcommand; see `## Headless` below for exactly what that does and does
+not enable.
+
 ## Tiers
 
 | Tier          | Model                                             | Notes                                                                                         |
@@ -41,18 +47,39 @@ model programmatically.
 
 ## Headless
 
-None exists. Antigravity has no non-interactive command template — the
-Agent Manager launches agents instead. Anything the toolkit would run
-headlessly (drain/autopilot fallback workers) becomes an agent the
-human starts from the Agent Manager with the corresponding workflow.
+No fenced block (README.md's `## Headless` contract, shape 2: no
+scriptable relaunch) — confirmed live, not assumed, 2026-07-12 against
+`antigravity` v1.107.0. The CLI's `chat` subcommand
+(`antigravity chat [prompt] -m agent`) is real, but it is a
+**fire-and-forget window launcher, not a synchronous completion API**:
+run against a scratch fixture, it returned immediately (exit 0, empty
+stdout — no captured response) while spawning a full Electron GUI
+session (main process, renderer, GPU process, language server) that
+runs the agent asynchronously inside a window. No flag blocks for the
+result or writes it anywhere a caller could poll, so there is no
+scriptable relaunch whose output this toolkit's consumers (the eval
+runner's grade-the-response pattern, drain/autopilot's headless
+fallback) could capture. Anything the toolkit would run headlessly in
+that sense still becomes an agent the human starts from the Agent
+Manager (or via `chat` as a scripted trigger for that same GUI session —
+see `## Orchestration`) with the corresponding workflow.
 
 ## Orchestration
 
 - **Primitive**: none scripted — sequential markdown workflows
   (`.agents/workflows/`) executed inside one conversation.
-- **Invocation surface**: human-dispatched Agent Manager parallelism —
-  a fan-out orchestration degrades to a human launch list (the human
-  starts each worker agent from the Agent Manager).
+- **Invocation surface**: primarily human-dispatched Agent Manager
+  parallelism — a fan-out orchestration degrades to a human launch list
+  (the human starts each worker agent from the Agent Manager). A script
+  can now also trigger one of those sessions itself:
+  `antigravity chat "<prompt>" -m agent -n` (confirmed live) opens a
+  new-window agent session programmatically — a real scripted
+  alternative to manually opening the Agent Manager, useful as
+  autopilot's "fire-and-forget, this machine" mechanism. It stays
+  launch-only, though: no blocking and no captured result (see
+  `## Headless`), so a script still can't learn the outcome without a
+  human checking the window or a separate polling mechanism this
+  profile does not define.
 - **Structured output**: none — workflow args and agent returns are
   free text; no schema validation.
 - **Resume**: Agent Manager conversation history plus on-disk artifacts
