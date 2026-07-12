@@ -960,6 +960,28 @@ reviewed this run: `spec review: N findings, M fixed, K stubbed` (or the
    One interview and one checklist per session; "Nothing needs you" is a
    valid checklist.
 
+   **HUMAN.md filing (R2).** In the SAME commit wave that writes this exit
+   checklist, the ORCHESTRATOR — never a dispatched implementation worker —
+   files every still-open human-actionable item into the repo-root
+   `HUMAN.md`, under its machine-owned `## Agent-filed blockers` section
+   (grammar, section marker, and open-items-only rule in
+   `.claude/rules/human-blockers.md`, cited not restated; a repo with no
+   `HUMAN.md` is bootstrapped on first append — title line plus the empty
+   section, nothing else). Five checklist types map onto the
+   `ask|run|provision|decide` grammar: deferred questions still unanswered
+   → `ask` (§1); `Unblock: ask:` blocked tasks → `ask` (§3); `Unblock: run:`
+   blocked tasks → `run` (§3); decision-shaped or gate-refused stubs →
+   `decide` (§2/§5/§6); NOT-READY specs from critique intake → `decide`
+   (§4). `Unblock: agent:` blocked tasks are NOT filed — an agent, not a
+   human, clears them; the informational summary sections (promoted this
+   run, next commands) are not blockers and are not filed. When the batch
+   interview answers a deferred question, the commit that writes that task's
+   `## Answers` block ALSO deletes its `## Agent-filed blockers` entry, so an
+   answered blocker never lingers. Manual-pending items are NOT drain-scanned
+   (drain reads no evidence bodies): the session or worker-verdict flow that
+   records one files its own `run` entry per the rule's grammar — a separate
+   path from this exit-checklist filing.
+
 ## Ultra path
 
 Antigravity has no Workflow tool and no runtime profile, so the ultra

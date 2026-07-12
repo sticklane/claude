@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 02, 03
 Priority: P2
 Budget: 3 turns
@@ -21,6 +21,6 @@ changes; validate + ultra-gate green.
 
 ## Acceptance
 
-- [ ] `grep -qi 'Agent-filed blockers' antigravity/.agents/workflows/drain.md` → hit (0 today, verified)
-- [ ] `claude plugin validate .` → passes AND `bash evals/lint-ultra-gate.sh` → OK
-- [ ] `git show HEAD -- .claude-plugin/plugin.json | grep -q '^+.*"version"'` right after this task's commit → hit
+- [x] `grep -qi 'Agent-filed blockers' antigravity/.agents/workflows/drain.md` → hit (0 today, verified) — evidence: grep → HIT after R2 mirror paragraph added
+- [x] `claude plugin validate .` → passes AND `bash evals/lint-ultra-gate.sh` → OK — evidence: "Validation passed"; "lint-ultra-gate: OK — all ultra mentions gated in 4 files"
+- [x] `git show HEAD -- .claude-plugin/plugin.json | grep -q '^+.*"version"'` right after this task's commit → hit — evidence: version 0.8.51 → 0.8.52 in this commit

@@ -420,3 +420,16 @@ fixed **seven-section checklist**, each entry naming a file path:
 One interview and one checklist per session; "Nothing needs you" is a valid
 checklist. Next pipeline step: `$distill` after a drained queue; answers loop
 into step 1.
+
+**HUMAN.md filing (R2).** In the SAME commit wave that writes this exit
+checklist, the orchestrator — never a dispatched worker — files every
+still-open human-actionable item into the repo-root `HUMAN.md`'s
+`## Agent-filed blockers` section (grammar and open-items-only rule in
+`.claude/rules/human-blockers.md`; a repo with no `HUMAN.md` is bootstrapped
+on first append). Five checklist types map onto `ask|run|provision|decide`:
+deferred questions → `ask` (§1); `Unblock: ask:` blocked → `ask` (§3);
+`Unblock: run:` blocked → `run` (§3); decision-shaped or gate-refused stubs
+→ `decide` (§2/§5/§6); NOT-READY specs → `decide` (§4). `Unblock: agent:`
+stops file nothing — an agent clears them. The interview DELETES an
+answered task's entry in the same commit as its `## Answers` write;
+manual-pending items are not drain-scanned.
