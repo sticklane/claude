@@ -1,6 +1,6 @@
 # Task 04: Handoff autonomous refresh path
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 8 turns
