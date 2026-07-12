@@ -2,7 +2,7 @@
 
 Status: open
 Priority: P1
-Breakdown-ready: false
+Breakdown-ready: true
 
 ## Problem
 
@@ -108,7 +108,8 @@ live workboard flag so a bleeding session is visible while it still runs.
   staleness is visible. The flag is explicitly best-effort: its
   freshness is bounded by what regenerates the summary — the
   `com.sjaconette.agentprof-refresh` launchd job plus the workboard's
-  on-demand refresh control (both run `scripts/refresh-profile.sh`) —
+  on-demand refresh control (both run
+  `agentprof/scripts/refresh-profile.sh`) —
   and the mtime line makes that bound visible rather than hiding it.
   Sourced from the same summary JSON the cost panel already reads
   (specs/workboard-weekly-cost-view path); no new endpoint. The flag names the session, which arm tripped, the re-prime
