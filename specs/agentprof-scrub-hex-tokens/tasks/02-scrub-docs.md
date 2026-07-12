@@ -1,6 +1,6 @@
 # Task 02: Document the keyword-gated hex rule
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 4 turns
