@@ -59,6 +59,14 @@ namespace finding in agentprof's docs.
   do not edit them); (b) an overriding dispatch path corrected; (c) a
   deliberate escalation (e.g. tier-up retry) written into the verifier
   agent docs as policy.
+  - Note (AC3 plugin-cache-untouched false positive): R1's "no cache files
+    were modified" acceptance verifies the immutable snapshots via an mtime
+    scan (`find ~/.claude/plugins/cache/agentic-toolkit -newer <SPEC.md>
+    -type f | wc -l` → 0). That scan has a known false positive: transient
+    `.in_use/<pid>` runtime markers written by any live `claude` process
+    bump the count above zero even when no cached content changed. A future
+    reader should filter those markers out with `-not -path '*/.in_use/*'`
+    so a nonzero count is not mistaken for a real regression.
 - R2 **Tier-dispatch doctrine for freehand fan-outs.** One short block in
   `.claude/rules/token-discipline.md` (the doctrine home the skills already
   cite; CLAUDE.md gets at most a pointer line, per the repo's
