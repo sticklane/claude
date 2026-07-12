@@ -23,3 +23,12 @@ so reverting can break the other session rather than fix anything. Let one
 session own the finish; the other stays fully out of the tree.
 `isolation: "worktree"` (Agent/Workflow) is the structural fix when
 parallel edits are actually intended.
+
+## Shared-tree edit hygiene
+
+Uncommitted working-tree edits are casualties in a shared checkout:
+another session's stash/rebase/checkout can silently revert them
+(2026-07-11 incident: a critique-fix round on two SPEC.md files was
+clobbered mid-session and had to be re-applied from context). Commit each
+completed unit path-scoped the moment it's ready — a spec that just
+passed critique is a completed unit, not work-in-progress.
