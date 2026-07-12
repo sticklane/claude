@@ -1,4 +1,5 @@
-Status: draft
+Status: obsolete
+Closed: 2026-07-12 — stub-intake gate-confirmed OBSOLETE. Drain SKILL.md step-2 already directs the pinned flip format: SKILL.md line 227 reads "using the pinned flip-message contract `drain: <spec-slug> task NN in-progress` (this exact format is a contract, not an example …)". The earlier "e.g." hedge was removed by task 01 (done); no stale example shapes remain.
 Discovered-from: specs/spec-completion-review/tasks/01-drain-step.md
 Spec: ../SPEC.md
 Blocking: no
