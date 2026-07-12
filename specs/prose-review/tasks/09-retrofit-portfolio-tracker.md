@@ -4,6 +4,7 @@
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
 Status: blocked
+Unblock: ask: Is the GCP Cloud Build trigger for portfolio-tracker (per cloudbuild.yaml, deploys Cloud Run on push to main) disabled, or does it have an includedFiles filter excluding README.md/docs/**? If yes, the docs-only commit is safe to make and push from the target-repo worktree.
 Depends on: 03
 Priority: P2
 Budget: 4 turns
@@ -29,3 +30,7 @@ satisfiable, stop with the finding recorded instead of committing.
 
 - [x] `test -s specs/prose-review/evidence/retrofit-portfolio-tracker.md` → before/after Vale AND rubric counts + CI-precondition line present (MANUAL: content) — evidence at specs/prose-review/evidence/retrofit-portfolio-tracker.md: BEFORE Vale (README 7/10/15; docs/*.md 187/158/493), AFTER-on-disk README 5/6/15, rubric findings, CI-precondition FAIL line present.
 - [~] N/A (BLOCKED): after-state committed-in-target rubric/Vale resolution not performed — CI auto-deploy precondition FAILED (cloudbuild.yaml documents a push-to-main Cloud Run deploy with no docs-only path filter; trigger state unverifiable). Fixes applied on disk in the worktree (uncommitted) and residual Vale itemized as domain jargon in the evidence file, per the mandatory no-commit rule.
+
+## Progress
+
+- 2026-07-12 — Attempt 1 (gen 9) returned BLOCKED. Done: full Vale+rubric+reader review of README.md and docs/*.md, BEFORE/AFTER counts, 6 Google-style fixes applied on disk (uncommitted) in the target-repo worktree, evidence file + task close-out committed on the toolkit branch and merged. Remaining: a human must confirm the portfolio-tracker GCP Cloud Build trigger is disabled or docs-path-filtered before the on-disk README fix can be committed and pushed (auto-deploy risk). Target-repo worktree left uncommitted at /private/tmp/claude-501/-Users-sjaconette-claude/2ef60b45-2141-4410-8eb4-a2985babd531/scratchpad/pt-worktree, branch task/09-retrofit-portfolio-tracker — discarded per the no-persistent-worktree convention; a future attempt starts fresh once unblocked.
