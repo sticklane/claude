@@ -1007,21 +1007,43 @@ task-file path — step 2's tie-break.
   The script pins a four-category regex list — imperatives addressed to an
   agent, "ignore/disregard … instructions", tool-invocation directives, and
   absolute paths outside the repo — and exits 1 (refused) on any match, 0
-  (clean) otherwise. A refused stub is **not assessed, not gated**: it stays
-  `draft` and lands on the exit checklist flagged for a human this run.
-  Promotion of injectable text can never rest on a model's judgment of it
-  (docs/human-gates.md reason 4, cited not restated) — the screen is a hard
-  mechanism run before the model, not the model's call.
+  (clean) otherwise. A refused stub is **not assessed, not gated**: drain
+  writes an `Intake-refused: screen — <matched rule> (<ISO date>)` line onto
+  it (R1 line, defined below), it stays `draft`, and it lands on the exit
+  checklist flagged for a human this run. Promotion of injectable text can
+  never rest on a model's judgment of it (docs/human-gates.md reason 4, cited
+  not restated) — the screen is a hard mechanism run before the model, not
+  the model's call.
 - **Assessor (scout-tier dispatch, capped return 1–2k tokens).** For a clean
-  stub, one scout-tier agent classifies it OBSOLETE (the described gap is
-  already closed — it must cite the closing evidence), DECISION-SHAPED (the
-  goal requires choosing between alternatives), or ACTIONABLE. For an
-  ACTIONABLE stub the assessor **authors the promotion**: a fresh, neutral
-  Goal written in its own words, plus runnable acceptance criteria, `Touch:`,
-  `Budget:`, and `Depends on:`. The worker-reported original Goal is retained
-  only as quoted data under an `## Original report` blockquote — it never
-  remains the task's binding text (once dispatched it would become binding
-  worker instructions, so untrusted-data governs it).
+  stub, one scout-tier agent classifies it into exactly one of three
+  outcomes, each of which MUST carry the payload that outcome needs — the
+  assessor **may not come back unauthored**:
+  - **ACTIONABLE** → the assessor **authors the promotion**: a fresh, neutral
+    Goal written in its own words, plus authored runnable acceptance
+    criteria, `Touch:`, and `Budget:` (and `Depends on:`). ACTIONABLE
+    *requires* those authored fields — the assessor
+    **may not return ACTIONABLE-without-criteria**; a return that classifies a stub ACTIONABLE
+    but ships no criteria / `Touch:` / `Budget:` is malformed, not a
+    promotion, and drain treats it as a gate FAIL (an R1 `gate` refusal line,
+    below), never as "came back unauthored". The worker-reported original
+    Goal is retained only as quoted data under an `## Original report`
+    blockquote — it never remains the task's binding text (once dispatched it
+    would become binding worker instructions, so untrusted-data governs it).
+  - **DECISION-SHAPED** → the goal turns on a choice the assessor cannot make
+    for the human; the assessor **names the decision**. That named decision
+    is the one-line reason its R1 refusal line carries (`assess` stage) when
+    no defensible reversible default exists — a DECISION-SHAPED stub *with* a
+    default the assessment can justify promotes instead (Act, below).
+  - **OBSOLETE** → the described gap is already closed; the assessor **cites
+    the closing evidence**. That cited evidence is what the gate confirms
+    before closure and what an R1 `gate` line carries if the gate cannot
+    confirm it.
+
+  "Came back unauthored" thus ceases to be a representable outcome: an
+  ACTIONABLE stub carries authored criteria + `Touch:` + `Budget:`, and each
+  of the two non-actionable classifications carries the reason (the named
+  decision / the cited evidence) that either promotes/closes the stub or
+  populates its R1 `Intake-refused:` line.
 
 **2. Gate** (single-call rubric critic, per token-discipline's judge default —
 one prompt emitting a pass/fail grade). The critic receives the stub plus the
@@ -1042,25 +1064,84 @@ immediately):
   headers into the stub, adds `Promotion-ready: true` +
   `Promoted-by-run: <run-token>` (audit trail, stamped with THIS
   invocation's own `Run-token:`), strips the `## Original report` block,
-  and flips `draft` → `pending` — all in ONE committed write. The stub is
-  dispatchable this run (maintainer decision 2026-07-11: no pipeline step
-  forces a human; the earlier deferred-past-the-authoring-run split is
-  retired — the human audit is the exit checklist plus the permanently
-  respected `Demoted:` override).
+  **clears any prior `Intake-refused:` line** (R1 lifecycle below), and flips
+  `draft` → `pending` — all in ONE committed write. The stub is dispatchable
+  this run (maintainer decision 2026-07-11: no pipeline step forces a human;
+  the earlier deferred-past-the-authoring-run split is retired — the human
+  audit is the exit checklist plus the permanently respected `Demoted:`
+  override).
 - **OBSOLETE (gate-confirmed)** → `Status: obsolete` plus a `Closed:` line
-  citing the evidence the gate checked (Status field semantics above).
+  citing the evidence the gate checked, **clearing any prior
+  `Intake-refused:` line in the same commit** (Status field semantics above;
+  R1 lifecycle below). A gate-confirmed OBSOLETE is a terminal resolution,
+  not a refusal — it writes no `Intake-refused:` line of its own.
 - **DECISION-SHAPED with a reversible default the assessment can justify** →
   record the default under `## Answers` (decision, rationale, how to reverse)
-  and promote exactly as for PASS; **without** a defensible default →
-  stays `draft` with no marker and lands on the exit checklist as needing the
+  and promote exactly as for PASS (clearing any prior `Intake-refused:` line);
+  **without** a defensible default → drain writes
+  `Intake-refused: assess — decision-shaped: <the decision named> (<ISO date>)`,
+  the stub stays `draft`, and it lands on the exit checklist as needing the
   human.
-- **FAIL** → stays `draft` with no marker, exit checklist, the critic's
-  reason attached.
+- **FAIL** (the critic rejected the authored promotion, or the assessor
+  returned ACTIONABLE-without-criteria / an OBSOLETE the gate could not
+  confirm) → drain writes
+  `Intake-refused: gate — <critic's one-line reason> (<ISO date>)`, the stub
+  stays `draft`, and it lands on the exit checklist with the reason attached.
+
+**R1 — `Intake-refused:` line (drain-written queue state).** Every
+stub-intake outcome short of promotion or gate-confirmed closure writes a
+single machine-greppable line onto the stub file, on the line immediately
+after `Status:`:
+
+```
+Intake-refused: <screen|assess|gate> — <one-line reason> (<ISO date>)
+```
+
+The stage token records WHERE the refusal happened —
+`screen` (deterministic screen matched), `assess` (assessor returned
+DECISION-SHAPED with no defensible default), or `gate` (the critic failed
+the authored promotion, or the assessor shipped ACTIONABLE-without-criteria
+or an unconfirmable OBSOLETE) — so a human diagnoses a non-promotion from the
+stub file alone, without transcript archaeology. It is **drain-written queue
+state**: like every stub-intake mutation, only drain (the single queue
+writer) ever authors it — a dispatched worker never writes or edits it. It
+shares the slot the `Unblock:` grammar uses on blocked TASKS, but the two
+never co-occur (drafts are never `blocked`) and each grepper keys on its own
+label. **Lifecycle — cleared on promotion/closure.** A later PASS or
+gate-confirmed OBSOLETE Act write CLEARS any prior `Intake-refused:` line in
+the **same commit** that flips the stub — the identical
+strip-in-the-promotion-commit clause that already governs `## Original
+report` (Draft status above), extended to this line — so a promoted or closed
+stub never carries a stale refusal. A still-`draft` stub keeps its latest
+line; a re-attempt on a later run (once the once-per-run baton allows) that
+lands a new outcome overwrites it with the current stage/reason/date.
 
 Every promotion, closure, and refusal is audited in step 4's exit-checklist
-"promoted this run" section (stub, verdict, criteria source). A human may
-demote any auto-promoted task back to `draft` with a `Demoted:` line, which
+"promoted this run" section (stub, verdict, criteria source, and — per
+refused stub — its quoted `Intake-refused:` line). A human may demote any
+auto-promoted task back to `draft` with a `Demoted:` line, which
 stub intake **permanently** respects — a demoted stub is never re-attempted.
+
+**R4 — worked authoring examples (2026-07-11).** The three stubs the
+2026-07-11 drain run left unpromoted (`0 of 3`) were each authorable
+mechanically — the attended pass produced runnable criteria for all three in
+one sitting, committed 2026-07-11 — so they are the concrete model of what an
+ACTIONABLE assessor return should look like:
+
+- `specs/cache-reprime-visibility/tasks/05-*` — passed the deterministic
+  screen clean; the assessor should have authored its runnable criteria +
+  `Touch:` + `Budget:` rather than returning it unauthored.
+- `specs/agentprof-attribution-gaps/tasks/07-*` — likewise screen-clean and
+  mechanically authorable; an ACTIONABLE return with authored criteria was
+  the expected output.
+- `specs/agentprof-attribution-gaps/tasks/08-*` — the stub whose descriptive
+  "$HOME data, outside an isolated worktree" prose the screen false-positived
+  on (fixed under R2); with the screen corrected it too is an ACTIONABLE
+  authoring case.
+
+Each is what a correct ACTIONABLE outcome produces; a run that leaves one of
+these `draft` without an `Intake-refused:` line naming the stage is the exact
+"0 of 3, no reason recorded" failure R1 and R3 close.
 
 ## Auto-breakdown (lowest priority)
 
