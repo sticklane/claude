@@ -1,6 +1,6 @@
 # Task 05: `cmd_antigravity.go` subcommand + main.go wiring
 
-Status: pending
+Status: in-progress
 Depends on: 04
 Priority: P1
 Budget: 10 turns
