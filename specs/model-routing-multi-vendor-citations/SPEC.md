@@ -151,3 +151,9 @@ from (not a domain stem):
 ## Open questions
 
 (none)
+
+## Parallelization
+
+This spec decomposes into a single task (task 01: one cohesive
+`## Cross-vendor grounding` section added to one existing file). Task 01 runs
+solo; there are no concurrent-safe groups.
