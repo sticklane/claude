@@ -39,6 +39,15 @@ tokens on decisions; delegate consumption of raw material to subagents.
   drain-shaped live message IS the launch authorization (the skill's
   launch contract; docs/human-gates.md); absent one, recommend `/drain`
   and never launch it on the human's behalf.
+- **Large codebase, scout not converging → the orchestrating session (never
+  `scout`) may `ToolSearch` for a connected code-search MCP tool.** When
+  repeated `scout` dispatches on a fuzzy/semantic query aren't converging on
+  a large repo and such a server *happens to be connected* this session, the
+  orchestrating session — `scout` cannot `ToolSearch` — runs a `ToolSearch`
+  to discover it and prefers it over further scout rounds. Advisory and
+  conditional on a server being connected, never a hard dependency; when
+  each choice fits, and how to install `claude-context` or `code-index-mcp`,
+  is in docs/guides/large-codebase-context.md.
 
 ## Model and effort matching
 
