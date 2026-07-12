@@ -389,8 +389,7 @@ returns to step 1. Once no parked tasks remain:
   status, not the presence of a questions block, is what stops answered
   questions from being re-asked).
 - **Queue empty**: report the run (per-task verdict with acceptance evidence
-  and merged branches); if any verdict exposed a decomposition or spec
-  problem, run `$distill` before the next queue.
+  and merged branches); the terminal distill below then fires.
 - **Only blocked/failed remain**: report each blocker with its evidence and
   stop; those need amending (back to `$breakdown`) or an attended `$build`.
 - **Specs that failed auto-breakdown this run**: report each with its failure
@@ -420,6 +419,14 @@ fixed **seven-section checklist**, each entry naming a file path:
 One interview and one checklist per session; "Nothing needs you" is a valid
 checklist. Next pipeline step: `$distill` after a drained queue; answers loop
 into step 1.
+
+**Terminal distill (R1), at most once per session.** After the exit checklist
+is delivered and lease/baton cleanup committed, drain runs `$distill` once,
+unconditionally — a run that found "nothing worth keeping" still reports that
+through `$distill` rather than skipping the step. Both terminal states — queue
+exhaustion and the max-generations cap — route through this one terminal
+distill; a once-per-session guard prevents a double fire; the terminal-capture
+carve-out sanctions it (no critic-gated artifact applies).
 
 **HUMAN.md filing (R2).** In the SAME commit wave that writes this exit
 checklist, the orchestrator — never a dispatched worker — files every
