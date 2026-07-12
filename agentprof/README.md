@@ -214,6 +214,36 @@ When you pin a profile as evidence, run the emit with `--frame-denylist`
 pointing at your local denylist and confirm the redactions landed before
 committing.
 
+## Attribution normalization
+
+The `agentprof claude` adapter normalizes a few frame and sample shapes so the
+attribution hierarchy stays stable across machines and transcript quirks:
+
+- **Skill frames from typed slash commands.** A turn's `skill:` frame normally
+  comes from the transcript's `attributionSkill`. When that field is absent, the
+  adapter falls back to the turn's `<command-name>` tag — a typed `/parallel`
+  becomes `skill:parallel` (the plugin namespace is stripped, as with any skill
+  frame). Built-in commands are excluded and stay `(no skill)`: `/clear`,
+  `/model`, `/reload-plugins`, `/rate-limit-options`.
+- **Project normalization.** The project frame (stack root) is normalized, not
+  taken verbatim from the cwd basename: a session run from the home directory
+  frames as `(home)` (never the home basename), an `mktemp`-shaped scratch dir
+  (`tmp.<suffix>`) frames as `(tmp)`, and an agent sidecar directory is folded
+  into its owning worktree or dropped — sidecar dirs are never projects. Home is
+  resolved from `AGENTPROF_HOME` when set (falling back to the OS home dir), so
+  hermetic tests can pin it independent of the machine.
+- **Pending tool calls.** A `tool_use` block with no matching `tool_result`
+  can't be given a duration, so unmatched calls in a response aggregate into a
+  single `tool:(pending)` sample carrying a `pending_calls` count instead of one
+  duration-less sample per call. The library option `Options.KeepPending`
+  restores the old behavior (one `tool:(pending)` sample per unmatched call);
+  there is no CLI flag for it.
+
+Duration-only tool samples (matched and pending alike) have no model leaf — the
+model slot holds the `tool:` frame — so they aggregate under the cost-summary
+`(tools)` bucket rather than any model; see [SCHEMA.md](SCHEMA.md)'s `by_model`
+notes.
+
 ## GCP billing
 
 `agentprof gcp` ingests a file of GCP billing standard-export rows as
@@ -373,7 +403,7 @@ go tool pprof -top custom.pb.gz
 
 | Command                                                                   | What it does                                                               |
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `agentprof claude [--claude-dir PATH] [--days N] [--name-turns] [-o out]` | Claude Code transcripts → samples. Defaults: `~/.claude`, 30 days, stdout. |
+| `agentprof claude [--claude-dir PATH] [--days N] [--name-turns] [--reprime-threshold N] [--frame-denylist PATH] [-o out]` | Claude Code transcripts → samples. Defaults: `~/.claude`, 30 days, `--reprime-threshold 50000` (0 disables), denylist `~/.config/agentprof/frame-denylist`, stdout. |
 | `agentprof gcp <billing.json> [--frame-labels k1,k2] [-o out]`            | GCP billing export rows → samples.                                         |
 | `agentprof vertex <logs.json> [-o out]`                                   | Vertex AI request-response logging rows → samples.                         |
 | `agentprof build <samples.jsonl>... -o out.pb.gz`                         | Canonical-schema JSONL → pprof profile.                                    |
