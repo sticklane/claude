@@ -108,6 +108,12 @@ order cannot resolve are surfaced, not guessed.
   workers have neither the ultracode opt-in nor live-user launch
   authorization. Make such a check orchestrator-resolvable or give the
   criterion an explicit manual-pending path (docs/memory/unattended-worker-tool-limits.md).
+- Verify acceptance criteria against CURRENT file state at authoring time:
+  a grep criterion anchors on a NEW literal phrase confirmed absent
+  (`grep -c` → 0) from every target file, and a numeric bound (line count,
+  version) is confirmed satisfiable from the file as it exists — unverified
+  criteria pass vacuously or stall drains
+  (docs/memory/anchored-acceptance-criteria.md).
 
 ## Testing changes
 

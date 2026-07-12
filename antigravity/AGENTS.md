@@ -155,6 +155,9 @@ each other.
   `git worktree list` (a single checkout entry means a shared tree, zero
   isolation); recent file mtimes or unexplained `git status` entries —
   edits you didn't make are a live collision, not a fluke.
+- Shared-tree edit hygiene: uncommitted edits are casualties in a shared
+  checkout (another session's stash/rebase can silently revert them) —
+  commit each completed unit path-scoped the moment it's ready.
 - On a detected collision: STOP editing and surface it to the user.
   Never revert the other session's work unilaterally — it may already
   depend on your changes (or you on its), so reverting can break the
