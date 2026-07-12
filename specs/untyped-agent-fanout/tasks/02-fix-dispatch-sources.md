@@ -1,6 +1,6 @@
 # Task 02: Fix the toolkit-owned dispatch sources
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 10 turns
