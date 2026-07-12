@@ -1,6 +1,6 @@
 # Task 04: `internal/antigravity.Collect` — join, Stack/Labels, token mapping
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P1
 Budget: 24 turns
@@ -80,6 +80,50 @@ them.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/antigravity/... -v` → passes: walker tests (Task 02, unaffected), plus all of this task's `Collect`-level tests (join, skip-on-lock/corrupt, Stack project frame, token mapping, empty-dir zero-samples) against the COMMITTED fixture
-- [ ] `cd agentprof && go build ./...` → succeeds with the new SQLite dependency
-- [ ] `cd agentprof && go vet ./internal/antigravity/...` → clean
+- [x] `cd agentprof && go test ./internal/antigravity/... -v` → passes: walker tests (Task 02, unaffected), plus all of this task's `Collect`-level tests (join, skip-on-lock/corrupt, Stack project frame, token mapping, empty-dir zero-samples) against the COMMITTED fixture
+- [x] `cd agentprof && go build ./...` → succeeds with the new SQLite dependency
+- [x] `cd agentprof && go vet ./internal/antigravity/...` → clean
+
+## Evidence
+
+Confirmed via `protoc --decode_raw` against the committed fixture
+`d147c9da-…​.db`; all values now asserted in `antigravity_test.go`.
+
+Two SPEC field-path assumptions were DISPROVEN by the real fixture and
+corrected in the implementation (downstream tasks 05/06 and a SPEC touch-up
+should note these):
+
+1. **Join key is positional, not `idx`-equality.** The lone `step_type=15`
+   step is `steps.idx=2`, but its `gen_metadata` row is `idx=0`.
+   `gen_metadata.idx` is a 0-based generation ordinal, not the step index.
+   `Collect` joins the k-th `step_type=15` step (ordered by `steps.idx`) to
+   `gen_metadata.idx=k` via a `ROW_NUMBER()` window join — SPEC Solution
+   item 2's "join … on idx" (equality) would return zero rows here.
+2. **The gen fields the SPEC numbers live under top-level wrapper field 1.**
+   The `gen_metadata.data` blob wraps the generation submessage in top-level
+   field 1; the token submessage (4), Timestamp (9.4), display string (21),
+   and `{key,value}` map (20) are all at `1→N`, not at the blob root. (Top-
+   level field 3 is a separate config/tool-definitions block that also
+   carries a same-numbered field 4/21 with different meaning — reading at the
+   blob root would silently grab the wrong bytes.)
+
+Confirmed mappings (from gen wrapper `1→…`): `Time` = `9→4` Timestamp
+(1783813771 s / 429751000 ns → 2026-07-11T23:49:31.429751Z); `input_tokens`
+= `4` sub-field 2 (17234); `output_tokens` = `4` sub-field 3 (71);
+`cost_microusd` = 5348 (`PriceGemini("Gemini 3.5 Flash (Medium)")`).
+`cache_read_tokens` is deliberately OMITTED: the README's sub-fields 6/9/10
+are unidentified, so per Solution's no-guess rule no cache metric is emitted.
+`session` = cascade_id = `.db` basename (`d147c9da-…`); `trajectory_id`
+(`2d277f57-…`) comes from the `20` map and matches `trajectory_meta`. Project
+frame resolves to `trajectory_metadata_blob` field 18 (`eda80a54-…`, a
+per-project UUID here because the fixture used `--new-project`); the
+workspace-URI-basename fallback is covered by a separate hand-built-blob unit
+test.
+
+The corrupted-copy fixture lives at
+`internal/antigravity/testdata/conversations-corrupt/…-corrupt.db` (journal
+mode DELETE, its one `gen_metadata` blob overwritten with an unparseable
+byte sequence) — the real `testdata/conversations/` fixture is byte-for-byte
+untouched. Tests stage a byte-copy of the real (WAL-mode) fixture into a temp
+dir before reading, so SQLite's read-only WAL sidecars never dirty the
+tracked `testdata/` directory.
