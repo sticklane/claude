@@ -34,3 +34,7 @@ drain admission serializes via Touch; do not hand-merge its content.
 - [x] `grep -qi 'drain: <spec-slug> task NN in-progress' .claude/skills/drain/SKILL.md` → pinned contract present (MANUAL: "e.g." dropped at that site) — verifier: hit; flip site now pins the contract ("not an example")
 - [x] MANUAL: ordering, idempotency token, numstat-only hub, nulled task-file coupling, checklist line all present per R1/R2/R3/R5 — verifier: all present (SKILL.md spec-review section + reference.md worker section)
 - [x] `bash evals/lint-ultra-gate.sh` → OK — verifier: prints OK, exit 0
+
+## Discovered
+
+- [2026-07-12 /drain gen2] drain's own step-2 flip-message shapes diverge from the newly-pinned recovery grep `^drain: <slug> task .* in-progress` (in-flight formats: `drain: task scr/01 in-progress`, `drain: task 03 in-progress`); self-healing but worth confirming the flip INSTRUCTION now emits the pinned format. Stub: tasks/04-flip-message-format-transition.md
