@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Discovered-from: specs/spec-completion-review/tasks/02-build-parity.md
 Spec: ../SPEC.md
 Blocking: no
@@ -23,12 +23,16 @@ step so the two runtimes read consistently.
 
 ## Acceptance
 
-- [ ] `grep -qi 'spec-completion review' antigravity/.agents/workflows/build.md`
+- [x] `grep -qi 'spec-completion review' antigravity/.agents/workflows/build.md`
   succeeds (currently 0 hits — the mirror gap this task closes).
-- [ ] `grep -qi 'spec-completion review' codex/.agents/skills/build/SKILL.md`
+  Evidence: grep exits 0 (spec-completion review sentence added to close-out).
+- [x] `grep -qi 'spec-completion review' codex/.agents/skills/build/SKILL.md`
   succeeds (currently 0 hits).
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0 (ultra-mention gate stays green;
+  Evidence: grep exits 0 (spec-completion review sentence added to close-out).
+- [x] `bash evals/lint-ultra-gate.sh` exits 0 (ultra-mention gate stays green;
   the source `.claude/skills/build/SKILL.md` is not edited here).
-- [ ] `.claude-plugin/plugin.json` `version` is bumped from its pre-commit
+  Evidence: `lint-ultra-gate: OK — all ultra mentions gated in 4 files`, exit 0.
+- [x] `.claude-plugin/plugin.json` `version` is bumped from its pre-commit
   value within this task's own commit (`git show HEAD -- .claude-plugin/plugin.json`
   shows a `+` on the version line).
+  Evidence: version 0.8.48 → 0.8.49 in this task's commit.
