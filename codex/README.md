@@ -106,6 +106,19 @@ file path" state that preceded this port.
   Run unattended Codex sessions under `--sandbox read-only` (as
   `verify-live.sh` does) so a stage that is merely *read* still cannot act.
 
+## What's not ported
+
+Checked by `tests/test_codex_parity.sh` (sibling to the antigravity parity
+gate): every `.claude/skills/*` and `.claude/agents/*.md` must have either a
+`codex/.agents/skills/<name>` entry (real directory or a resolving symlink)
+or an anchored row here whose second cell contains "Not ported".
+
+| Skill | Status |
+|---|---|
+| `fleet` | Not ported — inherited from `antigravity/README.md`: Antigravity's Agent Manager is this surface natively, and Codex has no equivalent to port from. |
+| `workflow-author` | Not ported — inherited from `antigravity/README.md`: its entire job is authoring `.claude/workflows/*.js` for the Claude-Code-specific `Workflow` tool; neither Antigravity nor Codex has a scripted fan-out primitive to author against. |
+| `critique` | Not ported — Antigravity itself only has `critique` as a workflow (`antigravity/.agents/workflows/critique.md`), not a skill; Codex has no workflow mechanism to reuse (no custom slash commands, per "What degrades on Codex" above), and there is no skill-shaped antigravity source to symlink. The procedure is reachable only by opening the file directly. |
+
 ## Keeping the ports in sync
 
 `.claude/` is the source of truth → `antigravity/` is the full mirrored port
