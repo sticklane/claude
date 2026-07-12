@@ -1,5 +1,7 @@
 # Ground model-routing guidance in OpenAI/DeepMind/DeepSeek research (configurability already exists)
 
+Breakdown-ready: true
+
 ## Problem
 
 Per-task-type model configurability already exists in this toolkit —
