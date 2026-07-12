@@ -3,12 +3,12 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: deferred
+Status: pending
 Depends on: 01, 02
 Priority: P1
 Budget: 5 turns
 Spec: ../SPEC.md (requirement R8 + end-to-end criterion)
-Touch: templates/, .claude/skills/gate/, vale/styles/config/vocabularies/House/accept.txt
+Touch: templates/, .claude/skills/gate/, vale/styles/config/vocabularies/House/accept.txt, README.md, AGENTS.md
 
 ## Goal
 
@@ -37,3 +37,13 @@ report, saved to ../evidence/e2e-readme-review.md.
 ## Deferred questions
 
 - 2026-07-11 — Task 03 requires `vale README.md AGENTS.md` to exit 0 (criterion C2), but its Touch list (`templates/, .claude/skills/gate/, vale/styles/config/vocabularies/House/accept.txt`) cannot achieve that: of the three error-level alert classes (Google.EmDash 22, Vale.Spelling 22, Vale.Terms 2), the Spelling/Terms errors are fixable in accept.txt, but Google.EmDash is an existence-type rule (no vocabulary/exceptions mechanism) firing on the repo's deliberate spaced-em-dash house style in README.md and AGENTS.md. How should C2 be satisfied? (a) Amend the task's Touch to include `vale/.vale.ini.template` and centrally disable Google.EmDash there (`Google.EmDash = NO` under `[*.md]`) — the minimal fix, endorsing the house style; (b) amend Touch to include README.md and AGENTS.md and rewrite all spaced em-dashes to Google-style unspaced dashes — conforms to Google style but reverses the established house-style repo-wide prose convention; or (c) revise the spec/criterion so the bare-vale check excludes Google.EmDash some other way. Option (a) matches attempt 1's working implementation.
+
+
+## Answers
+
+- [2026-07-11, Steven via interview] Em-dash policy: option (b) — ADOPT
+  Google's unspaced style. Rewrite README.md and AGENTS.md to unspaced
+  em-dashes (word—word); Google.EmDash stays ON (do NOT disable or
+  downgrade it). Touch amended to include README.md and AGENTS.md for the
+  rewrite. This sets the house voice going forward: retrofit tasks 05-13
+  apply the same unspaced style in their target repos' docs.
