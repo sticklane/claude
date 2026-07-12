@@ -7,6 +7,15 @@ Long conversations accumulate dead context that degrades attention. A clean
 conversation resumed from a good handoff file outperforms a long one with
 accumulated corrections.
 
+**Autonomous refresh-over-carry path.** A long-lived autonomous run that
+refreshes under its session-refresh directive follows the same steps below —
+write the handoff file, then surface the resume pointer where the restart
+will look: the next loop firing, a scheduled fresh conversation, or the
+attended parent — then ends its turn. It must NOT spawn a detached
+continuation of itself: the "Awaited children, never detached" policy in
+`AGENTS.md` governs, so refreshing hands work to a fresh context rather than
+seeding this run's own successor.
+
 1. Write `HANDOFF.md` next to the active task/spec file (or at the repo
    root if there isn't one), containing only what a fresh agent needs:
    - **Task**: what we're doing and the task/spec file path.
