@@ -6,11 +6,14 @@ Breakdown-ready: true
 
 ## Problem
 
-The 2026-07-11 overnight agentprof window shows $123 flowing through the
-`claude` catch-all agent type at fable-5/opus-4-8, including dispatch
-chains nested 3–5 deep (`agent:claude > agent:claude > agent:claude`):
-~$95 in a home-directory orchestrator session and ~$61 inside a fooszone
-/drain run. The catch-all inherits the calling session's model, so an
+The 2026-07-11 overnight agentprof window shows $123 flowing through
+samples whose innermost agent frame is the `claude` catch-all, at
+fable-5/opus-4-8, including dispatch chains nested 3–5 deep
+(`agent:claude > agent:claude > agent:claude`). Measured differently —
+every sample whose stack carries ≥2 untyped frames, INCLUDING typed
+workers dispatched beneath them — the nested chains total ~$95 in a
+home-directory orchestrator session and ~$61 inside a fooszone /drain
+run; the two figures overlap and do not sum. The catch-all inherits the calling session's model, so an
 untyped agent spawning untyped children compounds frontier-tier cost at
 every level — the tier ladder inverted, at depth.
 
@@ -73,9 +76,14 @@ audit.
   harness.
 - R4 **Guard metric.** The cost summary gains an additive
   `untyped_fanout` section: calls and `cost_microusd` through untyped
-  agent frames (`agent:claude`, `agent:general-purpose`, with and without
-  plugin namespace), split by model, plus a `max_depth` observed for
-  untyped-under-untyped chains. Edge rule for depth (also the R3 hook's
+  agent frames, split by model, plus a `max_depth` observed for
+  untyped-under-untyped chains. The untyped set is an EXACT-match
+  enumeration — `agent:claude`, `agent:agentic:claude`,
+  `agent:general-purpose`, `agent:agentic:general-purpose` — never a
+  prefix match: any other `agent:*` frame (explicitly including
+  `agent:claude-code-guide`, which shares the `agent:claude` prefix and
+  appears in the pinned evidence) is typed, is excluded from the rollup,
+  and breaks a depth chain. Edge rule for depth (also the R3 hook's
   warn condition): count adjacent untyped `agent:` frames in one sample's
   stack, ignoring intervening `wf:`/`stage:`/role markers; a TYPED agent
   frame breaks the chain (`agent:claude > agent:scout > agent:claude`
@@ -105,12 +113,12 @@ audit.
   ≥ 1 (word confirmed absent from the whole file at authoring time) —
   placement inside the "Dispatch authoring" section is part of the
   check (R3)
-- [ ] If any task's R2/R3 fix edits a `.claude/skills/*` or
-  `.claude/agents/*` file, that task's `Touch:` also carries the
-  `antigravity/` mirror and a `.claude-plugin/plugin.json` version bump,
-  and `claude plugin validate .` passes (per CLAUDE.md's mirror rule;
-  conditional because R2's targets are unknown until R1 traces them)
-  (R2, R3)
+- [ ] If any task's R2/R3 change edits a `.claude/skills/*` or
+  `.claude/agents/*` file, or ships a hook (CLAUDE.md: hooks are
+  mirrored in Antigravity's JSON shape), that task's `Touch:` also
+  carries the `antigravity/` mirror and a `.claude-plugin/plugin.json`
+  version bump, and `claude plugin validate .` passes (conditional
+  because R2's targets are unknown until R1 traces them) (R2, R3)
 - [ ] Hook path: either the hook script exists with a runnable test
   (violating Agent input → warning emitted; typed or overridden input →
   silent), or the feasibility limitation is recorded beside the doctrine
