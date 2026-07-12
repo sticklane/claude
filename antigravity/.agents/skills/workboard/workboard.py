@@ -490,6 +490,20 @@ def ready_items(repos):
 
 CHECKBOX_RE = re.compile(r"^\s*-\s*\[([ x-])\]", re.MULTILINE)
 
+# An open `## Agent-filed blockers` entry (.claude/rules/human-blockers.md):
+#   - [ ] <ISO date> · <source path> · <ask|run|provision|decide> — <action>
+# Anchored on `[ ]` so checked (`- [x]`) / in-progress (`- [-]`) entries never
+# match — tools skip them. A line that doesn't fit the grammar is skipped, not
+# an error (graceful degradation).
+HUMAN_BLOCKER_RE = re.compile(
+    r"^\s*-\s*\[ \]\s*"
+    r"(?P<date>\S+)\s*·\s*"
+    r"(?P<source>.+?)\s*·\s*"
+    r"(?P<type>ask|run|provision|decide)\s*—\s*"
+    r"(?P<ask>.+?)\s*$",
+    re.MULTILINE,
+)
+
 
 def scan_kiro_specs(repo):
     """.kiro/specs/<name>/tasks.md — checkboxes [ ] todo, [-] doing, [x] done."""
@@ -670,6 +684,28 @@ def _section_body(text, *heading_patterns):
         if m and m.group(1).strip():
             return m.group(1).strip()
     return ""
+
+
+def scan_human_blockers(repo):
+    """HUMAN.md `## Agent-filed blockers` = human-actionable items an agent
+    can't clear (.claude/rules/human-blockers.md). Returns the OPEN entries
+    (`- [ ]`) parsed into {date, source, type, ask}; checked (`- [x]`) entries
+    are skipped. Absent file or absent section returns [] — never raises."""
+    text = read_text(repo / "HUMAN.md", 20_000)
+    if not text:
+        return []
+    body = _section_body(text, "agent.?filed blockers")
+    if not body:
+        return []
+    return [
+        {
+            "date": m.group("date"),
+            "source": m.group("source").strip(),
+            "type": m.group("type"),
+            "ask": m.group("ask").strip(),
+        }
+        for m in HUMAN_BLOCKER_RE.finditer(body)
+    ]
 
 
 def scan_batons(repo):
@@ -1280,6 +1316,25 @@ def attention_total(inbox):
     return sum(1 for i in inbox if i["state"] != "in-progress")
 
 
+def _iso_date_ts(date_str):
+    """Epoch seconds for an ISO `YYYY-MM-DD` HUMAN.md date, None if unparsable —
+    None sorts as oldest (`age_ts or 0`), so a malformed date never crashes."""
+    try:
+        return datetime.strptime(date_str.strip(), "%Y-%m-%d").timestamp()
+    except (ValueError, TypeError):
+        return None
+
+
+# A human-filed blocker type maps onto an existing inbox state so it renders in
+# a known group: a question/decision needs an answer; a command/access is blocked.
+_HUMAN_BLOCKER_STATE = {
+    "ask": "needs-answer",
+    "decide": "needs-answer",
+    "run": "blocked",
+    "provision": "blocked",
+}
+
+
 def attention_items(
     repos, sessions, antigravity, stale_days, drain_window=DRAIN_WINDOW_DEFAULT
 ):
@@ -1312,6 +1367,20 @@ def attention_items(
                     "why": f"{h['path']} — resume it in a fresh session, then delete the file (/handoff wrote it):",
                     "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(resume_prompt)}",
                     "age_ts": h["mtime"],
+                }
+            )
+        # Human-filed blockers (HUMAN.md) rank above spec/task rows: a person
+        # asked for these explicitly. Serious severity, filed before the specs
+        # loop so they lead the repo's items within the same severity band.
+        for hb in r.get("human_blockers", []):
+            items.append(
+                {
+                    "severity": "serious",
+                    "state": _HUMAN_BLOCKER_STATE.get(hb["type"], "needs-answer"),
+                    "repo": r["name"],
+                    "what": f"Human blocker ({hb['type']}): {hb['ask']}",
+                    "why": f"filed {hb['date']} · {hb['source']} — see HUMAN.md",
+                    "age_ts": _iso_date_ts(hb["date"]),
                 }
             )
         for s in r["specs"]:
@@ -1857,6 +1926,7 @@ def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFA
                 "specs": scan_toolkit_specs(p) + scan_kiro_specs(p),
                 "handoffs": scan_handoffs(p),
                 "batons": scan_batons(p),
+                "human_blockers": scan_human_blockers(p),
             }
         )
 
