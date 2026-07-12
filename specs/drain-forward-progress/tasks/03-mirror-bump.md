@@ -28,3 +28,7 @@ THIS task's own commit; validate + ultra-gate green.
 - [x] `git show HEAD -- .claude-plugin/plugin.json | grep -q '^+.*"version"'` right after this task's commit → hit
   - Evidence: plugin.json bumped 0.8.46 → 0.8.47 in this task's own (HEAD) commit; grep matches the `+  "version": "0.8.47",` line.
 - Verifier PASS on all three criteria + SPEC R5 mirror-intent; full report at specs/drain-forward-progress/evidence/03-mirror-bump.md.
+
+## Decisions
+
+- [2026-07-12 /drain gen2] Codex drain wrapper UPDATED (content-equivalent) rather than recording "codex wrapper summarizes above this level" — its text embeds the affected assess/act + section-6 clauses near-verbatim (precedent 739afdf). Reverse: restore codex/.agents/skills/drain/SKILL.md to base 5088bb1 and put the "summarizes above this level" note in the commit message instead.
