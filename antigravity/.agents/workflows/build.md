@@ -75,6 +75,12 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    (all acceptance passing), DEFERRED (a question a human must
    answer), or BLOCKED (stuck after the fix attempts) — rather than
    thrashing.
+   Heavy-context escape: attended build has no baton (that is the drain
+   workflow's degradation response); when the session itself has grown
+   heavy — not just one stuck fix — apply the handoff skill to write a
+   handoff file and lead the report with its resume command instead of
+   continuing degraded. This is the escape available to an attended run
+   where the baton cannot apply.
    Stopping blocked (the **same-edit** rule): when the session must stop on
    an external blocker it cannot clear (missing creds, an undeployed
    dependency, a product decision only the user can make), write
@@ -94,12 +100,6 @@ loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
    attended-scope only: a drained/unattended worker NEVER writes `HUMAN.md` —
    it returns its BLOCKED verdict and the orchestrator (not the worker) files
    the entry.
-   Heavy-context escape: attended build has no baton (that is the drain
-   workflow's degradation response); when the session itself has grown
-   heavy — not just one stuck fix — apply the handoff skill to write a
-   handoff file and lead the report with its resume command instead of
-   continuing degraded. This is the escape available to an attended run
-   where the baton cannot apply.
 
 5. **Close out.** Open this step by emitting
    `<!-- agentprof:stage=close-out -->` verbatim each time you enter it.

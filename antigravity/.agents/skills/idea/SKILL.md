@@ -15,9 +15,10 @@ files.
 
 ## 1. Scout before you ask
 
-Apply the scout skill to learn what the idea touches: relevant modules,
-existing similar features, test conventions, constraints. Keep conclusions
-(`path:line`), not file dumps. Informed questions beat generic ones.
+Fan out 2-4 scout agents in parallel (one focused question each) to learn
+what the idea touches: relevant modules, existing similar features, test
+conventions, constraints. Keep conclusions (`path:line`), not file dumps.
+Informed questions beat generic ones.
 
 ## 2. Interview the user
 
