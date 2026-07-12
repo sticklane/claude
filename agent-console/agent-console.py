@@ -2028,6 +2028,20 @@ def render_workboard(
                 f'<div class="line"><span class="trunc">{esc(str(n))} re-primes</span>'
                 f'<span class="meta">{_usd(reprime.get("cost_microusd", 0))}</span></div>'
             )
+        # One untyped-fanout guard line: calls (+ deepest nesting) and cost of
+        # dispatch through untyped catch-all agent frames (spec R4). Absent from
+        # older caches with no `untyped_fanout` section — the line is simply
+        # omitted, so the panel renders exactly as before.
+        fanout = cost.get("untyped_fanout")
+        if fanout:
+            calls = fanout.get("calls", 0)
+            depth = fanout.get("max_depth", 0)
+            cost_body += (
+                '<div class="sub">Untyped fan-out (7d)</div>'
+                f'<div class="line"><span class="trunc">{esc(str(calls))} calls · '
+                f"depth {esc(str(depth))}</span>"
+                f'<span class="meta">{_usd(fanout.get("cost_microusd", 0))}</span></div>'
+            )
     cost_panel = (
         f'<div class="panel" id="panel-cost"><div class="sub">Cost (7d) · '
         f"{cost_value}</div>{cost_body}</div>"

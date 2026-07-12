@@ -1,6 +1,6 @@
 # Task 04: untyped_fanout guard metric
 
-Status: in-progress
+Status: done
 Depends on: ../../session-refresh-automation/tasks/02-per-session-reprime-fields.md, ../../session-refresh-automation/tasks/05-workboard-reprime-flag.md
 Priority: P2
 Budget: 12 turns
@@ -44,8 +44,8 @@ chain).
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/costsummary/` → pass, including the exclusion and edge-rule cases
-- [ ] `cd agentprof && go build -o agentprof . && ./agentprof claude --days 7 --summary /tmp/s.json -o /dev/null && jq -e '.untyped_fanout | has("calls") and has("cost_microusd") and has("by_model") and has("max_depth")' /tmp/s.json` → true
-- [ ] `grep -c 'untyped_fanout' agentprof/SCHEMA.md` → ≥ 1
-- [ ] `bash agentprof/scripts/check.sh` → green
-- [ ] `bash agent-console/scripts/check.sh` → green, with the present/absent renderer cases
+- [x] `cd agentprof && go test ./internal/costsummary/` → pass, including the exclusion and edge-rule cases — verifier: pass, 7 new TestBuildUntypedFanout* cases (exclusion + edge-rule) green (evidence/04-untyped-fanout-metric.md)
+- [x] `cd agentprof && go build -o agentprof . && ./agentprof claude --days 7 --summary /tmp/s.json -o /dev/null && jq -e '.untyped_fanout | has("calls") and has("cost_microusd") and has("by_model") and has("max_depth")' /tmp/s.json` → true — verifier: jq returned true; all four keys present (evidence file)
+- [x] `grep -c 'untyped_fanout' agentprof/SCHEMA.md` → ≥ 1 — verifier: grep → 3 (evidence file)
+- [x] `bash agentprof/scripts/check.sh` → green — verifier: green (format-check, lint, tests) (evidence file)
+- [x] `bash agent-console/scripts/check.sh` → green, with the present/absent renderer cases — verifier: green, 157 tests; 3 renderer tests assert present/absent/None (evidence file)

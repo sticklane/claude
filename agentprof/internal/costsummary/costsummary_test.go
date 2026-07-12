@@ -330,6 +330,130 @@ func TestBuildSessionsSectionNonNilWhenEmpty(t *testing.T) {
 	}
 }
 
+// untypedSample builds a model-call sample whose stack ends in the given agent
+// chain frames followed by the model leaf (e.g. "agent:claude", "agent:claude").
+func untypedSample(session string, chain []string, model string, calls, cost int64) schema.Sample {
+	stack := append([]string{"proj", "t01 · x", "skill:build", "main"}, chain...)
+	stack = append(stack, model)
+	return schema.Sample{
+		Time:   time.Now(),
+		Stack:  stack,
+		Values: map[string]int64{"calls": calls, "cost_microusd": cost},
+		Labels: map[string]string{"source": "claude-code", "session": session},
+	}
+}
+
+func TestBuildUntypedFanoutCountsAdjacentUntypedChainDepth(t *testing.T) {
+	// Two adjacent untyped catch-all frames -> depth 2; the sample's calls and
+	// cost roll up, split by the model leaf.
+	samples := []schema.Sample{
+		untypedSample("s1", []string{"agent:claude", "agent:claude"}, "claude-fable-5", 1, 500),
+	}
+	s := Build(samples, nil)
+	if s.UntypedFanout.MaxDepth != 2 {
+		t.Errorf("untyped_fanout.max_depth = %d, want 2 (adjacent claude>claude)", s.UntypedFanout.MaxDepth)
+	}
+	if s.UntypedFanout.Calls != 1 {
+		t.Errorf("untyped_fanout.calls = %d, want 1", s.UntypedFanout.Calls)
+	}
+	if s.UntypedFanout.CostMicrousd != 500 {
+		t.Errorf("untyped_fanout.cost_microusd = %d, want 500", s.UntypedFanout.CostMicrousd)
+	}
+	if got := s.UntypedFanout.ByModel["claude-fable-5"]["cost_microusd"]; got != 500 {
+		t.Errorf("untyped_fanout.by_model[claude-fable-5][cost_microusd] = %d, want 500", got)
+	}
+	if got := s.UntypedFanout.ByModel["claude-fable-5"]["calls"]; got != 1 {
+		t.Errorf("untyped_fanout.by_model[claude-fable-5][calls] = %d, want 1", got)
+	}
+}
+
+func TestBuildUntypedFanoutTypedFrameBreaksChain(t *testing.T) {
+	// agent:claude > agent:scout > agent:claude: the typed scout frame breaks the
+	// run into two depth-1 runs, so max_depth is 1, not 2 (SPEC R4 edge rule).
+	samples := []schema.Sample{
+		untypedSample("s1", []string{"agent:claude", "agent:scout", "agent:claude"}, "claude-fable-5", 1, 300),
+	}
+	s := Build(samples, nil)
+	if s.UntypedFanout.MaxDepth != 1 {
+		t.Errorf("untyped_fanout.max_depth = %d, want 1 (typed scout breaks the chain)", s.UntypedFanout.MaxDepth)
+	}
+	// The sample still passes through untyped frames, so its cost counts.
+	if s.UntypedFanout.CostMicrousd != 300 {
+		t.Errorf("untyped_fanout.cost_microusd = %d, want 300", s.UntypedFanout.CostMicrousd)
+	}
+}
+
+func TestBuildUntypedFanoutExcludesClaudeCodeGuide(t *testing.T) {
+	// agent:claude-code-guide shares the agent:claude prefix but is TYPED (not in
+	// the exact-match untyped set): it is excluded entirely — no depth, no cost.
+	samples := []schema.Sample{
+		untypedSample("s1", []string{"agent:claude-code-guide", "agent:claude-code-guide"}, "claude-fable-5", 1, 900),
+	}
+	s := Build(samples, nil)
+	if s.UntypedFanout.MaxDepth != 0 {
+		t.Errorf("untyped_fanout.max_depth = %d, want 0 (claude-code-guide is typed)", s.UntypedFanout.MaxDepth)
+	}
+	if s.UntypedFanout.Calls != 0 || s.UntypedFanout.CostMicrousd != 0 {
+		t.Errorf("untyped_fanout calls/cost = %d/%d, want 0/0 (claude-code-guide excluded entirely)",
+			s.UntypedFanout.Calls, s.UntypedFanout.CostMicrousd)
+	}
+	if len(s.UntypedFanout.ByModel) != 0 {
+		t.Errorf("untyped_fanout.by_model = %v, want empty (claude-code-guide excluded)", s.UntypedFanout.ByModel)
+	}
+}
+
+func TestBuildUntypedFanoutTransparentMarkersDoNotBreakChain(t *testing.T) {
+	// wf:/stage:/role markers between two untyped frames are transparent — they
+	// are skipped through, so the adjacent run is still depth 2.
+	samples := []schema.Sample{
+		untypedSample("s1",
+			[]string{"agent:agentic:claude", "wf:flow", "role:worker", "agent:general-purpose"},
+			"claude-opus-4-8", 1, 200),
+	}
+	s := Build(samples, nil)
+	if s.UntypedFanout.MaxDepth != 2 {
+		t.Errorf("untyped_fanout.max_depth = %d, want 2 (wf:/role transparent between untyped frames)", s.UntypedFanout.MaxDepth)
+	}
+}
+
+func TestBuildUntypedFanoutSingleFrameCountsButDepthOne(t *testing.T) {
+	// A single untyped frame passes "through untyped agent frames": its cost
+	// counts, and max_depth is 1 (not fan-out, but still an untyped call).
+	samples := []schema.Sample{
+		untypedSample("s1", []string{"agent:general-purpose"}, "claude-sonnet-5", 1, 42),
+	}
+	s := Build(samples, nil)
+	if s.UntypedFanout.MaxDepth != 1 {
+		t.Errorf("untyped_fanout.max_depth = %d, want 1 (single untyped frame)", s.UntypedFanout.MaxDepth)
+	}
+	if s.UntypedFanout.CostMicrousd != 42 {
+		t.Errorf("untyped_fanout.cost_microusd = %d, want 42", s.UntypedFanout.CostMicrousd)
+	}
+}
+
+func TestBuildUntypedFanoutTypedOnlyAndAgentlessExcluded(t *testing.T) {
+	// A purely-typed agent chain and a main-loop (agentless) sample contribute
+	// nothing to the untyped_fanout section.
+	samples := []schema.Sample{
+		untypedSample("s1", []string{"agent:scout"}, "claude-haiku-4-5", 1, 700),
+		mainCall("s2", "beta", 100, 0, 800),
+	}
+	s := Build(samples, nil)
+	if s.UntypedFanout.MaxDepth != 0 || s.UntypedFanout.Calls != 0 || s.UntypedFanout.CostMicrousd != 0 {
+		t.Errorf("untyped_fanout non-zero for typed/agentless samples: %+v", s.UntypedFanout)
+	}
+}
+
+func TestBuildUntypedFanoutByModelNonNilWhenEmpty(t *testing.T) {
+	s := Build(nil, nil)
+	if s.UntypedFanout.ByModel == nil {
+		t.Error("untyped_fanout.by_model must be non-nil (initialized) so JSON emits {} not null")
+	}
+	if s.UntypedFanout.MaxDepth != 0 {
+		t.Errorf("untyped_fanout.max_depth = %d, want 0 for empty grouping", s.UntypedFanout.MaxDepth)
+	}
+}
+
 func TestBuildGroupingFromMergedWhileSessionsAddedFromFreshOnly(t *testing.T) {
 	// merged (post-eviction rolling window) has samples from sessions old1/old2;
 	// fresh (this run's Collect) touched only new1.
