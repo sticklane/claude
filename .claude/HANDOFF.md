@@ -1,12 +1,13 @@
-# Handoff (merged — two independent, unfinished threads)
+# Handoff (merged — three independent, unfinished threads)
 
 This file was briefly overwritten mid-session, losing Thread A's still-open
 next steps even though its own commits had already landed on `main` — a
 handoff's "Not done / open" section can stay live long after its "State"
 section's commits are merged, so "commits already in git log" is NOT the
 same as "nothing left to do." Restored from `git show 72d140d:.claude/HANDOFF.md`
-and merged with Thread B below. Pick up whichever thread is relevant; they
-don't touch the same files.
+and merged with Thread B below. Thread C appended the same way (not
+overwritten) after reading this file's own "merge, don't clobber" gotcha.
+Pick up whichever thread is relevant; they don't touch the same files.
 
 ---
 
@@ -314,3 +315,47 @@ Thread A above without merging — now fixed).
   the injected directive text appearing in context).
 - `bin/refresh-plugins` / `bin/submit`: `bash -n` syntax check only —
   never run end-to-end.
+
+---
+
+## Thread C: handoff-resume SessionStart hook
+
+### Task
+
+User asked for "a skill that does both /clear and resumes from
+handoff." Freehand work, no spec/task file. Done, committed, pushed as
+commit `6395889`.
+
+### State — done
+
+`hooks/handoff-resume/` (new): `resume-check.sh` (the hook), `README.md`,
+`test.sh` (11/11 passing). A `SessionStart` hook that searches the
+project for any file named `HANDOFF.md` and, if found, injects "read it
+and continue" — the actual mechanism, since `/clear` is a hard reset
+nothing can trigger-and-then-continue-past in one action. `/handoff` and
+`/clear` were deliberately left untouched/separate per explicit user
+correction mid-task. Wired into `~/.claude/settings.json`'s
+`SessionStart` hooks (global, mirrors how `hooks/session-refresh/` is
+wired). Found and fixed one real bug while testing: the hook initially
+false-positived on `tests/fixtures/workboard/demo-repo/HANDOFF.md` (a
+workboard-dashboard test double, not a real handoff) — now excludes
+`fixtures`/`test_fixtures` dirs too.
+
+### Not done / open (Thread C)
+
+- The hook has NOT fired for real yet (would need an actual `/clear` or
+  fresh launch to observe) — only smoke-tested by invoking the script
+  directly with `CLAUDE_PROJECT_DIR` set. Confirm live if picking this up.
+- No cleanup/archival for a consumed `HANDOFF.md` — deliberate, stays the
+  resuming session's own job per the README.
+- The Thread A "sync via genericity, not just gates" design direction
+  (above) is still fully open and is the larger, more valuable next step
+  if choosing between threads.
+
+### Verification (Thread C)
+
+- `bash hooks/handoff-resume/test.sh` → 11 passed, 0 failed.
+- `for t in tests/test_*.sh; do bash "$t"; done` → all green as of
+  `6395889`.
+- `python3 -c "import json; json.load(open('/Users/sjaconette/.claude/settings.json'))"` → valid.
+- Live smoke test against the real repo → correctly identifies this file.
