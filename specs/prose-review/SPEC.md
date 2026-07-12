@@ -85,14 +85,20 @@ this machine's doc locations, and the Google-style essentials Vale can't
 check (audience-first ordering, one-idea paragraphs).
 
 Mechanics: `bin/install-vale` (idempotent) installs Vale via Homebrew,
-writes `~/.vale.ini` pointing at this repo's `vale/` StylesPath, and runs
-`vale sync` to pull the Google package; the repo tracks the config template
-and the House vocabulary (accept list for toolkit jargon: drain, baton,
-worktree, agentprof, Diátaxis, ...) and gitignores the synced package
-payload. The gate skill's check template gains an OPT-IN vale stanza;
-machine-parsed prose (task files, specs/, SKILL.md bodies) is exempt
-by default — Vale targets human-orientation docs (README.md, AGENTS.md,
-docs/*.md).
+writes `~/.vale.ini` pointing at this repo's `vale/` StylesPath — the
+installer substitutes the ABSOLUTE resolved path (Vale resolves
+StylesPath relative to the config file's directory, so a relative value
+would break runs from other repos; the tracked template is a substitution
+target, never copied verbatim) — and runs `vale sync` to pull the Google
+package; the repo tracks the config template and the House vocabulary
+(accept list for toolkit jargon: drain, baton, worktree, agentprof,
+Diátaxis, ...) and gitignores the synced package payload. No per-repo
+setup is REQUIRED; a repo MAY layer its own domain vocabulary (a local
+`.vale.ini` extending the global styles) when its jargon would otherwise
+drown the signal. The gate skill's check template gains an OPT-IN vale
+stanza; machine-parsed prose (task files, specs/, SKILL.md bodies) is
+exempt by default — Vale targets human-orientation docs (README.md,
+AGENTS.md, docs/*.md).
 
 A bulk retrofit wave (decision: Steven, 2026-07-11 interview) brings every
 `std`-marked repo in `~/REPOS.md` up to the standard: one task per repo,
@@ -168,9 +174,21 @@ run the review, apply fixes to that repo's orientation docs, commit there.
 - **R9 (retrofit wave)**: one task per `std`-marked repo in `~/REPOS.md`
   (enumerated at /breakdown time): run `/prose-review` over that repo's
   orientation docs, apply the fixes IN that repo (its own commit
-  conventions), and record the before/after finding counts in this spec's
-  evidence/. Repos whose docs already pass produce a zero-findings
-  evidence entry, not silence.
+  conventions), and record before/after finding counts — BOTH the Vale
+  pass AND the nine-item rubric pass — in this spec's evidence/, with any
+  residual Vale findings itemized (domain jargon a central vocabulary
+  should not absorb is an acceptable, listed residue; "after" must show
+  rubric findings resolved and Vale findings reduced to that listed
+  residue — exit-0 is NOT the green condition). Target selection per
+  repo: README.md, plus AGENTS.md when present, else `docs/*.md`; a repo
+  with none of these SKIPS with a zero-target evidence entry — retrofit
+  never authors new docs. Dispatch precondition per repo: confirm the
+  repo's push-triggered workflows ignore docs-only commits
+  (`paths-ignore: **.md` or equivalent) or use its documented docs-safe
+  path BEFORE committing — auto-deploying repos (e.g. portfolio-tracker's
+  push-on-commit) must not bill a CI run for a docs retrofit
+  (~/.claude/CLAUDE.md CI cost discipline). Repos already clean produce a
+  zero-findings evidence entry, not silence.
 - **R10 (mirror + plugin)**: `antigravity/.agents/skills/prose-review/`
   is created in the same commit as the skill with content-equivalent
   doctrine (plain review/authoring skill, ports cleanly);
@@ -210,18 +228,24 @@ run the review, apply fixes to that repo's orientation docs, commit there.
 - [ ] MANUAL: `--fix` on a pasted-text target errors; `--fix` never
   applied without the human having typed it (R3, R4)
 - [ ] `grep -qi 'right now' .claude/skills/prose-review/reference.md` AND
+  `grep -q 'prose-review' CLAUDE.md` (0 hits today — verified) AND
   MANUAL: Diátaxis quadrant table binds all four quadrants to house doc
-  locations; CLAUDE.md carries the pointer line (R5)
+  locations (R5)
 - [ ] `grep -qi 'stumble' .claude/skills/prose-review/reference.md` AND
   MANUAL: reader-test procedure spawns a fresh-context agent and merges
   its report (R6)
 - [ ] `bash bin/install-vale && vale --version` exits 0; run twice —
   second run is a no-op (idempotent); `test -f ~/.vale.ini` (R7)
-- [ ] `vale README.md AGENTS.md` exits 0 in this repo after tuning;
-  gate template contains the commented vale stanza (R8)
+- [ ] `vale README.md AGENTS.md` exits 0 in this repo after tuning (the
+  toolkit's own jargon lives in the central House vocabulary, so exit-0
+  IS reachable here, unlike retrofit repos); `grep -qi 'Vale prose lint'`
+  hits in the gate skill's check template (anchor phrase absent today —
+  bare 'vale' false-hits "equivalent") (R8)
 - [ ] One evidence file per retrofitted repo under
-  specs/prose-review/evidence/ recording before/after finding counts;
-  each retrofit repo's orientation docs pass `vale` (R9)
+  specs/prose-review/evidence/ recording before/after Vale AND rubric
+  finding counts with residual Vale findings itemized; skipped/no-docs
+  repos have zero-target entries; every retrofit commit preceded by the
+  CI paths-ignore check recorded in its evidence entry (R9)
 - [ ] `claude plugin validate .` passes; antigravity mirror dir exists
   with content-equivalent doctrine (content-coverage grep on 'Diátaxis'
   there); plugin version line modified in the closing task's own commit
