@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 2 turns
@@ -22,5 +22,7 @@ specs/spec-completion-review); task-file /build runs are unchanged
 
 ## Acceptance
 
-- [ ] `grep -qi 'spec-completion review' .claude/skills/build/SKILL.md` → hit
-- [ ] `bash evals/lint-ultra-gate.sh` → OK
+- [x] `grep -qi 'spec-completion review' .claude/skills/build/SKILL.md` → hit
+  - verified: exit 0, hit in close-out at the added sentence (evidence/02-build-parity.md)
+- [x] `bash evals/lint-ultra-gate.sh` → OK
+  - verified: `lint-ultra-gate: OK — all ultra mentions gated in 4 files`, exit 0 (evidence/02-build-parity.md)

@@ -158,7 +158,12 @@ line every time you enter it.
   unattended. Style findings are dropped (the simplification pass already
   ran). This is one pass — no re-review after fixes. Record the outcome as
   evidence: `review: N findings, M fixed, K discovered` or
-  `review skipped: <reason>`.
+  `review skipped: <reason>`. When this /build run's target was a bare
+  SPEC.md (no `tasks/`), additionally run the spec-completion review
+  (specs/spec-completion-review) over the run's whole diff through this same
+  pre-commit review machinery — a bare-SPEC run has no per-task pass to catch
+  spec-level gaps; task-file /build runs are unchanged, their per-task pass
+  already covers them.
 - Log any reversible-default decisions taken this session (step 1's rule) to
   the task file's `## Decisions` section — one line each: decision, default
   taken, how to reverse. Append; never overwrite prior entries. No decisions
