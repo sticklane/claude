@@ -26,3 +26,7 @@ specs/spec-completion-review); task-file /build runs are unchanged
   - verified: exit 0, hit in close-out at the added sentence (evidence/02-build-parity.md)
 - [x] `bash evals/lint-ultra-gate.sh` → OK
   - verified: `lint-ultra-gate: OK — all ultra mentions gated in 4 files`, exit 0 (evidence/02-build-parity.md)
+
+## Discovered
+
+- [2026-07-12 /drain gen2] build SKILL.md spec-completion-review sentence ships un-mirrored: scr/03's Touch covers only the drain mirrors, not antigravity/.agents/workflows/build.md or codex/.agents/skills/build/SKILL.md (both 0-hit on the anchor). Violates CLAUDE.md port-chain. Stub: tasks/05-build-mirror-gap.md — needs human Touch amendment or a new task (drain can't edit read-only Touch).
