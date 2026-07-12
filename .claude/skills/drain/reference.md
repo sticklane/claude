@@ -1,11 +1,13 @@
 # /drain reference
 
-Contents: When NOT to drain · Owner lease (DRAIN-OWNER.md format,
+Contents: When NOT to drain · Gen-1 startup advisories · Wake economics ·
+Owner lease (DRAIN-OWNER.md format,
 liveness, reclaim, remote divergence check) · Status field semantics · Stale-lock liveness
 check · Worker prompt · Deferred question format · Relaunch-with-evidence
 prompt · Tournament · Headless fallback · Baton pass (self-relaunch) ·
 Critique intake · Stub intake (assess → gate → act) · Auto-breakdown
-(lowest priority)
+(lowest priority) · Push guard (canonical) · Rolling-window admission & merge
+(R1–R4) · Exit checklist (seven sections)
 
 Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt (workers return only a **verdict + evidence**), the
@@ -24,6 +26,69 @@ classification — peripheral work runs unattended, core work is watched):
 
 Anything unchecked: pull that task out of the queue and run it attended
 with /build; drain the rest.
+
+## Gen-1 startup advisories
+
+Three best-effort, never-blocking advisories drain runs at gen-1 startup ONLY
+(never on baton generations — they inherit gen 1's) — none gates dispatch;
+correctness comes from the owner-lease claim, not these. SKILL.md's "Gen-1
+startup advisories" names them and points here.
+
+**Name the shell (best-effort).** If the terminal tab has no custom name
+already (none set by the user this session), set it to the repo name plus a
+compact descriptor of the specs being drained:
+`printf '\033]0;%s · drain: %s\007' "$(basename "$(git rev-parse
+--show-toplevel)")" "<abbreviated spec slugs, comma-joined>"` — once, never
+re-set on baton generations (they inherit it), skip silently with no TTY.
+
+**Startup session sweep (advisory).** Before inventory, list other live
+sessions whose cwd resolves into this repo (`claude agents --json`, else
+`~/.claude/sessions/*.json` pid records probed with `kill -0`): one line per
+foreign live session, "sweep unavailable" on failure. Advisory only, never
+blocking — correctness comes from the owner-lease claim, not this sweep (the
+exact cwd filter is the same one the Owner lease section uses).
+
+**Hub-economics advisory (never blocking).** Two advisory lines at gen-1
+startup — never on baton generations, and neither ever blocks dispatch: (a)
+*frontier-hub* — when the model the harness disclosed in this session's system
+context maps to the **frontier tier** (`runtimes/` profiles carry the mapping;
+Claude default: `fable`), print one line citing the wake-economics doctrine
+(SKILL.md step 2) and recommending a relaunch on a deep-tier (`opus`) or lower
+hub via a fresh `/drain` session with the same argument — queue state is
+committed, so nothing is lost; skip silently where the runtime discloses no
+model. (b) *heavy-hub* — when the drain launch arrives beyond the session's
+first few turns (the observable heuristic), print one line recommending that
+same fresh-session relaunch. Advisory only: neither line blocks dispatch, and
+neither prints on baton generations.
+
+## Wake economics
+
+The rationale SKILL.md step 2 summarizes. Awaited workers routinely run 5–30
+minutes, longer than the harness's 5-minute prompt-cache TTL, so every
+verdict-collection wake lands after the hub's cached prefix has expired and
+re-caches the **whole** hub context at the 1.25× cache-write input rate. The
+cost per wake is `context_tokens × input_rate × 1.25` — so the hub's *size*,
+not the number of wakes, is the cost lever: shrinking the hub context makes
+per-verdict re-caching noise, while a fat hub pays it on every worker. Measured
+shape (see ../EVIDENCE.md, 2026-07-04→11): median rewrite 187k tokens, 268
+TTL-expiry wakes costing $587 in one week — this is why the verdict cap
+(SKILL.md step 2), the merge-time re-read ban (step 3), and the context-budget
+baton (step 3a) all exist. Because the hub's judgment lives in the task files
+and pinned worker tiers rather than in the hub session's own model, run a
+dedicated drain hub on the default (`opus`) tier or below: a frontier hub model
+roughly doubles wake cost for no quality gain.
+
+**Machinery the merge-time re-read ban must NOT weaken (SKILL.md step 3's DONE
+bullet points here).** The MUST-NOT ban — at merge/verdict time the hub never
+pulls the worker's code diffs or its check/test output into its own context;
+the ceiling is a path-scoped diff summary (file names + line counts, no
+content) plus the ≤2k-token verdict, and when the hub genuinely needs file
+contents it dispatches a scout — is EXEMPT for this shipped machinery: the
+append-only whitelist content diff over `tasks/` (the DONE-bullet diff), CAS
+re-reads of `Status:` header lines (step 2), `## Progress` / `## Deferred` /
+`## Decisions` append edits, and the hub's OWN post-merge project-gate run
+(its pass/fail plus the bounded output tail specified for relaunch evidence,
+Relaunch-with-evidence prompt).
 
 ## Owner lease
 
@@ -603,7 +668,31 @@ every live run is drain's own and is swept.
 A variant of the Worker prompt above, dispatched once per spec at the
 lease-release boundary. Same tier pin (implementation-worker), same
 `isolation: worktree`, same awaited-child, ≤2k-token verdict, and defer
-contract as the Worker prompt — with these differences:
+contract as the Worker prompt — with these differences.
+
+**Diff base and skip gate (drain computes these before dispatch; SKILL.md's
+"Spec-completion review" points here).** The spec's status-flip commit message
+is the pinned contract `drain: <spec-slug> task NN in-progress` (SKILL.md step
+2). Recover the first such commit with
+`git log --reverse --format=%H --grep='^drain: <slug> task .* in-progress' -- 'specs/<slug>/tasks/'`
+and take the first match. The cumulative product diff is
+`merge-base(<that commit>, main)..main` restricted to the union of the spec's
+tasks' `Touch:` paths (product paths only). A spec with no such commit (drained
+before this shipped) SKIPS, recording `spec review skipped: no pinned flip
+commit` as its evidence line. Compute the **skip gate** from `git diff
+--numstat` over that ref range restricted to the union Touch — names + line
+counts only, never file contents (Wake economics). Classify each path
+NON-product by build's list (`docs/**`, `**/*.md`, `tests/**`, `test/**`,
+`**/test_*`, `**/*_test.*`, `**/*.test.*`, `**/*.spec.*`, `**/*.json`,
+`**/*.yaml`, `**/*.yml`, `**/*.toml`, `**/*.lock`). When no product paths
+remain, or total added+deleted product lines is < 25, **skip**: write the `spec
+review skipped: <docs-only|tests-only|tiny-diff (<lines>)>` evidence line,
+commit it (path-scoped, pushed), and release the lease. Otherwise dispatch the
+review-fix worker below. Whether reviewed or skipped, the outcome is written to
+`specs/<slug>/evidence/spec-review.md` and committed (path-scoped, pushed)
+BEFORE releasing the lease; the exit checklist gains one line per spec.
+
+These are the worker differences:
 
 - **Input is a ref range, not a task file.** Drain passes the worker the
   cumulative diff's ref range and the **union Touch** path list; the worker
@@ -707,7 +796,11 @@ justified when the relaunch escalated after attempt 1's deep-tier (`opus`)
 failure, which is the one dispatch point `.claude/rules/token-discipline.md`
 sanctions frontier for; `isolation: worktree`), each given the standard worker prompt plus the
 relaunch-with-evidence append (covering both prior failures) plus one
-angle suffix. Each suffix also overrides the branch name set by the
+angle suffix. Each of the three prepends its own agentprof role marker as its
+prompt's first line — `<!-- agentprof:role=worker-tournament-t1 -->`,
+`<!-- agentprof:role=worker-tournament-t2 -->`,
+`<!-- agentprof:role=worker-tournament-t3 -->` (the `tN` template SKILL.md step
+3 names, enumerated). Each suffix also overrides the branch name set by the
 base prompt:
 
 > Override the branch name: commit to `task/NN-<slug>-t1`. Angle:
@@ -842,6 +935,15 @@ needs-attention note instead of respawning. The
 relaunch uses a NEW orchestrator flag set — NOT the Headless-fallback
 worker flags above, which deliberately exclude the Task tool and would
 abort the orchestrator's first worker dispatch.
+
+**Verdict-budget derivation (`max(2, 6 − W)`).** SKILL.md step 3a hands off
+after `max(2, 6 − W)` recorded verdicts. This count is a deterministic,
+size-adaptive stand-in for the one-rule ideal "after ~4 verdicts OR when the
+hub's context is heavy, whichever comes first": the harness exposes no reliable
+in-session context-size signal the hub can check, so a wider window W — which
+accumulates hub context faster per generation (each in-flight worker adds a
+verdict wake) — batons sooner (W=1→5 verdicts, W=3→3, W=5→2), keeping the hub
+small enough that per-verdict re-caching stays cheap (Wake economics).
 
 **Drain-down before the baton (R8).** Background workers notify only the
 session that launched them, so a successor generation cannot adopt
@@ -1308,3 +1410,97 @@ normal background-`Task` path (SKILL.md step 2), still under the
 max-generations cap of 10; the sequential Headless-fallback
 path above is NOT required for orchestrator relaunch — it stays the documented
 degraded route for environments where background agents are unavailable.
+
+## Push guard (canonical)
+
+The canonical push rule SKILL.md step 3's DONE bullet cites. **Build cites this
+too, and drain's own rolling-window merges follow it, extended to every drain
+bookkeeping commit — not only DONE merges — since a concurrent session's `pull
+--rebase` has been observed to drop unpushed drain commits
+(docs/memory/concurrent-session-collision.md).** Push only if `main` has a
+configured upstream — if none, skip silently; never `--force`; a rejected,
+non-fast-forward, or offline push warns and continues. The merge already landed
+locally, so a failed push never fails the task. This same guard applies to the
+owner claim/release commits (SKILL.md step 1), every flip (step 2), and the
+Deferred/Blocked/discovery commits (step 3). The worker never pushes — only the
+orchestrator session, after each of its own commits.
+
+## Rolling-window admission & merge (R1–R4)
+
+The full rules SKILL.md step 2's "Rolling-window admission & merge (R1–R4)"
+summarizes; they bind only when W > 1 (the default W=1 admits one task alone
+and merges it before the next).
+
+**Admission (R1).** A pending task enters the window only when all hold:
+`Status: pending` with every `Depends on:` dependency `done`; its `Touch:`
+list pairwise-disjoint from the **claim set** (the `Touch:` of every task whose
+committed `Status:` is `in-progress`, live slot or suspected zombie, so the
+claim set is computable from committed headers alone); and **co-admissible**
+with every in-flight task — two tasks may run together iff one `Group:` line in
+the owning spec's Parallelization section names both. A task on no `Group:`
+line, or in a spec with no Parallelization section, runs only **alone**
+(admitted only when the window is empty). **"Window empty" means zero live
+in-flight workers** — a suspected zombie does not count against emptiness
+(Stale-lock liveness check, R9.2).
+
+**`Group:` grammar.** The Parallelization section pins co-admissible groups one
+line per group, format `- Group: NN, NN[, NN...]` — pinned in
+specs/drain-rolling-window/SPEC.md and emitted by /breakdown, parsed, never
+re-derived from prose (the decision-coupling test governs what may share a
+line).
+
+**Top-up on verdict, not on wave (R2).** After each verdict is collected and
+(for DONE) merged + pushed, drain **re-computes admission and refills the
+window** to W — no wave boundary, no all-members-one-commit flip: each
+admission is one committed `Status: in-progress` flip, so CAS/push hygiene
+composes unchanged. Size the fleet by the task map; parallelism buys wall-clock
+time, not efficiency.
+
+**Serial merge queue with mechanical rebase recovery (R3).** Merges stay
+strictly serial, in verdict-landing order. A branch that conflicts because a
+sibling merged after its base was cut gets one rebase onto `main` in a
+**scratch worktree** (throwaway) — never checks out a task branch in the shared
+checkout (merges on the default branch, workers in worktrees). A clean rebase
+proceeds to DONE bookkeeping; one that still conflicts stops the remaining
+merges and reports which landed cleanly, never slot-machine.
+
+**Runtime Touch enforcement at merge (R4).** Extend the merge-time whitelist
+diff (SKILL.md step 3): changed paths must be a **subset of the task's**
+`Touch:` list plus the task's own file plus the spec's `evidence/` dir. Any
+path outside that set is a **merge failure** (the slot-machine path), closing
+the gap where ownership was enforced only at plan time, never mechanically at
+runtime.
+
+## Exit checklist (seven sections)
+
+SKILL.md step 4 fuses the batch interview and the session's final message: the
+interview asks every deferred question aggregated across ALL specs drained this
+session (gated on `Status: deferred`), and the final message is this fixed
+**seven-section checklist** for the human — **each entry names a file path**.
+One interview and one checklist per session; "Nothing needs you" is a valid
+checklist.
+
+1. **Deferred questions still unanswered** — the task file for each.
+2. **Defaults taken** — from `## Decisions` plus each DECISION-SHAPED stub's
+   `## Answers` default (from stub intake): decision, default, how to reverse.
+3. **Blocked items** — each `Status: blocked` task, what unblocks it, and its
+   task file.
+4. **NOT-READY specs** — each spec critique intake left NOT READY, its top
+   findings, and its `SPEC.md` path.
+5. **Draft stubs awaiting promotion** — each un-tagged `Status: draft` stub,
+   with its file, for a human to promote `draft` → `pending`
+   (`Promotion-ready: true` stubs excluded — see section 6).
+6. **Promoted this run** — every stub stub intake acted on: each stub promoted
+   to `pending` (tagged `Promotion-ready: true`, source of its criteria,
+   whether it was dispatched this run — print its exact `Demoted:` line to
+   reverse it, e.g. `Demoted: <ISO-date> — <reason>`, permanently respected),
+   each `Status: obsolete` closure (`Closed:` evidence), and each refused stub
+   (screen-refused, assess-refused, or gate-failed) with its `Intake-refused:
+   <screen|assess|gate> — <reason> (<date>)` line quoted verbatim — every
+   auto-promotion and refusal audited, task file for each.
+7. **Next commands** — the exact commands to resume.
+
+Additionally, for each spec whose lease released this run, the checklist
+carries its **spec-completion review** outcome — one line, `spec review: N
+findings, M fixed, K stubbed` or `spec review skipped: <reason>`, read from
+that spec's committed `specs/<slug>/evidence/spec-review.md`.
