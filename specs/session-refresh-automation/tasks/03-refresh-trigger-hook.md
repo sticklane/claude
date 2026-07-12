@@ -1,6 +1,6 @@
 # Task 03: Refresh trigger hook
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 12 turns
@@ -42,7 +42,7 @@ doctrine landed in task 01.
 
 ## Acceptance
 
-- [ ] `bash hooks/session-refresh/test.sh` (or the pytest equivalent) → all three cases pass
-- [ ] `grep -c '/handoff' hooks/session-refresh/*.sh` (or `.py`) → ≥ 1 (directive names the skill)
-- [ ] `grep -ci 'settings.json' hooks/session-refresh/README.md` → ≥ 1 (wiring documented)
-- [ ] Directive text appears ONLY on the over-budget path — under-budget and no-binary runs produce zero bytes on stdout (asserted by the tests)
+- [x] `bash hooks/session-refresh/test.sh` (or the pytest equivalent) → all three cases pass — verifier: 10/10 passed, exit 0 (evidence/03-refresh-trigger-hook.md)
+- [x] `grep -c '/handoff' hooks/session-refresh/*.sh` (or `.py`) → ≥ 1 (directive names the skill) — verifier: refresh-check.sh:2
+- [x] `grep -ci 'settings.json' hooks/session-refresh/README.md` → ≥ 1 (wiring documented) — verifier: 2
+- [x] Directive text appears ONLY on the over-budget path — under-budget and no-binary runs produce zero bytes on stdout (asserted by the tests) — verifier: under/absent/session-absent/error cases assert empty stdout; manual double-check under.json→0 bytes, over→371 bytes with /handoff
