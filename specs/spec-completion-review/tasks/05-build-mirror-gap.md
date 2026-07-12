@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/spec-completion-review/tasks/02-build-parity.md
 Spec: ../SPEC.md
 Blocking: no
