@@ -452,14 +452,17 @@ act pipeline (full detail: [reference.md](reference.md)'s "Stub intake
   stub for a human on the exit checklist — never assessed, never gated.
   Promotion of injectable text never rests on a model's judgment
   (docs/human-gates.md reason 4).
-- **Assess → gate → act.** A scout-tier assessor classifies the stub
-  (OBSOLETE / DECISION-SHAPED / ACTIONABLE) and authors any actionable
-  promotion in neutral words (original kept only as quoted data under an `##
-Original report` block, plus runnable criteria and `Touch:`/`Budget:`/
-  `Depends on:`); a single-call rubric critic gates it (criteria runnable,
-  `Touch:` complete with mirror obligations, Goal faithful without carrying
-  the original's phrasing — OBSOLETE passes this same gate on its cited
-  closing evidence); drain — the sole queue writer — acts. On PASS (and a
+- **Assess → gate → act.** A scout-tier assessor classifies the stub as
+  exactly one of OBSOLETE / DECISION-SHAPED / ACTIONABLE and MUST carry that
+  outcome's payload — ACTIONABLE requires authored runnable criteria +
+  `Touch:` + `Budget:` (it may not return ACTIONABLE-without-criteria),
+  DECISION-SHAPED names the decision, OBSOLETE cites the closing evidence — so
+  "came back unauthored" is not a representable outcome. The original is kept
+  only as quoted data under an `## Original report` block; a single-call
+  rubric critic gates the authored promotion (criteria runnable, `Touch:`
+  complete with mirror obligations, Goal faithful without carrying the
+  original's phrasing — OBSOLETE passes this same gate on its cited closing
+  evidence); drain — the sole queue writer — acts. On PASS (and a
   DECISION-SHAPED stub with a justifiable default in `## Answers`), drain
   writes the authored content tagged `Promotion-ready: true` +
   `Promoted-by-run: <this invocation's Run-token>` (audit trail) AND flips
@@ -467,10 +470,21 @@ Original report` block, plus runnable criteria and `Touch:`/`Budget:`/
   report` — the stub is dispatchable this run (maintainer decision
   2026-07-11; the earlier deferred-past-the-authoring-run split is
   retired). Gate-confirmed OBSOLETE writes `Status: obsolete` + a
-  `Closed:` line; else stays draft, untagged. Step 1 converts any legacy
+  `Closed:` line. Step 1 converts any legacy
   `Promotion-ready: true` draft left by a pre-2026-07-11 run to `pending`
   unconditionally, after the remote-divergence check and owner-lease
   claim. Full rules in reference.md's "Stub intake" and "Draft status".
+- **Every non-promotion writes a reason (R1).** Any outcome short of
+  promotion or gate-confirmed closure — screen refusal, a DECISION-SHAPED
+  stub with no defensible default, or a gate FAIL — leaves the stub `draft`
+  AND drain writes onto it, immediately after `Status:`, a single
+  machine-greppable `Intake-refused: <screen|assess|gate> — <one-line reason>
+  (<ISO date>)` line so a human can diagnose the refusal from the stub file
+  alone. It is drain-written queue state (workers never author it); a later
+  PASS or gate-confirmed OBSOLETE Act write clears any prior `Intake-refused:`
+  line in the same commit (the `## Original report` strip clause, extended).
+  Exit checklist section 6 quotes it per refused stub. Full grammar and
+  lifecycle in reference.md's "Stub intake".
 
 Every promotion, closure, and refusal is audited in step 4's checklist
 (below); a human may demote any auto-promoted task back to `draft` via a
@@ -547,8 +561,10 @@ checklist** for the human — **each entry names a file path**:
    criteria, whether it was dispatched this run — print its exact
    `Demoted:` line to reverse it, e.g. `Demoted: <ISO-date> — <reason>`,
    permanently respected), each `Status: obsolete` closure (`Closed:`
-   evidence), and each screen-refused or gate-failed stub — every
-   auto-promotion audited, task file for each.
+   evidence), and each refused stub (screen-refused, assess-refused, or
+   gate-failed) with its `Intake-refused: <screen|assess|gate> — <reason>
+   (<date>)` line quoted verbatim — every auto-promotion and refusal audited,
+   task file for each.
 7. **Next commands** — the exact commands to resume.
 
 One interview and one checklist per session; "Nothing needs you" is a valid
