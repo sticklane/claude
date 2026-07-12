@@ -63,6 +63,50 @@ func TestScrubLeavesNonSecretsAlone(t *testing.T) {
 	}
 }
 
+// Class (c): keyword-gated hex. A maximal [0-9a-fA-F]{24,} run is redacted
+// only when a secret keyword (word-boundary, case-insensitive) appears in the
+// 40 bytes immediately preceding the run. All hex values here are SYNTHETIC.
+func TestScrubRedactsKeywordGatedHex(t *testing.T) {
+	cases := []struct{ name, in, want string }{
+		// Observed 2026-07-11 incident shape, verbatim preceding bytes.
+		{"incident shape", "Todoist token: deadbeefcafef00d1234567890abcdef01234567", "Todoist token: [redacted]"},
+		{"keyword plus 40 hex", "api_key = deadbeefcafef00d1234567890abcdef01234567 done", "api_key = [redacted] done"},
+		{"24 hex with keyword", "key: abcdef0123456789abcdef01", "key: [redacted]"},
+		// Digit-free mixed-case hex: class (b) cannot match (no digit), so this
+		// isolates class (c).
+		{"digit-free mixed hex with keyword", "secret aBcDeFaBcDeFaBcDeFaBcDeF", "secret [redacted]"},
+		// A larger mixed-case-with-digits run embedding a hex sub-run is
+		// consumed whole by (b) before (c) runs: exactly one [redacted].
+		{"whole run b before c", "secret Ab1234567890cdef1234567890XY", "secret [redacted]"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := scrub(c.in); got != c.want {
+				t.Errorf("scrub(%q) = %q, want %q", c.in, got, c.want)
+			}
+		})
+	}
+}
+
+func TestScrubLeavesKeywordlessOrShortHexAlone(t *testing.T) {
+	cases := []struct{ name, in string }{
+		// "monkey" embeds "key" but no \bkey\b word boundary gates it.
+		{"monkey plus 40 hex", "monkey deadbeefcafef00d1234567890abcdef01234567"},
+		{"bare sha in prose", "at commit a1b2c3d4e5f60718293a4b5c6d7e8f9012345678 today"},
+		// Keyword sits more than 40 bytes before the run's first byte.
+		{"keyword outside window", "token and here is a fairly long stretch of filler prose text zzz deadbeefcafef00d1234567890abcdef01234567"},
+		// 23-char run is one byte too short for the {24,} class.
+		{"23 hex with keyword", "key: abcdef0123456789abcdef0"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := scrub(c.in); got != c.in {
+				t.Errorf("scrub(%q) = %q, want unchanged", c.in, got)
+			}
+		})
+	}
+}
+
 func TestScrubAppliesClassAThenClassB(t *testing.T) {
 	// The cfut_ token also matches the class-(b) shape; class (a) must
 	// consume it whole so exactly one [redacted] is emitted.
