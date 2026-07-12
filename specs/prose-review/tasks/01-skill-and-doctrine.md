@@ -32,3 +32,8 @@ installer (skill must degrade gracefully when vale absent, per R2).
 - [x] `grep -q 'prose-review' CLAUDE.md` → hit (0 today, verified) — verifier: exit 0, Authoring-conventions pointer bullet (evidence/01-skill-and-doctrine.md)
 - [x] `wc -l < .claude/skills/prose-review/SKILL.md` → < 500 — verifier: 84 lines (evidence/01-skill-and-doctrine.md)
 - [x] MANUAL: nine items with vendor quotes; --fix rules per R3/R4; reader-test skips diffs/pasted text — verifier: nine items each with vendor+quote, item-1 carve-out + DeepMind-no-item present; --fix read-only/file-path-only/human-typed; reader test skips diffs/pasted text (evidence/01-skill-and-doctrine.md)
+
+## Decisions
+
+- 2026-07-11 — CLAUDE.md pointer placement: new bullet in "Authoring conventions" (natural home for doc-quality guidance). Reverse: move/reword the bullet to another section.
+- 2026-07-11 — reference.md TOC kept as the house `Contents: X · Y · Z` prose line (matches existing reference.md idiom across skills). Reverse: convert to a markdown list if the convention is restated.
