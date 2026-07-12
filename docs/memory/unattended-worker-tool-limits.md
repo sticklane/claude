@@ -1,4 +1,4 @@
-# Unattended workers can't use the Workflow tool or `disable-model-invocation` skills
+# Unattended workers can't use the Workflow tool or launch gated skills
 
 When to read: authoring a task that will be drained/parallelized, debugging
 a worker that returned DEFERRED/BLOCKED on an acceptance criterion it "couldn't
@@ -7,12 +7,26 @@ run," or smoke-testing a change to a gated skill (`/build`, `/drain`,
 
 ## The gotcha
 
-A `general-purpose` background worker (what drain/autopilot dispatch)
-does **not** have the `Workflow` tool, and cannot invoke any
-`disable-model-invocation` skill (`/build`, `/drain`, `/evals`,
-`/deep-research`, …) — those are removed from the model's reach by design. So
-any acceptance criterion that requires _observing a live Workflow run_ or
-_launching a gated skill_ is unsatisfiable inside the worker.
+**Post-2026-07-11 migration, this is two different mechanisms, not one** —
+don't assume `disable-model-invocation` frontmatter explains all four:
+
+- `/evals` (and the `Workflow` tool, and `/deep-research`) are still
+  genuinely removed from the model's reach — `disable-model-invocation`
+  blocks the tool-call layer regardless of who's asking.
+- `/build`, `/autopilot`, `/drain`, `/prioritize` dropped
+  `disable-model-invocation` — they're model-invocable, but ONLY when the
+  human's live message names the stage (CLAUDE.md's authoring
+  conventions). A dispatched worker's prompt is synthesized by the
+  orchestrator, never a live human utterance, so the practical
+  conclusion is unchanged: **a worker still can't launch these**, but the
+  reason is now "no live-user authorization in this context," not "the
+  skill isn't in my toolset." Don't grep a worker's tool list to explain a
+  DEFERRED on one of these four; check whether the dispatch prompt could
+  ever satisfy the launch-authorization contract instead.
+
+So any acceptance criterion that requires _observing a live Workflow run_ or
+_launching a gated skill_ is unsatisfiable inside the worker, for either
+reason above.
 
 Seen 3× in the 2026-07-04 drain: ultra-mode's "a Workflow run is observable"
 e2e, wte-04's `[repo-deep-research]` resolution probe, and um-03's open-gate
@@ -32,17 +46,26 @@ panel e2e.
 
 ## Testing implication: you can't smoke-test a gated skill via Agent dispatch
 
-Confirmed 2026-07-06 (drain auto-breakdown feature): a `general-purpose`
-background agent — full tool access, explicitly instructed by a
-human-directed request to call `Skill(skill: "drain")` — hit a hard
-`InputValidationError`-style block, not a soft refusal. The
-`disable-model-invocation` gate is enforced at the tool-call layer
-regardless of who or what is asking; it doesn't matter that a human's
-instructions are what ultimately drove the call.
+Confirmed 2026-07-06 (drain auto-breakdown feature, **pre-migration**): a
+`general-purpose` background agent — full tool access, explicitly
+instructed by a human-directed request to call `Skill(skill: "drain")` —
+hit a hard `InputValidationError`-style block, not a soft refusal. That
+was `disable-model-invocation` enforced at the tool-call layer.
 
-Consequence: an in-session `Agent` dispatch can never exercise a gated
-skill's real invocation for a smoke test — it can only hand-walk the
-skill's written procedure step-by-step (which validates the *logic*, not
+**Unverified post-migration:** `/drain`/`/build`/`/autopilot`/`/prioritize`
+no longer carry that flag, so it's an open question whether an
+`Agent`-dispatched worker instructed to call `Skill(skill: "drain")` now
+hits a hard block, a soft model-level refusal (the model reading its own
+SKILL.md's launch-authorization paragraph and declining), or actually
+succeeds — the mechanism moved from "tool-call-layer removal" to
+"documented convention in the skill body," which is a different
+enforcement shape. Don't assume the pre-migration hard-block result still
+holds for these four without testing it directly; `/evals` (still
+`disable-model-invocation: true`) should still hard-block the same way.
+
+Consequence either way: an in-session `Agent` dispatch is not a reliable
+way to smoke-test a gated skill's real invocation — it can only hand-walk
+the skill's written procedure step-by-step (validates the *logic*, not
 that the actual `/command` invocation works end-to-end). To really exercise
 `/build`/`/drain`/`/autopilot`/`/evals`, use headless CLI
 (`claude -p "/drain ..."`, what `evals/run.sh` already does) or the human

@@ -113,6 +113,14 @@ of letting them default silently:
   specifically — not a general reopening of detachment; a future
   maintainer who retightens the policy should strike this sentence rather
   than read it as the rule's permanent shape.
+- **Background-dispatched agents can't interactively interview a human.**
+  `AskUserQuestion` isn't available to an `Agent`-tool-spawned background
+  worker (confirmed 2026-07-11: an `/idea`-invoking dispatch fell back to
+  asking in plain prose and stalled until the orchestrator relayed an
+  answer via `SendMessage`). Brief a dispatched worker fully enough
+  upfront that it doesn't need to ask — resolve genuinely open questions
+  yourself before dispatch, or accept the extra round-trip if one surfaces
+  anyway. Don't design a dispatch prompt around "the worker will just ask."
 
 - **Await, don't poll.** Await background children via the harness's
   completion notifications (or a `Monitor` until-loop where the harness

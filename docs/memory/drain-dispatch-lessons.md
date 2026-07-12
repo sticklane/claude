@@ -44,3 +44,54 @@ checkout untouched. The orchestrator merges both branches at collect time,
 re-runs the other repo's gate on the real path, pushes both, and restarts
 the service (label `com.agent-console`, not com.sjaconette.*) so the running
 process picks up the merged code.
+
+## Commit a freshly-written SPEC.md/tasks/ before claiming its lease
+
+Observed 2026-07-11 (a same-session pipeline: several `/idea`-style
+background agents wrote new `specs/<slug>/SPEC.md` + `tasks/*.md` directly
+to disk via `Write`, never committed): the orchestrator claimed a
+`DRAIN-OWNER.md` lease and flipped a task's `Status: in-progress`, then
+dispatched a worker with `isolation: worktree` — the worktree is cut from a
+commit, and the SPEC.md/task file didn't exist in ANY commit yet, so the
+worker's isolated checkout simply didn't have it. The worker correctly
+returned DEFERRED rather than guessing or reconstructing the file from
+scratch. Fix: before claiming a lease or flipping any task's status,
+`git status --short specs/<slug>/` — if the spec's own files are
+untracked, commit them first (a plain `docs:` commit, separate from the
+lease-claim commit) so the very first worker's worktree base actually
+contains what it's meant to work on.
+
+## Multi-spec concurrent drain: Touch-disjointness is per-spec, not global
+
+`/breakdown`'s decision-coupling test (disjoint `Touch`, no shared
+undecided design) only ever compares tasks *within the same spec* — it has
+no visibility into what a *different* spec's tasks touch. Running several
+specs' queues concurrently under one orchestrating session (rather than
+`/drain`'s normal one-spec-at-a-time sequential walk) surfaces real
+collisions the breakdown step never checked for. Observed 2026-07-11
+across a single session: three separate pairs of tasks in *different*
+specs both targeted `.claude/skills/workboard/workboard.py`, and two
+different specs' tasks both targeted `.claude/skills/drain/reference.md`.
+None of this showed up in either spec's own `## Parallelization` section.
+When orchestrating more than one spec's queue at once, the orchestrator
+must build its own cross-spec Touch map before dispatching anything, and
+serialize (never concurrently dispatch) any two tasks — regardless of
+which spec they belong to — that share a Touch path. This is manual
+bookkeeping today; there is no mechanized cross-spec check.
+
+## Worktree-isolated workers still sometimes write to the shared checkout first
+
+Observed 3× in one session (2026-07-11): a dispatched worker's early Bash
+commands used a bare relative path (or `cd /Users/sjaconette/claude`
+directly) before it had switched into its actual worktree directory,
+landing one or two writes in the shared main checkout by mistake. Every
+occurrence self-corrected (the worker noticed at its first `Edit` call,
+which is worktree-guarded, reverted the stray shared-checkout changes with
+`git checkout --`, and redid the work in its worktree) — but the
+orchestrator should not assume this always happens cleanly. After
+collecting ANY worker's DONE verdict that mentions touching the wrong
+directory, independently verify the shared checkout is still clean
+(`git status --short`) before proceeding to merge, rather than trusting
+the self-report. Dispatch prompts should state the worktree's absolute
+path explicitly and instruct the worker to `cd` into it as its very first
+action, before any other command.
