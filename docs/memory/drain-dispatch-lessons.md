@@ -130,3 +130,58 @@ confined to the worker's OWN `git commit` inside its cross-repo worktree
 orchestrator's merge step. Verified 2026-07-12 by checking `git status
 --short` immediately after a `--ff-only` merge into `~/ynab-app` (a repo
 with a confirmed post-commit auto-push hook) — no push fired, hook silent.
+
+## Interleaved multi-spec drain: a spec-completion review double-counts a sibling's changes on shared files
+
+When two specs are drained interleaved (not fully sequentially) and share a
+Touch path — e.g. two specs both edit `token-discipline.md` or
+`costsummary.go`, declared via the cross-spec `Depends on:` grammar
+(specs/QUEUE.md) — the SKILL.md-pinned diff-base recovery
+(`merge-base(<first pinned flip commit>, main)..main`) picks up BOTH specs'
+changes to that shared file, because both landed on the same shared `main`
+in between. Handing the review worker that full ref-range diff risks
+re-litigating content a sibling spec's OWN spec-completion review already
+passed. Observed 2026-07-12 (queue 6: `session-refresh-automation` and
+`untyped-agent-fanout` both edited `token-discipline.md`,
+`costsummary.go`/`SCHEMA.md`, and `agent-console.py`). Fix: dispatch the
+review-fix worker with an explicit instruction naming which lines/sections
+are attributable to THIS spec (cite the sibling's already-green
+`evidence/spec-review.md` by path and tell the worker to exclude anything
+it covers) — never blindly hand the full ref-range diff and trust the
+worker to guess spec boundaries on shared files.
+
+## Stale foreign owner lease: check the spec's own task Status first
+
+Before running the full stale-lock liveness sweep (worktree/branch check)
+on a foreign `DRAIN-OWNER.md` (different `Host:`), first check the fast,
+free signal: `grep '^Status:' specs/<slug>/tasks/*.md`. If every task is
+already `done`, the spec has nothing left to dispatch regardless of whether
+the lease-holding process is alive — reclaiming (deleting) the lease is
+safe without any worktree/branch archaeology, since a live holder of a
+fully-drained spec would itself have nothing left to do with the lease.
+Observed 2026-07-12: two foreign leases (`Host: claude-remote-*`, started
+2026-07-09) sat unreleased on `draft-auto-promotion` and `work-exhaustion`
+for 3 days after both specs' tasks had all completed — a crashed/abandoned
+remote run that never ran its own release step. The task-Status check
+resolved this in one command; a full liveness sweep would have needed to
+probe a remote host that may not even exist anymore.
+
+## Cross-repo worker hook-skips need orchestrator scrutiny, not a pass-through
+
+A dispatched worker fixing a cross-repo docs task hit a pre-commit hook
+failure in its target-repo worktree caused by a missing `node_modules`
+(the worktree lacked installed deps, so a project-wide `tsc` ran and
+failed) — unrelated to its actual change. It used `git commit --no-verify`
+to get past this and reported the decision in its verdict's `Decisions:`
+section. This is technically a hook-skip, which CLAUDE.md's Git Safety
+Protocol reserves for explicit user request — a worker taking this
+unilaterally, even for a clearly-environmental reason, is a call the
+orchestrator must independently verify before accepting the DONE verdict,
+not just read past. Verified 2026-07-12 by re-running the equivalent check
+in the target repo's OWN live checkout (where `node_modules` exists) and
+confirming it passes clean — the skip was legitimate, but that confirmation
+took an extra round-trip the worker's report didn't make unnecessary.
+Dispatch prompts for cross-repo tasks should flag: "a hook skip
+(`--no-verify`) is not yours to take silently — if a gate fails for a
+reason clearly unrelated to your change, name it explicitly in Decisions:
+and let the orchestrator re-verify, don't just bypass and move on."

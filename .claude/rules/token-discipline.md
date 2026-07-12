@@ -156,7 +156,13 @@ of letting them default silently:
   completion notifications (or a `Monitor` until-loop where the harness
   offers one); never poll them with chained short sleeps — after the
   harness blocks a `sleep`, chaining shorter sleeps is the same
-  blocked-sleep antipattern in chunks, and is banned.
+  blocked-sleep antipattern in chunks, and is banned. `run_in_background:
+  false` on the Agent tool is advisory, not guaranteed — the harness may
+  still launch a long-running dispatch in the background regardless
+  (observed 2026-07-12 on multi-turn `implementation-worker` calls).
+  Treat every dispatch as potentially backgrounded: don't treat a
+  background launch as an error when you asked for synchronous, just wait
+  for the completion notification.
 
 - **Tier by stage type.** Mechanical stages (search, fetch, extract,
   grep-like scouting, conformance checks) run on Haiku / `effort: low`;
