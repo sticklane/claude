@@ -157,12 +157,33 @@ cron, say) and `-diff_base` compares any two of them.
 ## Turn frames: secret scrubbing and naming
 
 Turn frames are prompt snippets, and prompts sometimes contain pasted
-credentials. Secret-shaped substrings — known token prefixes (`sk-`, `cfut_`,
-`ghp_`, `gho_`, `github_pat_`, `xoxb-`, `xoxp-`, `AKIA`, `ya29.`, `AIza`,
-`eyJ`) and 24+-char mixed-case runs containing digits — are always replaced
-with `[redacted]` before any prompt text reaches a profile. This is on
-unconditionally; UUIDs, git SHAs, model ids, and kebab-case slugs are
-deliberately not matched.
+credentials. Secret-shaped substrings are always replaced with `[redacted]`
+before any prompt text reaches a profile, across three shape classes:
+
+- **Known token prefixes** — `sk-`, `cfut_`, `ghp_`, `gho_`, `github_pat_`,
+  `xoxb-`, `xoxp-`, `AKIA`, `ya29.`, `AIza`, `eyJ` — followed by 8+ token
+  characters, matched only where the prefix starts a token run.
+- **Mixed-case long runs** — any 24+-character `[A-Za-z0-9_-]` run that mixes
+  digits, uppercase, and lowercase.
+- **Keyword-gated hex** — a 24+-character hex run (`[0-9a-fA-F]`), redacted
+  only when a secret keyword — `token`, `key`, `secret`, `password`,
+  `bearer`, `credential`, or `api-key`/`api_key`, matched on a word boundary,
+  case-insensitively — appears in the 40 bytes immediately before it. This
+  catches all-lowercase hex API tokens, which the mixed-case rule misses,
+  while leaving git SHAs and UUIDs in prose readable.
+
+The keyword gate is a deliberate over-redaction trade-off: a hex string
+labeled like a secret is redacted even when it is harmless, but an unlabeled
+hex string — a git SHA or UUID sitting in prose with no keyword in its
+preceding window — stays readable. That is the git-SHA carve-out: UUIDs, git
+SHAs, model ids, and kebab-case slugs are not matched by shape alone.
+
+Residual risk: a bare hex paste with no secret keyword nearby is
+unredactable by shape — it is indistinguishable from a SHA — so shape-based
+scrubbing cannot catch it. Mitigate this operationally: rotate any credential
+that reaches a profile, keep raw secrets out of prompts in the first place
+(paste hygiene), and add known-sensitive identifiers to the frame denylist
+(below) so they are stripped regardless of shape.
 
 Some frames are still uninformative (`t01 · done`, `t04 · [redacted]`).
 `--name-turns` renames those — prompts of at most 4 words that aren't slash
