@@ -7,6 +7,26 @@ Stub-intake-failed: specs/drain-wake-cost/tasks/04-skill-length-drift.md
 
 ## Done / next
 
+GEN 8 OUTCOME (parked, queue human-blocked — NOT handed to gen 9):
+Gen 8 recorded 1 budget unit (W=1): dispatched spec-completion-review/05
+(the promoted stub) → DONE, merged ab0057c (antigravity+codex build ports
+gained the "spec-completion review" close-out sentence; plugin.json
+0.8.48→0.8.49). Merge gates green: lint-ultra-gate OK, `claude plugin
+validate` passed. spec-completion-review is now FULLY DRAINED (01-03 done,
+04 obsolete, 05 done); its spec-completion review SKIPPED (docs-only —
+evidence at specs/spec-completion-review/evidence/spec-review.md); lease
+released. Exhaustion phase: critique intake NONE (all 13 draft specs on
+Intake-failed), stub intake NONE (all stubs terminal), 3b NONE. The ONLY
+remaining item is prose-review 03 (deferred, HUMAN question verbatim below).
+Gen 8 wrote it here and STOPPED per the headless clause. Baton + prose-review
+lease left in place (03 still deferred). plugin.json now at 0.8.49. Remote/main
+in sync at gen 8 exit (all commits pushed, last 508f24f).
+
+RESUME (gen 9, after a human answers 03): human answers prose-review 03 →
+that flips 03 pending → re-dispatch 03, then 04 (mirror+bump closing), then
+retrofits 05-13 (W=3, Group: 05..13). See the retrofit notes further down.
+
+--- Gen 7 record (historical) ---
 Gen 7 recorded 5 budget units (W=1 cap 5: 3 critique-intake + 2 dispatch)
 then drained-down and batoned. Gen 7 HAD the Agent-dispatch tool (critic,
 implementation-worker, general-purpose all present) and dispatched real
