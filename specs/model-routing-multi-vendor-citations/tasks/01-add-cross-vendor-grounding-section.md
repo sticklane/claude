@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -64,12 +64,12 @@ docs-only citation addition to one existing file — no new file.
 
 ## Acceptance
 
-- [ ] `grep -Fq 'developers.openai.com/api/docs/guides/model-selection' docs/guides/model-routing.md && grep -Fq 'developers.openai.com/api/docs/guides/reasoning-best-practices' docs/guides/model-routing.md && grep -Fq 'developers.openai.com/api/docs/guides/reasoning' docs/guides/model-routing.md` → all three OpenAI URLs present (exit 0).
-- [ ] `grep -Fq 'Optimize for accuracy until you hit your accuracy target' docs/guides/model-routing.md` → the accuracy-first quote is present verbatim (exit 0).
-- [ ] `grep -Fq 'ai.google.dev/gemini-api/docs/gemini-3' docs/guides/model-routing.md && grep -Fq 'ai.google.dev/gemini-api/docs/models' docs/guides/model-routing.md && grep -Fq 'research.google/pubs/language-model-cascades-token-level-uncertainty-and-beyond' docs/guides/model-routing.md` → DeepMind + cascade-paper URLs present (exit 0).
-- [ ] `grep -Fiq 'no single unified' docs/guides/model-routing.md || grep -Fiq 'no unified' docs/guides/model-routing.md` → the DeepMind unified-framework limitation sentence is present (exit 0).
-- [ ] `grep -Fq 'api-docs.deepseek.com/quick_start/pricing' docs/guides/model-routing.md && grep -Fq 'deepseek-v4-flash' docs/guides/model-routing.md` → DeepSeek contrast citation present (exit 0).
-- [ ] `grep -q '^## Cross-vendor grounding' docs/guides/model-routing.md` → the new section heading exists (exit 0).
-- [ ] `git diff --quiet HEAD -- runtimes/claude-code.md` → exit 0 (runtimes mapping unchanged, R4).
-- [ ] `bash tests/test_doc_links.sh` → exits 0 (relative links + mermaid fences intact after the edit).
+- [x] `grep -Fq 'developers.openai.com/api/docs/guides/model-selection' docs/guides/model-routing.md && grep -Fq 'developers.openai.com/api/docs/guides/reasoning-best-practices' docs/guides/model-routing.md && grep -Fq 'developers.openai.com/api/docs/guides/reasoning' docs/guides/model-routing.md` → all three OpenAI URLs present (exit 0). — verifier: exit 0 (evidence/01-add-cross-vendor-grounding-section.md).
+- [x] `grep -Fq 'Optimize for accuracy until you hit your accuracy target' docs/guides/model-routing.md` → the accuracy-first quote is present verbatim (exit 0). — verifier: exit 0.
+- [x] `grep -Fq 'ai.google.dev/gemini-api/docs/gemini-3' docs/guides/model-routing.md && grep -Fq 'ai.google.dev/gemini-api/docs/models' docs/guides/model-routing.md && grep -Fq 'research.google/pubs/language-model-cascades-token-level-uncertainty-and-beyond' docs/guides/model-routing.md` → DeepMind + cascade-paper URLs present (exit 0). — verifier: exit 0.
+- [x] `grep -Fiq 'no single unified' docs/guides/model-routing.md || grep -Fiq 'no unified' docs/guides/model-routing.md` → the DeepMind unified-framework limitation sentence is present (exit 0). — verifier: exit 0.
+- [x] `grep -Fq 'api-docs.deepseek.com/quick_start/pricing' docs/guides/model-routing.md && grep -Fq 'deepseek-v4-flash' docs/guides/model-routing.md` → DeepSeek contrast citation present (exit 0). — verifier: exit 0.
+- [x] `grep -q '^## Cross-vendor grounding' docs/guides/model-routing.md` → the new section heading exists (exit 0). — verifier: exit 0, heading at line 71 directly before `## Rules and skills this page explains`.
+- [x] `git diff --quiet HEAD -- runtimes/claude-code.md` → exit 0 (runtimes mapping unchanged, R4). — verifier: exit 0, byte-for-byte unchanged.
+- [x] `bash tests/test_doc_links.sh` → exits 0 (relative links + mermaid fences intact after the edit). — verifier: `pass: 16 fail: 0`, exit 0.
 - [ ] Manual-pending (human, post-merge, R5/AC5): each new URL resolves and each quoted string appears verbatim on its page — unattended workers cannot fetch external pages to self-verify.
