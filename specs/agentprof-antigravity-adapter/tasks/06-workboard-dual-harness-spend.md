@@ -1,6 +1,6 @@
 # Task 06: `workboard.py` dual-harness spend (`compute_antigravity_spend` + `merge_spend`)
 
-Status: in-progress
+Status: done
 Depends on: 05
 Priority: P2
 Budget: 16 turns
@@ -74,8 +74,8 @@ task only shells out to the binary it produces.
 
 ## Acceptance
 
-- [ ] `diff .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py` → no output (mirrors stay byte-identical)
-- [ ] `diff .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py` → no output
-- [ ] `python3 -m pytest .claude/skills/workboard/test_workboard.py -q` → passes, including the new `compute_antigravity_spend`/`merge_spend` cases
-- [ ] `python3 -m pytest antigravity/.agents/skills/workboard/test_workboard.py -q` → passes, same cases
-- [ ] `git show HEAD:.claude-plugin/plugin.json | grep version` → shows a version greater than the value at this task's base commit (`git show <base-commit>:.claude-plugin/plugin.json | grep version`)
+- [x] `diff .claude/skills/workboard/workboard.py antigravity/.agents/skills/workboard/workboard.py` → no output (mirrors stay byte-identical)
+- [x] `diff .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py` → no output
+- [x] `python3 -m pytest .claude/skills/workboard/test_workboard.py -q` → passes, including the new `compute_antigravity_spend`/`merge_spend` cases
+- [x] `python3 -m pytest antigravity/.agents/skills/workboard/test_workboard.py -q` → passes, same cases
+- [x] `git show HEAD:.claude-plugin/plugin.json | grep version` → shows a version greater than the value at this task's base commit (`git show <base-commit>:.claude-plugin/plugin.json | grep version`)
