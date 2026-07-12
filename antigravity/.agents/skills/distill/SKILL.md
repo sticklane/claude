@@ -16,6 +16,23 @@ Scan THIS conversation for:
 - Surprises: commands, conventions, or gotchas discovered the hard way.
 - Repetition: instructions given more than once, here or in prior sessions.
 
+## 1a. Unattended invocation (e.g. from drain)
+
+Distill runs unattended when a stage chains into it — drain's terminal distill
+has no live human to interview. Adopt the **"ask where available, else…"** idiom
+(the same detection drain uses): interview only where an interactive human is
+present; when none is (background/headless), never block on a question — skip
+the interview gracefully rather than erroring, and "nothing worth keeping" stays
+a valid outcome. A candidate learning that genuinely needs a human decision is
+NOT dropped or guessed: file it as a `decide` entry under the repo-root
+`HUMAN.md`'s `## Agent-filed blockers` section (the human-blockers grammar) and
+name it in the summary.
+
+For an orchestrated run, Harvest also mines the run's committed artifacts, not
+only this conversation's transcript: task-file `## Decisions` and `## Progress`
+entries, review/gate findings files, screen/sweep incident reports, and drain's
+own exit checklist.
+
 ## 2. Route each finding
 
 | Finding | Destination |

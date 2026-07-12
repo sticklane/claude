@@ -18,6 +18,24 @@ Scan THIS session for:
   (wrong test invocation, hidden config, non-obvious dependency).
 - Repetition: instructions given more than once, here or in prior sessions.
 
+## 1a. Unattended invocation (e.g. from drain)
+
+Distill runs unattended when a stage self-chains into it — drain's terminal
+distill has no live human to interview. Adopt the **"AskUserQuestion where
+available, else…"** idiom (the same detection drain uses): interview only where
+an interactive human is present; when none is (background/headless), never block
+on a question — skip the interview gracefully rather than erroring, and
+"nothing worth keeping" stays a valid outcome. A candidate learning that
+genuinely needs a human decision is NOT dropped or guessed: file it as a
+`decide` entry under the repo-root `HUMAN.md`'s `## Agent-filed blockers`
+section (grammar in `.claude/rules/human-blockers.md`, cited not restated) and
+name it in the summary.
+
+For an orchestrated run, Harvest (§1) also mines the run's committed artifacts,
+not only this session's transcript: task-file `## Decisions` and `## Progress`
+entries, critique/gate findings files, screen/sweep incident reports, and
+drain's own exit checklist.
+
 ## 2. Route each finding
 
 | Finding                                                        | Destination                                                  |
