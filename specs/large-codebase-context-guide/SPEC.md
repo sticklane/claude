@@ -126,3 +126,10 @@ has an MCP code-search server installed.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+This spec decomposes into a single task (task 01: the guide plus the
+token-discipline bullet are one cohesive, decision-coupled deliverable — the
+rule bullet cites the guide, so it cannot be authored before the guide's
+content is settled). Task 01 runs solo; there are no concurrent-safe groups.
