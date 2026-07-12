@@ -1,6 +1,6 @@
 # Task 01: Trace the untyped dispatch sites
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -39,6 +39,6 @@ pinned-evidence denylist rule in agentprof/README.md.
 
 ## Acceptance
 
-- [ ] `test -f specs/untyped-agent-fanout/EVIDENCE.md` → exists
-- [ ] `grep -c 'dispatch site\|Dispatch site' specs/untyped-agent-fanout/EVIDENCE.md` → ≥ 1, and every chain row carries a site or the literal `unresolved`
-- [ ] EVIDENCE.md's chain count is reconciled against the pinned samples (state the count and the jq/command used to derive it in the file)
+- [x] `test -f specs/untyped-agent-fanout/EVIDENCE.md` → exists (verifier: EXISTS)
+- [x] `grep -c 'dispatch site\|Dispatch site' …EVIDENCE.md` → 4 (≥1); verifier confirmed all 137 data rows carry a resolved site (129 drain-self-relaunch + 8 freehand-gp, 0 unresolved)
+- [x] Chain count 137 reconciled: verifier independently re-ran the stated `gunzip -k` + python filter against the pinned gz → 137, exact match (evidence/01-trace-dispatch-sites.md)
