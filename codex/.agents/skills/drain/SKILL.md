@@ -333,6 +333,44 @@ specs/<slug>/SPEC.md`; on a clean result commit path-scoped, push, and loop to
 step 1 (auto-created tasks land `Status: pending`). A failed attempt (stray
 changes or zero tasks) is reported in step 4, never persisted.
 
+## Spec-completion review (fires at lease release, once per spec per run)
+
+Emit `<!-- agentprof:stage=spec-review -->` verbatim as this step's opening
+line every time you enter it.
+
+When a spec reaches nothing-left-to-dispatch — critique intake, stub intake,
+and 3b all empty for it, so its owner lease is about to release — AND at least
+one of its tasks completed DONE this run, drain runs a **spec-completion
+review** before releasing that spec's lease. Ordering is pinned: run the
+review → commit the evidence line → release the lease. The committed
+`specs/<slug>/evidence/spec-review.md` (a `spec review:` or `spec review
+skipped:` line) is the idempotency token — a later generation or resumed run
+finding it committed SKIPS the review, holding "once per spec per run" across
+baton generations without a new baton line. A spec with no DONE task this run
+releases with no review.
+
+Diff base: the pinned status-flip commit `drain: <slug> task NN in-progress`
+(step 2), recovered via `git log --reverse --format=%H --grep='^drain: <slug>
+task .* in-progress' -- 'specs/<slug>/tasks/'` (first match); the diff is
+`merge-base(<that commit>, main)..main` restricted to the union of the spec's
+tasks' `Touch:` (product paths only). No such commit (drained before this
+shipped) → `spec review skipped: no pinned flip commit`. Apply build's skip
+gate verbatim from `git diff --numstat` (names + counts only) — no product
+paths or < 25 product lines → write the `spec review skipped: <reason>` line
+and release. Otherwise dispatch ONE awaited implementation-worker
+(worktree-isolated) with the ref range + union Touch: it reviews the
+cumulative diff at the `low` effort finding filter (high-confidence
+correctness/behavior only), fixes within the union Touch, re-runs the spec's
+per-task gates, commits to `task/<slug>-spec-review`, and returns the ≤2k
+verdict. The fix branch merges through step 3's serial machinery with
+task-file coupling nulled (allowed set = union Touch + the spec's `evidence/`
+dir; the append-only whitelist over `*/tasks/*.md` must be EMPTY; no DONE
+bookkeeping); uncertain or out-of-scope findings become draft stubs. A failed
+review-fix merge reports and releases anyway. Write the outcome to the
+evidence file and commit it before releasing; step 4's exit checklist carries
+`spec review: N findings, M fixed, K stubbed` (or the skip line) per reviewed
+spec.
+
 ## 4. The batch interview
 
 Emit `<!-- agentprof:stage=batch-interview -->` verbatim as this step's
