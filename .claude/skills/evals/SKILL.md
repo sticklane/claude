@@ -43,7 +43,9 @@ verbatim). `chmod +x` both scripts.
 
 `./evals/run.sh <skill>` (no argument runs every evalset). Per scenario
 the runner builds a fresh fixture, copies `.claude/skills/<skill>/` and
-`.claude/agents/` from this checkout into `$EVAL_DIR/.claude/`, and runs
+`.claude/agents/` from this checkout into `$EVAL_DIR/.claude/` (plus the
+`.agents/skills/<skill>/` layout Antigravity/Codex discover from, so the
+same fixture is runtime-portable — see `runtimes/README.md`), and runs
 the prompt there under `timeout 900` with a fixed allowlist — a
 deliberate, documented exception to the toolkit's self-contained-prompt
 rule, because exercising the real skill text is the entire point.
