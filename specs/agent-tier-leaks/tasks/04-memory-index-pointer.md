@@ -1,4 +1,4 @@
-Status: draft
+Status: pending
 Discovered-from: specs/agent-tier-leaks/tasks/01-verifier-leak-trace.md
 Spec: ../SPEC.md
 Blocking: no
@@ -24,10 +24,5 @@ entry format.
   — the hook description should be drawn from
   `docs/memory/verifier-tier-leak.md`'s own `Read when:` header, not
   invented.
-
-## Original report
-
-> docs/memory.md index pointer not added — task Steps §3 asks to add a
-> pointer to `docs/memory.md`, but that file is outside this task's Touch
-> ("verifier doc + memory note only"), so the new note lands un-indexed; a
-> follow-up should add a one-line pointer in `docs/memory.md`.
+- [ ] `grep -c '^- \[verifier-tier-leak\]' docs/memory.md` returns exactly 1
+  (no duplicate entries).
