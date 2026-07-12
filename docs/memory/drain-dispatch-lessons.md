@@ -94,4 +94,39 @@ directory, independently verify the shared checkout is still clean
 (`git status --short`) before proceeding to merge, rather than trusting
 the self-report. Dispatch prompts should state the worktree's absolute
 path explicitly and instruct the worker to `cd` into it as its very first
-action, before any other command.
+action, before any other command. Recurred again 2026-07-12 (two more
+workers in the same run) — the mitigation held both times (self-corrected,
+verified clean), so it's now a standing risk to instruct against
+preemptively rather than a one-off.
+
+## Pinned flip-commit message is regex-sensitive to plural "tasks"
+
+The spec-completion review's diff-base recovery greps for the literal
+`^drain: <slug> task .* in-progress` pattern (singular "task", a space right
+after it). A commit message bundling two simultaneous admissions —
+`drain: <slug> tasks 03-04 in-progress` — does NOT match: "task" immediately
+followed by "s" fails the pattern's required space. Observed 2026-07-12: a
+combined-admission commit silently dropped out of the recovery grep; the
+review still ran correctly because an earlier single-task flip commit in the
+same spec satisfied the pattern first (the grep takes the *first* match, not
+every match), but a spec whose *only* flip commits are multi-task-bundled
+would SKIP its review with "no pinned flip commit" — a false skip, not a
+crash. When bundling several tasks' `Status: pending -> in-progress` edits
+into one commit (a legitimate way to admit a Group at once), keep the
+commit message singular and literal for at least one of the bundled tasks,
+e.g. `drain: <slug> task 03 in-progress (+04, Group admission)` — never
+`tasks 03-04`.
+
+## Fast-forward merges don't fire post-commit hooks
+
+A target repo with a post-commit hook that auto-pushes (observed:
+`~/ynab-app`, `~/portfolio-tracker`'s cloudbuild path) does NOT fire that
+hook on `git merge --ff-only` — only `git commit` triggers post-commit
+hooks, and a fast-forward merge creates no new commit. This makes
+`--ff-only` merges safe to run directly in a live/auto-deploying repo's
+checkout even when its own commit path is deploy-sensitive; the risk is
+confined to the worker's OWN `git commit` inside its cross-repo worktree
+(handled by the existing "CI/deploy precondition" dispatch clause), not the
+orchestrator's merge step. Verified 2026-07-12 by checking `git status
+--short` immediately after a `--ff-only` merge into `~/ynab-app` (a repo
+with a confirmed post-commit auto-push hook) — no push fired, hook silent.
