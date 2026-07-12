@@ -1,54 +1,64 @@
 Run-token: e83f34f07094a4fa
-Generation: 3
+Generation: 4
 Spec: specs/prose-review
 Breakdown-failed:
-Intake-failed:
+Intake-failed: specs/build-doc-currency-check
 Stub-intake-failed:
 
 ## Done / next
 
-Gen 2 recorded 4 verdicts (all DONE, all merged + pushed) and batoned at the
-clean spec-completion-review boundary (within the W=1 budget of 5):
-- drain-forward-progress/tasks/03-mirror-bump — DONE, merged (dfp fully drained, lease released); codex-wrapper-update decision logged, ultra-gate green
-- spec-completion-review/tasks/01-drain-step — DONE, merged; ultra-gate green; discovery materialized (flip-message format transition, stub 04)
-- spec-completion-review/tasks/02-build-parity — DONE, merged; ultra-gate green; discovery materialized (build-mirror gap, stub 05)
-- spec-completion-review/tasks/03-mirror-bump — DONE, merged (scr fully drained, lease released); soft-reset decision logged; plugin.json now 0.8.48
+Gen 3 recorded 5 units (W=1 budget 5) and batoned:
+- prose-review/tasks/01-skill-and-doctrine — DONE, merged f3e11d7 (skill + reference + CLAUDE.md pointer; 2 decisions logged on task file)
+- prose-review/tasks/02-vale-install — DONE, merged 9f16219 (bin/install-vale, vale/ config, .gitignore; discovery recorded RESOLVED: drain re-ran `bash bin/install-vale --force` from main checkout post-merge)
+- prose-review/tasks/03-gate-stanza-selfapply — attempt 1 (opus) DONE but MERGE-FAILED on R4 Touch enforcement (changed vale/.vale.ini.template, outside Touch); relaunch (fable) returned DEFERRED: C2 (`vale README.md AGENTS.md` exit 0) is unsatisfiable within Touch — Google.EmDash (existence rule, no vocab suppression) fires 22x on the deliberate house spaced-em-dash style. Status: deferred; exact question on the task file under ## Deferred questions (options a/b/c; option (a) = amend Touch to include vale/.vale.ini.template + central EmDash disable, matches attempt 1's working implementation).
+- Critique intake #1: specs/build-doc-currency-check → NOT READY (4 findings recorded at specs/build-doc-currency-check/critique-findings.md; lease released; on Intake-failed line above).
 
-The spec-completion-review machinery is now MERGED (SKILL.md carries a
-"## Spec-completion review" step; build SKILL.md carries the bare-SPEC
-parity sentence). Gen 3 loads the UPDATED drain SKILL.md fresh, so it applies
-that step naturally. Per the human's standing instruction: do NOT retro-apply
-it to specs drained before it merged (cache-reprime, agentprof-attr, dfp,
-AND spec-completion-review itself — scr built the machinery, it is not a
-"drained-after" spec). Apply it to prose-review and later.
+prose-review is now FULLY GATED on 03's deferred answer: 04 depends on 01+03; retrofits 05-13 depend on 03. Nothing dispatchable anywhere in scope — gen 4 continues the EXHAUSTION PHASE:
 
-NEXT (gen 3): drain specs/prose-review (13 tasks). Per its SPEC Parallelization:
-- Group: 01, 02 (co-admissible); at W=1 run serially, 01 then 02.
-- 03 after 01 AND 02 (closing-ish for the core).
-- 04 after 01 AND 03 (mirror+bump closing — bumps plugin.json relative to base).
-- Retrofit tasks 05-13 after 03: Group: 05..13 (pairwise-disjoint Touch).
-  You MAY run W=3 for the retrofit group only (explicit throughput authorization
-  in the human's standing chain; baton budget then = max(2,6-3) = 3 verdicts/gen).
-VERIFY the exact dependency/group lines against specs/prose-review/SPEC.md and
-each task header at inventory — the above is from the baton map, re-read to confirm.
+1. Critique intake, one spec per pass, at most once per spec per run. Eligible
+   (all P2 unless noted, order = Priority then path; skip any on Intake-failed):
+   codequality-agent-console-mutation-coverage, codequality-antigravity-content-parity,
+   codequality-shared-header-parsing, domain-knowledge-base, idea-research-freshness,
+   large-codebase-context-guide, model-routing-multi-vendor-citations, narrow-autopilot,
+   retire-static-dashboards, rigor-tier, trajectory-evals, workboard-auto-triage,
+   first-pass-success-rate (P3), harness-audit (P3).
+   READY → 3b auto-breakdown same session → dispatch its tasks.
+2. Stub intake (screen script .claude/skills/drain/screen-stub.sh FIRST per stub):
+   agent-tier-leaks/tasks/04,05; drain-wake-cost/tasks/04;
+   orchestrator-share-audit/tasks/03; spec-completion-review/tasks/04,05.
+   Note on scr/05 (build-mirror gap): gen 2 flagged it needs a human Touch
+   amendment or new task — likely DECISION-SHAPED or refused.
+3. 3b auto-breakdown for any Breakdown-ready:true spec without tasks/ (none yet).
+4. Batch interview LAST (only when 1-3 all come up empty): the prose-review 03
+   question above + exit checklist. A headless generation reaching it writes
+   questions into this baton and stops.
+
+When 03's answer lands and flips it pending: re-dispatch 03 (prose-review lease
+is already held by this run), then 04, then retrofits 05-13 — W=3 authorized for
+the retrofit group ONLY (Group: 05..13, pairwise-disjoint Touch; budget then
+max(2,6-3)=3 units/gen). Retrofits are CROSS-REPO (worktree the TARGET repo per
+docs/memory/drain-dispatch-lessons.md); each has a MANDATORY CI paths-ignore
+precondition; task 09 (portfolio-tracker) AUTO-PUSHES/AUTO-DEPLOYS on commit —
+BLOCK rather than commit if its precondition fails.
 
 ## Anomalies / carry-forward
 
-- prose-review retrofits 05-13 have CROSS-REPO Touch (other repos on this machine).
-  Follow docs/memory/drain-dispatch-lessons.md cross-repo procedure (worktree the
-  TARGET repo too, not just this one). Each retrofit carries a MANDATORY CI
-  paths-ignore precondition before committing in the target repo.
-  Task 09 (portfolio-tracker) AUTO-PUSHES/AUTO-DEPLOYS on commit — if its
-  paths-ignore precondition fails, BLOCK the task rather than commit.
-- Draft stubs created by gen 2 (for final-exhaustion stub intake / exit checklist):
-  - specs/spec-completion-review/tasks/04-flip-message-format-transition.md (Blocking: no)
-  - specs/spec-completion-review/tasks/05-build-mirror-gap.md (Blocking: no) — the
-    build SKILL.md spec-completion sentence ships un-mirrored to antigravity/codex
-    build ports; needs a human Touch amendment or new task (drain can't edit Touch).
-  Pre-existing drafts also in scope at exhaustion: agent-tier-leaks/04,05;
-  drain-wake-cost/04; orchestrator-share-audit/03.
-- Two FOREIGN owner leases live and untouchable: specs/draft-auto-promotion/DRAIN-OWNER.md,
-  specs/work-exhaustion/DRAIN-OWNER.md. Never touch specs/agentprof-antigravity-adapter.
-- Baton budget: W=1 → 5 verdicts/gen; W=3 (retrofit window) → 3 verdicts/gen.
-- Generations cap = 10 (currently gen 3). plugin.json at 0.8.48; prose-review/04
-  closing task bumps relative to its own base.
+- SPEC-COMPLETION REVIEW OBLIGATION: prose-review had tasks 01+02 complete DONE
+  this run, so when it eventually reaches nothing-left-to-dispatch and its lease
+  releases, the spec-completion review step (drain SKILL.md) MUST run first
+  (evidence file specs/prose-review/evidence/spec-review.md is the idempotency
+  token — not yet written). Do NOT retro-apply the review to specs drained
+  before the machinery merged (cache-reprime, agentprof-attr,
+  drain-forward-progress, spec-completion-review itself).
+- vale side effect: any worker that runs bin/install-vale inside its worktree
+  repoints the machine-global ~/.vale.ini StylesPath at that worktree; after
+  merging such a branch, re-run `bash bin/install-vale --force` from
+  /Users/sjaconette/claude (happened twice in gen 3; fixed both times).
+- Two FOREIGN owner leases live and untouchable: specs/draft-auto-promotion/,
+  specs/work-exhaustion/. Never touch specs/agentprof-antigravity-adapter.
+- Foreign worktrees/branches live in the shared checkout (task/01-verifier-leak-trace,
+  task/02-namespace-attribution, task/03-closing-gate, task/03-ship-gate) — other
+  sessions' work; never sweep them.
+- Untracked slack-relay/ dir in the main checkout belongs to another session.
+- plugin.json at 0.8.48; prose-review/04 closing task bumps relative to its own base.
+- Generations cap = 10 (this baton hands to gen 4).
