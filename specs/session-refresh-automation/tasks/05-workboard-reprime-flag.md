@@ -1,6 +1,6 @@
 # Task 05: Live re-prime flag on the workboard
 
-Status: pending
+Status: in-progress
 Depends on: 02
 Priority: P2
 Budget: 10 turns
