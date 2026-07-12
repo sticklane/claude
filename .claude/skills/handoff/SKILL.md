@@ -7,6 +7,17 @@ Long sessions accumulate dead context that is re-billed every turn and
 degrades attention. A clean session resumed from a good handoff file
 outperforms a long session with accumulated corrections.
 
+**Autonomous refresh-over-carry path.** When a long-lived autonomous session
+refreshes under the session-refresh hook's directive (the wake budget in
+`.claude/rules/token-discipline.md`, "Session refresh"), it takes the same
+steps below — write the handoff file, then surface the resume pointer where
+the restart will actually look for it: the next loop firing, a scheduled
+fresh session, or the attended parent — and then **ends its turn**. It does
+NOT spawn a detached continuation to carry itself forward: the awaited-
+children / no-detachment policy in `.claude/rules/token-discipline.md`
+("Awaited children, never detached") governs, so refreshing means handing off
+to a fresh context, never seeding this session's own successor.
+
 1. Write `HANDOFF.md` next to the active task/spec file (or `.claude/HANDOFF.md`
    if there isn't one), containing only what a fresh agent needs:
    - **Task**: what we're doing and the task/spec file path.
