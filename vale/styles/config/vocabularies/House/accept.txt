@@ -1,0 +1,15 @@
+agentprof
+baton
+[Dd]iátaxis
+drain
+frontmatter
+subagent
+subagents
+worktree
+worktrees
+toolkit
+changelog
+linter
+rubric
+repo
+repos

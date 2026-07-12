@@ -1,0 +1,15 @@
+# ~/.vale.ini for the agentic toolkit — written by bin/install-vale.
+# StylesPath is a SUBSTITUTION TARGET: bin/install-vale replaces
+# __STYLESPATH__ with the ABSOLUTE resolved path to this repo's vale/styles
+# before writing ~/.vale.ini. Vale resolves StylesPath relative to the config
+# file's directory, so a relative value here would break runs from other repos.
+StylesPath = __STYLESPATH__
+
+MinAlertLevel = suggestion
+
+Vocab = House
+
+Packages = Google
+
+[*.md]
+BasedOnStyles = Vale, Google
