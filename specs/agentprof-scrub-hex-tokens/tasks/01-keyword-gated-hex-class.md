@@ -1,6 +1,6 @@
 # Task 01: Keyword-gated hex class in scrub
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -38,7 +38,7 @@ mechanism), any other `internal/claude` file, or README (task 02).
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./internal/claude/ -run Scrub` → pass, with the full R2 table present (`grep -c 'monkey' agentprof/internal/claude/scrub_test.go` → ≥ 1)
-- [ ] `grep -c 'keyword' agentprof/internal/claude/scrub_test.go` → ≥ 1
-- [ ] `git diff main -- agentprof/internal/claude/scrub_test.go` shows no deleted assertions on pre-existing cases (additive table only)
-- [ ] `bash agentprof/scripts/check.sh` → green
+- [x] `cd agentprof && go test ./internal/claude/ -run Scrub` → pass, with the full R2 table present (`grep -c 'monkey' agentprof/internal/claude/scrub_test.go` → ≥ 1) — verifier: tests ok, monkey count = 3 (evidence/01-keyword-gated-hex-class.md)
+- [x] `grep -c 'keyword' agentprof/internal/claude/scrub_test.go` → ≥ 1 — verifier: count = 7 (evidence/01-keyword-gated-hex-class.md)
+- [x] `git diff main -- agentprof/internal/claude/scrub_test.go` shows no deleted assertions on pre-existing cases (additive table only) — verifier: 0 deletion lines, 44 additions (evidence/01-keyword-gated-hex-class.md)
+- [x] `bash agentprof/scripts/check.sh` → green — verifier: format-check ok, lint ok, tests ok (evidence/01-keyword-gated-hex-class.md)
