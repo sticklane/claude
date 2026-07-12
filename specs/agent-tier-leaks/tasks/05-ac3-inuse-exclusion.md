@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/agent-tier-leaks/tasks/01-verifier-leak-trace.md
 Spec: ../SPEC.md
 Blocking: no
