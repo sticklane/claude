@@ -61,9 +61,14 @@ natively, so the gates hold by construction.
 - **Workflow args are free text** (no `$ARGUMENTS` templating) and workflow
   files cap at 12,000 characters.
 
-## Keeping the two ports in sync
+## Keeping the ports in sync
 
 The Claude Code files (`.claude/`) are the source of truth. When a skill
 changes there, mirror the change here — the bodies are deliberately close
 to identical, with platform-specific bits (subagent spawning, hooks JSON,
-fresh-session mechanics) swapped out.
+fresh-session mechanics) swapped out. This tree is itself upstream of a
+third leg: `codex/` overlays it with symlinks plus four real-content
+wrappers (drain/build/autopilot/evals) — a change here to a symlinked
+skill flows to Codex automatically, but a change to one of the four
+wrapper sources needs the matching `codex/.agents/skills/<name>/SKILL.md`
+update (root CLAUDE.md's port-chain bullet).

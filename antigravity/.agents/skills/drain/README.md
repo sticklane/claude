@@ -2,10 +2,12 @@
 
 This directory is a **script bundle** supporting
 `antigravity/.agents/workflows/drain.md`, not a triggerable skill. It
-deliberately contains no `SKILL.md`: `drain` is
-`disable-model-invocation: true` at its `.claude/skills/drain/SKILL.md`
-source, so in the Antigravity mirror it ports to a workflow
-(`.agents/workflows/drain.md`), and only humans launch it.
+deliberately contains no `SKILL.md`: `drain` is launch-gated at its
+`.claude/skills/drain/SKILL.md` source (a launch-authorization contract —
+explicit live-user authorization only; it replaced the old
+`disable-model-invocation` flag in 2026-07), so in the Antigravity mirror
+it ports to a workflow (`.agents/workflows/drain.md`), where every
+workflow is human-launched by the runtime anyway.
 
 The one file here, `screen-stub.sh`, is a verbatim mirror of
 `.claude/skills/drain/screen-stub.sh` — the deterministic prompt-injection

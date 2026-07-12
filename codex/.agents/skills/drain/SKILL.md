@@ -63,6 +63,17 @@ session list; one line per foreign session, "sweep unavailable" on failure).
 Advisory only, never blocking — correctness comes from the owner lease, not
 this sweep.
 
+**Hub-economics advisory (gen 1, never blocking).** Two advisory lines at
+gen-1 startup — never on baton generations, and neither ever blocks
+dispatch: (a) *frontier-hub* — where the runtime discloses the session
+model and it maps to the frontier tier, print one line citing the
+wake-economics doctrine (step 2) and recommending a relaunch on a
+deep-tier or lower hub via a fresh drain run with the same argument
+(queue state is committed, nothing is lost); skip silently where the
+runtime discloses no session model. (b) *heavy-hub* — when the drain
+launch arrives beyond the session's first few turns, print one line
+recommending that same fresh-session relaunch.
+
 ## 1. Inventory
 
 Emit `<!-- agentprof:stage=inventory -->` verbatim as this step's opening

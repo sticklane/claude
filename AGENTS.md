@@ -9,9 +9,10 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 
 - `.claude/` — the source of truth: `skills/` (pipeline stages), `agents/` (scout, critic, verifier...), `rules/` (always-on).
 - `.claude-plugin/` — plugin + marketplace manifests distributing the toolkit as plugin `agentic`.
-- `agentprof/` — pprof profiler for AI-agent token & spend attribution (Claude Code transcripts, GCP billing, OTel).
-- `agent-console/` — local zero-LLM dashboard (workboard/fleet views) for this machine's Claude Code setup.
+- `agentprof/` — pprof profiler for AI-agent token & spend attribution (Claude Code transcripts, GCP billing, OTel; cache re-prime + skill/project attribution metrics — flags and labels in its README/SCHEMA).
+- `agent-console/` — local zero-LLM dashboard (workboard/fleet views, cost panel incl. re-prime line) for this machine's Claude Code setup.
 - `antigravity/` — mirrored port of `.claude/` for the Antigravity runtime.
+- `codex/` — thin overlay on `antigravity/` for the Codex runtime: symlinked skills plus four real-content wrappers (drain/build/autopilot/evals); port chain is `.claude/` → `antigravity/` → `codex/` (CLAUDE.md's port-chain bullet).
 - `bin/` — installer scripts (quality gates, skill sync).
 - `docs/` — research and doctrine (anthropic-playbook, external-playbooks, memory index).
 - `evals/` — skill eval scenarios plus the headless runner.
@@ -29,7 +30,7 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 
 ## Commands
 
-All re-verified at the time of writing; run from the repo root.
+All re-verified 2026-07-11 (each run green); run from the repo root.
 
 - `./specs/status.sh` — proves the queue parses; prints per-task status rows and totals.
 - `claude plugin validate .` — proves the plugin + marketplace manifests are valid.
