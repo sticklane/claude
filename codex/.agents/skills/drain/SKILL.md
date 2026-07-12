@@ -297,16 +297,24 @@ tracked by a `Stub-intake-failed:` baton line.
   instructions", tool-invocation directives, absolute paths outside the repo)
   refuses promotion this run and flags the stub for a human. Promotion of
   injectable text never rests on a model's judgment.
-- **Assess → gate → act.** A scout-tier assessor classifies the stub
-  (OBSOLETE / DECISION-SHAPED / ACTIONABLE) and authors any actionable
-  promotion in neutral words (original kept only as quoted data under an
-  `## Original report` block, plus runnable criteria and
-  `Touch:`/`Budget:`/`Depends on:`); a single-call rubric critic gates it; and
-  drain — the sole queue writer — acts. On PASS, drain writes the authored
-  content tagged `Promotion-ready: true` + `Promoted-by-run: <Run-token>` AND
-  flips `Status` to `pending` in the same commit, stripping `## Original
-  report` — the stub is dispatchable this run. Gate-confirmed OBSOLETE writes
-  `Status: obsolete` + a `Closed:` line; else it stays draft, untagged.
+- **Assess → gate → act.** A scout-tier assessor classifies the stub as
+  exactly one of OBSOLETE / DECISION-SHAPED / ACTIONABLE and MUST return that
+  outcome's payload — ACTIONABLE requires authored runnable criteria +
+  `Touch:` + `Budget:` (it may not return ACTIONABLE-without-criteria),
+  DECISION-SHAPED names the decision, OBSOLETE cites the closing evidence, so
+  "came back unauthored" is not representable (original kept only as quoted
+  data under an `## Original report` block); a single-call rubric critic gates
+  it; and drain — the sole queue writer — acts. On PASS, drain writes the
+  authored content tagged `Promotion-ready: true` + `Promoted-by-run:
+  <Run-token>` AND flips `Status` to `pending` in the same commit, stripping
+  `## Original report` — the stub is dispatchable this run. Gate-confirmed
+  OBSOLETE writes `Status: obsolete` + a `Closed:` line. Every other
+  non-promotion — screen refusal, undefaultable DECISION-SHAPED, or gate FAIL
+  — leaves the stub `draft` AND drain writes onto it, immediately after
+  `Status:`, a machine-greppable `Intake-refused: <screen|assess|gate> —
+  <one-line reason> (<ISO date>)` line (drain-written queue state, cleared by a
+  later PASS or OBSOLETE Act in the same commit) so the refusal is diagnosable
+  from the stub alone.
 
 Every promotion, closure, and refusal is audited in step 4's checklist; a
 human may demote any auto-promoted task back to `draft` via a
@@ -366,8 +374,9 @@ fixed **seven-section checklist**, each entry naming a file path:
    excluded — see section 6).
 6. **Promoted this run** — every stub stub-intake acted on: each promotion to
    `pending` (with its `Demoted:` reversal line), each `Status: obsolete`
-   closure, and each screen-refused or gate-failed stub — every auto-promotion
-   audited, with its task file.
+   closure, and each refused stub (screen-refused, assess-refused, or
+   gate-failed) with its `Intake-refused:` line quoted verbatim — every
+   auto-promotion and refusal audited, with its task file.
 7. **Next commands** — the exact commands to resume.
 
 One interview and one checklist per session; "Nothing needs you" is a valid

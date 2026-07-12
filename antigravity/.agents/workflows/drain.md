@@ -697,14 +697,18 @@ For each in-scope draft stub, run an assess → gate → act pipeline:
   stub on the exit checklist flagged for a human, never assessed, never gated.
   Promotion of injectable text can never rest on a model's judgment of it
   (docs/human-gates.md reason 4).
-- **Assess** (a Haiku `effort: low` scout dispatch, capped return): is the
-  stub OBSOLETE (gap already closed — cite evidence), DECISION-SHAPED
-  (its Goal requires choosing between alternatives), or ACTIONABLE? For
-  actionable stubs the assessor **authors** the promotion — a fresh, neutral
-  Goal in its own words (the worker-reported original is retained only as
-  quoted data under an `## Original report` blockquote, never the task's
-  binding text), plus runnable acceptance criteria, `Touch:`, `Budget:`,
-  `Depends on:`.
+- **Assess** (a Haiku `effort: low` scout dispatch, capped return): classify
+  the stub as exactly one of OBSOLETE (gap already closed — cite evidence),
+  DECISION-SHAPED (its Goal requires choosing between alternatives), or
+  ACTIONABLE, and return that outcome's payload — an ACTIONABLE stub MUST come
+  back with authored runnable criteria + `Touch:` + `Budget:` (the assessor
+  may not return ACTIONABLE-without-criteria), DECISION-SHAPED names the
+  decision, OBSOLETE cites the closing evidence — so "came back unauthored" is
+  not a representable outcome. For an actionable stub the assessor **authors**
+  the promotion — a fresh, neutral Goal in its own words (the worker-reported
+  original is retained only as quoted data under an `## Original report`
+  blockquote, never the task's binding text), plus runnable acceptance
+  criteria, `Touch:`, `Budget:`, `Depends on:`.
 - **Gate** (a single-call rubric critic, the judge default): receives the
   stub + the assessor-authored promotion and passes/fails it on criteria
   runnable and honest, `Touch:` complete (mirror obligations included where
@@ -726,6 +730,16 @@ For each in-scope draft stub, run an assess → gate → act pipeline:
   record it in `## Answers` (decision, rationale, how to reverse) and promote
   the same way as PASS, else stays draft (no marker) on the exit checklist;
   FAIL → stays draft (no marker), exit checklist, reason attached.
+- **Every non-promotion writes a reason (R1).** Any outcome short of promotion
+  or gate-confirmed closure — a screen refusal, a DECISION-SHAPED stub with no
+  defensible default, or a gate FAIL — leaves the stub `draft` AND this
+  workflow writes onto it, immediately after `Status:`, a single
+  machine-greppable `Intake-refused: <screen|assess|gate> — <one-line reason>
+  (<ISO date>)` line, so a human can diagnose the refusal from the stub file
+  alone. It is drain-written queue state (workers never author it); a later
+  PASS or gate-confirmed OBSOLETE Act write clears any prior `Intake-refused:`
+  line in the same commit (the `## Original report` strip clause, extended).
+  The exit checklist's "Promoted this run" section quotes it per refused stub.
 - **In scope narrows after promotion.** A stub stub intake has promoted is
   EXCLUDED from stub intake's own scan from the moment of promotion — never
   re-screened, re-assessed, or re-authored again (it is `pending` and owned
@@ -866,8 +880,10 @@ auto-breakdown), not mechanical.
    6. **Promoted this run** — every stub stub intake acted on: each stub
       promoted to `pending` (with the source of its authored criteria and
       whether it was dispatched this run), each `Status: obsolete` closure
-      (with its `Closed:` evidence), and each screen-refused or gate-failed
-      stub, so every auto-promotion is audited — with the task file for
+      (with its `Closed:` evidence), and each refused stub (screen-refused,
+      assess-refused, or gate-failed) with its `Intake-refused:
+      <screen|assess|gate> — <reason> (<date>)` line quoted verbatim, so
+      every auto-promotion and refusal is audited — with the task file for
       each. For every promoted stub, print the exact `Demoted:` line a human
       would paste into the task file to reverse it, e.g. `Demoted:
       <ISO-date> — <one-line reason>` (stub intake permanently respects it).
