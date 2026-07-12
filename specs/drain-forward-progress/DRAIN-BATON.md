@@ -1,98 +1,136 @@
 Run-token: e83f34f07094a4fa
-Generation: 5
+Generation: 6
 Spec: specs/prose-review
 Breakdown-failed:
-Intake-failed: specs/build-doc-currency-check, specs/codequality-agent-console-mutation-coverage, specs/codequality-antigravity-content-parity, specs/codequality-shared-header-parsing, specs/domain-knowledge-base, specs/idea-research-freshness
+Intake-failed: specs/build-doc-currency-check, specs/codequality-agent-console-mutation-coverage, specs/codequality-antigravity-content-parity, specs/codequality-shared-header-parsing, specs/domain-knowledge-base, specs/idea-research-freshness, specs/narrow-autopilot
 Stub-intake-failed:
 
 ## Done / next
 
-Gen 4 recorded 5 units (W=1 budget 5) as critique-intake attempts and batoned.
-All 5 came back NOT READY — findings written to each spec's critique-findings.md,
-each lease claimed transiently then released, each spec added to Intake-failed:
+Gen 5 recorded 5 units (W=1 budget 5) and batoned. Work this gen — all inline
+(this environment exposes NO agent-dispatch/Task tool; see Anomalies):
 
-- codequality-agent-console-mutation-coverage → NOT READY (6 findings): spec
-  factually mischaracterizes execute_push (no dirty-check/commit/ahead-behind;
-  `:2872` is set_priority's line), resume_agent "empty prompt" is not a failure
-  case, render_markdown has zero acceptance criteria. Needs human spec revision.
-- codequality-antigravity-content-parity → NOT READY (3 findings): the
-  "every other mirrored .py is byte-identical" premise is FALSE — 3 legitimately
-  ported .py files diverge, so the all-.py byte-parity gate is a false-positive
-  machine that can never go green and would red-bar the repo's whole check loop.
-  (Real drift it targets IS present: _shared/test_viz.py 210 vs mirror 198.)
-- codequality-shared-header-parsing → NOT READY (3 findings): criterion #5
-  (`diff -r` empty vs mirror) unsatisfiable — prioritize_scan.py legitimately
-  diverges from its mirror; loader bootstrap ambiguous; "share the regex" silently
-  widens prioritize's parsing from P[0-3] to any digit. Refactor IS worth doing.
-- domain-knowledge-base → NOT READY (5 findings): core criteria gate on
-  deep-research/Workflow dispatch + live interactive /idea runs a drain worker
-  can't do (no manual-pending path); depends on unbuilt sibling
-  idea-research-freshness shipping first.
-- idea-research-freshness → NOT READY (6 findings): ships freshness fixtures but
-  NO deterministic checker over them (its core deliverable); criteria gate on
-  running /idea end-to-end; inserting a step breaks ~12 internal `step N`
-  cross-refs. R7/R8/R9 authoring conventions ARE pinned. Ship before
-  domain-knowledge-base (that sibling defers the `Verified:` convention here).
+1. critique-intake large-codebase-context-guide → READY. All mechanical gate
+   anchors verified present (tests/test_doc_links.sh enforces the mermaid
+   fence; token-discipline "Delegation defaults" section present; existing
+   guides establish the pattern). Deps conditional (idea-research-freshness
+   `Verified:` "if landed"), not hard. Wrote Breakdown-ready: true.
+2. auto-breakdown large-codebase-context-guide → 1 task: task 01 (guide +
+   token-discipline bullet), Status: pending, Depends on: none — DISPATCHABLE.
+   No antigravity mirror needed (.claude/rules/ and docs/guides/ aren't
+   mirrored — verified). Lease released.
+3. critique-intake model-routing-multi-vendor-citations → READY. All quotes
+   and URLs supplied verbatim in the spec; insertion anchor
+   "## Rules and skills this page explains" present (line 71); "Cross-vendor
+   grounding" absent. Minor: AC6 references absent .claude/runtime.md
+   (vacuously satisfied). Wrote Breakdown-ready: true.
+4. auto-breakdown model-routing-multi-vendor-citations → 1 task: task 01
+   (add ## Cross-vendor grounding section), Status: pending — DISPATCHABLE.
+   Lease released.
+5. critique-intake narrow-autopilot → NOT READY (6 findings in
+   specs/narrow-autopilot/critique-findings.md). Added to Intake-failed.
+   High-blast-radius skill-retirement (deletes /autopilot, edits ultra-path
+   build/SKILL.md + drain/reference.md, whole-repo sweep, plugin bump). Key
+   findings: R6/AC7 grep `grep -rln '\bautopilot\b' .claude/ ...` returns 887
+   files (only 19 tracked; ~868 are transient .claude/worktrees/*) — scope it
+   to `git grep -ln` so it's deterministic; line anchors drifted
+   (drain/reference.md:388→:776, onboard:74→:79); AC2 verbatim-check not
+   runnable; no ultra-gate AC; R7 antigravity fold underspecified (no
+   antigravity autopilot mirror exists); live sequencing dep on
+   build-doc-currency-check (itself NOT READY).
 
-PATTERN for the human: all three codequality-* specs (from the 2026-07-10 batch)
-are NOT READY, two sharing the same false byte-parity-vs-antigravity-mirror
-premise — the port is "near-identical," not byte-identical, so any spec whose
-gate is `diff -r`/`diff -q` empty against the mirror is a false-positive machine.
+DISPATCHABLE WORK NOW EXISTS for gen 6 (was empty at gen 5 start):
+- specs/large-codebase-context-guide/tasks/01-write-guide-and-rule-bullet.md
+  (pending, Depends on: none)
+- specs/model-routing-multi-vendor-citations/tasks/01-add-cross-vendor-grounding-section.md
+  (pending, Depends on: none)
+Both are P2 single-task doc deliverables, gated on tests/test_doc_links.sh +
+grep ACs, each with one manual-pending human URL/readability criterion. Gen 6
+dispatches these (W=1) BEFORE any further critique/stub intake — dispatch
+outranks exhaustion-phase work. BUT only a generation WITH agent-dispatch can
+build them (see Anomalies).
 
 prose-review remains FULLY GATED on 03's deferred answer (still deferred, no
-## Answers). 04 depends on 01+03; retrofits 05-13 depend on 03. Lease HELD at
-gen 5. Gen 5 continues the EXHAUSTION PHASE:
+## Answers). 04 depends on 01+03; retrofits 05-13 depend on 03. Lease HELD,
+now bumped to Generation 6 (pre-seeded specs/prose-review/DRAIN-OWNER.md).
 
-1. Critique intake, one spec per pass, at most once per spec per run, skipping the
-   6 Intake-failed specs above. Remaining eligible (order = Priority then path):
-   large-codebase-context-guide, model-routing-multi-vendor-citations,
-   narrow-autopilot, retire-static-dashboards, rigor-tier, trajectory-evals,
-   workboard-auto-triage (all P2), then first-pass-success-rate (P3),
-   harness-audit (P3). Per spec: scout sanity-check (already built? archive beats
-   critique), claim lease transiently, /critique via Skill tool, route
-   READY → 3b same session / NOT READY → write critique-findings.md + add to
-   Intake-failed + release lease.
-2. Stub intake (screen script .claude/skills/drain/screen-stub.sh FIRST per stub):
-   agent-tier-leaks/tasks/04,05; drain-wake-cost/tasks/04;
-   orchestrator-share-audit/tasks/03; spec-completion-review/tasks/04,05.
-   Note on scr/05 (build-mirror gap): gen 2 flagged it needs a human Touch
-   amendment or new task — likely DECISION-SHAPED or refused.
-3. 3b auto-breakdown for any Breakdown-ready:true spec without tasks/ (none yet).
-4. Batch interview LAST (only when 1-3 all come up empty): the prose-review 03
-   deferred question (verbatim in that task file under ## Deferred questions;
-   options a/b/c, option (a) = amend Touch to include vale/.vale.ini.template +
-   central Google.EmDash disable, matches attempt 1's working discarded impl) +
-   exit checklist. A headless generation reaching it writes questions into this
-   baton and stops.
+EXHAUSTION PHASE for gen 6 (after dispatching the two pending tasks above):
+1. Critique intake, one spec/pass, ≤once per spec per run, skipping the 7
+   Intake-failed specs. Remaining eligible (Priority then path):
+   retire-static-dashboards, rigor-tier, trajectory-evals,
+   workboard-auto-triage (P2), then first-pass-success-rate, harness-audit
+   (P3). (large-codebase-context-guide and model-routing-multi-vendor-citations
+   are now broken-down, no longer draft-spec candidates.)
+2. Stub intake (screen-stub.sh FIRST per stub): agent-tier-leaks/tasks/04,05;
+   drain-wake-cost/tasks/04; orchestrator-share-audit/tasks/03;
+   spec-completion-review/tasks/04,05. scr/05 (build-mirror gap) likely
+   DECISION-SHAPED or refused per gen 2.
+3. 3b auto-breakdown: none pending (the two Breakdown-ready specs this gen
+   already have tasks/).
+4. Batch interview LAST: prose-review 03 deferred question (verbatim below) +
+   exit checklist. A headless generation writes it into this baton and stops.
 
-When 03's answer lands and flips it pending: re-dispatch 03 (prose-review lease
-held), then 04 (mirror+bump closing; bumps plugin.json relative to its own base,
-plugin.json currently 0.8.48), then retrofits 05-13 — W=3 authorized for the
-retrofit group ONLY (Group: 05..13, pairwise-disjoint Touch; budget then drops to
-max(2,6-3)=3 units/gen). Retrofits are CROSS-REPO (worktree the TARGET repo per
+When 03's answer lands and flips it pending: re-dispatch 03, then 04
+(mirror+bump closing; bumps plugin.json relative to its own base, currently
+0.8.48), then retrofits 05-13 — W=3 authorized for the retrofit group ONLY
+(Group: 05..13, pairwise-disjoint Touch; budget then drops to max(2,6-3)=3
+units/gen). Retrofits are CROSS-REPO (worktree the TARGET repo per
 docs/memory/drain-dispatch-lessons.md); each has a MANDATORY CI paths-ignore
 precondition; task 09 (portfolio-tracker) AUTO-PUSHES/AUTO-DEPLOYS on commit —
 BLOCK rather than commit if its precondition fails.
 
+## prose-review 03 deferred question (verbatim, for the batch interview)
+
+- 2026-07-11 — Task 03 requires `vale README.md AGENTS.md` to exit 0
+  (criterion C2), but its Touch list (`templates/, .claude/skills/gate/,
+  vale/styles/config/vocabularies/House/accept.txt`) cannot achieve that: of
+  the three error-level alert classes (Google.EmDash 22, Vale.Spelling 22,
+  Vale.Terms 2), the Spelling/Terms errors are fixable in accept.txt, but
+  Google.EmDash is an existence-type rule (no vocabulary/exceptions mechanism)
+  firing on the repo's deliberate spaced-em-dash house style in README.md and
+  AGENTS.md. How should C2 be satisfied? (a) Amend the task's Touch to include
+  `vale/.vale.ini.template` and centrally disable Google.EmDash there
+  (`Google.EmDash = NO` under `[*.md]`) — the minimal fix, endorsing the house
+  style; (b) amend Touch to include README.md and AGENTS.md and rewrite all
+  spaced em-dashes to Google-style unspaced dashes — conforms to Google style
+  but reverses the established house-style repo-wide prose convention; or (c)
+  revise the spec/criterion so the bare-vale check excludes Google.EmDash some
+  other way. Option (a) matches attempt 1's working implementation.
+
 ## Anomalies / carry-forward
 
-- SPEC-COMPLETION REVIEW OBLIGATION: prose-review had tasks 01+02 complete DONE
-  earlier this run, so when it eventually reaches nothing-left-to-dispatch and its
-  lease releases, the spec-completion review step (drain SKILL.md) MUST run first
-  (evidence file specs/prose-review/evidence/spec-review.md is the idempotency
-  token — not yet written). Do NOT retro-apply the review to specs drained before
-  the machinery merged (cache-reprime, agentprof-attr, drain-forward-progress,
-  spec-completion-review itself).
+- ENVIRONMENT LIMITATION (gen 5, NEW): this drain generation ran in a context
+  with NO agent-dispatch tool (no Task/Agent/Team tool in base or deferred
+  set — searched exhaustively). Consequences: (a) implementation-workers
+  CANNOT be dispatched — the two pending tasks above cannot be BUILT by a
+  generation in this same environment; (b) /critique and /breakdown were run
+  INLINE (in the hub session's own context via the Skill tool) rather than
+  via the critic agent — verdicts are sound but this spends hub context, off
+  the wake-economics ideal; (c) a successor generation CANNOT be auto-spawned.
+  Per auto-memory (feedback_no_headless_sessions: "human launches every
+  generation"), gen 6 is HUMAN-LAUNCHED. A human must relaunch drain for
+  gen 6, ideally in an environment where the Task/Agent tool IS available so
+  the two pending doc tasks can be built (else gen 6 repeats this limitation
+  and can only do more inline critique/breakdown/stub-intake, never build).
+- SPEC-COMPLETION REVIEW OBLIGATION (carried): prose-review had tasks 01+02
+  complete DONE in an earlier generation, so when it eventually reaches
+  nothing-left-to-dispatch and its lease releases, the spec-completion review
+  MUST run first (evidence file specs/prose-review/evidence/spec-review.md is
+  the idempotency token — still NOT written). Do NOT retro-apply to specs
+  drained before the machinery merged (cache-reprime, agentprof-attr,
+  drain-forward-progress, spec-completion-review itself). Gen 5 drained NO
+  prose-review tasks (fully gated), so no review fired this gen.
 - vale side effect: any worker that runs bin/install-vale inside its worktree
-  repoints the machine-global ~/.vale.ini StylesPath at that worktree; after
-  merging/discarding such a branch, re-run `bash bin/install-vale --force` from
-  /Users/sjaconette/claude and confirm `grep '^StylesPath' ~/.vale.ini` shows
-  /Users/sjaconette/claude/vale/styles.
+  repoints machine-global ~/.vale.ini StylesPath at that worktree; after
+  merging/discarding such a branch, re-run `bash bin/install-vale --force`
+  from /Users/sjaconette/claude and confirm `grep '^StylesPath' ~/.vale.ini`
+  shows /Users/sjaconette/claude/vale/styles. (No such worker ran this gen.)
 - Two FOREIGN owner leases live and untouchable: specs/draft-auto-promotion/,
   specs/work-exhaustion/. Never touch specs/agentprof-antigravity-adapter.
-- Foreign worktrees/branches live in the shared checkout (task/01-verifier-leak-trace,
-  task/02-namespace-attribution, task/03-closing-gate, task/03-ship-gate) — other
-  sessions' work; never sweep them.
-- Untracked slack-relay/ dir in the main checkout belongs to another session.
-- plugin.json at 0.8.48; prose-review/04 closing task bumps relative to its own base.
-- Generations cap = 10 (this baton hands to gen 5).
+- Foreign worktrees/branches in the shared checkout (task/01-verifier-leak-trace,
+  task/02-namespace-attribution, task/03-closing-gate, task/03-ship-gate) —
+  other sessions' work; never sweep them. Untracked slack-relay/ dir belongs
+  to another session.
+- plugin.json at 0.8.48; prose-review/04 closing task bumps relative to base.
+- Generations cap = 10 (this baton hands to gen 6). Remote/main in sync at
+  gen 5 handoff (0 ahead / 0 behind, verified).
