@@ -28,10 +28,12 @@ kebab-case slugs are deliberately unmatched — turn frames like
 ## Solution
 
 Add class (c): keyword-gated hex redaction. A maximal case-insensitive hex
-run of 24+ chars is redacted only when a secret keyword — token, key,
-secret, password, bearer, credential, apikey / api-key / api_key — occurs
-within a short window (proposed: 40 chars) of text immediately before the
-run. "Todoist token: 23596f…" redacts; "revert commit 3f4a90…" does not.
+run of 24+ chars is redacted only when a secret keyword — matched with
+word boundaries, `(?i)\b(token|key|secret|password|bearer|credential|api[-_]?key)\b`,
+so `monkey`/`whiskey`/`keyboard` never gate — occurs within the 40 bytes
+immediately preceding the first byte of the matched hex run. "Todoist
+token: deadbeef…" (hex values in this spec are synthetic) redacts;
+"revert commit 3f4a90…" does not.
 False positives like "the commit token 3f4a…" are acceptable and
 documented — over-redaction of a frame costs readability (recoverable via
 `--name-turns`, which renames `[redacted]` frames); under-redaction leaks
@@ -56,18 +58,22 @@ is best-effort (it failed on this machine's stale-auth scratch config on
   inside a larger mixed-case token run is therefore consumed by (b)'s
   whole-run redaction first, and (c) only sees text (a)/(b) left behind:
   a maximal `[0-9a-fA-F]{24,}` run is replaced with
-  `[redacted]` iff a secret keyword (case-insensitive: `token`, `key`,
-  `secret`, `password`, `bearer`, `credential`, `api[-_]?key`) appears in
-  the 40 characters preceding the run's token-run start. Runs already
-  inside a `[redacted]` replacement are not double-processed.
+  `[redacted]` iff a secret keyword — word-boundary, case-insensitive:
+  `(?i)\b(token|key|secret|password|bearer|credential|api[-_]?key)\b` —
+  appears in the 40 bytes immediately preceding the first byte of the
+  matched hex run. Runs already inside a `[redacted]` replacement are
+  not double-processed.
 - R2 **Behavior-pinning tests.** Table-driven tests in `scrub_test.go`
   covering at minimum: the observed incident's shape verbatim — a prompt
   containing `Todoist token: ` followed by a SYNTHETIC 40-char
   lowercase-hex value (never the real one) → redacted; keyword+40-hex →
   redacted; bare 40-hex SHA in
   prose (no keyword in window) → untouched; keyword more than the window
-  before the run → untouched; 24-hex with keyword → redacted; 23-hex with
-  keyword → untouched; mixed-case hex with keyword → redacted; a keyword
+  before the run → untouched; `monkey ` + 40-hex → untouched (word
+  boundary: `key` inside another word never gates); 24-hex with keyword →
+  redacted; 23-hex with keyword → untouched; mixed-case DIGIT-FREE hex
+  (e.g. `aBcDeF…`, letters only) with keyword → redacted — digit-free so
+  class (b) cannot match it and the case isolates (c); a keyword
   followed by a larger mixed-case token run embedding a hex sub-run →
   one whole-run `[redacted]` (pins the (b)-before-(c) order); existing
   class (a)/(b) cases unchanged (no edits to existing test expectations).

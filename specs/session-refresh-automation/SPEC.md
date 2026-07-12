@@ -61,10 +61,13 @@ live workboard flag so a bleeding session is visible while it still runs.
 - R2 **Refresh trigger hook.** A hook script (toolkit-shipped, installed
   globally via `~/.claude/settings.json` so it covers every repo's
   sessions — global reach is the point) that, on session wake/
-  prompt-submit, obtains the session's re-prime count and current context
-  size and, past either arm of the R1 budget, injects a directive: "over
+  prompt-submit, obtains the session's re-prime count and context size
+  and, past either arm of the R1 budget, injects a directive: "over
   wake budget — write a handoff (/handoff) and end instead of
-  continuing." agentprof is the single source of the re-prime definition:
+  continuing." The session id comes from the hook's stdin payload (the
+  harness's prompt-submit hook input carries it); the context arm reads
+  `sessions.<id>.p90_ctx` — the same percentile measure R4 uses, so the
+  hook and the workboard never disagree about which sessions are heavy. agentprof is the single source of the re-prime definition:
   the hook shells out to the `agentprof` binary (R2a below) rather than
   re-implementing the parse-time rule — a re-tuned `--reprime-threshold`
   must never make the hook and the profiler disagree. Binary absent or
@@ -102,9 +105,13 @@ live workboard flag so a bleeding session is visible while it still runs.
   exactly against the summary's `sessions` keys; live sessions absent
   from the summary (too new for the last refresh) are simply not
   flagged, and the flag line carries the summary file's mtime so
-  staleness is visible. Sourced from the same summary JSON the cost
-  panel already reads (specs/workboard-weekly-cost-view path); no new
-  endpoint. The flag names the session, which arm tripped, the re-prime
+  staleness is visible. The flag is explicitly best-effort: its
+  freshness is bounded by what regenerates the summary — the
+  `com.sjaconette.agentprof-refresh` launchd job plus the workboard's
+  on-demand refresh control (both run `scripts/refresh-profile.sh`) —
+  and the mtime line makes that bound visible rather than hiding it.
+  Sourced from the same summary JSON the cost panel already reads
+  (specs/workboard-weekly-cost-view path); no new endpoint. The flag names the session, which arm tripped, the re-prime
   count, and its cost.
 
 ## Out of scope
