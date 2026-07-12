@@ -1,6 +1,6 @@
 # Task 02: Per-session reprime fields in the cost summary
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 10 turns
