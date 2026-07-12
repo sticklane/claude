@@ -1,6 +1,6 @@
 # Task 03: Depth-guard doctrine, hook if feasible
 
-Status: in-progress
+Status: done
 Depends on: ../../session-refresh-automation/tasks/01-wake-budget-doctrine.md
 Priority: P2
 Budget: 10 turns
@@ -42,6 +42,10 @@ CLAUDE.md); a doctrine-only outcome touches just the rule file.
 
 ## Acceptance
 
-- [ ] `sed -n '/## Dispatch authoring/,/^## /p' .claude/rules/token-discipline.md | grep -ci 'untyped'` → ≥ 1
-- [ ] Either `bash hooks/untyped-dispatch-warn/test.sh` → passes (warn case + both silent cases), or `sed -n '/## Dispatch authoring/,/^## /p' .claude/rules/token-discipline.md | grep -ci 'hook'` → ≥ 1 (limitation recorded)
-- [ ] If the hook shipped: mirror updated and `git show $(git merge-base HEAD main):.claude-plugin/plugin.json | grep '"version"'` differs from the working-tree value; `claude plugin validate .` → passes
+- [x] `sed -n '/## Dispatch authoring/,/^## /p' .claude/rules/token-discipline.md | grep -ci 'untyped'` → ≥ 1 — verifier: → 6 (evidence/03-depth-guard-doctrine.md)
+- [x] Either `bash hooks/untyped-dispatch-warn/test.sh` → passes (warn case + both silent cases), or `sed -n '/## Dispatch authoring/,/^## /p' .claude/rules/token-discipline.md | grep -ci 'hook'` → ≥ 1 (limitation recorded) — limitation path taken: → 4, genuine one-sentence feasibility limitation confirmed (evidence/03-depth-guard-doctrine.md)
+- [x] If the hook shipped: mirror updated and `git show $(git merge-base HEAD main):.claude-plugin/plugin.json | grep '"version"'` differs from the working-tree value; `claude plugin validate .` → passes — vacuous: no hook shipped, plugin.json unchanged (0.8.55), no antigravity mirror touched (evidence/03-depth-guard-doctrine.md)
+
+## Decisions
+
+- R3 hook-vs-limitation feasibility: chose doctrine-only, no PreToolUse warn-hook. Default taken because the PreToolUse hook input schema exposes no dispatch-depth field and no reliable running-agent tier marker (`agent_type` surfaces only inside a subagent, undocumented for the main session), so a correct untyped-under-untyped warn cannot be built from it; R3's own clause says ship doctrine-only when the API cannot see type/depth. Reverse by adding `hooks/untyped-dispatch-warn/` with its test plus the antigravity mirror and a plugin.json bump if a future harness release exposes caller type or depth.
