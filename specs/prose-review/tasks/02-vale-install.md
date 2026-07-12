@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 6 turns
@@ -23,7 +23,7 @@ frontmatter, ...); synced Google payload gitignored.
 
 ## Acceptance
 
-- [ ] `bash bin/install-vale && vale --version` → exits 0
-- [ ] `bash bin/install-vale` (second run) → no-op, exits 0
-- [ ] `test -f ~/.vale.ini && grep -q '/vale/styles' ~/.vale.ini` → absolute path present
-- [ ] `git check-ignore vale/styles/Google >/dev/null` → synced payload ignored; `git ls-files vale/ | grep -q accept.txt` → vocab tracked
+- [x] `bash bin/install-vale && vale --version` → exits 0 — verifier: exit 0, `vale version 3.15.1` (evidence/02-vale-install.md)
+- [x] `bash bin/install-vale` (second run) → no-op, exits 0 — verifier: exit 0, `~/.vale.ini` and `vale/styles/Google` mtimes unchanged (genuine no-op)
+- [x] `test -f ~/.vale.ini && grep -q '/vale/styles' ~/.vale.ini` → absolute path present — verifier: exit 0, absolute StylesPath rendered
+- [x] `git check-ignore vale/styles/Google >/dev/null` → synced payload ignored; `git ls-files vale/ | grep -q accept.txt` → vocab tracked — verifier: both exit 0; 0 Google files tracked, template + accept.txt tracked
