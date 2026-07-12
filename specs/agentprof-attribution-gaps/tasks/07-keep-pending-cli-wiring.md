@@ -13,6 +13,17 @@ Budget: 4 turns
 Spec: ../SPEC.md
 Touch: agentprof/cmd_claude.go, agentprof/cmd_claude_test.go, agentprof/README.md
 
+<!-- PLAN (delete at close-out)
+1. cmd_claude_test.go (RED): test default run surfaces the pending parse-stat
+   on stderr ("unmatched tool call"); test --keep-pending changes output shape
+   (per-call tool:(pending) samples with no pending_calls value).
+2. cmd_claude.go (GREEN): add fs.Bool("keep-pending"); switch
+   CollectWithReprime → CollectWithOptions to get full Stats; print the pending
+   stat when stats.Pending > 0; pass KeepPending through Options.
+3. README.md: add --keep-pending to the Commands table row + update the
+   "no CLI flag" note in the Pending tool calls section.
+-->
+
 ## Goal
 
 `agentprof claude` exposes task 03's library-level `Options.KeepPending`
