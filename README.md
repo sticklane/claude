@@ -81,8 +81,12 @@ questions into the task files instead of stopping on them.
 - **Autonomy is classified, not assumed** — auto-accept for peripheral work,
   synchronous supervision for core logic; unattended runs get scoped
   permissions, bounded goals, branch isolation, and a discard-and-relaunch
-  recovery rule (the "slot machine"). Why the execution stages are
-  human-launched: [docs/human-gates.md](docs/human-gates.md).
+  recovery rule (the "slot machine"). The execution stages (`/build`,
+  `/drain`, `/autopilot`, `/prioritize`) launch only on explicit user
+  authorization in the live conversation — a launch contract in each
+  skill's opening lines replaced the old `disable-model-invocation` flag
+  in 2026-07; `/evals` alone stays human-typed. Why the boundary sits
+  there and how it moved: [docs/human-gates.md](docs/human-gates.md).
 - **Subagents protect the context window** — exploration, test noise, and
   review happen in disposable contexts; only conclusions return.
 - **One task, one session, one commit** — after two failed corrections,
@@ -176,6 +180,12 @@ cp ~/agentic-toolkit/antigravity/AGENTS.md .    # merge if you have one
 
 See [antigravity/README.md](antigravity/README.md) for the concept mapping
 and what degrades (notably: no enforced cheap subagents, softer stop gates).
+
+A third leg, [codex/](codex/README.md), overlays the Antigravity port for
+the Codex runtime: most skills are symlinks into `antigravity/`, plus four
+real-content wrappers (`drain`, `build`, `autopilot`, `evals`) gated by
+Codex's `allow_implicit_invocation: false`. The port chain is `.claude/` →
+`antigravity/` → `codex/`.
 
 ### Other runtimes and models
 

@@ -14,13 +14,14 @@ Agent Skills standard — `.agents/skills/<name>/SKILL.md` with YAML
   each, zero content copies. Codex reads a symlinked `SKILL.md` transparently
   (it `cat`s the file the link points at) and runs the bundled scanners in
   place, so these skills stay in lockstep with the antigravity tree.
-- Only the four human-launched stages — `drain`, `build`, `autopilot`,
+- Only the four launch-gated stages — `drain`, `build`, `autopilot`,
   `evals` — are **real directories** here, each with its own `SKILL.md` and a
   nested `agents/openai.yaml` setting
   `policy: { allow_implicit_invocation: false }`. That is Codex's native
-  analogue of `.claude/`'s `disable-model-invocation: true`: it blocks
-  automatic description-match selection while leaving explicit invocation
-  available.
+  analogue of `.claude/`'s launch gates (a launch-authorization contract on
+  drain/build/autopilot since 2026-07; the `disable-model-invocation` flag
+  remains only on `/evals`): it blocks automatic description-match
+  selection while leaving explicit invocation available.
 
 See [`codex/AGENTS.md`](AGENTS.md) for orientation; the shared pipeline
 doctrine lives in [`antigravity/AGENTS.md`](../antigravity/AGENTS.md).
