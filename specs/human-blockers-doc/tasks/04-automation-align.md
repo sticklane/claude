@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 3 turns
@@ -21,6 +21,6 @@ docs-only change).
 
 ## Acceptance
 
-- [ ] `grep -qi 'Agent-filed blockers' /Users/sjaconette/automation/HUMAN.md` → hit
-- [ ] `git -C ~/automation diff <recorded-base> -- HUMAN.md` (base SHA from the evidence file) → additions only, all inside the new section
-- [ ] `test -s specs/human-blockers-doc/evidence/04-automation-align.md` → base SHA + diff summary recorded
+- [x] `grep -qi 'Agent-filed blockers' /Users/sjaconette/automation/HUMAN.md` → hit (evidence/04-automation-align.md; verified in automation worktree, base 2f0c3ce)
+- [x] `git -C ~/automation diff <recorded-base> -- HUMAN.md` (base SHA from the evidence file) → additions only, all inside the new section (2 insertions, 0 deletions; evidence/04-automation-align.md)
+- [x] `test -s specs/human-blockers-doc/evidence/04-automation-align.md` → base SHA + diff summary recorded
