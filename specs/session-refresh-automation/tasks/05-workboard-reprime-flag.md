@@ -1,6 +1,6 @@
 # Task 05: Live re-prime flag on the workboard
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P2
 Budget: 10 turns
@@ -36,6 +36,10 @@ also edits agent-console's cost panel and declares a cross-spec
 
 ## Acceptance
 
-- [ ] `bash agent-console/scripts/check.sh` → green, including the three new renderer cases
-- [ ] `grep -c 'reprime' agent-console/agent-console.py` → ≥ 1 (flag wired into the needs-attention path)
-- [ ] Renderer test asserts the mtime appears in the flag line (staleness visible)
+- [x] `bash agent-console/scripts/check.sh` → green, including the three new renderer cases — verifier: 154 tests green, tests/test_reprime_flag.py covers over-budget/under-budget/absent-from-summary (evidence/05-workboard-reprime-flag.md)
+- [x] `grep -c 'reprime' agent-console/agent-console.py` → ≥ 1 (flag wired into the needs-attention path) — verifier: grep → 12
+- [x] Renderer test asserts the mtime appears in the flag line (staleness visible) — verifier: test asserts `ac._dt(MTIME)` in the flag HTML (evidence/05-workboard-reprime-flag.md)
+
+## Decisions
+
+- Live-session source: `_reprime_flags` scans active sessions from `b["repos"][*]["sessions"]` only. Orphan sessions (cwd unresolved) lose their id in `_adapt_board`, so they are not joined against the summary. Reversible: to include orphans, carry their id through `_adapt_board`'s orphan mapping and scan `b["orphans"]` too.
