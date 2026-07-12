@@ -1,29 +1,11 @@
 # Task 03: Refresh trigger hook
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 12 turns
 Spec: ../SPEC.md (requirement R2)
 Touch: hooks/session-refresh/
-
-<!-- PLAN (build, delete at close-out)
-Files under hooks/session-refresh/:
-- refresh-check.sh — the hook. Reads .session_id from stdin JSON (jq);
-  resolves agentprof (AGENTPROF_BIN override, else `command -v agentprof`) →
-  exit 0 silent if absent; runs `agentprof claude --since <N days> --summary
-  <tmp> -o /dev/null` (silent exit 0 on any error); jq-extracts
-  .sessions[$sid].reprime_count and .p90_ctx (// 0); prints /handoff refresh
-  directive iff reprime_count>=3 OR p90_ctx>=250000; else empty. Budgets +
-  since-window tunable via env.
-- test.sh — RED first. Cases: over(reprime arm)→directive; over(ctx arm)→
-  directive; under→empty exit0; agentprof absent→empty exit0; session absent
-  from summary→empty. Uses fixtures/ + a fake agentprof double writing a
-  fixture to the --summary path.
-- fixtures/*.json — synthetic summaries (over-reprime, over-ctx, under).
-- README.md — settings.json UserPromptSubmit wiring (user-run step).
-Order: test.sh+fixtures+fake (fail) → refresh-check.sh (green) → README.
--->
 
 ## Goal
 
@@ -60,7 +42,7 @@ doctrine landed in task 01.
 
 ## Acceptance
 
-- [ ] `bash hooks/session-refresh/test.sh` (or the pytest equivalent) → all three cases pass
-- [ ] `grep -c '/handoff' hooks/session-refresh/*.sh` (or `.py`) → ≥ 1 (directive names the skill)
-- [ ] `grep -ci 'settings.json' hooks/session-refresh/README.md` → ≥ 1 (wiring documented)
-- [ ] Directive text appears ONLY on the over-budget path — under-budget and no-binary runs produce zero bytes on stdout (asserted by the tests)
+- [x] `bash hooks/session-refresh/test.sh` (or the pytest equivalent) → all three cases pass — verifier: 10/10 passed, exit 0 (evidence/03-refresh-trigger-hook.md)
+- [x] `grep -c '/handoff' hooks/session-refresh/*.sh` (or `.py`) → ≥ 1 (directive names the skill) — verifier: refresh-check.sh:2
+- [x] `grep -ci 'settings.json' hooks/session-refresh/README.md` → ≥ 1 (wiring documented) — verifier: 2
+- [x] Directive text appears ONLY on the over-budget path — under-budget and no-binary runs produce zero bytes on stdout (asserted by the tests) — verifier: under/absent/session-absent/error cases assert empty stdout; manual double-check under.json→0 bytes, over→371 bytes with /handoff

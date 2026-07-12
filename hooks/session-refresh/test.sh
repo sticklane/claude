@@ -58,6 +58,7 @@ check "under-budget exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
 run_with_fake under.json ghost-session
 check "session absent from summary produces empty stdout" \
   "$([ -z "$OUT" ] && echo 0 || echo 1)"
+check "session absent from summary exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
 
 # 5. agentprof binary absent from PATH → empty stdout, exit 0.
 OUT="$(stdin_for test-session | env -u AGENTPROF_BIN PATH=/usr/bin:/bin \
