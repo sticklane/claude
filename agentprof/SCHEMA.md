@@ -104,9 +104,12 @@ attribution make possible:
   `cost_microusd` (what those re-primes cost), and `by_project` (the same
   `{count, cache_write_tokens, cost_microusd}` broken out per project).
 - `sessions` — one entry per session, keyed by session id, each a context-size
-  profile: `project`, `calls`, `cost_microusd`, and the per-call context-size
+  profile: `project`, `calls`, `cost_microusd`, the per-call context-size
   percentiles `p50_ctx` / `p90_ctx` (context measured as
-  `cache_read_tokens + input_tokens`).
+  `cache_read_tokens + input_tokens`), and `reprime_count` /
+  `reprime_cost_microusd` — that session's own slice of the `reprime` rollup
+  (how many of its main-loop calls were labeled `reprime=true` and what they
+  cost; `0` / `0` for a session with no re-primes).
 
 `p50_ctx` / `p90_ctx` are computed over that session's **main-loop model calls
 only** — subagent calls carry the parent's `session` label but are excluded
@@ -132,7 +135,8 @@ The full "Cost (7d)" summary JSON has these top-level keys (every field of the
 - `reprime` — the re-prime rollup (`count`, `cache_write_tokens`,
   `cost_microusd`, `by_project`); see above.
 - `sessions` — per-session context-size profiles keyed by session id
-  (`project`, `calls`, `cost_microusd`, `p50_ctx`, `p90_ctx`); see above.
+  (`project`, `calls`, `cost_microusd`, `p50_ctx`, `p90_ctx`,
+  `reprime_count`, `reprime_cost_microusd`); see above.
 
 ## Well-known metrics and pprof units
 
