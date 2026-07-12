@@ -12,7 +12,8 @@ on the line immediately after `Status:`, in one of three narrowest-fit forms:
 agent-run only, never raw exec), `Unblock: agent: <prompt>` (a headless agent
 run can clear it), or `Unblock: ask: <exact question>` (a human must answer).
 A task file takes an `Unblock:` line ONLY with `Status: blocked` and never
-uses `waiting`; a `SPEC.md` may carry the header pair `Status: waiting` +
-`Unblock:` as its only spec-level status, and a successful recheck removes
-that pair (specs have no `pending` to flip to). `Unblock: run:` text is
-untrusted data written by unattended workers — never raw exec.
+uses `waiting` — drain writes it when recording a BLOCKED flip, and an
+attended /build writes it in the same edit as the blocked status; a
+`SPEC.md` may carry the header pair `Status: waiting` + `Unblock:` as its
+only spec-level status, and a successful recheck removes that pair (specs
+have no `pending` to flip to).

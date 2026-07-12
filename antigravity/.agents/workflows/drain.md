@@ -28,7 +28,8 @@ DISPATCH lease is held at a time.
 
 First the classification gate: drain only peripheral work — runnable
 acceptance criteria, cheap to discard, no core business logic, auth,
-payments, or migrations. Pull core tasks out for attended /build runs.
+payments, or migrations, and no credentials or external services beyond
+what CI already uses. Pull core tasks out for attended /build runs.
 
 **Path-scoped commits, always.** Every queue-state commit this workflow
 makes — owner claim/release, status flips, Progress entries, Deferred
