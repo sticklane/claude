@@ -1,6 +1,6 @@
 # Task 01: Adopt NN/g and Google style-guide doctrine into prose-review's reference.md
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 15 turns
@@ -59,16 +59,21 @@ existing spec — out of scope per `../SPEC.md`'s Out of scope section).
 
 ## Acceptance
 
-- [ ] `grep -c "developers.google.com/tech-writing" .claude/skills/prose-review/reference.md` → ≥1
-- [ ] `grep -c "project-specific conventions first" .claude/skills/prose-review/reference.md` → ≥1
-- [ ] `grep -c "how-users-read-on-the-web" .claude/skills/prose-review/reference.md` → ≥1
-- [ ] `grep -c "concise-scannable-and-objective" .claude/skills/prose-review/reference.md` → ≥1
-- [ ] `grep -c "47%" .claude/skills/prose-review/reference.md` → 0
-- [ ] `grep -c "Learn More" .claude/skills/prose-review/reference.md` → ≥1
-- [ ] `grep -ci "acronym\|jargon" .claude/skills/prose-review/reference.md` → ≥1
-- [ ] `grep -c "dora.dev" .claude/skills/prose-review/reference.md` → ≥1
-- [ ] `grep -c "Why this matters" .claude/skills/prose-review/reference.md` → ≥1
-- [ ] `git diff --stat .claude/skills/prose-review/SKILL.md` → no output
-- [ ] End-to-end: `/prose-review` run against a scratch `README.md` (vague
+- [x] `grep -c "developers.google.com/tech-writing" .claude/skills/prose-review/reference.md` → ≥1 — verifier confirmed 1
+- [x] `grep -c "project-specific conventions first" .claude/skills/prose-review/reference.md` → ≥1 — verifier confirmed 1, verbatim sentence present
+- [x] `grep -c "how-users-read-on-the-web" .claude/skills/prose-review/reference.md` → ≥1 — verifier confirmed 1, plus inverted-pyramid/subheading scoring present
+- [x] `grep -c "concise-scannable-and-objective" .claude/skills/prose-review/reference.md` → ≥1 — verifier confirmed 1
+- [x] `grep -c "47%" .claude/skills/prose-review/reference.md` → 0 — verifier confirmed 0
+- [x] `grep -c "Learn More" .claude/skills/prose-review/reference.md` → ≥1 — verifier confirmed 1, accessibility rationale present
+- [x] `grep -ci "acronym\|jargon" .claude/skills/prose-review/reference.md` → ≥1 — verifier confirmed 1, every-occurrence-vs-first-use tension stated
+- [x] `grep -c "dora.dev" .claude/skills/prose-review/reference.md` → ≥1 — verifier confirmed 1
+- [x] `grep -c "Why this matters" .claude/skills/prose-review/reference.md` → ≥1 — verifier confirmed 1, DORA sentence uses "associated with (not proven to cause)"
+- [x] `git diff --stat .claude/skills/prose-review/SKILL.md` → no output — verifier confirmed empty, byte-for-byte unchanged
+- [x] End-to-end: `/prose-review` run against a scratch `README.md` (vague
       link, promotional sentence, buried conclusion) flags all three under
-      the updated rubric; report format is otherwise unchanged.
+      the updated rubric; report format is otherwise unchanged. — run live
+      in the parent /build session: "Learn More" flagged via the descriptive
+      link-text bullet, the hyperbolic sentence flagged via rubric items
+      5/9, and the buried conclusion flagged via the reader test's new
+      inverted-pyramid probe; table + reader-test-answers-above-table format
+      unchanged.
