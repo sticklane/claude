@@ -2,6 +2,7 @@
 
 Status: open
 Priority: P1
+Breakdown-ready: true
 
 ## Problem
 
@@ -139,3 +140,5 @@ Cross-spec contention: specs/spec-completion-review also edits drain
 SKILL.md/reference.md — the two specs must NOT drain concurrently; THIS
 spec sequences first (its counterpart carries the mirror-image note).
 Both closing tasks bump plugin.json relative to their own base.
+
+- Group: 01, 02

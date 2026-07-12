@@ -2,6 +2,7 @@
 
 Status: open
 Priority: P1
+Breakdown-ready: true
 
 ## Problem
 
@@ -66,7 +67,8 @@ interview).
 
 System-wide application comes free: the skill ships in the `agentic`
 plugin, which every session on this machine loads; the Vale config is
-user-level (`~/.vale.ini`). No per-repo setup beyond the optional gate.
+user-level (`~/.vale.ini`). No per-repo setup is required beyond the
+optional gate (a repo may add a local vocabulary — see Solution).
 
 ## Solution
 
@@ -159,8 +161,9 @@ run the review, apply fixes to that repo's orientation docs, commit there.
   pasted text.
 - **R7 (Vale install)**: `bin/install-vale` idempotently: installs Vale
   via Homebrew when absent, writes `~/.vale.ini` from the repo's tracked
-  template (StylesPath in this repo's `vale/`, `Packages = Google`,
-  vocabulary `House`), and runs `vale sync`. The repo tracks
+  template (StylesPath in this repo's `vale/`, written as the ABSOLUTE
+  resolved path — the template is a substitution target, per Solution;
+  `Packages = Google`, vocabulary `House`), and runs `vale sync`. The repo tracks
   `vale/.vale.ini.template` and
   `vale/styles/config/vocabularies/House/accept.txt` (toolkit jargon);
   synced package payload is gitignored. Re-running the installer is safe
@@ -264,7 +267,12 @@ in Solution: user-level `~/.vale.ini` pointing at this repo's tracked
 
 ## Parallelization
 
-(/breakdown owns the task map; likely shape: skill+doctrine → vale
-install/config → gate/self-application → retrofit fan-out (one task per
-repo, cross-repo Touch per docs/memory/drain-dispatch-lessons.md) →
-closing mirror/bump gate.)
+Task map: 01 skill+doctrine, 02 vale install (disjoint Touch, no shared
+undecided design); 03 gate stanza + self-application (after 01, 02);
+04 closing mirror/bump + zero-target entries (after 01, 03); 05–13
+retrofit fan-out, one per std repo with docs (after 03; pairwise-disjoint
+Touch — each names its own repo + its own evidence file). Format grammar
+per specs/drain-rolling-window/SPEC.md's Parallelization section.
+
+- Group: 01, 02
+- Group: 05, 06, 07, 08, 09, 10, 11, 12, 13

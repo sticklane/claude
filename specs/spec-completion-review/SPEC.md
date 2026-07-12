@@ -2,6 +2,7 @@
 
 Status: open
 Priority: P1
+Breakdown-ready: true
 
 ## Problem
 
@@ -26,9 +27,9 @@ nothing-left-to-dispatch with at least one DONE task (the lease-release
 moment), drain computes the spec's cumulative product diff (merge-base of
 the spec's first flip commit → current main, path-scoped to the union of
 its tasks' Touch), skips it under the same NON-product/25-line gate build
-uses, and otherwise dispatches ONE review-fix worker: run `/code-review`
-equivalent review at high-confidence effort over that diff, apply ONLY
-high-confidence correctness/behavior fixes inside the union Touch,
+uses, and otherwise dispatches ONE review-fix worker: run `/code-review`-equivalent
+review at `low` effort over that diff, keeping only high-confidence
+correctness/behavior findings, apply those fixes inside the union Touch,
 re-run the spec's acceptance-bearing gates, and return a verdict. Fixes
 merge through the normal serial-merge machinery (a `task/`-style branch,
 whitelist + Touch checks). Findings judged uncertain or out-of-scope
@@ -89,9 +90,9 @@ Attended /build of a bare SPEC.md gets the same step at its close-out
   SKILL.md's close-out citing this spec's trigger; no second review of
   task-file /build runs (their per-task pass already covers them).
 - R5 **Wake economics respected.** The hub never reads the cumulative
-  diff inline: it computes `git diff --stat` for the skip gate and passes
-  the ref range to the worker. The review-fix worker's verdict is capped
-  like every worker verdict.
+  diff inline: it computes `git diff --numstat` for the skip gate and
+  passes the ref range to the worker. The review-fix worker's verdict is
+  capped like every worker verdict.
 - R6 **Mirror + plugin.** Content-equivalent addition to the antigravity
   drain workflow (and codex drain wrapper's worker-dispatch area if its
   summary embeds the lease-release sequence — check). Plugin version
@@ -122,7 +123,7 @@ Attended /build of a bare SPEC.md gets the same step at its close-out
   format present; uncertain findings route to draft stubs (R3)
 - [ ] `grep -qi 'spec-completion review' .claude/skills/build/SKILL.md`
   (absent today) — one close-out sentence for bare-SPEC builds (R4)
-- [ ] MANUAL: hub-side handling is --stat + ref range only (R5)
+- [ ] MANUAL: hub-side handling is --numstat + ref range only (R5)
 - [ ] `claude plugin validate .` passes; `bash evals/lint-ultra-gate.sh`
   green; plugin version line modified in the closing task's own commit;
   `grep -qi 'spec-completion review' antigravity/.agents/workflows/drain.md`
@@ -141,3 +142,5 @@ specs/drain-forward-progress also edits drain SKILL.md/reference.md —
 the two specs must not drain concurrently; sequence forward-progress
 first or serialize via Touch overlap, and their closing tasks both bump
 plugin.json relative to base.)
+
+- Group: 01, 02
