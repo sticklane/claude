@@ -7,3 +7,7 @@ __pycache__/
 # SQLite WAL sidecars (created transiently by any read of a WAL-mode .db fixture)
 *.db-wal
 *.db-shm
+
+# Vale synced package payload (pulled by `vale sync`, never tracked). The config
+# template and the House vocabulary under vale/styles/config/ ARE tracked.
+vale/styles/Google/
