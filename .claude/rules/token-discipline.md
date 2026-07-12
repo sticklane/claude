@@ -187,6 +187,33 @@ of letting them default silently:
 - Don't re-run searches or re-read files already established this session;
   don't paste large command output back into the conversation — summarize it.
 
+## Session refresh
+
+A long-lived autonomous session that idles past the prompt-cache TTL between
+wakes rewrites its whole accumulated context at cache-write rates before
+doing any work — cache re-priming was 26% of one overnight window's cost
+(specs/session-refresh-automation, which pins the 30-day numbers below).
+Three points govern the shape:
+
+- **A waiting main loop is a scheduler, not a thinker.** A main loop that
+  expects to idle past the cache TTL — a watch-then-act poller, a self-paced
+  wakeup loop — runs cheap-tier (or launchd), dispatching each event's
+  judgment work to an awaited fresh subagent; never a frontier-tier main loop
+  that re-warms a fat context just to poll.
+- **Every autonomous session carries a wake budget** — refresh-over-carry.
+  When observed re-primes or estimated context-rewrite cost crosses the
+  budget, the session refreshes (writes a `/handoff` artifact and ends, or
+  batons where a sanctioned baton exists) instead of sleeping again.
+- **Budget defaults: 3 re-primes or a 250k-token context, tunable.** Pinned
+  from the 30-day profile (specs/session-refresh-automation): 3 is the
+  re-prime median deliberately — the median is the behavior being changed —
+  and 250k sits between the context p50 and p90 so the flag marks the heavy
+  tail, not normal sessions.
+
+The drain-specific verdict-count baton stays owned by specs/drain-wake-cost
+(cited, not restated); this doctrine covers the freehand and watch-then-act
+sessions drain's border doesn't reach.
+
 ## Cache economics
 
 - Prompts are cached static-first: stable content (rules, skill text,
