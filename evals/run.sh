@@ -58,9 +58,14 @@ MAX_TURNS="${MAX_TURNS:-40}"
 # Isolate git from the user's global config (signing, hooks, templates)
 # for every setup.sh and claude invocation: null the global config and
 # inject commit.gpgsign=false via GIT_CONFIG_COUNT so git commands run
-# inside the claude session never try to sign.
-export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
-export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+# inside the claude session never try to sign. Live-service evalsets set
+# EVAL_GIT_ISOLATION=0 to keep the user's real config — their sessions
+# and teardowns push to real remotes, which needs the credential helper
+# the isolation would strip.
+if [ "${EVAL_GIT_ISOLATION:-1}" != "0" ]; then
+  export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+fi
 
 filter="${1:-}"
 if [ -n "$filter" ] && [ ! -d "$SKILLS_ROOT/$filter" ]; then
