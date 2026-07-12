@@ -2620,5 +2620,108 @@ class TestFindReposDetectsJj(unittest.TestCase):
             self.assertIn(repo.resolve(), found)
 
 
+HUMAN_MD_FIXTURE = (
+    "# Human blockers\n"
+    "\n"
+    "Hand-written narrative an agent must never touch.\n"
+    "\n"
+    "## Agent-filed blockers\n"
+    "\n"
+    "- [ ] 2026-07-12 · specs/foo/tasks/02.md · ask — "
+    "Which auth provider should we use?\n"
+    "- [ ] 2026-07-11 · scripts/deploy.sh · run — "
+    "Run the prod migration manually\n"
+    "- [x] 2026-07-10 · specs/bar/SPEC.md · decide — "
+    "Resolved, awaiting sweep\n"
+)
+
+
+class TestScanHumanBlockers(unittest.TestCase):
+    """R4: HUMAN.md `## Agent-filed blockers` scanner — open entries only."""
+
+    def test_two_open_one_checked_yields_two_open_blockers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "HUMAN.md").write_text(HUMAN_MD_FIXTURE, encoding="utf-8")
+            blockers = workboard.scan_human_blockers(Path(tmp))
+            self.assertEqual(len(blockers), 2)
+            types = [b["type"] for b in blockers]
+            self.assertIn("ask", types)
+            self.assertIn("run", types)
+            self.assertNotIn("decide", types)  # the checked entry is skipped
+
+    def test_fields_are_parsed_from_the_grammar(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "HUMAN.md").write_text(HUMAN_MD_FIXTURE, encoding="utf-8")
+            blockers = workboard.scan_human_blockers(Path(tmp))
+            ask = next(b for b in blockers if b["type"] == "ask")
+            self.assertEqual(ask["date"], "2026-07-12")
+            self.assertEqual(ask["source"], "specs/foo/tasks/02.md")
+            self.assertEqual(ask["ask"], "Which auth provider should we use?")
+
+    def test_no_human_md_returns_empty_no_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(workboard.scan_human_blockers(Path(tmp)), [])
+
+    def test_human_md_without_section_returns_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "HUMAN.md").write_text(
+                "# Human blockers\n\nJust narrative, no machine section.\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(workboard.scan_human_blockers(Path(tmp)), [])
+
+
+class TestHumanBlockersInbox(unittest.TestCase):
+    """R4: parsed blockers surface as inbox rows above spec/task rows."""
+
+    def _human_rows(self, inbox):
+        return [i for i in inbox if "human blocker" in i["what"].lower()]
+
+    def test_fixture_pair_two_open_one_checked_gives_two_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "HUMAN.md").write_text(HUMAN_MD_FIXTURE, encoding="utf-8")
+            repo = make_repo_record(path=tmp)
+            repo["human_blockers"] = workboard.scan_human_blockers(Path(tmp))
+            inbox = workboard.attention_items([repo], [], [], stale_days=7)
+            rows = self._human_rows(inbox)
+            self.assertEqual(len(rows), 2)
+            self.assertTrue(all(r["severity"] == "serious" for r in rows))
+            self.assertTrue(any("auth provider" in r["what"] for r in rows))
+
+    def test_repo_without_human_md_gives_no_rows_no_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_repo_record(path=tmp)
+            repo["human_blockers"] = workboard.scan_human_blockers(Path(tmp))
+            inbox = workboard.attention_items([repo], [], [], stale_days=7)
+            self.assertEqual(self._human_rows(inbox), [])
+
+    def test_human_blockers_rank_above_spec_task_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "HUMAN.md").write_text(HUMAN_MD_FIXTURE, encoding="utf-8")
+            repo = make_repo_record(path=tmp)
+            repo["human_blockers"] = workboard.scan_human_blockers(Path(tmp))
+            repo["specs"] = [
+                {
+                    "slug": "demo",
+                    "status": None,
+                    "tasks_total": 2,
+                    "tasks_done": 0,
+                    "tasks_blocked": ["01-x"],
+                    "tasks": [],
+                    "last_touched": 10.0,
+                }
+            ]
+            inbox = workboard.attention_items([repo], [], [], stale_days=7)
+            first_human = next(
+                idx
+                for idx, i in enumerate(inbox)
+                if "human blocker" in i["what"].lower()
+            )
+            first_spec = next(
+                idx for idx, i in enumerate(inbox) if i["what"].startswith("Spec ")
+            )
+            self.assertLess(first_human, first_spec)
+
+
 if __name__ == "__main__":
     unittest.main()
