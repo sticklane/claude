@@ -37,3 +37,7 @@ assertions may need updating if the flag changes output shape
 - [x] `cd agentprof && go test ./...` → pass (incl. root cmd tests) — verifier PASS; all 15 packages ok incl. 2 new cmd tests
 - [x] `grep -qi 'keep-pending' agentprof/README.md` → hit — verifier PASS; hits in Commands table + Pending-tool-calls note
 - [x] `bash agentprof/scripts/check.sh` → green — verifier PASS; format-check ok / lint ok / tests ok
+
+## Decisions
+
+- 2026-07-12 — stderr wording is mode-aware ("consolidated into tool:(pending)" default / "kept as tool:(pending)" with the flag) rather than a single fixed "N unmatched tool call(s) consolidated" phrase, since "consolidated" is inaccurate when --keep-pending keeps per-call samples; both wordings contain "unmatched tool call(s)". Reverse by editing the `disposition` strings in agentprof/cmd_claude.go to a single fixed phrase.
