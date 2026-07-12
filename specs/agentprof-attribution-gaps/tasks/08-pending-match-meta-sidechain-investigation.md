@@ -53,3 +53,11 @@ the manual-pending escape, docs/memory/unattended-worker-tool-limits.md).
   needs real ~/.claude data absent from the worktree).
 - [x] `cd agentprof && go test ./...` → pass; `bash agentprof/scripts/check.sh` → green
   — PASS: all 14 packages `ok`; check.sh → format-check ok, lint ok, tests ok.
+
+## Decisions
+
+- 2026-07-12 — used the package's existing in-test `writeMain` transcript idiom (hermetic temp-dir) rather than a static file under `agentprof/testdata/`; both permitted by Touch and this matches every sibling pending/duration test. Reverse: move the fixture into `agentprof/testdata/` and load by path.
+
+## Progress
+
+- 2026-07-12 — C2 real-window measurement (`go run . claude --claude-dir "$HOME/.claude"` before/after pending counts) is MANUAL-PENDING: needs real ~/.claude transcript data absent from the isolated worktree (unattended-worker-tool-limits). A human/attended run can capture the before/after volume and append it to evidence/08-pending-match.md.
