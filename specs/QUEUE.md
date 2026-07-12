@@ -1,6 +1,6 @@
 # Combined queue — wave plan (canonical, single copy)
 
-**Queue 6 (planned 2026-07-12)** — the three overnight-review specs:
+**Queue 6 (drained 2026-07-12)** — the three overnight-review specs:
 agentprof-scrub-hex-tokens (shx), session-refresh-automation (sra),
 untyped-agent-fanout (uaf). 11 tasks, one repo-wide drain. Contention
 points and their machine-expressed resolution: token-discipline.md
@@ -19,6 +19,19 @@ never co-run (sra 04 is the only bump in its group; uaf 03 in its; uaf
 | 5 | sra 03 |
 | 6 | uaf 02 |
 | 7 | uaf 03; uaf 04 |
+
+All 11 tasks `Status: done`, one repo-wide sequential drain (W=1), each
+merged + pushed individually with gates green (`specs/status.sh`,
+`claude plugin validate .`, plus each touched sub-repo's own
+`scripts/check.sh`). Both specs' spec-completion reviews landed 0 findings
+(evidence at `specs/agentprof-scrub-hex-tokens/evidence/spec-review.md` and
+`specs/session-refresh-automation/evidence/spec-review.md`); untyped-agent-fanout's
+review also 0 findings, scoped to exclude the interleaved
+session-refresh-automation content it shares files with
+(`specs/untyped-agent-fanout/evidence/spec-review.md`). Two low-value
+`Status: draft` stubs were discovered and scaffolded under
+session-refresh-automation (06 hook-test-path-robustness, 07
+costsummary-comment-accuracy) — not yet triaged.
 
 **Queue 5 (drained 2026-07-05)** — shared-viz-renderer (4 tasks: shared
 `_shared/viz.py` renderer + golden tests; /workboard wired to
