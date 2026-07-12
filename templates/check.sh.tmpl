@@ -17,5 +17,15 @@ run_stage() { # run_stage <name> <command...>
   printf 'check: %s ok\n' "$desc"
 }
 
+# --- Vale prose lint (opt-in) --------------------------------------------
+# Prose linting for ORIENTATION DOCS ONLY — README.md, AGENTS.md, docs/*.md.
+# Never point it at task files, specs/, or skill bodies (machine-parsed
+# prose, out of scope). Requires `vale` on PATH and the House vocab tuned
+# (bin/install-vale writes ~/.vale.ini; tune vocabularies/House/accept.txt).
+# Uncomment to enforce it as a check stage:
+#
+#   run_stage "vale prose lint" vale README.md AGENTS.md docs
+# -------------------------------------------------------------------------
+
 @STAGES@
 exit 0
