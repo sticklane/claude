@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns
@@ -90,12 +90,12 @@ on either MCP server is introduced.
 
 ## Acceptance
 
-- [ ] `test -f docs/guides/large-codebase-context.md` → file exists.
-- [ ] `grep -Fq 'anthropic.com/engineering/effective-context-engineering-for-ai-agents' docs/guides/large-codebase-context.md && grep -Fq 'aider.chat/2023/10/22/repomap.html' docs/guides/large-codebase-context.md && grep -Fq 'github.com/zilliztech/claude-context' docs/guides/large-codebase-context.md && grep -Fq 'github.com/trondhindenes/code-index-mcp' docs/guides/large-codebase-context.md && grep -Fq 'github.com/modelcontextprotocol/servers' docs/guides/large-codebase-context.md` → all five cited URLs present (exit 0).
-- [ ] `grep -cE '^\s*```mermaid' docs/guides/large-codebase-context.md` → ≥ 1 (at least one mermaid fence).
-- [ ] `grep -Fq 'large-codebase-context' .claude/rules/token-discipline.md` → the new bullet cites the guide (exit 0).
-- [ ] `git diff --quiet HEAD -- .claude/agents/scout.md` → exit 0 (scout.md unchanged this task, R4).
-- [ ] `bash tests/test_doc_links.sh` → exits 0 (passes with the new guide).
+- [x] `test -f docs/guides/large-codebase-context.md` → file exists. Verifier: PASS (file present).
+- [x] `grep -Fq 'anthropic.com/engineering/effective-context-engineering-for-ai-agents' docs/guides/large-codebase-context.md && grep -Fq 'aider.chat/2023/10/22/repomap.html' docs/guides/large-codebase-context.md && grep -Fq 'github.com/zilliztech/claude-context' docs/guides/large-codebase-context.md && grep -Fq 'github.com/trondhindenes/code-index-mcp' docs/guides/large-codebase-context.md && grep -Fq 'github.com/modelcontextprotocol/servers' docs/guides/large-codebase-context.md` → all five cited URLs present (exit 0). Verifier: PASS (exit 0).
+- [x] `grep -cE '^\s*```mermaid' docs/guides/large-codebase-context.md` → ≥ 1 (at least one mermaid fence). Verifier: PASS (= 1).
+- [x] `grep -Fq 'large-codebase-context' .claude/rules/token-discipline.md` → the new bullet cites the guide (exit 0). Verifier: PASS (bullet names orchestrating session, cites guide, doesn't restate).
+- [x] `git diff --quiet HEAD -- .claude/agents/scout.md` → exit 0 (scout.md unchanged this task, R4). Verifier: PASS (tools: byte-identical to base c00f5bb).
+- [x] `bash tests/test_doc_links.sh` → exits 0 (passes with the new guide). Verifier: PASS (pass: 16 fail: 0). Evidence: ../evidence/01-write-guide-and-rule-bullet.md.
 - [ ] Manual-pending (human, post-merge, AC6): a reader of the new guide can
       decide whether their project warrants `claude-context`,
       `code-index-mcp`, or neither, and how to install the chosen one —
