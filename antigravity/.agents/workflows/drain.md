@@ -439,6 +439,28 @@ line blocks dispatch, and neither prints on baton generations.
    `deferred`, `failed`) → log the verdict and discard it, the rescue
    branch being the durable artifact.
 
+   **Environment kill.** Distinct from a per-worker sweep race: an
+   environment kill is the whole runtime dying under drain, so every live
+   run is affected at once, not just one worker. Detect it from either the
+   harness's termination-cause text for a dispatched worker, or an API
+   error drain's own session hits directly — but only when that text names
+   an **account-wide** condition: a usage or weekly limit reached, an
+   auth/billing failure, or a persistent 429/5xx that survived the
+   harness's own retries. One agent erroring while its siblings keep
+   running is an ordinary per-worker failure, not this. An environment kill
+   never counts toward the slot machine or the tournament threshold (like a
+   sweep race); unlike a stale lock, the grace window does not apply —
+   drain does not wait it out, because the death signal is definitive. On
+   the signal, drain sweeps EVERY currently-live run it owns (the
+   snapshot-before-force-remove rescue procedure above), writes each swept
+   task's `## Progress` entry stating "environment kill, does not count as
+   an attempt", flips each to `pending`, commits and pushes the resets, and
+   then **halts**: no further dispatch, no slot-machine relaunch, no baton
+   self-relaunch. When the underlying error carries a reset time, the halt
+   report names it. Foreign-owned tasks named by a committed partition or
+   owner record are left alone; absent one, every live run is drain's own
+   and is swept.
+
    Record decisions: a worker's verdict report may carry a fixed
    `Decisions:` section (the worker-prompt ambiguity clause above now lets
    the worker take a **reversible default** itself instead of deferring, and

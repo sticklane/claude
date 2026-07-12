@@ -58,8 +58,12 @@ recommend an attended `$build` instead — do not launch.
   ("<criteria> pass, or stop after ~20 turns").
 - Fire-and-forget on this machine → a background agent in a worktree,
   prompted with the `$build` procedure.
-- CI / scripts / scheduled → a headless run with an explicit tool
-  allowlist, a max-turns cap, and no interactive prompts.
+- CI / scripts / scheduled → a headless `codex exec` run (see
+  `runtimes/codex.md`'s `## Headless` section for the exact template):
+  `--sandbox` is the closest analogue to a tool allowlist (coarse
+  filesystem-write/network posture, not a tool-by-tool list — there is no
+  direct allowlist flag), and there is no max-turns flag — Codex has its
+  own internal step budget instead. No interactive prompts either way.
 - Exploratory low-confidence bet → slot machine: commit state, timebox one
   run, then accept the result or DISCARD and restart fresh with a better
   task file. Never debug a failed run in place.

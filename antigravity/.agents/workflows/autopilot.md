@@ -24,7 +24,11 @@ folded into AGENTS.md, cited not restated).
      "discard the branch", never "untangle the tree".
    - Runnable acceptance criteria in the task file (no criteria → no
      autonomy).
-   - Gates installed (/gate hooks) so edits are checked deterministically.
+   - Gates installed (/gate hooks) so edits are checked deterministically,
+     OR, when gates aren't installed, a **bounded goal** set instead:
+     staying at the keyboard in this conversation (step 3's "This
+     conversation" launch shape) with an explicit stop condition stated up
+     front — "<criteria> pass, or stop after ~20 turns".
    - Terminal Execution Policy: deny list covers pushing to the remote
      (e.g., under git: `git push`), deploys, and
      destructive commands (Settings → Antigravity → Terminal Execution
