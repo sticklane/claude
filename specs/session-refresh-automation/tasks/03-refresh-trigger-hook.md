@@ -7,6 +7,24 @@ Budget: 12 turns
 Spec: ../SPEC.md (requirement R2)
 Touch: hooks/session-refresh/
 
+<!-- PLAN (build, delete at close-out)
+Files under hooks/session-refresh/:
+- refresh-check.sh — the hook. Reads .session_id from stdin JSON (jq);
+  resolves agentprof (AGENTPROF_BIN override, else `command -v agentprof`) →
+  exit 0 silent if absent; runs `agentprof claude --since <N days> --summary
+  <tmp> -o /dev/null` (silent exit 0 on any error); jq-extracts
+  .sessions[$sid].reprime_count and .p90_ctx (// 0); prints /handoff refresh
+  directive iff reprime_count>=3 OR p90_ctx>=250000; else empty. Budgets +
+  since-window tunable via env.
+- test.sh — RED first. Cases: over(reprime arm)→directive; over(ctx arm)→
+  directive; under→empty exit0; agentprof absent→empty exit0; session absent
+  from summary→empty. Uses fixtures/ + a fake agentprof double writing a
+  fixture to the --summary path.
+- fixtures/*.json — synthetic summaries (over-reprime, over-ctx, under).
+- README.md — settings.json UserPromptSubmit wiring (user-run step).
+Order: test.sh+fixtures+fake (fail) → refresh-check.sh (green) → README.
+-->
+
 ## Goal
 
 A toolkit-shipped hook script under a new `hooks/session-refresh/`
