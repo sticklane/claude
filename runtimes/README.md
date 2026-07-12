@@ -8,6 +8,8 @@ command template and orchestration surface — onto one concrete runtime:
   behavior exactly.
 - [antigravity.md](antigravity.md) — describes the `antigravity/`
   reference port.
+- [codex.md](codex.md) — describes the `codex/` reference port (OpenAI's
+  Codex CLI).
 - [gemini-cli.md](gemini-cli.md) — mapping for Google's gemini-cli.
 
 This file is the single home of the selection convention and the
@@ -24,7 +26,7 @@ runtime: <profile-name>
 ```
 
 where `<profile-name>` names a file here (`claude-code`, `antigravity`,
-`gemini-cli`). If the file is absent, the runtime is `claude-code` —
+`codex`, `gemini-cli`). If the file is absent, the runtime is `claude-code` —
 so a repo that never creates `.claude/runtime.md` gets today's behavior
 unchanged.
 
