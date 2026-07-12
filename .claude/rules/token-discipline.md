@@ -99,6 +99,27 @@ When a skill spawns agents, its prompt text must make these choices
 explicit — model/effort tier, return budget, and any loop bound — instead
 of letting them default silently:
 
+- **An untyped agent must not spawn another untyped agent without an
+  explicit model override** — nesting is where model inheritance compounds.
+  The untyped set is the exact-match catch-all enumeration
+  `agent:claude` / `agent:agentic:claude` / `agent:general-purpose` /
+  `agent:agentic:general-purpose` (specs/untyped-agent-fanout/SPEC.md R4;
+  any other `agent:*` frame — e.g. `agent:claude-code-guide`, which merely
+  shares the `agent:claude` prefix — is typed and breaks the chain). Each
+  inherits the caller's model, so stacked untyped frames compound
+  frontier-tier cost at every level — the tier ladder inverted, at depth
+  (specs/untyped-agent-fanout/SPEC.md; the 2026-07-11 $123 nested-chain
+  leak). This extends "Freehand fan-out" above from a single frame to
+  nested dispatch: give the child a typed pinned agent (scout / verifier /
+  implementation-worker) or pass it an explicit cheap-tier `model`
+  override. **Feasibility, decided 2026-07-12 — doctrine-only, no hook:** a
+  PreToolUse warn-hook on Agent calls was scoped and NOT shipped because
+  the hook input schema exposes no dispatch-depth field and no reliable
+  running-agent tier marker (`agent_type` surfaces only inside a subagent
+  and is undocumented for the main session), so a correct
+  untyped-under-untyped warn cannot be built from it; this stays a doctrine
+  line, warn-only in spirit, until the hook API exposes caller type or
+  depth.
 - **Awaited children, never detached (maintainer policy, 2026-07-09).**
   Fresh context comes from the subagent boundary — a worktree-isolated
   worker with a blank context — never from detachment. Every spawned
