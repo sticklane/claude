@@ -1054,9 +1054,16 @@ into the template's placeholders:
   grant added — the same deferred permission-surface widening the worker/agent
   grants carry).
 - `<turn cap>` (the template's `--max-turns`) → default 80, or the run's cap.
-- `<tier alias>` (the template's `--model` flag, when it carries one) → the
-  orchestrator generation runs at the session tier; leave the runtime
-  template's own model placeholder as its profile renders it.
+- `<tier alias>` (the template's `--model` flag, when it carries one) → pin it
+  explicitly to the drain-hub tier — deep-tier `opus` by default, or the lower
+  tier a repo's `.claude/runtime.md` pins ("default (`opus`) tier or below",
+  per the Wake economics section above) — **never** leave it to inherit the
+  calling session's model. An untyped successor left to inherit a frontier
+  session (`fable`) carries that frontier tier down every generation, roughly
+  doubling wake cost for no quality gain and compounding 3–5 generations deep
+  (../../../specs/untyped-agent-fanout/EVIDENCE.md Site 1). Where the runtime
+  template carries no `--model` flag, launch the hub at opus-or-below
+  explicitly, never the session frontier.
 
 These are drain-level values inserted into the runtime template's own flag
 placeholders — not new backgrounding behavior. Then wrap the substituted
