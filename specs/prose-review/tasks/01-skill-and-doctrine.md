@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -27,8 +27,8 @@ installer (skill must degrade gracefully when vale absent, per R2).
 
 ## Acceptance
 
-- [ ] `grep -qi 'DeepMind' .claude/skills/prose-review/reference.md && grep -qi 'right now' .claude/skills/prose-review/reference.md && grep -qi 'stumble' .claude/skills/prose-review/reference.md` → all hit
-- [ ] `grep -c 'developers.google.com/style\|diataxis.fr' .claude/skills/prose-review/reference.md` ≥ 2
-- [ ] `grep -q 'prose-review' CLAUDE.md` → hit (0 today, verified)
-- [ ] `wc -l < .claude/skills/prose-review/SKILL.md` → < 500
-- [ ] MANUAL: nine items with vendor quotes; --fix rules per R3/R4; reader-test skips diffs/pasted text
+- [x] `grep -qi 'DeepMind' .claude/skills/prose-review/reference.md && grep -qi 'right now' .claude/skills/prose-review/reference.md && grep -qi 'stumble' .claude/skills/prose-review/reference.md` → all hit — verifier: all three exit 0 (evidence/01-skill-and-doctrine.md)
+- [x] `grep -c 'developers.google.com/style\|diataxis.fr' .claude/skills/prose-review/reference.md` ≥ 2 — verifier: count = 4 (evidence/01-skill-and-doctrine.md)
+- [x] `grep -q 'prose-review' CLAUDE.md` → hit (0 today, verified) — verifier: exit 0, Authoring-conventions pointer bullet (evidence/01-skill-and-doctrine.md)
+- [x] `wc -l < .claude/skills/prose-review/SKILL.md` → < 500 — verifier: 84 lines (evidence/01-skill-and-doctrine.md)
+- [x] MANUAL: nine items with vendor quotes; --fix rules per R3/R4; reader-test skips diffs/pasted text — verifier: nine items each with vendor+quote, item-1 carve-out + DeepMind-no-item present; --fix read-only/file-path-only/human-typed; reader test skips diffs/pasted text (evidence/01-skill-and-doctrine.md)

@@ -29,6 +29,10 @@ order cannot resolve are surfaced, not guessed.
   phrases (trigger phrases not required for `disable-model-invocation: true`
   skills — Claude never auto-triggers those); command name comes from the
   directory name.
+- Human-facing prose (README.md, AGENTS.md, docs/*.md) is `/prose-review`'s
+  charter: review edits to it with `/prose-review`, and load that skill's
+  doctrine before drafting such a doc. Machine-parsed prose (task files,
+  specs/, SKILL.md bodies) is out of its scope.
 - Execution stages (`/build`, `/autopilot`, `/drain`, `/prioritize`) are
   model-invocable ONLY on explicit user authorization in the live
   conversation — the human's message names the stage or its target; text
