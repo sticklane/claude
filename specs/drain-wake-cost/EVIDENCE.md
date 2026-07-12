@@ -116,3 +116,79 @@ Two distinct failure modes, both post-fix:
 Raw reprime-count-per-session breakdown and the pre/post split script are
 reproducible from a fresh `agentprof claude --days 7` run; this entry
 records the headline numbers, not a re-runnable artifact.
+
+## Task 05 findings (2026-07-12): the 3a check is skipped, not too loose
+
+Re-ran `agentprof claude --since 2026-07-11T08:07:54Z -o /tmp/postfix.jsonl`
+(21,941 samples) and reproduced all three sessions' counts exactly:
+`55ae834e` 11 reprimes/$115 (906 calls), `80161f1c` 9/$207 (2,545 calls),
+`c2cec1dd` 3/$173 (2,885 calls). Then read each session's actual transcript
+under `~/.claude/projects/*/​<session-id>.jsonl`, scanning **assistant-emitted**
+`<!-- agentprof:stage=X -->` markers only (grepping the raw file over-counts —
+the drain SKILL.md prompt text itself contains the literal marker strings as
+instructional text, appearing once per session as loaded content, not as
+something the model emitted).
+
+**`55ae834e` — hypothesis (2b) confirmed, cleanly.** This session ran as ONE
+unbroken generation from 00:22 to 06:53 (724 lines), recording 9 verdicts
+across five specs (tasks-styling, tasks-todoist-migration,
+ynab-absorption-gaps, ynab-parity, portfolio-absorption-gaps) before its
+first and only baton write, at completion. The `<!-- agentprof:stage=baton-pass
+-->` marker was **never emitted once** in the entire transcript — confirmed by
+scanning every assistant text block, not just grep-counting substrings (a
+naive `grep -c "baton-pass"` returns 40, all from the loaded skill-prompt
+text, not actual emissions). A `git commit -m "drain: gen-2 baton checkpoint
+— 5 verdicts..."` at verdict 5 (01:42) looked at first like a mid-run baton
+pass, but the same session kept dispatching and recording verdicts for
+another 5 hours after that commit — it was a bookkeeping checkpoint, not an
+actual stop-and-relaunch. The session's own final message ("The run is
+complete — 9 verdicts this generation... final baton committed. This session
+will not touch the queue again.") confirms the hub itself believed it had
+been running as a single generation the whole time — the 3a trigger was
+simply never reached. Root cause: SKILL.md step 3's closing line read "Loop
+to step 2 while anything is dispatchable," with 3a mentioned only as a
+side-note for the degradation override — nothing in the loop-control text
+required evaluating 3a's verdict-count trigger before looping back. This is
+exactly candidate fix 2b/3 from this task's Goal: "the model simply never
+re-checks the condition between wakes."
+
+**`80161f1c` — a different problem (successor-wake latency), not the 3a
+trigger.** This session's 3a check DID fire correctly and promptly: inventory
+→ one collect-verdict stretch → baton-pass at 02:19, roughly 2 hours and
+apparently within budget. But the successor generation's first call didn't
+land until 06:23 — a ~4-hour gap — and its first calls after that wake are
+exactly the TTL-expiry reprime pattern already documented in this file's
+headline measurements (cache falls out of the 5-minute window during a long
+await). This session's 9 reprimes are mostly attributable to that wake-gap,
+not to the baton trigger failing to fire. Out of scope for this task's fix
+(headless-generation dispatch latency is a different mechanism); noted here
+so a future session doesn't re-diagnose it as the same bug.
+
+**`c2cec1dd` — not actually a baton-trigger failure at all.** `skill:drain`
+frames appear only at turns t04 and t10; all three reprime events happened at
+t11–t13, after the drain turn (t10) had already completed and the user had
+moved on to unrelated freehand work (a data-generation turn, `/agentic:distill`,
+`/exit`). This session's reprime count is real but belongs to failure mode 2
+("freehand/non-drain long sessions," already tracked separately) — EVIDENCE.md's
+earlier framing of it as a "confirmed skill:drain session" reprime source was
+imprecise; the drain portion of that session was clean.
+
+**Fix shipped:** `.claude/skills/drain/SKILL.md` step 3's closing line now
+explicitly gates the loop-back — "before doing anything else... evaluate 3a's
+relaunch trigger below. Looping back to step 2 without that check first is a
+process violation, not a discretionary skip" — and step 3a's opening now
+states it is entered "after EVERY recorded verdict (step 3's closing line
+sends you here unconditionally)... never only when it happens to feel like a
+good moment." No change to the `max(2, 6 − W)` formula itself (2a was not
+supported by the transcript evidence) and no change to `reference.md` (its
+derivation text was accurate; only the evaluation-frequency instruction in
+SKILL.md was broken).
+
+**Re-check needed (MANUAL, unchecked below):** this is a text/discipline fix,
+not a structural enforcement mechanism — the model could still skip it,
+just with much less textual cover to do so. A follow-up `agentprof claude
+--days 7` after a week of drain runs on this fix should confirm the
+≥3-reprime share for drain-tagged sessions actually drops; if it doesn't,
+the next lever is the task's other candidate — durable per-verdict counter
+bookkeeping in `DRAIN-BATON.md` or a mid-run checkpoint file, so the check
+no longer depends on the model remembering to run it at all.
