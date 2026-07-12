@@ -1,6 +1,6 @@
 # Task 06: `workboard.py` dual-harness spend (`compute_antigravity_spend` + `merge_spend`)
 
-Status: pending
+Status: in-progress
 Depends on: 05
 Priority: P2
 Budget: 16 turns
