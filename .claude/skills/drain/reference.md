@@ -598,6 +598,54 @@ a re-run can succeed. Ownership scoping: foreign-owned tasks named by any
 committed partition or owner record are left alone; absent any such record,
 every live run is drain's own and is swept.
 
+## Spec-completion review worker (SKILL.md's "Spec-completion review" dispatches this)
+
+A variant of the Worker prompt above, dispatched once per spec at the
+lease-release boundary. Same tier pin (implementation-worker), same
+`isolation: worktree`, same awaited-child, ≤2k-token verdict, and defer
+contract as the Worker prompt — with these differences:
+
+- **Input is a ref range, not a task file.** Drain passes the worker the
+  cumulative diff's ref range and the **union Touch** path list; the worker
+  never reads the diff through the hub. There is no task file, no `Budget:`
+  line to flip, and no acceptance checkboxes.
+- **Review, don't implement.** The worker reviews that diff via `/code-review`
+  at the `low` effort tier where invocable (matching build's per-task pass,
+  build SKILL.md's "Pre-commit review"), else the fallback subagent shape
+  build's close-out defines. It keeps **ONLY high-confidence
+  correctness/behavior findings** — "high-confidence" is the FINDING FILTER,
+  not an effort tier; style findings are excluded (/simplify territory) and
+  uncertain findings are excluded.
+- **Fix scope = union Touch.** It applies fixes for the kept findings ONLY
+  inside the union Touch, then re-runs the **union of the spec's per-task gate
+  commands** until green, and commits to `task/<slug>-spec-review`. Findings
+  needing edits outside the union Touch, or judged uncertain, are NOT fixed:
+  they go into the verdict's `Discovered:` section for the
+  materialize-discoveries path (draft stubs) — never silently, never
+  auto-fixed.
+- **Verdict.** Returns `spec review: N findings, M fixed, K discovered` in the
+  ≤2k verdict. **Zero findings is a valid verdict** and produces the evidence
+  line — not silence.
+
+**Merge (task-file coupling nulled).** The fix branch merges through SKILL.md
+step 3's serial merge + gates + push, with the task-file-coupled parts ADAPTED
+because this branch carries **no task file**:
+
+- The runtime-Touch allowed set (step 3's Runtime Touch enforcement) is the
+  **union Touch plus the spec's `evidence/` dir ONLY** — the "task's own file"
+  term is null.
+- The append-only whitelist diff over `'*/tasks/*.md'` must be **EMPTY**: any
+  `tasks/` change on this branch is a **merge failure** (the slot-machine
+  path), never allowed.
+- **NONE of the DONE bookkeeping runs** — no `Status` flip, no checkbox ticks,
+  no plan-block handling, no verifier append-only diff over a task file —
+  there is no task. Drain merges the branch, runs the project gates, writes the
+  `spec review:` line to `specs/<slug>/evidence/spec-review.md`, and pushes.
+- A **failed** review-fix merge (a conflict surviving one rebase, or red
+  gates) is REPORTED and the lease releases anyway — a failed spec review
+  never blocks lease release, since the spec's tasks already passed their own
+  gates.
+
 ## Deferred question format (written by drain, from the verdict)
 
 ```markdown

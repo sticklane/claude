@@ -222,8 +222,11 @@ ownership was enforced only at plan time, never mechanically at runtime.
 **The flip is compare-and-swap.** Re-read the task file immediately before
 flipping — an exact-match edit of the literal `Status: pending` line (a file
 already flipped by another writer fails the edit and returns drain to step
-1). Set `Status: in-progress`, **commit path-scoped to the task file** (e.g.
-`drain: task 03 in-progress`), push (guard in step 3), then re-read at HEAD
+1). Set `Status: in-progress`, **commit path-scoped to the task file** using
+the pinned flip-message contract `drain: <spec-slug> task NN in-progress`
+(this exact format is a contract, not an example — the spec-completion review
+below recovers a spec's diff base by grepping it), push (guard in step 3),
+then re-read at HEAD
 and confirm your flip before dispatching — the worker's worktree is cut from
 this commit, so it must carry current statuses and any `## Answers`. Launch
 ONE `implementation-worker` agent — an awaited child, never detached —
@@ -511,6 +514,67 @@ eligibility predicate, verify-before-commit diff check, and commit procedure
 are in [reference.md](reference.md)'s "Auto-breakdown". A failed attempt
 (stray changes or zero tasks) is reported in step 4, never persisted.
 
+## Spec-completion review (fires at lease release, once per spec per run)
+
+Emit `<!-- agentprof:stage=spec-review -->` verbatim as this step's opening
+line every time you enter it.
+
+When a spec reaches nothing-left-to-dispatch — critique intake, stub intake,
+and 3b all came up empty for it, so its lease is about to release — AND **at
+least one of its tasks completed DONE this run**, drain runs a
+**spec-completion review** before releasing that spec's owner lease. Ordering
+is **pinned**: run the review → commit the evidence line → release the lease.
+The committed evidence file `specs/<slug>/evidence/spec-review.md` (carrying
+either a `spec review:` or a `spec review skipped:` line) is the
+**idempotency token**: a later baton generation, or a resumed run, that finds
+it already committed SKIPS the review — this is what makes "once per spec per
+run" hold across generations without a new baton line. A spec with no DONE
+task this run releases with no review and no evidence file.
+
+**Diff base (recovery).** The spec's status-flip commit message is the pinned
+contract `drain: <spec-slug> task NN in-progress` (step 2). Recover the first
+such commit with
+`git log --reverse --format=%H --grep='^drain: <slug> task .* in-progress' -- 'specs/<slug>/tasks/'`
+and take the first match. The cumulative product diff is
+`merge-base(<that commit>, main)..main` restricted to the union of the spec's
+tasks' `Touch:` paths (product paths only). A spec with no such commit
+(drained before this shipped) SKIPS, recording `spec review skipped: no
+pinned flip commit` as its evidence line.
+
+**Skip gate (build's, verbatim).** Compute the gate from `git diff --numstat`
+over that ref range restricted to the union Touch — names + line counts only,
+never file contents (wake economics, step 2). Classify each path NON-product
+by build's list (`docs/**`, `**/*.md`, `tests/**`, `test/**`, `**/test_*`,
+`**/*_test.*`, `**/*.test.*`, `**/*.spec.*`, `**/*.json`, `**/*.yaml`,
+`**/*.yml`, `**/*.toml`, `**/*.lock`). When no product paths remain, or total
+added+deleted product lines is < 25, **skip**: write the `spec review
+skipped: <docs-only|tests-only|tiny-diff (<lines>)>` evidence line, commit it
+(path-scoped, pushed), and release the lease as today. Otherwise dispatch the
+review-fix worker.
+
+**Dispatch (one awaited worker).** Launch ONE `implementation-worker` agent at
+the implementation-worker tier pin, `isolation: worktree`, awaited — the
+**Spec-completion review worker** prompt in [reference.md](reference.md) —
+passing it the ref range and the union Touch list (never the diff inline). It
+reviews the cumulative diff via `/code-review`-equivalent review at the `low`
+effort tier, keeps ONLY high-confidence correctness/behavior findings (the
+finding filter, not an effort tier), fixes them inside the union Touch,
+re-runs the union of the spec's per-task gate commands, commits to
+`task/<slug>-spec-review`, and returns the ≤2k verdict (findings / fixed /
+discovered). Zero findings is a valid verdict and still produces the evidence
+line. The fix branch merges through step 3's serial-merge machinery with the
+task-file coupling nulled (reference.md's Spec-completion review worker,
+"Merge"). Uncertain or out-of-scope findings materialize as draft stubs via
+the existing discoveries path — never silent, never auto-fixed. A failed
+review-fix merge reports and releases anyway: lease release never blocks on it
+(the spec's tasks already passed their own gates).
+
+**Evidence + checklist.** Whether reviewed or skipped, write the outcome to
+`specs/<slug>/evidence/spec-review.md` and commit it (path-scoped, pushed)
+BEFORE releasing the lease. The exit checklist (step 4) gains one line per
+spec reviewed this run: `spec review: N findings, M fixed, K stubbed` (or the
+`spec review skipped: <reason>` line).
+
 ## 4. The batch interview
 
 Emit `<!-- agentprof:stage=batch-interview -->` verbatim as this step's
@@ -566,6 +630,11 @@ checklist** for the human — **each entry names a file path**:
    (<date>)` line quoted verbatim — every auto-promotion and refusal audited,
    task file for each.
 7. **Next commands** — the exact commands to resume.
+
+Additionally, for each spec whose lease released this run, the checklist
+carries its **spec-completion review** outcome — one line, `spec review: N
+findings, M fixed, K stubbed` or `spec review skipped: <reason>`, read from
+that spec's committed `specs/<slug>/evidence/spec-review.md`.
 
 One interview and one checklist per session; "Nothing needs you" is a valid
 checklist.
