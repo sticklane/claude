@@ -469,13 +469,18 @@ Each released spec's **spec-completion review** outcome (`spec review:` /
 the checklist too. One interview and one checklist per session; "Nothing needs
 you" is a valid checklist.
 
-Artifacts: drain mutates task files in the main checkout only (`Status` lines,
-`## Deferred questions`, `## Answers`, `## Progress`, `## Decisions`,
-`Status: draft` stubs, and — via stub intake — a promoted stub's authored Goal /
-`## Original report` strip or a gate-confirmed obsolete's `Closed:` line),
-committing every mutation, merges `task/NN-*` branches, and — via 3b — invokes
-`/breakdown` for critic-READY specs. Next pipeline step: /distill after a
-drained queue; answers loop into step 1.
+**HUMAN.md filing (R2).** In that SAME commit wave the ORCHESTRATOR (never a
+dispatched worker) files each open human-actionable item into repo-root
+`HUMAN.md`'s `## Agent-filed blockers` (five types → `ask`/`run`/`decide`; the
+interview DELETES an answered entry in its `## Answers` commit; manual-pending
+NOT drain-scanned) — mapping in [reference.md](reference.md)'s "HUMAN.md filing (R2)".
+
+Artifacts: drain mutates task files in the main checkout only (`Status`,
+`## Deferred questions`/`## Answers`/`## Progress`/`## Decisions`, `draft`
+stubs, a promoted stub's Goal/report strip or an obsolete's `Closed:` line)
+plus repo-root `HUMAN.md` (above), committing every mutation, merges
+`task/NN-*` branches, and — via 3b — invokes `/breakdown` for critic-READY
+specs. Next: /distill after a drained queue.
 
 ## Ultra path
 

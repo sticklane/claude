@@ -7,7 +7,7 @@ check · Worker prompt · Deferred question format · Relaunch-with-evidence
 prompt · Tournament · Headless fallback · Baton pass (self-relaunch) ·
 Critique intake · Stub intake (assess → gate → act) · Auto-breakdown
 (lowest priority) · Push guard (canonical) · Rolling-window admission & merge
-(R1–R4) · Exit checklist (seven sections)
+(R1–R4) · Exit checklist (seven sections) · HUMAN.md filing (R2)
 
 Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt (workers return only a **verdict + evidence**), the
@@ -1504,3 +1504,43 @@ Additionally, for each spec whose lease released this run, the checklist
 carries its **spec-completion review** outcome — one line, `spec review: N
 findings, M fixed, K stubbed` or `spec review skipped: <reason>`, read from
 that spec's committed `specs/<slug>/evidence/spec-review.md`.
+
+## HUMAN.md filing (R2)
+
+In the SAME commit wave that writes the exit checklist, drain's ORCHESTRATOR
+— never a dispatched implementation worker — files every still-open
+human-actionable item into the repo-root `HUMAN.md`, under its machine-owned
+`## Agent-filed blockers` section. The entry grammar, section marker, and
+open-items-only rule live in `.claude/rules/human-blockers.md` (cited, not
+restated); drain appends/removes only inside that section, never touching
+prose above or below it. A repo with no `HUMAN.md` is bootstrapped on first
+append (title line + the empty section, nothing else).
+
+FIVE checklist types map onto the grammar's `ask|run|provision|decide`, each
+tied to the exit-checklist section it summarizes:
+
+| Checklist source | HUMAN.md type | Checklist section |
+| --- | --- | --- |
+| Deferred questions still unanswered | `ask` | §1 |
+| `Unblock: ask:` blocked tasks | `ask` | §3 |
+| `Unblock: run:` blocked tasks | `run` | §3 |
+| Decision-shaped or gate-refused stubs | `decide` | §2 / §5 / §6 |
+| NOT-READY specs (critique intake) | `decide` | §4 |
+
+Each entry is one checkbox line — `- [ ] <ISO date> · <source path> · <type>
+— <one-line action>` — appended to the section. `Unblock: agent:` blocked
+tasks are NOT filed: an agent, not a human, clears them. Sections 6
+(promoted this run) and 7 (next commands) are informational summary lines,
+not open human blockers, so they are not filed either.
+
+**Same-commit deletion on answer.** When the batch interview's answer flow
+flips a `Status: deferred` task back to `pending`, the commit that writes
+that task's `## Answers` block ALSO deletes its `## Agent-filed blockers`
+entry — an answered blocker never lingers as a stale line.
+
+**Manual-pending items are NOT drain-scanned.** Drain never reads evidence
+bodies and no marker exists, so manual-pending measurements
+(`.claude/rules/mirror-verification.md`'s manual-pending escape) are out of
+scope for this filing; the attended session or worker-verdict flow that
+records a manual-pending item files its own `run` entry per the rule's
+grammar — a separate path from drain's exit-checklist filing.

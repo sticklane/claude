@@ -118,7 +118,17 @@ every time you enter it.
    check or clear it, `Unblock: agent: <prompt>` when clearing needs an
    agent's judgment, `Unblock: ask: <exact question>` only for a genuine human
    decision, quoting the exact question. The `Unblock:` line goes on the line
-   immediately after `Status:`.
+   immediately after `Status:`. **HUMAN.md pair (R3), ATTENDED `/build` only:**
+   that intra-file `Status:`+`Unblock:` atomicity is UNCHANGED, and the SAME
+   COMMIT also makes a second edit adding a matching entry to the repo-root
+   `HUMAN.md`'s `## Agent-filed blockers` section, typed to the `Unblock:` line
+   (`run`→`run`, `ask`→`ask`, a credentials/access blocker → `provision`;
+   grammar in `.claude/rules/human-blockers.md`). An `Unblock: agent:` stop is
+   agent-clearable, not a human blocker, so it files no entry. This is
+   attended-scope only: a DRAINED/unattended worker NEVER writes `HUMAN.md` — it
+   returns its BLOCKED verdict and drain's orchestrator (not the worker) files
+   the entry; a worker that wrote `HUMAN.md` would fail drain's merge-time Touch
+   whitelist.
 
 ## 4. Close out
 
