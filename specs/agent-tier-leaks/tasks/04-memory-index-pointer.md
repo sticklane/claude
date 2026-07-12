@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Discovered-from: specs/agent-tier-leaks/tasks/01-verifier-leak-trace.md
 Spec: ../SPEC.md
 Blocking: no
@@ -18,11 +18,15 @@ entry format.
 
 ## Acceptance
 
-- [ ] `grep 'verifier-tier-leak' docs/memory.md` finds a one-line index
+- [x] `grep 'verifier-tier-leak' docs/memory.md` finds a one-line index
   entry matching the existing convention (lines 7–15):
   `- [verifier-tier-leak](memory/verifier-tier-leak.md) — <one-line hook>`
   — the hook description should be drawn from
   `docs/memory/verifier-tier-leak.md`'s own `Read when:` header, not
   invented.
-- [ ] `grep -c '^- \[verifier-tier-leak\]' docs/memory.md` returns exactly 1
+  Evidence: grep returns the new entry; hook paraphrases the note's `Read
+  when:` header (frontmatter `model:` pin not holding / pinned agent billed
+  at frontier / fix not showing in running install).
+- [x] `grep -c '^- \[verifier-tier-leak\]' docs/memory.md` returns exactly 1
   (no duplicate entries).
+  Evidence: `grep -c` returns 1.
