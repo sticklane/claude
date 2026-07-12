@@ -114,6 +114,26 @@ from the percentiles. Main-loop context is the cost driver a growing session
 pays for on every turn; folding a subagent's small, independent context into
 the numbers would mask how heavy the main line itself has become.
 
+## Cost-summary top-level keys
+
+The full "Cost (7d)" summary JSON has these top-level keys (every field of the
+`Summary` struct in `internal/costsummary/costsummary.go`):
+
+- `by_project` — spend rolled up per project, a `{project: {metric: total}}`
+  map summing every sample in the bucket.
+- `by_skill` — the same rollup keyed by skill.
+- `by_agent_type` — the same rollup keyed by agent type (only samples with an
+  agent frame contribute).
+- `by_model` — the same rollup keyed by model leaf, plus the `(tools)` and
+  `<synthetic>` sentinel rows described above.
+- `totals` — grand totals per metric across every sample, `{metric: total}`.
+- `sessions_added` — count of distinct sessions in this run's fresh samples
+  (in `--merge` mode, how many the run added to the rolling window).
+- `reprime` — the re-prime rollup (`count`, `cache_write_tokens`,
+  `cost_microusd`, `by_project`); see above.
+- `sessions` — per-session context-size profiles keyed by session id
+  (`project`, `calls`, `cost_microusd`, `p50_ctx`, `p90_ctx`); see above.
+
 ## Well-known metrics and pprof units
 
 | Metric name     | pprof unit     |
