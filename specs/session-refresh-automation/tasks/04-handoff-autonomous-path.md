@@ -1,6 +1,6 @@
 # Task 04: Handoff autonomous refresh path
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 8 turns
@@ -34,8 +34,8 @@ NOT touch `.claude/rules/` (task 01 owns the doctrine — cite it).
 
 ## Acceptance
 
-- [ ] `grep -ci 'refresh-over-carry' .claude/skills/handoff/SKILL.md` → ≥ 1
-- [ ] `grep -ci 'token-discipline' .claude/skills/handoff/SKILL.md` → ≥ 1 (policy cited, not restated)
-- [ ] `grep -ci 'refresh-over-carry' antigravity/.agents/workflows/handoff.md` → ≥ 1 AND `grep -ci 'refresh-over-carry' antigravity/.agents/skills/handoff/SKILL.md` → ≥ 1 (content-coverage check — mirrors are paraphrased ports, never diffed byte-for-byte)
-- [ ] `git show $(git merge-base HEAD main):.claude-plugin/plugin.json | grep '"version"'` differs from `grep '"version"' .claude-plugin/plugin.json` — compared against this task's own base commit, never a hard-coded literal
-- [ ] `claude plugin validate .` → passes
+- [x] `grep -ci 'refresh-over-carry' .claude/skills/handoff/SKILL.md` → ≥ 1 — verifier: returns 1 (evidence/04-handoff-autonomous-path.md)
+- [x] `grep -ci 'token-discipline' .claude/skills/handoff/SKILL.md` → ≥ 1 (policy cited, not restated) — verifier: returns 2; skill cites the token-discipline "Session refresh"/"Awaited children" sections, does not restate them (evidence/04-handoff-autonomous-path.md)
+- [x] `grep -ci 'refresh-over-carry' antigravity/.agents/workflows/handoff.md` → ≥ 1 AND `grep -ci 'refresh-over-carry' antigravity/.agents/skills/handoff/SKILL.md` → ≥ 1 (content-coverage check — mirrors are paraphrased ports, never diffed byte-for-byte) — verifier: 1 each, both antigravity-native paraphrase not byte-copies (evidence/04-handoff-autonomous-path.md)
+- [x] `git show $(git merge-base HEAD main):.claude-plugin/plugin.json | grep '"version"'` differs from `grep '"version"' .claude-plugin/plugin.json` — compared against this task's own base commit, never a hard-coded literal — verifier: base 0.8.54 → head 0.8.55 (evidence/04-handoff-autonomous-path.md)
+- [x] `claude plugin validate .` → passes — verifier: ✔ Validation passed (evidence/04-handoff-autonomous-path.md)
