@@ -914,8 +914,8 @@ reviewed this run: `spec review: N findings, M fixed, K stubbed` (or the
    of a questions block — answered questions stay as history), ask all
    their `## Deferred questions` in one round, write answers under
    `## Answers`, flip `deferred` → `pending`, commit, and return to
-   step 1. Queue empty → report per-task verdicts and evidence, and run
-   /distill if any verdict exposed a decomposition problem. Only
+   step 1. Queue empty → report per-task verdicts and evidence; the terminal
+   distill below then fires. Only
    blocked/failed left → report the blockers and stop; those go back to
    /breakdown or an attended /build. Specs that failed auto-breakdown this
    run (4a) are reported alongside the other blockers, with their failure
@@ -959,6 +959,16 @@ reviewed this run: `spec review: N findings, M fixed, K stubbed` (or the
 
    One interview and one checklist per session; "Nothing needs you" is a
    valid checklist.
+
+   **Terminal distill (R1), at most once per session.** After the exit
+   checklist is delivered and lease/baton cleanup is committed, drain runs
+   /distill once — a one-line announcement, then unconditional: a run that
+   found "nothing worth keeping" still reports that through /distill rather
+   than skipping the step. Both terminal states — queue exhaustion here and
+   the baton pass's max-generations cap — route through this single terminal
+   distill, and a once-per-session guard prevents a double fire. The
+   terminal-capture carve-out sanctions the run: /distill consumes the run
+   and ships no critic-gated artifact, so no READY gate applies to it.
 
    **HUMAN.md filing (R2).** In the SAME commit wave that writes this exit
    checklist, the ORCHESTRATOR — never a dispatched implementation worker —
