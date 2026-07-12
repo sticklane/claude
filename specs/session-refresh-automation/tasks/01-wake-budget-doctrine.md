@@ -1,6 +1,6 @@
 # Task 01: Wake-budget doctrine in token-discipline
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 8 turns
