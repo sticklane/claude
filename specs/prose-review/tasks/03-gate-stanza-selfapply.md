@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: deferred
 Depends on: 01, 02
 Priority: P1
 Budget: 5 turns
@@ -33,3 +33,7 @@ report, saved to ../evidence/e2e-readme-review.md.
 ## Progress
 
 - 2026-07-11 — Attempt 1 (opus) returned DONE with all 3 criteria passing, but FAILED merge on R4 runtime Touch enforcement: branch changed `vale/.vale.ini.template` (6 lines, Google.EmDash disable) which is outside Touch (`templates/, .claude/skills/gate/, vale/styles/config/vocabularies/House/accept.txt`). Worker's own rationale: bare `vale README.md AGENTS.md` cannot exit 0 without centrally disabling Google.EmDash (22 errors from the house spaced-em-dash style), and accept-vocab cannot suppress a rule-level check. Done: stanza in templates/check.sh.tmpl, accept.txt tuning, e2e evidence. Remaining: achieve C2 within Touch or defer the Touch-amendment question. Branch discarded per slot machine.
+
+## Deferred questions
+
+- 2026-07-11 — Task 03 requires `vale README.md AGENTS.md` to exit 0 (criterion C2), but its Touch list (`templates/, .claude/skills/gate/, vale/styles/config/vocabularies/House/accept.txt`) cannot achieve that: of the three error-level alert classes (Google.EmDash 22, Vale.Spelling 22, Vale.Terms 2), the Spelling/Terms errors are fixable in accept.txt, but Google.EmDash is an existence-type rule (no vocabulary/exceptions mechanism) firing on the repo's deliberate spaced-em-dash house style in README.md and AGENTS.md. How should C2 be satisfied? (a) Amend the task's Touch to include `vale/.vale.ini.template` and centrally disable Google.EmDash there (`Google.EmDash = NO` under `[*.md]`) — the minimal fix, endorsing the house style; (b) amend Touch to include README.md and AGENTS.md and rewrite all spaced em-dashes to Google-style unspaced dashes — conforms to Google style but reverses the established house-style repo-wide prose convention; or (c) revise the spec/criterion so the bare-vale check excludes Google.EmDash some other way. Option (a) matches attempt 1's working implementation.
