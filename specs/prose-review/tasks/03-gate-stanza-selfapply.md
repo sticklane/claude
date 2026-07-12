@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P1
 Budget: 5 turns
@@ -24,11 +24,19 @@ report, saved to ../evidence/e2e-readme-review.md.
 
 ## Acceptance
 
-- [ ] `grep -qi 'Vale prose lint' templates/*check*` (or the gate
+- [x] `grep -qi 'Vale prose lint' templates/*check*` (or the gate
   template's actual location under .claude/skills/gate/ — anchor 0-hit
   everywhere today) → hit
-- [ ] `vale README.md AGENTS.md` → exit 0 in this repo
-- [ ] `test -s specs/prose-review/evidence/e2e-readme-review.md` → e2e report exists with all three passes (MANUAL: content)
+  - Evidence: HIT in templates/check.sh.tmpl; opt-in, fully commented stanza
+    (orientation docs only). Verifier PASS (evidence/03-gate-stanza-selfapply.md).
+- [x] `vale README.md AGENTS.md` → exit 0 in this repo
+  - Evidence: 0 error-level Vale alerts over README.md + AGENTS.md → exit 0,
+    Google.EmDash still ACTIVE; em-dashes rewritten to unspaced style, House
+    accept.txt tuned (no rule disabled, vale/.vale.ini.template untouched).
+    Verified against this repo's own styles. Verifier PASS.
+- [x] `test -s specs/prose-review/evidence/e2e-readme-review.md` → e2e report exists with all three passes (MANUAL: content)
+  - Evidence: e2e-readme-review.md present; Vale pass + 9-item rubric pass +
+    reader-test stumble report all covered. Verifier PASS (content confirmed).
 
 ## Progress
 
