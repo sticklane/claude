@@ -1,4 +1,5 @@
 Status: draft
+Intake-refused: gate — DECISION-SHAPED (intentional Antigravity port convention vs. accumulated gap, confirmed 11 of 14 mirrors missing the line) with no authored acceptance criteria/Touch/Budget to promote (2026-07-13)
 Discovered-from: specs/mirror-procedure-discipline/tasks/03-audit-distill.md
 Spec: ../SPEC.md
 Blocking: no
