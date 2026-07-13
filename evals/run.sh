@@ -25,11 +25,12 @@
 # (confirmed live via `codex exec`) and re-run without re-provisioning. A
 # runtime whose profile has no `## Headless` fenced block (returns NONE)
 # cannot run through this path and exits 1 rather than fabricate a run
-# (docs/memory/unattended-worker-tool-limits.md). `antigravity` DOES have
-# a fenced block (`agy -p`) but is hard-blocked below, not just
-# documented-against: live-tested, it did not confine itself to
-# $EVAL_DIR and mutated real repo files instead (runtimes/antigravity.md,
-# "UNSAFE for isolated/unattended use").
+# (docs/memory/unattended-worker-tool-limits.md). `antigravity` has a
+# fenced block (`agy -p --new-project ...`) confirmed safe for this path
+# live on 2026-07-13 (runtimes/antigravity.md, Headless section) — an
+# earlier version without `--new-project` was hard-blocked here after a
+# live mutation of real repo files; that block is gone now that the
+# template pins the fix.
 #
 # Compat: scenario setup.sh/assert.sh run under bare `bash`, and macOS's
 # system bash is 3.2 — write them to bash 3.2, no `declare -A` or other
@@ -166,18 +167,6 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
               | tee "$EVAL_DIR/session.log") || session_rc=$?
         fi
       else
-        # antigravity has a real ## Headless template (agy -p) but is NOT
-        # safe to drive here yet: live-tested 2026-07-12, it did not confine
-        # itself to $EVAL_DIR and instead edited real tracked files
-        # elsewhere in this checkout (reused a stale workspace rather than
-        # the invoking cwd — see runtimes/antigravity.md's Headless section,
-        # "UNSAFE for isolated/unattended use"). Hard-blocked here, not just
-        # documented, because a doc-only warning didn't stop this from
-        # actually happening once already.
-        if [ "$runtime" = "antigravity" ]; then
-          echo "eval: runtime 'antigravity' is blocked for evals — its headless mode did not confine itself to \$EVAL_DIR in live testing and mutated real repo files (runtimes/antigravity.md, 'UNSAFE for isolated/unattended use'); do not point .claude/runtime.md at it for evals until that's resolved" >&2
-          exit 1
-        fi
         template="$(cd "$ROOT" && python3 runtimes/parse_headless.py "$runtime")"
         if [ "$template" = "NONE" ]; then
           echo "eval: runtime '$runtime' has no scriptable headless relaunch (parse_headless.py returned NONE); evals require one" >&2

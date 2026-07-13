@@ -65,7 +65,7 @@ its bundled `specs/status.sh`, and returned an accurate report, from a
 scratch fixture and from this repo's `antigravity/` port root):
 
 ```bash
-/opt/homebrew/bin/agy -p "<prompt>" --mode accept-edits --sandbox
+/opt/homebrew/bin/agy -p "<prompt>" --new-project --mode accept-edits --sandbox
 ```
 
 **The absolute path is load-bearing, not decoration.** A bare `agy` was
@@ -79,32 +79,40 @@ confirmed on this machine; re-resolve it (`brew --prefix`, or wherever
 `antigravity-cli` installs) rather than assuming this path on another
 machine.
 
-**UNSAFE for isolated/unattended use as currently understood — do not
-wire into evals or any automated fixture-based caller yet.** Live-tested
-end to end via the eval runner (`(cd "$EVAL_DIR" && /opt/homebrew/bin/agy
--p ...)`, `$EVAL_DIR` a fresh `mktemp -d` with its own `git init`):
+**`--new-project` fixes the workspace-isolation defect — confirmed live,
+safe for isolated/unattended use.** The earlier finding (below, kept for
+the record) was that `agy -p` without `--new-project` did not confine
+itself to the invoking directory. Live-tested 2026-07-13,
+`antigravity-cli` 1.1.1: two back-to-back `agy -p ... --new-project`
+invocations, each from its own fresh scratch git repo with a distinct
+prompt ("create marker.txt" / "create second.txt"), each produced exactly
+the requested file in its own invoking directory and nothing else —
+no cross-contamination between the two runs, no writes anywhere in this
+toolkit's real checkout (`git status` clean before and after both runs,
+repo-wide `find -newermt` turned up nothing). This matches the leading
+theory below (workspace reuse, not path miscalculation) and confirms
+`--new-project` is the fix, not just a plausible one. `evals/run.sh` no
+longer hard-blocks this runtime as a result (see its own history for the
+prior block); codex and claude-code confirm the same
+invoking-cwd confinement by a different mechanism (`--cd`/cwd-relative
+discovery, no reuse concept to begin with).
+
+Prior finding, for the record — **do not drop `--new-project` from the
+template above; this is why it's there.** Live-tested end to end via the
+eval runner (`(cd "$EVAL_DIR" && /opt/homebrew/bin/agy -p ...)` with no
+`--new-project`, `$EVAL_DIR` a fresh `mktemp -d` with its own `git init`):
 the process did NOT confine itself to `$EVAL_DIR`. It instead edited real,
 tracked files in this toolkit's own checkout
 (`tests/fixtures/workboard/demo-repo/specs/demo/{SPEC.md,tasks/01-thing.md}`,
 plus created a new `02-other-thing.md`) — a path with no filesystem
 relationship to `$EVAL_DIR` at all. Reverted cleanly (uncommitted,
-`git checkout --` + `rm` the new file; the affected test still passes),
-but this means real, undesired file mutation in a shared checkout is a
-live, reproduced risk, not a theoretical one. Leading theory, unconfirmed:
-`-p` reused a stale "last active workspace" from an unrelated manual test
-run minutes earlier in this same repo (`agy` invoked from `antigravity/`),
-rather than scoping to the invoking cwd — consistent with the top-level
-CLI's own `-r`/`--reuse-window` "last active window" language and the
-GUI's session-reuse model bleeding into `-p` mode. `--new-project`
-("Create a new project for this session") is an untested candidate fix —
-it was not tried before this finding surfaced, to avoid a second
-uncontrolled mutation. Until workspace scoping is confirmed reliable
-(`--new-project`, `--add-dir`, or another mechanism forcing a fresh,
-isolated workspace per invocation), do NOT point `.claude/runtime.md` at
-`antigravity` for `evals/run.sh`, and do NOT use this template for any
-unattended/parallel caller — codex and claude-code do not share this
-defect (both confirmed to confine themselves to their invoking
-cwd/`--cd`).
+`git checkout --` + `rm` the new file; the affected test still passes).
+Leading theory, now corroborated: `-p` without `--new-project` reused a
+stale "last active workspace" from an unrelated manual test run minutes
+earlier in this same repo, rather than scoping to the invoking cwd —
+consistent with the top-level CLI's own `-r`/`--reuse-window` "last active
+window" language and the GUI's session-reuse model bleeding into `-p`
+mode absent an explicit fresh-workspace flag.
 
 - `<prompt>` — a self-contained single-agent prompt, same contract as the
   claude-code template. Passed via `-p`/`--print` (`--prompt` is a
@@ -187,7 +195,10 @@ cwd/`--cd`).
   other runtimes.
 - **Verification**: `-p`, model listing, and one real skill auto-trigger
   (`list-specs`) were confirmed live against `antigravity-cli` 1.1.1
-  (Homebrew cask, installed 2026-07-11) on 2026-07-12. `--model`,
+  (Homebrew cask, installed 2026-07-11) on 2026-07-12. `--new-project`
+  workspace isolation was confirmed live the same way on 2026-07-13 (two
+  back-to-back isolated invocations, no cross-contamination, no stray
+  writes to the real checkout — see Headless above). `--model`,
   `--mode`, `--dangerously-skip-permissions`, `--continue`/
   `--conversation`, and exact discovery-root semantics are documented
   from `--help` output but not yet exercised live — re-verify before
