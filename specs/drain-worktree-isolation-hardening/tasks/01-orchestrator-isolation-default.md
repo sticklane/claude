@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 20 turns
@@ -74,8 +74,18 @@ diff to R1 only.
 
 ## Acceptance
 
-- [ ] `grep -c "orchestrator's own working tree" .claude/skills/drain/SKILL.md` → ≥ 1
-- [ ] `grep -ci "opt.out\|opts out" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → ≥ 1 (documents the opt-out mechanism; baseline at task start is 0)
-- [ ] `grep -c "falls back to today's lease-only discipline" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → ≥ 1 (documents the fallback for a VCS/hosting environment without isolated-checkout support; baseline at task start is 0 in both files — this is a NEW anchor phrase, not the pre-existing generic "fallback" hits already in these files)
-- [ ] Net new lines added to `.claude/skills/drain/SKILL.md` by this task's diff ≤ 8 (`git diff HEAD~1 -- .claude/skills/drain/SKILL.md | grep -c '^+'` minus `grep -c '^-'`, or eyeball the diff)
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `grep -c "orchestrator's own working tree" .claude/skills/drain/SKILL.md` → ≥ 1 (evidence: 1)
+- [x] `grep -ci "opt.out\|opts out" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → ≥ 1 (evidence: SKILL.md:2, reference.md:2)
+- [x] `grep -c "falls back to today's lease-only discipline" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → ≥ 1 (evidence: reference.md:1)
+- [x] Net new lines added to `.claude/skills/drain/SKILL.md` by this task's diff ≤ 8 (evidence: +9/-1 = 8)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (evidence: "all ultra mentions gated in 4 files")
+
+## Decisions
+
+- Placed the required exact phrase "falls back to today's lease-only
+  discipline" in reference.md rather than SKILL.md — the acceptance grep
+  spans both files, the task's Touch note explicitly permits pushing detail
+  to reference.md, and SKILL.md's 8-line budget favored keeping only the
+  pointer + "orchestrator's own working tree" anchor there. Reversible:
+  move the sentence into SKILL.md if a future task wants it co-located
+  (would consume SKILL.md line budget).
