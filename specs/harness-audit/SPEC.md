@@ -2,6 +2,7 @@
 
 Status: open
 Priority: P3
+Breakdown-ready: true
 
 ## Problem
 
@@ -22,8 +23,16 @@ equivalent for the harness it installs.
 A read-only audit that checks an onboarded repo against a fixed checklist
 and emits a ranked findings report — never auto-fixes:
 
-1. **Command currency** — every command CLAUDE.md/AGENTS.md documents as
-   verified still runs (exit 0 or a documented expected failure).
+1. **Command currency** — scoped by mutation risk, mutation-class first:
+   a command is executed only if it is both read-only AND permitted by
+   the repo's permission allowlist — allowlist membership alone is not
+   sufficient, since an allowlist can contain mutating commands (e.g.
+   `Bash(git commit:*)`). Executed commands must still exit 0 (or match
+   a documented expected failure). Any command that mutates
+   (build/deploy/migrate and similar) is inspected only, regardless of
+   allowlist membership — checked that the command still exists and the
+   file/target it references is still valid, never executed. This keeps
+   R1's read-only contract intact.
 2. **Gate coverage** — if gates are installed, the Stop hook and
    pre-commit layer reference checks that exist and pass on a clean tree;
    if not installed, say so once, not as a finding per file.
@@ -39,8 +48,13 @@ session, with each finding naming the file and the one-line fix. The
 next pipeline step for a finding is a normal task/spec, not an in-audit
 edit.
 
-Delivery shape — /onboard re-run mode vs. a new skill — is an open
-question for /critique; the checklist above is the contract either way.
+Delivery shape: a new standalone skill at
+`.claude/skills/harness-audit/SKILL.md` (+
+`antigravity/.agents/skills/harness-audit/SKILL.md` mirror per R5), not
+an /onboard re-run mode — decided at the 2026-07-13 triage
+(specs/harness-audit/critique-findings.md). Per CLAUDE.md's authoring
+conventions, a new skill needs no plugin.json skills-manifest edit (the
+manifest points at the `.claude/skills/` directory generically).
 
 ## Requirements
 
@@ -67,9 +81,12 @@ question for /critique; the checklist above is the contract either way.
 ## Acceptance criteria
 
 - [ ] Skill text states the read-only contract (R1):
-      `grep -qi "read-only" <the shipped skill/mode file>`.
-- [ ] All five checklist areas named in the skill text (R2):
-      `grep -qi "allowlist" ... && grep -qi "memory" ...` etc.
+      `grep -qi "read-only" .claude/skills/harness-audit/SKILL.md`.
+- [ ] All five checklist areas named in the skill text (R2), against
+      `.claude/skills/harness-audit/SKILL.md` (call it `$F`):
+      `grep -qi "command currency" $F && grep -qi "gate coverage" $F &&
+      grep -qi "evalset" $F && grep -qi "memory hygiene" $F && grep -qi
+      "allowlist" $F`.
 - [ ] Fresh-session test on this repo with one seeded defect (a fake
       stale command in a scratch CLAUDE.md copy): the audit reports it
       as a finding with file + fix, and edits nothing (`git status`
@@ -80,5 +97,4 @@ question for /critique; the checklist above is the contract either way.
 
 ## Open questions
 
-- /onboard re-run mode or standalone skill — decide at /critique (a new
-  skill needs no plugin.json skills-manifest edit; a new _agent_ would).
+None — delivery shape resolved above (standalone skill).
