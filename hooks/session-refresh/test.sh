@@ -60,13 +60,26 @@ check "session absent from summary produces empty stdout" \
   "$([ -z "$OUT" ] && echo 0 || echo 1)"
 check "session absent from summary exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
 
-# 5. agentprof binary absent from PATH → empty stdout, exit 0.
-OUT="$(stdin_for test-session | env -u AGENTPROF_BIN PATH=/usr/bin:/bin \
+# 5. agentprof binary absent from PATH → empty stdout, exit 0. A committed
+#    fake-jq fixture stands in as `jq` (first on the restricted PATH) so the
+#    hook clears its `command -v jq` guard on ANY machine — real jq may live
+#    outside /usr/bin:/bin (e.g. homebrew's /opt/homebrew/bin) — and so
+#    reaches the intended agentprof-binary-absent branch instead of
+#    short-circuiting at the jq guard. agentprof itself stays unresolvable on
+#    the restricted PATH. The setup (fixture present + executable) is gated
+#    into the assertion, so a missing/unusable fixture fails test 5 rather
+#    than silently falling through to a system jq.
+JQBIN="$(mktemp -d)"
+cp "$FIX/fake-jq.sh" "$JQBIN/jq" && chmod +x "$JQBIN/jq"
+JQ_SETUP=$?
+OUT="$(stdin_for test-session | env -u AGENTPROF_BIN PATH="$JQBIN:/usr/bin:/bin" \
   bash "$HOOK")"
 RC=$?
+rm -rf "$JQBIN"
 check "missing agentprof binary produces empty stdout" \
-  "$([ -z "$OUT" ] && echo 0 || echo 1)"
-check "missing agentprof binary exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
+  "$([ "$JQ_SETUP" -eq 0 ] && [ -z "$OUT" ] && echo 0 || echo 1)"
+check "missing agentprof binary exits 0" \
+  "$([ "$JQ_SETUP" -eq 0 ] && [ "$RC" -eq 0 ] && echo 0 || echo 1)"
 
 # 6. agentprof present but erroring → empty stdout, exit 0.
 OUT="$(stdin_for test-session | AGENTPROF_BIN="$FAKE" FAKE_AGENTPROF_FAIL=1 \
