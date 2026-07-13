@@ -105,3 +105,8 @@ Task map: 01 = R1+R2 (drain SKILL.md block); 02 = R3 closing gate
 (antigravity port + plugin bump), depends on 01. Serialized — no Group
 lines (format grammar per specs/drain-rolling-window/SPEC.md's
 Parallelization section).
+
+## Closure (2026-07-13 verification sweep)
+
+Advisory text verified present but relocated from SKILL.md to reference.md by
+d51ce4b9; content intact. Literal-grep criteria closed as done-with-drift.

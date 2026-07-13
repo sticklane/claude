@@ -159,3 +159,9 @@ Touch; 04 = R5 automation cross-repo append; 05 = R6 closing mirror/bump
 changes). 01, 03, 04 pairwise-disjoint.
 
 - Group: 01, 03, 04
+
+## Closure (2026-07-13 verification sweep)
+
+Both deliverables verified live. R4's pytest drift was later-spec breakage
+(since fixed via bd33658); R5's diff drift is expected concurrent-repo noise.
+Closed verified.

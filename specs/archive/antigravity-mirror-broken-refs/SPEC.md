@@ -225,3 +225,8 @@ targets are all pinned above) and free of shared undecided design, so they
 run concurrently. Task 04 is a closing gate depending on all three.
 
 - Group: 01, 02, 03
+
+## Closure (2026-07-13 verification sweep)
+
+Original fixes verified correct. Two were later clobbered by unmirrored edits
+and re-applied 2026-07-13 (8b0e0b4, cf8e2b3). Closed verified.

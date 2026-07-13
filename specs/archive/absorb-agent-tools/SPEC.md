@@ -157,3 +157,10 @@ and its own `scripts/check.sh`; agent-console keeps `install.sh`/
 - Task 04 is ATTENDED ONLY (external services + machine state + working-
   copy deletion — fails drain's peripheral/core gate); run via /build
   after 03 is merged and pushed.
+
+## Closure (2026-07-13 verification sweep)
+
+Verified except (a) R7 personal-path grep now hits sanctioned com.sjaconette.*
+launchd service-label strings introduced by skill-profiling-workboard, and
+(b) the live workboard server hang — tracked as a follow-up
+(workboard-server-hang). Closed with follow-ups.

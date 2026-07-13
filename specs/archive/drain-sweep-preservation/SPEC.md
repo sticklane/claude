@@ -141,3 +141,8 @@ None — all three tasks edit `.claude/skills/drain/reference.md` (tasks 01 and
 02 also share SKILL.md), so every pair overlaps in Touch, and 02 textually
 cites 01's amended procedure while 03 carries the spec-wide version bump.
 Strictly sequential: 01 → 02 → 03.
+
+## Closure (2026-07-13 verification sweep)
+
+Rescue-procedure content verified intact; literal strings reworded/re-wrapped
+by 3f905fa (VCS-agnostic prose). Done-with-drift.

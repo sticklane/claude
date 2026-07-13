@@ -240,3 +240,9 @@ that completes the queue — the same one that deletes the baton.
   their final file states.
 - The spec's MANUAL-PENDING e2e criterion is human-run after the queue
   completes; no task carries it.
+
+## Closure (2026-07-13 verification sweep)
+
+All task work verified correct at merge. 'pull --rebase' and 'claude agents
+--json' strings moved from drain SKILL.md to reference.md by d51ce4b9.
+Done-with-drift.
