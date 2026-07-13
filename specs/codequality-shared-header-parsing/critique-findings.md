@@ -61,3 +61,12 @@ mechanism, then re-runs /critique.
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE. Edits before re-critique: (1) pin the shared regex to `\[?(P[0-3])\]?` with a range fixture (divergence live: prioritize_scan.py:31 vs workboard.py:237); (2) pin the import to the viz-style sys.path pattern (no _shared/headers.py exists; _load_module duplicated in both consumers); (3) replace AC5 with the parity gate or name the standalone-install docstring as the sole permitted divergence. Real correctness bug still live.
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+`git log -- specs/codequality-shared-header-parsing/SPEC.md` shows no commit
+since the triage above — SPEC.md is byte-identical to the state that produced
+this file's prior NOT READY verdict. Skipping a redundant full critic
+dispatch on unchanged content per token-discipline's "cheap before
+expensive" — the three approved triage edits above are the recovery path,
+unchanged. This spec's critique intake is spent for this run.
