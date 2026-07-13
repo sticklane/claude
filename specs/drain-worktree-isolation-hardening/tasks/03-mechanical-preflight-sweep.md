@@ -1,6 +1,6 @@
 # Task 03: Mechanical preflight sweep at drain startup (R3)
 
-Status: pending
+Status: in-progress
 Depends on: 02
 Priority: P1
 Budget: 22 turns
