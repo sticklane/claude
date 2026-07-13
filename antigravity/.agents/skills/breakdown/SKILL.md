@@ -131,3 +131,6 @@ Tell the user: run `/build specs/<slug>/tasks/01-*.md` in a new conversation
 per task, or apply the drain workflow (`.agents/workflows/drain.md`) to work
 the queue — its rolling window hands you concurrent Agent Manager
 launches for the unblocked tasks in flight.
+
+`Next stage: /build specs/<slug>/tasks/01-*.md or /drain specs/<slug>
+(human-launched)`.

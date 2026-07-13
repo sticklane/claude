@@ -89,5 +89,5 @@ or unreadable records are left alone rather than guessed at. This is disk
 hygiene, not an inbox action — it never changes what the dashboard shows.
 
 The dashboard is live — it re-scans on every refresh, so there is nothing
-to regenerate. Next step: none — items route back into the
+to regenerate. Next stage: none — items route back into the
 build/drain/handoff workflows as triaged above.
