@@ -587,7 +587,8 @@ def _build_runtime_regexes():
 
     A profile with a scriptable ``## Headless`` template maps to the regex
     derived from it by ``runtimes/parse_headless.py``; a profile with no
-    fenced template (e.g. antigravity) maps to ``None`` — it is a known
+    fenced template (e.g. fake-runtime-no-headless — antigravity graduated
+    2026-07-12 when ``agy -p`` proved scriptable) maps to ``None`` — a known
     runtime with no scriptable relaunch (manual only). Non-profile ``*.md``
     files in ``runtimes/`` (README) are skipped. Built once at import from
     the toolkit's own ``runtimes/`` dir, not per scanned repo."""
