@@ -145,3 +145,9 @@ tasks list it in `Touch:`, so drain's Touch-disjoint admission rule
 serializes them mechanically; each bumps RELATIVE to the version it
 reads at its own base (never a pinned literal), so whichever lands
 second still bumps cleanly after a rebase.
+
+## Closure (2026-07-13 verification sweep)
+
+Implementation verified correct at merge. R6's Baton-pass pointer phrase was
+later dropped by refactor d51ce4b9 and restored 2026-07-13 in 473cb51.
+Closed verified.

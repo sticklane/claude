@@ -160,3 +160,10 @@ repo's mirror + plugin-bump gate.
     drain scenario: this spec only; breakdown/build/idea skill files +
     mirrors: orchestrator-share-audit only; agents + agentprof docs:
     agent-tier-leaks only).
+
+## Closure (2026-07-13 verification sweep)
+
+Verified except SKILL.md line-count regression (517 -> 520 today, over the
+500-line convention) — tracked as a follow-up (drain-skill-length-rebound).
+Reprime-share re-verification failure was honestly recorded in SPEC.md with
+task 05 shipped. Closed with follow-up.

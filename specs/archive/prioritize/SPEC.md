@@ -173,3 +173,9 @@ never a top-level `bash scripts/check.sh` — this repo has no such gate.
 None — strictly serial. Task 02 depends on 01 (its SKILL.md invokes the
 script and its mirror byte-copies task 01's files), so there is no group
 with disjoint Touch and no dependency edge. Dispatch 01, then 02.
+
+## Closure (2026-07-13 verification sweep)
+
+Verified. Disable-model-invocation criterion obsoleted by the
+launch-authorization contract (c139218); mirror docstring divergence sanctioned
+by e835f5a. Closed verified.

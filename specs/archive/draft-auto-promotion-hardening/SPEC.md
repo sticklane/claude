@@ -345,3 +345,9 @@ NOT all three are safe to run concurrently:
 
 Sanctioned group for throughput mode: {01, 02} or {02, 03} — never {01, 03}
 together, and never all three concurrently.
+
+## Closure (2026-07-13 verification sweep)
+
+R1's two-phase promotion mechanism was deliberately reverted by maintainer
+decision 2026-07-11 (a524797, same-run stub promotion). Closed as SUPERSEDED,
+not failed.

@@ -183,3 +183,9 @@ test passes. Task 03 mirrors and closes, depending on both. Group-line
 grammar per specs/drain-rolling-window/SPEC.md's Parallelization section.
 
 - Group: 01, 02
+
+## Closure (2026-07-13 verification sweep)
+
+All criteria reproduce except the shared R7 phrase-sweep grep, which now
+collides with an unrelated Gen-1 session-naming advisory line added by 3405070.
+Done-with-drift.

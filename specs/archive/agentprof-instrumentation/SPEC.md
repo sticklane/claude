@@ -281,3 +281,10 @@ today — this is a strictly additive parser change.
 - **04** runs last (depends on 01, 02, 03) and is manual-pending — it
   needs a real human-launched `/drain`/`/build` run to have happened after
   03 lands.
+
+## Closure (2026-07-13 verification sweep)
+
+All Go/gofmt/docs criteria pass. R4's "5 distinct agentprof:role= literals in
+drain SKILL.md" was invalidated by refactor d51ce4b9 (tournament roles collapsed
+to a generic worker-tournament-tN line, prose relocated to reference.md); content
+survives. Criterion closed as done-with-drift.
