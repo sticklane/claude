@@ -28,10 +28,17 @@ to a fresh context, never seeding this session's own successor.
    - **Verification**: which acceptance criteria pass right now, which don't.
    Facts and paths only — no narrative, no conversation history. If it
    exceeds a page, it's carrying dead weight.
-2. Commit work-in-progress to the working branch if the tree is dirty (a
+2. Run the `verifier` agent on any work COMPLETED this session (a task
+   whose Status flipped to done, a spec whose criteria you're claiming
+   met) before parking — completed work leaves the session verified, not
+   self-reported. Record the verdict in the handoff's Verification
+   section; a FAIL flips the task back and becomes the handoff's exact
+   next step. Skip only when the session completed nothing (pure
+   exploration, or all work is still in flight).
+3. Commit work-in-progress to the working branch if the tree is dirty (a
    handoff pointing at an uncommitted tree is fragile).
-3. Run /distill first if there were corrections worth keeping — handoff
+4. Run /distill first if there were corrections worth keeping — handoff
    preserves state, distill preserves lessons; they're different.
-4. Tell the user: `/clear`, then resume with
+5. Tell the user: `/clear`, then resume with
    "Read <path>/HANDOFF.md and continue." Close with:
    `Next stage: none — /clear and resume from the handoff file`.

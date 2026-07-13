@@ -25,11 +25,18 @@ seeding this run's own successor.
      assumptions, commands that need flags, tests that are slow/flaky.
    - **Verification**: which acceptance criteria pass right now, which don't.
    Facts and paths only — no narrative. Over a page means dead weight.
-2. Commit work-in-progress to the working branch if the tree is dirty (a
+2. Apply the verifier skill to any work COMPLETED this conversation (a
+   task whose Status flipped to done, a spec whose criteria you're
+   claiming met) before parking — completed work leaves the conversation
+   verified, not self-reported. Record the verdict in the handoff's
+   Verification section; a FAIL flips the task back and becomes the
+   handoff's exact next step. Skip only when the conversation completed
+   nothing (pure exploration, or all work is still in flight).
+3. Commit work-in-progress to the working branch if the tree is dirty (a
    handoff pointing at an uncommitted tree is fragile).
-3. Apply the distill skill first if there were corrections worth keeping —
+4. Apply the distill skill first if there were corrections worth keeping —
    handoff preserves state, distill preserves lessons; they're different.
-4. Tell the user: start a new conversation with
+5. Tell the user: start a new conversation with
    "Read <path>/HANDOFF.md and continue."
 
 `Next stage: none — start a new conversation and resume from the handoff file`.
