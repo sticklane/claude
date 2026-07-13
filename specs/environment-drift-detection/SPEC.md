@@ -122,11 +122,32 @@ prerequisite stage (e.g. a monorepo dist build), rendered into
 `templates/check.sh.tmpl` as a `run_stage` line that runs BEFORE the
 existing lint/typecheck/test stages whenever detected, so `scripts/
     check.sh` is self-sufficient and the CLAUDE.md doc list can drift
-without silently breaking gating. Detection heuristic and repo-opt-in
-mechanism (e.g. a marker file, a `package.json` script name, an
-explicit installer flag) are an implementation decision for whoever
-picks this up — record the choice in this SPEC.md or CLAUDE.md per this
-repo's Change Process convention, not left implicit in code.
+without silently breaking gating.
+
+**Decision (made at breakdown time, per this requirement's own instruction
+to record the choice rather than leave it implicit in code):** follow the
+existing detection architecture's own precedent rather than inventing a new
+mechanism. `detect_node`'s pattern (`bin/install-gates` ~line 200) already
+reads a conventional `package.json` script name (`.scripts.check`,
+`.scripts.typecheck`, etc.) as its opt-in signal — no separate marker file
+exists anywhere in today's detection code. R1 extends the same pattern:
+
+- Node stack: if `package.json` has a `.scripts.build` entry, add a
+  `run_stage "build" $pm run build` line before the existing stages (mirror
+  the `check_script`/`typecheck_script` read-and-gate pattern already used
+  for `check`/`typecheck`/`lint`).
+- Any other detected stack (python, generic): no equivalent "everyone has a
+  build script" convention exists, so require an explicit opt-in marker file
+  at the repo root, `.claude/build-prereq`, whose single-line contents are
+  the literal shell command to run as the build stage (e.g.
+  `pnpm -r build`). Presence of the file is the opt-in; absence means no
+  build stage is added, matching the "never a silent block, never
+  auto-detected magic across a wide variety of repos" caution this
+  requirement's discovery raised.
+
+This is a real design decision, not a placeholder — a task implementing R1
+implements exactly this two-path detection, not a heuristic of its own
+choosing.
 
 R2. `.claude/skills/build/SKILL.md`'s verify step and `.claude/skills/drain/
     SKILL.md`'s merge-then-gate step (plus `.claude/skills/drain/
@@ -217,6 +238,13 @@ task rather than parallelizing them.
 
 - `grep -c "build/dist prerequisite" bin/install-gates` → 0 today (verified
   this session); a task implementing R1 must raise it above 0.
+- MANUAL: run `bin/install-gates` (or its dry-run mode) against a scratch
+  Node repo whose `package.json` has a `.scripts.build` entry, and confirm
+  the generated `scripts/check.sh` contains a `run_stage "build" ...` line
+  ordered before the lint/typecheck/test stages. Repeat against a scratch
+  repo with a root `.claude/build-prereq` file and confirm the same
+  ordering using that file's literal command. Repeat against a repo with
+  neither signal and confirm no build stage is added.
 - `grep -c "sole required check entrypoint" .claude/skills/build/SKILL.md
 .claude/skills/drain/SKILL.md` → 0/0 today (verified this session); R2
   requires BOTH files updated (build's verify step AND drain's
@@ -257,17 +285,35 @@ workflows/drain.md` and `codex/.agents/skills/drain/SKILL.md` for the
 
 ## Open questions
 
-- R1's detection heuristic for "this repo needs a build/dist prerequisite
-  stage" is left as an implementation decision (see R1) — should
-  `bin/install-gates` auto-detect it (e.g. a monorepo layout signal) or
-  require explicit opt-in (a marker file or install-gates flag)? Auto-
-  detection risks false positives across the wide variety of repos this
-  toolkit is installed into; explicit opt-in requires a human or worker to
-  discover and set it once. Whoever breaks this spec down should decide and
-  record the choice rather than leaving it implicit in code.
+- R1's detection heuristic was the one open question at spec-authoring
+  time; it is now DECIDED (resolved at breakdown time, see R1's "Decision"
+  paragraph and its dedicated MANUAL acceptance criterion above) —
+  `package.json` `.scripts.build` for Node, an explicit
+  `.claude/build-prereq` marker file for every other stack. No longer open.
 - R5's premise (a multi-sub-check wrapper stage exists in some target
   repo's check invocation) was not directly verified against a live
   wrapper — the evidence describes symptoms consistent with one but this
   research pass did not locate the specific repo/script. The requirement is
   written to self-scope during implementation; flag DEFERRED if no such
   wrapper shape is found anywhere in scope.
+
+## Parallelization
+
+Five tasks (`tasks/01`-`tasks/05`), one per requirement R1-R5. Tasks 04 and
+05 each depend on Task 01 because all three edit shared files
+(`bin/install-gates` for 01/04; `templates/check.sh.tmpl` for 01/05, per
+this spec's "Shared-file note for task breakdown" under R5) — sequencing
+avoids a merge collision on those files. Tasks 02 and 03 touch neither
+shared file and carry no undecided design overlapping any other task, so
+both are parallel-safe with Task 01 and with each other.
+
+Tasks 04 and 05 are NOT parallel-safe with each other, despite each only
+depending on Task 01: both also list `tests/test_install_gates.sh` in
+their own `Touch:` (04 extends it for the docs-only-diff regression case;
+05 extends it if a wrapper is found), so running them concurrently risks a
+collision on that shared test file. Task 05 additionally depends on Task
+04 to sequence past this, so 04 and 05 run solo (in either order relative
+to each other, since 05 declares the dependency), never as a concurrent
+pair.
+
+- Group: 01, 02, 03
