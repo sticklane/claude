@@ -66,3 +66,10 @@ routing-note prose rephrase. Confirmed no `antigravity/.agents/workflows/factche
 exists (skills-dir mirror only). Recorded a `# checked: factcheck` comment
 line in the manifest. Mirror `reference.md` exists but is outside this task's
 Touch scope, so it was not audited or edited here.
+
+## Discovered
+
+- `antigravity/.agents/skills/factcheck/reference.md` (the worker-prompt
+  template) was outside this task's Touch scope and was never audited
+  against any source counterpart. See
+  `specs/mirror-procedure-discipline/tasks/17-audit-factcheck-reference.md`.
