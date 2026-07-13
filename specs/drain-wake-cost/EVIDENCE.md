@@ -192,3 +192,49 @@ just with much less textual cover to do so. A follow-up `agentprof claude
 the next lever is the task's other candidate — durable per-verdict counter
 bookkeeping in `DRAIN-BATON.md` or a mid-run checkpoint file, so the check
 no longer depends on the model remembering to run it at all.
+
+## Follow-up (2026-07-13): intake attempts were inflating the verdict-budget trigger
+
+Investigated a live complaint ("we keep spawning headless generations")
+separate from task 05's reprime-pileup angle: not sessions running too long
+without batoning, but the self-relaunch mechanism (SKILL.md 3a's `nohup …
+&` spawn, reference.md "Baton pass") firing too *often*, each relaunch
+paying a full cold-start reprime for little or no dispatch progress.
+
+**Evidence.** `agentprof claude --since <48h>` found 5 drain-tagged sessions
+in a 48-hour window that ran under 90 seconds / 40 calls each (`ed1173c3`:
+3 calls/$0.87, `3d6fe09b`: 5 calls/$0.68, `ed29cc3f`: 5 calls/$1.38 —
+fooszone's own "generation 8"), alongside three separate repos (`claude`,
+`automation`, `specs`) each spawning a "generation 2" self-relaunch within
+the same 3-hour stretch. The clearest single instance: fooszone's git log
+(`ad1331e4 drain: baton pass gen 5 -> 6 (5 intake attempts, all NOT READY)`)
+shows an entire generation batoning — full relaunch, full reprime — after
+doing **zero dispatch work**, only 5 critique-intake attempts that all came
+back NOT READY. That queue (`specs/evolve-eval-data`) went on to hit the
+hard 10-generation cap (`6e3a44b0`) with real work still queued (its final
+`DRAIN-BATON.md` NEEDS-ATTENTION section lists a dispatchable task, 4
+unattempted stub-intake items, and 2 gate-FAIL stubs a human could fix in
+minutes) — 10 cold-start relaunches burned without draining the queue.
+
+**Root cause.** SKILL.md step 3a's `max(2, 6 − W)` "recorded verdicts"
+threshold was silent on whether critique-intake and stub-intake attempts
+(fired at the exhaustion trigger, before 3b) counted toward it. Nothing in
+the text excluded them, and — since intake only fires when nothing is
+dispatchable anyway — batoning after intake attempts doesn't cost real
+throughput, so the model reasonably (if wastefully) folded them into the
+same count. But intake attempts already have their own per-run
+at-most-once bookkeeping (`Intake-failed:`/`Stub-intake-failed:`), so there
+is no starvation risk in letting a generation keep working through more
+draft specs/stubs without relaunching — the per-generation turn cap (80)
+and the existing degradation override already bound a long intake spree.
+
+**Fix shipped:** SKILL.md step 3a and reference.md's "Baton pass" now state
+explicitly that the `max(2, 6 − W)` count is step-3 worker verdicts and 3b
+auto-breakdown attempts only — critique-intake and stub-intake attempts
+never increment it. Mirrored into `antigravity/.agents/workflows/drain.md`
+and `codex/.agents/skills/drain/SKILL.md` (mirror-procedure-discipline).
+
+**Re-check needed (MANUAL, not yet done):** a follow-up scan of
+`.drain-gen.log`/git history after a week of runs should show queues no
+longer hitting the 10-generation cap on intake-only stretches, and no new
+short (<2 min) drain-tagged sessions whose entire span is intake attempts.

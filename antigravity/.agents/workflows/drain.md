@@ -553,7 +553,14 @@ line blocks dispatch, and neither prints on baton generations.
    context faster per generation, so it batons sooner to keep per-verdict
    re-caching cheap — wake economics, step 2) — or a degradation override on
    re-reading files already read, losing queue position, repeated failed
-   corrections, or a compaction event. When it fires, drain first enters
+   corrections, or a compaction event. **Critique-intake and stub-intake
+   attempts never count toward this budget** — they already carry their own
+   per-run at-most-once bookkeeping (the `Intake-failed:`/`Stub-intake-failed:`
+   lines below), and counting them pays a full reprime for zero dispatch
+   progress (a fooszone drain queue batoned gen 5→6 on 5 intake attempts that
+   were all NOT READY, then exhausted the 10-generation cap without finishing
+   — `.claude`'s specs/drain-wake-cost/EVIDENCE.md, "Follow-up (2026-07-13)").
+   When it fires, drain first enters
    **drain-down (R8)**: it stops admitting new tasks and waits for every
    in-flight worker's verdict, recording and committing each per step 3 —
    a background worker notifies only the session that launched it, so a
