@@ -1,4 +1,5 @@
 Status: draft
+Intake-refused: gate — assessor's OBSOLETE verdict cited only that task 19's undeclared manifest edit merged harmlessly under this run's W=1 (no Touch enforcement at W=1), not that task 15's own Touch defect is closed; task 15 is still blocked and would hit real R4 Touch enforcement on a future W>1 re-dispatch/merge (2026-07-13)
 Discovered-from: specs/mirror-procedure-discipline/tasks/15-normalize-next-stage-lines.md
 Spec: ../SPEC.md
 Blocking: no
