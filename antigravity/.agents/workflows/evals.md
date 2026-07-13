@@ -25,8 +25,9 @@ no Antigravity equivalent and is ignored here.
    smallest honest prompt, assertions on the artifact contract the
    skill's SKILL.md promises — not incidental wording. Keep each
    `assert.sh` failure message under ~10 lines — that is the whole budget
-   the grader returns to the orchestrator, never a transcript. `chmod +x`
-   both scripts.
+   the grader returns to the orchestrator, never a transcript. Model it on
+   the existing `/breakdown` scenario under `evals/breakdown/`, copying its
+   file shapes. `chmod +x` both scripts.
 2. **Provision the fixture.** Per scenario: create a fresh empty
    directory, run `EVAL_DIR=<dir> bash setup.sh`, then copy
    `.agents/skills/<skill>/` plus the helper skills that are agents in
@@ -49,5 +50,7 @@ no Antigravity equivalent and is ignored here.
    same commit as the skill change. Never loosen an assertion just to go
    green.
 
-Artifacts: scenarios live in `evals/<skill>/<NN-name>/`, committed. Next
-step: run the affected evalset before committing any skill change.
+Artifacts: scenarios live in `evals/<skill>/<NN-name>/`, committed. If a
+failure exposed a skill-authoring gap, apply the distill skill to capture
+the lesson. Next step: run the affected evalset before committing any skill
+change.
