@@ -37,6 +37,8 @@ check "one-handoff: mentions the path" \
   "$(printf '%s' "$out" | grep -qF "$tmp/.claude/HANDOFF.md" && echo 0 || echo 1)"
 check "one-handoff: instructs to continue" \
   "$(printf '%s' "$out" | grep -qi "continue" && echo 0 || echo 1)"
+check "one-handoff: names the resume-handoff skill" \
+  "$(printf '%s' "$out" | grep -qi "resume-handoff" && echo 0 || echo 1)"
 check "one-handoff: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
 rm -rf "$tmp"
 
@@ -51,6 +53,8 @@ check "two-handoffs: mentions both paths" \
   "$(printf '%s' "$out" | grep -qF "$tmp/.claude/HANDOFF.md" \
      && printf '%s' "$out" | grep -qF "$tmp/specs/demo/HANDOFF.md" \
      && echo 0 || echo 1)"
+check "two-handoffs: names the resume-handoff skill" \
+  "$(printf '%s' "$out" | grep -qi "resume-handoff" && echo 0 || echo 1)"
 check "two-handoffs: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
 rm -rf "$tmp"
 

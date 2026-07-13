@@ -1,10 +1,15 @@
 # handoff-resume hook
 
-A `SessionStart` hook that auto-resumes from a `HANDOFF.md` left by
-`/handoff`. On every session start it searches the project for any file
-named `HANDOFF.md` and, if found, injects an instruction to read it and
-continue — so the only manual step left after a heavy session is `/clear`
-itself; the resume instruction is no longer something you type by hand.
+A `SessionStart` hook that flags a `HANDOFF.md` left by `/handoff`. On every
+session start it searches the project for any file named `HANDOFF.md` and,
+if found, injects a pointer at the `resume-handoff` skill
+(`.claude/skills/resume-handoff/SKILL.md`) — so the only manual step left
+after a heavy session is `/clear` itself. Earlier versions injected raw
+"read it and continue" prose instead of naming a skill; that was advisory
+context a live user message asking for something else correctly outranked
+(CLAUDE.md's precedence order), so the resume happened inconsistently.
+Naming the skill explicitly is what makes the resume deterministic — the
+skill (not this hook) does the actual locate/read/resume/cleanup work.
 
 ## Why this is a hook, not a skill
 
@@ -33,9 +38,9 @@ launch alike.
 - Skips `.git` and any worktree/`node_modules` directories, so drain's
   throwaway worktree copies under `.claude/worktrees/` never produce false
   matches.
-- Never deletes or archives the handoff file — that stays the resuming
-  session's job once the work it describes is actually done (normal
-  handoff hygiene), not this hook's.
+- Never deletes or archives the handoff file itself — that's the
+  `resume-handoff` skill's job once it has actually resumed the described
+  work, not this hook's.
 
 ## Wiring (one user-run step)
 
