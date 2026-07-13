@@ -45,10 +45,10 @@ same stated conditions; targeted edit, not a rewrite):
 All four literals are confirmed absent from the codex file today
 (grep -c → 0, verified 2026-07-13):
 
-- [ ] `grep -c "minimal-diff" codex/.agents/skills/drain/SKILL.md` ≥ 1
-- [ ] `grep -c "strict-test-first" codex/.agents/skills/drain/SKILL.md` ≥ 1
-- [ ] `grep -c "re-derive" codex/.agents/skills/drain/SKILL.md` ≥ 1
-- [ ] `grep -c "next-ranked" codex/.agents/skills/drain/SKILL.md` ≥ 1
-- [ ] The tie-break's "angle index" reference now resolves to angles defined in the same clause (no dangling reference — reviewer check)
-- [ ] `tests/test_mirror_procedure_coverage.sh` gains manifest lines pinning the three restored phrases for the codex drain mirror, and `bash tests/test_mirror_procedure_coverage.sh` is green
-- [ ] `for t in tests/test_*.sh; do bash "$t"; done` all green
+- [x] `grep -c "minimal-diff" codex/.agents/skills/drain/SKILL.md` ≥ 1 — result 1 (t1 angle label)
+- [x] `grep -c "strict-test-first" codex/.agents/skills/drain/SKILL.md` ≥ 1 — result 1 (t2 angle label)
+- [x] `grep -c "re-derive" codex/.agents/skills/drain/SKILL.md` ≥ 1 — result 1 (t3 angle label)
+- [x] `grep -c "next-ranked" codex/.agents/skills/drain/SKILL.md` ≥ 1 — result 1 (merge-failure fallback)
+- [x] The tie-break's "angle index" reference now resolves to angles defined in the same clause (no dangling reference — reviewer check) — t1/t2/t3 now defined inline before the "lowest angle index (t1 before t2 before t3)" tie-break
+- [x] `tests/test_mirror_procedure_coverage.sh` gains manifest lines pinning the three restored phrases for the codex drain mirror, and `bash tests/test_mirror_procedure_coverage.sh` is green — 4 lines added (re-derive/next-ranked enforce; minimal-diff/strict-test-first advisory), exit 0
+- [x] `for t in tests/test_*.sh; do bash "$t"; done` all green — ALL TESTS GREEN; ultra-gate OK
