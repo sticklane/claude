@@ -22,6 +22,6 @@ no behavior edits.
 
 ## Acceptance
 
-- [ ] `grep -c "per-session slice of the top-level Reprime rollup" agentprof/internal/costsummary/costsummary.go` returns 0 (the misleading phrase, present at line ~78 today, is gone).
-- [ ] `grep -A2 "ReprimeCount and ReprimeCostMicrousd" agentprof/internal/costsummary/costsummary.go | grep -Eiq "main[- ]loop"` exits 0 (new wording names the main-loop-only filtering; no match today).
-- [ ] `cd agentprof && go test ./internal/costsummary/...` exits 0.
+- [x] `grep -c "per-session slice of the top-level Reprime rollup" agentprof/internal/costsummary/costsummary.go` returns 0 (the misleading phrase, present at line ~78 today, is gone). Evidence: command prints 0.
+- [x] `grep -A2 "ReprimeCount and ReprimeCostMicrousd" agentprof/internal/costsummary/costsummary.go | grep -Eiq "main[- ]loop"` exits 0 (new wording names the main-loop-only filtering; no match today). Evidence: exit 0.
+- [x] `cd agentprof && go test ./internal/costsummary/...` exits 0. Evidence: `ok github.com/sticklane/agentprof/internal/costsummary`; scripts/check.sh all green.
