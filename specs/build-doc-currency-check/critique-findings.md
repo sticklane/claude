@@ -44,3 +44,7 @@ stand (codex mirror leg omitted from R6/Touch; R1 rule placement contradicts
 the Out-of-scope drain exclusion; acceptance criteria not runnable anchored
 greps; stale numeric line anchors — R6's antigravity :63 is actually :121).
 Recovery: amend SPEC.md per findings, then re-run /critique.
+
+## Triage 2026-07-13 (attended; Steven approved REVISE)
+
+Verdict: REVISE. Edits before re-critique: (1) extend R6 to the codex leg with an inline one-line reminder (codex/.agents/skills/build/ is real content with no citable quality-discipline file); (2) scope R1's rule text to the attended /build path or drop the drain exclusion; (3) convert ACs to anchored greps and drop numeric line anchors. Verified: `grep -c "Documentation currency"` → 0 in both targets (problem unsolved); no existing gate covers doc drift.

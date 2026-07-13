@@ -57,3 +57,7 @@ real: no _shared/headers.py; workboard/prioritize regexes still diverge.
 Recovery: human pins regex to `\[?(P[0-3])\]?`, swaps criterion 5 for the
 existing parity gate or names the permitted divergence, pins the import
 mechanism, then re-runs /critique.
+
+## Triage 2026-07-13 (attended; Steven approved REVISE)
+
+Verdict: REVISE. Edits before re-critique: (1) pin the shared regex to `\[?(P[0-3])\]?` with a range fixture (divergence live: prioritize_scan.py:31 vs workboard.py:237); (2) pin the import to the viz-style sys.path pattern (no _shared/headers.py exists; _load_module duplicated in both consumers); (3) replace AC5 with the parity gate or name the standalone-install docstring as the sole permitted divergence. Real correctness bug still live.

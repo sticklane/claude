@@ -40,3 +40,7 @@ manual-pending behavioral AC for the prototype build/drain path.
 `Rigor:` absent from idea/breakdown/build/drain SKILL.md; `rigor` absent from quality-discipline.md;
 `prototype` absent from list-specs SKILL.md — all grep-for-new criteria meaningfully non-vacuous today.
 No recursive grep over .claude/ (no worktree-sweep risk).
+
+## Triage 2026-07-13 (attended; Steven approved REVISE)
+
+Verdict: REVISE. Edits before re-critique: (1) add the lint-ultra-gate AC to tasks touching idea/build/drain; (2) extend R8 to codex/.agents/skills/{build,drain}/SKILL.md + antigravity/.agents/skills/list-specs/SKILL.md and fix the "workflows/" phrasing; (3) replace the blanket R8 grep with per-file greps and a concrete version pin (plugin.json is 0.8.56 as of triage). Verified: `Rigor:` absent from idea/build/drain/breakdown SKILL.md — problem live.

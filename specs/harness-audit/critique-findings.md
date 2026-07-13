@@ -30,3 +30,7 @@ Verdict: NOT READY (drain gen 7 critique intake, 2026-07-12)
 
 Non-blocking: R5/AC4 correctly require antigravity mirror + plugin.json bump; new skill
 is not ultra-path so no lint-ultra-gate criterion owed — both correct.
+
+## Triage 2026-07-13 (attended; Steven approved REVISE)
+
+Verdict: REVISE (P3 — deferral also defensible). Edits before re-critique: (1) decide "standalone skill" as the delivery shape (no manifest edit needed) and name the path; (2) rewrite AC1/AC2 from placeholders (SPEC.md:70, 82-83) to anchored greps against that path, covering all five audit areas; (3) scope command-currency to read-only/allowlisted commands, inspect-only for mutating ones. Verified: only partial neighbor overlap (build-doc-currency-check, ~/REPOS.md) — gates/evals/allowlist auditing not covered elsewhere.

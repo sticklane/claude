@@ -70,3 +70,7 @@ line anchors (finding 2), make AC2 per-section runnable (finding 3), add the
 ultra-gate AC (finding 4), resolve the antigravity fold (finding 5), and
 sequence against build-doc-currency-check (finding 6). Then re-run
 `/critique specs/narrow-autopilot/SPEC.md`.
+
+## Triage 2026-07-13 (attended; Steven approved REVISE)
+
+Verdict: REVISE. Edits before re-critique: (1) switch R6/AC7 to `git grep` and refresh all anchors (drain/reference.md:873, onboard/SKILL.md:78-79 as of 2026-07-13); (2) rewrite R2/R5 against the post-2026-07-11 launch-contract doctrine (execution stages are live-message-authorized; `/evals` alone keeps disable-model-invocation) — the human-gates edits are stale as written; (3) add the lint-ultra-gate AC, pin per-section verbatim checks, and sequence explicitly before build-doc-currency-check. Verified: `.claude/skills/autopilot/` still exists; recursive grep hits 3282 files vs 21 git-tracked (31 worktrees).
