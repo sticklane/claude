@@ -204,6 +204,20 @@ baton's `Run-token:` line (Baton pass below) matches DRAIN-OWNER.md's. A
 mismatch means the predecessor died and a different drain claimed in the
 interim — treat it like any other startup and apply the FRESH refuse path.
 
+**Lease re-confirm before every subsequent status-flip commit (R2).** The
+claim-time confirmation — after committing your claim, re-read the owner
+file at HEAD and confirm YOUR `Run-token:` is the one present — is not a
+one-time gate at the initial claim. The SAME re-read-and-confirm check runs
+immediately before every subsequent status-flip commit within the claimed
+spec's dispatch/collect cycle: each `in-progress` → `done`/`deferred`/
+`blocked`/`failed` flip and each stub-intake flip, not only the opening
+`pending` → `in-progress` claim. A mismatched `Run-token:` at any of these
+re-reads means the session lost ownership mid-cycle — a crossed-yield race,
+or a liveness-based reclaim by another session — so the flip is aborted and
+never committed, and drain treats the spec as lost via the same FRESH refuse
+path the Baton-lineage exception applies (report and skip; do not force the
+flip over another owner's token).
+
 **Remote divergence check (before the Status-header read).** Runs at the
 top of step 1, BEFORE the `Status:` header read and BEFORE the owner-lease
 claim, on every fresh spec pass and on every re-claim after the batch
