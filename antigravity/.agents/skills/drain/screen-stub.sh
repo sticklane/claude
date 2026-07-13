@@ -39,8 +39,12 @@ re_agent='(^|[^[:alnum:]])(you[[:space:]]+(must|should|will|shall|are[[:space:]]
 # "retrieval quality") is not command syntax and must pass clean; a real
 # injection (`eval $(...)`, `eval "..."`, `exec(...)`) always has one.
 re_tool='(push[[:space:]]+to[[:space:]]+(main|master)|git[[:space:]]+push|rm[[:space:]]+-rf|sudo[[:space:]]|curl[[:space:]]|wget[[:space:]]|bash[[:space:]]+-c|(^|[^[:alnum:]])eval[[:space:]]*[$"'"'"'\`(]|(^|[^[:alnum:]])exec[[:space:]]*[$"'"'"'\`(]|<tool_use|<invoke[[:space:]]|invoke[[:space:]]+name=)'
-# 4. absolute paths outside the repo
-re_abspath='(^|[^[:alnum:]])(/etc/|/root/|/var/|/usr/|/bin/|/sbin/|/sys/|/proc/|/dev/|~/)'
+# 4. absolute paths outside the repo — instruction-shaped only (SPEC R2): an
+#    imperative verb must govern the path (read/write/… Xpath, allowing a few
+#    filler tokens like "the file at"). A bare descriptive mention of a path
+#    (prose about where data lives) is NOT instruction-shaped and passes;
+#    tool-invocation directives carrying paths are caught by re_tool above.
+re_abspath='(^|[^[:alnum:]])(read|write|copy|run|execute|exec|open|delete|remove|cat|move|access|fetch|load|save|dump|exfiltrate|upload|download)[[:space:]]+([[:alnum:]._-]+[[:space:]]+){0,3}(/etc/|/root/|/var/|/usr/|/bin/|/sbin/|/sys/|/proc/|/dev/|~/)'
 
 # Collapse all whitespace (including newlines) to single spaces so a pattern
 # split across a line break is caught — line-oriented grep alone is blind to it.
