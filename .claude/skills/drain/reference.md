@@ -36,10 +36,14 @@ startup advisories" names them and points here.
 
 **Name the shell (best-effort).** If the terminal tab has no custom name
 already (none set by the user this session), set it to the repo name plus a
-compact descriptor of the specs being drained:
+**deterministic** descriptor of the specs being drained: sort this run's
+spec slugs alphabetically, join with `,`, then cap the joined string at 40
+chars (truncate and append `…` if longer) — the same input specs always
+produce the same descriptor; never paraphrase or abbreviate by hand:
 `printf '\033]0;%s · drain: %s\007' "$(basename "$(git rev-parse
---show-toplevel)")" "<abbreviated spec slugs, comma-joined>"` — once, never
-re-set on baton generations (they inherit it), skip silently with no TTY.
+--show-toplevel)")" "<sorted, comma-joined, 40-char-capped spec slugs>"` —
+once, never re-set on baton generations (they inherit it), skip silently
+with no TTY.
 
 **Startup session sweep (advisory).** Before inventory, list other live
 sessions whose cwd resolves into this repo (`claude agents --json`, else
