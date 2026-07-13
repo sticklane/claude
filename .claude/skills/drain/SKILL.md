@@ -54,7 +54,12 @@ ONLY (never on baton generations), drain runs three non-blocking advisories —
 **hub-economics** relaunch recommendations (frontier-hub / heavy-hub) — none
 gating dispatch (correctness comes from the owner-lease claim below). Exact
 procedures are in [reference.md](reference.md)'s "Gen-1 startup advisories" —
-load only the named section.
+load only the named section. It also pins the mechanical preflight sweep — a
+gen-1 pass, before step 1's spec-scoped work, across EVERY spec in the drain
+run's launched scope (not only the one about to be claimed): it reclaims dead
+leases and prunes orphaned worktrees (the scripted replacement for the manual
+"kill any zombie drains" ritual), reporting a one-line summary (leases
+reclaimed, worktrees pruned) among these advisories.
 
 **Orchestrator isolation (default ON).** Before any bookkeeping, drain runs
 its own dispatch loop inside a VCS-level isolated checkout of the target repo —
