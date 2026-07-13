@@ -104,31 +104,35 @@ criterion updated to reflect the real (2nd) blocking cause. Commits:
 `blocked`** — now blocked on the R6 bug fix, not on Steven's key.
 
 **14. youtube-cookie-wrapper/06 signing + manual e2e** (fooszone) —
-**IN FLIGHT, this is the exact next step.** Corrected Steven's "do it for me
-now" — this needs a native macOS Keychain "Always Allow" dialog click,
-which I have no tool to drive (Claude-in-Chrome only reaches web pages).
-Opened Keychain Access for him (`open -a "Keychain Access"`) and gave him
-the exact Certificate Assistant steps (Name: `ytcookie-signing`, Identity
-Type: Self Signed Root, Certificate Type: Code Signing). He said "done" but
-the verify command found **0 identities** — the certificate has NOT
-actually landed yet:
+**Step 1 DONE, this is the exact next step (Step 2).** Corrected Steven's
+"do it for me now" — this needs native macOS dialog clicks (Certificate
+Assistant, Keychain "Always Allow"), which I have no tool to drive
+(Claude-in-Chrome only reaches web pages). Opened Keychain Access for him
+and gave him the Certificate Assistant steps (Name: `ytcookie-signing`,
+Identity Type: Self Signed Root, Certificate Type: Code Signing). First
+verify found **0 identities** — root cause: the cert+key pair existed but
+was untrusted for code signing
+(`security find-identity -p codesigning` showed `CSSMERR_TP_NOT_TRUSTED`).
+Fix: Steven set the cert's Trust → Code Signing to "Always Trust" in
+Keychain Access (password-prompted). Re-verified — **now passes**:
 
 ```
-security find-identity -v -p codesigning
+$ security find-identity -v -p codesigning
+  1) 0466D78E293057E96C63540CEE5F09658603DBE7 "ytcookie-signing"
+     1 valid identities found
 ```
 
-→ `0 valid identities found`. **This is exactly where to resume**: find out
-why the identity didn't register (wizard not finished? "Always Trust" step
-not confirmed? wrong keychain selected?), then once
-`security find-identity -v -p codesigning` shows `ytcookie-signing`,
-continue with the runbook at
-`~/fooszone/specs/youtube-cookie-wrapper/evidence/manual-e2e.md` Step 2
-(`cd go && make ytcookie`, verify `codesign -dvvv` shows the stable
-identity) and Step 3 (first authenticated run — real Keychain "Always
-Allow" dialog, Steven clicks it). Task 06's code is already `Status: done`;
-only the manual R12/R13/e2e checkboxes in the evidence file are open, and
-they're explicitly DEFERRED-for-human by the task's own design (not
-something to force through unattended).
+**Resume at Step 2** of
+`~/fooszone/specs/youtube-cookie-wrapper/evidence/manual-e2e.md`:
+`cd ~/fooszone/go && make ytcookie`, then verify
+`codesign -dvvv bin/ytcookie 2>&1 | grep -i Authority` shows
+`ytcookie-signing`. Then Step 3 (first authenticated run — real Keychain
+"Always Allow" dialog, Steven clicks it; I can run the `ytcookie -- -J
+"<url>"` command via Bash and he handles the OS dialog). Task 06's code is
+already `Status: done`; only the manual R12/R13/e2e checkboxes in the
+evidence file are open, and they're explicitly DEFERRED-for-human by the
+task's own design (not something to force through unattended) — Steven
+still needs to check those boxes himself once Steps 2-3 pass.
 
 ## Remaining — items 15-28, not yet reached
 
@@ -194,6 +198,16 @@ items above already turned out stale when actually checked):
   are NOT reachable by any available tool** — Claude-in-Chrome only reaches
   web pages. Don't attempt to "drive" these; open the app for the user
   (`open -a "<App Name>"`) and hand off the manual steps precisely.
+- **A freshly-created self-signed cert from Certificate Assistant is NOT
+  automatically trusted for its intended usage.** `security find-identity
+-v -p codesigning` (valid-only) silently shows `0 valid identities found`
+  even when the cert+key pair exists — the tell is
+  `security find-identity -p codesigning` (no `-v`) showing the identity
+  with `CSSMERR_TP_NOT_TRUSTED`. Fix is a manual Keychain Access step:
+  double-click the cert → Trust → set the matching usage (e.g. Code
+  Signing) to "Always Trust" → password prompt to save. Check trust
+  status with the no-`-v` command before concluding a cert "didn't
+  register."
 
 ## Verification
 
