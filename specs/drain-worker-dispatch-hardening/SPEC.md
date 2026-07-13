@@ -1,5 +1,6 @@
 Status: open
 Priority: P1
+Breakdown-ready: true
 
 ## Problem
 
@@ -35,7 +36,7 @@ worker — after the wasted run:
   reference.md:1205) is invoked with a bare script path — but the
   Touch-enforcement check two hundred lines earlier
   (`.claude/skills/drain/SKILL.md:205`) already reaches for `git diff
-  $(git merge-base <default-branch> <branch>)..<branch> --` — exactly the
+$(git merge-base <default-branch> <branch>)..<branch> --` — exactly the
   command-substitution shape a restrictive permission mode denies (see next
   finding), showing the allowlist-incompatible-Bash-shape problem is not
   confined to worker prompts; it reaches drain's own orchestrator-side
@@ -52,9 +53,9 @@ worker — after the wasted run:
 
 **Worker shell-pattern pitfalls rediscovered fresh, independently, per
 generation.** The Worker prompt (`reference.md:506-631`) already carries a
-*reactive* rule for Bash denials — "retry it ONCE as a bare single command
+_reactive_ rule for Bash denials — "retry it ONCE as a bare single command
 … if it is still denied, stop and report" (reference.md:570-572) — but
-states no *proactive* guidance on which shapes get denied in the first
+states no _proactive_ guidance on which shapes get denied in the first
 place. Evidence from real sessions:
 
 - Shell permission-mode denials on command substitution (`$(...)`), a
@@ -78,22 +79,34 @@ Four mechanical fixes plus one documented-gap item, scoped to the actual
 current structure of `.claude/skills/drain/SKILL.md` and
 `.claude/skills/drain/reference.md`:
 
-1. Add an allowlist pre-flight to drain's headless-dispatch and baton
-   self-relaunch steps (reference.md "Headless fallback" and "Baton pass
-   (self-relaunch)"): before the first `claude -p` invocation of a
-   generation, scan the pending tasks' acceptance-criteria commands for
-   the tool/command names they invoke and confirm each is covered by the
-   `--allowedTools` string about to be used; widen the list (per the
-   canonical template from R2) before dispatching rather than after a
-   BLOCKED verdict reveals the gap.
-2. Add one canonical, tool-complete allowlist template for compute-heavy
-   specs (`go`, `bash`, `npm`, `python3`, `git` at minimum, following the
-   existing `Bash(<verified test/lint/build cmds>)` placeholder
-   convention) to `runtimes/claude-code.md`'s `## Headless` section (the
-   file that already defines `<allowlist>`'s shape), and have
-   `reference.md`'s Headless fallback and Relaunch command template
-   sections reference it by name instead of each session reconstructing
-   an allowlist ad hoc.
+1. Add an allowlist pre-flight to drain's headless-dispatch step
+   (reference.md "Headless fallback", the per-task WORKER allowlist at
+   reference.md:915): before the first `claude -p` invocation of a
+   generation's worker, scan the pending tasks' acceptance-criteria
+   commands for the tool/command names they invoke and confirm each is
+   covered by the `--allowedTools` string about to be used; widen the
+   list (per the canonical template from R2) before dispatching rather
+   than after a BLOCKED verdict reveals the gap. Separately, add a
+   pre-flight to the baton self-relaunch step (reference.md "Baton pass
+   (self-relaunch)", the distinct ORCHESTRATOR allowlist at
+   reference.md:1069-1076, which reference.md already documents as
+   `Task`-inclusive and NOT the worker's): before self-relaunching,
+   confirm that allowlist still carries `Task`, `Bash(git *)`, and the
+   repo's actual project gate/lint/test command(s) — a fixed, repo-level
+   check, not a per-task tool scan, since the orchestrator dispatches
+   workers rather than running their acceptance commands itself.
+2. Add one canonical, tool-complete WORKER allowlist template for
+   compute-heavy specs (`go`, `bash`, `npm`, `python3`, `git` at minimum,
+   following the existing `Bash(<verified test/lint/build cmds>)`
+   placeholder convention) to `runtimes/claude-code.md`'s `## Headless`
+   section (the file that already defines `<allowlist>`'s shape), and
+   have `reference.md`'s Headless fallback section reference it by name
+   instead of each session reconstructing a worker allowlist ad hoc. The
+   Relaunch command template's ORCHESTRATOR allowlist
+   (reference.md:1069-1076) is deliberately distinct — it grants `Task`,
+   not build/test tools — and is out of scope for this canonical worker
+   template; item 1's baton-self-relaunch pre-flight covers that
+   allowlist separately.
 3. Add a privileged/OS-level task classifier: a task whose acceptance
    commands require `launchctl`, a system installer, or interactive OAuth
    is flagged MANUAL / human-pending at breakdown or drain-intake time
@@ -106,7 +119,7 @@ current structure of `.claude/skills/drain/SKILL.md` and
    stated once and referenced from both: avoid command substitution
    (`$(...)`), `for` loops, and multi-verb `&&`-chained commands in
    permission-gated Bash calls; use `! cmd | grep -q` rather than `cmd |
-   ! grep`; and handle `grep -c`'s exit-1-on-zero-matches explicitly
+! grep`; and handle `grep -c`'s exit-1-on-zero-matches explicitly
    (e.g. `grep -c … || true` when zero is an expected outcome) rather
    than letting it break a chained command. This sits alongside, not in
    place of, the existing reactive retry-once-bare-command rule.
@@ -116,22 +129,51 @@ current structure of `.claude/skills/drain/SKILL.md` and
 
 ### Mirror obligations
 
-Requirement 4 touches the Worker prompt in `.claude/skills/drain/
-reference.md`, which is restated (not merely referenced) in the headless
-fallback template and is itself the source drain's dispatch machinery
-ports across runtimes. Any task breaking this spec down must carry, in
-its own `Touch:`:
+Requirements 1, 2, and 4 touch `.claude/skills/drain/reference.md`
+(Headless fallback, Baton pass, and the Worker prompt); R5 may touch
+`.claude/skills/drain/SKILL.md` (the Touch-enforcement line at
+SKILL.md:205); R3's classifier may land in `.claude/skills/drain/
+reference.md`, `.claude/skills/drain/SKILL.md`, or `.claude/skills/
+breakdown/SKILL.md` (its acceptance criterion permits any of the three).
+Confirmed live at spec-authoring time via `ls -la antigravity/.agents/
+skills/drain/`, `ls -la codex/.agents/skills/`, and `grep -n
+'$(git merge-base' antigravity/.agents/workflows/drain.md
+codex/.agents/skills/drain/SKILL.md`:
 
-- a matching update to `antigravity/.agents/skills/drain/` (the mirrored
-  copy of the touched drain files — locate the exact mirrored file(s) at
-  breakdown time; per CLAUDE.md's port-chain convention, `.claude/` →
-  `antigravity/` → `codex/`), and
-- since `codex/.agents/skills/drain` is a symlink to the `antigravity/`
-  directory (not real content — CLAUDE.md's mirror-obligations bullet),
-  no separate codex edit is needed for drain itself; only the four
-  explicit-invocation wrapper skills (`drain`/`build`/`autopilot`/`evals`)
-  carry real content under `codex/.agents/skills/`, and this spec's
-  Requirements do not touch those four wrapper files directly, and
+- BOTH `.claude/skills/drain/reference.md` and `.claude/skills/drain/
+SKILL.md` port into the SAME antigravity file:
+  `antigravity/.agents/workflows/drain.md` (confirmed: it carries the
+  reference.md worker-prompt/retry-rule/Baton-pass content AND the
+  SKILL.md:205 `$(git merge-base …)` line, at drain.md:368) —
+  `antigravity/.agents/skills/drain/` deliberately holds no
+  `SKILL.md`/`reference.md` of its own (only `README.md` and
+  `screen-stub.sh`, a script bundle), because drain is human-launched and
+  therefore ports to a _workflow_, not a skill. Any task whose `Touch:`
+  includes EITHER `.claude/skills/drain/reference.md` OR
+  `.claude/skills/drain/SKILL.md` must also list
+  `antigravity/.agents/workflows/drain.md` in its own `Touch:`, and locate
+  the exact corresponding section inside `drain.md` at breakdown time.
+- `codex/.agents/skills/drain/` is real content, NOT a symlink (confirmed:
+  every other entry under `codex/.agents/skills/` is a symlink into
+  `antigravity/.agents/skills/`, but `drain`, `build`, `autopilot`, and
+  `evals` are real directories — CLAUDE.md's port-chain bullet names these
+  four as the exception). Per CLAUDE.md's codex-leg rule (which triggers on
+  `SKILL.md` changes specifically), any task whose `Touch:` includes
+  `.claude/skills/drain/SKILL.md` must also list
+  `codex/.agents/skills/drain/SKILL.md` in its own `Touch:` (confirmed:
+  that file already carries the same `$(git merge-base …)` line at
+  codex/.agents/skills/drain/SKILL.md:187, plus an equivalent of the
+  retry-once-bare-command rule in its own Codex-adapted "Dispatch"
+  section). A task whose `Touch:` is `reference.md`-only (R1, R2, R4) is
+  not required by that literal rule to also touch codex — but should note
+  in its commit if it restates a rule codex's SKILL.md also carries (e.g.
+  R4's shell-pattern guidance), so the two don't silently drift.
+- if R3's classifier lands in `.claude/skills/breakdown/SKILL.md`, the
+  task must also list `antigravity/.agents/skills/breakdown/SKILL.md` in
+  its own `Touch:` (confirmed a real, non-stub mirrored file); per the
+  codex-leg rule, `codex/.agents/skills/breakdown` is a symlink to that
+  same file (confirmed), so no separate codex edit is needed for that
+  path.
 - a `.claude-plugin/plugin.json` `version` bump (current `0.8.63` per
   live check at spec-authoring time — bump per semver; this spec's
   changes are behavior-affecting skill-body edits, so at minimum a patch
@@ -149,10 +191,10 @@ closes:
   your verdict, never iterate syntax variants." (reference.md:570-572)
 - Headless fallback's allowlist is a bare placeholder with no canonical
   tool-complete form: `--allowedTools "Read,Edit,Write,Glob,Grep,
-  Bash(<verified test/lint/build cmds>),Bash(git add *),Bash(git commit
-  *)"` (reference.md:915, restated in runtimes/claude-code.md:67-68).
+Bash(<verified test/lint/build cmds>),Bash(git add *),Bash(git commit
+*)"` (reference.md:915, restated in runtimes/claude-code.md:67-68).
 - The Touch-enforcement check's own command-substitution shape:
-  `` git diff $(git merge-base <default-branch> <branch>)..<branch> -- ``
+  `git diff $(git merge-base <default-branch> <branch>)..<branch> --`
   (SKILL.md:205) — the exact pattern class the shell-pattern evidence says
   gets denied under restrictive permission modes.
 - `docs/memory/unattended-worker-tool-limits.md`'s existing manual-pending
@@ -161,20 +203,32 @@ closes:
 
 ## Requirements
 
-R1. Drain's headless-dispatch and baton self-relaunch steps
-(`reference.md` "Headless fallback" and "Baton pass (self-relaunch)")
-must validate the `--allowedTools` string against the actual pending
-tasks' acceptance-criteria commands before dispatching the generation's
-first worker — not discover a gap via a live BLOCKED verdict. State this
-as an explicit pre-flight step in both sections (they currently share the
-allowlist mechanism but are documented separately).
+R1. Drain's headless-dispatch step (`reference.md` "Headless fallback",
+the per-task WORKER allowlist at reference.md:915) must validate its
+allowlist against the actual pending tasks' acceptance-criteria commands
+before dispatching the generation's first worker — not discover a gap via
+a live BLOCKED verdict. State this as an explicit pre-flight step in that
+section. Separately — because reference.md:1069-1076 explicitly documents
+the baton self-relaunch step's allowlist as a distinct ORCHESTRATOR
+allowlist (`Task`-inclusive, not per-task-tool-scoped) — the baton
+self-relaunch step (`reference.md` "Baton pass (self-relaunch)") must,
+before self-relaunching, confirm that separate allowlist still carries
+`Task`, `Bash(git *)`, and the repo's actual project gate/lint/test
+command(s): a fixed, repo-level check, not a per-task tool scan, since the
+orchestrator dispatches workers rather than running their acceptance
+commands itself. These are two pre-flights over two allowlists that serve
+different purposes; neither substitutes for the other.
 
-R2. Document one canonical, tool-complete allowlist template for
+R2. Document one canonical, tool-complete WORKER allowlist template for
 compute-heavy specs (`go`, `bash`, `npm`, `python3`, `git` at minimum) in
 `runtimes/claude-code.md`'s `## Headless` section, and have
-`reference.md`'s Headless fallback (reference.md:915) and Relaunch
-command template (reference.md:1069-1076) sections reference it by name
-rather than each restate or reconstruct an allowlist ad hoc.
+`reference.md`'s Headless fallback (reference.md:915) section reference
+it by name rather than restate or reconstruct an allowlist ad hoc. This
+template is scoped to the per-task WORKER allowlist only — the Relaunch
+command template's ORCHESTRATOR allowlist (reference.md:1069-1076) is
+deliberately distinct (it grants `Task`, not build/test tools) and is out
+of scope for this requirement; R1's baton-self-relaunch pre-flight covers
+that allowlist separately.
 
 R3. Add a privileged/OS-level task classifier at breakdown or drain-intake
 time: a task whose acceptance commands require `launchctl`, a system
@@ -239,11 +293,15 @@ under drain's own session, not necessarily under the same restrictive
 - `grep -c "never drain-completable unattended" /Users/sjaconette/claude/.claude/skills/drain/SKILL.md /Users/sjaconette/claude/.claude/skills/drain/reference.md /Users/sjaconette/claude/.claude/skills/breakdown/SKILL.md` → at least 1 across the three files combined (R3; phrase absent today in all three, verified via `grep -rc` returning 0 in each).
 - `grep -c "known-safe shell patterns" /Users/sjaconette/claude/.claude/skills/drain/reference.md` → at least 1 (R4; phrase absent today, verified via `grep -rc` returning 0).
 - `grep -c '\$(git merge-base' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md` → either 0 (rewritten) with a corresponding note in the same task's commit message explaining the safe replacement, OR the phrase persists AND an Open Questions entry documents the manual-pending live-probe reason (R5; this criterion is a fork resolved by the closing task's own commit, not a fixed literal — record which branch was taken in the task's evidence).
-- Mirror obligation check: any task whose `Touch:` includes
-  `.claude/skills/drain/reference.md` and/or
-  `.claude/skills/drain/SKILL.md` must also list a matching path under
-  `antigravity/.agents/skills/drain/` in its own `Touch:` — verify with
-  `grep -l "drain/reference.md\|drain/SKILL.md" specs/drain-worker-dispatch-hardening/tasks/*.md` cross-checked by hand against each matching task's `Touch:` list at breakdown time (MANUAL: breakdown-time review, not a standalone runnable command, since it depends on tasks/ files that don't exist until /breakdown runs).
+- Mirror obligation check: any task whose `Touch:` includes EITHER
+  `.claude/skills/drain/reference.md` OR `.claude/skills/drain/SKILL.md`
+  must also list `antigravity/.agents/workflows/drain.md` in its own
+  `Touch:`; any task whose `Touch:` includes `.claude/skills/drain/
+SKILL.md` must ALSO list `codex/.agents/skills/drain/SKILL.md` in its
+  own `Touch:`; any task whose `Touch:` includes `.claude/skills/
+breakdown/SKILL.md` must also list `antigravity/.agents/skills/
+breakdown/SKILL.md` in its own `Touch:` — verify with
+  `grep -l "drain/reference.md\|drain/SKILL.md\|breakdown/SKILL.md" specs/drain-worker-dispatch-hardening/tasks/*.md` cross-checked by hand against each matching task's `Touch:` list at breakdown time (MANUAL: breakdown-time review, not a standalone runnable command, since it depends on tasks/ files that don't exist until /breakdown runs).
 - `git show <version-bump-commit> -- /Users/sjaconette/claude/.claude-plugin/plugin.json | grep -q '^+.*"version"'` → match, on whichever task's commit performs the version bump (per anchored-acceptance-criteria.md's version-bump-criteria pattern — never a pinned literal, since the current `0.8.63` may have moved by drain time).
 
 ## Open questions
