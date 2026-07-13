@@ -175,3 +175,13 @@ procedural gap").
 ## Open questions
 
 None.
+
+## Parallelization
+
+No concurrent-safe groups. Task 02 depends on Task 01's exact landed
+wording (mirror-procedure-discipline requires the antigravity mirror to
+match the same steps/order/conditions Task 01 writes) and its own
+manifest-line/version-bump work only makes sense once Task 01 has landed —
+they fail the decision-coupling test (shared undecided content: Task 01's
+prose is what Task 02 must read and mirror). Both tasks run solo, in
+order.
