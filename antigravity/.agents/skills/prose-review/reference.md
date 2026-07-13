@@ -11,6 +11,13 @@ verified content (like /simplify's fixed checklist), not live research: the
 vendor sources below were verified 2026-07-11 and are revisited only on a
 human call, never re-fetched at invocation.
 
+## Why this matters
+
+Documentation quality is associated with (not proven to cause) ~25% higher
+team performance, per Google/DORA's State of DevOps research — a
+correlational, self-reported finding, not a causal one.
+(dora.dev/capabilities/documentation-quality)
+
 ## The nine-item rubric
 
 Each item names the vendor(s) whose own published guidance backs it and the
@@ -72,6 +79,12 @@ one-line reason, and a suggested rewrite (SKILL.md's report shape).
      reduce repetition.
    - Amazon: "verbosity hacking" (length exploding without quality) is a
      named failure mode in their RFT best-practices guidance.
+   - Nielsen Norman Group (Morkes & Nielsen): concise writing measured +58%
+     usability, objective language +27%, and the two combined with
+     scannability +124% — the evidentiary basis for this item and for items 5
+     (purple prose) and 9 (self-celebratory language). Conciseness is an
+     explicitly *rewarded* property here, not just an anti-flagged one.
+     (nngroup.com/articles/concise-scannable-and-objective-how-to-write-for-the-web)
 
 8. **Vague / blurry language.** Placeholder words where a concrete specific
    belongs.
@@ -118,6 +131,13 @@ straddles two modes.
 
 ## Google-style essentials Vale can't check
 
+Priority when guides conflict: project-specific conventions first, this
+toolkit's adopted Google-style layer second, third-party authorities
+(Merriam-Webster, Chicago Manual, Microsoft Writing Style Guide) third.
+This is guidance, not a rule — departable when it improves the content, per
+Google's own single-house-style-regardless-of-which-conventions principle.
+(developers.google.com/tech-writing/resources)
+
 Vale's Google package (developers.google.com/style, run first when
 installed) catches sentence-level mechanics — passive voice, second person,
 tense, wordy phrases, heading case. It cannot judge structure or fit, so the
@@ -133,7 +153,16 @@ Style Guide (developers.google.com/style):
 - **Concrete over abstract.** Prefer a real example to a general
   description; show the command, the path, the value.
 - **Descriptive link text.** Link the thing being referred to, never "click
-  here" or "this page".
+  here", "this page", or "Learn More". Vague link text is also an
+  accessibility defect: a screen reader announces duplicate link text with no
+  way to distinguish where each link goes. (nngroup.com/articles/ux-writing-faqs)
+- **Acronym and jargon on first use.** Define an acronym or jargon term the
+  first time it appears; this is new doctrine, not a restatement of an
+  existing rule. Known tension: NN/g's research on non-linear scanning found
+  readers often miss a first-use definition because they don't read start to
+  finish — a long document should consider a glossary or a repeated inline
+  gloss rather than relying on this check alone.
+  (nngroup.com/articles/ux-writing-faqs)
 
 Vale absent does not stop these — they are judgment checks the rubric pass
 runs regardless; the review notes only that the deterministic Vale pass was
@@ -158,6 +187,14 @@ target document. It reads once and answers, in a capped report:
   elsewhere to follow.
 - **What question is left unanswered?** — the gap it noticed but the doc
   never closes.
+- **Inverted pyramid.** Is the conclusion front-loaded, or does the reader
+  have to wade through background before reaching the point?
+- **Subheading quality.** Do the subheadings alone convey the document's
+  structure, or would a reader scanning just the headings come away lost?
+
+79% of readers scan rather than read word-by-word (16%), which is why these
+two structural probes matter as much as the comprehension ones above.
+(nngroup.com/articles/how-users-read-on-the-web)
 
 The stumble report merges into the review findings (each stumble ranked with
 the rubric/Vale findings by how badly it blocks the reader). Review mode runs
