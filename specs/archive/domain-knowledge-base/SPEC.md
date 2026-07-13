@@ -1,3 +1,5 @@
+Archived: 2026-07-13 (Steven, attended triage) — thin value (the automated workflow is ~"run /deep-research once and save it dated"), heavy revision (Workflow/ultracode contract + ~8-criterion restructure), hard-blocked behind idea-research-freshness. Re-/idea after the sibling ships and the pattern proves itself.
+
 # /domain-knowledge: build and consult a per-project cache of domain best practices
 
 ## Problem

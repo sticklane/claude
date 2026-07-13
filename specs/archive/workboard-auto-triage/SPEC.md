@@ -1,3 +1,5 @@
+Archived: 2026-07-13 (Steven, attended triage) — targets retired architecture — /workboard is now the live agent-console dashboard with its own action registry, and /drain's auto-breakdown already shipped the breakdown bucket. The remaining verify+archive value belongs as a small agent-console action-kind spec (a rewrite, not a revision).
+
 # workboard auto-triage: dispatch critique/breakdown/verify+archive without per-spec manual commands
 
 ## Problem

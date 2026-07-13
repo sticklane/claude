@@ -1,3 +1,5 @@
+Archived: 2026-07-13 (Steven, attended triage) — uncomputable as specified — no attempt-1↔retry pairing key exists in the frame data (turnFrame is ordinal+snippet, not task identity) and the cost cache is a single collapsed weekly summary. Needs upstream instrumentation re-scope; re-/idea if the metric is still wanted.
+
 # First-pass success rate from agentprof role markers
 
 Status: open
