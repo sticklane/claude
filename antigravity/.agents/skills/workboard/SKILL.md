@@ -58,9 +58,10 @@ inline rather than as an opaque single row.
   cwd, plus every repo any Claude Code session has touched. It also reads
   `~/.gemini/antigravity*/brain/` conversation artifacts, so Antigravity's
   own open checklists appear alongside everything else.
+  Pass explicit roots when the user names directories.
 - `--stale-days N` tunes the staleness threshold (default 7). Data sources
   and the state model are in [reference.md](reference.md) — load only if
-  the scan misbehaves.
+  the scan misbehaves or the user asks what a state means.
 
 ## 3. Triage (only if the user asks)
 
