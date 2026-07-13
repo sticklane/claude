@@ -34,3 +34,13 @@ is not ultra-path so no lint-ultra-gate criterion owed — both correct.
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE (P3 — deferral also defensible). Edits before re-critique: (1) decide "standalone skill" as the delivery shape (no manifest edit needed) and name the path; (2) rewrite AC1/AC2 from placeholders (SPEC.md:70, 82-83) to anchored greps against that path, covering all five audit areas; (3) scope command-currency to read-only/allowlisted commands, inspect-only for mutating ones. Verified: only partial neighbor overlap (build-doc-currency-check, ~/REPOS.md) — gates/evals/allowlist auditing not covered elsewhere.
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+`git log -- specs/harness-audit/SPEC.md` shows no commit since the triage
+above — SPEC.md is byte-identical to the state that produced this file's
+prior NOT READY verdict. Skipping a redundant full critic dispatch on
+unchanged content per token-discipline's "cheap before expensive" — the
+three approved triage edits above are the recovery path, unchanged (the
+triage's own P3-deferral-is-defensible note stands too). This spec's
+critique intake is spent for this run.
