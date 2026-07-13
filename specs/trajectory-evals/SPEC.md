@@ -55,7 +55,10 @@ touches it.
   the only observable change for artifact-only scenarios.
 - R3: At least one committed scenario exercises a trajectory assertion
   (a new scenario for an existing evalset, asserting an expected dispatch
-  or the absence of a banned pattern) and passes.
+  or the absence of a banned pattern) and passes. The "passes" half is
+  manual-pending: it requires a paid headless `./evals/run.sh` run, which
+  an unattended worker cannot launch — mark it manual-pending per
+  docs/memory/unattended-worker-tool-limits.md rather than guessing.
 - R4: `.claude/skills/evals/SKILL.md` + `.claude/skills/evals/reference.md`
   document `EVAL_TRANSCRIPT`,
   keep artifact assertions primary, and keep the ~10-line failure-message
@@ -63,8 +66,14 @@ touches it.
 - R5: The antigravity mirror (`antigravity/.agents/workflows/evals.md`)
   receives the equivalent documentation, or — if Agent Manager runs
   expose no transcript file — a reviewed carve-out recorded as evidence,
-  never a silent skip (CLAUDE.md's mirroring convention); plugin.json is
-  bumped; some task's `Touch:` lists these paths.
+  never a silent skip (CLAUDE.md's mirroring convention). The codex mirror
+  (`codex/.agents/skills/evals/SKILL.md` — real content, not a symlink,
+  per CLAUDE.md's port-chain convention) receives the equivalent
+  documentation too: its "v1 grades artifacts only" (line 19) and "never
+  a transcript" (line 41) phrasing directly contradicts the v2 mechanism
+  and must be updated. `.claude-plugin/plugin.json`'s `version` is
+  bumped. Some task's `Touch:` lists all of these paths, including the
+  codex mirror.
 
 ## Out of scope
 
@@ -81,11 +90,14 @@ touches it.
 - [ ] `./evals/run.sh breakdown` passes with no scenario edits (R2 — paid
       headless run; human-launched).
 - [ ] `grep -rl "EVAL_TRANSCRIPT" evals/*/ | grep -q assert.sh` — at least
-      one committed scenario asserts against the transcript (R3).
-- [ ] `grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/SKILL.md || grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/reference.md` (R4)
+      one committed scenario asserts against the transcript (R3 — the
+      "asserts" half). The "passes" half is manual-pending: `./evals/run.sh`
+      is a paid headless run, human-launched (R3).
+- [ ] `grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/SKILL.md && grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/reference.md` (R4 — both files must document it)
 - [ ] `grep -q "EVAL_TRANSCRIPT" antigravity/.agents/workflows/evals.md` or
-      an evidence file records the reviewed carve-out; plugin.json version
-      is higher than before (R5).
+      an evidence file records the reviewed carve-out; `grep -q
+      "EVAL_TRANSCRIPT" codex/.agents/skills/evals/SKILL.md`; `grep -q
+      '"version": "0.8.59"' .claude-plugin/plugin.json` (R5).
 
 ## Open questions
 
