@@ -83,3 +83,43 @@ prior NOT READY verdict. Skipping a redundant full critic dispatch on
 unchanged content per token-discipline's "cheap before expensive" — the
 three approved triage edits above are the recovery path, unchanged. This
 spec's critique intake is spent for this run.
+
+## Re-critique 2026-07-13 (approved triage edits applied) — still NOT READY
+
+The three approved triage edits above were applied to SPEC.md (git-grep
+R6/AC7 with refreshed anchors, R2/R5 rewritten against the post-2026-07-11
+launch-contract doctrine, lint-ultra-gate AC added, AC2 made per-section
+runnable, explicit Sequencing AC added). Re-critiqued via `/critique`.
+Verdict: **NOT READY**. The critic confirmed the applied edits are correct
+(refreshed anchors match current file content, git-grep scoping is
+deterministic, R5's human-gates rewrite is factually accurate, AC2's
+per-section check is runnable, the lint-ultra-gate AC is well-placed) but
+surfaced findings outside this revision's approved scope:
+
+1. **The codex leg is entirely unaddressed (confidence 88, blocker).**
+   `codex/.agents/skills/autopilot/` exists as real content (not a
+   symlink) per CLAUDE.md's port-chain rule naming `drain/build/autopilot/
+   evals` as the four codex wrappers. This spec's R7 addresses only
+   `antigravity/`; R6's sweep grep is scoped to `.claude/ docs/ CLAUDE.md
+   .claude-plugin/`, excluding `codex/` and `antigravity/` entirely, so
+   AC7 passing proves nothing about the codex leg. A literal decomposition
+   ships `codex/.agents/skills/autopilot/SKILL.md` orphaned and
+   `codex/AGENTS.md` + `codex/README.md` stale.
+2. **R6's enumeration misses 4 tracked git-grep hits and mis-instructs
+   their disposition (confidence 72).** `.claude/rules/
+   mirror-procedure-discipline.md:55` (historical bug reference),
+   `.claude/skills/resume-handoff/SKILL.md:28`, `docs/TASKS.md:54`, and
+   `docs/memory/multi-runtime-live-testing.md:62` are in the 21-file
+   git-grep set but not in R6's "known hits" list; list-membership hits
+   need `/autopilot` dropped from the enumeration (not reworded to
+   "build's bounded mode"), and the historical reference should be
+   exempted, not rewritten.
+3. **Finding 5 (R7 antigravity fold-in underspecified) still stands
+   (confidence 65)** — out of this revision's approved scope, so left
+   unchanged, but not resolved: whether `antigravity/.agents/skills/
+   build/` needs the new classification gate/escalation triggers ported
+   is still undefined.
+
+Next step for a human: findings 1–2 need the same triage-and-approve
+treatment as the prior round before another revision round; finding 3
+repeats prior finding 5, unresolved by design this round.
