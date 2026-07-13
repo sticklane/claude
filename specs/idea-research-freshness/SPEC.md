@@ -19,16 +19,33 @@ trustworthy versus stale and due for a refresh.
 
 - **A dated citation-freshness convention.** Any doc section that cites
   external research (currently `docs/external-playbooks.md` and
-  `docs/guides/*.md`) carries a `Verified: YYYY-MM-DD` line immediately
-  under its heading. This is the one signal both a human and a future
-  `/idea` run check before deciding whether a topic needs fresh research.
-- **`/idea` gains a grounding-check step**, inserted between step 1
-  (scout) and step 2 (interview) in `.claude/skills/idea/SKILL.md`: when
-  the idea's own framing asks for external grounding (phrases like "best
-  practices," "how do [vendor/tool] do this," "research X," "backed by
-  research/blogs from ..."), grep `docs/` for a `Verified:` stamp on a
-  topically-matching section within the staleness window (default **90
-  days**) before dispatching anything:
+  `docs/guides/*.md`) carries a `Verified: YYYY-MM-DD` line as the next
+  non-blank line after its `##` heading, matching `^Verified:
+  \d{4}-\d{2}-\d{2}$` exactly (no other text on that line). This is the
+  one signal both a human and a future `/idea` run check before deciding
+  whether a topic needs fresh research.
+- **A deterministic freshness checker.**
+  `.claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh
+  <dir> [--today YYYY-MM-DD]` scans a `docs/`-shaped directory tree for
+  headings, checks each for the pinned `Verified:` line immediately below
+  it, and prints one of `fresh` / `stale` / `absent` per matching heading:
+  a stamp within 90 days of `--today` (default: the real current date) is
+  `fresh`; older than 90 days is `stale`; no stamp at all is `absent`.
+  The `--today` flag makes the fixtures below date-relative instead of
+  hardcoded, so they don't rot as the calendar advances. This script is
+  the one mechanical decision point both `/idea`'s new step and this
+  spec's tests rely on — no other freshness logic is duplicated
+  elsewhere.
+- **`/idea` gains a grounding-check step**, inserted as the new step 2
+  between today's step 1 (scout) and step 2 (interview) in
+  `.claude/skills/idea/SKILL.md` — today's steps 2-6 renumber to 3-7, and
+  every internal `step N` cross-reference elsewhere in SKILL.md is
+  updated to match the new numbering: when the idea's own framing asks
+  for external grounding (phrases like "best practices," "how do
+  [vendor/tool] do this," "research X," "backed by research/blogs from
+  ..."), run `check-freshness.sh` against `docs/` to check for a
+  `Verified:` stamp on a topically-matching section within the staleness
+  window (default **90 days**) before dispatching anything:
   - **Fresh match found** → reuse it: cite the existing `docs/<path>:<line>`
     directly in the spec's Solution/Problem, dispatch no research agents.
   - **Stale or no match** → dispatch research the same way this session
@@ -62,7 +79,11 @@ trustworthy versus stale and due for a refresh.
   human or a future `/idea` run backfills real stamps for those,
   heading by heading, only as each is actually re-verified.
 - **R2**: `.claude/skills/idea/SKILL.md` gains a grounding-check step,
-  positioned between today's step 1 and step 2, worded per Solution.
+  inserted as the new step 2 (positioned between today's step 1 and
+  step 2), worded per Solution. Inserting it renumbers today's steps 2-6
+  to 3-7, and every internal `step N` cross-reference elsewhere in
+  SKILL.md (the ~12 the critic found at authoring time) is updated in the
+  same edit to match — no reference is left pointing at the old numbers.
   Detection of "needs external grounding" is judgment-based (the
   executing session reads the idea's own phrasing and intent), not a
   fixed keyword list — the step names the phrase patterns from Solution
@@ -114,11 +135,13 @@ trustworthy versus stale and due for a refresh.
 
 ## Acceptance criteria
 
-Fixtures for the four checks below live under a new
+Fixtures for the checks below live under a new
 `.claude/skills/idea/test-fixtures/research-freshness/` directory (one
 small `docs/`-shaped tree per scenario: `fresh/`, `stale/`, `no-stamp/`),
 created as part of this spec's implementation — not left for the
-verifying agent to invent.
+verifying agent to invent. Each fixture's `Verified:` date (where
+present) is computed relative to the check's `--today` argument rather
+than hardcoded, so the fixtures stay valid as the calendar advances.
 
 - [ ] `docs/guides/model-routing.md`'s `## Dispatch authoring: making the
       choice explicit` heading has a real, current-dated `Verified:` line
@@ -127,29 +150,46 @@ verifying agent to invent.
       `docs/external-playbooks.md` or `docs/guides/*.md` gets a stamp
       from this spec (per R1's narrowed dogfood scope) — confirm none
       were added elsewhere.
+- [ ] `bash check-freshness.sh <fixtures-dir>/fresh --today <fixed-date>`
+      prints `fresh` for the fixture's stamped heading (a `Verified:`
+      date within 90 days of `--today`), where `<fixtures-dir>` is
+      `.claude/skills/idea/test-fixtures/research-freshness`.
+- [ ] `bash check-freshness.sh <fixtures-dir>/stale --today <fixed-date>`
+      prints `stale` for the fixture's stamped heading (a `Verified:`
+      date 100+ days before `--today`).
+- [ ] `bash check-freshness.sh <fixtures-dir>/no-stamp --today
+      <fixed-date>` prints `absent` for the fixture's heading (no
+      `Verified:` line at all).
 - [ ] `.claude/skills/idea/SKILL.md` contains the new grounding-check step
-      between today's steps 1 and 2, naming the 90-day window, the
-      fresh-vs-stale branching from Solution, and the "illustrative, not
-      exhaustive" phrase-pattern caveat from R2.
-- [ ] Using the `fresh/` fixture (a `Verified:` stamp dated within 90
-      days on a section topically matching a test idea phrased "research
-      best practices for X, backed by Y"): a fresh agent running `/idea`
-      against it produces a spec citing that existing doc location; the
-      transcript shows no research-agent (`factcheck`/general-purpose
-      web-research/`deep-research`) dispatch.
-- [ ] Using the `stale/` fixture (identical, but the stamp is dated 100+
-      days ago): research agents ARE dispatched, and the resulting spec's
-      citations include a refreshed `Verified: <today>` stamp written back
-      to that doc section.
-- [ ] Using the `no-stamp/` fixture (matching section, no `Verified:` line
-      at all): treated identically to `stale/` (research dispatched,
-      stamp written).
-- [ ] Using the `fresh/` fixture again, but with the test idea reworded to
-      carry the same grounding intent without any of R2's listed trigger
-      phrases (e.g. "let's make sure our approach here matches what other
-      labs have published"): the fresh match is still found and cited,
-      demonstrating the check isn't a literal keyword match on the
-      illustrative phrase list.
+      as step 2 (between today's steps 1 and 2), naming the 90-day
+      window, directing that `check-freshness.sh` (or the equivalent
+      logic) decides the fresh/stale/absent branching from Solution, and
+      the "illustrative, not exhaustive" phrase-pattern caveat from R2 —
+      checked by grep over SKILL.md's text, not by running `/idea`.
+- [ ] Every internal `step N` cross-reference in
+      `.claude/skills/idea/SKILL.md` is consistent with the renumbering
+      from R2: no reference still points at a step's pre-insertion
+      number (old steps 2-6 are cited as 3-7 everywhere they're
+      referenced, not only where they're defined) — checked by grepping
+      every `step [0-9]` occurrence against the heading it's meant to
+      reference.
+- [ ] MANUAL-PENDING (unattended drain workers cannot interactively run
+      `/idea` — CLAUDE.md's execution-stage launch-authorization contract
+      requires a live user request naming the stage, and
+      background-dispatched agents can't interview per
+      `.claude/rules/token-discipline.md`'s "Background-dispatched agents
+      can't interactively interview a human"): a human or attended
+      session runs `/idea` against the `fresh/`, `stale/`, and
+      `no-stamp/` fixtures (plus one paraphrase-only rewording of the
+      `fresh/` idea per R2, carrying the same grounding intent without
+      any listed trigger phrase) and confirms behavior matches the
+      deterministic checks above end to end: `fresh/` (trigger-phrase or
+      paraphrase) dispatches no research agent and cites the existing
+      `docs/<path>:<line>`; `stale/` and `no-stamp/` dispatch research
+      and write back a refreshed `Verified: <today>` stamp. This is the
+      only criterion requiring a live `/idea` run — the mechanical
+      fresh/stale/absent decision itself is fully covered by
+      `check-freshness.sh` above.
 - [ ] `bash tests/test_doc_links.sh` (existing link-checker gate) still
       passes after the `Verified:` lines are added.
 - [ ] `bash evals/lint-ultra-gate.sh` passes after the SKILL.md edit (R9).

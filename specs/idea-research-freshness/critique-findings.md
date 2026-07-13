@@ -64,3 +64,48 @@ file's prior NOT READY verdict. Skipping a redundant full critic dispatch on
 unchanged content per token-discipline's "cheap before expensive" — the
 three approved triage edits above are the recovery path, unchanged. This
 spec's critique intake is spent for this run.
+
+## Re-critique 2026-07-13 (after applying the approved REVISE edits) — still NOT READY
+
+Applied exactly the three approved edits from the 2026-07-13 triage above:
+(1) added `check-freshness.sh` (injectable `--today`, date-relative
+fixtures) with acceptance criteria asserting its fresh/stale/absent output
+per fixture; (2) replaced the run-`/idea`-end-to-end criteria (old 3-6)
+with grep checks on SKILL.md text plus exactly one explicit MANUAL-PENDING
+end-to-end criterion; (3) pinned the stamp regex/placement
+(`^Verified: \d{4}-\d{2}-\d{2}$`, next non-blank line after the `##`
+heading) and added a step-renumbering cross-reference-consistency
+criterion.
+
+Full critic dispatch verdict: **NOT READY**. The three prior blockers are
+confirmed closed. One new gap surfaced, introduced by this round's own
+edit:
+
+1. **(conf 78) The renumbering instruction ("today's steps 2-6 renumber to
+   3-7") and its cross-reference criterion target `.claude/skills/idea/
+   SKILL.md` (6 steps) only.** `antigravity/.agents/skills/idea/SKILL.md`
+   has only 5 steps (its own numbering: Adversarial pass is step 4, Hand
+   off is step 5) with one internal `step 5` reference. R7 already
+   requires mirroring the grounding-check step into antigravity, but
+   neither R2/R7 nor the acceptance criteria say how antigravity's own
+   steps renumber (2-5→3-6) or that its lone `step 5` reference must
+   become `step 6` — a worker applying the `.claude`-shaped instruction
+   literally to the 5-step mirror has no correct action, and nothing
+   catches a stale reference there. Fix: state antigravity's own
+   renumbering explicitly in R7, and add a parallel cross-reference
+   criterion for the mirror.
+2. **(conf 62, nit) `check-freshness.sh`'s per-heading output line format
+   is unpinned** — "prints `fresh`" is checkable as a bare word or as
+   `<heading>: fresh`; pin the exact line shape.
+3. **(conf 60, nit) No fixture exercises the exact 90-day boundary** (91
+   vs 90 days) — only "within 90" and "100+"; a `<`-vs-`<=` bug would pass
+   all three current fixtures.
+4. **(conf 52, mention-only) Date-diff portability** (GNU `date -d` vs BSD
+   `date -j`) isn't called out; worth a one-line implementation note so
+   breakdown budgets a portable approach.
+
+Per this task's scope (apply only the previously-approved edit list, don't
+invent new changes), finding 1 was not fixed in this pass — it needs a
+human decision on how R7/the antigravity mirror should state its own
+renumbering. `Breakdown-ready:` is not set; do not `/breakdown` until a
+human resolves finding 1 (2-4 are nits, fixable in the same pass).
