@@ -64,8 +64,9 @@ gets ignored and costs tokens every conversation.
   the same edit — topics whose code or convention no longer exists, or
   that AGENTS.md now covers (this manual pass is the layer's only decay
   mechanism).
-- New skills: `description` in third person stating what it does AND when
-  to use it (concrete trigger phrases); body under 500 lines; heavy
-  reference material in a separate file in the skill directory.
+- New skills: directory-named command, `description` in third person stating
+  what it does AND when to use it (concrete trigger phrases); body under 500
+  lines; procedures as checklists; heavy reference material in a separate
+  file in the skill directory.
 - Show the user a one-line summary per learning captured (or "nothing worth
   keeping" — a valid outcome).
