@@ -70,3 +70,12 @@ this file's prior NOT READY verdict. Skipping a redundant full critic
 dispatch on unchanged content per token-discipline's "cheap before
 expensive" — the three approved triage edits above are the recovery path,
 unchanged. This spec's critique intake is spent for this run.
+
+## Re-critique 2026-07-13 (approved edits applied) — READY
+
+The three approved triage edits (regex pin `\[?(P[0-3])\]?` + P7 range
+fixture, viz-style `sys.path.insert`+`import headers` import pin, AC5
+named-exception for prioritize_scan.py's docstring) were applied to
+SPEC.md. Re-critique confirms all three prior findings are resolved with
+no new blocking issues (three non-blocking nits noted, not holding
+breakdown). `Breakdown-ready: true` written to SPEC.md's header.
