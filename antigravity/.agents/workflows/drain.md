@@ -528,14 +528,20 @@ line blocks dispatch, and neither prints on baton generations.
    attempt starts from evidence instead of zero.
 
    Keep verdicts,
-   not transcripts. Then top up the window (step 2's top-up on verdict) —
-   loop while anything is dispatchable and the window has a free slot.
+   not transcripts. **Every recorded verdict ends here, not at step 2**:
+   before dispatching the next worker or topping up the window again,
+   evaluate the baton-pass relaunch trigger below — looping back to step 2
+   without that check first is a process violation, not a discretionary skip.
+   Only after the baton check clears (trigger not met, or fired and this
+   generation's turn has ended) does the hub top up the window (step 2's
+   top-up on verdict) and loop while anything is dispatchable and the window
+   has a free slot.
 
    **Baton pass (write the baton and stop).** Open this step by emitting
-   `<!-- agentprof:stage=baton-pass -->` verbatim each time you enter it.
-   At each safe boundary (a
-   verdict just recorded and committed, or a 4a auto-breakdown attempt)
-   evaluate the same relaunch trigger
+   `<!-- agentprof:stage=baton-pass -->` verbatim each time you enter it —
+   and you enter it after EVERY recorded verdict (step 3's closing line sends
+   you here unconditionally) or 4a auto-breakdown attempt, never only when it
+   happens to feel like a good moment. Evaluate the same relaunch trigger
    as `.claude`'s drain: a generation budget — hand off after
    **`max(2, 6 − W)` recorded verdicts** this session (W is the window size,
    so a wider window batons sooner: W=1→5, W=3→3, W=5→2; an auto-breakdown
