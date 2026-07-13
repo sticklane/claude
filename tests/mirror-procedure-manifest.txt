@@ -1,0 +1,17 @@
+# Mirror procedure-coverage manifest (spec mirror-procedure-discipline, R3/R4).
+#
+# One entry per line, pipe-delimited: <source file>|<mirror file>|<critical phrase>
+# tests/test_mirror_procedure_coverage.sh fails when a phrase is present in the
+# source but absent from the mirror. Blank lines and lines starting with # are
+# skipped, so audits (R5/R6) append "# checked: <skill> — <finding or clean>"
+# comment lines here to record a side-by-side read that found nothing to seed.
+#
+# Seeded from the 6 manifest-expressible of this session's 8 fixes (commits
+# e742cb6, 4d1edcc). The other 2 are the rule's named blind spots: build.md's
+# pure reorder (ordering-only) and codex-autopilot's content-swap (mirror-adds).
+.claude/skills/autopilot/SKILL.md|antigravity/.agents/workflows/autopilot.md|bounded goal
+.claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|Environment kill
+.claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|one focused question each
+.claude/skills/breakdown/SKILL.md|antigravity/.agents/workflows/breakdown.md|recording a BLOCKED flip
+.claude/skills/critique/SKILL.md|antigravity/.agents/workflows/critique.md|Relay the verdict and findings verbatim
+.claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|credentials or external services beyond
