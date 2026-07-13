@@ -74,3 +74,12 @@ sequence against build-doc-currency-check (finding 6). Then re-run
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE. Edits before re-critique: (1) switch R6/AC7 to `git grep` and refresh all anchors (drain/reference.md:873, onboard/SKILL.md:78-79 as of 2026-07-13); (2) rewrite R2/R5 against the post-2026-07-11 launch-contract doctrine (execution stages are live-message-authorized; `/evals` alone keeps disable-model-invocation) — the human-gates edits are stale as written; (3) add the lint-ultra-gate AC, pin per-section verbatim checks, and sequence explicitly before build-doc-currency-check. Verified: `.claude/skills/autopilot/` still exists; recursive grep hits 3282 files vs 21 git-tracked (31 worktrees).
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+`git log -- specs/narrow-autopilot/SPEC.md` shows no commit since the triage
+above — SPEC.md is byte-identical to the state that produced this file's
+prior NOT READY verdict. Skipping a redundant full critic dispatch on
+unchanged content per token-discipline's "cheap before expensive" — the
+three approved triage edits above are the recovery path, unchanged. This
+spec's critique intake is spent for this run.
