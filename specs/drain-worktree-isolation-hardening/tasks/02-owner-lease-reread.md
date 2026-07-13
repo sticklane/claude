@@ -1,6 +1,6 @@
 # Task 02: Owner-lease re-read before every status-flip commit (R2)
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 18 turns
