@@ -44,3 +44,12 @@ No recursive grep over .claude/ (no worktree-sweep risk).
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE. Edits before re-critique: (1) add the lint-ultra-gate AC to tasks touching idea/build/drain; (2) extend R8 to codex/.agents/skills/{build,drain}/SKILL.md + antigravity/.agents/skills/list-specs/SKILL.md and fix the "workflows/" phrasing; (3) replace the blanket R8 grep with per-file greps and a concrete version pin (plugin.json is 0.8.56 as of triage). Verified: `Rigor:` absent from idea/build/drain/breakdown SKILL.md — problem live.
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+`git log -- specs/rigor-tier/SPEC.md` shows no commit since the triage
+above — SPEC.md is byte-identical to the state that produced this file's
+prior NOT READY verdict. Skipping a redundant full critic dispatch on
+unchanged content per token-discipline's "cheap before expensive" — the
+three approved triage edits above are the recovery path, unchanged. This
+spec's critique intake is spent for this run.
