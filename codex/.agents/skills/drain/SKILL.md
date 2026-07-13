@@ -50,12 +50,16 @@ along. Stated once; every commit below follows it.
 **Name the run (gen 1, best-effort).** At gen-1 startup, if the run has no
 custom name already (none set by the user this session), label it in Codex's
 Agent Manager naming surface — or, in a `codex exec`/TUI shell that owns a
-TTY, set the terminal tab title — to the repo name plus a compact descriptor
-of the specs being drained: the repo basename then `· drain: <abbreviated
-spec slugs, comma-joined>` (where a TTY exists, `printf '\033]0;%s · drain:
-%s\007' "$(basename "$(git rev-parse --show-toplevel)")" "<slugs>"`). Set it
-once; never re-set on baton generations (they inherit it); skip silently with
-no naming surface or TTY.
+TTY, set the terminal tab title — to the repo name plus a **deterministic**
+descriptor of the specs being drained: sort this run's spec slugs
+alphabetically, join with `,`, then cap the joined string at 40 chars
+(truncate and append `…` if longer) — the same input specs always produce
+the same descriptor; never paraphrase or abbreviate by hand: the repo
+basename then `· drain: <sorted, comma-joined, 40-char-capped spec slugs>`
+(where a TTY exists, `printf '\033]0;%s · drain: %s\007' "$(basename
+"$(git rev-parse --show-toplevel)")" "<slugs>"`). Set it once; never re-set
+on baton generations (they inherit it); skip silently with no naming
+surface or TTY.
 
 **Startup session sweep (advisory).** Before inventory, list other live
 sessions whose working directory resolves into this repo (the runtime's
@@ -321,6 +325,9 @@ human may demote any auto-promoted task back to `draft` via a
 permanently-respected `Demoted:` line.
 
 ## 3b. Auto-breakdown (lowest priority)
+
+Emit `<!-- agentprof:stage=auto-breakdown -->` verbatim as this step's
+opening line every time you enter it.
 
 When step 1 finds nothing dispatchable, in-progress, or parked, check for a
 **not-yet-broken-down spec** before the batch interview: a spec dir with a

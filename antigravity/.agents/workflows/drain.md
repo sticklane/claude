@@ -39,11 +39,14 @@ staged or working-tree changes must never ride along. Stated once here;
 every commit below follows it without restating it.
 
 **Name the run (gen 1, best-effort).** At gen-1 startup, if the run/tab has
-no custom name already, name it the repo plus a compact descriptor of the
-specs being drained (e.g. `claude · drain: reprime-vis, model-pins`) using
-whatever naming surface the runtime offers (terminal title escape, Agent
-Manager run name); skip silently where none exists, and never re-name on
-baton generations.
+no custom name already, name it the repo plus a **deterministic** descriptor
+of the specs being drained: sort this run's spec slugs alphabetically, join
+with `,`, then cap the joined string at 40 chars (truncate and append `…` if
+longer) — the same input specs always produce the same descriptor; never
+paraphrase or abbreviate by hand (e.g. `claude · drain: model-pins,reprime-vis`)
+— using whatever naming surface the runtime offers (terminal title escape,
+Agent Manager run name); skip silently where none exists, and never re-name
+on baton generations.
 
 **Startup session sweep (advisory).** Before inventory, check whether
 another live session's working directory is this same repo — the Agent
@@ -656,6 +659,8 @@ layout` the winner's branch already carries the worker's evidence
      drops the other candidates' deferred questions.
 
 **Critique intake (fires at the exhaustion trigger, immediately before 4a).**
+Open this step by emitting `<!-- agentprof:stage=critique-intake -->`
+verbatim each time you enter it.
 When step 1's inventory finds nothing dispatchable, nothing in-progress,
 and no parked tasks — the same trigger 4a and step 5 use, evaluated
 **immediately before 4a** (critique intake writes the `Breakdown-ready:`
@@ -698,7 +703,9 @@ plus an adversarial gate (docs/human-gates.md reason 4, cited not restated);
 stubs it cannot promote appear on the exit checklist for the human.
 
 **Stub intake (fires at the exhaustion trigger, after critique intake,
-before 4a).** At the same trigger critique intake uses — nothing
+before 4a).** Open this step by emitting `<!-- agentprof:stage=stub-intake -->`
+verbatim each time you enter it.
+At the same trigger critique intake uses — nothing
 dispatchable, nothing in-progress, nothing parked — and evaluated **after
 critique intake and before 4a's auto-breakdown loop-back**, this workflow
 works the in-scope `Status: draft` stubs. It is the sibling of critique
@@ -792,7 +799,9 @@ Every promotion, closure, and refusal is audited on the exit checklist's
 task back to draft with a `Demoted:` line that stub intake permanently
 respects.
 
-4a. **Auto-breakdown (lowest priority).** When step 1's inventory finds
+4a. **Auto-breakdown (lowest priority).** Open this step by emitting
+`<!-- agentprof:stage=auto-breakdown -->` verbatim each time you enter it.
+When step 1's inventory finds
 nothing dispatchable, nothing in-progress, and no parked tasks — the
 same trigger step 5 uses — check for **not-yet-broken-down specs**
 before falling into the batch interview: a spec dir with a `SPEC.md`, no

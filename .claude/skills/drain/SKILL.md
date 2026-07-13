@@ -381,6 +381,9 @@ may demote any auto-promoted task back to `draft` via a permanently-respected
 
 ## 3b. Auto-breakdown (lowest priority)
 
+Emit `<!-- agentprof:stage=auto-breakdown -->` verbatim as this step's
+opening line every time you enter it.
+
 When step 1 finds nothing dispatchable, in-progress, or parked (the same
 trigger step 4 uses), check for a **not-yet-broken-down spec** before the batch
 interview: a spec dir with a `SPEC.md`, no `tasks/`, and a
