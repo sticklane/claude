@@ -1,4 +1,15 @@
 Status: in-progress
+<!-- plan (task 19):
+  RED  — add manifest lines pinning re-derive/next-ranked (source-present,
+         codex-absent) → test_mirror_procedure_coverage.sh fails on 2 GAPs.
+  GREEN— restore codex tournament clause: 3 angle-suffixes (t1 minimal-diff,
+         t2 strict-test-first, t3 re-derive; defines the angles the tie-break
+         references), merge-failure fallback (abort → next-ranked survivor),
+         no-survivor DEFERRED-beats-failed routing. Test green.
+  VERIFY— all tests/test_*.sh green; ultra-gate green; independent verifier.
+  Decision (Steven, attended): incidental compression, restore; targeted
+  edit per .claude/rules/mirror-procedure-discipline.md, not a rewrite.
+-->
 Discovered-from: specs/mirror-procedure-discipline/tasks/14-audit-codex-drain.md
 Spec: ../SPEC.md
 Blocking: no
