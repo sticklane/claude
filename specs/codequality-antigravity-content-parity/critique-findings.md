@@ -77,3 +77,21 @@ produced this file's prior NOT READY verdict. Skipping a redundant full
 critic dispatch on unchanged content per token-discipline's "cheap before
 expensive" — the three approved triage edits above are the recovery path,
 unchanged. This spec's critique intake is spent for this run.
+
+## Re-critique 2026-07-13 (attended, post-approved-edits) — READY WITH NITS
+
+The three approved triage edits above were applied to SPEC.md: (1) premise
+corrected — 10 mirrored `.py` pairs, 4 differ, 3 sanctioned port
+adaptations, gate scoped to an include-list (`_shared/*.py`,
+`workboard/*.py`, `list-specs/list_specs.py`); (2) AC1 pinned to a
+committed `tests/fixtures/content-parity/` divergent fixture pair; (3)
+the `_shared/test_viz.py` drift-copy kept as Approach step 1. The critic
+independently re-verified the include-list against the live tree and
+confirmed no unsatisfiable acceptance criterion — verdict READY WITH NITS,
+not a blocker for `/breakdown`. Two non-blocking nits (both optional,
+neither behavior-changing): the "6 files" count in the Problem section's
+include-list parenthetical is an off-by-one vs. the 7 files the globs
+actually expand to (7th being `_shared/test_viz.py`, whose drift step 1
+fixes); AC1's fixture seam doesn't spell out that it must redirect the
+compared *file set* to the fixture dir's contents (`example.py`), not just
+the compared roots. `Breakdown-ready: true` written to SPEC.md.
