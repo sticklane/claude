@@ -1,5 +1,6 @@
 Status: open
 Priority: P1
+Breakdown-ready: true
 
 ## Problem
 
@@ -9,8 +10,11 @@ get silently re-done, burning whole headless generations along the way.
 **Approved findings never get applied mechanically.** `/critique` and
 drain's critique-intake step (`.claude/skills/drain/SKILL.md`, "Critique
 intake") only know two routes for a critic verdict: READY writes
-`Breakdown-ready: true`; NOT READY records findings in
-`specs/<slug>/critique-findings.md` and routes the spec to the exit
+`Breakdown-ready: true`; NOT READY relays the findings verbatim (`/critique`
+itself persists nothing today — it only relays the verdict and findings to
+its caller and writes/removes the `Breakdown-ready:` marker; drain's
+critique-intake step is the one that records them in
+`specs/<slug>/critique-findings.md`) and routes the spec to the exit
 checklist's §4, which drain's HUMAN.md filing (R2) files as a `decide`
 blocker (`.claude/skills/drain/reference.md`, "HUMAN.md filing (R2)":
 "NOT-READY specs (critique intake) | `decide` | §4"). Nothing distinguishes
@@ -24,7 +28,7 @@ list", each a human-reviewed, human-approved pass that mechanically edited
 new findings each time) — real agent-shaped work currently requiring a
 human to notice the stale `decide` item and do the edit by hand. Across
 three separate sessions on two different days, 10-13 draft specs sat stuck
-this way. One session added a dedup guard so drain stops *re-critiquing*
+this way. One session added a dedup guard so drain stops _re-critiquing_
 the same spec repeatedly (see Requirement 3's grounding below) but never
 closed the mechanical-application gap. A related cost: a whole headless
 generation (full cold-start reprime) got burned on 5 intake attempts that
@@ -46,7 +50,7 @@ interview's answer flow (step 4) flips `Status: deferred` straight back to
 `pending` on any human answer, with no check that the SPEC's stated premise
 actually changed. A finding that empirically refutes the SPEC's stated
 root cause is not the same shape as an open question awaiting information —
-answering it wrong (or answering a *different*, later-arrived question
+answering it wrong (or answering a _different_, later-arrived question
 without re-reading the earlier contradiction) re-admits the exact same
 false premise for another worker to re-derive.
 
@@ -56,11 +60,20 @@ NOT-READY spec before a session noticed `SPEC.md` hadn't changed since the
 last findings file and switched to a cheap timestamp/hash-diff check
 instead. That fix is written down in
 `docs/memory/drain-dispatch-lessons.md` ("Critique intake: skip the critic
-when SPEC.md is unchanged since a recorded NOT READY") only AFTER ~160k
-tokens were wasted — and a memory file is local to this repo, so it does
-not help any other install of this toolkit running the same `critique`/
-`drain` skills. This lesson has never been promoted into the actual
-SKILL.md mechanism.
+when SPEC.md is unchanged since a recorded NOT READY") and has since been
+partially promoted into drain's own mechanism: `.claude/skills/drain/
+reference.md`'s Critique intake section now runs a "cheap-before-expensive
+short-circuit" comparing `git log -1 --format=%H` for `SPEC.md` against the
+commit that produced the last recorded NOT READY verdict, skipping the
+critic dispatch entirely when unchanged (confirmed on 9 of 10 draft specs
+in one 2026-07-13 pass). Two gaps remain in that promotion: it is
+**drain-only** — an attended `/critique` invocation on an unchanged spec
+has no such skip and still pays full critic cost — and it keys on a
+**commit hash**, which stops resolving across a squash or rebase (the same
+self-containment failure mode R5 below is designed to avoid by keying on
+content instead). The lesson is real and partially shipped, but the
+mechanism lives in the wrong place and in a fragile form, duplicated
+rather than shared by both callers.
 
 ## Solution
 
@@ -146,57 +159,116 @@ READY, new findings)").
   (stale path/line references, a non-deterministic or under-scoped
   acceptance command, a missing runnable check, a format/header contract
   violation — an edit with no judgment call) or JUDGMENT (ambiguity, scope,
-  a missing design decision, a contested tradeoff). Apply every MECHANICAL
-  finding directly to the target `SPEC.md` (or plan/diff target), commit,
+  a missing design decision, a contested tradeoff). MECHANICAL findings are
+  applied unconditionally — no user-ask or pipeline gate applies to them,
+  unlike existing step 4's "apply fixes only if the user asks or the
+  pipeline step requires READY" (that gate still governs JUDGMENT
+  findings, unchanged). Apply every MECHANICAL finding directly to the
+  target `SPEC.md` (or, when `/critique` was invoked against a plan
+  document instead of a spec, that plan file — scoped to prose-only
+  targets; a code-diff target is out of scope, see "Out of scope"), commit,
   and re-run the critic — bounded to the 2-4 cycle cap in
   `.claude/rules/token-discipline.md`'s "Dispatch authoring" (cited, not
   restated). Findings still open after the bound, or JUDGMENT findings
   from the first pass, are what gets relayed/recorded — never silently
   dropped.
-- R2 **Same triage reused by drain's critique intake, before HUMAN.md
-  filing.** Drain's critique-intake step (`.claude/skills/drain/SKILL.md`,
-  "Critique intake") runs R1's triage on a NOT READY verdict before routing
-  to step 4's checklist: MECHANICAL findings are applied and committed
-  in-run (same as R1, lease already held), the critic re-run once per the
-  bound above, and only a spec whose remaining findings are JUDGMENT-shaped
+- R2 **Same triage reused automatically by drain's critique intake, before
+  HUMAN.md filing — no drain/SKILL.md invocation-logic edit required.**
+  Drain's critique-intake step already invokes `/critique` via the Skill
+  tool (`.claude/skills/drain/SKILL.md`, "Critique intake"), so R1's
+  triage-apply-recheck loop runs automatically inside that call — the same
+  automatic-once-R1-ships relationship R6 states for R5. `/critique`'s
+  returned verdict already reflects the triage outcome: only a spec whose
+  remaining findings are JUDGMENT-shaped still comes back NOT READY and
   reaches the exit checklist's §4 / HUMAN.md's `decide` filing
-  (`.claude/skills/drain/reference.md`, "HUMAN.md filing (R2)"). This
-  narrows — but does not remove — the `decide` grammar in
-  `.claude/rules/human-blockers.md`: a spec whose findings are genuinely
-  judgment-shaped is still filed exactly as today.
+  (`.claude/skills/drain/reference.md`, "HUMAN.md filing (R2)"), narrowing
+  — but not removing — the `decide` grammar in
+  `.claude/rules/human-blockers.md`. This requirement exists to make that
+  automatic reuse explicit and to add the MANUAL acceptance check below
+  confirming a MECHANICAL finding surfaced via drain's critique-intake path
+  gets applied without a human touching `SPEC.md` — not to change
+  drain/SKILL.md's routing text itself.
 - R3 **Deferred-verdict premise-contradiction flag.** The worker defer
   contract (`.claude/skills/drain/reference.md`'s worker prompt) gains an
   optional `Contradicts-premise: true` marker a worker sets alongside its
   DEFERRED question when its finding empirically refutes the SPEC's or
-  task's stated root cause (not merely an open information gap). Drain
-  records this distinctly under `## Deferred questions` (the flag plus the
-  contradicting evidence, verbatim from the verdict).
+  task's stated root cause (not merely an open information gap). The
+  marker must name which artifact it contradicts — `SPEC.md` or the task
+  file itself — and quote the exact contradicted excerpt verbatim, as a
+  single clause or sentence (not a multi-paragraph span — the excerpt must
+  be short enough to substring-match reliably). Drain records this
+  distinctly under `## Deferred questions` (the flag, the named artifact,
+  the quoted excerpt, and the contradicting evidence, verbatim from the
+  verdict).
 - R4 **Blocked re-dispatch until the premise is corrected.** For a task
   flagged `Contradicts-premise: true`, drain's batch-interview answer flow
   (`.claude/skills/drain/SKILL.md`, step 4) must not flip `Status: deferred`
-  back to `pending` on a plain human answer alone — it additionally
-  requires `SPEC.md`'s stated root-cause/fix content to have actually
-  changed since the defer (a commit-hash or content diff over the cited
-  section) before re-dispatch is permitted. Until that diff is observed,
-  the task (and any dependent) stays non-dispatchable, and its HUMAN.md
-  entry types as `decide` ("spec amendment needed") rather than `ask`
-  (`.claude/rules/human-blockers.md` grammar).
-- R5 **Critique re-run skip, mechanized in `/critique` itself.** Before
-  dispatching the critic agent, `/critique` compares `SPEC.md`'s current
-  commit hash (or content hash) against the hash recorded in
-  `critique-findings.md` at its last write. If unchanged and a verdict is
-  already recorded, skip the critic and relay the recorded verdict instead
-  of re-running it. `critique-findings.md`'s header gains the recorded
-  hash so the comparison is self-contained (no dependency on `git log`
-  history surviving a squash or rebase).
+  back to `pending` on a plain human answer alone. It additionally requires
+  the named artifact from R3 — `SPEC.md` when the contradiction targets the
+  spec, or the task file itself when it targets the task's own stated root
+  cause — to no longer contain the quoted excerpt unchanged before
+  re-dispatch is permitted. The check is a whitespace-normalized substring
+  match: collapse runs of whitespace and newlines in both the recorded
+  excerpt and the artifact's current full text before comparing, so a
+  human reflow of untouched prose doesn't spuriously register as a change,
+  and a genuinely edited excerpt doesn't survive a naive line-based grep.
+  Until the excerpt is observed absent (post-normalization) from the
+  artifact's current content, the task (and any dependent) stays
+  non-dispatchable, and its HUMAN.md entry types as `decide` ("spec
+  amendment needed" or "task amendment needed", matching the named
+  artifact) rather than `ask` (`.claude/rules/human-blockers.md` grammar).
+- R5 **Critique re-run skip, mechanized in `/critique` itself, replacing
+  drain's existing commit-hash short-circuit.** Today `/critique` persists
+  nothing — it only relays the verdict and findings to its caller
+  (`.claude/skills/critique/SKILL.md` step 2); `critique-findings.md` is
+  currently authored solely by drain's critique-intake step
+  (`.claude/skills/drain/reference.md`'s "Cheap-before-expensive
+  short-circuit" and NOT-READY handling). R5 **introduces** a new write:
+  `/critique` becomes the sole owner of `critique-findings.md`, and drain's
+  critique-intake step stops writing it (that write is removed from
+  `reference.md` along with the short-circuit it supported). On every NOT
+  READY or READY WITH NITS verdict against a `SPEC.md` target, `/critique`
+  writes (creating the file if absent) or updates a header recording the
+  content hash of the exact `SPEC.md` content that verdict was produced
+  from, together with the verdict, then appends the findings in a dated
+  section (the format `specs/build-doc-currency-check/critique-findings.md`
+  already establishes) — header and findings written atomically in the
+  same step, so the recorded hash never desyncs from the findings it
+  accompanies. Before dispatching the critic agent, `/critique` first
+  compares `SPEC.md`'s current content hash against that recorded header
+  hash (content hash only — a commit hash is rejected because R5's own
+  self-containment goal, no dependency on `git log` history surviving a
+  squash or rebase, rules it out: a squashed commit's hash no longer
+  resolves). If unchanged and a verdict is already recorded, skip the
+  critic and relay the recorded verdict instead of re-running it. If
+  `critique-findings.md` has no recorded hash (every file written before
+  this requirement shipped, or a hash that fails to parse), treat it as
+  changed and always run the critic — never treat a missing hash as a
+  match. This skip applies only to `SPEC.md` targets, which are the only
+  targets `critique-findings.md` is written for; a plan or diff invocation
+  of `/critique` has no findings file to compare against and always runs
+  the critic. **This requirement replaces** the "cheap-before-expensive
+  short-circuit" currently in `.claude/skills/drain/reference.md`'s
+  Critique intake section (the `git log -1 --format=%H` comparison against
+  `critique-findings.md`'s last dated section, and the NOT-READY step's
+  findings write): both are removed from `reference.md`, and drain's
+  critique intake goes back to unconditionally invoking `/critique` (R6),
+  which now performs the equivalent skip and the findings write internally
+  via content hash. `reference.md` is therefore in this requirement's
+  Touch.
 - R6 **Same skip reused by drain's critique intake.** Drain's
   critique-intake step invokes `/critique` (SKILL.md: "invoke **/critique**
-  via the Skill tool"), so R5's skip applies automatically once R5 ships;
-  this requirement exists only to make the reuse explicit and to update
+  via the Skill tool") unconditionally once R5 removes the pre-empting
+  short-circuit, so R5's skip applies automatically inside that call; this
+  requirement exists only to make the reuse explicit and to update
   `docs/memory/drain-dispatch-lessons.md`'s entry to note the lesson is now
   mechanized in `/critique` itself, not merely documented — a future
   session reading that memory file should be pointed at the shipped
-  mechanism rather than re-deriving it.
+  mechanism rather than re-deriving it. Concretely: replace that entry's
+  text so it no longer reads as a standalone lesson but instead points at
+  `/critique`'s R5 mechanism (e.g. the entry gains the literal phrase
+  "mechanized in /critique" in place of the manual `git log -1` recipe it
+  currently documents).
 - R7 (informational, not implementation work) **Generation-count
   miscounting is already fixed.** The originating research pass's fourth
   candidate requirement — drain's baton-pass relaunch/generation-count
@@ -209,16 +281,36 @@ READY, new findings)").
   attempts and exhausting the generation cap). No task should re-implement
   this; breakdown should not create a task for R7.
 - R8 **Ship gate.** Any task whose Touch includes `.claude/skills/critique/
-  SKILL.md` carries a matching `antigravity/` mirror update and a
-  `.claude-plugin/plugin.json` version bump (current: 0.8.63) in its
-  Touch — no `codex/` mirror requirement, since `critique` is not one of
-  the four explicit-invocation skills codex mirrors (CLAUDE.md). Any task
-  whose Touch includes `.claude/skills/drain/SKILL.md` or
+SKILL.md` carries a matching `antigravity/.agents/workflows/critique.md`
+  mirror update (this is the actual mirror path — `critique` ports as a
+  workflow, not a skill directory) and a `.claude-plugin/plugin.json`
+  version bump (current: 0.8.63) in its Touch — no `codex/` mirror
+  requirement, since `critique` is not one of the four
+  explicit-invocation skills codex mirrors (CLAUDE.md). Any task whose
+  Touch includes `.claude/skills/drain/SKILL.md` or
   `.claude/skills/drain/reference.md` carries the `antigravity/` mirror
   update, the matching `codex/.agents/skills/drain/SKILL.md` update, and
   the same plugin.json bump. `bash evals/lint-ultra-gate.sh` must stay
   green for both (`critique` and `drain` are both ultra-path skills per
-  CLAUDE.md's "Testing changes" section).
+  CLAUDE.md's "Testing changes" section). No task under this spec touches
+  `.claude/agents/critic.md` — R1's MECHANICAL/JUDGMENT split is resolved
+  (see "Design decision" below) as a `/critique`-side heuristic, not
+  critic-authored metadata, so `critic.md` and its
+  `antigravity/.agents/skills/critic/` mirror are out of this spec's Touch
+  entirely.
+
+**Design decision (resolves the prior Open Question).** The
+MECHANICAL/JUDGMENT split is a `/critique`-side heuristic applied to the
+critic's plain-text findings, not critic-authored metadata. R1 already
+states this ("`/critique` classifies each finding"), and Out-of-scope
+already commits to the same shape ("the triage is a post-verdict step
+`/critique` and drain perform on the findings, not a new critic-side
+verdict type"). Adding a structured-tag concept to the critic agent's
+output format would be a larger interface change than this spec's
+findings-triage scope calls for, and would touch `.claude/agents/critic.md`
+plus its mirror and `plugin.json`'s `agents` enumeration for no behavioral
+gain over a `/critique`-side classification pass over the same plain-text
+findings. No task should edit `.claude/agents/critic.md`.
 
 ## Out of scope
 
@@ -233,14 +325,14 @@ READY, new findings)").
   NOT READY stays as-is) — the triage is a post-verdict step `/critique`
   and drain perform on the findings, not a new critic-side verdict type.
 - Any change to `.claude/skills/build/SKILL.md` or `.claude/skills/idea/
-  SKILL.md` — neither owns findings-application or DEFERRED handling.
+SKILL.md` — neither owns findings-application or DEFERRED handling.
 
 ## Acceptance criteria
 
 - `grep -c "MECHANICAL" .claude/skills/critique/SKILL.md` returns 0 today
   (confirmed absent) and ≥ 1 after R1 ships.
 - `grep -c "Contradicts-premise" .claude/skills/drain/SKILL.md
-  .claude/skills/drain/reference.md` returns 0 today (confirmed absent in
+.claude/skills/drain/reference.md` returns 0 today (confirmed absent in
   both) and ≥ 1 in at least one of the two files after R3/R4 ship.
 - `grep -c "hash" .claude/skills/critique/SKILL.md` returns 0 today
   (confirmed absent) and ≥ 1 after R5 ships.
@@ -249,6 +341,13 @@ READY, new findings)").
   routing table entry is narrowed by, not deleted by, this spec — a
   genuinely judgment-shaped NOT READY spec is still filed exactly this
   way).
+- `grep -c "mechanized in /critique" docs/memory/drain-dispatch-lessons.md`
+  returns 0 today (confirmed absent) and ≥ 1 after R6 ships (the entry
+  points at the shipped mechanism instead of the manual `git log -1`
+  recipe it documents today).
+- `grep -c "Cheap-before-expensive short-circuit" .claude/skills/drain/
+reference.md` returns 1 today (confirmed present) and 0 after R5 ships
+  (the commit-hash short-circuit is removed, not merely supplemented).
 - `bash evals/lint-ultra-gate.sh` exits 0 after all requirements land.
 - `claude plugin validate .` exits 0 after all requirements land.
 - MANUAL: exercise R1/R2 end to end on a real NOT-READY spec with at least
@@ -259,21 +358,34 @@ READY, new findings)").
   non-deterministic grep) get applied without a human touching SPEC.md by
   hand.
 - MANUAL: exercise R3/R4 with a synthetic DEFERRED verdict carrying
-  `Contradicts-premise: true` and confirm the batch interview's plain-answer
-  flow refuses to flip the task back to `pending` until `SPEC.md`'s cited
-  section is actually edited.
+  `Contradicts-premise: true` (naming `SPEC.md` as the contradicted
+  artifact and quoting a real excerpt from it) and confirm the batch
+  interview's plain-answer flow refuses to flip the task back to `pending`
+  until that exact quoted excerpt is no longer present unchanged in
+  `SPEC.md`.
+- MANUAL: run `/critique` twice in a row on the same unchanged `SPEC.md`
+  with a recorded NOT READY or READY WITH NITS verdict and confirm the
+  second run skips the critic dispatch entirely and relays the recorded
+  verdict from `critique-findings.md` instead — then edit `SPEC.md` and
+  confirm a third run dispatches the critic for real.
 
 ## Open questions
 
-- Should a MECHANICAL/JUDGMENT split live as critic-authored metadata
-  (the critic agent itself tags each finding) or as a `/critique`-side
-  heuristic applied to the critic's plain-text findings? The critic
-  agent's `tools:` grant and output format
-  (`.claude/agents/critic.md`) currently has no structured-tag concept —
-  adding one is a larger interface change than a task drained unattended
-  should decide alone; flagging for the breakdown pass or a human call.
-- R4's "content actually changed" check needs a precise diff scope (whole
-  `SPEC.md` vs. just the section the worker's `Contradicts-premise` finding
-  cited) — too broad and an unrelated edit falsely unblocks; too narrow and
-  a legitimate rewrite that moved the section falsely stays blocked. Left
-  for the breakdown pass to pin down against a concrete example.
+None. The prior open question (MECHANICAL/JUDGMENT split: critic-authored
+metadata vs. `/critique`-side heuristic) is resolved under R8's "Design
+decision" above.
+
+## Parallelization
+
+Task 01 (`.claude/skills/critique/SKILL.md` only) and task 03
+(`.claude/skills/drain/reference.md` + `.claude/skills/drain/SKILL.md`)
+are disjoint in Touch and free of shared undecided design — R1's
+findings-triage-in-critique and R3/R4's deferred-premise-contradiction
+flag are independent features with no overlapping design choice — so they
+run concurrently. Task 02 depends on task 01 (same file, and R5's
+hash-check/write logic is built on top of task 01's triage loop) and also
+touches `.claude/skills/drain/reference.md`, which task 03 touches too —
+it stays out of the group and runs after both. Task 04 depends on all
+three and runs last.
+
+- Group: 01, 03
