@@ -2,9 +2,6 @@
 
 ## Agent-filed blockers
 
-- [ ] 2026-07-13 · specs/mirror-procedure-discipline/tasks/15-normalize-next-stage-lines.md · ask — Should criterion 1's target be corrected to ≥13 (workflow-author has no antigravity mirror by design), accepting the task as complete, or should a separate task port workflow-author into the antigravity tree?
-- [ ] 2026-07-13 · specs/mirror-procedure-discipline/tasks/20-touch-whitelist-manifest-file.md · decide — gate refused the assessor's OBSOLETE closure (task 15's Touch omission is real but harmless only under this run's W=1); decide whether to fix task 15's Touch when it's re-dispatched, or close this stub by hand.
-- [ ] 2026-07-13 · specs/mirror-procedure-discipline/tasks/21-task15-c1-numeric-bound-unverified.md · decide — gate refused the assessor's OBSOLETE label (the underlying gap is still open, not closed); this stub duplicates task 15's own Unblock: ask: with no independent action — close it by hand once task 15 resolves.
 - [ ] 2026-07-13 · specs/build-doc-currency-check/critique-findings.md · decide — NOT READY; Steven's 2026-07-13 approved REVISE edit list has not been applied to SPEC.md yet (3 items: extend R6 to the codex leg, resolve R1's rule-placement contradiction, convert ACs to anchored greps).
 - [ ] 2026-07-13 · specs/codequality-agent-console-mutation-coverage/critique-findings.md · decide — NOT READY (4th round); approved REVISE edit list not applied to SPEC.md yet (rewrite Approach step 3 to the real execute_push surface, fix the failure-case AC, split the OR-grep + add render_markdown AC).
 - [ ] 2026-07-13 · specs/codequality-antigravity-content-parity/critique-findings.md · decide — NOT READY; approved REVISE edit list not applied to SPEC.md yet (scope gate to contractually-identical files, pin AC1 to a fixture, keep the _shared/test_viz.py step).
