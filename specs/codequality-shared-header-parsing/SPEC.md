@@ -1,6 +1,7 @@
 # Shared header parsing: one Priority regex and one module loader for the skill scripts
 
 Status: open
+Breakdown-ready: true
 
 ## Problem
 
@@ -36,12 +37,27 @@ also executes its top-level side effects (`sys.path.insert` + `import viz`,
 1. Move the header regexes (`STATUS_RE`, `PRIORITY_RE`, and workboard's
    other `Key: value` header regexes as far as consumers need them) and a
    single `_load_module`/loader helper into `.claude/skills/_shared/`
-   (new module, e.g. `_shared/headers.py`), imported by workboard,
-   list_specs, and prioritize_scan the same way `viz`/`spec_readiness` are.
-2. `prioritize_scan.py` adopts the shared (bracket-tolerant) Priority
-   regex; add a regression test with a `Priority: [P1]` fixture to
+   (new module, `_shared/headers.py`). Pin the import mechanism: workboard,
+   list_specs, and prioritize_scan all reach `headers.py` via
+   `sys.path.insert(0, .../_shared)` + `import headers` — the same
+   mechanism workboard.py already uses to reach `viz`/`spec_readiness` —
+   never via path-loading (`_load_module`-by-path), which would need a
+   loader to load the loader. `list_specs.py` and `prioritize_scan.py`
+   still need to reach `workboard.py` itself (not in `_shared`); they do
+   this by importing `_load_module` from `headers` (regular import, per
+   above) and calling it on `workboard.py`'s path, same as today, so
+   neither file defines its own `_load_module` anymore.
+2. Pin the shared regex to `\[?(P[0-3])\]?` — bracket-tolerant like
+   workboard's current `PRIORITY_RE`, but range-restricted to P0-P3 (the
+   toolkit's defined priority range), fixing workboard's current
+   `\[?(P\d)\]?` which incorrectly accepts any digit. `prioritize_scan.py`
+   adopts this shared regex in place of its own `P[0-3]` (no brackets);
+   add a regression test with a `Priority: [P1]` fixture to
    `test_prioritize_scan.py`, and keep a symmetric fixture in
-   `test_workboard.py` so the two suites pin the same reading.
+   `test_workboard.py` so the two suites pin the same reading. Add a range
+   fixture too — `Priority: P7` — to both suites asserting it does NOT
+   match (falls through to the `P2 (default)` behavior), pinning the P0-P3
+   range against future widening.
 3. Mirror all touched `.py` files to `antigravity/.agents/skills/` in the
    same commit and bump `.claude-plugin/plugin.json` version, per
    CLAUDE.md's mirror convention (a task's `Touch:` must list the mirror
@@ -71,5 +87,11 @@ spanning both trees collides on module names.
 - [ ] `python3 -m pytest .claude/skills` exits 0 (do not widen the run to
       `antigravity/` — mirror basenames collide).
 - [ ] `diff -r` of every touched `.py` against its
-      `antigravity/.agents/skills/` counterpart is empty, and
-      `.claude-plugin/plugin.json` version is bumped in the same change.
+      `antigravity/.agents/skills/` counterpart is empty, with one named
+      exception: `prioritize_scan.py`'s module docstring may keep its
+      existing standalone-install note (the sanctioned port divergence
+      already live at `prioritize_scan.py:18-20` vs its antigravity
+      mirror) — this is the sole permitted divergence; every other line,
+      including all regex definitions, the `_load_module` import, and any
+      other docstring content, must diff empty. `.claude-plugin/plugin.json`
+      version is bumped in the same change.
