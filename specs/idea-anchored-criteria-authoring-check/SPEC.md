@@ -1,5 +1,6 @@
 Status: open
 Priority: P2
+Breakdown-ready: true
 
 # idea: apply the anchored-acceptance-criteria check at drafting time, not just breakdown time
 
@@ -21,8 +22,8 @@ never fail, regardless of correctness. This is the same failure class the
 memory file already names ("vacuous grep" — a criterion that green-checks a
 worker that did the wrong thing), but from the opposite temporal direction:
 the memory file's guidance checks a phrase against the file's state
-*before* a change; the self-referential trap here is a phrase that will
-only ever exist *because of* the change meant to satisfy it, making
+_before_ a change; the self-referential trap here is a phrase that will
+only ever exist _because of_ the change meant to satisfy it, making
 absence-today insufficient by itself as a check. `/idea` drafted the
 criterion with neither check applied, so it reached breakdown (and then a
 worker) already broken, causing a spurious DEFER when the worker correctly
@@ -35,7 +36,19 @@ immediately after drafting each grep/count-based acceptance criterion (the
 bullet list under the `## Acceptance criteria` template, `.claude/skills/idea/SKILL.md:66-70`),
 `/idea` applies the anchored-acceptance-criteria check from
 `docs/memory/anchored-acceptance-criteria.md` (cited, not restated) to that
-criterion before it is written into the SPEC.md file:
+criterion before it is written into the SPEC.md file.
+
+Placement: the new instruction is added as prose in step 3's body, AFTER
+the closing ` ``` ` fence of the `specs/<kebab-slug>/SPEC.md` template block
+(the fence closes at `.claude/skills/idea/SKILL.md:74`) — the same
+placement step 4's own guidance already uses. It must never be added as a
+line inside the fenced template itself: that template is copied verbatim
+into every generated SPEC.md, so text placed inside it would become
+literal boilerplate injected into every future spec rather than an
+instruction `/idea` follows while drafting one. The template's
+`## Acceptance criteria` bullet (`:66-70`) is only the pointer to WHICH
+criteria the check applies to; the check's steps below are new prose
+following the template, not template content:
 
 1. For a criterion asserting a phrase or count is present/passing, run
    `grep -ci '<phrase>' <target file>` (or the equivalent count check)
@@ -77,38 +90,48 @@ needed.
 > pre-existing, unrelated text — the criterion green-checks a worker that
 > writes nothing. Fix pattern: anchor on a NEW distinctive literal phrase
 > the requirement mandates verbatim ... and run `grep -ci '<phrase>' <every
-> target>` → 0 at authoring time; record 'phrase absent today, verified
+target>` → 0 at authoring time; record 'phrase absent today, verified
 > <date>' in the criterion so the verifier knows it can't pass vacuously."
 > — `docs/memory/anchored-acceptance-criteria.md:10-17`
 
 ## Requirements
 
 R1. `.claude/skills/idea/SKILL.md` step 3 ("Write the spec") must instruct
-    that, for every grep/count-based acceptance criterion drafted in that
-    step, the anchored-acceptance-criteria check (citing
-    `docs/memory/anchored-acceptance-criteria.md`, not restating its
-    content) is applied to the criterion before it is written into the
-    SPEC.md — not deferred to `/breakdown`.
+that, for every grep/count-based acceptance criterion drafted in that
+step, the anchored-acceptance-criteria check (citing
+`docs/memory/anchored-acceptance-criteria.md`, not restating its
+content) is applied to the criterion before it is written into the
+SPEC.md — not deferred to `/breakdown`.
 
 R2. The step-3 instruction must require confirming, against the CURRENT
-    on-disk file (not a hypothetical post-change state), that the
-    criterion's target phrase/count is presently absent/unsatisfied, per
-    the memory file's existing "run `grep -ci` at authoring time" pattern.
+on-disk file (not a hypothetical post-change state), that the
+criterion's target phrase/count is presently absent/unsatisfied, per
+the memory file's existing "run `grep -ci` at authoring time" pattern.
 
 R3. The step-3 instruction must additionally require rejecting a criterion
-    whose target phrase is itself an incidental artifact this same spec's
-    own Requirements would introduce (the self-referential trap) — i.e. a
-    criterion a worker could satisfy by writing only the literal search
-    string, without implementing the requirement's actual behavior — and
-    rewriting it to assert something dependent on genuine implementation.
+whose target phrase is itself an incidental artifact this same spec's
+own Requirements would introduce (the self-referential trap) — i.e. a
+criterion a worker could satisfy by writing only the literal search
+string, without implementing the requirement's actual behavior — and
+rewriting it to assert something dependent on genuine implementation.
 
 R4. The antigravity mirror (`antigravity/.agents/skills/idea/SKILL.md`,
-    its own step 3 "Write the spec") receives the same procedural addition
-    (same steps, same order, same stated conditions per
-    `.claude/rules/mirror-procedure-discipline.md` — cited, not restated).
+its own step 3 "Write the spec") receives the same procedural addition
+(same steps, same order, same stated conditions per
+`.claude/rules/mirror-procedure-discipline.md` — cited, not restated).
 
 R5. `.claude-plugin/plugin.json`'s `version` is bumped from its value at
-    the time this spec's closing task is authored.
+the time this spec's closing task is authored.
+
+R6. The closing task appends one new line to
+`tests/mirror-procedure-manifest.txt` anchoring the "self-referential"
+phrase for this pair — `.claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|self-referential`
+— so `tests/test_mirror_procedure_coverage.sh` actually exercises this
+change instead of passing vacuously (it only checks phrases already
+seeded in the manifest, and this pair currently has no line covering the
+new step-3 content; see `.claude/rules/mirror-procedure-discipline.md`,
+"the manifest grows every time a session finds and fixes a real
+procedural gap").
 
 ## Out of scope
 
@@ -133,16 +156,21 @@ R5. `.claude-plugin/plugin.json`'s `version` is bumped from its value at
       → 0).
 - [ ] `grep -c "self-referential" .claude/skills/idea/SKILL.md` → 1 or more
       (phrase absent today, verified 2026-07-13 via the same command → 0).
+- [ ] `grep -c "self-referential" antigravity/.agents/skills/idea/SKILL.md` →
+      1 or more (phrase absent today, verified 2026-07-13 via the same
+      command → 0).
 - [ ] The closing task's own commit modifies `.claude-plugin/plugin.json`'s
       version line: `git show <closing-commit> -- .claude-plugin/plugin.json
-      | grep -q '^+.*"version"'` → match (per the version-bump-criteria
+| grep -q '^+.*"version"'` → match (per the version-bump-criteria
       pattern in `docs/memory/anchored-acceptance-criteria.md` — asserts the
       commit's own diff, not a pinned literal or a bare "differs from base").
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` (if present) passes,
-      or MANUAL: confirm by inspection that the antigravity step-3 edit
-      states the same three sub-checks (current-state grep, self-referential
-      rejection, inline outcome recording) in the same order as the
-      `.claude/` edit.
+- [ ] `grep -Fc '.claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|self-referential' tests/mirror-procedure-manifest.txt` →
+      1 or more (line absent today, verified 2026-07-13 via the same
+      command → 0), satisfying R6.
+- [ ] `bash tests/test_mirror_procedure_coverage.sh` passes — with R6's new
+      manifest line in place, this is no longer a vacuous pass-either-way
+      check: it fails if the antigravity mirror lacks the "self-referential"
+      phrase the `.claude/` edit introduces.
 
 ## Open questions
 
