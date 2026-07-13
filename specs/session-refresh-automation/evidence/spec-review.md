@@ -19,3 +19,5 @@ specs/session-refresh-automation/tasks/07-costsummary-reprime-comment-accuracy.m
 
 Gates green: agentprof/scripts/check.sh, agent-console/scripts/check.sh,
 hooks/session-refresh/test.sh, claude plugin validate .
+
+spec review skipped: 2026-07-13 run a219d53e — idempotency token already committed (prior run's review above); this run's residual DONE diff is tests/fixture (task 06) + comment-only (task 07), both per-task verifier PASS with a zero-finding code-review pass.
