@@ -48,3 +48,27 @@ Recovery: amend SPEC.md per findings, then re-run /critique.
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE. Edits before re-critique: (1) extend R6 to the codex leg with an inline one-line reminder (codex/.agents/skills/build/ is real content with no citable quality-discipline file); (2) scope R1's rule text to the attended /build path or drop the drain exclusion; (3) convert ACs to anchored greps and drop numeric line anchors. Verified: `grep -c "Documentation currency"` → 0 in both targets (problem unsolved); no existing gate covers doc drift.
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+SPEC.md is byte-identical to before the triage — only critique-findings.md was
+updated in the 2026-07-13 triage commit, none of the three approved edits
+landed in SPEC.md itself. Critic re-verified independently (codex
+build/SKILL.md real content with `$code-review` at line 146, no
+quality-discipline rule file on the codex leg; `grep -c "Documentation
+currency"` → 0 across all five targets) and confirms the same three findings
+stand verbatim, plus one new nit:
+
+1. Codex mirror leg still absent from R6 and the acceptance criteria
+   (confidence 90) — same as prior rounds, triage edit (1) unapplied.
+2. R1 rule placement still contradicts the Out-of-scope drain exclusion
+   (confidence 85) — triage edit (2) unapplied.
+3. Acceptance criteria still prose, not runnable greps; stale numeric line
+   anchors remain (confidence 82) — triage edit (3) unapplied.
+4. NEW (confidence 62, nit): build is an ultra-path skill —
+   `bash evals/lint-ultra-gate.sh` isn't named in the verification steps;
+   should stay green after the edit and be called out explicitly.
+
+Recovery: apply the three approved triage edits to SPEC.md itself (not just
+recorded in this file), add the lint-ultra-gate note, then re-run /critique.
+This spec's critique intake is spent for this run.
