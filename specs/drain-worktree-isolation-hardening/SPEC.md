@@ -358,3 +358,12 @@ resolved during critique rather than left open:
   preflight sweep" bullet.
 
 None remain unresolved.
+
+## Parallelization
+
+No task groups qualify for concurrent execution. Every task under this
+spec touches `.claude/skills/drain/SKILL.md` and/or
+`.claude/skills/drain/reference.md` (tasks 01–04), or depends on all four
+of them (task 05) — none pass the decision-coupling test's disjoint-`Touch`
+requirement, so all five tasks run serially in dependency order
+(01 → 02 → 03 → 04 → 05).
