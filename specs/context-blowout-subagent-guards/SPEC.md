@@ -1,5 +1,6 @@
 Status: open
 Priority: P2
+Breakdown-ready: true
 
 ## Problem
 
@@ -68,8 +69,15 @@ then citation) rather than a new section or file:
    where/how/what-exists) as the delegation vehicle for pages that are
    pure existence/state checks, reserving `general-purpose` or a
    purpose-built agent for pages needing an interaction sequence
-   (`scout` is `Read/Grep/Glob`-only per `.claude/agents/scout.md` and
-   cannot drive `mcp__claude-in-chrome__*` tools).
+   (`scout` has no MCP tool grant per `.claude/agents/scout.md` — its
+   frontmatter lists `Read, Grep, Glob, Bash(git log *), Bash(git show *),
+Bash(ls *), Bash(wc *)` only — and so cannot drive
+   `mcp__claude-in-chrome__*` tools).
+
+   Both edits (this one and the "Dispatch authoring" bullet below) land in
+   `.claude/rules/token-discipline.md`; they ship as a single breakdown
+   task rather than two, since two same-file-`Touch` tasks cannot be
+   drained in parallel.
 
 2. **"Dispatch authoring"** (which already has bullets for loop bounds,
    tier choice, and return-size caps) gets a new bullet generalizing the
@@ -158,7 +166,8 @@ both edits land entirely inside `.claude/rules/token-discipline.md`.
 ## Acceptance criteria
 
 - `grep -c "route each page-check through a subagent" .claude/rules/token-discipline.md` → 1 (currently 0; confirms R1's bullet landed with this or an equivalent literal anchor — adjust the exact phrase during breakdown if wording changes, keeping the anchor check in sync).
-- `grep -c "ToolSearch-load its schema before calling" .claude/rules/token-discipline.md` → 1 (currently 0; confirms R2's bullet landed).
+- `grep -c "2 direct-context screenshots" .claude/rules/token-discipline.md` → 1 (currently 0; confirms R1(b)'s concrete cap landed, not just the delegation requirement in R1(a) — adjust the exact phrase during breakdown if wording changes, keeping the anchor check in sync).
+- `grep -c "batch-load the tool's schema via" .claude/rules/token-discipline.md` → 1 (currently 0; confirms R2's bullet landed — adjust the exact phrase during breakdown if wording changes, keeping the anchor check in sync).
 - `grep -n "^## Delegation defaults" .claude/rules/token-discipline.md` and `grep -n "^## Dispatch authoring" .claude/rules/token-discipline.md` each still return exactly one match (sections not duplicated or renamed).
 - `grep -c "^## " .claude/rules/token-discipline.md` returns the same count as before the change (8 sections; new content is bullets inside existing sections, not new headers) — verify against `git show HEAD:.claude/rules/token-discipline.md | grep -c '^## '` at breakdown time.
 - MANUAL: a human or reviewing agent reads both new bullets in context and confirms they cite rather than restate the RETRY evidence and the `scout` tool-grant constraint, per R3.
