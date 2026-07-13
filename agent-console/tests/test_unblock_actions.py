@@ -261,20 +261,28 @@ class TestUntrustedText(unittest.TestCase):
             result = self._track(ac.run_action(act["id"]))
         self.assertEqual(result["code"], 200)
 
-        # Exactly ONE subprocess was launched (the full recorded history).
-        self.assertEqual(len(popen_calls), 1, "unblock must launch exactly one subprocess")
-        (pargs, pkwargs), = popen_calls
-        argv = pargs[0] if pargs else pkwargs.get("args")
-        self.assertIsInstance(argv, list, "argv must be a list, not a shell string")
+        # Assert against the FULL recorded subprocess history (the dispatch's
+        # `claude` launch plus any bookkeeping subprocess such as `ps`).
+        self.assertTrue(popen_calls, "a subprocess must have been launched")
+        argvs = []
+        for pargs, pkwargs in popen_calls:
+            # No call ever hands the text to a shell.
+            self.assertFalse(pkwargs.get("shell"), "shell=True must be absent")
+            argv = pargs[0] if pargs else pkwargs.get("args")
+            self.assertIsInstance(argv, list, "argv must be a list, not a shell string")
+            argvs.append(argv)
 
-        # shell=True is absent -> the text is never handed to a shell.
-        self.assertFalse(pkwargs.get("shell"), "shell=True must be absent")
-
-        # The hostile text appears in exactly one argv element...
-        occurrences = [i for i, a in enumerate(argv) if hostile in str(a)]
-        self.assertEqual(len(occurrences), 1, "hostile text must appear in exactly one argv slot")
-        # ...and that element is the value immediately after the single `-p`.
-        idx = occurrences[0]
+        # The hostile text appears in exactly one argv slot across the ENTIRE
+        # history — no other position, no other subprocess.
+        hits = [
+            (argv, i)
+            for argv in argvs
+            for i, a in enumerate(argv)
+            if hostile in str(a)
+        ]
+        self.assertEqual(len(hits), 1, "hostile text must appear in exactly one argv slot")
+        argv, idx = hits[0]
+        # ...and that slot is the value immediately after the single `-p`.
         self.assertEqual(argv.count("-p"), 1, "exactly one -p flag")
         self.assertEqual(argv[idx - 1], "-p", "the hostile text is the -p prompt value")
         self.assertEqual(argv.index("-p"), idx - 1)

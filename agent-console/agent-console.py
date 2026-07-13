@@ -651,6 +651,20 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
                     "done": done,
                     "total": total,
                     "tasks": _dag_tasks(sp.get("tasks", [])),
+                    # Forward the scanner's waiting-spec header unblock and any
+                    # blocked task files' unblock steps (each task carries an
+                    # absolute path) so build_action_registry can generate the
+                    # unblock/recheck dispatch kinds (unblock-next-steps R7).
+                    "unblock": sp.get("unblock"),
+                    "blocked_tasks": [
+                        {
+                            "path": t.get("abs") or "",
+                            "title": t.get("title") or "",
+                            "unblock": t.get("unblock"),
+                        }
+                        for t in sp.get("tasks", [])
+                        if t.get("unblock")
+                    ],
                     "mtime": sp["last_touched"],
                 }
             )
@@ -990,6 +1004,61 @@ def _scanner_dispatch_prompts(inbox: list) -> tuple[dict, dict]:
     return verify, resume
 
 
+def _unblock_prompt(unblock: dict) -> str:
+    """The agent prompt for an `unblock` dispatch. `run:` text is untrusted
+    file-derived data, so it is never exec'd: the agent is told to evaluate it
+    and run it only under its own judgment (spec R7 / execution-safety). An
+    `agent:` step is already a prompt and dispatches verbatim."""
+    step = unblock.get("step") or ""
+    if unblock.get("type") == "run":
+        return f"Evaluate and, if safe and sensible, run: {step}; report the outcome."
+    return step
+
+
+def _recheck_prompt(file_path: str, unblock: dict) -> str:
+    """The documented read-verify-flip-or-update prompt (spec R7), covering both
+    a blocked task file (flip Status to pending + drop the Unblock line) and a
+    waiting spec header (drop the Status/Unblock pair)."""
+    line = f"Unblock: {unblock.get('type')}: {unblock.get('step') or ''}"
+    return (
+        f"Read {file_path}. It is blocked/waiting; its recorded unblock step is "
+        f"`{line}`. Verify whether the blocking condition still holds. If it has "
+        "cleared: for a task file, flip Status to pending and remove the Unblock "
+        "line; for a spec header, remove the Status/Unblock pair; then commit with "
+        "--no-verify. If it still holds, update the Unblock text with what is still "
+        "missing and today's date, then commit."
+    )
+
+
+def _add_unblock_recheck(
+    actions: dict, file_path: str, cwd: str, unblock: dict | None, label: str
+) -> None:
+    """Register the `unblock` + `recheck` dispatch kinds for one blocked task
+    file or waiting spec header. `ask:` items get neither (no dispatch
+    affordance — a human answers them); both are keyed by (kind, file) so a
+    later POST validates against the current registry."""
+    if not file_path or not unblock or unblock.get("type") == "ask":
+        return
+    uid = _entity_id("unblock", file_path)
+    actions[uid] = {
+        "id": uid,
+        "kind": "unblock",
+        "label": f"unblock: {label}",
+        "repo": cwd,
+        "cwd": cwd,
+        "prompt": _unblock_prompt(unblock),
+    }
+    rid = _entity_id("recheck", file_path)
+    actions[rid] = {
+        "id": rid,
+        "kind": "recheck",
+        "label": f"recheck: {label}",
+        "repo": cwd,
+        "cwd": cwd,
+        "prompt": _recheck_prompt(file_path, unblock),
+    }
+
+
 def build_action_registry(board: dict) -> dict:
     """Map action-id -> action dict for every executable action the current
     board affords. Kinds: a `push` per repo with unpushed commits
@@ -1060,6 +1129,28 @@ def build_action_registry(board: dict) -> dict:
                     path,
                     prompt,
                     f"resume handoff: {title}",
+                )
+        # unblock/recheck (unblock-next-steps R7): a waiting-spec header and each
+        # blocked task file in this git root gets both agent-dispatch kinds
+        # (ask: items excluded inside the helper). Kept separate from the
+        # drain/verify loop above, which gates on task counts a waiting spec
+        # (spec-header-only status, often no tasks/) would not satisfy.
+        for sp in repo.get("specs", []):
+            _add_unblock_recheck(
+                actions,
+                sp.get("path") or "",
+                path,
+                sp.get("unblock"),
+                f"spec {sp.get('slug') or ''}".strip(),
+            )
+            for bt in sp.get("blocked_tasks") or []:
+                tpath = bt.get("path") or ""
+                _add_unblock_recheck(
+                    actions,
+                    tpath,
+                    path,
+                    bt.get("unblock"),
+                    bt.get("title") or os.path.basename(tpath),
                 )
 
     # stop-dispatch: one per live dispatch this server started (R1/R7). Keyed
@@ -2531,6 +2622,8 @@ _ACTION_EXECUTORS = {
     "dispatch-drain": execute_dispatch,
     "dispatch-verify": execute_dispatch,
     "dispatch-resume-handoff": execute_dispatch,
+    "unblock": execute_dispatch,
+    "recheck": execute_dispatch,
     "stop-dispatch": execute_stop_dispatch,
 }
 
