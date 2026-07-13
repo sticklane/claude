@@ -60,8 +60,10 @@ Solution below.
 ## Requirements
 
 - **R1**: Every reference to `/fleet` in this repo is inventoried via
-  `grep -rn '\bfleet\b' .claude/ antigravity/ docs/ AGENTS.md CLAUDE.md
-  .claude-plugin/` (not a narrower guess) and updated to describe fleet's
+  `git grep -n '\bfleet\b' -- .claude/ antigravity/ docs/ AGENTS.md
+  CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
+  `.claude/worktrees/`'s transient full-repo copies, unlike a recursive
+  `grep -rn`) and updated to describe fleet's
   new inline-table output instead of an HTML snapshot — including but not
   limited to: `.claude-plugin/plugin.json:3` ("a `/fleet` dashboard of
   open agents"), `.claude-plugin/marketplace.json` ("the /fleet
@@ -150,7 +152,7 @@ Solution below.
       .claude/skills/workboard/SKILL.md` returns no match.
 - [ ] `python3 .claude/skills/workboard/workboard.py --json` still runs
       and produces valid JSON (unaffected mode).
-- [ ] `grep -rn '\bfleet\b' .claude/ antigravity/ docs/ AGENTS.md
+- [ ] `git grep -n '\bfleet\b' -- .claude/ antigravity/ docs/ AGENTS.md
       CLAUDE.md .claude-plugin/` shows only: (a) the new inline-table
       description, (b) the legitimate unrelated prose uses named in R1
       (including `antigravity/AGENTS.md`'s "scale the fleet" line), or
@@ -164,13 +166,23 @@ Solution below.
       `antigravity/.agents/skills/_shared/viz.py` (R6).
 - [ ] `.claude-plugin/plugin.json`'s `version` is higher than before this
       change.
-- [ ] `bash evals/run.sh` (or the repo's equivalent skill-eval runner) has
-      no fixture/eval case left pointing at fleet's old HTML output, the
-      deleted `--out` flag, or `--emit-fleet-css`.
+- [ ] `git grep -ln 'fleet\.html\|--out\|--emit-fleet-css' -- evals/`
+      returns no matches (no fixture/eval case left pointing at fleet's
+      old HTML output, the deleted `--out` flag, or `--emit-fleet-css`) —
+      a static check, not `bash evals/run.sh` (the paid, human-launched
+      `/evals` runner; drained/unattended workers may not gate on it).
+- [ ] `bash evals/lint-ultra-gate.sh` exits 0 (R1's edit to
+      `drain/SKILL.md`, an ultra-path skill, must not disturb the
+      ultra-gate marker).
 - [ ] End-to-end: running `/fleet` in a session with at least one
       background agent prints the markdown table and summary line
       directly in the response — no `fleet.html` (or any file) is written
-      anywhere.
+      anywhere. **Manual-pending**: this requires an attended session with
+      a live harness `TaskList` and skill invocation, which a drained/
+      unattended worker cannot exercise — mark this criterion
+      manual-pending with this reason rather than deferring or guessing
+      (docs/memory/unattended-worker-tool-limits.md); the orchestrator or
+      a human runs it post-merge.
 
 ## Open questions
 
