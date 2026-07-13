@@ -26,10 +26,11 @@ leases critique intake and 4a auto-breakdown each take on a different spec
 (claim → act → release) may transiently overlap this one; at most one
 DISPATCH lease is held at a time.
 
-First the classification gate: drain only peripheral work — runnable
-acceptance criteria, cheap to discard, no core business logic, auth,
-payments, or migrations, and no credentials or external services beyond
-what CI already uses. Pull core tasks out for attended /build runs.
+First the drain-readiness gate: every task drains, unattended — runnable
+acceptance criteria, cheap to discard, no credentials or external services beyond
+what CI already uses. Core business logic, auth, payments, or migrations
+don't get pulled out for a human-watched run; they raise the bar (tighter
+acceptance criteria, full worktree isolation) instead.
 
 **Path-scoped commits, always.** Every queue-state commit this workflow
 makes — owner claim/release, status flips, Progress entries, Deferred
@@ -58,13 +59,13 @@ this sweep.
 
 **Hub-economics advisory (gen 1, never blocking).** Two advisory lines at
 gen-1 startup — never on baton generations, and neither ever blocks
-dispatch: (a) *frontier-hub* — where the runtime discloses the session
+dispatch: (a) _frontier-hub_ — where the runtime discloses the session
 model and that model maps to the **frontier tier** (`runtimes/` profiles
 carry the mapping; Claude default: `fable`), print one line citing the
 wake-economics doctrine (step 2) and recommending a relaunch on a deep-tier
 (`opus`) or lower hub via a fresh drain run with the same argument — queue
 state is committed, so nothing is lost; skip silently where the runtime
-discloses no session model. (b) *heavy-hub* — when the drain launch arrives
+discloses no session model. (b) _heavy-hub_ — when the drain launch arrives
 beyond the session's first few turns (the observable heuristic), print one
 line recommending that same fresh-session relaunch. Advisory only: neither
 line blocks dispatch, and neither prints on baton generations.
@@ -109,44 +110,44 @@ line blocks dispatch, and neither prints on baton generations.
        `AGENTS.md`'s "Concurrent sessions" section, leaving the human to choose
        take-theirs / merge-both / manual reconcile. An attended session MAY
        ask instead, at its own discretion — not required here.
-   Read only each task file's header lines (`Status`,
-   `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies. `Budget`
-   feeds the worker's over-budget stop; `Priority` is an optional
-   tie-break (absent = P2). Dispatchable = `pending` with all
-   dependencies `done`.
-   An `in-progress` task is a dead worker's lock ONLY after the stale-lock
-   liveness check confirms it — never on a bare "no live agent" guess.
-   **Liveness check** (run before any sweep): (a) harness check — consult
-   `TaskList`/background-task state; a running or queued worker for the task
-   means live, wait for its notification, never sweep. (b) activity check —
-   gather EVERY worktree and branch for the task (`task/NN-<slug>` plus any
-   `task/NN-<slug>-t*` tournament worktrees/branches) and take the newest of
-   file mtimes under each worktree (excluding `node_modules` and `.git`
-   internals) and each branch's tip-commit time; if that is younger than the
-   grace window (a 15-minute named default a queue may override), the worker
-   is possibly alive — park the task, do not sweep. The worktree lock's
-   recorded pid is NOT a liveness signal (it is the pid of the session that
-   started it, alive after a `/clear`). A parked task stays `in-progress`; keep
-   dispatching other tasks whose dependencies are met, logging each park and
-   window extension in one line. After 4 consecutive window extensions on
-   the same task with no verdict and no harness-tracked worker, stop waiting
-   and report a suspected zombie to the user (do NOT silently sweep, do NOT
-   wait forever); its status stays `in-progress` and it is treated like
-   `blocked` thereafter. **Window-slot vs. Touch claim (R9.2):** under a
-   rolling window, a zombie-escalated task releases its window slot — drain
-   keeps admitting other tasks into the freed slot — but its `Touch:` claim
-   persists, so pending tasks overlapping that `Touch` are blocked and
-   reported, not silently starved. Residual risk (accepted): the activity signal can
-   go silent on a live worker for a full window, so false sweeps stay
-   possible by design — the rescue branch and the worker's vanished-worktree
-   clause are the deliberate safety net; do NOT add worker heartbeats.
-   On confirmed death, reset the task to `pending` (commit the flip) and
-   PRESERVE each branch instead of deleting it: force-remove each worktree
-   first, then rename the `task/NN-<slug>` branch and every
-   `task/NN-<slug>-t*` tournament branch to `rescue/NN-<slug>-<shortsha>`
-   (shortsha = that branch's tip; branches sharing a tip collapse into one,
-   a pre-existing rescue at the same sha already counts). Rescue branches
-   are forensic only — never resume a dead run.
+       Read only each task file's header lines (`Status`,
+       `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies. `Budget`
+       feeds the worker's over-budget stop; `Priority` is an optional
+       tie-break (absent = P2). Dispatchable = `pending` with all
+       dependencies `done`.
+       An `in-progress` task is a dead worker's lock ONLY after the stale-lock
+       liveness check confirms it — never on a bare "no live agent" guess.
+       **Liveness check** (run before any sweep): (a) harness check — consult
+       `TaskList`/background-task state; a running or queued worker for the task
+       means live, wait for its notification, never sweep. (b) activity check —
+       gather EVERY worktree and branch for the task (`task/NN-<slug>` plus any
+       `task/NN-<slug>-t*` tournament worktrees/branches) and take the newest of
+       file mtimes under each worktree (excluding `node_modules` and `.git`
+       internals) and each branch's tip-commit time; if that is younger than the
+       grace window (a 15-minute named default a queue may override), the worker
+       is possibly alive — park the task, do not sweep. The worktree lock's
+       recorded pid is NOT a liveness signal (it is the pid of the session that
+       started it, alive after a `/clear`). A parked task stays `in-progress`; keep
+       dispatching other tasks whose dependencies are met, logging each park and
+       window extension in one line. After 4 consecutive window extensions on
+       the same task with no verdict and no harness-tracked worker, stop waiting
+       and report a suspected zombie to the user (do NOT silently sweep, do NOT
+       wait forever); its status stays `in-progress` and it is treated like
+       `blocked` thereafter. **Window-slot vs. Touch claim (R9.2):** under a
+       rolling window, a zombie-escalated task releases its window slot — drain
+       keeps admitting other tasks into the freed slot — but its `Touch:` claim
+       persists, so pending tasks overlapping that `Touch` are blocked and
+       reported, not silently starved. Residual risk (accepted): the activity signal can
+       go silent on a live worker for a full window, so false sweeps stay
+       possible by design — the rescue branch and the worker's vanished-worktree
+       clause are the deliberate safety net; do NOT add worker heartbeats.
+       On confirmed death, reset the task to `pending` (commit the flip) and
+       PRESERVE each branch instead of deleting it: force-remove each worktree
+       first, then rename the `task/NN-<slug>` branch and every
+       `task/NN-<slug>-t*` tournament branch to `rescue/NN-<slug>-<shortsha>`
+       (shortsha = that branch's tip; branches sharing a tip collapse into one,
+       a pre-existing rescue at the same sha already counts). Rescue branches
+       are forensic only — never resume a dead run.
 
    **Claim the owner lease, before presenting the dispatch order.** If
    `specs/<slug>/DRAIN-OWNER.md` is absent, write it (single-line
@@ -319,7 +320,7 @@ line blocks dispatch, and neither prints on baton generations.
    prompt-cache TTL, so every verdict-collection wake lands after the drain
    session's cached prefix has expired and re-caches its **whole** context at
    the 1.25× cache-write rate. Cost per wake is `context_tokens × input_rate ×
-   1.25`, so the session's *size* — not the number of wakes — is the cost
+1.25`, so the session's _size_ — not the number of wakes — is the cost
    lever: a lean drain session makes per-verdict re-caching noise, while a fat
    one pays it on every worker. Measured shape (../EVIDENCE.md,
    2026-07-04→11): median rewrite 187k tokens, 268 TTL-expiry wakes costing
@@ -366,12 +367,12 @@ line blocks dispatch, and neither prints on baton generations.
    DONE → before merging, re-run the append-only
    whitelist diff over the branch's changes since its merge-base, path-scoped
    to every spec's tasks/ dir (e.g., under git: `git diff $(git merge-base
-   <default-branch> <branch>)..<branch> -- '*/tasks/*.md'`): changes only in the
+<default-branch> <branch>)..<branch> -- '*/tasks/*.md'`): changes only in the
    worker's own task file and only in the allowed set — Status line,
    checkbox ticks, evidence lines, the plan block; anything else is a
    post-verification edit riding in — treat it as a merge failure.
    **MUST NOT (wake economics): at merge/verdict time the drain session never
-   pulls the worker's *code diffs* or the *worker's own check/test output*
+   pulls the worker's _code diffs_ or the _worker's own check/test output_
    into its own context — a path-scoped diff summary (file names and line
    counts, no content) plus the ≤ 2k-token
    verdict is the ceiling; when it genuinely needs file contents it dispatches
@@ -770,7 +771,7 @@ For each in-scope draft stub, run an assess → gate → act pipeline:
 - **Act** (this workflow, the single queue writer): PASS → write the authored
   Goal, criteria, and headers into the stub, add `Promotion-ready: true` and
   `Promoted-by-run: <run-token>` (audit trail), strip the `## Original
-  report` block, and flip `draft` → `pending` in the SAME commit — the stub
+report` block, and flip `draft` → `pending` in the SAME commit — the stub
   is dispatchable this run (maintainer decision 2026-07-11: no pipeline step
   forces a human; the earlier deferred-past-the-authoring-run split is
   retired; the human audit is the exit checklist plus the permanently
@@ -785,7 +786,7 @@ For each in-scope draft stub, run an assess → gate → act pipeline:
   defensible default, or a gate FAIL — leaves the stub `draft` AND this
   workflow writes onto it, immediately after `Status:`, a single
   machine-greppable `Intake-refused: <screen|assess|gate> — <one-line reason>
-  (<ISO date>)` line, so a human can diagnose the refusal from the stub file
+(<ISO date>)` line, so a human can diagnose the refusal from the stub file
   alone. It is drain-written queue state (workers never author it); a later
   PASS or gate-confirmed OBSOLETE Act write clears any prior `Intake-refused:`
   line in the same commit (the `## Original report` strip clause, extended).
@@ -969,7 +970,7 @@ reviewed this run: `spec review: N findings, M fixed, K stubbed` (or the
    step 1. Queue empty → report per-task verdicts and evidence; the terminal
    distill below then fires. Only
    blocked/failed left → report the blockers and stop; those go back to
-   /breakdown or an attended /build. Specs that failed auto-breakdown this
+   /breakdown or a human working the task directly. Specs that failed auto-breakdown this
    run (4a) are reported alongside the other blockers, with their failure
    reason — these need a human `/breakdown` or spec amendment, not a retry.
 
@@ -997,16 +998,16 @@ reviewed this run: `spec review: N findings, M fixed, K stubbed` (or the
       whether it was dispatched this run), each `Status: obsolete` closure
       (with its `Closed:` evidence), and each refused stub (screen-refused,
       assess-refused, or gate-failed) with its `Intake-refused:
-      <screen|assess|gate> — <reason> (<date>)` line quoted verbatim, so
+<screen|assess|gate> — <reason> (<date>)` line quoted verbatim, so
       every auto-promotion and refusal is audited — with the task file for
       each. For every promoted stub, print the exact `Demoted:` line a human
       would paste into the task file to reverse it, e.g. `Demoted:
-      <ISO-date> — <one-line reason>` (stub intake permanently respects it).
+<ISO-date> — <one-line reason>` (stub intake permanently respects it).
    7. **Next commands** — the exact commands to resume.
 
    Additionally, for each spec whose lease released this run, the checklist
    carries its **spec-completion review** outcome — one line, `spec review: N
-   findings, M fixed, K stubbed` or `spec review skipped: <reason>`, read from
+findings, M fixed, K stubbed` or `spec review skipped: <reason>`, read from
    that spec's committed `specs/<slug>/evidence/spec-review.md` (step 4b).
 
    One interview and one checklist per session; "Nothing needs you" is a

@@ -31,11 +31,15 @@ mechanism), emitting one line per foreign live session or a
 
 Autonomous execution fits peripheral features, prototypes, migrations with
 mechanical verification, and anything with runnable acceptance criteria and
-no irreversible actions. It does NOT fit core business logic,
-security-sensitive code, ambiguous specs, or tasks whose only verification
-is "looks right". Auto-accept the edges; keep the core under synchronous
-supervision. If the task is on the wrong side of that line, say so and
-recommend an attended `$build` instead — do not launch.
+no irreversible actions. Core business logic and security-sensitive code
+don't disqualify a task — they raise the bar it must clear first: tighten
+acceptance criteria to runnable commands and confirm worktree isolation,
+then launch. What genuinely doesn't fit is a task whose "correct" is a
+judgment call no test can settle — an ambiguous spec, or verification
+that's inherently "looks right". That's an unresolved spec question, not a
+task needing a human to watch a build: say so, file it as a HUMAN.md
+`ask`/`decide` entry (or route it back through the spec pipeline), and do
+not launch.
 
 ## 2. Preconditions (all mandatory)
 
@@ -47,7 +51,7 @@ recommend an attended `$build` instead — do not launch.
 - Permissions scoped so the run can build/test/commit but NOT push or
   deploy. Risk-rate each tool by reversibility and blast radius; auto-allow
   only what discarding the branch fully undoes. Push stays
-  human-escalated — the attended stages' push-on-completion is
+  human-escalated — drain's and build's push-on-completion behavior is
   intentionally not adopted here. Be honest about limits: allowlists gate
   commands, not the filesystem; a worktree isolates the diff, not the
   machine. Never bypass permissions outside a network-isolated container.
