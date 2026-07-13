@@ -29,11 +29,14 @@ ordering. Contracts, top-first:
 
 ## Procedure
 
-1. **Run the scanner.** From the repo root, run
-   `python3 <this skill dir>/prioritize_scan.py` (the scanner ships in this
-   skill's own directory; invoke it by its path relative to this SKILL.md).
-   If it prints `nothing to reprioritize`, stop here — no interview, no
-   commit.
+1. **Run the scanner.** Print a one-line plain-text lead-in to the user
+   BEFORE the scanner call (e.g. "Scanning specs/ for reorderable work…") —
+   the invocation must never be silent from the user's side. Then, from the
+   repo root, run `python3 <this skill dir>/prioritize_scan.py` (the scanner
+   ships in this skill's own directory; invoke it by its path relative to
+   this SKILL.md). If it prints `nothing to reprioritize`, relay that line
+   to the user as the turn's closing message and stop — no interview, no
+   commit; never end the turn without reporting it.
 
 2. **Present the table and ask one question.** Lead with a short plain-text
    line (e.g. "Here's what's open:") before the table — some terminal
@@ -46,6 +49,11 @@ ordering. Contracts, top-first:
    > What changes should I make? Reference tasks by their `Ref` (e.g. 'make
    > drain-sweep-preservation/03-worker-commits.md P0'). Say 'none' if you're
    > done looking.
+
+   The table and the question must be the turn's final message, with no
+   tool calls after them — text emitted between tool calls in the same turn
+   may never be rendered to the user at all, which reads as the skill
+   producing no output.
 
    Interpret the free-form reply yourself, the way you would any
    natural-language instruction — there is no rigid grammar.
