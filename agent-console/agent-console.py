@@ -591,14 +591,19 @@ def _dag_tasks(spec_tasks: list[dict]) -> list[dict]:
             dm = re.search(r"\d+", raw)
             if dm:
                 deps.append(int(dm.group(0)))
-        out.append(
-            {
-                "num": int(m.group(1)),
-                "deps": deps,
-                "status": t["status"],
-                "title": t["title"],
-            }
-        )
+        entry = {
+            "num": int(m.group(1)),
+            "deps": deps,
+            "status": t["status"],
+            "title": t["title"],
+        }
+        # Blocker kind for viz.dag()'s badge: blocked/failed tasks are
+        # human-bounded (no unblock step, or an ask-typed one) unless they
+        # record an agent-runnable Unblock: run/agent recheck.
+        if viz.canonical_status(t["status"]) in ("blocked", "failed"):
+            ub = (t.get("unblock") or {}).get("type")
+            entry["blocker"] = "agent" if ub in ("run", "agent") else "human"
+        out.append(entry)
     return out
 
 
@@ -2283,8 +2288,15 @@ def render_workboard(
                 )
                 prio = _prio_select(sp.get("path", ""), sp.get("priority", ""))
                 if graph:  # expandable to the dependency graph
+                    # Human-blocked nodes auto-expand: the human's blockers
+                    # are visible per repo without hunting; agent-bounded
+                    # ones stay collapsed and proceed.
+                    is_open = any(
+                        t.get("blocker") == "human" for t in sp.get("tasks", [])
+                    )
                     item = (
-                        f'<details class="spec" data-k="s:{esc(r["name"])}/{esc(sp["slug"])}">'
+                        f'<details class="spec" data-k="s:{esc(r["name"])}/{esc(sp["slug"])}"'
+                        f'{" open" if is_open else ""}>'
                         f'<summary><div class="line">{row}</div>'
                         f"</summary>{graph}</details>"
                     )

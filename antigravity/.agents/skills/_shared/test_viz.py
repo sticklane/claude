@@ -91,6 +91,37 @@ def test_dag_cyclic_deps_terminates_instead_of_infinite_looping():
     assert svg.count("<path") == 2
 
 
+def test_dag_human_blocker_node_carries_badge():
+    tasks = [
+        {"num": 1, "deps": [], "status": "done", "title": "a"},
+        {"num": 2, "deps": [1], "status": "blocked", "title": "b", "blocker": "human"},
+    ]
+    svg = viz.dag(tasks)
+    assert 'class="viz-blocker viz-blocker-human"' in svg
+    assert svg.count("viz-blocker-") == 1
+
+
+def test_dag_agent_blocker_node_carries_recheck_badge():
+    tasks = [
+        {"num": 1, "deps": [], "status": "done", "title": "a"},
+        {"num": 2, "deps": [1], "status": "blocked", "title": "b", "blocker": "agent"},
+    ]
+    svg = viz.dag(tasks)
+    assert 'class="viz-blocker viz-blocker-agent"' in svg
+
+
+def test_dag_renders_nodes_without_edges_when_blockers_present():
+    # A spec whose blocked task has no dependency edges still gets a graph —
+    # the blocker must be visible even in an edge-less spec.
+    tasks = [
+        {"num": 1, "deps": [], "status": "open", "title": "a"},
+        {"num": 2, "deps": [], "status": "blocked", "title": "b", "blocker": "human"},
+    ]
+    svg = viz.dag(tasks)
+    assert svg.count("<g") == 2
+    assert "<path" not in svg
+
+
 def test_dag_node_stroke_and_num_text_use_status_hex():
     tasks = [
         {"num": 1, "deps": [], "status": "running", "title": "a"},
@@ -195,4 +226,16 @@ def test_timeline_bar_class_has_css_var_fallback_for_its_status(monkeypatch):
 def test_viz_css_defines_fallback_for_every_canonical_token():
     for token, hexval in viz.STATUS_HEX.items():
         assert f"var(--viz-{token}, {hexval})" in viz.VIZ_CSS
+    assert ":root" not in viz.VIZ_CSS
+
+
+def test_viz_axis_labels_carry_muted_tint_with_token_fallback():
+    # axis labels restore the muted-gray tint the old `.axis div` rule had,
+    # via the --viz-muted token with a hex fallback so consumers that never
+    # define the token still get the tint (mirrors the --muted #898781 value).
+    assert "var(--viz-muted, #898781)" in viz.VIZ_CSS
+    axis_rule = next(
+        line for line in viz.VIZ_CSS.splitlines() if line.startswith(".viz-axis div")
+    )
+    assert "color: var(--viz-muted, #898781)" in axis_rule
     assert ":root" not in viz.VIZ_CSS

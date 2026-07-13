@@ -91,6 +91,37 @@ def test_dag_cyclic_deps_terminates_instead_of_infinite_looping():
     assert svg.count("<path") == 2
 
 
+def test_dag_human_blocker_node_carries_badge():
+    tasks = [
+        {"num": 1, "deps": [], "status": "done", "title": "a"},
+        {"num": 2, "deps": [1], "status": "blocked", "title": "b", "blocker": "human"},
+    ]
+    svg = viz.dag(tasks)
+    assert 'class="viz-blocker viz-blocker-human"' in svg
+    assert svg.count("viz-blocker-") == 1
+
+
+def test_dag_agent_blocker_node_carries_recheck_badge():
+    tasks = [
+        {"num": 1, "deps": [], "status": "done", "title": "a"},
+        {"num": 2, "deps": [1], "status": "blocked", "title": "b", "blocker": "agent"},
+    ]
+    svg = viz.dag(tasks)
+    assert 'class="viz-blocker viz-blocker-agent"' in svg
+
+
+def test_dag_renders_nodes_without_edges_when_blockers_present():
+    # A spec whose blocked task has no dependency edges still gets a graph —
+    # the blocker must be visible even in an edge-less spec.
+    tasks = [
+        {"num": 1, "deps": [], "status": "open", "title": "a"},
+        {"num": 2, "deps": [], "status": "blocked", "title": "b", "blocker": "human"},
+    ]
+    svg = viz.dag(tasks)
+    assert svg.count("<g") == 2
+    assert "<path" not in svg
+
+
 def test_dag_node_stroke_and_num_text_use_status_hex():
     tasks = [
         {"num": 1, "deps": [], "status": "running", "title": "a"},
