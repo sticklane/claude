@@ -11,7 +11,8 @@ every time. Exact JSON and script templates are in [reference.md](reference.md)
 ## 1. Establish the check commands
 
 From the user, AGENTS.md, or the build files — then RUN each one to confirm
-it works and observe how long it takes (pipe long output through `tail`).
+it works and observe how long it takes (pipe long output through `tail`, or
+delegate the run to a subagent — raw logs don't belong in the main context).
 A flaky or slow gate is worse than none. Prefer the narrowest reliable
 check (lint + typecheck + affected tests); the full suite belongs in CI.
 
