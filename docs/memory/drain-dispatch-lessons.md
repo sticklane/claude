@@ -185,3 +185,30 @@ Dispatch prompts for cross-repo tasks should flag: "a hook skip
 (`--no-verify`) is not yours to take silently — if a gate fails for a
 reason clearly unrelated to your change, name it explicitly in Decisions:
 and let the orchestrator re-verify, don't just bypass and move on."
+
+## Two live drains, one shared checkout: intake-alongside works (2026-07-13)
+
+A fresh /drain that finds the only pending spec under a FRESH foreign
+`DRAIN-OWNER.md` (another live drain mid-dispatch) does not have to stand
+down or halt: with the human's explicit choice, it can work everything the
+leaseholder can't reach — critique intake over draft specs, stub intake,
+and dispatch of any tasks those promote — claiming per-spec leases as
+usual. Observed working for a full run with zero push rejections and zero
+divergence-halts alongside an actively-merging sibling drain. The
+load-bearing habits: push immediately after EVERY bookkeeping commit
+(claim, flip, findings, release — a lingering unpushed commit is what turns
+the sibling's next push into true divergence), keep every commit
+path-scoped, and never touch the foreign spec's dir, drafts included. The
+scope question itself is the other lesson: /drain launched outside any repo
+(cwd not a git tree) has no derivable queue — ask, don't guess.
+
+## Critique intake: skip the critic when SPEC.md is unchanged since a recorded NOT READY
+
+Before dispatching a critic at a spec, compare `git log -1 --format=%ct`
+of `SPEC.md` against its `critique-findings.md`: findings newer than the
+spec + a recorded NOT READY verdict decide the outcome deterministically —
+append nothing, dispatch nothing, checklist it. Four fresh critic runs on
+2026-07-13 (~40k subagent tokens each) confirmed exactly this: unchanged
+spec → identical verdict. The re-dispatch is only worth it when the human
+asked for fresh findings or the findings file predates a relevant
+code/CLAUDE.md change the verdict hinged on.
