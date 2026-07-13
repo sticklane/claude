@@ -1,4 +1,5 @@
-Status: draft
+Status: obsolete
+Closed: 2026-07-13 (Steven, attended) — superseded by d2ae9ba: the manual steps-2–4 flow no longer exists (`agy -p --new-project` confirmed safe; the workflow drives evals/run.sh headlessly), and evals/run.sh itself runs teardown.sh whenever setup was attempted. The cue is structural, not operator-dependent.
 Intake-refused: screen — instruction-shaped Goal matched: tool-invocation (2026-07-13)
 Discovered-from: specs/mirror-procedure-discipline/tasks/04-audit-evals.md
 Spec: ../SPEC.md

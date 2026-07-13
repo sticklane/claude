@@ -36,3 +36,7 @@ manual-pending per docs/memory/unattended-worker-tool-limits.md.
 ## Non-blocking / verified
 Spec does NOT touch any ultra-path skill → no lint-ultra-gate AC required (correctly absent).
 `EVAL_TRANSCRIPT` confirmed absent from evals/run.sh today, so AC :80 is not vacuous.
+
+## Triage 2026-07-13 (attended; Steven approved REVISE)
+
+Verdict: REVISE. Edits before re-critique: (1) add codex/.agents/skills/evals/SKILL.md to R5/Touch with its own grep AC (its lines 19 and 41 carry exactly the text this spec would contradict); (2) split the R4 `||` AC into two `&&` greps; (3) fix the plugin.json path, pin the fresh next version (0.8.56+ — the critique's 0.8.49 suggestion is itself stale), and mark R3's "passes" manual-pending. Verified: EVAL_TRANSCRIPT absent from evals/run.sh — problem live.

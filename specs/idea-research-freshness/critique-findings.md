@@ -51,3 +51,7 @@ assertions, replace the run-`/idea` criteria with grep/manual-pending, pin the
 step renumbering + cross-reference criterion, make fixtures date-relative, and
 pin the stamp placement regex. Then re-run /critique. Do not /breakdown until
 READY. (Ship this before domain-knowledge-base.)
+
+## Triage 2026-07-13 (attended; Steven approved REVISE)
+
+Verdict: REVISE. Edits before re-critique: (1) add `check-freshness.sh` (injectable `--today`, date-relative fixtures) and assert its fresh/stale/absent output per fixture; (2) replace the run-`/idea` criteria with grep checks on SKILL.md text plus one explicit manual-pending e2e; (3) pin the stamp regex/placement and a step-renumbering criterion. Verified: `docs/guides/model-routing.md` target headings landed (R1's conditional resolves); no grounding step or test-fixtures/ exists yet; 11 `step N` cross-references confirm the renumbering risk.

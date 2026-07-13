@@ -75,3 +75,7 @@ satisfiable by one wrapper alone; render_markdown has an Approach step but
 no acceptance criterion. This spec needs the same human revision as the
 prior two runs before another /critique pass is worth spending — a fourth
 identical re-critique would be pure waste absent an actual SPEC.md edit.
+
+## Triage 2026-07-13 (attended; Steven approved REVISE)
+
+Verdict: REVISE. Edits before re-critique: (1) rewrite Approach step 3 + its AC to the real execute_push surface (agent-console.py:2542: TimeoutExpired / rc-0→_invalidate_board / rc-nonzero — no dirty-check or ahead-behind logic exists); (2) replace the "empty prompt" failure case with unknown-sid and the _claude_run_bg error path; (3) split the OR-grep, add a render_markdown AC, require unittest.TestCase style. Verified: zero tests reference resume_agent/set_priority/execute_push. High value — untested git-mutating endpoints on a live launchd service.

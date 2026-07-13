@@ -33,3 +33,7 @@ Low risk (prose far from any "ultra" marker) but the obligation is unstated. Add
 R6 mirror obligations complete (codex/antigravity drain artifacts carry no `fleet` reference, so the
 drain edit needs no counterpart); all eight R1 prose anchors present; workboard/viz/fleet single-file
 anchors all present as claimed; plugin.json 0.8.48 makes R7's bump satisfiable.
+
+## Triage 2026-07-13 (attended; Steven approved REVISE)
+
+Verdict: REVISE (smallest of the batch). Edits before re-critique: (1) replace the recursive greps with `git grep` in R1 and the AC; (2) mark the `/fleet` e2e criterion manual-pending and swap `evals/run.sh` for a static `git grep` over eval fixtures; (3) add `bash evals/lint-ultra-gate.sh` as an AC. Verified: not superseded — fleet/reference.md still exists; workboard.py still carries render_html/--out/--actions-out (lines 2444, 2841, 2915).
