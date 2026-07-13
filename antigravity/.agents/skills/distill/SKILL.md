@@ -70,3 +70,5 @@ gets ignored and costs tokens every conversation.
   file in the skill directory.
 - Show the user a one-line summary per learning captured (or "nothing worth
   keeping" — a valid outcome).
+
+`Next stage: none — lessons land in AGENTS.md/rules`.

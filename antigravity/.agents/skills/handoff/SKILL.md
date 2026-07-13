@@ -31,3 +31,5 @@ seeding this run's own successor.
    handoff preserves state, distill preserves lessons; they're different.
 4. Tell the user: start a new conversation with
    "Read <path>/HANDOFF.md and continue."
+
+`Next stage: none — start a new conversation and resume from the handoff file`.
