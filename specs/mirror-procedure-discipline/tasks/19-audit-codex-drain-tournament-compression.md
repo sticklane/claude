@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/mirror-procedure-discipline/tasks/14-audit-codex-drain.md
 Spec: ../SPEC.md
 Blocking: no
