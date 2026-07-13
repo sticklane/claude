@@ -74,8 +74,11 @@ type Reprime struct {
 // the parent's session label but are excluded — main-loop context is the cost
 // driver; see the spec's Open questions). p50/p90 are over per-call context
 // size (cache_read_tokens + input_tokens).
-// ReprimeCount and ReprimeCostMicrousd aggregate this session's own samples
-// labeled reprime=true — the per-session slice of the top-level Reprime rollup.
+// ReprimeCount and ReprimeCostMicrousd count only this session's reprime=true
+// main-loop model calls (samples carrying a `calls` value with no agent: frame),
+// so they are NOT a per-session cut of the top-level Reprime rollup: that rollup
+// sums every reprime=true sample — including subagent-frame and non-`calls`
+// samples this per-session view excludes.
 type SessionStat struct {
 	Project             string `json:"project"`
 	Calls               int64  `json:"calls"`
