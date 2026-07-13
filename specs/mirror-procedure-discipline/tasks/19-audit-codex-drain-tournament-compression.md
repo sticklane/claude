@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 <!-- plan (task 19):
   RED  — add manifest lines pinning re-derive/next-ranked (source-present,
          codex-absent) → test_mirror_procedure_coverage.sh fails on 2 GAPs.
