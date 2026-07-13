@@ -296,10 +296,17 @@ line every time you enter it — and you enter it after EVERY recorded verdict
 (step 3's closing line sends you here unconditionally) or 3b auto-breakdown
 attempt, never only when it happens to feel like a good moment. Evaluate the
 relaunch **trigger**: hand off after
-**`max(2, 6 − W)` recorded verdicts** this session (an auto-breakdown attempt
-counts as one; a `Relaunch-every: N` header overrides it), or on a
-**degradation override** — re-reading files already read, losing queue
-position, repeated failed corrections, or a compaction event. The
+**`max(2, 6 − W)` recorded verdicts** this session (a worker verdict from step
+3, or a 3b auto-breakdown attempt, counts as one; a `Relaunch-every: N` header
+overrides it), or on a **degradation override** — re-reading files already
+read, losing queue position, repeated failed corrections, or a compaction
+event. **Critique-intake and stub-intake attempts never count toward this
+threshold** — they already carry their own per-run at-most-once bookkeeping
+(`Intake-failed:` / `Stub-intake-failed:` below), and counting them pays a full
+reprime for zero dispatch progress: a fooszone drain queue batoned gen 5→6 on
+5 intake attempts that were all NOT READY, then exhausted the 10-generation
+cap without finishing the queue (specs/drain-wake-cost/EVIDENCE.md, "Follow-up
+(2026-07-13)"). The
 `max(2, 6 − W)` count is a size-adaptive stand-in for "after ~4 verdicts OR when
 context is heavy" — a wider W batons sooner (W=1→5, W=3→3, W=5→2); full
 derivation in [reference.md](reference.md)'s "Baton pass". On fire:

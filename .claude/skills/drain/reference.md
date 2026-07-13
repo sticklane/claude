@@ -941,7 +941,13 @@ worker flags above, which deliberately exclude the Task tool and would
 abort the orchestrator's first worker dispatch.
 
 **Verdict-budget derivation (`max(2, 6 − W)`).** SKILL.md step 3a hands off
-after `max(2, 6 − W)` recorded verdicts. This count is a deterministic,
+after `max(2, 6 − W)` recorded verdicts — step 3 worker verdicts and 3b
+auto-breakdown attempts only. Critique-intake and stub-intake attempts are
+excluded from this count (SKILL.md step 3a, cited not restated): they are
+already bounded by their own per-run `Intake-failed:`/`Stub-intake-failed:`
+bookkeeping, and including them forces a full-reprime relaunch on runs that
+spent their budget on intake screening rather than dispatch, with zero queue
+progress to show for the reprime cost. This count is a deterministic,
 size-adaptive stand-in for the one-rule ideal "after ~4 verdicts OR when the
 hub's context is heavy, whichever comes first": the harness exposes no reliable
 in-session context-size signal the hub can check, so a wider window W — which

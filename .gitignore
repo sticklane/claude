@@ -11,3 +11,7 @@ __pycache__/
 # Vale synced package payload (pulled by `vale sync`, never tracked). The config
 # template and the House vocabulary under vale/styles/config/ ARE tracked.
 vale/styles/Google/
+
+# drain's self-relaunch log (reference.md "Baton pass" nohup wrapper) —
+# a runtime artifact per spec dir, never meant to be tracked.
+specs/*/.drain-gen.log
