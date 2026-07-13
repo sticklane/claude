@@ -41,5 +41,5 @@ here (no per-tool allowlist flag exists — see the Headless section's
 
 Artifacts: scenarios live in `evals/<skill>/<NN-name>/`, committed. If a
 failure exposed a skill-authoring gap, apply the distill skill to capture
-the lesson. Next step: run the affected evalset before committing any skill
-change.
+the lesson. Next stage: run the affected evalset before committing any skill
+change (human-launched).

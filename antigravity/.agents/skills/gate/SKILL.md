@@ -45,3 +45,5 @@ uninstalled-but-described gate is the trust-then-verify gap in miniature.
 
 Files land in `.agents/hooks.json` + `.agents/hooks/*.sh` — commit both so
 the whole team's agents get the same gates.
+
+`Next stage: /autopilot specs/<slug>/tasks/NN-*.md (human-launched)`.

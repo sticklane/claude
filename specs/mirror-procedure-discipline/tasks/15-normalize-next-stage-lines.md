@@ -1,7 +1,22 @@
-Status: blocked
-Blocked: criterion 1 (`Next stage:` count ≥14) is unattainable — the true ceiling is 13 because `workflow-author` is Claude-Code-only (ultracode Workflow tool) with no antigravity mirror by design. All other work (C2–C5) is done, committed, and verified on branch task/15-normalize-next-stage-lines.
-Unblock: ask: Should criterion 1's target be corrected to ≥13 (workflow-author has no antigravity mirror by design), accepting this task as complete — or should a separate task port workflow-author into the antigravity tree?
+Status: done
+Resolution: Steven, attended, 2026-07-13 (human-tasks walkthrough) — corrected criterion 1's target from ≥14 to ≥13; `workflow-author` is Claude-Code-only (authors ultracode `.claude/workflows/*.js`; plugins can't ship workflows) and has no antigravity mirror by design, so 13 is the true ceiling, not an unmet bound. Task accepted as complete; no separate antigravity-port task for workflow-author.
 Discovered-from: specs/mirror-procedure-discipline/tasks/03-audit-distill.md
+<!--
+PLAN (worker, task/15-normalize-next-stage-lines):
+Map: 13 of 14 source skills have an antigravity mirror. workflow-author is
+Claude-Code-only (authors ultracode .claude/workflows/*.js; "Plugins cannot
+ship workflows") → NO antigravity mirror by design (load-bearing absence per
+mirror-procedure-discipline.md) → true ceiling for criterion 1 is 13, not 14.
+Existing 4 with Next stage: list-specs, factcheck, prose-review (skills),
+prioritize (workflow). Add 9: breakdown, design, distill, idea, gate, onboard,
+handoff, workboard (skills SKILL.md), evals (workflow). design + workboard +
+evals currently use a "Next step:" variant → convert. Launch markers adapted
+to antigravity (human-launched workflow convention).
+TDD: seed 3 manifest lines (breakdown/distill/design Next stage phrases) RED,
+add mirror lines GREEN, run full tests/.
+Criterion 1 (≥14) BLOCKED at 13 — workflow-author has no mirror; reported.
+-->
+
 Spec: ../SPEC.md
 Blocking: no
 Priority: P2
@@ -34,11 +49,16 @@ prose rewrites; `.claude/rules/mirror-procedure-discipline.md` governs.
 
 ## Acceptance criteria
 
-- [ ] `grep -rl "Next stage:" antigravity/.agents/skills/*/SKILL.md antigravity/.agents/workflows/*.md | wc -l` ≥ 14 (was 4)
-- [ ] `grep -rln "^Next step:" antigravity/.agents/skills antigravity/.agents/workflows | wc -l` → 0 (the variant is gone; was 1)
-- [ ] For each of the 14 sources, the mirror's `Next stage:` names the same successor skill (spot-checkable; list the 14 pairs in the commit message or an evidence note)
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` green, with ≥ 3 new manifest lines seeding `Next stage:` phrases for high-traffic skills (breakdown, distill, design) so the line can't silently drop again
-- [ ] `for t in tests/test_*.sh; do bash "$t"; done` all green
+- [x] `grep -rl "Next stage:" antigravity/.agents/skills/*/SKILL.md antigravity/.agents/workflows/*.md | wc -l` ≥ 13 (was 4; corrected from an unverified ≥14 — workflow-author has no antigravity mirror by design, see Resolution above)
+  - evidence: result 13 — the true ceiling. workflow-author is the 14th source but is Claude-Code-only (authors ultracode `.claude/workflows/*.js`; "Plugins cannot ship workflows") → NO antigravity mirror by design (load-bearing absence per mirror-procedure-discipline.md). All 13 mirrored sources now carry the line.
+- [x] `grep -rln "^Next step:" antigravity/.agents/skills antigravity/.agents/workflows | wc -l` → 0 (the variant is gone; was 1)
+  - evidence: result 0 (design/SKILL.md `^Next step:` converted to `Next stage:`).
+- [x] For each of the 14 sources, the mirror's `Next stage:` names the same successor skill (spot-checkable; list the 14 pairs in the commit message or an evidence note)
+  - evidence: 13/14 verified — breakdown→/build or /drain, design→/breakdown, distill→none(AGENTS.md/rules), idea→/breakdown, gate→/autopilot, onboard→/idea, handoff→none(new conversation), workboard→none, evals→run evalset; pre-existing list-specs→none, factcheck→none, prose-review→none, prioritize→none(build/drain). 14th (workflow-author) has no mirror.
+- [x] `bash tests/test_mirror_procedure_coverage.sh` green, with ≥ 3 new manifest lines seeding `Next stage:` phrases for high-traffic skills (breakdown, distill, design) so the line can't silently drop again
+  - evidence: coverage test exit 0; 3 new `|Next stage:` manifest lines (breakdown, distill, design).
+- [x] `for t in tests/test_*.sh; do bash "$t"; done` all green
+  - evidence: all 15 tests PASS.
 
 ## Decisions
 
@@ -48,9 +68,10 @@ prose rewrites; `.claude/rules/mirror-procedure-discipline.md` governs.
 
 ## Progress
 
-- 2026-07-13 — worker attempt 1: C2–C5 done, committed on `task/15-normalize-next-stage-lines` (commit `0a0beb9`, unmerged), all tests green. C1 BLOCKED — see `Unblock:` above. Remaining: human decision on C1's numeric target.
+- 2026-07-13 — worker attempt 1: C2–C5 done, committed on `task/15-normalize-next-stage-lines` (commit `0a0beb9`), all tests green.
+- 2026-07-13 — human-tasks walkthrough: criterion 1 corrected to ≥13 and checked, branch merged, task closed as done.
 
 ## Discovered
 
-- Task 15's own `Touch:` names `tests/test_mirror_procedure_coverage.sh` but criterion 4 requires editing `tests/mirror-procedure-manifest.txt` (the data the script reads) — a merge-time Touch whitelist should include it once this task unblocks. (specs/mirror-procedure-discipline/tasks/15-normalize-next-stage-lines.md)
-- Criterion 1's `≥14` target was an unverified numeric bound (anchored-acceptance-criteria failure mode) — the task author counted 14 source skills carrying `Next stage:` but never confirmed 14 antigravity mirrors exist; only 13 do. (specs/mirror-procedure-discipline/tasks/15-normalize-next-stage-lines.md)
+- Task 15's own `Touch:` names `tests/test_mirror_procedure_coverage.sh` but criterion 4 requires editing `tests/mirror-procedure-manifest.txt` (the data the script reads) — the merge included the manifest edit anyway, so this was a documentation gap, not a blocked merge.
+- Criterion 1's `≥14` target was an unverified numeric bound (anchored-acceptance-criteria failure mode) — the task author counted 14 source skills carrying `Next stage:` but never confirmed 14 antigravity mirrors exist; only 13 do.
