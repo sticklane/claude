@@ -106,6 +106,24 @@ class ClassifySpecTestCase(unittest.TestCase):
         self.assertIsNone(row["next_command"])
         self.assertIn("blocked/failed", row["status"])
 
+    def test_needs_verification_flags_awaiting_verification(self):
+        row = list_specs.classify_spec(
+            "foo",
+            tasks=self._tasks(["done", "needs-verification"]),
+            open_questions_unresolved=False,
+        )
+        self.assertIn("awaiting verification", row["status"])
+        self.assertNotIn("needs attention", row["status"])
+        self.assertIn("1 needs-verification", row["status"])
+
+    def test_needs_verification_plus_pending_still_drains_first(self):
+        row = list_specs.classify_spec(
+            "foo",
+            tasks=self._tasks(["needs-verification", "pending", "pending"]),
+            open_questions_unresolved=False,
+        )
+        self.assertEqual(row["next_command"], "/drain specs/foo")
+
     def test_agent_unblockable_blocked_does_not_flag_needs_attention(self):
         # Agent-bounded blockage (Unblock: run/agent) proceeds — the spec
         # routes to /drain instead of halting for the human.

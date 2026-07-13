@@ -45,6 +45,7 @@ open_questions_unresolved = _spec_readiness.open_questions_unresolved
 _PENDING_LIKE = {"pending", "open", "todo", "ready"}
 _IN_PROGRESS_LIKE = {"in-progress", "in_progress", "claimed"}
 _BLOCKED_OR_FAILED = {"blocked", "failed"}
+_NEEDS_VERIFICATION = {"needs-verification", "needs_verification"}
 _DONE_LIKE = {"done", "skipped"}
 
 
@@ -62,6 +63,8 @@ def bucket_status(status):
         return "deferred"
     if s in _BLOCKED_OR_FAILED:
         return "blocked_or_failed"
+    if s in _NEEDS_VERIFICATION:
+        return "needs_verification"
     if s == "draft":
         return "draft"
     if s in _DONE_LIKE:
@@ -99,6 +102,7 @@ def classify_spec(slug, tasks, open_questions_unresolved):
         "in_progress_like": [],
         "deferred": [],
         "blocked_or_failed": [],
+        "needs_verification": [],
         "draft": [],
         "done_like": [],
         "unrecognized": [],
@@ -110,12 +114,14 @@ def classify_spec(slug, tasks, open_questions_unresolved):
     n_blocked = len(buckets["blocked_or_failed"])
     n_pending = len(buckets["pending_like"])
     n_in_progress = len(buckets["in_progress_like"])
+    n_needs_verification = len(buckets["needs_verification"])
     n_draft = len(buckets["draft"])
     n_unrecognized = len(buckets["unrecognized"])
 
     summary = (
         f"{len(tasks)} task(s): {n_pending} pending, {n_in_progress} "
         f"in-progress, {n_deferred} deferred, {n_blocked} blocked/failed, "
+        f"{n_needs_verification} needs-verification, "
         f"{n_draft} draft, {len(buckets['done_like'])} done, "
         f"{n_unrecognized} unrecognized"
     )
@@ -169,6 +175,17 @@ def classify_spec(slug, tasks, open_questions_unresolved):
             "slug": slug,
             "status": f"{summary} — in-progress/awaiting — check /fleet "
             "or a drain may be running",
+            "next_command": None,
+        }
+
+    # Rule 5a: completed-but-unverified tasks remain -> dispatch the
+    # verifier (agent-bounded: verification proceeds, never a
+    # needs-attention flag).
+    if n_needs_verification > 0:
+        return {
+            "slug": slug,
+            "status": f"{summary} — awaiting verification — dispatch the "
+            "verifier agent against the spec's acceptance criteria",
             "next_command": None,
         }
 

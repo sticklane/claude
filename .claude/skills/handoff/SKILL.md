@@ -32,9 +32,13 @@ to a fresh context, never seeding this session's own successor.
    whose Status flipped to done, a spec whose criteria you're claiming
    met) before parking — completed work leaves the session verified, not
    self-reported. Record the verdict in the handoff's Verification
-   section; a FAIL flips the task back and becomes the handoff's exact
-   next step. Skip only when the session completed nothing (pure
-   exploration, or all work is still in flight).
+   section; a FAIL flips the task back to `Status: in-progress` and
+   becomes the handoff's exact next step. If the verifier genuinely
+   cannot run before parking, flip the task to
+   `Status: needs-verification` instead of leaving an unverified `done` —
+   the scanners treat it as open agent-bounded work and the verifier
+   flips it to `done` later. Skip only when the session completed nothing
+   (pure exploration, or all work is still in flight).
 3. Commit work-in-progress to the working branch if the tree is dirty (a
    handoff pointing at an uncommitted tree is fragile).
 4. Run /distill first if there were corrections worth keeping — handoff
