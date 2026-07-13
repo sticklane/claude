@@ -190,7 +190,9 @@ class TestSimpleCommandsInInbox(unittest.TestCase):
         self.assertIn("claude", inbox[0].get("cmd", ""))
         self.assertIn("docs/HANDOFF.md", inbox[0]["cmd"])
 
-    def test_all_tasks_done_spec_carries_verifier_command(self):
+    def test_all_tasks_done_spec_is_not_an_inbox_item(self):
+        # Agent-bounded: verification proceeds (verifier agent / card button),
+        # it is not the human's attention item.
         repo = make_repo_record()
         repo["specs"] = [
             {
@@ -209,8 +211,7 @@ class TestSimpleCommandsInInbox(unittest.TestCase):
 
         inbox = workboard.attention_items([repo], [], [], stale_days=7)
 
-        self.assertIn("claude", inbox[0].get("cmd", ""))
-        self.assertIn("demo", inbox[0]["cmd"])
+        self.assertEqual(inbox, [])
 
 
 BATON_FIXTURE = """# Drain baton: demo
@@ -2199,7 +2200,8 @@ def _unblock_spec(tasks, status=None, unblock=None):
         ],
         "tasks": tasks,
         "tasks_unparseable": 0,
-        "last_touched": 1.0,
+        # fresh, so the stale branch never fires in these fixtures
+        "last_touched": workboard.now_ts(),
     }
     if status:
         s["status"] = status
@@ -2276,16 +2278,41 @@ class TestNeedsAnswerInbox(unittest.TestCase):
             [i for i in self._inbox(spec) if i["state"] == "needs-answer"], []
         )
 
-    def test_run_unblock_step_shows_on_blocked_inbox_row(self):
+    def test_run_unblock_task_is_not_an_inbox_item(self):
+        # Agent-bounded: a recorded run:/agent: unblock step means the work
+        # proceeds (recheck/dispatch), it is not the human's attention item.
         spec = _unblock_spec(
             [_unblock_task(unblock={"type": "run", "step": "make deploy"})]
         )
-        blocked = [
-            i
-            for i in self._inbox(spec)
-            if i["state"] == "blocked" and "blocked" in i["what"].lower()
-        ]
-        self.assertIn("make deploy", blocked[0]["why"])
+        self.assertEqual(self._inbox(spec), [])
+
+    def test_agent_unblock_task_is_not_an_inbox_item(self):
+        spec = _unblock_spec(
+            [_unblock_task(unblock={"type": "agent", "step": "recheck deploy"})]
+        )
+        self.assertEqual(self._inbox(spec), [])
+
+    def test_draft_task_is_not_an_inbox_item(self):
+        # Drafts are queue state (intake promotes them); decision-shaped
+        # drafts surface via HUMAN.md entries, not the spec-blocked row.
+        spec = _unblock_spec([_unblock_task(status="draft")])
+        self.assertEqual(self._inbox(spec), [])
+
+    def test_blocked_task_without_unblock_still_flags(self):
+        # Unknown-bounded: no recorded unblock step — surface it.
+        spec = _unblock_spec([_unblock_task()])
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("no unblock step recorded", blocked[0]["why"])
+
+    def test_ask_unblock_task_does_not_duplicate_spec_blocked_row(self):
+        # The ask task already has its own needs-answer row; the spec-level
+        # blocked row must not repeat it.
+        spec = _unblock_spec(
+            [_unblock_task(unblock={"type": "ask", "step": "which creds?"})]
+        )
+        inbox = self._inbox(spec)
+        self.assertEqual([i["state"] for i in inbox], ["needs-answer"])
 
     def test_waiting_spec_ask_unblock_becomes_needs_answer(self):
         spec = _unblock_spec(
@@ -2296,14 +2323,18 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         self.assertIn("sign in at URL?", answer[0]["why"])
         self.assertNotIn("cmd", answer[0])
 
-    def test_waiting_spec_agent_unblock_becomes_blocked_item_with_step(self):
+    def test_waiting_spec_agent_unblock_is_not_an_inbox_item(self):
+        # Agent-bounded: the recheck step proceeds; not an attention item.
         spec = _unblock_spec(
             [], status="waiting", unblock={"type": "agent", "step": "check deploy"}
         )
+        self.assertEqual(self._inbox(spec), [])
+
+    def test_waiting_spec_without_unblock_still_flags(self):
+        spec = _unblock_spec([], status="waiting")
         blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
         self.assertEqual(len(blocked), 1)
-        self.assertIn("check deploy", blocked[0]["why"])
-        self.assertNotIn("cmd", blocked[0])
+        self.assertIn("no unblock step recorded", blocked[0]["why"])
 
     def test_needs_answer_group_renders_before_blocked_group(self):
         answer = {
@@ -2707,7 +2738,15 @@ class TestHumanBlockersInbox(unittest.TestCase):
                     "tasks_total": 2,
                     "tasks_done": 0,
                     "tasks_blocked": ["01-x"],
-                    "tasks": [],
+                    "tasks": [
+                        {
+                            "file": "specs/demo/tasks/01-x.md",
+                            "abs": "/r/demo/specs/demo/tasks/01-x.md",
+                            "title": "x",
+                            "status": "blocked",
+                            "deps": [],
+                        }
+                    ],
                     "last_touched": 10.0,
                 }
             ]

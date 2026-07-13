@@ -47,6 +47,12 @@ python3 <this skill dir>/workboard.py [ROOTS ...] --json
 and relay the **needs-attention inbox** as a short list — that is the
 actionable part; don't re-narrate the repo cards.
 
+The inbox is **human-bounded work only**: agent-bounded work (drafts,
+`Unblock: run:/agent:` rechecks, all-tasks-done specs awaiting the
+verifier) proceeds via dispatch and never appears as an attention item —
+the one exception is generation/relaunch limits (parked handoffs, drain
+batons), which surface because relaunch is human-gated.
+
 - No ROOTS → it scans `~/code ~/src ~/projects ~/dev ~/repos ~/work`, the
   cwd, **plus every repo any Claude Code session has touched** (from session
   records' `cwd`). Pass explicit roots when the user names directories.
@@ -60,10 +66,10 @@ actionable part; don't re-narrate the repo cards.
 For each inbox item the suggested action column already names the move:
 
 - `blocked` handoff → resume it in a fresh session from the HANDOFF.md, then
-  delete the file. Blocked task file → answer its open question, flip its
-  `Status:` line, re-dispatch via /build or /drain.
-- `needs-review` all-tasks-done spec → run the verifier, then archive the
-  spec dir. Dirty/unpushed repo → commit, stash, or push.
+  delete the file. Blocked task file (no unblock step recorded) → answer its
+  open question or add an `Unblock:` line, flip its `Status:` line,
+  re-dispatch via /build or /drain.
+- `needs-review` dirty/unpushed repo → commit, stash, or push.
 - `stale` open spec → resume, defer (`Status: deferred`), or delete — open
   work decays; deciding is the point.
 - `stale` Antigravity conversation → resume it in Antigravity, or run the

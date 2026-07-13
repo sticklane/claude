@@ -48,6 +48,12 @@ python3 <this skill dir>/workboard.py [ROOTS ...] --json
 and relay the **needs-attention inbox** as a short list — that is the
 actionable part; don't re-narrate the repo cards.
 
+The inbox is **human-bounded work only**: agent-bounded work (drafts,
+`Unblock: run:/agent:` rechecks, all-tasks-done specs awaiting the
+verifier) proceeds via dispatch and never appears as an attention item —
+the one exception is generation/relaunch limits (parked handoffs, drain
+batons), which surface because relaunch is human-gated.
+
 Each session on the dashboard also carries a collapsible **spawn tree** of
 the sub-agents it launched, each node badged with its status (running,
 completed, or failed) using the same status chips the fleet view uses — so a
@@ -68,10 +74,10 @@ inline rather than as an opaque single row.
 For each inbox item the suggested-action column already names the move:
 
 - `blocked` handoff → resume it in a fresh Agent Manager conversation from
-  the HANDOFF.md, then delete the file. Blocked task file → answer its open
-  question, flip its `Status:` line, re-dispatch.
-- `needs-review` all-tasks-done spec → verify, then archive the spec dir.
-  Dirty/unpushed repo → commit, stash, or push.
+  the HANDOFF.md, then delete the file. Blocked task file (no unblock step
+  recorded) → answer its open question or add an `Unblock:` line, flip its
+  `Status:` line, re-dispatch.
+- `needs-review` dirty/unpushed repo → commit, stash, or push.
 - `stale` open spec → resume, defer (`Status: deferred`), or delete — open
   work decays; deciding is the point.
 - `stale` Antigravity conversation → resume it in the Agent Manager, or run
