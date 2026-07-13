@@ -39,11 +39,22 @@ already (none set by the user this session), set it to the repo name plus a
 **deterministic** descriptor of the specs being drained: sort this run's
 spec slugs alphabetically, join with `,`, then cap the joined string at 40
 chars (truncate and append `…` if longer) — the same input specs always
-produce the same descriptor; never paraphrase or abbreviate by hand:
+produce the same descriptor; never paraphrase or abbreviate by hand.
+**Runtime-dependent mechanism, verify which applies:** on Claude Code, a
+terminal-title OSC escape sequence (`printf '\033]0;<title>\007'`) does
+**NOT** rename the session — confirmed live 2026-07-13: the `name` field
+`claude agents --json` reports is separate session metadata, not derived
+from a subprocess's terminal-title write. The only mechanism that actually
+updates it is the **`/rename <name>`** slash command, which only a human (or
+the live user turn) can issue — no tool exposes it for a session to invoke
+on itself. On Claude Code, propose the descriptor to the user and ask them
+to run `/rename <descriptor>` rather than assuming a printf escape worked;
+other runtimes may genuinely honor the OSC escape for their terminal tab
+(harness-dependent, unverified here) — use
 `printf '\033]0;%s · drain: %s\007' "$(basename "$(git rev-parse
---show-toplevel)")" "<sorted, comma-joined, 40-char-capped spec slugs>"` —
-once, never re-set on baton generations (they inherit it), skip silently
-with no TTY.
+--show-toplevel)")" "<sorted, comma-joined, 40-char-capped spec slugs>"`
+there. Once, never re-set on baton generations (they inherit it), skip
+silently with no TTY.
 
 **Startup session sweep (advisory).** Before inventory, list other live
 sessions whose cwd resolves into this repo (`claude agents --json`, else
@@ -1120,9 +1131,30 @@ tie-break. For the chosen spec:
   compare-and-swap re-read to confirm your `Run-token:`, refuse and skip to
   the next eligible spec on a lost race). This is what stops two concurrent
   drains from racing to critique the same spec.
-- Invoke **/critique** on the spec via the Skill tool — model-invocable
-  with no launch contract, the same sanctioned in-session exception
-  3b's `/breakdown` invocation relies on.
+- **Cheap-before-expensive short-circuit, checked first.** `git log -1
+  --format=%H -- specs/<slug>/SPEC.md` against the commit that produced the
+  spec's most recent recorded NOT READY verdict (readable from
+  `critique-findings.md`'s last dated section): if SPEC.md has had **no
+  commit since**, a fresh critic dispatch is a foregone, already-answered
+  question — SPEC.md's content is byte-identical to what already produced
+  that verdict. Skip the critic dispatch; append a dated
+  `## Re-critique <date> (drain critique intake, run <token>) — still NOT
+  READY, approved plan not yet applied` section to `critique-findings.md`
+  citing the git-log evidence and pointing at the prior findings/approved
+  edit list already in the file (never re-derive them), release the lease,
+  and continue. This is a case of "cheap before expensive"
+  (`.claude/rules/token-discipline.md`): a 2026-07-13 run confirmed the
+  pattern on 9 of 10 draft specs in one pass, each carrying a same-day
+  attended "Triage … approved REVISE" block whose edit list had not yet
+  landed in SPEC.md — running the critic on each would have reproduced the
+  exact prior verdict at full cost, the same "reprime for zero dispatch
+  progress" anti-pattern the fooszone incident (Baton pass, above)
+  documents for intake attempts generally. If SPEC.md HAS changed since
+  that commit (even if not through the approved edit list), this
+  short-circuit does not apply — dispatch the critic for real.
+- Otherwise, invoke **/critique** on the spec via the Skill tool —
+  model-invocable with no launch contract, the same sanctioned in-session
+  exception 3b's `/breakdown` invocation relies on.
 - **READY** → the critic writes the `Breakdown-ready:` marker; 3b's existing
   auto-breakdown path then makes the spec dispatchable **in the same
   session**. Release the lease and loop to step 1.
