@@ -207,13 +207,25 @@ opening line every time you enter it.
   frontier), dispatching a fresh worker with the verifier's failure evidence,
   never the failed transcript. A second failure routes into one tournament (at
   most one per task per run): sweep leftover `task/NN-<slug>-t*` branches, then
-  dispatch three concurrent frontier workers on `task/NN-<slug>-tN` branches.
-  Each DONE candidate gets three independent verifier runs; a candidate
-  survives only on majority PASS (two of three), and a verifier returning
-  BLOCKED disqualifies it outright. Rank the survivors mechanically — most PASS
-  votes first (3 ahead of 2), then fewest gate findings, then smallest total
-  diff, then lowest angle index (t1 before t2) as the final tie-break. Skip the
-  tournament when the relaunch returned BLOCKED over budget.
+  dispatch three concurrent frontier workers on `task/NN-<slug>-tN` branches,
+  one distinct angle each so the three are non-identical — t1 `minimal-diff`
+  (the smallest change that passes the acceptance commands), t2
+  `strict-test-first` (write all acceptance-shaped tests before any
+  implementation, confirm each fails, then implement to green), t3 `re-derive`
+  (reread the task's Goal and Spec reference and design from scratch, ignoring
+  the failed approach). Each DONE candidate gets three independent verifier
+  runs; a candidate survives only on majority PASS (two of three), and a
+  verifier returning BLOCKED disqualifies it outright. Rank the survivors
+  mechanically — most PASS votes first (3 ahead of 2), then fewest gate
+  findings, then smallest total diff, then lowest angle index (t1 before t2
+  before t3) as the final tie-break. Merge the top-ranked survivor through the
+  normal DONE bookkeeping with no relaunch; if its merge or post-merge gates
+  fail, abort the merge and move to the next-ranked survivor, deleting survivor
+  branches only after some merge passes gates. No survivor and at least one
+  worker DEFERRED → take the DEFERRED path (write the collected questions,
+  `Status: deferred`) in preference to failed; otherwise `Status: failed` with
+  every verdict's evidence recorded. Skip the tournament when the relaunch
+  returned BLOCKED over budget.
 - **DEFERRED** — the verdict message contains the question. Drain writes it
   into the main-checkout task file under `## Deferred questions`, sets
   `Status: deferred`, commits and pushes (path-scoped, guarded), and discards
