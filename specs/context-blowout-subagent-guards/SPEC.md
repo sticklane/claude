@@ -172,6 +172,13 @@ both edits land entirely inside `.claude/rules/token-discipline.md`.
 - `grep -c "^## " .claude/rules/token-discipline.md` returns the same count as before the change (8 sections; new content is bullets inside existing sections, not new headers) — verify against `git show HEAD:.claude/rules/token-discipline.md | grep -c '^## '` at breakdown time.
 - MANUAL: a human or reviewing agent reads both new bullets in context and confirms they cite rather than restate the RETRY evidence and the `scout` tool-grant constraint, per R3.
 
+## Parallelization
+
+This spec decomposes into a single task (01) — both R1 and R2 edits share
+one `Touch` target (`.claude/rules/token-discipline.md`), so they cannot be
+split into concurrent-safe groups per the decision-coupling test; no
+`- Group:` line applies.
+
 ## Open questions
 
 - The 2-screenshots-per-turn cap is this spec's proposed anchored default,
