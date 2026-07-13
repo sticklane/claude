@@ -35,10 +35,11 @@ leases stub intake, critique intake, and auto-breakdown take on another spec
 (claim → act → release) may transiently overlap. The session ends only when
 no spec in scope has dispatchable work.
 
-**Classification gate.** Drain is for queues that pass the peripheral/core
-test: runnable acceptance criteria, cheap to discard, no core business logic,
-auth, payments, or migrations. Pull core tasks out for attended `$build` runs
-and drain only the rest.
+**Drain-readiness gate.** Every task drains, unattended: runnable acceptance
+criteria, cheap to discard, no credentials or external services beyond what
+CI already uses. Core business logic, auth, payments, or migrations don't
+get pulled out for a human-watched `$build` run — they raise the bar
+(tighter acceptance criteria, full worktree isolation) instead.
 
 **Path-scoped commits, always.** Every queue-state commit drain makes — owner
 claim/release, status flips, Progress entries, Deferred questions, draft
@@ -69,12 +70,12 @@ this sweep.
 
 **Hub-economics advisory (gen 1, never blocking).** Two advisory lines at
 gen-1 startup — never on baton generations, and neither ever blocks
-dispatch: (a) *frontier-hub* — where the runtime discloses the session
+dispatch: (a) _frontier-hub_ — where the runtime discloses the session
 model and it maps to the frontier tier, print one line citing the
 wake-economics doctrine (step 2) and recommending a relaunch on a
 deep-tier or lower hub via a fresh drain run with the same argument
 (queue state is committed, nothing is lost); skip silently where the
-runtime discloses no session model. (b) *heavy-hub* — when the drain
+runtime discloses no session model. (b) _heavy-hub_ — when the drain
 launch arrives beyond the session's first few turns, print one line
 recommending that same fresh-session relaunch.
 
@@ -145,7 +146,7 @@ window is empty; a suspected zombie does not count against emptiness).
 
 **Keep the hub context small (wake economics).** Awaited workers run minutes,
 longer than the prompt-cache TTL, so every verdict wake re-caches the whole
-hub context. The hub's *size*, not the number of wakes, is the cost lever —
+hub context. The hub's _size_, not the number of wakes, is the cost lever —
 which is why the verdict cap, the merge-time re-read ban, and the baton all
 exist. Run the drain hub on the default tier or below; a frontier hub model
 roughly doubles wake cost for no quality gain. Same lever when the hub must
@@ -185,7 +186,7 @@ opening line every time you enter it.
 - **DONE** — before merging, re-run the append-only whitelist diff over
   `merge-base..branch`, path-scoped to every spec's `tasks/` dir
   (`git diff $(git merge-base <default-branch> <branch>)..<branch> --
-  '*/tasks/*.md'`): changes only in the worker's own task file and only in the
+'*/tasks/*.md'`): changes only in the worker's own task file and only in the
   allowed set — Status line, checkbox ticks, evidence lines, the plan block.
   Anything else is a post-verification edit riding in: treat it as a merge
   failure. **Wake-economics ban: at merge/verdict time the hub never pulls the
@@ -345,13 +346,13 @@ tracked by a `Stub-intake-failed:` baton line.
   data under an `## Original report` block); a single-call rubric critic gates
   it; and drain — the sole queue writer — acts. On PASS, drain writes the
   authored content tagged `Promotion-ready: true` + `Promoted-by-run:
-  <Run-token>` AND flips `Status` to `pending` in the same commit, stripping
+<Run-token>` AND flips `Status` to `pending` in the same commit, stripping
   `## Original report` — the stub is dispatchable this run. Gate-confirmed
   OBSOLETE writes `Status: obsolete` + a `Closed:` line. Every other
   non-promotion — screen refusal, undefaultable DECISION-SHAPED, or gate FAIL
   — leaves the stub `draft` AND drain writes onto it, immediately after
   `Status:`, a machine-greppable `Intake-refused: <screen|assess|gate> —
-  <one-line reason> (<ISO date>)` line (drain-written queue state, cleared by a
+<one-line reason> (<ISO date>)` line (drain-written queue state, cleared by a
   later PASS or OBSOLETE Act in the same commit) so the refusal is diagnosable
   from the stub alone.
 
@@ -426,14 +427,15 @@ death sweeps the run (preserving rescue branches), flips to `pending`, and
 returns to step 1. Once no parked tasks remain:
 
 - **Tasks with `Status: deferred` exist**: collect their `## Deferred
-  questions` blocks, ask them all in one round, write each answer under
+questions` blocks, ask them all in one round, write each answer under
   `## Answers`, flip to `pending`, commit, and return to step 1 (gating on the
   status, not the presence of a questions block, is what stops answered
   questions from being re-asked).
 - **Queue empty**: report the run (per-task verdict with acceptance evidence
   and merged branches); the terminal distill below then fires.
 - **Only blocked/failed remain**: report each blocker with its evidence and
-  stop; those need amending (back to `$breakdown`) or an attended `$build`.
+  stop; those need amending (back to `$breakdown`) or a human working the
+  task directly.
 - **Specs that failed auto-breakdown this run**: report each with its failure
   reason alongside the other blockers.
 

@@ -14,10 +14,13 @@ folded into AGENTS.md, cited not restated).
 
 1. **Classify (go/no-go).** Low-supervision execution fits: peripheral
    features, prototypes, mechanical migrations — anything with runnable
-   acceptance criteria and no irreversible actions. It does NOT fit: core
-   business logic, security-sensitive code, ambiguous specs. If the task is
-   on the wrong side, say so and recommend attended /build instead. Don't
-   launch.
+   acceptance criteria and no irreversible actions. Core business logic and
+   security-sensitive code don't disqualify a task — they raise the bar it
+   must clear first: tighten acceptance criteria to runnable commands and
+   confirm worktree isolation, then launch. What genuinely doesn't fit is an
+   ambiguous spec — that's an unresolved spec question, not a task needing a
+   human to watch a build. Say so, file it as a HUMAN.md `ask`/`decide`
+   entry (or route it back through the spec pipeline), and don't launch.
 
 2. **Preconditions (all mandatory).**
    - Clean git state; dedicated branch or worktree — recovery must be

@@ -2,8 +2,8 @@
 description: Execute one task file (or a small SPEC.md) end to end - scout, plan proportionally, implement test-first, verify independently, commit. Run in a fresh conversation per task.
 ---
 
-Execute the task file given after the command. This is the pipeline's inner
-loop; it assumes an agent-ready task/spec with runnable acceptance criteria.
+Execute the task file given after the command. It assumes an agent-ready
+task/spec with runnable acceptance criteria.
 
 1. **Load only the task.** Open this step by emitting
    `<!-- agentprof:stage=load -->` verbatim each time you enter it —

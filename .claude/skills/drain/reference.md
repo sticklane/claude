@@ -13,19 +13,28 @@ Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt (workers return only a **verdict + evidence**), the
 tournament procedure (at most one per task), and the headless fallback.
 
-## When NOT to drain (the peripheral/core gate)
+## Drain-readiness gate
 
-Drain a task only if every box checks (from the playbook's task
-classification — peripheral work runs unattended, core work is watched):
+Every task in the queue drains — there is no "attended" task category that
+carves work out to a human-watched lane instead. What varies is how much
+scrutiny a task needs before it's actually ready to hand to an unattended
+worker. Drain a task only once every box checks:
 
-- [ ] Not core business logic, auth, payments, billing, or data migration
 - [ ] Acceptance criteria are runnable commands (not "looks right")
 - [ ] A wrong implementation is cheap to discard (branch-isolated, no
       side effects outside the repo)
 - [ ] No credentials or external services beyond what CI already uses
 
-Anything unchecked: pull that task out of the queue and run it attended
-with /build; drain the rest.
+Core business logic, auth, payments, billing, or data migration don't
+disqualify a task — they raise the bar it must clear: tighten the
+acceptance criteria until they're exhaustive enough to catch a wrong
+implementation mechanically, confirm worktree isolation covers every side
+effect the task could have, and strip any credential dependency the task
+doesn't strictly need. A task that still can't clear the boxes above after
+tightening — because what "correct" means is genuinely a judgment call,
+not because the domain is sensitive — isn't drain-ready: fix the
+acceptance criteria, or file the open question via the Unblock: grammar
+below, rather than routing the task to a different execution mode.
 
 ## Gen-1 startup advisories
 
@@ -65,13 +74,13 @@ exact cwd filter is the same one the Owner lease section uses).
 
 **Hub-economics advisory (never blocking).** Two advisory lines at gen-1
 startup — never on baton generations, and neither ever blocks dispatch: (a)
-*frontier-hub* — when the model the harness disclosed in this session's system
+_frontier-hub_ — when the model the harness disclosed in this session's system
 context maps to the **frontier tier** (`runtimes/` profiles carry the mapping;
 Claude default: `fable`), print one line citing the wake-economics doctrine
 (SKILL.md step 2) and recommending a relaunch on a deep-tier (`opus`) or lower
 hub via a fresh `/drain` session with the same argument — queue state is
 committed, so nothing is lost; skip silently where the runtime discloses no
-model. (b) *heavy-hub* — when the drain launch arrives beyond the session's
+model. (b) _heavy-hub_ — when the drain launch arrives beyond the session's
 first few turns (the observable heuristic), print one line recommending that
 same fresh-session relaunch. Advisory only: neither line blocks dispatch, and
 neither prints on baton generations.
@@ -82,7 +91,7 @@ The rationale SKILL.md step 2 summarizes. Awaited workers routinely run 5–30
 minutes, longer than the harness's 5-minute prompt-cache TTL, so every
 verdict-collection wake lands after the hub's cached prefix has expired and
 re-caches the **whole** hub context at the 1.25× cache-write input rate. The
-cost per wake is `context_tokens × input_rate × 1.25` — so the hub's *size*,
+cost per wake is `context_tokens × input_rate × 1.25` — so the hub's _size_,
 not the number of wakes, is the cost lever: shrinking the hub context makes
 per-verdict re-caching noise, while a fat hub pays it on every worker. Measured
 shape (see ../EVIDENCE.md, 2026-07-04→11): median rewrite 187k tokens, 268
@@ -623,8 +632,8 @@ carry a readable path, resolved at dispatch:
 > `Done vs remaining:` line summarizing partial progress. If BLOCKED, one
 > paragraph on why AND, on its own line, the unblock step in typed form —
 > `Unblock: run: <cmd>` (a command checks or clears it), `Unblock: agent:
-> <prompt>` (a headless agent run clears it), or `Unblock: ask: <exact
-> question>` (a human must decide), narrowest type that fits; drain records
+<prompt>` (a headless agent run clears it), or `Unblock: ask: <exact
+question>` (a human must decide), narrowest type that fits; drain records
 > it verbatim on the task's `Unblock:` line when it writes `Status: blocked`,
 > and derives an `ask:` from your reason if you omit it. If DEFERRED, the
 > question(s) verbatim — the verdict plus these three fixed sections are all
@@ -1062,7 +1071,7 @@ runtime's `## Headless` template with its placeholders (`<prompt>`,
 `<allowlist>`, `<turn cap>`, `<tier alias>`) intact — or the sentinel
 `NONE` when the runtime has no scriptable relaunch.
 
-*Scriptable runtime (a template is returned).* Substitute drain's own values
+_Scriptable runtime (a template is returned)._ Substitute drain's own values
 into the template's placeholders:
 
 - `<prompt>` → `/drain <spec> (generation G+1, baton: specs/<slug>/DRAIN-BATON.md)`.
@@ -1101,7 +1110,7 @@ nohup <substituted runtime command> \
 `dontAsk` (which every runtime's headless template already carries) makes any
 unapproved tool abort rather than hang.
 
-*No scriptable relaunch (`NONE`).* When the parser returns `NONE`
+_No scriptable relaunch (`NONE`)._ When the parser returns `NONE`
 (Antigravity today), there is no shell command to render — the grammar is a
 plain-language instruction instead: **No scriptable relaunch for `<runtime>`
 — reopen generation G+1 from `<runtime>`'s Agent Manager, pointed at
@@ -1132,14 +1141,14 @@ tie-break. For the chosen spec:
   the next eligible spec on a lost race). This is what stops two concurrent
   drains from racing to critique the same spec.
 - **Cheap-before-expensive short-circuit, checked first.** `git log -1
-  --format=%H -- specs/<slug>/SPEC.md` against the commit that produced the
+--format=%H -- specs/<slug>/SPEC.md` against the commit that produced the
   spec's most recent recorded NOT READY verdict (readable from
   `critique-findings.md`'s last dated section): if SPEC.md has had **no
   commit since**, a fresh critic dispatch is a foregone, already-answered
   question — SPEC.md's content is byte-identical to what already produced
   that verdict. Skip the critic dispatch; append a dated
   `## Re-critique <date> (drain critique intake, run <token>) — still NOT
-  READY, approved plan not yet applied` section to `critique-findings.md`
+READY, approved plan not yet applied` section to `critique-findings.md`
   citing the git-log evidence and pointing at the prior findings/approved
   edit list already in the file (never re-derive them), release the lease,
   and continue. This is a case of "cheap before expensive"
@@ -1220,7 +1229,7 @@ task-file path — step 2's tie-break.
   - **ACTIONABLE** → the assessor **authors the promotion**: a fresh, neutral
     Goal written in its own words, plus authored runnable acceptance
     criteria, `Touch:`, and `Budget:` (and `Depends on:`). ACTIONABLE
-    *requires* those authored fields — the assessor
+    _requires_ those authored fields — the assessor
     **may not return ACTIONABLE-without-criteria**; a return that classifies a stub ACTIONABLE
     but ships no criteria / `Touch:` / `Budget:` is malformed, not a
     promotion, and drain treats it as a gate FAIL (an R1 `gate` refusal line,
@@ -1231,7 +1240,7 @@ task-file path — step 2's tie-break.
   - **DECISION-SHAPED** → the goal turns on a choice the assessor cannot make
     for the human; the assessor **names the decision**. That named decision
     is the one-line reason its R1 refusal line carries (`assess` stage) when
-    no defensible reversible default exists — a DECISION-SHAPED stub *with* a
+    no defensible reversible default exists — a DECISION-SHAPED stub _with_ a
     default the assessment can justify promotes instead (Act, below).
   - **OBSOLETE** → the described gap is already closed; the assessor **cites
     the closing evidence**. That cited evidence is what the gate confirms
@@ -1545,7 +1554,7 @@ checklist.
    reverse it, e.g. `Demoted: <ISO-date> — <reason>`, permanently respected),
    each `Status: obsolete` closure (`Closed:` evidence), and each refused stub
    (screen-refused, assess-refused, or gate-failed) with its `Intake-refused:
-   <screen|assess|gate> — <reason> (<date>)` line quoted verbatim — every
+<screen|assess|gate> — <reason> (<date>)` line quoted verbatim — every
    auto-promotion and refusal audited, task file for each.
 7. **Next commands** — the exact commands to resume.
 
@@ -1568,13 +1577,13 @@ append (title line + the empty section, nothing else).
 FIVE checklist types map onto the grammar's `ask|run|provision|decide`, each
 tied to the exit-checklist section it summarizes:
 
-| Checklist source | HUMAN.md type | Checklist section |
-| --- | --- | --- |
-| Deferred questions still unanswered | `ask` | §1 |
-| `Unblock: ask:` blocked tasks | `ask` | §3 |
-| `Unblock: run:` blocked tasks | `run` | §3 |
-| Decision-shaped or gate-refused stubs | `decide` | §2 / §5 / §6 |
-| NOT-READY specs (critique intake) | `decide` | §4 |
+| Checklist source                      | HUMAN.md type | Checklist section |
+| ------------------------------------- | ------------- | ----------------- |
+| Deferred questions still unanswered   | `ask`         | §1                |
+| `Unblock: ask:` blocked tasks         | `ask`         | §3                |
+| `Unblock: run:` blocked tasks         | `run`         | §3                |
+| Decision-shaped or gate-refused stubs | `decide`      | §2 / §5 / §6      |
+| NOT-READY specs (critique intake)     | `decide`      | §4                |
 
 Each entry is one checkbox line — `- [ ] <ISO date> · <source path> · <type>
 — <one-line action>` — appended to the section. `Unblock: agent:` blocked

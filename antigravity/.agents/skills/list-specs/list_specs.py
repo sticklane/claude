@@ -148,7 +148,7 @@ def classify_spec(slug, tasks, open_questions_unresolved):
         return {
             "slug": slug,
             "status": f"{summary} — blocked/failed — needs attention "
-            "(amend spec or attended /build)",
+            "(amend spec or work it directly with /build)",
             "next_command": None,
         }
 

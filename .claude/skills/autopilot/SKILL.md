@@ -26,11 +26,16 @@ session, a "sweep unavailable" line on failure, never blocking.
 
 Autonomous execution fits: peripheral features, prototypes, migrations with
 mechanical verification, anything with runnable acceptance criteria and no
-irreversible actions. It does NOT fit: core business logic, security-
-sensitive code, ambiguous specs, tasks whose verification is "looks right".
-That split — auto-accept for the edges, synchronous supervision for the
-core — is how Anthropic's own teams draw the line. If the task is on the
-wrong side, say so and recommend attended `/build` instead. Don't launch.
+irreversible actions. Core business logic and security-sensitive code don't
+disqualify a task — they raise the bar it must clear first: tighten
+acceptance criteria to runnable commands, confirm worktree isolation covers
+every side effect, and only then launch. What genuinely doesn't fit is a
+task whose "correct" is a judgment call no test can settle — an ambiguous
+spec, or verification that's inherently "looks right". That isn't a task
+needing a human to sit and watch a build; it's an unresolved spec question.
+Say so, file it as a HUMAN.md `ask`/`decide` entry (or route it back
+through the spec pipeline to resolve the ambiguity), and don't launch —
+there's no "attended" execution mode to fall back to instead.
 
 ## 2. Preconditions (all mandatory)
 
@@ -41,9 +46,10 @@ wrong side, say so and recommend attended `/build` instead. Don't launch.
 - Permissions scoped: the run can build/test/commit but NOT push or deploy.
   Risk-rate each tool by reversibility and blast radius when scoping the
   allowlist — auto-allow only what discarding the branch fully undoes.
-  The attended stages' push-on-completion (drain/build) is
-  **intentionally not** adopted here: autopilot is unattended, so push
-  stays human-escalated (the trigger below), never automatic.
+  Drain's and build's push-on-completion behavior is **intentionally not**
+  adopted here: autopilot commonly runs detached from a human's realtime
+  attention, so push stays human-escalated (the trigger below), never
+  automatic.
   Be honest about the limit — allowlists gate commands, not the filesystem;
   a worktree isolates the diff, not the machine. For hard isolation use the
   containment ladder in reference.md. Never `bypassPermissions` outside a

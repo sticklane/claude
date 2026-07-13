@@ -36,9 +36,10 @@ another spec (claim → act → release) may transiently overlap. The per-spec
 concurrent-drain refusal and per-run generations cap are unchanged; the
 session ends only when no spec in scope has dispatchable work.
 
-First, the **classification gate**: drain only queues passing the
-peripheral/core test — tasks touching core business logic, auth, payments, or
-migrations run attended via /build, drain the rest (checklist in reference.md).
+First, the **drain-readiness gate**: every task drains, unattended — core
+business logic, auth, payments, and migrations raise the scrutiny bar
+(tighter acceptance criteria, full worktree isolation) rather than getting
+carved out to a human-watched lane (checklist in reference.md).
 
 **Path-scoped commits, always.** Every queue-state commit drain makes — owner
 claim/release, status flips, Progress/Deferred/Decisions entries, draft stubs,
@@ -126,7 +127,7 @@ still-`pending` tasks whose `Depends on:` names this task, resolved as the
 dispatchability check does), then lexicographic task-file path. Drain computes
 the order; the model never reorders the queue mid-run.
 
-**Wake economics — keep the hub context small.** The hub's context *size*, not
+**Wake economics — keep the hub context small.** The hub's context _size_, not
 the number of verdict wakes, is the cost lever: each verdict wake re-caches the
 whole hub context at the 1.25× cache-write rate after the 5-minute cache TTL,
 so a fat hub pays it on every worker. This is why the verdict cap above, the
@@ -150,7 +151,7 @@ default W=1 admits one task alone and merges it before the next); full rules in
 load only the named section. The contract:
 
 - **Admission (R1).** A pending task enters the window only when `Status:
-  pending` with every `Depends on:` `done`; its `Touch:` is pairwise-disjoint
+pending` with every `Depends on:` `done`; its `Touch:` is pairwise-disjoint
   from the **claim set** (the `Touch:` of every committed-`in-progress` task,
   live slot or suspected zombie); and it is **co-admissible** with every
   in-flight task — two run together iff one `Group:` line in the owning spec's
@@ -203,7 +204,7 @@ so a per-session emission would misattribute later iterations.
 - **DONE** — before merging, re-run the verifier's append-only whitelist diff
   over the branch's changes since its merge-base, path-scoped to every spec's
   tasks/ dir (`git diff $(git merge-base <default-branch> <branch>)..<branch> --
-  '*/tasks/*.md'`): changes only in the worker's own task file and only in the
+'*/tasks/*.md'`): changes only in the worker's own task file and only in the
   allowed set (Status line, checkbox ticks, evidence lines, plan block).
   Anything else is a post-verification edit riding in — a merge failure (the
   slot-machine path below). **MUST NOT (wake economics): at merge/verdict time
@@ -459,7 +460,8 @@ like `blocked`. Once no parked tasks remain:
 - **Queue empty**: report the run (per-task verdict + acceptance evidence +
   merged branches). The terminal distill below then fires.
 - **Only blocked/failed remain**: report each blocker with its evidence and
-  stop — those need amending (back to /breakdown) or an attended /build.
+  stop — those need amending (back to /breakdown) or a human working the
+  task directly.
 - **Specs that failed auto-breakdown this run** (3b): report each with its
   failure reason alongside the other blockers — a human `/breakdown` or spec
   amendment, not a retry.
