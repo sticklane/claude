@@ -1,5 +1,6 @@
 Status: open
 Priority: P2
+Breakdown-ready: true
 
 ## Problem
 
@@ -29,18 +30,19 @@ has already failed repeatedly and measurably:
 - `.claude/skills/drain/reference.md` is **1595 lines** (verified `wc -l`)
   with no heading-style table of contents — its only navigation aid is a
   prose paragraph after the title (`Contents: When NOT to drain · Gen-1
-  startup advisories · ...`), not a `## Table of contents` / `## Contents`
+startup advisories · ...`), not a `## Table of contents` / `## Contents`
   heading. A session with no upfront map of the file ran 14 separate
   section-grep queries against it instead of one read, and two other
   sessions independently re-read large chunks mid-session for the same
   reason — token waste directly attributable to the missing TOC.
 - The gap is not confined to drain: of this repo's 10 `.claude/skills/*/reference.md`
-  files, 7 exceed the 100-line TOC threshold (factcheck 111, evals 119,
-  prose-review 204, gate 198, workflow-author 250, fleet 190, autopilot
-  159 — all verified `wc -l`, 2026-07-13) and **none** of the 10 has a
-  heading matching `## Table of contents` or `## Contents` anywhere in the
-  file (verified: `grep -rl` for both headings across all 10 returns zero
-  hits). The convention is stated once in CLAUDE.md and followed nowhere.
+  files, 8 exceed the 100-line TOC threshold — drain (1595, cited above)
+  plus 7 others (factcheck 111, evals 119, prose-review 204, gate 198,
+  workflow-author 250, fleet 190, autopilot 159 — all verified `wc -l`,
+  2026-07-13) — and **none** of the 10 has a heading matching
+  `## Table of contents` or `## Contents` anywhere in the file (verified:
+  `grep -rl` for both headings across all 10 returns zero hits). The
+  convention is stated once in CLAUDE.md and followed nowhere.
 
 ## Solution
 
@@ -51,8 +53,9 @@ resolved from `BASH_SOURCE`, a `FILES`/glob list, violations printed as
 rather than wired into `evals/run.sh`) — that mechanically checks both
 conventions across every `.claude/skills/*/SKILL.md` and
 `.claude/skills/*/reference.md`. Bring the repo into compliance with it
-(shrink `drain/SKILL.md`, add TOC headings to the 7 reference.md files
-that need one) so the gate lands green, and reference the gate from
+(shrink `drain/SKILL.md`, add TOC headings to `drain/reference.md` plus
+the 7 other reference.md files that need one — 8 total) so the gate
+lands green, and reference the gate from
 drain's own pre-merge checklist so a future generation that fattens a
 SKILL.md or reference.md catches the regression mechanically instead of a
 human hand-trimming it reactively weeks later.
@@ -82,7 +85,7 @@ human hand-trimming it reactively weeks later.
    `evals/lint-ultra-gate.sh`'s conventions: `set -u`, `ROOT` resolved
    from `BASH_SOURCE`, a discovery loop (glob or explicit list) over
    `.claude/skills/*/SKILL.md`, per-violation output as `path:count:
-   reason`, a final `lint-skill-size-gate: OK` / `FAIL` line, exit 0 only
+reason`, a final `lint-skill-size-gate: OK` / `FAIL` line, exit 0 only
    if every file is compliant.
 2. **SKILL.md line-budget check.** For every `.claude/skills/*/SKILL.md`,
    fail if `wc -l` exceeds 500 (the concrete threshold for CLAUDE.md's
@@ -104,7 +107,7 @@ human hand-trimming it reactively weeks later.
    (e.g. `agentprof:stage=`, `agentprof:role=` counts, `## Decisions`,
    `/handoff`) is lost — check with the same greps task 05 used before
    calling it done.
-5. **Remediate `drain/reference.md` and the 6 other over-100-line
+5. **Remediate `drain/reference.md` and the 7 other over-100-line
    reference.md files to carry a compliant TOC heading.** For
    `drain/reference.md`, promote its existing prose "Contents:" line into
    (or supplement it with) a `## Table of contents` heading listing the
@@ -113,7 +116,15 @@ human hand-trimming it reactively weeks later.
    `prose-review/reference.md`, `gate/reference.md`,
    `workflow-author/reference.md`, `fleet/reference.md`, and
    `autopilot/reference.md` (each currently over 100 lines with no
-   qualifying heading — verified 2026-07-13).
+   qualifying heading — verified 2026-07-13). Three of these seven —
+   `prose-review`, `gate`, and `factcheck` — have an existing antigravity
+   mirror (`antigravity/.agents/skills/<name>/reference.md`); per
+   CLAUDE.md's standing "mirror the change into antigravity/ in the same
+   commit" convention (not specific to this spec), each of those three
+   tasks must add the matching TOC heading to its antigravity mirror too,
+   and its `Touch:` list must include that mirror path. `evals`,
+   `workflow-author`, `fleet`, and `autopilot` have no antigravity mirror
+   to update.
 6. **Wire the gate into drain's own pre-merge checklist.** Add a step to
    `.claude/skills/drain/reference.md`'s "Exit checklist" or "Push guard
    (canonical)" section (exact placement is an implementation decision)
@@ -126,7 +137,7 @@ human hand-trimming it reactively weeks later.
    tasks don't touch skill docs at all.
 7. **Mirror obligations.** Requirements 4 and 6 change
    `.claude/skills/drain/SKILL.md` content, which is one of the four
-   `drain`/`build`/`autopilot`/`evals` skills mirrored as *real content*
+   `drain`/`build`/`autopilot`/`evals` skills mirrored as _real content_
    (not a symlink) into `codex/.agents/skills/drain/SKILL.md` — that file
    must get the matching update. `drain/SKILL.md` and `drain/reference.md`
    changes also need the antigravity leg: drain is a human-only-launch
@@ -143,6 +154,13 @@ human hand-trimming it reactively weeks later.
    need antigravity/codex mirroring (per the task framing precedent:
    "a general-purpose lint script added elsewhere in the repo... doesn't
    need mirroring itself").
+
+Note for breakdown: requirements 4, 5's drain portion, 6, and 7 all touch
+`.claude/skills/drain/SKILL.md` and/or `.claude/skills/drain/reference.md`
+(plus their codex/antigravity mirrors) and cannot be split into independent
+parallel tasks — they belong in one serialized drain-remediation task. Only
+the gate script (requirements 1–3) and the seven non-drain reference.md TOC
+edits (part of requirement 5) are independently parallelizable.
 
 ## Out of scope
 
