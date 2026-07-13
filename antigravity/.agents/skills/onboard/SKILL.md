@@ -25,8 +25,9 @@ vars, flaky tests). An AGENTS.md that lies is worse than none. Two cautions:
 
 - First contact means untrusted code: confirm with the user before running
   install hooks or long/side-effectful suites, and timebox anything slow.
-- Keep raw logs out of the conversation — pipe through `tail` and record
-  command + exit status + quirks only.
+- Keep raw logs out of the conversation — pipe through `tail`, or delegate
+  the runs to a separate conversation that reports command + exit status +
+  quirks only.
 
 ## 3. Write AGENTS.md
 
@@ -43,8 +44,9 @@ what passes "would removing this line cause an agent to make a mistake?":
   else "no task tracking".
 - Conventions an agent can't infer from the code, architecture facts that
   prevent wrong-place edits ("API handlers live in X; generated code in Y —
-  never edit"), and known gotchas — AGENTS.md is Antigravity's native context
-  file, so these live here, not in a separate rules file.
+  never edit"), known gotchas, and the repo's check command — AGENTS.md is
+  Antigravity's native context file, so these live here, not in a separate
+  rules file.
 - Optional: if the repo is ever edited by more than one live session in the
   same non-worktree checkout, a bullet pointing at the concurrent-sessions
   pre-flight pattern (this toolkit's `.claude/rules/concurrent-sessions.md`,
