@@ -53,3 +53,44 @@ prior NOT READY verdict. Skipping a redundant full critic dispatch on
 unchanged content per token-discipline's "cheap before expensive" — the
 three approved triage edits above are the recovery path, unchanged. This
 spec's critique intake is spent for this run.
+
+## Re-critique 2026-07-13 (post-triage edits applied, commit 87ecafe) — still NOT READY
+
+The three approved triage edits above were applied verbatim (commit
+87ecafe: lint-ultra-gate AC added; R8 extended to codex build/drain +
+antigravity list-specs mirrors; blanket R8 grep replaced with per-file
+greps + a 0.8.58→0.8.59 version pin). Re-running /critique surfaced one
+new finding the approved edit list didn't cover:
+
+### 1. [conf 85] R8 still names the wrong antigravity mirror for idea and breakdown
+R8 and its AC (SPEC.md ~84-88, ~113) list `antigravity/.agents/workflows/idea.md`
+and `antigravity/.agents/workflows/breakdown.md` as the mirrors to update, and
+call all four "workflow files under `antigravity/.agents/workflows/`." That's
+wrong for idea/breakdown: those `workflows/*.md` files are thin launcher stubs
+("Use the idea skill (.agents/skills/idea/SKILL.md) and follow it exactly…");
+the real ported content — where R2/R3's behavioral changes actually belong —
+lives at `antigravity/.agents/skills/idea/SKILL.md` and
+`antigravity/.agents/skills/breakdown/SKILL.md`. build and drain are
+different and correctly named: they have no `skills/` copy, their real
+content IS directly in `antigravity/.agents/workflows/{build,drain}.md`. This
+is the same mirror-path-bucketing bug as prior finding #3 (list-specs); that
+one got fixed in the triage round, idea/breakdown did not. Fix: in R8 and its
+AC, swap `antigravity/.agents/workflows/{idea,breakdown}.md` for
+`antigravity/.agents/skills/{idea,breakdown}/SKILL.md`; narrow R8's blanket
+"workflow files under `workflows/`" phrasing to build/drain only. Confirmed
+non-vacuous: `rigor` absent (count 0) today from both real skill-mirror
+targets.
+
+### 2. [conf 60, spec-range, repeat of prior nit #5] R4 still has no verifying check
+Unaddressed — not part of the approved triage list, carried forward for the
+next round.
+
+### Verified clean this round
+Version pin (0.8.58→0.8.59) accurate; all per-file grep ACs in the applied
+edits are non-vacuous against current repo state; `bash evals/lint-ultra-gate.sh`
+exists and exits 0 today; all codex/antigravity target paths referenced in
+the applied R8 exist.
+
+Not yet triaged for approval — the idea/breakdown mirror-path fix (finding 1
+above) needs the same attended-approval step the prior round got before
+another edit lands.
