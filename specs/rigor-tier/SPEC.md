@@ -81,11 +81,16 @@ input to a normal production task, not as done work.
   header (/build and /drain), not only in this spec.
 - R7: quality-discipline.md gains one line scoping its TDD mandate to
   production-rigor work, citing this mechanism.
-- R8: Antigravity mirrors (the idea, breakdown, build, and drain files
-  under `antigravity/.agents/workflows/` and the ported skills they
-  reference) receive the equivalent changes in the same commit, and
-  `.claude-plugin/plugin.json` is bumped; some task's `Touch:` must list
-  these paths (CLAUDE.md's mirroring convention).
+- R8: Mirrors receive the equivalent changes in the same commit: the
+  idea, breakdown, build, and drain workflow files under
+  `antigravity/.agents/workflows/`; the list-specs skill mirror at
+  `antigravity/.agents/skills/list-specs/SKILL.md` (list-specs is ported
+  under `antigravity/.agents/skills/`, not `workflows/`); and, per
+  CLAUDE.md's codex mirroring convention (build and drain are real
+  content there, not symlinks), `codex/.agents/skills/build/SKILL.md`
+  and `codex/.agents/skills/drain/SKILL.md`. `.claude-plugin/plugin.json`
+  is bumped from its current 0.8.58 to 0.8.59. Some task's `Touch:` must
+  list all of these paths (CLAUDE.md's mirroring convention).
 
 ## Out of scope
 
@@ -101,7 +106,11 @@ input to a normal production task, not as done work.
 - [ ] `grep -q "Rigor:" .claude/skills/build/SKILL.md && grep -q "Rigor:" .claude/skills/drain/SKILL.md` (R4)
 - [ ] `grep -qi "prototype" .claude/skills/list-specs/SKILL.md || grep -qi "Rigor" .claude/skills/list-specs/*` (R5)
 - [ ] `grep -qi "rigor" .claude/rules/quality-discipline.md` (R7)
-- [ ] `grep -rql "Rigor" antigravity/.agents/ | grep -q .` and plugin.json version is higher than before (R8)
+- [ ] `bash evals/lint-ultra-gate.sh` passes (CLAUDE.md's standalone ultra-path
+      gate check, required before committing changes to any of
+      idea/critique/drain/build SKILL.md; this spec's R2 and R4 edit
+      idea/build/drain)
+- [ ] `grep -qi "rigor" antigravity/.agents/workflows/idea.md && grep -qi "rigor" antigravity/.agents/workflows/breakdown.md && grep -qi "rigor" antigravity/.agents/workflows/build.md && grep -qi "rigor" antigravity/.agents/workflows/drain.md && grep -qi "rigor" antigravity/.agents/skills/list-specs/SKILL.md && grep -qi "rigor" codex/.agents/skills/build/SKILL.md && grep -qi "rigor" codex/.agents/skills/drain/SKILL.md && grep -q '"version": "0.8.59"' .claude-plugin/plugin.json` (R8)
 - [ ] Fresh-session test: /idea a throwaway-tool pitch, answer "prototype";
       the produced SPEC.md carries `Rigor: prototype` above its first `##`
       (manual, per CLAUDE.md's testing convention).
