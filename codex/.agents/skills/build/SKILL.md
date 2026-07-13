@@ -151,8 +151,9 @@ every time you enter it.
   a correctness/behavior defect AND the fix stays inside the task's `Touch:`
   (or, with no `Touch:` header, inside the files touched this session), then
   re-run the acceptance commands; findings needing out-of-Touch edits, or
-  judged uncertain, are never fixed here: surface to the user. Style findings
-  are dropped. This is one pass. Record the outcome as evidence:
+  judged uncertain, are never fixed here: surface to the user when attended,
+  or add to `Discovered:` when unattended. Style findings are dropped. This is
+  one pass. Record the outcome as evidence:
   `review: N findings, M fixed, K discovered` or `review skipped: <reason>`.
   When this /build run's target was a bare SPEC.md (no `tasks/`), additionally
   run the spec-completion review (specs/spec-completion-review) over the run's
