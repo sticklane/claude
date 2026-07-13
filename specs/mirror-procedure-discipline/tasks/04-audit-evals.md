@@ -94,3 +94,9 @@ Antigravity flow (steps 2–4) never names teardown.sh at all — an operator
 porting an eval that seeds external live-service state gets no cue to run
 it. Worth a one-line "operator runs teardown.sh after the session" note in
 a future pass, if the maintainer agrees it belongs in the manual flow.
+
+## Discovered
+
+- The manual Antigravity evals flow never names `teardown.sh` — an operator
+  running an eval that seeds external live-service state gets no cue to
+  clean it up. See `specs/mirror-procedure-discipline/tasks/16-manual-evals-teardown-cue.md`.
