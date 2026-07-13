@@ -70,3 +70,13 @@ or the rule/gate files from task 01.
 - [x] `grep -c "checked: codex-drain" tests/mirror-procedure-manifest.txt` → 1 (≥1); also four new `.claude/skills/drain/{SKILL.md,reference.md}|codex/.agents/skills/drain/SKILL.md|<phrase>` seed lines
 - [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines (15 test files, verifier-confirmed)
 - [x] `bash evals/lint-ultra-gate.sh` → exit 0 ("all ultra mentions gated in 4 files")
+
+## Discovered
+
+- `antigravity/.agents/workflows/drain.md` still carries the pre-d35fc9e
+  discretionary step-3/3a loop-back language ("At each safe boundary"); the
+  baton-trigger fix has not been ported to the antigravity leg. -> draft 18
+- `codex/.agents/skills/drain/SKILL.md`'s tournament clause still compresses
+  (beyond the now-fixed rank tie-break) the generate angle-suffixes,
+  merge/next-ranked-survivor step, and the DEFERRED-beats-failed verdict
+  routing that reference.md and antigravity spell out. -> draft 19
