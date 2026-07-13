@@ -60,3 +60,18 @@ pass vacuously; OR-grep satisfied by one wrapper; render_markdown step has no
 criterion; line anchors ~90 lines stale. Gaps confirmed real (no tests name
 the four functions) — spec mis-specified, not moot. Recovery: human revises
 SPEC.md (findings 1-3 first), then re-run /critique.
+
+## Re-critique 2026-07-13 (drain critique intake, run 57520c7421ab1aab) — still NOT READY
+
+Third consecutive NOT READY on an unchanged spec (2026-07-11, 2026-07-12,
+now this run). Findings unchanged in substance, line anchors now stale by
+~90-190 lines against current agent-console.py (execute_push actual :2542,
+resume_agent :3122, set_priority :3025, render_markdown :1206). Same core
+defects: execute_push's dirty/ahead-behind branches don't exist (real
+surface is rc-0/rc-nonzero/timeout); resume_agent's "empty prompt" case
+succeeds, not fails; check.sh's unittest-discover runner would silently
+skip bare pytest-style tests; the OR-grep acceptance criterion is
+satisfiable by one wrapper alone; render_markdown has an Approach step but
+no acceptance criterion. This spec needs the same human revision as the
+prior two runs before another /critique pass is worth spending — a fourth
+identical re-critique would be pure waste absent an actual SPEC.md edit.
