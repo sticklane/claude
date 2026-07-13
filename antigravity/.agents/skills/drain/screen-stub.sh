@@ -34,7 +34,11 @@ re_ignore='(^|[^[:alnum:]])(ignore|disregard|forget|override|bypass)[[:space:]][
 # 2. imperatives addressed to an agent
 re_agent='(^|[^[:alnum:]])(you[[:space:]]+(must|should|will|shall|are[[:space:]]to)|as[[:space:]]an[[:space:]]ai|act[[:space:]]as|pretend[[:space:]]+(to|you)|new[[:space:]]+instructions|do[[:space:]]not[[:space:]]tell|reveal[[:space:]]+your)'
 # 3. tool-invocation directives
-re_tool='(push[[:space:]]+to[[:space:]]+(main|master)|git[[:space:]]+push|rm[[:space:]]+-rf|sudo[[:space:]]|curl[[:space:]]|wget[[:space:]]|bash[[:space:]]+-c|eval[[:space:]]|exec[[:space:]]|<tool_use|<invoke[[:space:]]|invoke[[:space:]]+name=)'
+# eval/exec require a word boundary before AND a shell metachar ($"'`() )
+# immediately after — a bare descriptive mention ("the plan-week eval",
+# "retrieval quality") is not command syntax and must pass clean; a real
+# injection (`eval $(...)`, `eval "..."`, `exec(...)`) always has one.
+re_tool='(push[[:space:]]+to[[:space:]]+(main|master)|git[[:space:]]+push|rm[[:space:]]+-rf|sudo[[:space:]]|curl[[:space:]]|wget[[:space:]]|bash[[:space:]]+-c|(^|[^[:alnum:]])eval[[:space:]]*[$"'"'"'\`(]|(^|[^[:alnum:]])exec[[:space:]]*[$"'"'"'\`(]|<tool_use|<invoke[[:space:]]|invoke[[:space:]]+name=)'
 # 4. absolute paths outside the repo
 re_abspath='(^|[^[:alnum:]])(/etc/|/root/|/var/|/usr/|/bin/|/sbin/|/sys/|/proc/|/dev/|~/)'
 
