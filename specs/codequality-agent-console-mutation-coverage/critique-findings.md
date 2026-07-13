@@ -79,3 +79,14 @@ identical re-critique would be pure waste absent an actual SPEC.md edit.
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE. Edits before re-critique: (1) rewrite Approach step 3 + its AC to the real execute_push surface (agent-console.py:2542: TimeoutExpired / rc-0→_invalidate_board / rc-nonzero — no dirty-check or ahead-behind logic exists); (2) replace the "empty prompt" failure case with unknown-sid and the _claude_run_bg error path; (3) split the OR-grep, add a render_markdown AC, require unittest.TestCase style. Verified: zero tests reference resume_agent/set_priority/execute_push. High value — untested git-mutating endpoints on a live launchd service.
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+`git log -- specs/codequality-agent-console-mutation-coverage/SPEC.md` shows
+no commit since the triage above — SPEC.md is byte-identical to the state
+that produced this file's prior NOT READY rounds (this is now the 4th
+consecutive NOT READY the file itself already called "pure waste absent an
+actual SPEC.md edit" for a re-critique with nothing changed). Skipping a
+redundant full critic dispatch on unchanged content per token-discipline's
+"cheap before expensive" — the three approved triage edits above are the
+recovery path, unchanged. This spec's critique intake is spent for this run.
