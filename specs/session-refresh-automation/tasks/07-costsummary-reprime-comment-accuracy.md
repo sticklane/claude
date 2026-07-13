@@ -1,18 +1,27 @@
-Status: draft
+Status: pending
+Promotion-ready: true
+Promoted-by-run: a219d53ef6bba100
 Discovered-from: spec-completion review (specs/session-refresh-automation/evidence/spec-review.md)
 Spec: ../SPEC.md
 Blocking: no
+Depends on: none
+Budget: 3
+Touch: agentprof/internal/costsummary/costsummary.go
 
-# ReprimeCount comment overstates it as a strict slice of the rollup
+# ReprimeCount comment: describe the main-loop-only filtering accurately
 
-agentprof/internal/costsummary/costsummary.go's comment on the per-session
-`ReprimeCount` field calls it "the per-session slice of the top-level
-Reprime rollup", but the top-level rollup counts reprime samples with any
-agent frame while the per-session aggregation excludes subagent/no-`calls`
-samples — the two are not strict slices of each other. The per-session
-main-loop-only behavior is likely the intended one for the wake budget;
-this is a comment-accuracy nit, not a correctness bug.
+## Goal
+
+Correct the doc comment on SessionStat's per-session reprime fields in
+agentprof/internal/costsummary/costsummary.go so it states that per-session
+reprime metrics count main-loop model calls only (samples carrying a
+`calls` value and no agent frame) and names how that filtering differs from
+the top-level Reprime rollup — instead of describing the fields as a strict
+per-session slice of that rollup, which they are not. Comment-only change;
+no behavior edits.
 
 ## Acceptance
 
-<!-- draft: needs runnable criteria before promotion -->
+- [ ] `grep -c "per-session slice of the top-level Reprime rollup" agentprof/internal/costsummary/costsummary.go` returns 0 (the misleading phrase, present at line ~78 today, is gone).
+- [ ] `grep -A2 "ReprimeCount and ReprimeCostMicrousd" agentprof/internal/costsummary/costsummary.go | grep -Eiq "main[- ]loop"` exits 0 (new wording names the main-loop-only filtering; no match today).
+- [ ] `cd agentprof && go test ./internal/costsummary/...` exits 0.
