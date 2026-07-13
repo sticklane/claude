@@ -1,16 +1,28 @@
-Status: draft
+Status: pending
+Promotion-ready: true
+Promoted-by-run: a219d53ef6bba100
 Discovered-from: spec-completion review (specs/session-refresh-automation/evidence/spec-review.md)
 Spec: ../SPEC.md
 Blocking: no
+Depends on: 03
+Budget: 6
+Touch: hooks/session-refresh/test.sh, hooks/session-refresh/fixtures/fake-jq.sh
 
-# hook test.sh test 5 may not exercise the intended jq-absent branch
+# hook test.sh test 5: exercise the agentprof-absent branch machine-independently
 
-Test 5 in hooks/session-refresh/test.sh sets `PATH=/usr/bin:/bin` to test
-the agentprof-absent path, but on macOS `jq` commonly lives in
-/usr/local/bin or /opt/homebrew/bin — the hook likely exits at the earlier
-`command -v jq` check instead of the intended branch. The assertion still
-passes but may not exercise the intended code path; machine-dependent.
+## Goal
+
+Make test 5 reliably reach the hook's agentprof-binary-absent code path on
+any machine: the test's restricted PATH must still resolve `jq` — via a
+committed fake-jq fixture placed on the test PATH — so the hook cannot
+short-circuit at its earlier `command -v jq` guard, while `agentprof`
+remains unresolvable. TDD: first demonstrate the current short-circuit (or
+its machine-dependence) with a failing/inconclusive check, then wire the
+fixture.
 
 ## Acceptance
 
-<!-- draft: needs runnable criteria before promotion -->
+- [ ] `test -x hooks/session-refresh/fixtures/fake-jq.sh` exits 0 (new committed executable fixture; path absent today).
+- [ ] `grep -c "fake-jq" hooks/session-refresh/test.sh` returns ≥ 1 (the fixture is wired into test 5's PATH; literal absent from the file today).
+- [ ] `bash hooks/session-refresh/test.sh 2>&1 | grep -q "missing agentprof binary produces empty stdout"` exits 0 (test 5's existing assertion still present and reported).
+- [ ] `bash hooks/session-refresh/test.sh` exits 0 (full suite green; the script exits nonzero on any failed check — test count may grow beyond today's 10).
