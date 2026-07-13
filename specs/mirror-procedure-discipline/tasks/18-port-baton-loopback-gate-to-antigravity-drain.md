@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Promotion-ready: true
 Promoted-by-run: bc1c30ae8ac43971
 Discovered-from: specs/mirror-procedure-discipline/tasks/14-audit-codex-drain.md
@@ -48,8 +48,8 @@ rule/gate files from task 01.
 
 ## Acceptance
 
-- [ ] `grep -q "after EVERY recorded verdict" antigravity/.agents/workflows/drain.md` → exit 0
-- [ ] `! grep -q "At each safe boundary" antigravity/.agents/workflows/drain.md` → exit 0 (old discretionary phrasing gone)
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` → exit 0
-- [ ] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `grep -q "after EVERY recorded verdict" antigravity/.agents/workflows/drain.md` → exit 0 (verified: match count=1)
+- [x] `! grep -q "At each safe boundary" antigravity/.agents/workflows/drain.md` → exit 0 (old discretionary phrasing gone; count=0)
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (verified: no output, exit 0)
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines (verified per-file: all 15 test_*.sh pass, zero FAIL)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (verified: "OK — all ultra mentions gated in 4 files")
