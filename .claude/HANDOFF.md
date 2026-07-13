@@ -268,9 +268,13 @@ Thread A above without merging — now fixed).
 
 ### Not done / open (Thread B)
 
-- Local repo has NOT been pushed to `sticklane/claude` this session —
-  `bin/submit` has never actually been exercised against a real push.
-  First real use will be the real test.
+- ~~Local repo has NOT been pushed to `sticklane/claude` this session —
+  `bin/submit` has never actually been exercised against a real push.~~
+  **VERIFIED 2026-07-13**: `bin/submit` ran end-to-end for real (pushed
+  `5bddb80`, marketplace refresh + plugin reinstall check OK). One gap
+  found: `bin/refresh-plugins` printed "could not determine current
+  installed version; skipping stale-cache prune" — version detection
+  needs a fix before the prune step ever runs.
 - `specs/drain-wake-cost` task 05 is unstarted — needs real transcript
   reading, not more agentprof aggregate stats.
 - `specs/session-refresh-automation` tasks 06-07 (draft) unreviewed.
@@ -313,8 +317,9 @@ Thread A above without merging — now fixed).
 - session-refresh hook: `bash hooks/session-refresh/test.sh` → 10
   passed, 0 failed. Live-fired on this session repeatedly (confirmed via
   the injected directive text appearing in context).
-- `bin/refresh-plugins` / `bin/submit`: `bash -n` syntax check only —
-  never run end-to-end.
+- `bin/refresh-plugins` / `bin/submit`: `bash -n` syntax check only at
+  handoff time; run end-to-end for real 2026-07-13 (see "Not done" above —
+  works, minus the stale-cache prune).
 
 ---
 
@@ -343,9 +348,13 @@ workboard-dashboard test double, not a real handoff) — now excludes
 
 ### Not done / open (Thread C)
 
-- The hook has NOT fired for real yet (would need an actual `/clear` or
-  fresh launch to observe) — only smoke-tested by invoking the script
-  directly with `CLAUDE_PROJECT_DIR` set. Confirm live if picking this up.
+- ~~The hook has NOT fired for real yet~~ **VERIFIED 2026-07-13**: fired
+  live on a fresh session launch — its SessionStart output injected the
+  multi-HANDOFF.md pointer (listing this file plus the plugin-cache
+  mirrors) and the session read this file from it. Works as designed.
+  Possible refinement: it also surfaces HANDOFF.md copies inside
+  `~/.claude/plugins/cache|marketplaces/` mirrors, which are never
+  resumable work — could exclude those roots.
 - No cleanup/archival for a consumed `HANDOFF.md` — deliberate, stays the
   resuming session's own job per the README.
 - The Thread A "sync via genericity, not just gates" design direction
