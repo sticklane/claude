@@ -55,3 +55,12 @@ READY. (Ship this before domain-knowledge-base.)
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE. Edits before re-critique: (1) add `check-freshness.sh` (injectable `--today`, date-relative fixtures) and assert its fresh/stale/absent output per fixture; (2) replace the run-`/idea` criteria with grep checks on SKILL.md text plus one explicit manual-pending e2e; (3) pin the stamp regex/placement and a step-renumbering criterion. Verified: `docs/guides/model-routing.md` target headings landed (R1's conditional resolves); no grounding step or test-fixtures/ exists yet; 11 `step N` cross-references confirm the renumbering risk.
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+`git log -- specs/idea-research-freshness/SPEC.md` shows no commit since the
+triage above — SPEC.md is byte-identical to the state that produced this
+file's prior NOT READY verdict. Skipping a redundant full critic dispatch on
+unchanged content per token-discipline's "cheap before expensive" — the
+three approved triage edits above are the recovery path, unchanged. This
+spec's critique intake is spent for this run.
