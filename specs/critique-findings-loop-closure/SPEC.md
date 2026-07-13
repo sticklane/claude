@@ -292,15 +292,25 @@ SKILL.md` carries a matching `antigravity/.agents/workflows/critique.md`
   update, the matching `codex/.agents/skills/drain/SKILL.md` update, and
   the same plugin.json bump. `bash evals/lint-ultra-gate.sh` must stay
   green for both (`critique` and `drain` are both ultra-path skills per
-  CLAUDE.md's "Testing changes" section). Conditional case: if breakdown
-  (or a later task) resolves Open Question 1 toward critic-authored
-  metadata — i.e. any task edits `.claude/agents/critic.md` — that task's
-  Touch also includes `.claude/agents/critic.md`'s mirror
-  (`antigravity/.agents/skills/critic/`) and the `plugin.json` `agents`
-  array entry it's already enumerated under (no new entry needed, since
-  `critic.md` is already listed; only its content changes). If Open
-  Question 1 instead resolves toward a `/critique`-side heuristic, no
-  `critic.md` Touch applies and this conditional case does not fire.
+  CLAUDE.md's "Testing changes" section). No task under this spec touches
+  `.claude/agents/critic.md` — R1's MECHANICAL/JUDGMENT split is resolved
+  (see "Design decision" below) as a `/critique`-side heuristic, not
+  critic-authored metadata, so `critic.md` and its
+  `antigravity/.agents/skills/critic/` mirror are out of this spec's Touch
+  entirely.
+
+**Design decision (resolves the prior Open Question).** The
+MECHANICAL/JUDGMENT split is a `/critique`-side heuristic applied to the
+critic's plain-text findings, not critic-authored metadata. R1 already
+states this ("`/critique` classifies each finding"), and Out-of-scope
+already commits to the same shape ("the triage is a post-verdict step
+`/critique` and drain perform on the findings, not a new critic-side
+verdict type"). Adding a structured-tag concept to the critic agent's
+output format would be a larger interface change than this spec's
+findings-triage scope calls for, and would touch `.claude/agents/critic.md`
+plus its mirror and `plugin.json`'s `agents` enumeration for no behavioral
+gain over a `/critique`-side classification pass over the same plain-text
+findings. No task should edit `.claude/agents/critic.md`.
 
 ## Out of scope
 
@@ -361,14 +371,6 @@ reference.md` returns 1 today (confirmed present) and 0 after R5 ships
 
 ## Open questions
 
-- Should a MECHANICAL/JUDGMENT split live as critic-authored metadata
-  (the critic agent itself tags each finding) or as a `/critique`-side
-  heuristic applied to the critic's plain-text findings? The critic
-  agent's `tools:` grant and output format
-  (`.claude/agents/critic.md`) currently has no structured-tag concept —
-  adding one is a larger interface change than a task drained unattended
-  should decide alone; flagging for the breakdown pass or a human call.
-  R8's ship gate already covers both resolutions (its conditional case),
-  so this question no longer blocks Touch-set correctness — it only
-  decides whether the triage logic lives in the critic agent or in
-  `/critique` itself.
+None. The prior open question (MECHANICAL/JUDGMENT split: critic-authored
+metadata vs. `/critique`-side heuristic) is resolved under R8's "Design
+decision" above.
