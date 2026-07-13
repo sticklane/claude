@@ -82,3 +82,5 @@ Ask which the user wants now (don't install unasked):
 
 Close by reporting what was created, each command's verification evidence,
 and the suggested first move: `/idea` for new work.
+
+`Next stage: /idea <first feature> (human-launched)`.

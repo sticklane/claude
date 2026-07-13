@@ -97,3 +97,5 @@ opted-in ultracode run over a multi-repo idea replaces the ad-hoc scouts
 with a four-scout multi-modal sweep — by-structure, by-convention,
 by-history, by-dependency — plus a completeness critic before the
 interview. That gate never opens in this mirror.)
+
+`Next stage: /breakdown specs/<slug>/SPEC.md (human-launched)`.
