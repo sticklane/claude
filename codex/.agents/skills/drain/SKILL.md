@@ -207,9 +207,13 @@ opening line every time you enter it.
   frontier), dispatching a fresh worker with the verifier's failure evidence,
   never the failed transcript. A second failure routes into one tournament (at
   most one per task per run): sweep leftover `task/NN-<slug>-t*` branches, then
-  dispatch three concurrent frontier workers on `task/NN-<slug>-tN` branches
-  and rank their results. Skip the tournament when the relaunch returned
-  BLOCKED over budget.
+  dispatch three concurrent frontier workers on `task/NN-<slug>-tN` branches.
+  Each DONE candidate gets three independent verifier runs; a candidate
+  survives only on majority PASS (two of three), and a verifier returning
+  BLOCKED disqualifies it outright. Rank the survivors mechanically — most PASS
+  votes first (3 ahead of 2), then fewest gate findings, then smallest total
+  diff, then lowest angle index (t1 before t2) as the final tie-break. Skip the
+  tournament when the relaunch returned BLOCKED over budget.
 - **DEFERRED** — the verdict message contains the question. Drain writes it
   into the main-checkout task file under `## Deferred questions`, sets
   `Status: deferred`, commits and pushes (path-scoped, guarded), and discards
@@ -243,16 +247,21 @@ neutral words and passing the adversarial gate.
 `## Progress` block (done vs remaining, from the worker's report) before any
 relaunch.
 
-Keep verdicts, not transcripts. Log one line per task. Loop to step 2 while
-anything is dispatchable.
+Keep verdicts, not transcripts. Log one line per task. **Every recorded
+verdict ends here, not at step 2**: before dispatching the next worker or
+touching the queue again, evaluate 3a's relaunch trigger below — looping back
+to step 2 without that check first is a process violation, not a discretionary
+skip. Only after 3a clears (trigger not met, or fired and this generation's
+turn has ended) does the hub loop to step 2 while anything is dispatchable.
 
 ## 3a. Baton pass (self-relaunch)
 
 Emit `<!-- agentprof:stage=baton-pass -->` verbatim as this step's opening
 line every time you enter it.
 
-At each safe boundary (a verdict just recorded and committed, or an
-auto-breakdown attempt) evaluate the relaunch trigger: a generation budget —
+You enter it after EVERY recorded verdict (step 3's closing line
+sends you here unconditionally) or auto-breakdown attempt, never only when it happens to
+feel like a good moment. Evaluate the relaunch trigger: a generation budget —
 hand off after **`max(2, 6 − W)` recorded verdicts** this session (a
 `Relaunch-every: N` header overrides it) — or a **degradation override** on
 re-reading files already read, losing queue position, repeated failed
