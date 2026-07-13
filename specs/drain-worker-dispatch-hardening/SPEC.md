@@ -131,34 +131,48 @@ current structure of `.claude/skills/drain/SKILL.md` and
 Requirements 1, 2, and 4 touch `.claude/skills/drain/reference.md`
 (Headless fallback, Baton pass, and the Worker prompt); R5 may touch
 `.claude/skills/drain/SKILL.md` (the Touch-enforcement line at
-SKILL.md:205). The two files port to different targets — confirmed
-live at spec-authoring time via `ls -la antigravity/.agents/skills/drain/`
-and `ls -la codex/.agents/skills/`:
+SKILL.md:205); R3's classifier may land in `.claude/skills/drain/
+reference.md`, `.claude/skills/drain/SKILL.md`, or `.claude/skills/
+breakdown/SKILL.md` (its acceptance criterion permits any of the three).
+Confirmed live at spec-authoring time via `ls -la antigravity/.agents/
+skills/drain/`, `ls -la codex/.agents/skills/`, and `grep -n
+'$(git merge-base' antigravity/.agents/workflows/drain.md
+codex/.agents/skills/drain/SKILL.md`:
 
-- `antigravity/.agents/skills/drain/` deliberately contains no
-  `SKILL.md`/`reference.md` — it holds only `README.md` and
-  `screen-stub.sh` (a script bundle), because drain is human-launched and
-  therefore ports to a _workflow_. The confirmed mirror of the touched
-  reference.md content is `antigravity/.agents/workflows/drain.md` (it
-  already carries the reactive retry-once-bare-command rule and the Baton
-  pass step, confirmed present at spec-authoring time). Any task whose
-  `Touch:` includes `.claude/skills/drain/reference.md` must also list
+- BOTH `.claude/skills/drain/reference.md` and `.claude/skills/drain/
+SKILL.md` port into the SAME antigravity file:
+  `antigravity/.agents/workflows/drain.md` (confirmed: it carries the
+  reference.md worker-prompt/retry-rule/Baton-pass content AND the
+  SKILL.md:205 `$(git merge-base …)` line, at drain.md:368) —
+  `antigravity/.agents/skills/drain/` deliberately holds no
+  `SKILL.md`/`reference.md` of its own (only `README.md` and
+  `screen-stub.sh`, a script bundle), because drain is human-launched and
+  therefore ports to a _workflow_, not a skill. Any task whose `Touch:`
+  includes EITHER `.claude/skills/drain/reference.md` OR
+  `.claude/skills/drain/SKILL.md` must also list
   `antigravity/.agents/workflows/drain.md` in its own `Touch:`, and locate
   the exact corresponding section inside `drain.md` at breakdown time.
 - `codex/.agents/skills/drain/` is real content, NOT a symlink (confirmed:
   every other entry under `codex/.agents/skills/` is a symlink into
   `antigravity/.agents/skills/`, but `drain`, `build`, `autopilot`, and
   `evals` are real directories — CLAUDE.md's port-chain bullet names these
-  four as the exception). Per CLAUDE.md's codex-leg rule, any task whose
-  `Touch:` includes `.claude/skills/drain/SKILL.md` must also list
-  `codex/.agents/skills/drain/SKILL.md` in its own `Touch:` (that file
-  already carries an equivalent of the retry-once-bare-command rule in its
-  own Codex-adapted "Dispatch" section). CLAUDE.md's codex-leg rule triggers
-  on `SKILL.md` changes only, so a task whose `Touch:` is
-  `reference.md`-only (R1, R2, R4) is not required by that rule to also
-  touch codex — but should note in its commit if it restates a rule
-  codex's SKILL.md also carries (e.g. R4's shell-pattern guidance), so the
-  two don't silently drift.
+  four as the exception). Per CLAUDE.md's codex-leg rule (which triggers on
+  `SKILL.md` changes specifically), any task whose `Touch:` includes
+  `.claude/skills/drain/SKILL.md` must also list
+  `codex/.agents/skills/drain/SKILL.md` in its own `Touch:` (confirmed:
+  that file already carries the same `$(git merge-base …)` line at
+  codex/.agents/skills/drain/SKILL.md:187, plus an equivalent of the
+  retry-once-bare-command rule in its own Codex-adapted "Dispatch"
+  section). A task whose `Touch:` is `reference.md`-only (R1, R2, R4) is
+  not required by that literal rule to also touch codex — but should note
+  in its commit if it restates a rule codex's SKILL.md also carries (e.g.
+  R4's shell-pattern guidance), so the two don't silently drift.
+- if R3's classifier lands in `.claude/skills/breakdown/SKILL.md`, the
+  task must also list `antigravity/.agents/skills/breakdown/SKILL.md` in
+  its own `Touch:` (confirmed a real, non-stub mirrored file); per the
+  codex-leg rule, `codex/.agents/skills/breakdown` is a symlink to that
+  same file (confirmed), so no separate codex edit is needed for that
+  path.
 - a `.claude-plugin/plugin.json` `version` bump (current `0.8.63` per
   live check at spec-authoring time — bump per semver; this spec's
   changes are behavior-affecting skill-body edits, so at minimum a patch
@@ -278,12 +292,15 @@ under drain's own session, not necessarily under the same restrictive
 - `grep -c "never drain-completable unattended" /Users/sjaconette/claude/.claude/skills/drain/SKILL.md /Users/sjaconette/claude/.claude/skills/drain/reference.md /Users/sjaconette/claude/.claude/skills/breakdown/SKILL.md` → at least 1 across the three files combined (R3; phrase absent today in all three, verified via `grep -rc` returning 0 in each).
 - `grep -c "known-safe shell patterns" /Users/sjaconette/claude/.claude/skills/drain/reference.md` → at least 1 (R4; phrase absent today, verified via `grep -rc` returning 0).
 - `grep -c '\$(git merge-base' /Users/sjaconette/claude/.claude/skills/drain/SKILL.md` → either 0 (rewritten) with a corresponding note in the same task's commit message explaining the safe replacement, OR the phrase persists AND an Open Questions entry documents the manual-pending live-probe reason (R5; this criterion is a fork resolved by the closing task's own commit, not a fixed literal — record which branch was taken in the task's evidence).
-- Mirror obligation check: any task whose `Touch:` includes
-  `.claude/skills/drain/reference.md` must also list
-  `antigravity/.agents/workflows/drain.md` in its own `Touch:`; any task
-  whose `Touch:` includes `.claude/skills/drain/SKILL.md` must also list
-  `codex/.agents/skills/drain/SKILL.md` in its own `Touch:` — verify with
-  `grep -l "drain/reference.md\|drain/SKILL.md" specs/drain-worker-dispatch-hardening/tasks/*.md` cross-checked by hand against each matching task's `Touch:` list at breakdown time (MANUAL: breakdown-time review, not a standalone runnable command, since it depends on tasks/ files that don't exist until /breakdown runs).
+- Mirror obligation check: any task whose `Touch:` includes EITHER
+  `.claude/skills/drain/reference.md` OR `.claude/skills/drain/SKILL.md`
+  must also list `antigravity/.agents/workflows/drain.md` in its own
+  `Touch:`; any task whose `Touch:` includes `.claude/skills/drain/
+SKILL.md` must ALSO list `codex/.agents/skills/drain/SKILL.md` in its
+  own `Touch:`; any task whose `Touch:` includes `.claude/skills/
+breakdown/SKILL.md` must also list `antigravity/.agents/skills/
+breakdown/SKILL.md` in its own `Touch:` — verify with
+  `grep -l "drain/reference.md\|drain/SKILL.md\|breakdown/SKILL.md" specs/drain-worker-dispatch-hardening/tasks/*.md` cross-checked by hand against each matching task's `Touch:` list at breakdown time (MANUAL: breakdown-time review, not a standalone runnable command, since it depends on tasks/ files that don't exist until /breakdown runs).
 - `git show <version-bump-commit> -- /Users/sjaconette/claude/.claude-plugin/plugin.json | grep -q '^+.*"version"'` → match, on whichever task's commit performs the version bump (per anchored-acceptance-criteria.md's version-bump-criteria pattern — never a pinned literal, since the current `0.8.63` may have moved by drain time).
 
 ## Open questions
