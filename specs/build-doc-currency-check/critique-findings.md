@@ -36,3 +36,11 @@ spec-completion review, or lint-ultra-gate.sh.
 Next step: amend SPEC.md per findings 1-3 (4 optional), then re-run
 /critique. Recorded by drain gen 3 (run e83f34f07094a4fa); this spec's
 critique intake is spent for this run (Intake-failed baton line).
+
+## Re-critique 2026-07-13 (drain critique intake, run a219d53e) — still NOT READY
+
+Spec unchanged since the 2026-07-11 NOT READY verdict; all four findings
+stand (codex mirror leg omitted from R6/Touch; R1 rule placement contradicts
+the Out-of-scope drain exclusion; acceptance criteria not runnable anchored
+greps; stale numeric line anchors — R6's antigravity :63 is actually :121).
+Recovery: amend SPEC.md per findings, then re-run /critique.
