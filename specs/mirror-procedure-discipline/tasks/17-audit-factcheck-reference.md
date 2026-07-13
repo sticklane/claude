@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Promotion-ready: true
 Promoted-by-run: bc1c30ae8ac43971
 Discovered-from: specs/mirror-procedure-discipline/tasks/05-audit-factcheck.md
@@ -54,7 +54,7 @@ TO it, never edit the source), or the rule/gate files from task 01.
 
 ## Acceptance
 
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` → exit 0
-- [ ] `grep -c "checked: factcheck — reference.md" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `factcheck` and `reference` — evidence either way
-- [ ] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (no output)
+- [x] `grep -c "checked: factcheck — reference.md" tests/mirror-procedure-manifest.txt` → 1
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → all 15 tests pass, no FAIL lines
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 ("OK — all ultra mentions gated in 4 files")
