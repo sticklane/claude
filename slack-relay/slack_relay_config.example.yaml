@@ -1,0 +1,30 @@
+# Copy to slack_relay_config.yaml (gitignored) and fill in. The Slack bot
+# token itself is NEVER stored here — see the "What you still have to do"
+# steps in the slack-relay design doc; it lives only in macOS Keychain:
+#   security add-generic-password -s slack-relay -a bot-token -w <xoxb-...>
+
+# Slack channel ID (not the #name) the bot posts questions into and polls
+# for replies. Use a private channel with just you — the authorized-user
+# filter below only bounds who can trigger an ANSWER, not who can read
+# repo/task content posted into a shared channel.
+channel_id: "C0000000000"
+
+# Your own Slack member ID (profile -> "Copy member ID"). Only a threaded
+# reply from this exact user is ever treated as an answer.
+authorized_slack_user_id: "U0000000000"
+
+# Repos to scan for Status: deferred tasks. Explicit allowlist, not "all of
+# disk" — bounds blast radius to repos you've opted in.
+roots:
+  - ~/claude
+
+# A threaded reply arriving more than this many days after the question was
+# posted is treated as stale, not an answer (the spec may have moved on).
+max_reply_age_days: 14
+
+# Advisory-only window (seconds) for the relaunch guard: a DRAIN-OWNER.md
+# younger than this is treated as a live drain already owning the spec, so
+# slack_relay skips relaunching (that session's next inventory pass finds
+# the now-pending task on its own). Not safety-critical — drain's own
+# compare-and-swap owner claim is the real guard against double-dispatch.
+owner_lease_window_seconds: 900
