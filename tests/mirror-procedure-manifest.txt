@@ -15,3 +15,6 @@
 .claude/skills/breakdown/SKILL.md|antigravity/.agents/workflows/breakdown.md|recording a BLOCKED flip
 .claude/skills/critique/SKILL.md|antigravity/.agents/workflows/critique.md|Relay the verdict and findings verbatim
 .claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|credentials or external services beyond
+.claude/skills/design/SKILL.md|antigravity/.agents/skills/design/SKILL.md|expensive to reverse
+.claude/skills/design/SKILL.md|antigravity/.agents/skills/design/SKILL.md|would removing this cause mistakes
+# checked: design — restored two dropped decision conditions (prototype reversibility/cost gate, AGENTS.md "would removing this cause mistakes?" test); workflows/design.md is a pointer, reference.md diffs are load-bearing runtime renames
