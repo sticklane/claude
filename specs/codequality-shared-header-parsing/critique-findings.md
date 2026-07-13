@@ -42,3 +42,18 @@ Nit (non-blocking): stale line anchors — `PRIORITY_RE` is workboard.py:237 not
 Human revises SPEC.md: fix criterion #5 to the content-parity check, pin the
 loader to the viz import pattern, decide the regex range and test it. Then re-run
 /critique. Do not /breakdown until READY.
+
+## Re-critique 2026-07-13 (drain critique intake, run a219d53e) — still NOT READY
+
+Spec unchanged; all prior findings re-verified against current files. Fatal:
+criterion 5's empty `diff -r` vs the antigravity mirror is unsatisfiable
+(prioritize_scan.py's standalone-install docstring is a sanctioned port
+divergence — a worker must clobber it or stall); Approach step 2's
+bracket-tolerant `\[?(P\d)\]?` regex widens P0-P3 semantics against the Out
+of scope section (P7 would parse; only P1 is tested); loader mechanism
+ambiguous between viz-style sys.path import and _load_module-by-path (the
+latter self-contradicts — the loader would have to load itself). Gap still
+real: no _shared/headers.py; workboard/prioritize regexes still diverge.
+Recovery: human pins regex to `\[?(P[0-3])\]?`, swaps criterion 5 for the
+existing parity gate or names the permitted divergence, pins the import
+mechanism, then re-runs /critique.
