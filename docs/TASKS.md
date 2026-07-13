@@ -100,3 +100,16 @@
 - **agent-console: test gaps beyond the mutation-endpoints spec.**
   `parse_repos` is only ever mocked, never tested directly; `apply_priority`'s
   insert-after-H1 branch is untested. (2026-07-10)
+- **workboard: live server hangs on /workboard.** The agent-console
+  workboard server (port 8899, launchd) hangs — `curl
+  http://127.0.0.1:8899/workboard` timed out 3x (60-85s, 0 bytes) on
+  2026-07-13 while the process idled (~8s CPU over minutes); suspected
+  slow/disconnected filesystem mount in its scan path. Investigate and
+  fix; do NOT restart the service as part of filing this — the hung
+  state is the evidence. (2026-07-13, verification sweep)
+- **drain/SKILL.md length rebound: 520 lines.** `.claude/skills/drain/SKILL.md`
+  is at 520 lines vs the 500-line convention; drain-wake-cost task 04 got
+  it to 495 but task 05 (d35fc9e), follow-up a87a324, and the 473cb51
+  one-liner pushed it back up. Trim/relocate prose (the d51ce4b9
+  reference.md pattern) without content loss. (2026-07-13, verification
+  sweep)
