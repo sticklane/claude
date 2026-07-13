@@ -68,3 +68,9 @@ design audit in this same spec likewise left design's own absence), so
 restoring it would force a `.claude/` convention the port has declined.
 -->
 
+## Discovered
+
+- Antigravity port carries `Next stage:` closing lines in only 3 of 14
+  source skills that have them — a port-wide convention gap, not specific
+  to distill or design. See `specs/mirror-procedure-discipline/tasks/15-normalize-next-stage-lines.md`.
+
