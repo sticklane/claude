@@ -32,10 +32,10 @@ worker — after the wasted run:
 - The sandbox denies `launchctl`/install scripts outright — hit twice, in
   two different sessions, both launchd-class tasks — with no classifier
   anywhere flagging such tasks as unattended-incompatible before dispatch.
-- The mandatory stub-screen step (`screen-stub.sh`, SKILL.md:367,
-  reference.md:1205) is invoked with a bare script path — but the
+- The mandatory stub-screen step (`screen-stub.sh`, SKILL.md:369,
+  reference.md:1214) is invoked with a bare script path — but the
   Touch-enforcement check two hundred lines earlier
-  (`.claude/skills/drain/SKILL.md:205`) already reaches for `git diff
+  (`.claude/skills/drain/SKILL.md:206`) already reaches for `git diff
 $(git merge-base <default-branch> <branch>)..<branch> --` — exactly the
   command-substitution shape a restrictive permission mode denies (see next
   finding), showing the allowlist-incompatible-Bash-shape problem is not
@@ -54,7 +54,7 @@ $(git merge-base <default-branch> <branch>)..<branch> --` — exactly the
 **Worker shell-pattern pitfalls rediscovered fresh, independently, per
 generation.** The Worker prompt (`reference.md:506-631`) already carries a
 _reactive_ rule for Bash denials — "retry it ONCE as a bare single command
-… if it is still denied, stop and report" (reference.md:570-572) — but
+… if it is still denied, stop and report" (reference.md:579) — but
 states no _proactive_ guidance on which shapes get denied in the first
 place. Evidence from real sessions:
 
@@ -81,20 +81,25 @@ current structure of `.claude/skills/drain/SKILL.md` and
 
 1. Add an allowlist pre-flight to drain's headless-dispatch step
    (reference.md "Headless fallback", the per-task WORKER allowlist at
-   reference.md:915): before the first `claude -p` invocation of a
+   reference.md:~924): before the first `claude -p` invocation of a
    generation's worker, scan the pending tasks' acceptance-criteria
    commands for the tool/command names they invoke and confirm each is
    covered by the `--allowedTools` string about to be used; widen the
    list (per the canonical template from R2) before dispatching rather
    than after a BLOCKED verdict reveals the gap. Separately, add a
-   pre-flight to the baton self-relaunch step (reference.md "Baton pass
-   (self-relaunch)", the distinct ORCHESTRATOR allowlist at
-   reference.md:1069-1076, which reference.md already documents as
-   `Task`-inclusive and NOT the worker's): before self-relaunching,
-   confirm that allowlist still carries `Task`, `Bash(git *)`, and the
-   repo's actual project gate/lint/test command(s) — a fixed, repo-level
-   check, not a per-task tool scan, since the orchestrator dispatches
-   workers rather than running their acceptance commands itself.
+   pre-flight that gates the baton self-relaunch step, placed next to the
+   distinct ORCHESTRATOR allowlist literal in reference.md's "Relaunch
+   command template" subsection (~reference.md:1059-1085, literal at
+   ~1079), which reference.md already documents as `Task`-inclusive and
+   NOT the worker's — this subsection sits inside "## Baton pass
+   (self-relaunch)" (the section spans ~949-1126; a `## Anomalies`
+   heading near ~1017 is fenced illustration content inside a code
+   block, not a real section boundary, so don't be misled into thinking
+   the literal sits outside Baton pass): before self-relaunching, confirm
+   that allowlist still carries `Task`, `Bash(git *)`, and the repo's
+   actual project gate/lint/test command(s) — a fixed, repo-level check,
+   not a per-task tool scan, since the orchestrator dispatches workers
+   rather than running their acceptance commands itself.
 2. Add one canonical, tool-complete WORKER allowlist template for
    compute-heavy specs (`go`, `bash`, `npm`, `python3`, `git` at minimum,
    following the existing `Bash(<verified test/lint/build cmds>)`
@@ -103,7 +108,7 @@ current structure of `.claude/skills/drain/SKILL.md` and
    have `reference.md`'s Headless fallback section reference it by name
    instead of each session reconstructing a worker allowlist ad hoc. The
    Relaunch command template's ORCHESTRATOR allowlist
-   (reference.md:1069-1076) is deliberately distinct — it grants `Task`,
+   (reference.md:~1059-1085, literal at ~1079) is deliberately distinct — it grants `Task`,
    not build/test tools — and is out of scope for this canonical worker
    template; item 1's baton-self-relaunch pre-flight covers that
    allowlist separately.
@@ -132,7 +137,7 @@ current structure of `.claude/skills/drain/SKILL.md` and
 Requirements 1, 2, and 4 touch `.claude/skills/drain/reference.md`
 (Headless fallback, Baton pass, and the Worker prompt); R5 may touch
 `.claude/skills/drain/SKILL.md` (the Touch-enforcement line at
-SKILL.md:205); R3's classifier may land in `.claude/skills/drain/
+SKILL.md:206); R3's classifier may land in `.claude/skills/drain/
 reference.md`, `.claude/skills/drain/SKILL.md`, or `.claude/skills/
 breakdown/SKILL.md` (its acceptance criterion permits any of the three).
 Confirmed live at spec-authoring time via `ls -la antigravity/.agents/
@@ -144,7 +149,7 @@ codex/.agents/skills/drain/SKILL.md`:
 SKILL.md` port into the SAME antigravity file:
   `antigravity/.agents/workflows/drain.md` (confirmed: it carries the
   reference.md worker-prompt/retry-rule/Baton-pass content AND the
-  SKILL.md:205 `$(git merge-base …)` line, at drain.md:368) —
+  SKILL.md:206 `$(git merge-base …)` line, at drain.md:369) —
   `antigravity/.agents/skills/drain/` deliberately holds no
   `SKILL.md`/`reference.md` of its own (only `README.md` and
   `screen-stub.sh`, a script bundle), because drain is human-launched and
@@ -162,7 +167,7 @@ SKILL.md` port into the SAME antigravity file:
   `.claude/skills/drain/SKILL.md` must also list
   `codex/.agents/skills/drain/SKILL.md` in its own `Touch:` (confirmed:
   that file already carries the same `$(git merge-base …)` line at
-  codex/.agents/skills/drain/SKILL.md:187, plus an equivalent of the
+  codex/.agents/skills/drain/SKILL.md:188, plus an equivalent of the
   retry-once-bare-command rule in its own Codex-adapted "Dispatch"
   section). A task whose `Touch:` is `reference.md`-only (R1, R2, R4) is
   not required by that literal rule to also touch codex — but should note
@@ -188,14 +193,14 @@ closes:
   proactive): "If a Bash call is denied ('don't ask mode'), retry it ONCE
   as a bare single command (no chaining, no `&&`/pipe/redirection
   tricks); if it is still denied, stop and report the blocked command in
-  your verdict, never iterate syntax variants." (reference.md:570-572)
+  your verdict, never iterate syntax variants." (reference.md:579)
 - Headless fallback's allowlist is a bare placeholder with no canonical
   tool-complete form: `--allowedTools "Read,Edit,Write,Glob,Grep,
 Bash(<verified test/lint/build cmds>),Bash(git add *),Bash(git commit
-*)"` (reference.md:915, restated in runtimes/claude-code.md:67-68).
+*)"` (reference.md:~924, restated in runtimes/claude-code.md:67-68).
 - The Touch-enforcement check's own command-substitution shape:
   `git diff $(git merge-base <default-branch> <branch>)..<branch> --`
-  (SKILL.md:205) — the exact pattern class the shell-pattern evidence says
+  (SKILL.md:206) — the exact pattern class the shell-pattern evidence says
   gets denied under restrictive permission modes.
 - `docs/memory/unattended-worker-tool-limits.md`'s existing manual-pending
   precedent this spec's R3 classifier follows: "OR let the worker mark
@@ -204,28 +209,30 @@ Bash(<verified test/lint/build cmds>),Bash(git add *),Bash(git commit
 ## Requirements
 
 R1. Drain's headless-dispatch step (`reference.md` "Headless fallback",
-the per-task WORKER allowlist at reference.md:915) must validate its
+the per-task WORKER allowlist at reference.md:~924) must validate its
 allowlist against the actual pending tasks' acceptance-criteria commands
 before dispatching the generation's first worker — not discover a gap via
 a live BLOCKED verdict. State this as an explicit pre-flight step in that
-section. Separately — because reference.md:1069-1076 explicitly documents
-the baton self-relaunch step's allowlist as a distinct ORCHESTRATOR
-allowlist (`Task`-inclusive, not per-task-tool-scoped) — the baton
-self-relaunch step (`reference.md` "Baton pass (self-relaunch)") must,
-before self-relaunching, confirm that separate allowlist still carries
-`Task`, `Bash(git *)`, and the repo's actual project gate/lint/test
-command(s): a fixed, repo-level check, not a per-task tool scan, since the
-orchestrator dispatches workers rather than running their acceptance
-commands itself. These are two pre-flights over two allowlists that serve
-different purposes; neither substitutes for the other.
+section. Separately — because reference.md's "Relaunch command template"
+subsection (~reference.md:1059-1085, literal at ~1079, inside "## Baton
+pass (self-relaunch)", which spans ~949-1126) explicitly documents the
+baton self-relaunch step's allowlist as a distinct ORCHESTRATOR allowlist
+(`Task`-inclusive, not per-task-tool-scoped) — the baton self-relaunch
+step must, before self-relaunching, confirm that separate allowlist still
+carries `Task`, `Bash(git *)`, and the repo's actual project
+gate/lint/test command(s): a fixed, repo-level check, not a per-task tool
+scan, since the orchestrator dispatches workers rather than running their
+acceptance commands itself.
+These are two pre-flights over two allowlists that serve different
+purposes; neither substitutes for the other.
 
 R2. Document one canonical, tool-complete WORKER allowlist template for
 compute-heavy specs (`go`, `bash`, `npm`, `python3`, `git` at minimum) in
 `runtimes/claude-code.md`'s `## Headless` section, and have
-`reference.md`'s Headless fallback (reference.md:915) section reference
+`reference.md`'s Headless fallback (reference.md:~924) section reference
 it by name rather than restate or reconstruct an allowlist ad hoc. This
 template is scoped to the per-task WORKER allowlist only — the Relaunch
-command template's ORCHESTRATOR allowlist (reference.md:1069-1076) is
+command template's ORCHESTRATOR allowlist (reference.md:~1059-1085) is
 deliberately distinct (it grants `Task`, not build/test tools) and is out
 of scope for this requirement; R1's baton-self-relaunch pre-flight covers
 that allowlist separately.
@@ -245,10 +252,10 @@ loops, no multi-verb `&&`-chained commands in permission-gated Bash
 calls; `! cmd | grep -q` instead of `cmd | ! grep`; and explicit handling
 of `grep -c`'s exit-1-on-zero-matches (e.g. `grep -c … || true` where
 zero is a valid outcome). This is additive to the existing reactive
-retry-once-bare-command rule (reference.md:570-572), not a replacement
+retry-once-bare-command rule (reference.md:579), not a replacement
 for it.
 
-R5. Fix or document the SKILL.md:205 Touch-enforcement check's own
+R5. Fix or document the SKILL.md:206 Touch-enforcement check's own
 `$(git merge-base …)` command-substitution shape if a permission-mode-safe
 rewrite is identifiable without live debugging (e.g. a two-step form that
 avoids inline substitution); otherwise leave it and note in Open questions
@@ -283,8 +290,8 @@ under drain's own session, not necessarily under the same restrictive
   the pre-flight step exist and be followed, not that it be fully
   automated; a scripted scanner is a reasonable follow-up but not required
   here.
-- Changing the reactive retry-once-bare-command rule (reference.md:
-  570-572) — R4 adds proactive guidance alongside it, not a replacement.
+- Changing the reactive retry-once-bare-command rule (reference.md:579)
+  — R4 adds proactive guidance alongside it, not a replacement.
 
 ## Acceptance criteria
 
@@ -319,7 +326,7 @@ breakdown/SKILL.md` in its own `Touch:` — verify with
   Out-of-scope section and this entry together ARE the documentation
   Solution item 5 calls for. No task file targets it; a human who wants
   to chase the root cause does so outside this spec.
-- R5's `$(git merge-base …)` fix: is SKILL.md:205's Touch-enforcement
+- R5's `$(git merge-base …)` fix: is SKILL.md:206's Touch-enforcement
   check actually run under the same restrictive `dontAsk` permission mode
   that denies command substitution in worker prompts, or does it run
   under drain's own (typically less restrictive) orchestrator session? If
@@ -334,5 +341,18 @@ breakdown/SKILL.md` in its own `Touch:` — verify with
   So it does NOT run under the restrictive mode the Problem section's
   shell-pattern evidence describes. Per R5's own stated fork, this
   downgrades R5 to "confirm, don't fix": the closing task documents this
-  finding at SKILL.md:205 rather than rewriting a check that already
+  finding at SKILL.md:206 rather than rewriting a check that already
   runs safely.
+
+## Parallelization
+
+Tasks 01-03 and 05 all touch `.claude/skills/drain/reference.md` and/or
+`.claude/skills/drain/SKILL.md`, which both mirror into the same
+`antigravity/.agents/workflows/drain.md` file — Touch-overlapping, so
+they serialize (01 → 02 → 03 → 05, with 05 also waiting on 04). Task 04
+(the privileged-task classifier) lands entirely in
+`.claude/skills/breakdown/SKILL.md` and its antigravity mirror —
+Touch-disjoint from the drain-file chain and free of shared undecided
+design with task 01, so it may run concurrently with task 01.
+
+- Group: 01, 04
