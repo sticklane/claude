@@ -88,7 +88,9 @@ def dag(tasks: list[dict]) -> str:
     constants above. Returns "" when there are no in-list edges."""
     by = {t["num"]: t for t in tasks}
     edges = [(d, t["num"]) for t in tasks for d in t["deps"] if d in by]
-    if not edges:
+    # Edge-less specs normally get no graph, but a blocker must stay visible
+    # even when its spec has no dependency edges.
+    if not edges and not any(t.get("blocker") for t in tasks):
         return ""
 
     # longest-path layering (cycle-guarded)
@@ -137,6 +139,22 @@ def dag(tasks: list[dict]) -> str:
         canon = canonical_status(t.get("status"))
         stroke = STATUS_HEX[canon]
         label = html.escape(str(t.get("title") or "")[:17])
+        # Blocker badge: who unblocks this node — a human (ask/no unblock
+        # step recorded) or an agent recheck (Unblock: run/agent).
+        badge = ""
+        blocker = t.get("blocker")
+        if blocker in ("human", "agent"):
+            glyph = "✋" if blocker == "human" else "⟳"  # ✋ / ⟳
+            hint = (
+                "human-blocked: needs an answer or decision"
+                if blocker == "human"
+                else "agent-unblockable: recheck step recorded"
+            )
+            badge = (
+                f'<text class="viz-blocker viz-blocker-{blocker}" '
+                f'x="{x + W - 16}" y="{y + 19}" font-size="12">'
+                f"<title>{hint}</title>{glyph}</text>"
+            )
         nodes.append(
             f'<g class="viz-node" opacity="{0.55 if canon == "done" else 1}">'
             f'<rect x="{x}" y="{y}" width="{W}" height="{H}" rx="6" '
@@ -144,7 +162,7 @@ def dag(tasks: list[dict]) -> str:
             f'<text x="{x + 9}" y="{y + 19}" font-family="ui-monospace,Menlo,monospace" '
             f'font-size="11" fill="{stroke}" font-weight="700">{html.escape(str(num))}</text>'
             f'<text x="{x + 32}" y="{y + 19}" font-family="-apple-system,system-ui,sans-serif" '
-            f'font-size="11" fill="{_DAG_TEXT}">{label}</text></g>'
+            f'font-size="11" fill="{_DAG_TEXT}">{label}</text>{badge}</g>'
         )
 
     return (
