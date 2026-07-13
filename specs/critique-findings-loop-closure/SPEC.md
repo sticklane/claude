@@ -374,3 +374,18 @@ reference.md` returns 1 today (confirmed present) and 0 after R5 ships
 None. The prior open question (MECHANICAL/JUDGMENT split: critic-authored
 metadata vs. `/critique`-side heuristic) is resolved under R8's "Design
 decision" above.
+
+## Parallelization
+
+Task 01 (`.claude/skills/critique/SKILL.md` only) and task 03
+(`.claude/skills/drain/reference.md` + `.claude/skills/drain/SKILL.md`)
+are disjoint in Touch and free of shared undecided design — R1's
+findings-triage-in-critique and R3/R4's deferred-premise-contradiction
+flag are independent features with no overlapping design choice — so they
+run concurrently. Task 02 depends on task 01 (same file, and R5's
+hash-check/write logic is built on top of task 01's triage loop) and also
+touches `.claude/skills/drain/reference.md`, which task 03 touches too —
+it stays out of the group and runs after both. Task 04 depends on all
+three and runs last.
+
+- Group: 01, 03
