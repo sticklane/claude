@@ -2,6 +2,7 @@
 
 Status: open
 Priority: P1
+Breakdown-ready: true
 
 ## Problem
 
@@ -90,9 +91,10 @@ semantics" sections) rather than replacing any of it. Four requirements,
 one per uncovered gap:
 
 - **Default the ORCHESTRATOR's own working tree to VCS-level isolation**
-  for drain (and, where the same shared-checkout risk applies, build/
-  autopilot), not merely lease-file discipline — a structural fix
-  layered on top of, not instead of, the existing lease protocol.
+  for drain, not merely lease-file discipline — a structural fix layered
+  on top of, not instead of, the existing lease protocol. Drain-only;
+  build/autopilot orchestrator isolation is out of scope for this spec
+  (see Out of scope).
 - **Re-read the owner-lease file at HEAD immediately before every
   status-flip commit**, not only at the initial claim — extending the
   existing claim-time CAS re-read (multi-session-coordination R1) to
@@ -108,10 +110,10 @@ one per uncovered gap:
 
 Scope: `.claude/skills/drain/SKILL.md`, `.claude/skills/drain/reference.md`,
 and (per this repo's mirror obligations, CLAUDE.md "Authoring conventions")
-`antigravity/.agents/workflows/drain.md` + `antigravity/.agents/skills/drain/`
-+ `codex/.agents/skills/drain/SKILL.md` (drain is one of the four explicit-
-invocation skills codex mirrors as real content, not a symlink) + a
-`.claude-plugin/plugin.json` version bump. Whoever breaks this spec down
+`antigravity/.agents/workflows/drain.md`, `antigravity/.agents/skills/drain/`,
+`codex/.agents/skills/drain/SKILL.md` (drain is one of the four explicit-
+invocation skills codex mirrors as real content, not a symlink), and
+`.claude-plugin/plugin.json`'s version bump. Whoever breaks this spec down
 must carry the antigravity mirror, the codex mirror, and the plugin bump in
 the `Touch:` of whichever task(s) change the drain skill files — CLAUDE.md's
 existing rule that an unlisted mirror silently ships un-mirrored applies
@@ -141,21 +143,29 @@ to a specific task.
 ## Requirements
 
 - **R1 — Default orchestrator-level isolation.** Drain's own dispatch
-  loop (and build/autopilot where the same shared-checkout risk applies)
-  defaults to running the ORCHESTRATOR's bookkeeping — not just each
-  worker — inside a VCS-level isolated checkout/worktree of the target
-  repo, rather than relying on lease-file discipline alone to keep two
-  concurrent drain sessions from interleaving commits in one shared
-  tree. State this in VCS-neutral terms first (e.g., under git: `git
-  worktree add` for the orchestrator's own working directory, analogous
-  to how `isolation: worktree` already isolates each dispatched worker),
-  matching the existing pattern in `.claude/rules/concurrent-sessions.md`
-  ("the VCS's checkouts/worktrees... e.g., under git: `git worktree
-  list`"). Document the fallback for a repo whose VCS or hosting
-  environment cannot provide isolated checkouts (falls back to today's
-  lease-only discipline, advisory-only, per the existing rule's
-  "Enforcement on interactive/ad-hoc sessions" carve-out in
-  multi-session-coordination's Out of scope).
+  loop defaults to running the ORCHESTRATOR's bookkeeping — not just
+  each worker — inside a VCS-level isolated checkout/worktree of the
+  target repo, rather than relying on lease-file discipline alone to
+  keep two concurrent drain sessions from interleaving commits in one
+  shared tree. This is drain-only: build/autopilot orchestrator
+  isolation is explicitly out of scope for this spec (the research
+  grounding above is drain-specific — all four incidents narrate drain
+  sessions — so no build/autopilot file is in Scope and no acceptance
+  criterion covers them; see Out of scope). The default is ON — isolation
+  applies automatically, with no opt-in step — because every collision
+  incident in the Problem section happened under today's default-OFF
+  shared-checkout model; a header opts OUT for a repo that must keep the
+  old shared-checkout behavior. State this in VCS-neutral terms first
+  (e.g., under git: `git worktree add` for the orchestrator's own working
+  directory, analogous to how `isolation: worktree` already isolates each
+  dispatched worker), matching the existing pattern in
+  `.claude/rules/concurrent-sessions.md` ("the VCS's checkouts/
+  worktrees... e.g., under git: `git worktree list`"). Document the
+  fallback for a repo whose VCS or hosting environment cannot provide
+  isolated checkouts (falls back to today's lease-only discipline,
+  advisory-only, per the existing rule's "Enforcement on interactive/
+  ad-hoc sessions" carve-out in multi-session-coordination's Out of
+  scope).
 - **R2 — Owner-lease re-read before every status-flip commit.** Extend
   the existing claim-time CAS re-read (multi-session-coordination R1,
   "after committing, re-read the file at HEAD and confirm YOUR
@@ -181,16 +191,24 @@ to a specific task.
   checkout/worktree of the repo the VCS reports (state this in VCS-
   neutral terms first — "the VCS's checkouts/worktrees," e.g., under
   git: `git worktree list` — matching `.claude/rules/concurrent-
-  sessions.md`'s existing pattern) and prunes any with no corresponding
-  live `in-progress` task or live session. This sweep is scoped to
-  EVERY spec in the drain run's launched scope (a no-argument launch
-  means the whole `specs/` queue, per the existing exhaustion contract),
-  not only the one spec about to be claimed — the mechanical replacement
-  for the manual "kill any zombie drains" ritual. Report a one-line
-  summary (leases reclaimed, worktrees pruned) in the gen-1 startup
-  advisories alongside the existing session-sweep/hub-economics
-  advisories (SKILL.md, "Gen-1 startup advisories" — best-effort, never
-  blocking).
+sessions.md`'s existing pattern) and prunes any with no corresponding
+  live `in-progress` task or live session. "Live session" is defined
+  mechanically the same way `.claude/rules/concurrent-sessions.md`'s own
+  pre-flight already defines it: a session reported by the harness's
+  live-session listing (e.g., `claude agents --json`) whose `cwd`
+  resolves into that worktree's path. Fail-safe: when a worktree's
+  liveness cannot be determined (the harness's live-session listing is
+  unavailable, or `cwd` resolution is ambiguous), the sweep SKIPS that
+  worktree rather than pruning it — pruning is irreversible and a wrong
+  prune is strictly worse than leaving a zombie for the next sweep. This
+  sweep is scoped to EVERY spec in the drain run's launched scope (a
+  no-argument launch means the whole `specs/` queue, per the existing
+  exhaustion contract), not only the one spec about to be claimed — the
+  mechanical replacement for the manual "kill any zombie drains" ritual.
+  Report a one-line summary (leases reclaimed, worktrees pruned) in the
+  gen-1 startup advisories alongside the existing session-sweep/
+  hub-economics advisories (SKILL.md, "Gen-1 startup advisories" —
+  best-effort, never blocking).
 - **R4 — Worktree-removal-before-branch-deletion ordering, pinned
   unconditionally.** Every drain cleanup step that deletes a branch
   (survivor-branch cleanup after a tournament merge, `rescue/NN-<slug>-*`
@@ -239,9 +257,16 @@ to a specific task.
   R1 is about the ORCHESTRATOR's own tree, not worker dispatch, which is
   unchanged.
 - Enforcement on interactive/ad-hoc sessions — R1's default isolation
-  and R3's sweep are drain/build/autopilot behaviors; a human's own
-  ad-hoc session stays advisory-only per `.claude/rules/concurrent-
-  sessions.md`, unchanged.
+  and R3's sweep are drain behaviors; a human's own ad-hoc session stays
+  advisory-only per `.claude/rules/concurrent-sessions.md`, unchanged.
+- **Build/autopilot orchestrator isolation and preflight sweep.** R1 and
+  R3 apply to drain only. The research grounding for both is
+  drain-specific (every incident in the Problem section narrates a
+  drain session), so extending either to build/autopilot's own
+  orchestrator loop is deferred to a future spec rather than pinned
+  here — resolving the "should R1/R3 also cover build/autopilot"
+  question raised during this spec's critique by scoping both
+  requirements to drain and explicitly deferring the extension.
 
 ## Acceptance criteria
 
@@ -252,35 +277,44 @@ to a specific task.
       claim, not `DRAIN-OWNER.md` by name, and reference.md has no
       DRAIN-OWNER-specific re-read text at all); after this spec's
       implementation, `grep -n "before every.*status-flip\|before every
-      subsequent.*commit" .claude/skills/drain/reference.md` → ≥ 1 hit
+subsequent.*commit" .claude/skills/drain/reference.md` → ≥ 1 hit
       in the "Owner lease" section (R2)
-- [ ] `grep -n "isolation.*worktree\|VCS.*checkout" .claude/skills/drain/SKILL.md`
-      shows a hit describing the ORCHESTRATOR's own working tree
-      (distinct from the existing worker-dispatch `isolation: worktree`
-      hits at SKILL.md's step 2/3/Tournament, all of which name a
-      dispatched agent, never the orchestrator itself — confirmed absent
-      at authoring time by inspection of every current `isolation:
-      worktree` occurrence) (R1)
-- [ ] `grep -n "preflight\|mechanical.*sweep" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md`
-      shows a hit describing a scope-wide (every spec, not one) dead-
-      lease-and-orphaned-worktree sweep at drain startup — confirmed
-      absent at authoring time (the only existing "preflight"-adjacent
-      hits are the reactive per-spec reclaim in "Owner lease" and the
-      unrelated "repo-wide status" Touch-enforcement phrase, neither of
-      which sweeps every spec at startup) (R3)
-- [ ] `grep -n "worktree" .claude/skills/drain/reference.md` in the
-      Tournament "Merge" step and SKILL.md step 3's rescue-branch
-      deletion both show worktree removal stated to precede branch
-      deletion — currently neither location states an order (confirmed
-      absent at authoring time: "Delete survivor branches and worktrees
-      only after some merge passes gates" names no sequence) (R4)
+- [ ] `grep -c "orchestrator's own working tree" .claude/skills/drain/SKILL.md`
+      currently → 0 (confirmed at authoring time: the three existing
+      `isolation: worktree` hits at SKILL.md's step 2/3/Tournament all
+      name a dispatched agent, never the orchestrator itself); after
+      implementation → ≥ 1, anchoring the literal phrase this spec's R1
+      prose uses so the check doesn't depend on judgment about which hit
+      "counts" (R1)
+- [ ] `grep -c "mechanical preflight sweep" .claude/skills/drain/SKILL.md`
+      currently → 0 (confirmed at authoring time: the only existing
+      "preflight"-adjacent hits are the reactive per-spec reclaim in
+      "Owner lease" and the unrelated "repo-wide status"
+      Touch-enforcement phrase, neither of which sweeps every spec at
+      startup); after implementation → ≥ 1, anchoring the literal phrase
+      this spec's R3 prose uses (R3)
+- [ ] `grep -c "remove the worktree before deleting the branch\|remove the checkout/worktree before deleting the branch" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md`
+      currently → 0 across both files (confirmed at authoring time:
+      "Delete survivor branches and worktrees only after some merge
+      passes gates" names no sequence, and SKILL.md step 3's rescue-branch
+      deletion is silent on ordering too); after implementation, the
+      literal phrase (this exact regex is authoritative — R4's prose
+      must use this "remove ... before deleting" structure verbatim, not
+      a paraphrase) appears at BOTH the Tournament "Merge" step in
+      reference.md AND SKILL.md step 3's DONE-merge rescue-branch
+      deletion — i.e. `grep -c` on `reference.md` alone → ≥ 1 AND on
+      `SKILL.md` alone → ≥ 1, since R4 requires the ordering fix in both
+      locations, not just one (R4)
 - [ ] `diff` (or this repo's mirror-conformance check) shows
       `antigravity/.agents/workflows/drain.md`,
       `antigravity/.agents/skills/drain/`, and
       `codex/.agents/skills/drain/SKILL.md` updated in step with every
       changed `.claude/skills/drain/` file (R5)
-- [ ] `git diff <base>..HEAD -- .claude-plugin/plugin.json | grep -c version`
-      → 1, and the new version is a minor bump over 0.8.63 (R5)
+- [ ] `git diff <base>..HEAD -- .claude-plugin/plugin.json | grep -c '"version"'`
+      → 2 (one removed line, one added line — a diff always shows both
+      sides of a changed field), and the added line's value is a minor
+      bump over 0.8.63; check with
+      `git diff <base>..HEAD -- .claude-plugin/plugin.json | grep '^+.*version'` (R5)
 - [ ] `bash evals/lint-ultra-gate.sh` → exit 0 (drain is an ultra-gated
       skill; its edits must keep the gate lint green)
 - [ ] `wc -l < .claude/skills/drain/SKILL.md` stays genuinely below the
@@ -291,32 +325,45 @@ to a specific task.
 - [ ] Full gate suite green: `for t in tests/test_*.sh; do bash "$t"; done`,
       `./bin/check-agent-model-pins`, `./evals/runner-selftest.sh`,
       `./specs/status.sh`, `claude plugin validate .`
-- [ ] MANUAL-PENDING (human-run; /drain is disable-model-invocation, so
-      no unattended worker can execute this; per
-      `docs/memory/unattended-worker-tool-limits.md`): in an attended
-      terminal, stage two decoy `DRAIN-OWNER.md` leases (one FRESH, one
-      backdated stale) plus one orphaned worktree with no corresponding
-      task, invoke `/drain` with no argument, and observe the preflight
-      sweep (R3) reclaim the stale lease and prune the orphaned worktree
-      while leaving the fresh one alone; separately, force a branch-
-      still-checked-out-in-a-worktree deletion attempt on a survivor
-      branch and confirm the ordering fix (R4) removes the worktree
-      first without erroring; record transcripts in
+- [ ] MANUAL-PENDING (human-run; `/drain` requires live-user launch
+      authorization — an unattended worker has neither the ultracode
+      opt-in nor that authorization, per CLAUDE.md's "Authoring
+      conventions" and `docs/memory/unattended-worker-tool-limits.md`):
+      in an attended terminal, invoke `/drain` with no argument on a
+      shared (non-worktree) checkout and confirm the orchestrator itself
+      now operates from an isolated VCS checkout/worktree by default
+      (R1), then confirm a repo carrying the documented opt-out header
+      instead runs from the shared checkout as before; separately, stage
+      two decoy `DRAIN-OWNER.md` leases (one FRESH, one backdated stale)
+      plus one orphaned worktree with no corresponding task, invoke
+      `/drain` again, and observe the preflight sweep (R3) reclaim the
+      stale lease and prune the orphaned worktree while leaving the
+      fresh one alone; separately, force a branch-still-checked-out-in-
+      a-worktree deletion attempt on a survivor branch and confirm the
+      ordering fix (R4) removes the worktree first without erroring;
+      record transcripts in
       `specs/drain-worktree-isolation-hardening/evidence/`
 
 ## Open questions
 
-- R1's orchestrator-isolation default changes where drain's own
-  bookkeeping commits land relative to today's shared-checkout model —
-  whoever breaks this down should confirm with a human whether R1
-  should be opt-out (default ON, a header disables it) or opt-in
-  (default OFF, a header enables it) before authoring task 01; the
-  evidence favors default-ON (every collision incident happened under
-  today's default-OFF shared-checkout model) but this spec does not
-  pin that choice.
-- Whether R3's preflight sweep should also run at build/autopilot
-  startup (not just drain) is unresolved; the research evidence for R3
-  is drain-specific (all "zombie drain" narration was inside drain
-  sessions), so this spec scopes R3 to drain only — a human or the
-  breakdown author should confirm this is the right boundary before
-  widening it.
+Both open judgment calls surfaced during this spec's authoring were
+resolved during critique rather than left open:
+
+- R1's opt-in-vs-opt-out default is pinned to default-ON (a header opts
+  out) — see R1 above; the evidence (every collision incident happened
+  under today's default-OFF shared-checkout model) favored ON.
+- Whether R1/R3 should also cover build/autopilot is resolved by scoping
+  both to drain only and explicitly deferring the extension to a future
+  spec — see Out of scope's "Build/autopilot orchestrator isolation and
+  preflight sweep" bullet.
+
+None remain unresolved.
+
+## Parallelization
+
+No task groups qualify for concurrent execution. Every task under this
+spec touches `.claude/skills/drain/SKILL.md` and/or
+`.claude/skills/drain/reference.md` (tasks 01–04), or depends on all four
+of them (task 05) — none pass the decision-coupling test's disjoint-`Touch`
+requirement, so all five tasks run serially in dependency order
+(01 → 02 → 03 → 04 → 05).
