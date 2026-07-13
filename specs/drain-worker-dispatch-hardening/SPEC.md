@@ -314,10 +314,25 @@ breakdown/SKILL.md` in its own `Touch:` — verify with
   isolate before a fix requirement can be written — flagging here per
   the topic brief's instruction to surface this as an explicit
   manual-pending item rather than guess at a root cause from static
-  analysis.
+  analysis. **Resolved as non-blocking at breakdown time:** this item is
+  already fully addressed by its own presence here — the spec's
+  Out-of-scope section and this entry together ARE the documentation
+  Solution item 5 calls for. No task file targets it; a human who wants
+  to chase the root cause does so outside this spec.
 - R5's `$(git merge-base …)` fix: is SKILL.md:205's Touch-enforcement
   check actually run under the same restrictive `dontAsk` permission mode
   that denies command substitution in worker prompts, or does it run
   under drain's own (typically less restrictive) orchestrator session? If
   the latter, R5 may be a non-issue and the requirement should be
-  downgraded to "confirm, don't fix" at breakdown time.
+  downgraded to "confirm, don't fix" at breakdown time. **Resolved at
+  breakdown time:** confirmed by reading `.claude/skills/drain/SKILL.md`
+  — the `$(git merge-base …)` check lives in step 3 ("Collect the
+  verdict"), which drain's own orchestrator session executes when
+  merging a worker's result; it is never part of a dispatched worker's
+  `claude -p` prompt or its restrictive `--permission-mode dontAsk`
+  invocation (`reference.md`'s "Headless fallback" section, ~line 924).
+  So it does NOT run under the restrictive mode the Problem section's
+  shell-pattern evidence describes. Per R5's own stated fork, this
+  downgrades R5 to "confirm, don't fix": the closing task documents this
+  finding at SKILL.md:205 rather than rewriting a check that already
+  runs safely.
