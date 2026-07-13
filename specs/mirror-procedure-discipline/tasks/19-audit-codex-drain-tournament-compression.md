@@ -1,4 +1,5 @@
 Status: draft
+Intake-refused: gate — DECISION-SHAPED (intentional Codex-style compression vs. real procedural gap in tournament generate/merge/verdict-routing) with no authored acceptance criteria/Touch/Budget to promote (2026-07-13)
 Discovered-from: specs/mirror-procedure-discipline/tasks/14-audit-codex-drain.md
 Spec: ../SPEC.md
 Blocking: no
