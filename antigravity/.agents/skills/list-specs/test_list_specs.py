@@ -106,6 +106,53 @@ class ClassifySpecTestCase(unittest.TestCase):
         self.assertIsNone(row["next_command"])
         self.assertIn("blocked/failed", row["status"])
 
+    def test_agent_unblockable_blocked_does_not_flag_needs_attention(self):
+        # Agent-bounded blockage (Unblock: run/agent) proceeds — the spec
+        # routes to /drain instead of halting for the human.
+        tasks = [
+            {
+                "file": "specs/foo/tasks/01-a.md",
+                "status": "blocked",
+                "unblock": {"type": "agent", "step": "recheck the deploy"},
+            },
+            {"file": "specs/foo/tasks/02-b.md", "status": "pending"},
+            {"file": "specs/foo/tasks/03-c.md", "status": "pending"},
+        ]
+        row = list_specs.classify_spec(
+            "foo", tasks=tasks, open_questions_unresolved=False
+        )
+        self.assertNotIn("needs attention", row["status"])
+        self.assertEqual(row["next_command"], "/drain specs/foo")
+
+    def test_ask_unblock_blocked_still_flags_needs_attention(self):
+        tasks = [
+            {
+                "file": "specs/foo/tasks/01-a.md",
+                "status": "blocked",
+                "unblock": {"type": "ask", "step": "which creds?"},
+            },
+            {"file": "specs/foo/tasks/02-b.md", "status": "pending"},
+        ]
+        row = list_specs.classify_spec(
+            "foo", tasks=tasks, open_questions_unresolved=False
+        )
+        self.assertIsNone(row["next_command"])
+        self.assertIn("needs attention", row["status"])
+
+    def test_only_agent_unblockable_blocked_left_suggests_drain(self):
+        tasks = [
+            {
+                "file": "specs/foo/tasks/01-a.md",
+                "status": "blocked",
+                "unblock": {"type": "run", "step": "make recheck"},
+            },
+            {"file": "specs/foo/tasks/02-b.md", "status": "done"},
+        ]
+        row = list_specs.classify_spec(
+            "foo", tasks=tasks, open_questions_unresolved=False
+        )
+        self.assertEqual(row["next_command"], "/drain specs/foo")
+
     def test_deferred_plus_blocked_no_pending_suggests_drain_rule3_over_rule4(self):
         row = list_specs.classify_spec(
             "foo",

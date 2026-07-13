@@ -1412,7 +1412,8 @@ def attention_items(
                         }
                     )
             # A spec-level `Status: waiting` header (spec-only status): ask →
-            # needs-answer, run/agent → blocked. No dispatch cmd here (R7 owns it).
+            # needs-answer; run/agent → agent-bounded, proceeds (R7 recheck owns
+            # it), NOT an attention item; missing → unknown-bounded, surface.
             if s.get("status") == "waiting":
                 ub = s.get("unblock")
                 if ub and ub["type"] == "ask":
@@ -1426,33 +1427,37 @@ def attention_items(
                             "age_ts": s["last_touched"],
                         }
                     )
-                else:
+                elif not ub:
                     items.append(
                         {
                             "severity": "serious",
                             "state": "blocked",
                             "repo": r["name"],
                             "what": f"Spec {s['slug']}: waiting",
-                            "why": ub["step"]
-                            if ub
-                            else "no unblock step recorded — add an Unblock: line",
+                            "why": "no unblock step recorded — add an Unblock: line",
                             "age_ts": s["last_touched"],
                         }
                     )
-            if s.get("tasks_blocked"):
-                unblock_steps = [
-                    f"{t['unblock']['type']}: {t['unblock']['step']}"
-                    for t in s.get("tasks", [])
-                    if _task_is_blocked(t["status"])
-                    and t.get("unblock")
-                    and t["unblock"]["type"] != "ask"
-                ]
+            # Inbox principle: agent-bounded work proceeds (drafts → intake,
+            # run:/agent: unblocks → recheck/dispatch, done specs → verifier);
+            # only human-bounded or unknown-bounded blockage is the human's
+            # attention item. Ask-typed unblocks already have their own
+            # needs-answer row above; the spec-level row covers only blocked
+            # tasks with NO recorded unblock step.
+            needs_human = [
+                t
+                for t in s.get("tasks", [])
+                if _task_is_blocked(t["status"])
+                and t["status"] != "draft"
+                and not t.get("unblock")
+            ]
+            if needs_human:
                 why = (
-                    ", ".join(s["tasks_blocked"][:3])
-                    + " — answer its open question, flip its Status: line, re-dispatch via /build or /drain"
+                    ", ".join(t["file"] for t in needs_human[:3])
+                    + " — no unblock step recorded: answer its open question or"
+                    " add an Unblock: line, flip its Status:, re-dispatch via"
+                    " /build or /drain"
                 )
-                if unblock_steps:
-                    why += " · unblock: " + "; ".join(unblock_steps)
                 items.append(
                     {
                         "severity": "serious",
@@ -1460,23 +1465,6 @@ def attention_items(
                         "repo": r["name"],
                         "what": f"Spec {s['slug']}: task(s) blocked",
                         "why": why,
-                        "age_ts": s["last_touched"],
-                    }
-                )
-            elif s["tasks_total"] > 0 and open_tasks == 0:
-                verify_prompt = (
-                    f"Use the verifier agent to verify specs/{s['slug']} "
-                    "against its acceptance criteria; if it passes, "
-                    "archive the spec dir"
-                )
-                items.append(
-                    {
-                        "severity": "warning",
-                        "state": "needs-review",
-                        "repo": r["name"],
-                        "what": f"Spec {s['slug']}: all {s['tasks_total']} task(s) done",
-                        "why": "run the verifier agent against the spec, then archive the spec dir:",
-                        "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(verify_prompt)}",
                         "age_ts": s["last_touched"],
                     }
                 )

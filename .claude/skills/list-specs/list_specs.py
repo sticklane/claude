@@ -128,8 +128,17 @@ def classify_spec(slug, tasks, open_questions_unresolved):
             "next_command": f"/drain specs/{slug}",
         }
 
-    # Rule 2: deferred == 0, blocked_or_failed > 0 -> flagged, no command.
-    if n_blocked > 0:
+    # Rule 2: deferred == 0, HUMAN-bounded blocked_or_failed > 0 -> flagged,
+    # no command. Agent-bounded blockage (Unblock: run:/agent:) proceeds —
+    # /drain owns the recheck — so it never gates a needs-attention flag;
+    # only ask-typed or unblock-less blocked/failed tasks are the human's.
+    agent_unblockable = [
+        t
+        for t in buckets["blocked_or_failed"]
+        if (t.get("unblock") or {}).get("type") in ("run", "agent")
+    ]
+    n_human_blocked = n_blocked - len(agent_unblockable)
+    if n_human_blocked > 0:
         return {
             "slug": slug,
             "status": f"{summary} — blocked/failed — needs attention "
@@ -161,6 +170,16 @@ def classify_spec(slug, tasks, open_questions_unresolved):
             "status": f"{summary} — in-progress/awaiting — check /fleet "
             "or a drain may be running",
             "next_command": None,
+        }
+
+    # Rule 5b: only agent-unblockable blocked/failed tasks remain open ->
+    # /drain (it runs the recorded run:/agent: recheck steps).
+    if agent_unblockable:
+        return {
+            "slug": slug,
+            "status": f"{summary} — blocked task(s) agent-unblockable "
+            "(Unblock: run/agent)",
+            "next_command": f"/drain specs/{slug}",
         }
 
     # Rule 6: deferred, blocked, pending, in_progress, unrecognized all == 0
