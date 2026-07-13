@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Promotion-ready: true
 Promoted-by-run: bc1c30ae8ac43971
 Discovered-from: specs/mirror-procedure-discipline/tasks/14-audit-codex-drain.md
