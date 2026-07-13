@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/mirror-procedure-discipline/tasks/03-audit-distill.md
 Spec: ../SPEC.md
 Blocking: no
