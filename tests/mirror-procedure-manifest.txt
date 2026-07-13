@@ -28,3 +28,4 @@
 .claude/skills/drain/SKILL.md|antigravity/.agents/workflows/drain.md|agentprof:stage=stub-intake
 .claude/skills/drain/SKILL.md|antigravity/.agents/workflows/drain.md|agentprof:stage=auto-breakdown
 # checked: drain agentprof stage-marker instrumentation — antigravity's workflow implemented critique intake, stub intake, and 4a auto-breakdown but never emitted their agentprof:stage markers (source and the codex mirror already did), leaving those stages unattributed in profiling. Added the three missing markers to antigravity/.agents/workflows/drain.md and seeded them here so a future antigravity edit can't silently drop them again. Also added the previously-missing source SKILL.md 3b auto-breakdown marker itself (mirrored into codex) — not manifest-expressible since it's a same-file gap, not a source/mirror divergence.
+.claude/skills/gate/SKILL.md|antigravity/.agents/skills/gate/SKILL.md|delegate the run to a subagent
