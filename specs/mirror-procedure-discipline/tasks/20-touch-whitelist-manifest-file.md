@@ -1,4 +1,5 @@
-Status: draft
+Status: obsolete
+Closed: 2026-07-13 (Steven, attended, human-tasks walkthrough) — task 15 is done and merged (585796c); the Touch-whitelist concern only mattered for a future re-dispatch, which will never happen now. The merge included tests/mirror-procedure-manifest.txt without issue (manual merge, no W>1 Touch enforcement in play).
 Intake-refused: gate — assessor's OBSOLETE verdict cited only that task 19's undeclared manifest edit merged harmlessly under this run's W=1 (no Touch enforcement at W=1), not that task 15's own Touch defect is closed; task 15 is still blocked and would hit real R4 Touch enforcement on a future W>1 re-dispatch/merge (2026-07-13)
 Discovered-from: specs/mirror-procedure-discipline/tasks/15-normalize-next-stage-lines.md
 Spec: ../SPEC.md
