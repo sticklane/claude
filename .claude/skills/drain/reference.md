@@ -1,7 +1,7 @@
 # /drain reference
 
 Contents: When NOT to drain · Gen-1 startup advisories · Wake economics ·
-Owner lease (DRAIN-OWNER.md format,
+Orchestrator isolation · Owner lease (DRAIN-OWNER.md format,
 liveness, reclaim, remote divergence check) · Status field semantics · Stale-lock liveness
 check · Worker prompt · Deferred question format · Relaunch-with-evidence
 prompt · Tournament · Headless fallback · Baton pass (self-relaunch) ·
@@ -113,6 +113,35 @@ re-reads of `Status:` header lines (step 2), `## Progress` / `## Deferred` /
 `## Decisions` append edits, and the hub's OWN post-merge project-gate run
 (its pass/fail plus the bounded output tail specified for relaunch evidence,
 Relaunch-with-evidence prompt).
+
+## Orchestrator isolation
+
+Default-ON, drain-only structural layer beneath the Owner lease below —
+isolation stops two concurrent drains from interleaving commits in one
+shared tree; the lease is the discipline layer on top. SKILL.md's
+"Orchestrator isolation (default ON)" paragraph points here. Build/autopilot
+orchestrator isolation is out of scope for this behavior.
+
+**Default: isolate the orchestrator's own working tree.** State it
+VCS-neutral first: before any bookkeeping, drain sets up an isolated
+checkout/worktree of the target repo for its own dispatch loop, the same way
+`isolation: worktree` already isolates each dispatched worker — e.g. under
+git, `git worktree add` for the orchestrator's own working directory
+(matching `.claude/rules/concurrent-sessions.md`'s "the VCS's checkouts/
+worktrees … e.g., under git: `git worktree list`" phrasing). This is ON with
+no opt-in step: every collision incident behind this behavior happened under
+the old default-OFF shared-checkout model.
+
+**Opt out per repo.** A repo that must keep the old shared-checkout behavior
+opts out with an `Isolation: off` header; when a repo opts out, drain runs
+from the shared checkout and relies on lease-file discipline alone, exactly
+as before.
+
+**Fallback (no isolated checkouts available).** For a repo whose VCS or
+hosting environment cannot provide isolated checkouts, drain
+falls back to today's lease-only discipline — advisory-only, matching the
+"Enforcement on interactive/ad-hoc sessions" carve-out — rather than
+blocking dispatch.
 
 ## Owner lease
 

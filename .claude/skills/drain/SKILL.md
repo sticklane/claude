@@ -56,6 +56,14 @@ gating dispatch (correctness comes from the owner-lease claim below). Exact
 procedures are in [reference.md](reference.md)'s "Gen-1 startup advisories" —
 load only the named section.
 
+**Orchestrator isolation (default ON).** Before any bookkeeping, drain runs
+its own dispatch loop inside a VCS-level isolated checkout of the target repo —
+the orchestrator's own working tree, isolated the way `isolation: worktree`
+already isolates each dispatched worker (VCS-neutral; e.g. under git, `git
+worktree add`). A repo opts out with an `Isolation: off` header; the mechanics,
+the opt-out, and the no-isolated-checkout fallback are in
+[reference.md](reference.md)'s "Orchestrator isolation".
+
 ## 1. Inventory
 
 Emit `<!-- agentprof:stage=inventory -->` verbatim as this step's opening
