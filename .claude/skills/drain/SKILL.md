@@ -310,7 +310,8 @@ cap without finishing the queue (specs/drain-wake-cost/EVIDENCE.md, "Follow-up
 (2026-07-13)"). The
 `max(2, 6 − W)` count is a size-adaptive stand-in for "after ~4 verdicts OR when
 context is heavy" — a wider W batons sooner (W=1→5, W=3→3, W=5→2); full
-derivation in [reference.md](reference.md)'s "Baton pass". On fire:
+derivation in [reference.md](reference.md)'s "Baton pass" — load only the
+named section. On fire:
 write the baton `specs/<slug>/DRAIN-BATON.md` (grammar + relaunch command in
 reference.md), spawn the successor generation (awaited where a parent can
 supervise; else headless), report the pass, and **end your turn at once,
