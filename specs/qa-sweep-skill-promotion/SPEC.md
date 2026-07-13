@@ -1,5 +1,6 @@
 Status: open
 Priority: P2
+Breakdown-ready: true
 
 ## Problem
 
@@ -43,10 +44,8 @@ Two further patterns showed up across these same sessions:
    the Google SSO/One-Tap detect-and-handoff behavior, so it is written once
    and cited by every claude-in-chrome-driven skill rather than
    reimplemented per skill (this repo's rule-citation convention, per
-   `.claude/rules/token-discipline.md`'s "Write invariant procedural content
-   once and carry it faithfully" pattern — see
-   `.claude/rules/mirror-procedure-discipline.md` for the same discipline
-   applied to mirrored procedure).
+   `.claude/rules/mirror-procedure-discipline.md`'s "Write invariant
+   procedural content once and carry it faithfully" pattern).
 
 ## Research grounding
 
@@ -68,97 +67,126 @@ Two further patterns showed up across these same sessions:
 ## Requirements
 
 R1. Create `.claude/skills/qa-sweep/SKILL.md` following this repo's
-    established frontmatter shape (`name`, `description` written third
-    person with concrete trigger phrases, optional `argument-hint`) — model
-    it on `.claude/skills/critique/SKILL.md`'s frontmatter shape. Propose
-    `qa-sweep` as the directory/command name; description must cover what it
-    does and trigger phrases such as "test the site", "QA sweep", "run a
-    smoke test", "test everything end to end". It is NOT one of the four
-    explicit-invocation-only skills (drain/build/autopilot/evals), so it
-    stays model-invocable under the repo's normal self-chaining rules.
+established frontmatter shape (`name`, `description` written third
+person with concrete trigger phrases, optional `argument-hint`) — model
+it on `.claude/skills/critique/SKILL.md`'s frontmatter shape. Propose
+`qa-sweep` as the directory/command name; description must cover what it
+does and trigger phrases such as "test the site", "QA sweep", "run a
+smoke test", "test everything end to end". It is NOT one of the four
+explicit-invocation-only skills (drain/build/autopilot/evals), so it
+stays model-invocable under the repo's normal self-chaining rules.
 
 R2. The skill's procedure, in order:
-    a. Scout the target surface (routes/pages/MCP tool surfaces) to build a
-       test plan, using cheap scout-tier dispatch per
-       `.claude/rules/token-discipline.md`.
-    b. Check deployment/migration freshness FIRST, before any functional
-       assertion: verify each target service's deploy is current (e.g. last
-       deploy timestamp vs. latest source commit), required secrets/env vars
-       are present, and database schema/migration state matches the
-       codebase's expected migrations. Use whatever project-specific
-       tooling the target repo's own AGENTS.md/CLAUDE.md documents for these
-       checks; the skill states the check categories, not vendor-specific
-       commands. Any drift found here is reported as an environment/deploy
-       finding, not routed through the functional-bug path in R2d.
-    c. Dispatch parallel per-domain test agents (one per functional
-       domain/surface identified in R2a) to exercise the target and report
-       findings — sized per `.claude/rules/token-discipline.md`'s dispatch
-       guidance (tier by stage type, capped returns, bounded fan-out).
-    d. File a spec under `specs/<slug>/SPEC.md` for each confirmed piece of
-       breakage found in R2b or R2c (not for unconfirmed/flaky findings).
-    e. Self-chain into `/critique` on each filed spec — permitted
-       unconditionally per root CLAUDE.md's self-chaining conventions since
-       `/critique` is not one of the four gated execution-stage skills
-       (cited, not restated).
-    f. Hand off to `/drain` for fixes rather than auto-invoking it: per root
-       CLAUDE.md's self-chaining conventions, `/drain` is one of the four
-       execution-stage skills that are model-invocable ONLY on the user's
-       live-message authorization (docs/human-gates.md, cited not
-       restated). qa-sweep therefore presents the critique-READY specs and
-       tells the human to run `/drain`, unless the user's original live
-       request already named draining/fixing as part of the ask (e.g. "test
-       everything and fix what's broken"), in which case that request IS
-       the authorization and qa-sweep may chain into `/drain` directly.
-    g. Re-verify: after fixes land (via drain or manual fix), re-run the
-       affected per-domain checks from R2c to confirm the finding is
-       resolved.
+a. Scout the target surface (routes/pages/MCP tool surfaces) to build a
+test plan, using cheap scout-tier dispatch per
+`.claude/rules/token-discipline.md`.
+b. Check deployment/migration freshness FIRST, before any functional
+assertion: verify each target service's deploy is current (e.g. last
+deploy timestamp vs. latest source commit), required secrets/env vars
+are present, and database schema/migration state matches the
+codebase's expected migrations. Use whatever project-specific
+tooling the target repo's own AGENTS.md/CLAUDE.md documents for these
+checks; the skill states the check categories, not vendor-specific
+commands. Any drift found here is reported as an environment/deploy
+finding, not routed through the functional-bug path in R2d.
+c. Dispatch parallel per-domain test agents (one per functional
+domain/surface identified in R2a) to exercise the target and report
+findings — sized per `.claude/rules/token-discipline.md`'s dispatch
+guidance (tier by stage type, capped returns, bounded fan-out).
+d. File a spec under `specs/<slug>/SPEC.md` for each confirmed piece of
+breakage found in R2b or R2c (not for unconfirmed/flaky findings).
+e. Self-chain into `/critique` on each filed spec — permitted
+unconditionally per root CLAUDE.md's self-chaining conventions since
+`/critique` is not one of the four gated execution-stage skills
+(cited, not restated).
+f. Hand off to `/drain` for fixes rather than auto-invoking it: per root
+CLAUDE.md's self-chaining conventions, `/drain` is one of the four
+execution-stage skills that are model-invocable ONLY on the user's
+live-message authorization (docs/human-gates.md, cited not
+restated). qa-sweep therefore presents the critique-READY specs and
+tells the human to run `/drain`, unless the user's original live
+request already named draining/fixing as part of the ask (e.g. "test
+everything and fix what's broken"), in which case that request IS
+the authorization and qa-sweep may chain into `/drain` directly.
+g. Re-verify: after fixes land, re-run the affected per-domain checks
+from R2c to confirm the finding is resolved. This step's control flow
+depends on which R2f branch fired:
 
-R3. The skill's page-check/screenshot steps must follow whatever
-    screenshot/subagent-delegation guidance the sibling
-    `context-blowout-subagent-guards` spec establishes, cited rather than
-    reimplemented, IF that spec exists by the time this spec reaches
-    `/breakdown`. As of this spec's authoring, `context-blowout-subagent-guards`
-    does NOT exist anywhere in `specs/` (checked open and archived) — see
-    Open questions. Until it exists, R2c's per-domain test agents must at
-    minimum follow the existing baseline already in
-    `.claude/rules/token-discipline.md`: cap subagent returns at 1-2k
-    tokens, externalize large artifacts (e.g. a batch of screenshots) to
-    disk and return a path rather than pasting them inline, and never
-    accumulate raw screenshot bytes in the orchestrating skill's own
-    context — each page check is delegated to a fresh subagent that returns
-    a verdict, not the screenshot.
+- Human-gated branch (the default): qa-sweep's own invocation ends at
+  the R2f handoff — it does not block waiting for a human to run
+  `/drain`. Re-verification in this branch is a separate, later
+  qa-sweep invocation (or a targeted re-run of just the affected
+  per-domain check) that the human triggers once `/drain` has
+  finished, not a continuation of the original run.
+- Authorized auto-chain branch (the user's live request already named
+  draining/fixing): qa-sweep chains into `/drain` and, once `/drain`
+  completes, continues in the same invocation to re-run the affected
+  per-domain checks before reporting final results.
+
+R3. The skill's page-check/screenshot steps must cite
+`.claude/rules/token-discipline.md`'s "Delegation defaults" section for
+their screenshot/subagent-delegation guidance, rather than reimplementing
+it. `specs/context-blowout-subagent-guards/SPEC.md` (open as of this
+spec's authoring) lands its fix as new bullets inside that same section —
+specifically a bullet requiring each page-check to route through a
+subagent returning a short verdict (anchored on the literal phrase "route
+each page-check through a subagent") — not as a standalone spec artifact
+qa-sweep could point to by name. So R3's citation target is
+`.claude/rules/token-discipline.md`'s "Delegation defaults" section,
+whether or not `context-blowout-subagent-guards` has merged by the time
+this spec reaches `/breakdown`:
+
+- If it has already merged, cite the section as-is (it will contain the
+  "route each page-check through a subagent" bullet).
+- If it has not yet merged, R2c's per-domain test agents must at minimum
+  follow the section's existing baseline: cap subagent returns at 1-2k
+  tokens, externalize large artifacts (e.g. a batch of screenshots) to
+  disk and return a path rather than pasting them inline, and never
+  accumulate raw screenshot bytes in the orchestrating skill's own
+  context — each page check is delegated to a fresh subagent that returns
+  a verdict, not the screenshot. This is the same behavior the sibling
+  spec's bullet will make explicit; qa-sweep's citation of the section
+  stays correct either way, so no rework is needed once the sibling
+  merges.
 
 R4. Add `.claude/rules/browser-automation-handoffs.md`: any
-    claude-in-chrome-driven flow that encounters a Google SSO/One-Tap login
-    surface attempts at most ONE click strategy against it, then hands off
-    to the human rather than retrying alternate strategies. State this once
-    as canonical doctrine, in the same "cite it, don't restate it" shape
-    this repo already uses for its other rule files.
+claude-in-chrome-driven flow that encounters a Google SSO/One-Tap login
+surface attempts at most ONE click strategy against it, then hands off
+to the human rather than retrying alternate strategies. State this once
+as canonical doctrine, in the same "cite it, don't restate it" shape
+this repo already uses for its other rule files.
 
 R5. `.claude/skills/qa-sweep/SKILL.md` cites
-    `.claude/rules/browser-automation-handoffs.md` for its own
-    claude-in-chrome-driven checks rather than restating the SSO handoff
-    behavior inline.
+`.claude/rules/browser-automation-handoffs.md` for its own
+claude-in-chrome-driven checks rather than restating the SSO handoff
+behavior inline.
 
 R6. Note for whoever breaks this spec down: the personal skill
-    `health-admin` referenced in the task evidence as another
-    claude-in-chrome-driven flow that should eventually cite R4's rule
-    lives OUTSIDE this repo, at `/Users/sjaconette/automation/skills/health-admin`
-    (confirmed by scout — it is symlinked into `~/.claude/skills/`, not
-    part of `/Users/sjaconette/claude`). This spec's own acceptance
-    criteria cannot reach that file. R4's rule text is the deliverable this
-    repo owns; propagating a citation into `health-admin`'s SKILL.md is a
-    cross-repo follow-up, filed per Open questions below, not a requirement
-    of this spec.
+`health-admin` referenced in the task evidence as another
+claude-in-chrome-driven flow that should eventually cite R4's rule
+lives OUTSIDE this repo, at `/Users/sjaconette/automation/skills/health-admin`
+(confirmed by scout — it is symlinked into `~/.claude/skills/`, not
+part of `/Users/sjaconette/claude`). This spec's own acceptance
+criteria cannot reach that file. R4's rule text is the deliverable this
+repo owns; propagating a citation into `health-admin`'s SKILL.md is a
+cross-repo follow-up, filed per Open questions below, not a requirement
+of this spec.
+
+R7. `.claude-plugin/plugin.json`'s `version` field is bumped (per root
+CLAUDE.md's "Bump `version` in `plugin.json` whenever skill behavior
+changes") as part of adding the new `qa-sweep` skill; its `agents` array
+is left untouched, since qa-sweep is a skill, not an agent, and skills
+are manifest-free.
 
 ## Out of scope
 
 - Editing `/Users/sjaconette/automation/skills/health-admin/SKILL.md` or any
   other file outside `/Users/sjaconette/claude` — out of this repo's spec
   pipeline entirely (see R6).
-- Building or modifying `context-blowout-subagent-guards` — that spec, if
-  and when it is authored, is independent work; this spec only cites its
-  eventual guidance (R3).
+- Building or modifying `specs/context-blowout-subagent-guards/SPEC.md` or
+  its own tasks — that spec is independent work with its own pipeline;
+  this spec only cites the `.claude/rules/token-discipline.md` section its
+  fix lands in (R3).
 - A `codex/` mirror for `qa-sweep` — codex only mirrors the four
   explicit-invocation skills (drain/build/autopilot/evals), per root
   CLAUDE.md's mirror-obligations bullet.
@@ -191,27 +219,25 @@ R6. Note for whoever breaks this spec down: the personal skill
 10. `grep -qi "browser-automation-handoffs" .claude/skills/qa-sweep/SKILL.md`
     → match found — qa-sweep cites the new rule (R5) rather than restating
     it.
-11. `grep -qi "browser-automation-handoffs" .claude/rules/token-discipline.md .claude/skills/qa-sweep/SKILL.md`
+11. `grep -qi "browser-automation-handoffs" .claude/skills/qa-sweep/SKILL.md`
     — MANUAL: confirm at breakdown/build time that the citation reads as a
     pointer ("cite it, don't restate it") and not a full restatement of the
     SSO handoff behavior, per this repo's authoring conventions — not
     mechanically checkable by grep alone.
-12. `.claude-plugin/plugin.json`'s `agents` array is unchanged by this
-    spec's work (`git diff --stat .claude-plugin/plugin.json` shows no
-    changes after implementation) — confirms qa-sweep, as a skill and not
-    an agent, needed no manifest edit, per root CLAUDE.md's
-    manifest-free-for-skills convention.
+12. `git diff .claude-plugin/plugin.json` touches only the `version` line
+    (no lines inside the `agents` array change) — confirms qa-sweep, as a
+    skill and not an agent, needed no manifest edit for the `agents` array
+    (root CLAUDE.md's manifest-free-for-skills convention), while `version`
+    is still bumped per R7.
+13. `grep -qi "re-verify\|re-run" .claude/skills/qa-sweep/SKILL.md` → match
+    found — the re-verification step (R2g) is documented, including its
+    two branches (human-gated vs. authorized auto-chain).
+14. `grep -qi "Delegation defaults\|route each page-check\|return a path" .claude/skills/qa-sweep/SKILL.md`
+    → match found — the skill's page-check/screenshot steps cite the
+    token-discipline.md delegation guidance (R3) rather than omitting it.
 
 ## Open questions
 
-- `context-blowout-subagent-guards` does not exist in `specs/` (open or
-  archived) as of this spec's authoring (2026-07-13) — confirmed by direct
-  search. The task brief that produced this spec assumed it either existed
-  as an open spec or had already merged. A human should confirm: was this
-  spec authored under a different name, is it still pending authorship
-  elsewhere, or was the sibling-spec assumption simply wrong? R3 gives
-  qa-sweep a working fallback either way, but the citation in R3 should be
-  updated to the real spec name once one exists.
 - Propagating the Google SSO/One-Tap handoff rule (R4) into
   `/Users/sjaconette/automation/skills/health-admin/SKILL.md` is a
   cross-repo change this spec cannot make. Recommend filing a task in that
