@@ -18,3 +18,6 @@
 .claude/skills/design/SKILL.md|antigravity/.agents/skills/design/SKILL.md|expensive to reverse
 .claude/skills/design/SKILL.md|antigravity/.agents/skills/design/SKILL.md|would removing this cause mistakes
 # checked: design — restored two dropped decision conditions (prototype reversibility/cost gate, AGENTS.md "would removing this cause mistakes?" test); workflows/design.md is a pointer, reference.md diffs are load-bearing runtime renames
+.claude/skills/distill/SKILL.md|antigravity/.agents/skills/distill/SKILL.md|directory-named command
+.claude/skills/distill/SKILL.md|antigravity/.agents/skills/distill/SKILL.md|procedures as checklists
+# checked: distill — restored two dropped §3 New-skills authoring instructions ("directory-named command", "procedures as checklists"); workflows/distill.md is a pointer; verifier/critic→review, AskUserQuestion→ask, CLAUDE.md/rules→AGENTS.md and the added workflow route-table row are load-bearing runtime renames; absent Next stage line is a systematic port omission (14 source skills carry it, port carries 3; design audit left its own absence too)
