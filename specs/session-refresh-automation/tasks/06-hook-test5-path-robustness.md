@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Promotion-ready: true
 Promoted-by-run: a219d53ef6bba100
 Discovered-from: spec-completion review (specs/session-refresh-automation/evidence/spec-review.md)
