@@ -329,19 +329,42 @@ class TestRuntimeAgnosticBatonParsing(unittest.TestCase):
             self.assertFalse(batons[0].get("manual_relaunch"))
             self.assertFalse(batons[0].get("parse_warning"))
 
-    def test_antigravity_runtime_sets_manual_relaunch_not_blank_command(self):
-        # R5: antigravity has no scriptable headless template → manual_relaunch
-        # set, command stays "", no regex attempted.
+    def test_no_headless_runtime_sets_manual_relaunch_not_blank_command(self):
+        # R5: a runtime with no scriptable headless template → manual_relaunch
+        # set, command stays "", no regex attempted. antigravity left this
+        # class 2026-07-12 when `agy -p` proved scriptable (runtimes/
+        # antigravity.md); the synthetic no-headless profile is the fixture.
         cmd = 'claude -p "/drain specs/demo (generation 5)"'  # ignored: manual runtime
         with tempfile.TemporaryDirectory() as tmp:
-            _write_repo_baton(tmp, "antigravity", cmd)
+            _write_repo_baton(tmp, "fake-runtime-no-headless", cmd)
 
             batons = workboard.scan_batons(Path(tmp))
 
             self.assertEqual(len(batons), 1)
             self.assertEqual(batons[0]["command"], "")
             self.assertTrue(batons[0].get("manual_relaunch"))
-            self.assertIn("antigravity", batons[0]["manual_relaunch"].lower())
+            self.assertIn(
+                "fake-runtime-no-headless", batons[0]["manual_relaunch"].lower()
+            )
+
+    def test_antigravity_baton_command_extracted_since_agy_headless(self):
+        # antigravity gained a real scriptable headless template (agy -p,
+        # confirmed live 2026-07-12) — its batons now extract like any other
+        # scriptable runtime instead of falling to manual_relaunch.
+        cmd = (
+            '/opt/homebrew/bin/agy -p "/drain specs/demo (generation 6, baton: y)" '
+            "--new-project --mode accept-edits --sandbox"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_repo_baton(tmp, "antigravity", cmd)
+
+            batons = workboard.scan_batons(Path(tmp))
+
+            self.assertEqual(len(batons), 1)
+            self.assertIn("agy -p", batons[0]["command"])
+            self.assertIn("/drain specs/demo", batons[0]["command"])
+            self.assertFalse(batons[0].get("manual_relaunch"))
+            self.assertFalse(batons[0].get("parse_warning"))
 
     def test_unrecognized_shape_sets_parse_warning_and_surfaces_in_inbox(self):
         # R9: a relaunch command matching no known runtime → command "",
