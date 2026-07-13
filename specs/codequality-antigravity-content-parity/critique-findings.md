@@ -50,3 +50,17 @@ Note: the drift the spec targets is real — `.claude/skills/_shared/test_viz.py
 (210 lines) has a `test_viz_axis_labels_carry_muted_tint_with_token_fallback`
 method the antigravity mirror (198 lines) is missing. A correctly-scoped version
 of this spec is worth building.
+
+## Re-critique 2026-07-13 (drain critique intake, run a219d53e) — still NOT READY
+
+Spec unchanged; prior findings independently re-verified and confirmed fatal.
+Premise "every other mirrored .py is byte-identical" is false: 4 of 10 pairs
+differ, 3 legitimately (prioritize_scan.py + its test, test_list_specs.py —
+sanctioned run-path/docstring ports). The diff -q-over-all gate can never go
+green and would fail the whole tests/ loop (criterion 5) repo-wide; a drained
+worker would stall or clobber load-bearing port divergences. Criterion 1's
+"pre-fix tree or a fixture" is stall-grade ambiguity. Real drift confirmed:
+_shared/test_viz.py token-fallback test missing from the mirror. Recovery:
+human re-scopes the gate to an include-list (or normalizes sanctioned
+adaptations), pins a committed fixture pair, fixes the premise text, then
+re-runs /critique.
