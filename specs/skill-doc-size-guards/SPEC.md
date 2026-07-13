@@ -220,3 +220,20 @@ edits (part of requirement 5) are independently parallelizable.
   the same limit? This spec assumes the uniform 500 CLAUDE.md already
   states; a human may want to revisit the number itself rather than keep
   re-enforcing it.
+
+## Parallelization
+
+Tasks 01 (gate script), 02 (non-drain reference.md TOC edits), and 03
+(drain SKILL.md shrink + drain reference.md TOC) are disjoint in `Touch`
+and share no undecided design — each follows a pattern this spec already
+fixes (the lint-ultra-gate.sh shape, the TOC-heading regex, the
+work-exhaustion shrink precedent) — so they run concurrently. Task 04
+(wire the gate into drain's checklist + mirror the drain changes) shares
+`Touch` with task 03's drain files and depends on task 03's content being
+final, so it serializes after 03; it also depends on task 01 (it
+references `evals/lint-skill-size-gate.sh` by name, so the script must
+exist first) even though 01 and 03 run concurrently. Task 05 (final gate
+verification)
+depends on all four preceding tasks and serializes last.
+
+- Group: 01, 02, 03
