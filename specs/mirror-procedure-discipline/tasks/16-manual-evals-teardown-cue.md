@@ -1,4 +1,5 @@
 Status: draft
+Intake-refused: screen — instruction-shaped Goal matched: tool-invocation (2026-07-13)
 Discovered-from: specs/mirror-procedure-discipline/tasks/04-audit-evals.md
 Spec: ../SPEC.md
 Blocking: no
