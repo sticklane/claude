@@ -1,5 +1,6 @@
 Status: open
 Priority: P2
+Breakdown-ready: true
 
 ## Problem
 
@@ -117,60 +118,74 @@ section does not cover).
 ## Requirements
 
 R1. `bin/install-gates` gains detection for a repo-declared build/install
-    prerequisite stage (e.g. a monorepo dist build), rendered into
-    `templates/check.sh.tmpl` as a `run_stage` line that runs BEFORE the
-    existing lint/typecheck/test stages whenever detected, so `scripts/
+prerequisite stage (e.g. a monorepo dist build), rendered into
+`templates/check.sh.tmpl` as a `run_stage` line that runs BEFORE the
+existing lint/typecheck/test stages whenever detected, so `scripts/
     check.sh` is self-sufficient and the CLAUDE.md doc list can drift
-    without silently breaking gating. Detection heuristic and repo-opt-in
-    mechanism (e.g. a marker file, a `package.json` script name, an
-    explicit installer flag) are an implementation decision for whoever
-    picks this up — record the choice in this SPEC.md or CLAUDE.md per this
-    repo's Change Process convention, not left implicit in code.
+without silently breaking gating. Detection heuristic and repo-opt-in
+mechanism (e.g. a marker file, a `package.json` script name, an
+explicit installer flag) are an implementation decision for whoever
+picks this up — record the choice in this SPEC.md or CLAUDE.md per this
+repo's Change Process convention, not left implicit in code.
 
 R2. `.claude/skills/build/SKILL.md`'s verify step and `.claude/skills/drain/
     SKILL.md`'s merge-then-gate step (plus `.claude/skills/drain/
     reference.md`'s "project gates" language) are updated to state
-    explicitly that `scripts/check.sh` is the sole required check
-    entrypoint for both a dispatched worker's own verification and drain's
-    own merge-time gate run — never a hand-derived list of steps read out
-    of CLAUDE.md prose. `drain` and `build` are two of the four ultra-path
-    skills (CLAUDE.md, "Testing changes") — any task implementing this
-    requirement must run `bash evals/lint-ultra-gate.sh` before committing,
-    and per CLAUDE.md's mirror-obligations paragraph, a SKILL.md-level
-    wording change to either file must carry the matching `antigravity/`
-    mirror update (and, since `drain`/`build` are two of the four codex
-    real-content skills, the matching `codex/.agents/skills/{drain,build}/
-    SKILL.md` update too) in the same task's `Touch:`.
+explicitly that `scripts/check.sh` is the sole required check
+entrypoint for both a dispatched worker's own verification and drain's
+own merge-time gate run — never a hand-derived list of steps read out
+of CLAUDE.md prose. `drain` and `build` are two of the four ultra-path
+skills (CLAUDE.md, "Testing changes") — any task implementing this
+requirement must run `bash evals/lint-ultra-gate.sh` before committing.
+Mirror obligations (verified this session — `codex/.agents/skills/
+    {build,drain}/SKILL.md` are real files, NOT symlinks; antigravity has no
+`skills/build/` directory, and `antigravity/.agents/skills/drain/` exists but
+holds only `README.md`/`screen-stub.sh`, no `SKILL.md` — both `drain` and
+`build` are human-launched execution stages ported to antigravity as
+workflows, not skills): a wording change to `.claude/skills/drain/SKILL.md`
+must carry a matching update to `antigravity/.agents/workflows/drain.md`
+AND `codex/.agents/skills/drain/SKILL.md` in the same task's `Touch:`; a
+wording change to `.claude/skills/build/SKILL.md` must carry a matching
+update to `antigravity/.agents/workflows/build.md` AND
+`codex/.agents/skills/build/SKILL.md` in the same task's `Touch:`.
 
 R3. A plugin-staleness check compares the installed plugin's version
-    (`.claude-plugin/plugin.json`'s `version` field as installed vs. the
-    version at the source repo's current HEAD, or whatever mechanism this
-    repo already uses via `bin/refresh-plugins`) at a natural checkpoint —
-    session start, or before a session acts on doctrine that might have
-    changed — and surfaces a warning (never a silent block, never an
-    auto-refresh with side effects a user didn't request) when the
-    installed version is behind source. Builds on the existing manual
-    `bin/refresh-plugins` remedy; this requirement is the missing
-    proactive-detection half.
+(`.claude-plugin/plugin.json`'s `version` field as installed vs. the
+version at the source repo's current HEAD, or whatever mechanism this
+repo already uses via `bin/refresh-plugins`) at a natural checkpoint —
+session start, or before a session acts on doctrine that might have
+changed — and surfaces a warning (never a silent block, never an
+auto-refresh with side effects a user didn't request) when the
+installed version is behind source. Builds on the existing manual
+`bin/refresh-plugins` remedy; this requirement is the missing
+proactive-detection half.
 
 R4. `templates/stop-gate.sh` (and `bin/install-gates`'s generation of it)
-    detects a docs-only diff — every changed file since the last commit (or
-    HEAD) matches CLAUDE.md's existing `paths-ignore` glob set (`**.md`,
-    `docs/**`, `specs/**`, `.claude/**`) — and skips or narrows
-    `scripts/check.sh` accordingly, applying the same convention CLAUDE.md
-    already states for push-triggered CI to the LOCAL Stop-hook gate.
+detects a docs-only diff — every changed file since the last commit (or
+HEAD) matches CLAUDE.md's existing `paths-ignore` glob set (`**.md`,
+`docs/**`, `specs/**`, `.claude/**`) — and skips or narrows
+`scripts/check.sh` accordingly, applying the same convention CLAUDE.md
+already states for push-triggered CI to the LOCAL Stop-hook gate.
 
 R5. `templates/check.sh.tmpl`'s `run_stage` failure reporting is reordered
-    (or its aggregate runner is) so that when a stage fails, its output is
-    surfaced first/prominently in the hook's stderr rather than appearing
-    only after every prior passing stage's full output — `run_stage`
-    already exits on first failure and prints only that stage's output
-    (`templates/check.sh.tmpl`'s current behavior), so this requirement is
-    about the CALLING context (e.g. a multi-workspace wrapper stage that
-    itself runs several sub-checks and currently prints all of them before
-    the failing one) not about `check.sh` itself if no such wrapper exists —
-    confirm which shape applies during implementation and scope the fix to
-    what's actually true of the target repo's check invocation.
+(or its aggregate runner is) so that when a stage fails, its output is
+surfaced first/prominently in the hook's stderr rather than appearing
+only after every prior passing stage's full output — `run_stage`
+already exits on first failure and prints only that stage's output
+(`templates/check.sh.tmpl`'s current behavior), so this requirement is
+about the CALLING context (e.g. a multi-workspace wrapper stage that
+itself runs several sub-checks and currently prints all of them before
+the failing one) not about `check.sh` itself if no such wrapper exists —
+confirm which shape applies during implementation and scope the fix to
+what's actually true of the target repo's check invocation.
+
+**Shared-file note for task breakdown:** R1 and R4 both edit
+`bin/install-gates`; R1 and R5 both edit `templates/check.sh.tmpl`. Neither
+pair has a hidden ordering dependency (each requirement is independently
+implementable), but a breakdown that runs either pair as concurrent
+drain-parallel tasks risks a merge collision on the shared file — sequence
+them (a `Depends on` line) or scope both members of a pair into the same
+task rather than parallelizing them.
 
 ## Out of scope
 
@@ -203,18 +218,23 @@ R5. `templates/check.sh.tmpl`'s `run_stage` failure reporting is reordered
 - `grep -c "build/dist prerequisite" bin/install-gates` → 0 today (verified
   this session); a task implementing R1 must raise it above 0.
 - `grep -c "sole required check entrypoint" .claude/skills/build/SKILL.md
-  .claude/skills/drain/SKILL.md` → 0/0 today (verified this session); a
-  task implementing R2 must raise at least one of these above 0, and the
-  corresponding `antigravity/.agents/skills/{build,drain}/SKILL.md` mirror
-  must show the same phrase (codex is a symlink to antigravity for these
-  two paths — confirmed via `codex/.agents/skills/{build,drain} ->
-  ../../../antigravity/.agents/skills/{build,drain}` — so no separate codex
-  edit is needed for R2 specifically, only the mirror check applies).
+.claude/skills/drain/SKILL.md` → 0/0 today (verified this session); R2
+  requires BOTH files updated (build's verify step AND drain's
+  merge-then-gate step), so a task implementing R2 must raise BOTH counts
+  above 0, not just one. Mirrors are NOT symlinks and must independently
+  show the same phrase (verified this session): `antigravity/.agents/
+workflows/drain.md` and `codex/.agents/skills/drain/SKILL.md` for the
+  drain change; `antigravity/.agents/workflows/build.md` and
+  `codex/.agents/skills/build/SKILL.md` for the build change.
 - `bash evals/lint-ultra-gate.sh` exits 0 after any commit touching
   `.claude/skills/{drain,build}/SKILL.md` under R2.
 - `grep -c "plugin-staleness" bin/refresh-plugins .claude/skills/*/SKILL.md`
   → 0 today (verified this session); a task implementing R3 must raise it
-  above 0 in whichever file ends up hosting the check.
+  above 0 in whichever file ends up hosting the check. If the check lands
+  in a file outside this glob (e.g. a new script, or a SessionStart hook
+  file), the task must state the actual file it landed in and update this
+  grep target to name it explicitly — the MANUAL criterion below is the
+  authoritative check regardless of where the grep points.
 - `grep -c "docs-only diff" templates/stop-gate.sh bin/install-gates` → 0
   today (verified this session); a task implementing R4 must raise it
   above 0.
@@ -227,6 +247,13 @@ R5. `templates/check.sh.tmpl`'s `run_stage` failure reporting is reordered
 - MANUAL: on a repo with a deliberately stale plugin cache (mismatched
   `.claude-plugin/plugin.json` version vs. installed), confirm the R3 check
   surfaces a warning rather than silently proceeding or hard-blocking.
+- R5: if a live multi-sub-check wrapper stage is located during
+  implementation, MANUAL — induce a failure in one of its sub-checks and
+  confirm the failing sub-check's output is surfaced first/prominently in
+  the hook's stderr, not after the other sub-checks' passing output. If no
+  such wrapper shape is found anywhere in scope (see Open Question 2), the
+  task implementing R5 records verdict DEFERRED with the repos it checked,
+  rather than leaving the requirement's done-ness unverifiable.
 
 ## Open questions
 
