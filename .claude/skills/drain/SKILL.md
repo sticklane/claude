@@ -189,7 +189,9 @@ pinned flip-message contract `drain: <spec-slug> task NN in-progress` (this
 exact format is a contract, not an example — spec-completion review recovers a
 spec's diff base by grepping it), push (guard in step 3), then re-read at HEAD
 and confirm your flip before dispatching — the worker's worktree is cut from
-this commit, so it must carry current statuses and any `## Answers`. Launch ONE
+this commit, so it must carry current statuses and any `## Answers`. This same
+owner-lease re-confirm runs before every subsequent status-flip commit in the
+spec's cycle, not just this claim — see reference.md's "Owner lease" (R2). Launch ONE
 `implementation-worker` agent — an **awaited child, never detached**
 (`.claude/agents/implementation-worker.md` pins the tier) — with
 `isolation: worktree` using the **Worker prompt** in
