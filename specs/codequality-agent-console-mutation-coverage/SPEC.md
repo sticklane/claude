@@ -37,16 +37,27 @@ skill tests as long as runs stay scoped to `agent-console/`):
    `POST /api/agent/resume` through the real handler with the process
    boundary (`subprocess`/spawn) mocked at the edge only — assert the
    response JSON and the observable dispatch effect (what command/cwd was
-   launched), success and failure (unknown sid, empty prompt) both.
+   launched). Cover both real failure branches of `resume_agent()`
+   (agent-console.py:3122): unknown sid → `(False, "not a known session")`,
+   and `_claude_run_bg` raising `OSError`/`RuntimeError` (e.g. `claude` not
+   on PATH) → `(False, str(e))`. An empty/whitespace prompt is NOT a
+   failure — `resume_agent` defaults it to `"continue"` and succeeds; do
+   not test it as one.
 2. set_priority: temp git repo fixture, real `git` (it is local and fast),
    assert the file's `Priority:` header changed and a commit exists —
    behavior, not call order.
-3. execute_push success path: temp git repo with a dirty file and a bare
-   "remote"; assert commit created and pushed (or, if the network boundary
-   must be mocked, assert the assembled git invocations against the dirty /
-   clean / ahead cases — one test per branch).
-4. render_markdown: parse its HTML output for a fixture doc (headers,
-   nested lists, code fences) and assert structure, not exact strings.
+3. execute_push: drive `execute_push(action)` directly (agent-console.py:2542)
+   with `action["argv"]` pointed at a real git push against a bare "remote" —
+   no dirty-check or ahead/behind logic exists, so cover exactly its three
+   branches: (a) rc 0 → response `ok:true`, `exit:0`, and the board cache
+   invalidated (`_invalidate_board`/`_board_cache["ts"]` reset, verified via
+   a stale-then-fresh `_board_cache["ts"]` read, not a mock-called-once
+   check); (b) rc non-zero (e.g. push to an unreachable/rejecting remote) →
+   `ok:false`, `exit:<code>`, message contains the exit code; (c)
+   `subprocess.TimeoutExpired` (mock `subprocess.run` to raise it) →
+   `exit:None`, message states the timeout.
+4. render_markdown: parse its HTML output for a fixture doc (headers, lists,
+   code fences) and assert structure, not exact strings.
 
 ## Out of scope
 
@@ -60,9 +71,21 @@ skill tests as long as runs stay scoped to `agent-console/`):
       is non-empty, and the new tests fail if `resume_agent`'s success
       branch is stubbed to return `(False, "x")` (red-first evidence in
       the task).
-- [ ] `grep -rln "set_priority\|execute_push" agent-console/tests/` shows
-      direct coverage of both wrappers (not just `apply_priority` /
+- [ ] `grep -rln "set_priority" agent-console/tests/` is non-empty and
+      shows direct coverage of the wrapper (not just `apply_priority` /
       registry rejection).
+- [ ] `grep -rln "execute_push" agent-console/tests/` is non-empty and
+      shows direct coverage of the wrapper's rc-0/rc-nonzero/timeout
+      branches (not just registry rejection with `subprocess.run` fully
+      mocked).
+- [ ] `grep -rln "render_markdown" agent-console/tests/` is non-empty, and
+      the new tests fail if heading-level parsing is stubbed to always
+      emit `<h1>` (e.g. `level = len(heading.group(1))` replaced with
+      `level = 1`) — a concrete mutation-kill bar for the parser, not a
+      reviewer judgment call.
+- [ ] All new tests are `unittest.TestCase` subclasses (`agent-console`'s
+      `scripts/check.sh` runs `python3 -m unittest discover`, which does
+      not collect bare pytest-style `def test_...` functions).
 - [ ] `bash agent-console/scripts/check.sh` exits 0.
 - [ ] New tests assert observable behavior (response payloads, file/git
       state) — no bare `assert_called_once()`-style assertions without an
