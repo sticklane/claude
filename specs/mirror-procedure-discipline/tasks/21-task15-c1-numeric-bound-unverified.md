@@ -1,4 +1,5 @@
 Status: draft
+Intake-refused: gate — assessor's OBSOLETE verdict is the wrong label: this stub's gap (task 15's C1 numeric target) is still genuinely OPEN, not closed, so it can't cite closing evidence; it duplicates task 15's own Unblock: ask: line with no independent action. Human should close this by hand (no `duplicate` status exists in drain's enum) once task 15's Unblock: ask: resolves, not promote it (2026-07-13)
 Discovered-from: specs/mirror-procedure-discipline/tasks/15-normalize-next-stage-lines.md
 Spec: ../SPEC.md
 Blocking: no
