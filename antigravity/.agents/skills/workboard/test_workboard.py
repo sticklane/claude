@@ -157,6 +157,22 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
 
             self.assertEqual(specs[0]["tasks_blocked"], [])
 
+    def test_needs_verification_is_open_not_blocked(self):
+        # Formal status for completed-but-unverified work: agent-bounded
+        # (the verifier proceeds), so it is open — never a blocked flag.
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = Path(tmp) / "specs" / "demo"
+            (spec / "tasks").mkdir(parents=True)
+            (spec / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+            (spec / "tasks" / "01-a.md").write_text(
+                "# A\nStatus: needs-verification\n", encoding="utf-8"
+            )
+
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+
+            self.assertEqual(specs[0]["tasks_blocked"], [])
+            self.assertEqual(specs[0]["tasks_done"], 0)
+
     def test_status_failed_still_flags_as_blocked(self):
         with tempfile.TemporaryDirectory() as tmp:
             spec = Path(tmp) / "specs" / "demo"

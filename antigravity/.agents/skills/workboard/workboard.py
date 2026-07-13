@@ -249,6 +249,10 @@ OPEN_TASK_STATUSES = {
     "in-progress",
     "in_progress",
     "claimed",
+    # completed-but-unverified: agent-bounded (the verifier proceeds), so it
+    # is open in-flight work — never a blocked flag, never done.
+    "needs-verification",
+    "needs_verification",
 }
 CLOSED_TASK_STATUSES = {"done", "deferred", "skipped"}
 

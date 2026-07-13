@@ -14,7 +14,7 @@ metadata) are never modified; undo = delete the marker. Tests:
 
 | Source | Path | What it yields |
 |---|---|---|
-| Toolkit specs | `<repo>/specs/<slug>/SPEC.md` + `tasks/*.md` | spec title; per-task `Status:` line (`pending`/`in-progress`/`claimed` open; `done`/`deferred`/`skipped` closed; anything else = blocked-ish and flagged) |
+| Toolkit specs | `<repo>/specs/<slug>/SPEC.md` + `tasks/*.md` | spec title; per-task `Status:` line (`pending`/`in-progress`/`claimed`/`needs-verification` open — the last is completed-but-unverified, the verifier flips it to `done`; `done`/`deferred`/`skipped` closed; anything else = blocked-ish, flagged only when no `Unblock:` step is recorded) |
 | Kiro specs | `<repo>/.kiro/specs/<name>/tasks.md` | checkbox states — `[ ]` todo, `[-]` doing, `[x]` done; phase = which of requirements/design/tasks files exist |
 | Handoffs | `HANDOFF.md` (repo root, `.claude/`, `specs/*/`, ≤2 dirs deep) | parked work waiting on a human — always an inbox item |
 | Batons | `DRAIN-BATON.md` (repo root, `specs/*/`) | a parked drain generation to relaunch — generation number, relaunch command, and any needs-attention/deferred section; a repo card, NOT the handoff's resume-then-delete prompt (drain self-manages the file) |
