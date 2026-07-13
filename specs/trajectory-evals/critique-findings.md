@@ -40,3 +40,12 @@ Spec does NOT touch any ultra-path skill → no lint-ultra-gate AC required (cor
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE. Edits before re-critique: (1) add codex/.agents/skills/evals/SKILL.md to R5/Touch with its own grep AC (its lines 19 and 41 carry exactly the text this spec would contradict); (2) split the R4 `||` AC into two `&&` greps; (3) fix the plugin.json path, pin the fresh next version (0.8.56+ — the critique's 0.8.49 suggestion is itself stale), and mark R3's "passes" manual-pending. Verified: EVAL_TRANSCRIPT absent from evals/run.sh — problem live.
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+`git log -- specs/trajectory-evals/SPEC.md` shows no commit since the triage
+above — SPEC.md is byte-identical to the state that produced this file's
+prior NOT READY verdict. Skipping a redundant full critic dispatch on
+unchanged content per token-discipline's "cheap before expensive" — the
+three approved triage edits above are the recovery path, unchanged. This
+spec's critique intake is spent for this run.
