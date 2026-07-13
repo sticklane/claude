@@ -37,3 +37,13 @@ anchors all present as claimed; plugin.json 0.8.48 makes R7's bump satisfiable.
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE (smallest of the batch). Edits before re-critique: (1) replace the recursive greps with `git grep` in R1 and the AC; (2) mark the `/fleet` e2e criterion manual-pending and swap `evals/run.sh` for a static `git grep` over eval fixtures; (3) add `bash evals/lint-ultra-gate.sh` as an AC. Verified: not superseded — fleet/reference.md still exists; workboard.py still carries render_html/--out/--actions-out (lines 2444, 2841, 2915).
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+`git log -- specs/retire-static-dashboards/SPEC.md` shows no commit since
+the triage above — SPEC.md is byte-identical to the state that produced
+this file's prior NOT READY verdict. Skipping a redundant full critic
+dispatch on unchanged content per token-discipline's "cheap before
+expensive" — the three approved triage edits above (smallest of the batch)
+are the recovery path, unchanged. This spec's critique intake is spent for
+this run.
