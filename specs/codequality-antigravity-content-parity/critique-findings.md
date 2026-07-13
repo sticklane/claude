@@ -68,3 +68,12 @@ re-runs /critique.
 ## Triage 2026-07-13 (attended; Steven approved REVISE)
 
 Verdict: REVISE. Edits before re-critique: (1) fix the premise text and scope the gate to an include-list of contractually-identical files (_shared/*.py etc.) — exactly 4 mirrored .py pairs differ and 3 are sanctioned port adaptations; (2) pin AC1 to a committed tests/fixtures/ divergent pair; (3) keep the trivial _shared/test_viz.py drift copy as step 1 (real drift: token_fallback test present in source, absent in mirror). Verified: no existing gate covers .py content.
+
+## Re-critique 2026-07-13 (drain critique intake, run b4adb88f) — still NOT READY, approved plan not yet applied
+
+`git log -- specs/codequality-antigravity-content-parity/SPEC.md` shows no
+commit since the triage above — SPEC.md is byte-identical to the state that
+produced this file's prior NOT READY verdict. Skipping a redundant full
+critic dispatch on unchanged content per token-discipline's "cheap before
+expensive" — the three approved triage edits above are the recovery path,
+unchanged. This spec's critique intake is spent for this run.
