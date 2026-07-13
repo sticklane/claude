@@ -48,3 +48,15 @@ it is breakdown-ready.
 
 Human revises SPEC.md per the fixes above (primarily #1-#3, which block a
 correct breakdown), then re-run /critique. Do not /breakdown until READY.
+
+## Re-critique 2026-07-13 (drain critique intake, run a219d53e) — still NOT READY
+
+Spec unchanged since the 2026-07-11 verdict; all findings re-verified against
+current agent-console.py. Drain-fatal: execute_push Approach/acceptance
+describe nonexistent branches (real surface is rc-0 / rc-nonzero / timeout,
+agent-console.py:2451-2488); resume_agent "empty prompt" is a success not a
+failure (:3040); check.sh runs unittest discover so bare pytest-style tests
+pass vacuously; OR-grep satisfied by one wrapper; render_markdown step has no
+criterion; line anchors ~90 lines stale. Gaps confirmed real (no tests name
+the four functions) — spec mis-specified, not moot. Recovery: human revises
+SPEC.md (findings 1-3 first), then re-run /critique.
