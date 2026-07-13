@@ -47,7 +47,9 @@ sequentially with the scout discipline. Per candidate report, capped at
 
 Where reading isn't enough, prototype: one git worktree or branch per
 candidate on the session model, timeboxed to the spec's riskiest
-requirement, throwaway — keep the winner's lessons, not its code.
+requirement, throwaway — keep the winner's lessons, not its code. Worth it
+only when the decision is expensive to reverse, since each candidate pays
+its own full context.
 
 ## 3. Decide and record
 
@@ -62,7 +64,8 @@ with the runner-up and the one scenario that would flip it. Then record:
 - SPEC.md appendix: rejected options and the reason, one line each — and,
   when the ladder applied, the chosen rung per component.
 - AGENTS.md: a single line constraining future agents ("Use X for Y; do
-  not introduce Z") — only if the decision is repo-wide.
+  not introduce Z") — only if the decision is repo-wide, and it passes the
+  "would removing this cause mistakes?" test.
 
 Next step: `/breakdown specs/<slug>/SPEC.md` (or `/build specs/<slug>/SPEC.md`
 for small specs).
