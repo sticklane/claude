@@ -44,3 +44,32 @@ unchanged content per token-discipline's "cheap before expensive" — the
 three approved triage edits above are the recovery path, unchanged (the
 triage's own P3-deferral-is-defensible note stands too). This spec's
 critique intake is spent for this run.
+
+## Re-critique 2026-07-13 (approved edits applied) — READY
+
+Applied the three approved triage edits above: delivery shape decided as
+a standalone skill at `.claude/skills/harness-audit/SKILL.md` (+
+antigravity mirror per R5, no plugin.json manifest edit needed); AC1/AC2
+rewritten as anchored greps against that path covering all five audit
+areas (confirmed absent-until-created, `grep -c` → 0 today); command
+currency scoped to read-only-and-allowlisted-executed vs.
+mutating-inspected-only.
+
+First critic pass: READY WITH NITS. One conf-70 finding: the
+command-currency wording's "read-only/allowlisted" phrasing conflated two
+non-equivalent categories (an allowlist can contain mutating commands),
+which could be read as "execute because allowlisted" and re-open the R1
+contradiction finding 4 was meant to close. Fixed by making the mutation
+class dominant: execution requires read-only AND allowlisted (allowlist
+membership alone insufficient); any mutating command is inspected-only
+regardless of allowlist membership. Re-verified on just that section:
+READY, no reading under which a mutating-but-allowlisted command executes.
+
+Second (non-blocking) note: AC3 (seeded-defect fresh-session behavioral
+check) stays manual — correctly so, per CLAUDE.md's skill-testing
+convention, and it's already labeled manual-pending. AC1/AC2/AC4 are
+machine-checkable, so the spec is no longer "almost entirely manual"
+(prior finding 5) even though the one true behavioral check remains
+attended.
+
+Verdict: READY. `Breakdown-ready: true` header added to SPEC.md.
