@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. ## Progress / ## Deferred questions are drain-written sections. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -73,11 +73,11 @@ every other task's scope.
 
 ## Acceptance
 
-- [ ] `test -f .claude/rules/mirror-procedure-discipline.md` → exists
-- [ ] `grep -c "load-bearing" .claude/rules/mirror-procedure-discipline.md` → ≥1; `grep -c "incidental" .claude/rules/mirror-procedure-discipline.md` → ≥1
-- [ ] `grep -c "mirror-verification" .claude/rules/mirror-procedure-discipline.md` → ≥1 (the scope-distinction line)
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` → exit 0
-- [ ] `wc -l < tests/mirror-procedure-manifest.txt` → ≥6 (non-comment lines)
-- [ ] `grep -c "Environment kill" tests/mirror-procedure-manifest.txt` → ≥1
-- [ ] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `test -f .claude/rules/mirror-procedure-discipline.md` → exists (file created)
+- [x] `grep -c "load-bearing" .claude/rules/mirror-procedure-discipline.md` → ≥1; `grep -c "incidental" .claude/rules/mirror-procedure-discipline.md` → ≥1 (both = 1)
+- [x] `grep -c "mirror-verification" .claude/rules/mirror-procedure-discipline.md` → ≥1 (the scope-distinction line) (= 2)
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (also verified red: injected source-has/mirror-lacks entry → exit 1 with clear message)
+- [x] `wc -l < tests/mirror-procedure-manifest.txt` → ≥6 (non-comment lines) (= 17 total, 6 entries)
+- [x] `grep -c "Environment kill" tests/mirror-procedure-manifest.txt` → ≥1 (= 1)
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines (full sweep, no FAIL)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (all ultra mentions gated in 4 files)
