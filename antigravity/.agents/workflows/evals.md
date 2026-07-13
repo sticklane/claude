@@ -1,5 +1,5 @@
 ---
-description: Scaffold and run stored artifact-assertion evals for the toolkit's skills - build a fixture, hand the user an Agent Manager launch per scenario, then grade what the run produced with the scenario's assert.sh.
+description: Scaffold and run stored artifact-assertion evals for the toolkit's skills - each scenario builds a fixture repo, runs the skill under test headlessly inside it via evals/run.sh, and grades what it produced. Human-only because every run spawns paid headless sessions.
 ---
 
 Run (or first scaffold) the stored evalset for the named skill. Same
@@ -10,15 +10,14 @@ fixture-relative paths, no `$EVAL_DIR` variables), `assert.sh` (runs
 with CWD the fixture; exit 0 = pass, non-zero with output explaining
 what failed). Both scripts run under bare `bash`, and macOS's system bash
 is 3.2 — write them to bash 3.2 (no `declare -A` or other bash-4+ syntax),
-or they misbehave silently rather than erroring. Antigravity DOES have a
-headless CLI (`agy -p`, the `antigravity-cli` package's binary) but it is
-NOT safe to drive here yet: live-tested 2026-07-12, it did not confine
-itself to the invoking directory and instead edited real tracked files
-elsewhere in the checkout (see `runtimes/antigravity.md`'s Headless
-section, "UNSAFE for isolated/unattended use" — the same finding
-`evals/run.sh` hard-blocks on). The run step below stays the manual
-Agent Manager launch until that's resolved; `allowed-tools.txt` still has
-no Antigravity equivalent and is ignored here.
+or they misbehave silently rather than erroring. Antigravity's headless
+CLI (`agy -p --new-project ...`, the `antigravity-cli` package's binary)
+is confirmed safe to drive this runner as of 2026-07-13 (see
+`runtimes/antigravity.md`'s Headless section — `--new-project` fixed a
+workspace-isolation defect that previously made this unsafe);
+`allowed-tools.txt` still has no Antigravity equivalent and is ignored
+here (no per-tool allowlist flag exists — see the Headless section's
+`<allowlist>` note).
 
 1. **Scaffold if no evalset exists.** Create `evals/<skill>/01-<name>/`
    with the three files: a minimal fixture the skill can act on, the
@@ -28,24 +27,14 @@ no Antigravity equivalent and is ignored here.
    the grader returns to the orchestrator, never a transcript. Model it on
    the existing `/breakdown` scenario under `evals/breakdown/`, copying its
    file shapes. `chmod +x` both scripts.
-2. **Provision the fixture.** Per scenario: create a fresh empty
-   directory, run `EVAL_DIR=<dir> bash setup.sh`, then copy
-   `.agents/skills/<skill>/` plus the helper skills that are agents in
-   the Claude Code port (`scout`, `critic`, `verifier`) into
-   `<dir>/.agents/skills/`, and `.agents/workflows/` into
-   `<dir>/.agents/workflows/` so slash commands resolve.
-3. **Hand the user the launch.** One Agent Manager launch per scenario:
-   a fresh conversation rooted at the fixture directory whose first
-   message is the contents of `prompt.txt`. Wait for the user to report
-   the session finished — do not grade a run that is still going. (Not
-   `agy -p` yet — see the workspace-scoping caveat above.)
-4. **Grade.** With CWD the fixture directory, invoke the scenario's
-   assert.sh by absolute path from the toolkit repo — the fixture does
-   not contain it — e.g.
-   `(cd <fixture> && bash <toolkit>/evals/<skill>/<NN-name>/assert.sh)`,
-   the same shape the Claude Code runner uses. Report one pass/fail
-   line per scenario and a summary.
-5. **Interpret failures.** Skill regression → fix the skill, scenario
+2. **Run.** `./evals/run.sh <skill>` with `.claude/runtime.md` pointed at
+   `antigravity` (no argument runs every evalset). Per scenario the runner
+   builds a fresh fixture, copies `.agents/skills/<skill>/` plus the
+   helper skills (`scout`, `critic`, `verifier`) and `.agents/workflows/`
+   into the fixture so slash commands resolve, then runs the prompt there
+   under a timeout via `agy -p --new-project ...` and grades with the
+   scenario's `assert.sh` — same shape the Claude Code runner uses.
+3. **Interpret failures.** Skill regression → fix the skill, scenario
    untouched. Intentional behavior change → update the scenario in the
    same commit as the skill change. Never loosen an assertion just to go
    green.

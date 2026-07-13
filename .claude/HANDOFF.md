@@ -132,24 +132,29 @@ a future session to investigate:
   this repo's own `/design` skill for exactly this kind of
   architecture-choice work.
 
-### Next step (if continuing this exact ask)
+### Next step (if continuing this exact ask) — RESOLVED 2026-07-13
 
-Untested candidate fix for antigravity's workspace-isolation bug:
-`agy`'s `--new-project` flag ("Create a new project for this session") —
-NOT tried yet, deliberately, to avoid a second uncontrolled file
-mutation while investigating. If picking this up:
+`--new-project` was tested per the plan below (isolated scratch dirs
+under the session's scratchpad, two back-to-back runs, no cross-
+contamination, no writes to the real checkout) and confirmed to fix the
+workspace-isolation bug. Shipped: `runtimes/antigravity.md`'s Headless
+template now includes `--new-project`; the hard-block in `evals/run.sh`
+is removed; `antigravity/.agents/workflows/evals.md` now runs
+`evals/run.sh` directly (matching the 3-step claude-code/codex shape)
+instead of the manual Agent Manager launch. Antigravity functional
+parity via evals is unblocked as a result — not yet exercised
+end-to-end with a real evalset run (that's still open, see Thread A's
+"Other legitimate next steps" below).
+
+Original plan, for reference (now executed):
 1. Test `--new-project` in an isolated scratch dir FAR from any real repo
-   first (e.g. `/tmp/agy-isolation-test`), never directly against
-   `$EVAL_DIR` inside `~/claude` again without that isolation proven.
+   first, never directly against `$EVAL_DIR` inside `~/claude` again
+   without that isolation proven.
 2. If it reliably confines `agy -p` to the invoking directory, update
    `runtimes/antigravity.md`'s Headless template to add `--new-project`,
    remove the hard-block in `evals/run.sh`, and restore the automated
-   run step in `antigravity/.agents/workflows/evals.md` (currently
-   reverted to manual Agent Manager launch).
-3. If `--new-project` doesn't fix it, that's a legitimate place to stop
-   — antigravity's functional parity remains manual-pending per this
-   repo's own `mirror-verification.md` doctrine (a documented, accepted
-   escape for runtimes without a safe scriptable relaunch).
+   run step in `antigravity/.agents/workflows/evals.md`.
+3. If `--new-project` doesn't fix it, that's a legitimate place to stop.
 
 Other legitimate next steps, not started: live-run the 4 new evalsets
 (real spend, user's call); author evalsets for more of the remaining

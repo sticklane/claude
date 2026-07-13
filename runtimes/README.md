@@ -108,10 +108,11 @@ two shapes:
    2026-07-12 — antigravity was believed to be until live-testing found
    `agy -p`, the antigravity-cli binary, actually works headlessly). A
    fenced block existing is necessary but not sufficient for a consumer
-   to treat a runtime as safe for isolated/unattended use — see
-   `runtimes/antigravity.md`'s Headless section for a case where it
-   isn't yet (live-tested: didn't confine itself to the invoking
-   directory).
+   to treat a runtime as safe for isolated/unattended use — `agy -p`
+   without `--new-project` was live-tested and found unsafe (didn't
+   confine itself to the invoking directory) before `--new-project` was
+   found to fix it; see `runtimes/antigravity.md`'s Headless section for
+   the full history and the confirming test.
 
 `runtimes/parse_headless.py` is the single tool that enforces and derives
 this mechanically: given a runtime name it returns the joined template
