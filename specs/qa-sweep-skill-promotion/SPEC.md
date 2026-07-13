@@ -178,6 +178,15 @@ changes") as part of adding the new `qa-sweep` skill; its `agents` array
 is left untouched, since qa-sweep is a skill, not an agent, and skills
 are manifest-free.
 
+R8. `codex/README.md`'s "What's not ported" table gains an anchored row
+for `qa-sweep` (second cell containing the literal substring "Not
+ported", matching the shape of the existing `fleet`/`workflow-author`/
+`critique` rows), since `tests/test_codex_parity.sh` requires every
+`.claude/skills/*` directory to be covered by either a resolving
+`codex/.agents/skills/<name>` entry or this exemption row, and this spec
+deliberately creates neither a codex mirror (R1, out of scope) — so the
+exemption row is the only way the gate stays green once `qa-sweep` lands.
+
 ## Out of scope
 
 - Editing `/Users/sjaconette/automation/skills/health-admin/SKILL.md` or any
@@ -235,6 +244,9 @@ are manifest-free.
 14. `grep -qi "Delegation defaults\|route each page-check\|return a path" .claude/skills/qa-sweep/SKILL.md`
     → match found — the skill's page-check/screenshot steps cite the
     token-discipline.md delegation guidance (R3) rather than omitting it.
+15. `bash tests/test_codex_parity.sh` → exit 0 — confirms `qa-sweep`'s
+    absence from `codex/.agents/skills/` is covered by an anchored
+    "Not ported" row in `codex/README.md` (R8), not a silent gate failure.
 
 ## Open questions
 
@@ -243,3 +255,20 @@ are manifest-free.
   cross-repo change this spec cannot make. Recommend filing a task in that
   repo's own tracking (or its `HUMAN.md` if it uses the same convention)
   once R4 lands here.
+
+## Parallelization
+
+Task 01 (the new `browser-automation-handoffs.md` rule) and Task 02 (the
+`qa-sweep` skill file) are disjoint in `Touch` and free of shared
+undecided design — R4's rule content and R1/R2/R3/R5's skill procedure
+are each fully specified in this spec, so neither task's author must
+invent anything the other depends on. Task 02's citation of the rule file
+is a literal path reference, so it does not need Task 01 to have landed
+first. Task 03 (antigravity mirror, codex exemption, plugin.json version
+bump) depends on Task 02 for its primary work (porting the finished skill
+content) and on Task 01 as a documentation-completeness dependency (the
+citation Task 03 ports from Task 02 should point at a rule file that
+actually exists by the time both land) — so it runs solo after the group
+below completes.
+
+- Group: 01, 02
