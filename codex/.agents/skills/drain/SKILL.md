@@ -307,7 +307,13 @@ At the exhaustion trigger — nothing dispatchable, in-progress, or parked,
 evaluated immediately before 3b — scan scope for a **draft spec**: a spec dir
 with a `SPEC.md`, no `tasks/`, and no `Breakdown-ready:` header. Order
 eligible specs by `Priority` then path; for the chosen spec claim its owner
-lease, invoke `$critique`, and route: **READY** → the critic writes
+lease. **Cheap-before-expensive short-circuit first:** if `git log` shows no
+commit to SPEC.md since the commit that produced its last recorded NOT READY
+verdict, skip the critic dispatch — append a dated re-critique note citing
+that git evidence and the prior findings already on file, release the lease,
+continue (a foregone critic dispatch on byte-identical content is the same
+"reprime for zero progress" waste intake-attempt bookkeeping exists to avoid).
+Otherwise invoke `$critique`, and route: **READY** → the critic writes
 `Breakdown-ready:` and 3b makes the spec dispatchable in the same session
 (release the lease, loop to step 1); **NOT READY** → findings recorded, spec
 to step 4's exit checklist, lease released. Lower priority than dispatch;

@@ -691,7 +691,14 @@ spec path — step 2's tie-break. For the chosen spec:
   compare-and-swap re-read to confirm your `Run-token:`, refuse and skip
   to the next eligible spec on a lost race). This is what stops two
   concurrent drains from racing to critique the same spec.
-- Apply the **critique workflow**'s procedure
+- **Cheap-before-expensive short-circuit first.** If `git log` shows no
+  commit to SPEC.md since the commit that produced its last recorded NOT
+  READY verdict, skip the critique dispatch — append a dated re-critique
+  note citing that git evidence and the prior findings already on file,
+  release the lease, continue. A dispatch on byte-identical content is a
+  foregone conclusion at full cost — the same "reprime for zero progress"
+  waste intake-attempt bookkeeping exists to avoid.
+- Otherwise apply the **critique workflow**'s procedure
   (`.agents/workflows/critique.md`) to the spec **in this same
   conversation** — no new Agent Manager launch, no worktree: critique only
   reads the spec and writes its verdict marker, so there is nothing to
