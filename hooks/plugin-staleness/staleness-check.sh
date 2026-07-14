@@ -25,11 +25,9 @@ root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 manifest="$root/.claude-plugin/plugin.json"
 [ -f "$manifest" ] || exit 0
 
-extract_semver() { grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1; }
-
 # --- source version: the manifest at the repo root ------------------------
 source_version="$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$manifest" \
-  | head -1 | extract_semver)"
+  | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
 [ -n "$source_version" ] || exit 0
 
 # --- installed version: env stub wins (tests + explicit overrides), else the
