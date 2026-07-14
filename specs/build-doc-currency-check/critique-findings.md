@@ -161,3 +161,22 @@ only; give the codex R5 AC a distinct anchor matching R6's actual codex
 wording), then re-run /critique. This spec's critique intake is spent for
 this run (Run-token c92aedb1ae49f8d3) — recorded in
 `DRAIN-BATON.md`'s `Intake-failed:` line.
+
+## Fix applied 2026-07-14 (attended, human-authorized HUMAN.md cleanup pass)
+
+Both findings from the prior round fixed directly in SPEC.md:
+
+1. The antigravity "Documentation currency" AC now checks only
+   `antigravity/AGENTS.md` — dropped `antigravity/.agents/workflows/build.md`
+   from that AC entirely (R6 never puts that literal phrase there; its
+   citation reads "see AGENTS.md's Quality discipline section" instead).
+2. R6's codex paragraph now explicitly mandates the literal phrase "not by
+   $code-review itself" for the R5-equivalent note. The codex R5 AC's
+   anchor changed to that same phrase, independently verifiable from the
+   inlined-reminder AC and distinct from the old shared anchor
+   (previously "quality-discipline" or "Documentation currency").
+
+Verified both new anchor phrases confirmed absent today (2026-07-14):
+`grep -c "Documentation currency" antigravity/AGENTS.md` → 0;
+`grep -c "not by \$code-review itself" codex/.agents/skills/build/SKILL.md`
+→ 0. Ready for re-critique.
