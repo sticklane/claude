@@ -168,3 +168,45 @@ fixed a formatter-introduced markdown nesting regression in the existing
 passing).
 
 Ready for re-critique.
+
+## Re-critique 2026-07-14 (drain critique intake, gen 3, run c92aedb1ae49f8d3) — still NOT READY
+
+All prior-round fixes verified still landed and accurate (human-gates.md
+anchors, onboard/gate/breakdown mentions, CLAUDE.md's 3 hits, the
+antigravity workflow + codex skill fold-in targets, both exempt files
+present). Three new gaps, all caused by the live tree moving since last
+verification (qa-sweep-skill-promotion's task 03 merged an antigravity
+mirror after this spec's last check):
+
+1. **AC7 is unsatisfiable as written — an uncovered `/autopilot` hit now
+   exists in `antigravity/.agents/skills/qa-sweep/SKILL.md:82`
+   (confidence 88).** The verifying grep now returns 32 tracked files, not
+   the 31 the spec pins. The new hit — `"(build/autopilot/drain/prioritize),
+so no live-request naming it is required"` — landed via the qa-sweep
+   antigravity mirror (commit `225ff0f`) after this spec's last
+   verification. It's covered by zero requirements/Touch scopes (the spec
+   never mentions "qa-sweep"), and it exists only in the antigravity leg —
+   the `.claude` source has zero autopilot mentions. Fix: add
+   `antigravity/.agents/skills/qa-sweep/SKILL.md` to R6's antigravity
+   enumeration (three-skill-set treatment) and update AC7's count to 32.
+2. **`drain/reference.md` has a second `/autopilot` mention (line 158,
+   the "Orchestrator isolation" paragraph) that R3 doesn't address, plus a
+   stale anchor (confidence 78).** R3/Problem cite `:884` for the headless
+   citation; it's now `:1007`. R6 excludes reference.md as "handled by
+   R1-R5," but R1-R5 only cover the headless citation, not line 158's
+   isolation-scope mention. AC7 would catch this as a backstop (not a
+   silent miss like finding 1), but the Touch scope and edit instructions
+   should name both mentions explicitly. Fix: R3 notes both mentions
+   (headless ~:1007, isolation-scope ~:158), both updated; refresh anchor.
+3. **AC7's pinned count (31) is already stale one day after authoring
+   (confidence 75, spec-tier).** The mirror set churns day-to-day (qa-sweep
+   landed between authoring and now); a count-based AC on a moving target
+   will keep breaking. The content-based per-file checks are robust; the
+   raw count is the fragile part. Fix: state AC7 as "returns exactly the 2
+   exempt files (docs/orchestration-research-2026-07.md,
+   .claude/rules/mirror-procedure-discipline.md)" and drop the absolute
+   count, or re-derive it at breakdown time.
+
+Recovery: fix findings 1-3, then re-run /critique. This spec's critique
+intake is spent for this run (Run-token c92aedb1ae49f8d3) — recorded in
+`DRAIN-BATON.md`'s `Intake-failed:` line.
