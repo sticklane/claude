@@ -199,18 +199,31 @@ TEMPLATE.format(...)` — so it is covered by the module-level-constant
     buttons, filter tiles, inbox grouping, the actions-script content),
     and R4 removes that whole output surface; nothing of either file's
     assertions has anything left to assert against once `render_html`/
-    `build_actions_script` are gone.
+    `build_actions_script` are gone. Their fixture trees,
+    `tests/fixtures/workboard/` and `tests/fixtures/workboard-actionability/`,
+    are deleted too — confirmed today each is consumed exclusively by the
+    one test file it's named for, nothing else references either path.
   - `tests/test_fleet_css_drift.sh` is **deleted outright**: both sides
     of the diff it runs (`viz.py --emit-fleet-css`, removed by R3;
     `fleet/reference.md`, removed by R2) are gone.
   - `.claude/skills/workboard/test_workboard.py`'s test methods that call
-    `render_html(...)` directly (not via `--out` — these are unittest
-    calls into the function itself, so R4's `--out`-focused language
-    doesn't reach them on its own) are deleted along with `render_html`;
-    the surviving tests (covering `assemble`/`attention_items`/
-    `ready_items`/`default_roots`/`--json`) are unaffected.
+    `render_html(...)` **or any other function or constant in R4's
+    orphaned-deletion set** directly (not via `--out` — these are unittest
+    calls into the functions themselves, so R4's `--out`-focused language
+    doesn't reach them on its own) are deleted along with those functions
+    — not `render_html` alone: confirmed today, this file also directly
+    calls `render_batons`, `render_inbox`, `render_filter_tiles`,
+    `render_spend_section`, `_spec_dag_html`, and `_short_model_name`, all
+    six in R4's orphaned set. Illustrative-not-exhaustive, same caveat as
+    R4's own function list — verify against whatever the file's calls
+    look like at implementation time, don't trust this name list blindly.
+    The tests that genuinely survive (covering `assemble`/
+    `attention_items`/`ready_items`/`default_roots`/`--json`) are the ones
+    that call none of R4's orphaned names, not a fixed list assumed safe
+    in advance.
   - The antigravity mirror's `test_workboard.py` gets the identical
-    render_html-test deletion (R6).
+    treatment — confirmed today to have the same orphaned-function calls
+    at the same line numbers (R6).
 
 ## Out of scope
 
@@ -296,9 +309,10 @@ CLAUDE.md .claude-plugin/` shows only: (a) the new inline-table
       `drain/SKILL.md`, an ultra-path skill, must not disturb the
       ultra-gate marker).
 - [ ] R8 test deletions, deterministic: `[ ! -f tests/test_workboard_render.sh
-    ] && [ ! -f tests/test_workboard_actionability.sh ] && [ ! -f
-    tests/test_fleet_css_drift.sh ]` (all three deleted outright, not
-      rewritten — R8).
+] && [ ! -f tests/test_workboard_actionability.sh ] && [ ! -f
+tests/test_fleet_css_drift.sh ] && [ ! -d tests/fixtures/workboard ] && [
+! -d tests/fixtures/workboard-actionability ]` (all three test files and
+      both fixture trees deleted outright, not rewritten — R8).
 - [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` exits 0 —
       the full gated shell-test suite (AGENTS.md's canonical command) is
       green after R8's deletions, catching any other test this spec's
