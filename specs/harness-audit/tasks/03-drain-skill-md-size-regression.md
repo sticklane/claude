@@ -1,6 +1,6 @@
 # Task 03: Trim drain/SKILL.md back under the 500-line budget
 
-Status: in-progress
+Status: done
 Promotion-ready: true
 Promoted-by-run: c92aedb1ae49f8d3
 Depends on: none
@@ -61,14 +61,15 @@ own bump).
 
 ## Acceptance
 
-- [ ] `wc -l < .claude/skills/drain/SKILL.md` → <=500
-- [ ] `grep -c "agentprof:stage=" .claude/skills/drain/SKILL.md` → 9
-- [ ] `grep -c "agentprof:role=" .claude/skills/drain/SKILL.md` → 3
-- [ ] `bash evals/lint-skill-size-gate.sh; echo "exit:$?"` → exit:0
-- [ ] `F=.claude/skills/drain/SKILL.md; grep -qi "dispatchable work remains" $F && grep -qi "critique intake" $F && grep -q "## Decisions" $F && grep -qi "/handoff" $F && grep -qi "checklist" $F`
-- [ ] Final verdict's `Decisions:` section states, for both
+- [x] `wc -l < .claude/skills/drain/SKILL.md` → <=500. Evidence: `495`.
+- [x] `grep -c "agentprof:stage=" .claude/skills/drain/SKILL.md` → 9. Evidence: `9`.
+- [x] `grep -c "agentprof:role=" .claude/skills/drain/SKILL.md` → 3. Evidence: `3`.
+- [x] `bash evals/lint-skill-size-gate.sh; echo "exit:$?"` → exit:0. Evidence: `lint-skill-size-gate: OK` / `exit:0`.
+- [x] `F=.claude/skills/drain/SKILL.md; grep -qi "dispatchable work remains" $F && grep -qi "critique intake" $F && grep -q "## Decisions" $F && grep -qi "/handoff" $F && grep -qi "checklist" $F`. Evidence: `exit:0`.
+- [x] Final verdict's `Decisions:` section states, for both
       `codex/.agents/skills/drain/SKILL.md` and
       `antigravity/.agents/workflows/drain.md`, whether it was edited or
-      confirmed no-edit-needed, with one-line reasoning for each.
-- [ ] Version bumped from this task's own base commit:
-      `BASE=$(git merge-base main HEAD); OLD=$(git show $BASE:.claude-plugin/plugin.json | grep '"version"'); NEW=$(grep '"version"' .claude-plugin/plugin.json); [ "$OLD" != "$NEW" ]`
+      confirmed no-edit-needed, with one-line reasoning for each. Evidence:
+      both classified no-edit-needed (INCIDENTAL) in the run verdict's Decisions.
+- [x] Version bumped from this task's own base commit:
+      `BASE=$(git merge-base main HEAD); OLD=$(git show $BASE:.claude-plugin/plugin.json | grep '"version"'); NEW=$(grep '"version"' .claude-plugin/plugin.json); [ "$OLD" != "$NEW" ]`. Evidence: `0.9.7 -> 0.9.8`.
