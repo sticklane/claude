@@ -227,7 +227,10 @@ so a per-session emission would misattribute later iterations.
 - **DEFERRED** — the verdict carries the question. Drain writes it into the task
   file under `## Deferred questions`, sets `Status: deferred`, commits and
   pushes (path-scoped; guard above), and discards the worker's branch/worktree.
-  Dependents simply never become dispatchable.
+  Dependents simply never become dispatchable. When the verdict carries
+  `Contradicts-premise: true`, drain also records the named artifact and the
+  quoted excerpt on that entry (reference.md "Deferred question format"); step
+  4's flip is then gated on that excerpt.
 - **BLOCKED** (technical blocker, no human question) — write `Status: blocked`
   with the reason and, on the line immediately after, the `Unblock:` line, then
   commit and push (path-scoped; guard above) — except BLOCKED over budget after a
@@ -430,7 +433,18 @@ no parked tasks remain:
   blocks, ask them all in one round (AskUserQuestion where available, else a
   numbered list), write each answer under `## Answers`, flip to `pending`,
   commit, return to step 1 (gating on the status, not the questions block,
-  stops answered questions being re-asked).
+  stops answered questions being re-asked). **`Contradicts-premise: true`
+  gate:** for a deferred task whose block carries `Contradicts-premise: true`,
+  a plain human answer alone does NOT flip it to `pending`. Additionally
+  require the named artifact (`SPEC.md` or the task file) to no longer contain
+  the recorded excerpt — a whitespace-normalized substring match (collapse
+  runs of whitespace/newlines in both the recorded excerpt and the artifact's
+  current full text before comparing, so an untouched reflow does not register
+  as a change and an edited excerpt cannot hide behind line wrapping). Until
+  the excerpt is observed absent post-normalization, the task (and any
+  dependent) stays non-dispatchable, and its HUMAN.md entry types as `decide`
+  ("spec amendment needed" or "task amendment needed", matching the named
+  artifact) rather than `ask` (reference.md "HUMAN.md filing (R2)").
 - **Queue empty**: report the run (per-task verdict + acceptance evidence +
   merged branches). The terminal distill below then fires.
 - **Only blocked/failed remain**: report each blocker with its evidence and
