@@ -73,3 +73,25 @@ remediation. Do not edit `evals/run.sh`.
       correct, the expected-8 count is outdated.
 - [x] `grep -c "evals/run.sh" evals/lint-skill-size-gate.sh` → 0 (the script
       must NOT reference or wire itself into `evals/run.sh`). Evidence: `0`.
+
+## Decisions
+
+- [2026-07-14 /drain] Acceptance criteria 3 and 4 anchored on a stale
+  codebase snapshot (drain/SKILL.md at 517 lines, 8 reference.md TOC
+  gaps) that this same drain run's task 03 already resolved (commits
+  2f19e4d, 982b278) before this task dispatched. Reversible default
+  taken by the worker: built the script to reflect current reality
+  (correctly NOT flagging drain/SKILL.md; reporting 7 remaining TOC
+  gaps) rather than forcing a false match against outdated numbers. An
+  independent verifier confirmed the script is a correct, non-overfit
+  implementation of the Goal. Reverse by editing the two criteria's
+  expected values (517→489/non-match, 8→7) to match current reality, or
+  by re-deriving them fresh if the spec is revisited.
+
+## Discovered
+
+- [2026-07-14 /drain] The spec's remaining tasks (02, 04, 05) may
+  reference stale counts/expectations tied to the same pre-task-03
+  snapshot this task hit — worth a pass confirming their acceptance
+  criteria still match current reality before treating their gates as
+  final. See `specs/skill-doc-size-guards/tasks/06-recheck-stale-counts.md`.
