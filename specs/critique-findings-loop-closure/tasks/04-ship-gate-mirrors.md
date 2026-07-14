@@ -1,6 +1,6 @@
 # Task 04: Ship gate — mirrors and plugin version bump (R8)
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03
 Priority: P1
 Budget: 14 turns
