@@ -173,9 +173,11 @@ passes when the count is 1 or more after the edit.
       → 1 or more (confirmed absent today; R6's antigravity mirror of
       R5's note, attached to the sub-reviewer fallback bullet — anchored
       distinctly from the R4-equivalent citation above).
-- [ ] `grep -c "Documentation currency\|AGENTS.md's Map" codex/.agents/skills/build/SKILL.md`
+- [ ] `grep -cE "Documentation currency|AGENTS.md's Map" codex/.agents/skills/build/SKILL.md`
       → 1 or more (R6's codex leg: the inlined reminder, since codex has
-      no `quality-discipline.md` to cite).
+      no `quality-discipline.md` to cite; `-E` rather than a `\|`
+      BRE-alternation escape — `\|` is a GNU/ugrep extension, not POSIX,
+      so it's not portable to a plain BSD `grep`).
 - [ ] `grep -cF 'not by $code-review itself' codex/.agents/skills/build/SKILL.md`
       → 1 or more (confirmed absent today; R6's codex leg equivalent of
       R5's note, attached to the `$code-review` invocation — anchored on
