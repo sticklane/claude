@@ -1,6 +1,6 @@
 # Task 01: build/dist prerequisite stage in install-gates + check.sh.tmpl
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -67,14 +67,19 @@ also edits `bin/install-gates`.
 
 ## Acceptance
 
-- [ ] `grep -c "build/dist prerequisite" bin/install-gates` → greater than 0
-- [ ] `bash tests/test_install_gates.sh` exits 0, including the three new
+- [x] `grep -c "build/dist prerequisite" bin/install-gates` → greater than 0
+      (verifier: returns 2; evidence/01-build-prereq-stage.md)
+- [x] `bash tests/test_install_gates.sh` exits 0, including the three new
       cases (Node `.scripts.build`, `.claude/build-prereq` marker, neither
-      signal present)
-- [ ] MANUAL: run `bin/install-gates --dry-run <scratch-repo>` (or install
+      signal present) (verifier: `pass: 168 fail: 0`, exit 0)
+- [x] MANUAL: run `bin/install-gates --dry-run <scratch-repo>` (or install
       for real into a scratch git repo) with a Node `.scripts.build` entry
       and confirm the rendered `scripts/check.sh` runs the build stage
-      before lint/typecheck/test
-- [ ] MANUAL: repeat with a `.claude/build-prereq` marker file and confirm
-      its literal command runs as the build stage
-- [ ] MANUAL: repeat with neither signal and confirm no build stage is added
+      before lint/typecheck/test (verifier scratch repo: `run_stage "build"
+    npm run build` first, before lint/tests)
+- [x] MANUAL: repeat with a `.claude/build-prereq` marker file and confirm
+      its literal command runs as the build stage (verifier scratch repo,
+      python stack, marker `make compile-protos`: `run_stage "build" make
+    compile-protos` before lint)
+- [x] MANUAL: repeat with neither signal and confirm no build stage is added
+      (verifier scratch repo: no `run_stage "build"` line present)
