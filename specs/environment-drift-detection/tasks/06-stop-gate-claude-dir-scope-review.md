@@ -1,4 +1,5 @@
 Status: draft
+Intake-refused: assess — decision-shaped: whether `.claude/**` should stay in the local Stop-gate's docs-only skip set for this toolkit repo (where `.claude/` is the actual product) or be carved out as product-like; assessor named a lean (carve it out) but declined to commit it as an autonomous reversible default, since it is a repo-policy trade-off (product safety vs. convention consistency) rather than a mechanical choice (2026-07-14)
 Discovered-from: specs/environment-drift-detection/tasks/04-docs-only-diff-scoping.md
 Spec: ../SPEC.md
 Blocking: no

@@ -1,4 +1,5 @@
 Status: draft
+Intake-refused: gate — assessor-authored ACs are unsatisfiable/backwards (criterion 1 can never reach 0 since the fix keeps "worktree remove" in the file; criterion 2 passes today unfixed and breaks after the correct fix) and miss a second genuinely-wrapped span (`git branch -D <branch>`, lines 251-252) the Goal/Touch don't cover (2026-07-14)
 Discovered-from: 05-mirrors-plugin-bump-trim.md
 Spec: ../SPEC.md
 Blocking: no
