@@ -1,6 +1,6 @@
 # Task 05: surface failing-stage output first in check reporting
 
-Status: in-progress
+Status: deferred
 Depends on: 01, 04
 Priority: P3
 Budget: 12 turns
@@ -68,6 +68,44 @@ those).
 - [ ] EITHER: a located wrapper's failure-reporting is fixed, with a new
       regression test in `tests/test_install_gates.sh` that exits 0 and
       exercises the "failing sub-check surfaces first" behavior
-- [ ] OR: verdict DEFERRED is recorded with the specific locations checked
+- [x] OR: verdict DEFERRED is recorded with the specific locations checked
       (per SPEC.md's Open Questions self-scoping instruction for R5)
-- [ ] `bash tests/test_install_gates.sh` exits 0 either way (no regression)
+- [x] `bash tests/test_install_gates.sh` exits 0 either way (no regression) —
+      168 pass, 0 fail, confirmed by the worker before any edit was made
+      (no code change occurred, so no regression risk)
+
+## Deferred questions
+
+R5 targets a _multi-sub-check wrapper stage_ — one stage whose command runs
+several sub-checks and prints all their passing output before the failing
+one surfaces. After searching every location in scope, **no such wrapper
+exists anywhere in this toolkit.** This is the spec-anticipated DEFERRED
+outcome (SPEC.md's Open Question 2), informational rather than a decision
+needing a human's judgment call — surfaced at the batch interview per
+drain's DEFERRED protocol, no action expected beyond acknowledgment.
+
+Locations searched and confirmed clear:
+
+- `templates/check.sh.tmpl` — `run_stage` (lines 9-18) exits on first
+  failure and prints only that stage's output; documented baseline, not a
+  bug.
+- `bin/install-gates` — read in full. Every generated `run_stage` line is a
+  single atomic command (python: format-check/lint/typecheck/tests;
+  node: check/format-check/lint/typecheck/tests; go:
+  format-check/lint/tests; build). No stack-detection branch emits a loop,
+  `pnpm -r`/`npm -ws` fan-out, or `for pkg in packages/*` aggregate stage.
+- `tests/test_install_gates.sh` — its fixtures assert a single atomic
+  `run_stage "build" pnpm -r build` line; `pnpm -r` is delegated to the
+  workspace runner as one atomic stage, not an in-`check.sh` loop that
+  prints per-package output before a failure. No fixture builds a
+  multi-sub-check wrapper.
+- Every checked-in `check.sh` in the repo: `agentprof/scripts/check.sh`
+  (atomic `run_stage` stages) and `agent-console/scripts/check.sh`
+  (hand-written sequential py_compile -> render smoke -> `unittest
+discover`, emitting only terse one-line `ok` confirmations between
+  steps — not multi-page passing output burying a failure). Neither
+  matches the wrapper shape.
+
+No code change was made; the working tree was left clean, matching Step 5's
+"a DEFERRED verdict with no code change still needs the repo left green"
+requirement.
