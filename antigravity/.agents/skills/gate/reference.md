@@ -1,5 +1,10 @@
 # Antigravity hook templates
 
+## Table of contents
+
+Post-edit format + lint · Protected files · Command blocking · What
+replaces the Stop gate
+
 Format notes (verified against antigravity.google/docs/hooks and community
 guides, July 2026): project hooks live in `<root>/.agents/hooks.json`;
 global hooks in `~/.gemini/config/hooks.json` (IDE). Both scopes run and

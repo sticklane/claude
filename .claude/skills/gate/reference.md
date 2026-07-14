@@ -1,6 +1,8 @@
 # Quality-gate hook templates
 
-Contents: Stop gate · Auto-format on edit · Protected files ·
+## Table of contents
+
+Stop gate · Auto-format on edit · Protected files ·
 Session-scoped alternatives · Sanity rules
 
 Verified against code.claude.com/docs/en/hooks and hooks-guide (July 2026).

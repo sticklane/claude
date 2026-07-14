@@ -1,6 +1,8 @@
 # /prose-review reference
 
-Contents: The nine-item rubric (with vendor quotes · item-1 carve-out ·
+## Table of contents
+
+The nine-item rubric (with vendor quotes · item-1 carve-out ·
 DeepMind note) · Diátaxis — structure by what the reader needs RIGHT NOW
 (quadrant table bound to house doc locations) · Google-style essentials Vale
 can't check · The reader test (distilled).
