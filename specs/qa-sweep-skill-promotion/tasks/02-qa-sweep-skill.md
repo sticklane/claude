@@ -1,6 +1,6 @@
 # Task 02: Create the qa-sweep skill
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -65,7 +65,7 @@ read of the sibling file's content).
      literal phrase "Delegation defaults" must appear, or the phrase
      "route each page-check through a subagent" if that bullet has
      already landed there via the sibling `context-blowout-subagent-
-   guards` spec — check the file's current content and cite
+guards` spec — check the file's current content and cite
      whichever form is actually present) — do not reimplement the cap/
      externalize-to-disk guidance inline.
      d. File a spec under `specs/<slug>/SPEC.md` for each confirmed piece
