@@ -88,6 +88,19 @@ applied to every emitted frame at sample-emit time (see R6).
   result-matching regressions stay visible. Investigate and fix the two
   known unmatched shapes (Agent-tool/TaskOutput results) if they account
   for the volume.
+  - **Maintainer decision 2026-07-13 (task 09) — the ≥8% total-sample
+    drop is struck; empty-values=0 stands.** Re-measured against real
+    `~/.claude` on the 14-day window (evidence/09-r3-remeasure.md): current
+    parser 131,519 samples vs b4971fe 131,521 — a **0.0015%** drop, not
+    ≥8%. Empty-valued `tool:(pending)` samples = **0** (all 4 residual
+    pending samples carry `pending_calls`). The ≥8% projection assumed the
+    8.87%-of-total pending samples would be eliminated; instead the tasks
+    03/08 Agent-tool/TaskOutput match fixes re-attribute them to their real
+    tool frames sample-count-neutrally (one sample either way), and
+    consolidation only collapses same-turn multiples (4 residual unmatched
+    calls, each in its own turn → 4→4, zero net removal). The parser is
+    correct as-is — eliminating those samples would lose the attribution
+    tasks 03/08 recover — so no parser change is made.
 - R4 **`(tools)` and `(synthetic)` buckets in by_model.** `modelLeaf()`
   returns a sentinel for samples with no model frame; the summary shows
   them as `(tools)` (duration-only) — `main` never appears as a model
@@ -121,25 +134,30 @@ applied to every emitted frame at sample-emit time (see R6).
 ## Acceptance criteria
 
 - [ ] Testdata fixture: a turn whose first user message is a
-  `<command-name>/parallel</command-name>` tag and no attributionSkill
-  yields `skill:parallel` frames; a `/clear` turn yields `(no skill)`;
-  an attributionSkill-carrying line still wins over the tag (R1)
+      `<command-name>/parallel</command-name>` tag and no attributionSkill
+      yields `skill:parallel` frames; a `/clear` turn yields `(no skill)`;
+      an attributionSkill-carrying line still wins over the tag (R1)
 - [ ] Testdata fixtures: home-dir project maps to `(home)`, `tmp.*` to
-  `(tmp)`, and an `agent-*` sidecar dir emits no project of its own (R2)
+      `(tmp)`, and an `agent-*` sidecar dir emits no project of its own (R2)
 - [ ] On the full local 14-day window, `tool:(pending)`-frame samples
-  with empty values number 0, and total sample count drops ≥8% vs the
-  pre-change parser (spot-check figure recorded in evidence/) (R3)
+      with empty values number 0 vs the pre-change parser (spot-check
+      figure recorded in evidence/09-r3-remeasure.md) (R3). The original
+      "total sample count drops ≥8%" clause is STRUCK by maintainer
+      decision 2026-07-13 (task 09) — re-measurement showed a 0.0015% drop,
+      not ≥8%, because the tasks 03/08 match fixes re-attribute pending
+      calls sample-count-neutrally rather than eliminating them; see the R3
+      requirement note and evidence/09-r3-remeasure.md.
 - [ ] `--summary` by_model contains no `main` key on a fixture containing
-  main-loop tool-duration samples; `(tools)` holds their duration; AND
-  the agent-console workboard cost panel is checked for special-casing of
-  the literal `main` key (expected: it iterates by_model keys generically
-  — record the check in evidence/, fix the panel if not) (R4)
+      main-loop tool-duration samples; `(tools)` holds their duration; AND
+      the agent-console workboard cost panel is checked for special-casing of
+      the literal `main` key (expected: it iterates by_model keys generically
+      — record the check in evidence/, fix the panel if not) (R4)
 - [ ] Samples from an agent sidecar fixture carry `agent_id`, and
-  `grep -qi 'agent_id' agentprof/SCHEMA.md` (R5)
+      `grep -qi 'agent_id' agentprof/SCHEMA.md` (R5)
 - [ ] With a denylist file listing a substring of a fixture SKILL name,
-  emitted JSONL contains `(redacted)` where the `skill:` frame was and
-  the substring appears nowhere in the output (also exercise a project
-  frame match); `grep -qi 'denylist' agentprof/README.md` (R6)
+      emitted JSONL contains `(redacted)` where the `skill:` frame was and
+      the substring appears nowhere in the output (also exercise a project
+      frame match); `grep -qi 'denylist' agentprof/README.md` (R6)
 - [ ] `bash agentprof/scripts/check.sh` green (all)
 
 ## Open questions
