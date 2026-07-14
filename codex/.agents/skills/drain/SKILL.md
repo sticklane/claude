@@ -207,7 +207,11 @@ and any `## Answers`. Launch ONE worker agent — an awaited child, never
 detached — with worktree isolation, running the /build procedure plus the
 defer contract: **the worker never asks the human and never edits queue state;
 on ambiguity it stops with verdict DEFERRED and puts the exact question in its
-final message.** Await it and collect its verdict — never fire-and-forget.
+final message.** The worker sets `Contradicts-premise: true` alongside that
+question only when its finding empirically refutes the SPEC's or task's stated
+root cause (naming the artifact and quoting the exact contradicted clause
+verbatim), not for an ordinary open gap. Await it and collect its verdict —
+never fire-and-forget.
 
 The dispatch carries three Codex-adapted worktree guards, addressed to the
 worker: every path you Read/Edit/Write must be under your worktree root (your
@@ -287,6 +291,12 @@ worktree remove <path>` then `git branch -D <branch>`). No survivor and at least
   into the main-checkout task file under `## Deferred questions`, sets
   `Status: deferred`, commits and pushes (path-scoped, guarded), and discards
   the worker's branch/worktree. Dependents simply never become dispatchable.
+  When the verdict carries `Contradicts-premise: true` — a finding that
+  empirically refuted the SPEC's or task's stated root cause, not just an open
+  question — drain also records on that entry the artifact it names (`SPEC.md`
+  or the task file) and the exact excerpt it quoted verbatim, so the batch
+  interview can substring-match that excerpt against the artifact's current
+  text.
 - **BLOCKED** (technical blocker, no human question) — write `Status: blocked`
   with the reason, and on the line immediately after it an `Unblock:` line
   (typed `run:`/`agent:`/`ask:`, narrowest that fits — taken from the worker's
@@ -364,13 +374,7 @@ At the exhaustion trigger — nothing dispatchable, in-progress, or parked,
 evaluated immediately before 3b — scan scope for a **draft spec**: a spec dir
 with a `SPEC.md`, no `tasks/`, and no `Breakdown-ready:` header. Order
 eligible specs by `Priority` then path; for the chosen spec claim its owner
-lease. **Cheap-before-expensive short-circuit first:** if `git log` shows no
-commit to SPEC.md since the commit that produced its last recorded NOT READY
-verdict, skip the critic dispatch — append a dated re-critique note citing
-that git evidence and the prior findings already on file, release the lease,
-continue (a foregone critic dispatch on byte-identical content is the same
-"reprime for zero progress" waste intake-attempt bookkeeping exists to avoid).
-Otherwise invoke `$critique`, and route: **READY** → the critic writes
+lease, then invoke `$critique`, and route: **READY** → the critic writes
 `Breakdown-ready:` and 3b makes the spec dispatchable in the same session
 (release the lease, loop to step 1); **NOT READY** → findings recorded, spec
 to step 4's exit checklist, lease released. Lower priority than dispatch;
@@ -486,7 +490,13 @@ returns to step 1. Once no parked tasks remain:
 questions` blocks, ask them all in one round, write each answer under
   `## Answers`, flip to `pending`, commit, and return to step 1 (gating on the
   status, not the presence of a questions block, is what stops answered
-  questions from being re-asked).
+  questions from being re-asked). A deferred entry carrying
+  `Contradicts-premise: true` is NOT flipped to `pending` on the human answer
+  alone — it additionally requires the named artifact (`SPEC.md` or the task
+  file) to no longer contain the recorded excerpt (whitespace-normalized
+  substring match). Until the excerpt is observed absent, that task and any
+  dependent stay non-dispatchable, and its checklist entry types as `decide`,
+  not `ask`.
 - **Queue empty**: report the run (per-task verdict with acceptance evidence
   and merged branches); the terminal distill below then fires.
 - **Only blocked/failed remain**: report each blocker with its evidence and
