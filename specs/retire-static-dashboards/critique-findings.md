@@ -190,3 +190,24 @@ every round. Same check applies to the antigravity mirror since
 workboard.py is confirmed byte-identical across both trees
 (docs/memory/workboard-mirror-verbatim.md). Re-run `/critique` to
 confirm READY.
+
+## Re-critique 2026-07-14 (attended, /critique) — the reachability script itself was broken
+
+The 27-name list and the reachability logic were confirmed exactly
+right. But the embedded Python script had an `IndentationError` and
+couldn't run at all — the AC it defined was unpassable regardless of
+implementation correctness. Root cause: the script was nested inside a
+markdown list item's own fenced code block, and this repo's
+prose-formatter hook reflows list-item content, corrupting the
+Python indentation in the process (same failure class as this session's
+other spec-edit "Gotchas," documented in the resume-handoff's own
+gotcha list). Fixed: moved the script to a new top-level `##
+Reachability check script` section (not nested in any list), which
+survives the formatter untouched — verified by extracting the exact
+text from the committed file and running it, twice: once directly and
+once via the AC's own copy-paste instructions. Also added the critic's
+secondary point as explicit guidance: the check reports "clean" both
+before AND after correct deletion (pre-deletion, everything is still
+reachable through the not-yet-deleted `render_html`) — a worker must not
+mistake a pre-deletion `clean` for "nothing to delete." Re-run
+`/critique` to confirm READY.
