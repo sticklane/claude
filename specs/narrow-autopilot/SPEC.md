@@ -18,10 +18,10 @@ built-in** (Claude Code's own transcript-evaluator command, not a
 never implemented it, it only documented the pattern of wrapping its own
 walk-away contract in a `/goal` invocation. `autopilot/reference.md` also
 holds content with live consumers elsewhere: `onboard/SKILL.md:78-79` points
-users at its scoped-permissions JSON template, and `drain/reference.md:884`
+users at its scoped-permissions JSON template, and `drain/reference.md:1007`
 cites "the autopilot reference's headless rule" as the source of truth for
 headless dispatch. Deleting autopilot without relocating that content
-breaks both citations. (Anchors refreshed 2026-07-13 against HEAD;
+breaks both citations. (Anchors refreshed 2026-07-14 against HEAD;
 re-verify at implementation time — `drain/reference.md` in particular
 shifts often — rather than trusting these numbers blindly.)
 
@@ -62,7 +62,7 @@ SKILL.md:78-79`'s pointer is updated to `build/reference.md`.
   a debugging invitation: fix the spec, discard the branch, relaunch
   clean), directly relevant to bounded mode's failure path.
 - **Headless template** — moves verbatim (becoming the canonical copy);
-  `drain/reference.md:884`'s citation is updated to point at
+  `drain/reference.md:1007`'s citation is updated to point at
   `build/reference.md`.
 - **Pre-cap baton boundary** — moves verbatim (unchanged: it already cites
   `/drain`'s baton grammar rather than restating it).
@@ -116,7 +116,7 @@ reference.md`. `drain/reference.md` has TWO separate `/autopilot`
 tasks/NN-*.md (human-launched)` becomes
     `Next stage: /build specs/<slug>/tasks/NN-*.md (human-launched;
 /goal-bound it per build/reference.md for an unattended-feeling run)`.
-  - `breakdown/SKILL.md:98`'s routing sentence recommending `/autopilot`
+  - `breakdown/SKILL.md:166`'s routing sentence recommending `/autopilot`
     "for unattended execution of peripheral tasks" is reworded to
     recommend `/drain` for queue/unattended work and `/build` (optionally
     `/goal`-bounded) for a single task.
