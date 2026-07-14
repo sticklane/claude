@@ -14,7 +14,7 @@ it is breakdown-ready.
    ahead-behind branching. It has none — `agent-console.py:2374-2411` just runs
    `action["argv"]` (a `git ... push` built at `:1030`) via subprocess and
    returns `{code, body}`; branches are only timeout / rc==0 / rc!=0. `:2872` is
-   *set_priority's* commit-message line. Approach step 3 (SPEC.md:44-47)
+   _set_priority's_ commit-message line. Approach step 3 (SPEC.md:44-47)
    prescribes dirty/clean/ahead tests that cannot be written. Fix: rewrite to the
    real surface — rc 0 → `_invalidate_board` called; non-zero exit → `ok:false` +
    exit code in message; `TimeoutExpired` → `exit:None` + timeout message.
@@ -90,3 +90,40 @@ actual SPEC.md edit" for a re-critique with nothing changed). Skipping a
 redundant full critic dispatch on unchanged content per token-discipline's
 "cheap before expensive" — the three approved triage edits above are the
 recovery path, unchanged. This spec's critique intake is spent for this run.
+
+## Re-critique (drain critique intake) — 5th round, still NOT READY
+
+The three triage edits from the round above eventually landed in SPEC.md's
+Approach section (execute_push/resume_agent branches corrected, ACs split),
+but the Problem section was never updated to match — a new, self-inflicted
+contradiction:
+
+1. Problem section (SPEC.md:20-24 at the time) still described execute_push's
+   fictional dirty-check/commit-message-assembly/ahead-behind logic even
+   though Approach step 3 already had the correct rc-0/rc-nonzero/timeout
+   branches — and cited `:2872`, which is unrelated dispatch-conflict code,
+   not execute_push at all (conf 90).
+2. All four Problem-section line numbers were stale against Approach's
+   already-corrected ones (conf 70).
+
+## Triage 2026-07-13 (attended; Steven approved, walk-through item 19)
+
+Verdict: REVISE, applied directly. Fixes landed in SPEC.md:
+
+1. Problem section rewritten to describe execute_push's real branches
+   (TimeoutExpired / rc==0 → `_invalidate_board` / rc!=0 → `ok:false` +
+   exit code) instead of the fictional dirty-check/ahead-behind claim;
+   dropped the wrong `:2872` anchor.
+2. All four function/route line numbers re-verified against the current
+   `agent-console.py` and refreshed (resume_agent :3134, route :3465;
+   set_priority :3037, route :3455; execute_push :2554, dispatched via the
+   `"push"` action-kind table at :2633; render_markdown :1211-1256) — also
+   caught and fixed a fresh 12-line drift in the Approach section's own
+   resume_agent/execute_push anchors that had crept in since the last
+   triage.
+3. Added a hedge sentence to the Problem section: line numbers are
+   snapshots, not a contract, since this spec has drifted between every
+   single critique round so far — find functions by name at implementation
+   time.
+
+Ready for re-critique.
