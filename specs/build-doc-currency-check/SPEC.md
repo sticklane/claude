@@ -215,3 +215,18 @@ passes when the count is 1 or more after the edit.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Both tasks are blocked pending `specs/narrow-autopilot` landing fully (its
+tasks touch `build/SKILL.md` and both its mirrors, colliding with every
+file this spec edits) — see each task's `Unblock: run:` line. Once
+unblocked, Task 02 depends on Task 01: its antigravity/codex citations
+parallel Task 01's exact `.claude`-leg wording, so it runs after, not
+alongside. No concurrent-safe group.
+
+The `Unblock: run:` check requires every narrow-autopilot task to read
+`Status: done` literally — if any of them instead resolves `skipped`,
+`deferred`, or `failed`, this gate never empties on its own and these
+tasks stay blocked until a human makes the judgment call to clear them
+manually (the conservative, safe failure direction, not a bug).
