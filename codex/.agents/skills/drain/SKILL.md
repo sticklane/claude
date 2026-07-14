@@ -241,7 +241,11 @@ opening line every time you enter it.
   when file contents are genuinely needed, dispatch a scout, never read them
   inline.** Then merge the task branch (it carries the task file with
   `Status: done` and ticked boxes, plus the verifier's `evidence/` file for
-  `specs/<slug>/` layouts) and run the project gates. Once gates pass, delete
+  `specs/<slug>/` layouts) and run the project gates — the gate run invokes
+  `scripts/check.sh`, the sole required check entrypoint for drain's
+  merge-time gate, never a hand-derived list of steps read out of
+  CLAUDE.md/AGENTS.md prose (repos without it fall back to their own
+  build/lint/test commands). Once gates pass, delete
   every `rescue/NN-<slug>-*` branch for this task — removing each branch's
   worktree before the branch, since a branch still checked out in a live
   worktree cannot be deleted (e.g. `git worktree remove <path>` then `git
