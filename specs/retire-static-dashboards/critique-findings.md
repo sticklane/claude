@@ -253,3 +253,44 @@ function list) and to correct the false chip-CSS claim. New AC added:
 `grep -n "^TEMPLATE = " workboard.py` → no match, as a concrete backstop
 for the single largest orphaned item, alongside the now-dual-purpose
 reachability-check AC. Re-run `/critique` to confirm READY.
+
+## Re-critique 2026-07-14 (attended, resumed from handoff) — NOT READY, R8 test coverage gap
+
+The R4 reachability machinery (both functions and constants) verified
+sound and internally consistent — a fresh critic pass ran it against
+synthetic fixtures (orphaned constant-to-constant chains, `AnnAssign`
+with value, an incomplete-deletion case) and confirmed correct behavior
+in every case. The gap was in R8: three repo-root gated shell tests
+directly invoke code paths this spec deletes, but SPEC.md never
+inventories them (`grep 'tests/' SPEC.md` → 0 hits before this fix) and
+no acceptance criterion runs any test suite at all — only a positive
+runtime check (`workboard.py --json`) existed. Confirmed live: no Stop
+hook or `scripts/check.sh` auto-runs `tests/test_*.sh` in this repo (it's
+a manual AGENTS.md-documented loop), so an unattended worker satisfying
+every listed AC would ship all three tests red:
+
+- `tests/test_workboard_render.sh:38` and
+  `tests/test_workboard_actionability.sh:48` both invoke
+  `workboard.py --out ... --actions-out ...` and assert against the
+  resulting HTML/actions-script content — R4 deletes that entire output
+  surface, so nothing in either file has anything left to assert against.
+- `tests/test_fleet_css_drift.sh` diffs `viz.py --emit-fleet-css` (R3)
+  against `.claude/skills/fleet/reference.md` (R2) — both sides of its
+  diff are deleted by this spec.
+- Separately, `.claude/skills/workboard/test_workboard.py` calls
+  `render_html(...)` directly ~20 times (never via `--out`, so R8's old
+  `--out`-focused wording didn't reach these) — R8's examples steered
+  workers away from this, the largest deletion target of all.
+
+Fixed: R8 rewritten to name all three shell tests for outright deletion
+(not "rewrite" — verified by reading each file in full that its entire
+premise is the deleted HTML/actions-script output, nothing survives to
+rewrite toward) and to explicitly cover `test_workboard.py`'s
+render_html-calling tests in both trees. Three new ACs added: a
+deterministic check that all three shell tests are gone, a green run of
+the full `tests/test_*.sh` loop (AGENTS.md's canonical command), and a
+green `python3 -m unittest discover -s .claude/skills/workboard` (and
+its antigravity counterpart) — confirmed all three commands run today
+(137 unittest tests pass in each tree; the deletion-check correctly
+fails pre-deletion, confirming it's non-vacuous). Re-run `/critique` to
+confirm READY.
