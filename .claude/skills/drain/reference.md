@@ -978,7 +978,19 @@ their profile's `## Headless` template, selected per `runtimes/README.md`
 (toolkit repo; absent in plugin installs and eval fixtures, where the
 claude-code defaults apply) — the same runtime resolution the baton section
 below (`## Baton pass`) now applies mechanically via
-`runtimes/parse_headless.py`. One task at a time, from the repo root:
+`runtimes/parse_headless.py`.
+
+**Allowlist pre-flight (before the generation's first `claude -p`).** Before
+issuing the generation's first `claude -p` invocation,
+validate its allowlist against the pending tasks it will run: scan each task's
+acceptance-criteria commands for the tool and command names they invoke (test,
+lint, build binaries, and any other `Bash(...)` command), confirm every one is
+covered by the `--allowedTools` string about to be passed below, and widen that
+string to cover any gap before dispatching. A tool a worker's acceptance command
+needs but the allowlist omits aborts under `dontAsk` mid-run — a caught
+pre-flight gap is cheap; a live BLOCKED verdict burns the whole worker run.
+
+One task at a time, from the repo root:
 
 ```bash
 git worktree add -b task/NN-<slug> ../<repo>-task-NN
@@ -1165,6 +1177,17 @@ into the template's placeholders:
   runs drain performs itself (a jj-colocated repo would need the analogous VCS
   grant added — the same deferred permission-surface widening the worker/agent
   grants carry).
+  - **Orchestrator-allowlist pre-flight (before self-relaunching).** Before
+    spawning generation G+1, confirm this ORCHESTRATOR allowlist still carries
+    `Task`, `Bash(git *)`, and the repo's actual project gate/lint/test
+    command(s) inside `Bash(<project gate/test/lint cmds>)`, widening it before
+    the relaunch if the repo's check command drifted. This is a fixed,
+    repo-level check — NOT the per-task acceptance-command tool scan the
+    headless-worker pre-flight runs, because the orchestrator dispatches workers
+    rather than running their acceptance commands itself. A successor that can't
+    run `Task` aborts its first worker dispatch under `dontAsk`, and one missing
+    the project gate can't run the post-merge check — either burns the whole
+    relaunched generation.
 - `<turn cap>` (the template's `--max-turns`) → default 80, or the run's cap.
 - `<tier alias>` (the template's `--model` flag, when it carries one) → pin it
   explicitly to the drain-hub tier — deep-tier `opus` by default, or the lower
