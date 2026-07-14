@@ -7,6 +7,25 @@ Budget: 26 turns
 Spec: ../SPEC.md (requirements R5, R6)
 Touch: .claude/skills/critique/SKILL.md, .claude/skills/drain/reference.md, docs/memory/drain-dispatch-lessons.md
 
+<!-- PLAN (build step 1; delete at close-out)
+Prose/skill task, grep + lint-ultra-gate acceptance (no test harness).
+1. critique/SKILL.md: add a "checked first" content-hash skip gate (bold
+   paragraph before the numbered list) + a new step 6 persisting the
+   findings file (header hash + verdict + dated findings, atomic) on a
+   settled NOT READY / READY WITH NITS verdict against a SPEC.md target.
+   Ultra section untouched (keeps lint-ultra-gate green).
+2. drain/reference.md Critique intake: delete the whole
+   "Cheap-before-expensive short-circuit" bullet (incl. its findings
+   write); make the "/critique" invocation unconditional; re-attribute the
+   NOT-READY "findings recorded" phrasing to /critique. Do NOT touch the
+   routing-table row (~L1700) or worker-prompt DEFERRED text (~L590).
+3. docs/memory/drain-dispatch-lessons.md: rewrite the "Critique intake"
+   entry to read "mechanized in /critique" instead of the git log recipe.
+Risks: renumbering could desync task-01 internal step refs -> avoid by
+adding a pre-list paragraph + appending step 6, no renumber. Mirrors +
+plugin.json are task 04's, not mine.
+-->
+
 ## Goal
 
 `/critique` becomes the sole owner of `specs/<slug>/critique-findings.md`.

@@ -8,6 +8,21 @@ Get an adversarial second opinion on $ARGUMENTS. If no argument: an
 uncommitted diff exists → review that; otherwise the most recently touched
 SPEC.md or plan.
 
+**SPEC.md re-run skip (checked first, before step 1's dispatch).** When the
+target is a `SPEC.md`, compute the content hash of its current bytes (e.g.
+`sha256sum specs/<slug>/SPEC.md`) and compare it against the hash recorded in
+the target's `specs/<slug>/critique-findings.md` header (if that file exists
+and carries a parseable hash). If the hash matches **and** a verdict is
+already recorded, skip the critic dispatch entirely and relay that recorded
+verdict and its findings from `critique-findings.md` (step 2) — the answer is
+already computed against byte-identical content. A missing
+`critique-findings.md`, a missing header hash, or a hash that fails to parse
+always means "run the critic" — never treat an absent or unparseable hash as
+a match (every findings file written before this skip shipped has no hash, so
+it always re-runs). This skip is `SPEC.md`-only: a plan or diff target has no
+`critique-findings.md` to compare against and always dispatches the critic.
+`/critique` is the sole owner of `critique-findings.md` — step 6 writes it.
+
 1. Spawn the `critic` agent with a POINTER to the artifact (file path, or a
    pointer to the working diff — e.g., under git: `git diff HEAD`), never the
    pasted content — the critic
@@ -49,6 +64,20 @@ findings` or similar), and re-run the critic — this apply→recheck loop is
 5. After fixes, re-run the critic on the changed artifact — a critique you
    didn't re-check is a claim, not a verification. Between rounds the author
    re-reads only the sections the critic named, never the whole artifact.
+6. **Persist the findings for a `SPEC.md` target** (skip for a plan or diff,
+   and skip when the re-run gate above already relayed a recorded verdict —
+   nothing was re-derived to record). Once the verdict has settled (after any
+   step-4 apply→recheck loop and step-5 re-run), if the settled verdict
+   against the `SPEC.md` is **NOT READY or READY WITH NITS**, write or update
+   `specs/<slug>/critique-findings.md` in one atomic write: a header
+   recording the content hash of the exact current `SPEC.md` bytes the
+   settled verdict was produced from together with that verdict, and the
+   findings appended as a dated section (the format
+   `specs/build-doc-currency-check/critique-findings.md` establishes). Header
+   hash and findings are written together so the recorded hash can never
+   desync from the findings it describes; the hash is what the next
+   invocation's re-run skip compares against. A plain READY (no nits) records
+   no findings — step 3's `Breakdown-ready:` marker is its only artifact.
 
 ## Ultra path
 
