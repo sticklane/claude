@@ -1,6 +1,6 @@
 # Task 04: Ship gate — mirrors and plugin version bump (R8)
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P1
 Budget: 14 turns
@@ -67,24 +67,24 @@ drain/SKILL.md`. Port: the removed "cheap-before-expensive
 
 ## Acceptance
 
-- [ ] `grep -c "Cheap-before-expensive short-circuit" antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md | awk -F: '{s+=$2} END {print s}'`
+- [x] `grep -c "Cheap-before-expensive short-circuit" antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md | awk -F: '{s+=$2} END {print s}'`
       → 0 (today: 2 combined — confirmed present, one occurrence per file
       at `antigravity/.agents/workflows/drain.md:694` and
       `codex/.agents/skills/drain/SKILL.md:310` — this proves removal)
-- [ ] `grep -c "Contradicts-premise" antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md`
+- [x] `grep -c "Contradicts-premise" antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md`
       → ≥ 1 combined
-- [ ] `grep -c "MECHANICAL\|hash" antigravity/.agents/workflows/critique.md`
+- [x] `grep -c "MECHANICAL\|hash" antigravity/.agents/workflows/critique.md`
       → ≥ 1 (the triage and skip concepts landed in the mirror, in its own
       words)
-- [ ] `bash evals/lint-ultra-gate.sh` → exits 0
-- [ ] `claude plugin validate .` → exits 0
-- [ ] `for t in tests/test_*.sh; do bash "$t"; done` → every test exits 0,
+- [x] `bash evals/lint-ultra-gate.sh` → exits 0
+- [x] `claude plugin validate .` → exits 0
+- [x] `for t in tests/test_*.sh; do bash "$t"; done` → every test exits 0,
       in particular `tests/test_mirror_procedure_coverage.sh` (its
       manifest requires the verbatim phrase "Relay the verdict and
       findings verbatim" to survive in both `.claude/skills/critique/SKILL.md`
       and `antigravity/.agents/workflows/critique.md` — a paraphrased port
       of step 2 must keep that exact phrase, not just its meaning)
-- [ ] Version bump check: `git show <this-task's-base-commit>:.claude-plugin/plugin.json | grep version`
+- [x] Version bump check: `git show <this-task's-base-commit>:.claude-plugin/plugin.json | grep version`
       differs from the current `grep version .claude-plugin/plugin.json`
       (compare against the base commit's value, never a hard-coded
       "0.8.63" literal — a sibling task may have already bumped it)
