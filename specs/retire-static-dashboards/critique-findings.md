@@ -137,3 +137,30 @@ current tree:
 .claude/skills/fleet/SKILL.md` → 0 (confirmed 1 today).
 
 Ready for re-critique.
+
+## Re-critique 2026-07-14 (attended, /critique) — one new finding, R4 scope gap
+
+A fresh critic dispatch flagged four findings, but three (the whitelist
+narrowness, the antigravity mention count, the frontmatter AC) turned out
+to already be fixed by the "Fix applied 2026-07-14" pass above — verified
+directly against the live tree (the current whitelist clause (b) already
+covers "fleet's status vocabulary"-style phrasing generically, and the
+frontmatter AC already exists at SPEC.md:173-177). The critic appears to
+have misread the already-broadened text; no action needed on those three.
+
+The fourth finding was real and distinct from anything fixed above: **R4
+names only `render_html` and `build_actions_script` for deletion, but
+`_agent_chip`, `_spawn_nodes_html`, `_spawn_tree_html`, and
+`_session_timeline_html` become orphaned dead code once `render_html`
+goes** — each is called only from within `render_html`'s own body
+(transitively; confirmed by tracing `_session_timeline_html`'s two call
+sites, both inside `render_html`'s line range in both `.claude` and
+`antigravity` trees), and `_spawn_tree_html`'s docstring cites the deleted
+`fleet/reference.md`. Fixed: R4 now names all four helpers for deletion,
+with a new AC (`grep -n "_agent_chip\|_spawn_nodes_html\|_spawn_tree_html\|
+_session_timeline_html" .claude/skills/workboard/workboard.py` → no
+matches), and the antigravity mirror AC extended to cover the same four
+names. The embedded chip-CSS block (previously flagged) needed no separate
+action — it's inside `render_html`'s own returned string, deleted
+automatically. Confirmed non-vacuous in both trees today (10 matches on
+the `.claude` leg). Re-run `/critique` to confirm READY.
