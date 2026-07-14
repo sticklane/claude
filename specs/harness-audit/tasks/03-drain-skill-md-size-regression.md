@@ -1,6 +1,6 @@
 # Task 03: Trim drain/SKILL.md back under the 500-line budget
 
-Status: pending
+Status: in-progress
 Promotion-ready: true
 Promoted-by-run: c92aedb1ae49f8d3
 Depends on: none
