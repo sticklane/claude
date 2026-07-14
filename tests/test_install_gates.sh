@@ -707,6 +707,85 @@ assert "R6 in-scope control: gates installed" \
   test -f "$FH/automation/.claude/settings.json"
 
 # ---------------------------------------------------------------------------
+# R1 build/dist prerequisite stage — Node .scripts.build: a build stage is
+# rendered as the first run_stage, before the existing lint/test stages.
+# ---------------------------------------------------------------------------
+
+NB="$TMP/nodebuild"
+mkrepo "$NB"
+cat > "$NB/package.json" <<'EOF'
+{
+  "name": "nodebuild",
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "test": "node test.js"
+  }
+}
+EOF
+run_install "$NB"
+NB_CHECK="$NB/scripts/check.sh"
+assert_eq "node-build: exits 0" 0 "$RI_EXIT"
+assert "node-build: build stage runs \$pm run build" \
+  grep -q '^run_stage "build" npm run build' "$NB_CHECK"
+nb_build_ln="$(stage_line "$NB_CHECK" '^run_stage "build"')"
+nb_lint_ln="$(stage_line "$NB_CHECK" '^run_stage "lint"')"
+nb_test_ln="$(stage_line "$NB_CHECK" '^run_stage "tests"')"
+assert "node-build: build stage before lint" \
+  test -n "$nb_build_ln" -a -n "$nb_lint_ln" -a "$nb_build_ln" -lt "$nb_lint_ln"
+assert "node-build: build stage before tests" \
+  test -n "$nb_build_ln" -a -n "$nb_test_ln" -a "$nb_build_ln" -lt "$nb_test_ln"
+
+# ---------------------------------------------------------------------------
+# R1 build/dist prerequisite stage — .claude/build-prereq marker (any non-node
+# stack): its single-line literal command runs as the build stage, first.
+# ---------------------------------------------------------------------------
+
+MB="$TMP/markerbuild"
+mkrepo "$MB"
+cat > "$MB/pyproject.toml" <<'EOF'
+[project]
+name = "markerbuild"
+version = "0.0.1"
+
+[tool.ruff]
+line-length = 100
+EOF
+mkdir -p "$MB/tests" "$MB/.claude"
+printf 'def test_ok():\n    assert True\n' > "$MB/tests/test_sample.py"
+printf 'pnpm -r build\n' > "$MB/.claude/build-prereq"
+run_install "$MB"
+MB_CHECK="$MB/scripts/check.sh"
+assert_eq "marker-build: exits 0" 0 "$RI_EXIT"
+assert "marker-build: literal marker command runs as build stage" \
+  grep -q '^run_stage "build" pnpm -r build' "$MB_CHECK"
+mb_build_ln="$(stage_line "$MB_CHECK" '^run_stage "build"')"
+mb_lint_ln="$(stage_line "$MB_CHECK" '^run_stage "lint"')"
+assert "marker-build: build stage before lint" \
+  test -n "$mb_build_ln" -a -n "$mb_lint_ln" -a "$mb_build_ln" -lt "$mb_lint_ln"
+
+# ---------------------------------------------------------------------------
+# R1 build/dist prerequisite stage — neither signal present: no build stage is
+# added (regression guard against false positives).
+# ---------------------------------------------------------------------------
+
+NBN="$TMP/nobuild"
+mkrepo "$NBN"
+cat > "$NBN/package.json" <<'EOF'
+{
+  "name": "nobuild",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "node test.js"
+  }
+}
+EOF
+run_install "$NBN"
+assert_eq "no-build: exits 0" 0 "$RI_EXIT"
+assert_not "no-build: no build stage without .scripts.build or marker" \
+  grep -q '^run_stage "build"' "$NBN/scripts/check.sh"
+
+# ---------------------------------------------------------------------------
 
 echo "pass: $pass fail: $fail"
 [ "$fail" -eq 0 ] || exit 1

@@ -7,6 +7,20 @@ Budget: 20 turns
 Spec: ../SPEC.md (requirement R1)
 Touch: bin/install-gates, templates/check.sh.tmpl, tests/test_install_gates.sh
 
+<!-- PLAN (build)
+- tests first (tests/test_install_gates.sh): (1) node .scripts.build → build
+  stage before lint/tests; (2) .claude/build-prereq marker (python fixture) →
+  literal cmd as build stage before other stages; (3) neither signal → no
+  build stage. Confirm 1+2 red.
+- impl (bin/install-gates): unified post-detection block after the
+  detect_* dispatch (~line 334). BUILD_CMD from node .scripts.build (recompute
+  pm) else .claude/build-prereq head -1; prepend `run_stage "build" $cmd` to
+  CHECK_STAGES + STAGE_DESC. Comment carries literal "build/dist prerequisite".
+- template unchanged (@STAGES@ already ordered). No tier change: generic repos
+  still get no check.sh (marker only visible where check.sh is rendered).
+- gates: bash tests/test_install_gates.sh green; bash scripts/check.sh.
+-->
+
 ## Goal
 
 `bin/install-gates` detects a repo-declared build/install prerequisite stage
