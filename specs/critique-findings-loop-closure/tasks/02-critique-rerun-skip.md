@@ -1,6 +1,6 @@
 # Task 02: Critique re-run skip, replacing drain's commit-hash short-circuit (R5, R6)
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 26 turns
@@ -82,17 +82,29 @@ carries those.
 
 ## Acceptance
 
-- [ ] `grep -c "hash" .claude/skills/critique/SKILL.md` → ≥ 1 (today: 0,
+- [x] `grep -c "hash" .claude/skills/critique/SKILL.md` → ≥ 1 (today: 0,
       confirmed absent)
-- [ ] `grep -c "Cheap-before-expensive short-circuit" .claude/skills/drain/reference.md` → 0
+      · Evidence: → 9. Verifier confirmed.
+- [x] `grep -c "Cheap-before-expensive short-circuit" .claude/skills/drain/reference.md` → 0
       (today: 1, confirmed present — this proves removal, not mere
       supplementation)
-- [ ] `grep -c "mechanized in /critique" docs/memory/drain-dispatch-lessons.md` → ≥ 1
+      · Evidence: → 0. Whole short-circuit bullet deleted; /critique now
+      invoked unconditionally. Verifier confirmed.
+- [x] `grep -c "mechanized in /critique" docs/memory/drain-dispatch-lessons.md` → ≥ 1
       (today: 0, confirmed absent)
-- [ ] `grep -rn "NOT-READY specs (critique intake) | \`decide\` | §4" .claude/skills/drain/reference.md`
+      · Evidence: → 2. Verifier confirmed.
+- [x] `grep -rn "NOT-READY specs (critique intake) | \`decide\` | §4" .claude/skills/drain/reference.md`
       still matches (the routing-table entry itself must survive the
       short-circuit removal untouched)
-- [ ] `bash evals/lint-ultra-gate.sh` → exits 0
+      · Evidence: intent met — the row survives byte-identical to base
+        (a diff of the row at 5fdbedb vs the branch shows no difference;
+        verifier confirmed). The literal command as written returns exit 1
+        at BOTH base and branch because the pipe is a literal in grep BRE
+        and the routing table is column-padded, so the single-space literal
+        never matched — a pre-existing mis-spec, not a regression this task
+        introduced.
+- [x] `bash evals/lint-ultra-gate.sh` → exits 0
+      · Evidence: exit 0, "OK — all ultra mentions gated in 4 files".
 - [ ] MANUAL: exercise R1/R2 end to end via **drain's critique-intake path**
       (not a direct `/critique` call) on a real NOT-READY spec with a
       findable mechanical finding, and confirm the finding is applied
@@ -100,8 +112,10 @@ carries those.
       exercises the drain path once this task's short-circuit removal
       lands (before that, an unchanged already-NOT-READY spec would hit
       the old short-circuit and never reach `/critique` at all).
+      · MANUAL — not exercised by unattended worker; standing manual-pending.
 - [ ] MANUAL: run `/critique` twice in a row on the same unchanged
       `SPEC.md` with a recorded NOT READY or READY WITH NITS verdict and
       confirm the second run skips the critic dispatch and relays the
       recorded verdict from `critique-findings.md` — then edit `SPEC.md`
       and confirm a third run dispatches the critic for real.
+      · MANUAL — not exercised by unattended worker; standing manual-pending.

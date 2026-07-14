@@ -202,13 +202,21 @@ path-scoped, and never touch the foreign spec's dir, drafts included. The
 scope question itself is the other lesson: /drain launched outside any repo
 (cwd not a git tree) has no derivable queue — ask, don't guess.
 
-## Critique intake: skip the critic when SPEC.md is unchanged since a recorded NOT READY
+## Critique intake: skip the critic when SPEC.md is unchanged — mechanized in /critique
 
-Before dispatching a critic at a spec, compare `git log -1 --format=%ct`
-of `SPEC.md` against its `critique-findings.md`: findings newer than the
-spec + a recorded NOT READY verdict decide the outcome deterministically —
-append nothing, dispatch nothing, checklist it. Four fresh critic runs on
-2026-07-13 (~40k subagent tokens each) confirmed exactly this: unchanged
-spec → identical verdict. The re-dispatch is only worth it when the human
-asked for fresh findings or the findings file predates a relevant
-code/CLAUDE.md change the verdict hinged on.
+This skip is now **mechanized in /critique** itself
+(specs/critique-findings-loop-closure R5), not a manual `git log` recipe.
+`/critique` records the **content hash** of the `SPEC.md` a NOT READY /
+READY WITH NITS verdict was produced from into
+`specs/<slug>/critique-findings.md`, and on the next invocation compares the
+current `SPEC.md` content hash against that recorded header — matching hash
+plus a recorded verdict → skip the critic dispatch and relay the recorded
+verdict. Drain's critique intake invokes `/critique` unconditionally, so it
+inherits the skip for free; it no longer runs its own `git log -1` pre-check
+(that short-circuit and its findings write were removed from
+`.claude/skills/drain/reference.md`). Content hash, **not**
+`git log -1 --format=%ct`/`%H` — a commit hash stops resolving across a
+squash or rebase, the fragility this change fixes. The original evidence
+still stands: four fresh critic runs on 2026-07-13 (~40k subagent tokens
+each) on an unchanged spec reproduced the identical verdict — which is what
+motivated mechanizing the skip rather than re-deriving it each session.
