@@ -109,6 +109,15 @@ CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
   both the HTML file and its `.actions.sh` companion — `build_actions_script`
   and `render_html` have no consumer other than that branch (agent-console
   imports only `assemble`/`attention_items`/`ready_items`/`default_roots`).
+  Also deleted as orphaned dead code once `render_html` goes: `_agent_chip`,
+  `_spawn_nodes_html`, `_spawn_tree_html`, and `_session_timeline_html` —
+  each is called only from within `render_html`'s own body (transitively),
+  has no other consumer, and `_spawn_tree_html`'s docstring/comments cite
+  the now-deleted `fleet/reference.md` (R1's dangling-citation cleanup
+  would otherwise have to reword comments on code this task is about to
+  delete anyway). The embedded chip-CSS block citing `fleet/reference.md`
+  (inside `render_html`'s own returned string) is removed automatically
+  as part of deleting `render_html` — no separate action needed for it.
   `--json` (used by `list-specs`, `workboard-auto-triage`, and step 2's
   inbox relay) is unaffected. With no `--out` path left, `main()`'s
   no-`--json`-flag behavior is: print the same one-line summary the HTML
@@ -180,6 +189,9 @@ CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
 - [ ] `grep -n "render_html\|build_actions_script\|--out\|--actions-out"
 .claude/skills/workboard/workboard.py` returns no matches (R4 — note
       this deliberately also catches `--actions-out`, not just `--out`).
+- [ ] `grep -n "_agent_chip\|_spawn_nodes_html\|_spawn_tree_html\|_session_timeline_html"
+.claude/skills/workboard/workboard.py` returns no matches (R4 — the
+      orphaned dead-code helpers that only `render_html` consumed).
 - [ ] `grep -n "Fallback (machines without agent-console)"
 .claude/skills/workboard/SKILL.md` returns no match.
 - [ ] `python3 .claude/skills/workboard/workboard.py --json` still runs
@@ -202,8 +214,10 @@ CLAUDE.md .claude-plugin/` shows only: (a) the new inline-table
 - [ ] `antigravity/.agents/skills/fleet/` does not exist (unchanged from
       before this spec — R6 confirms, doesn't create).
 - [ ] The workboard/viz.py checks above (workboard `--out`/`--actions-out`
-      gone, viz.py `--emit-fleet-css` gone, fallback bullet gone) also
-      hold under `antigravity/.agents/skills/workboard/` and
+      gone, the orphaned `_agent_chip`/`_spawn_nodes_html`/
+      `_spawn_tree_html`/`_session_timeline_html` helpers gone, viz.py
+      `--emit-fleet-css` gone, fallback bullet gone) also hold under
+      `antigravity/.agents/skills/workboard/` and
       `antigravity/.agents/skills/_shared/viz.py` (R6).
 - [ ] `.claude-plugin/plugin.json`'s `version` is higher than before this
       change.
