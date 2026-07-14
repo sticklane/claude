@@ -1,6 +1,6 @@
 # Task 02: Antigravity mirror and plugin version bump
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 15 turns
@@ -51,10 +51,10 @@ version field. Do not re-edit `.claude/skills/harness-audit/SKILL.md` or
 
 ## Acceptance
 
-- [ ] `test -f antigravity/.agents/skills/harness-audit/SKILL.md`
-- [ ] Content-coverage check (not byte-diff, per workboard-mirror-verbatim):
+- [x] `test -f antigravity/.agents/skills/harness-audit/SKILL.md`
+- [x] Content-coverage check (not byte-diff, per workboard-mirror-verbatim):
       `F=antigravity/.agents/skills/harness-audit/SKILL.md; grep -qi "read-only" $F && grep -qi "command currency" $F && grep -qi "gate coverage" $F && grep -qi "evalset" $F && grep -qi "memory hygiene" $F && grep -qi "allowlist" $F`
-- [ ] `bash tests/test_antigravity_parity.sh` -> exit 0, no "harness-audit" line
-- [ ] `bash tests/test_codex_parity.sh` -> exit 0, no "harness-audit" line
-- [ ] Version bumped from this task's own base commit:
+- [x] `bash tests/test_antigravity_parity.sh` -> exit 0, no "harness-audit" line
+- [x] `bash tests/test_codex_parity.sh` -> exit 0, no "harness-audit" line
+- [x] Version bumped from this task's own base commit:
       `BASE=$(git merge-base main HEAD); OLD=$(git show $BASE:.claude-plugin/plugin.json | grep '"version"'); NEW=$(grep '"version"' .claude-plugin/plugin.json); [ "$OLD" != "$NEW" ]`
