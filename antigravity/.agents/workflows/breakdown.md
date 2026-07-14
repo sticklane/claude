@@ -17,3 +17,17 @@ attended /build writes it in the same edit as the blocked status; a
 `SPEC.md` may carry the header pair `Status: waiting` + `Unblock:` as its
 only spec-level status, and a successful recheck removes that pair (specs
 have no `pending` to flip to).
+
+**Cross-spec file collision → `Status: blocked` + `Unblock: run:`, not
+`pending`.** When a spec's own text names a sibling spec it must land
+after (both edit the same file), check whether the collision is broader
+than stated — a spec touching a skill mirrored across `.claude`/
+`antigravity`/`codex` legs likely collides on all of them, not just the
+one file a Sequencing note happens to name. Encode the real collision by
+marking every affected task `Status: blocked` with `Unblock: run: for f in
+specs/<sibling>/tasks/*.md; do grep -q '^Status: done' "$f" || echo "not
+done: $f"; done` rather than `pending` — the only mechanical way to stop
+an unattended drain from landing both specs concurrently. Nothing
+auto-flips this: drain does not re-run `Unblock: run:` on a pre-existing
+blocked task, so a human or later session must re-check and flip the
+status once the sibling spec's tasks are all `done`.
