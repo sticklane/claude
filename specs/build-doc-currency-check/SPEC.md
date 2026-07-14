@@ -77,9 +77,12 @@ own citation convention — "cite, don't restate").
   repo owns doc-currency checking through that invocation. Add a
   one-line note there, worded distinctly from R4's citation so the two
   edits are independently verifiable: doc currency is checked by the new
-  quality-discipline.md section (R1), **not by `/code-review` itself** —
-  `/code-review` stays scoped to what the harness/plugin defines it to
-  check.
+  quality-discipline.md section (R1), **not by /code-review itself** —
+  write the phrase "not by /code-review itself" with no backticks around
+  `/code-review`, verbatim matching the AC anchor below (this file's own
+  backtick-around-slash-commands convention would otherwise break the
+  literal-string AC match). `/code-review` stays scoped to what the
+  harness/plugin defines it to check.
 - **R6**: Per CLAUDE.md's mirroring convention ("when a skill changes
   here, mirror the change there in the same commit"), both edits land in
   their mirrors too — antigravity and codex:
