@@ -1245,36 +1245,21 @@ tie-break. For the chosen spec:
   compare-and-swap re-read to confirm your `Run-token:`, refuse and skip to
   the next eligible spec on a lost race). This is what stops two concurrent
   drains from racing to critique the same spec.
-- **Cheap-before-expensive short-circuit, checked first.** `git log -1
---format=%H -- specs/<slug>/SPEC.md` against the commit that produced the
-  spec's most recent recorded NOT READY verdict (readable from
-  `critique-findings.md`'s last dated section): if SPEC.md has had **no
-  commit since**, a fresh critic dispatch is a foregone, already-answered
-  question — SPEC.md's content is byte-identical to what already produced
-  that verdict. Skip the critic dispatch; append a dated
-  `## Re-critique <date> (drain critique intake, run <token>) — still NOT
-READY, approved plan not yet applied` section to `critique-findings.md`
-  citing the git-log evidence and pointing at the prior findings/approved
-  edit list already in the file (never re-derive them), release the lease,
-  and continue. This is a case of "cheap before expensive"
-  (`.claude/rules/token-discipline.md`): a 2026-07-13 run confirmed the
-  pattern on 9 of 10 draft specs in one pass, each carrying a same-day
-  attended "Triage … approved REVISE" block whose edit list had not yet
-  landed in SPEC.md — running the critic on each would have reproduced the
-  exact prior verdict at full cost, the same "reprime for zero dispatch
-  progress" anti-pattern the fooszone incident (Baton pass, above)
-  documents for intake attempts generally. If SPEC.md HAS changed since
-  that commit (even if not through the approved edit list), this
-  short-circuit does not apply — dispatch the critic for real.
-- Otherwise, invoke **/critique** on the spec via the Skill tool —
-  model-invocable with no launch contract, the same sanctioned in-session
-  exception 3b's `/breakdown` invocation relies on.
+- Invoke **/critique** on the spec via the Skill tool — model-invocable with
+  no launch contract, the same sanctioned in-session exception 3b's
+  `/breakdown` invocation relies on. Drain dispatches it **unconditionally**:
+  the cheap-before-expensive re-run skip now lives inside `/critique` itself,
+  keyed on `SPEC.md`'s **content hash** (a commit hash stops resolving across
+  a squash or rebase — the fragility that motivated moving it), and
+  `/critique` is the sole owner of `critique-findings.md`'s write. Drain no
+  longer runs a `git log` pre-check or writes that file
+  (`.claude/skills/critique/SKILL.md`, R5; specs/critique-findings-loop-closure).
 - **READY** → the critic writes the `Breakdown-ready:` marker; 3b's existing
   auto-breakdown path then makes the spec dispatchable **in the same
   session**. Release the lease and loop to step 1.
-- **NOT READY** → the findings are recorded with the spec, the spec lands on
-  step 4's exit checklist as a NOT-READY item, the lease is released, and the
-  loop continues.
+- **NOT READY** → `/critique` has recorded the findings with the spec (in
+  `critique-findings.md`), the spec lands on step 4's exit checklist as a
+  NOT-READY item, the lease is released, and the loop continues.
 
 Attempt each spec's intake **at most once per run — spanning every baton
 generation, not just this one**: a NOT-READY or failed attempt is added to
