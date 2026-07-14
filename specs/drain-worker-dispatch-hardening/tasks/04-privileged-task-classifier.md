@@ -1,6 +1,6 @@
 # Task 04: Privileged/OS-level task classifier
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 15 turns
@@ -54,6 +54,16 @@ codex edit is needed once the antigravity file is updated.
 
 ## Acceptance
 
-- [ ] `grep -c "never drain-completable unattended" .claude/skills/breakdown/SKILL.md` → at least 1
-- [ ] `grep -c "never drain-completable unattended" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → 0 (confirms this task, not a sibling, owns the phrase — the spec's acceptance criterion sums across all three files, so this count only needs to be nonzero somewhere; this check just documents which file carries it)
-- [ ] `grep -c "never drain-completable unattended" antigravity/.agents/skills/breakdown/SKILL.md` → at least 1
+- [x] `grep -c "never drain-completable unattended" .claude/skills/breakdown/SKILL.md` → at least 1
+- [x] `grep -c "never drain-completable unattended" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → 0 (confirms this task, not a sibling, owns the phrase — the spec's acceptance criterion sums across all three files, so this count only needs to be nonzero somewhere; this check just documents which file carries it)
+- [x] `grep -c "never drain-completable unattended" antigravity/.agents/skills/breakdown/SKILL.md` → at least 1
+
+## Evidence
+
+Merged `task/04-privileged-task-classifier` (commits d9e54a0, 241a51f) via
+merge commit `01e28fa`. All 3 acceptance greps pass. `./specs/status.sh` and
+`claude plugin validate .` green; full `tests/test_*.sh` suite green except
+`test_antigravity_parity.sh`/`test_codex_parity.sh`, which fail on a
+pre-existing, unrelated `qa-sweep` mirror gap (confirmed present at the
+pre-merge base commit `5ad8e20`, tracked by
+`qa-sweep-skill-promotion` task 03, later in this queue).
