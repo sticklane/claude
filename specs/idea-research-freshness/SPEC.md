@@ -1,5 +1,8 @@
 # /idea: auto-trigger research grounding, skip it when a recent citation already exists
 
+Status: open
+Breakdown-ready: true
+
 ## Problem
 
 This session hit the same pattern twice: an idea framed around "best
@@ -190,7 +193,7 @@ choice explicit` heading has a real, current-dated `Verified:` line
 <fixed-date>` prints `absent` for the fixture's heading (no
       `Verified:` line at all).
 - [ ] `bash check-freshness.sh <fixtures-dir>/file-level-stamp --today
-    <fixed-date>` prints `fresh` for a `##` heading that itself has no
+<fixed-date>` prints `fresh` for a `##` heading that itself has no
       `Verified:` line but whose file carries a fresh file-level stamp
       (the next non-blank line after the H1 title) — confirming the
       fallback the Solution/checker description above pins, exercised on
@@ -254,3 +257,16 @@ choice explicit` heading has a real, current-dated `Verified:` line
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Tasks 01 (checker/fixtures/stamps), 02 (`.claude` SKILL.md step +
+renumbering), and 03 (antigravity mirror) are disjoint in `Touch` and
+share no undecided design — the `Verified:` format, the 90-day window,
+and each SKILL.md's own step-numbering scheme are all fully pinned by the
+spec text, so none of the three make an open choice the others depend
+on. Task 02 only _references_ task 01's script path (already fully
+specified), it doesn't need task 01's actual implementation to land
+first. Task 04 (version bump + closing evidence) depends on all three.
+
+- Group: 01, 02, 03
