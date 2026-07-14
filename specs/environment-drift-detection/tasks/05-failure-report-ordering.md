@@ -1,6 +1,6 @@
 # Task 05: surface failing-stage output first in check reporting
 
-Status: pending
+Status: in-progress
 Depends on: 01, 04
 Priority: P3
 Budget: 12 turns
