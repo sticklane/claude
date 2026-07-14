@@ -327,6 +327,54 @@ run_hook "$PRE_PROTECT" '{"tool_name": "Edit", "tool_input": {}}' "$REPO"
 assert_eq "pre-tool-protect exits 0 when file_path missing" 0 "$RH_EXIT"
 assert_eq "pre-tool-protect missing file_path warns (one line)" 1 "$(stderr_line_count)"
 
+# --- stop-gate: docs-only diff scoping (R4) ----------------------------------
+# When every file changed since the last commit matches CLAUDE.md's
+# paths-ignore globs (**.md, docs/**, specs/**, .claude/**), the full check is
+# skipped; any non-docs change still runs it in full (never a blanket skip).
+
+DOCS_REPO="$TMP/docs only repo"
+mkdir -p "$DOCS_REPO/scripts" "$DOCS_REPO/docs"
+git -C "$DOCS_REPO" init -q
+git -C "$DOCS_REPO" config user.email test@example.com
+git -C "$DOCS_REPO" config user.name test
+# A check.sh that records the fact it ran, so we can assert run-vs-skipped.
+cat > "$DOCS_REPO/scripts/check.sh" <<'EOF'
+#!/usr/bin/env bash
+touch check-ran.marker
+exit 0
+EOF
+chmod 755 "$DOCS_REPO/scripts/check.sh"
+echo "# readme" > "$DOCS_REPO/README.md"
+git -C "$DOCS_REPO" add -A
+git -C "$DOCS_REPO" commit -qm baseline
+
+# docs-only change (a new .md file) -> check skipped, exit 0, no marker
+git -C "$DOCS_REPO" clean -fdq
+echo "note" >> "$DOCS_REPO/HUMAN.md"
+run_hook "$STOP_GATE" "$json_stop_false" "$DOCS_REPO"
+assert_eq "stop-gate exits 0 on docs-only (.md) diff" 0 "$RH_EXIT"
+assert "check.sh NOT run for docs-only (.md) diff" \
+  test ! -f "$DOCS_REPO/check-ran.marker"
+
+# change confined to the docs/ subtree also counts as docs-only
+git -C "$DOCS_REPO" clean -fdq
+mkdir -p "$DOCS_REPO/docs"
+echo "doc" > "$DOCS_REPO/docs/guide.txt"
+run_hook "$STOP_GATE" "$json_stop_false" "$DOCS_REPO"
+assert_eq "stop-gate exits 0 on docs/ subtree-only diff" 0 "$RH_EXIT"
+assert "check.sh NOT run for docs/ subtree-only diff" \
+  test ! -f "$DOCS_REPO/check-ran.marker"
+
+# a non-docs change alongside a docs change -> full check still runs
+git -C "$DOCS_REPO" clean -fdq
+echo "note" >> "$DOCS_REPO/HUMAN.md"
+echo "x = 1" > "$DOCS_REPO/app.py"
+run_hook "$STOP_GATE" "$json_stop_false" "$DOCS_REPO"
+assert_eq "stop-gate exits 0 when mixed diff's check passes" 0 "$RH_EXIT"
+assert "check.sh DID run when a non-docs file changed" \
+  test -f "$DOCS_REPO/check-ran.marker"
+git -C "$DOCS_REPO" clean -fdq
+
 # --- Summary -----------------------------------------------------------------
 
 echo "pass: $pass, fail: $fail"
