@@ -1,7 +1,7 @@
 """Tests for prioritize_scan.py: scan + filter + priority-parse + render.
 
-Run: python3 -m pytest .claude/skills/prioritize/test_prioritize_scan.py -q
-or:  python3 -m unittest discover -s .claude/skills/prioritize
+Run: python3 -m pytest .agents/skills/prioritize/test_prioritize_scan.py -q
+or:  python3 -m unittest discover -s .agents/skills/prioritize
 
 Stdlib-only, like workboard.py / list_specs.py. Each test builds a real
 specs/ tree under a tmp dir and calls the script's functions directly — no
