@@ -273,10 +273,15 @@ mirror-procedure-manifest.txt`'s source→mirror pairing line
 autopilot.md|bounded goal`) is deleted outright — both sides of the
     pairing are removed by R1/R7, so the entry has nothing left to pair.
     A new pairing line is added in its place: `.claude/skills/build/
-SKILL.md|antigravity/.agents/workflows/build.md|escalation triggers` —
-    R2 and R7 fold the walk-away contract's classification gate and
-    escalation triggers into both mirror legs, so this is a procedure that
-    _moved_ rather than one that disappeared, and
+SKILL.md|antigravity/.agents/workflows/build.md|Two triggers escalate to
+a human` — the canary is that literal sentence, not the paraphrase
+    "escalation triggers": it's the one line the walk-away contract's
+    text actually contains verbatim, unwrapped, in both the `.claude` and
+    antigravity autopilot sources today, so it survives R1/R2/R7's
+    verbatim move into both `build` legs. R2 and R7 fold the walk-away
+    contract's classification gate and escalation triggers into both
+    mirror legs, so this is a procedure that _moved_ rather than one that
+    disappeared, and
     `.claude/rules/mirror-procedure-discipline.md`'s coverage manifest is
     required to track a moved procedure, not just shrink when one is
     deleted.
@@ -401,11 +406,12 @@ workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`),
       (R6 — the dead source→mirror pairing line is removed; the file's
       other, exempted `autopilot` mentions are unaffected and still
       present, per R6's exemption list).
-- [ ] `grep -qF '.claude/skills/build/SKILL.md|antigravity/.agents/workflows/build.md|escalation triggers' tests/mirror-procedure-manifest.txt`
+- [ ] `grep -qF '.claude/skills/build/SKILL.md|antigravity/.agents/workflows/build.md|Two triggers escalate to a human' tests/mirror-procedure-manifest.txt`
       (R6 — the moved-procedure pairing line replaces the deleted
       autopilot→autopilot.md line, so the coverage manifest keeps tracking
       the classification-gate/escalation-trigger procedure once it lives
-      in `build`).
+      in `build`; the canary is the literal unwrapped sentence confirmed
+      present in both fold-in sources, not a paraphrase).
 - [ ] `grep -c autopilot CLAUDE.md` returns 0, and CLAUDE.md's codex-leg
       authoring convention names the three-skill set (`drain`/`build`/
       `evals`), not four (R6).
