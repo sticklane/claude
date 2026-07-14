@@ -1,25 +1,11 @@
 # Task 01: build/dist prerequisite stage in install-gates + check.sh.tmpl
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
 Spec: ../SPEC.md (requirement R1)
 Touch: bin/install-gates, templates/check.sh.tmpl, tests/test_install_gates.sh
-
-<!-- PLAN (build)
-- tests first (tests/test_install_gates.sh): (1) node .scripts.build → build
-  stage before lint/tests; (2) .claude/build-prereq marker (python fixture) →
-  literal cmd as build stage before other stages; (3) neither signal → no
-  build stage. Confirm 1+2 red.
-- impl (bin/install-gates): unified post-detection block after the
-  detect_* dispatch (~line 334). BUILD_CMD from node .scripts.build (recompute
-  pm) else .claude/build-prereq head -1; prepend `run_stage "build" $cmd` to
-  CHECK_STAGES + STAGE_DESC. Comment carries literal "build/dist prerequisite".
-- template unchanged (@STAGES@ already ordered). No tier change: generic repos
-  still get no check.sh (marker only visible where check.sh is rendered).
-- gates: bash tests/test_install_gates.sh green; bash scripts/check.sh.
--->
 
 ## Goal
 
@@ -81,14 +67,19 @@ also edits `bin/install-gates`.
 
 ## Acceptance
 
-- [ ] `grep -c "build/dist prerequisite" bin/install-gates` → greater than 0
-- [ ] `bash tests/test_install_gates.sh` exits 0, including the three new
+- [x] `grep -c "build/dist prerequisite" bin/install-gates` → greater than 0
+      (verifier: returns 2; evidence/01-build-prereq-stage.md)
+- [x] `bash tests/test_install_gates.sh` exits 0, including the three new
       cases (Node `.scripts.build`, `.claude/build-prereq` marker, neither
-      signal present)
-- [ ] MANUAL: run `bin/install-gates --dry-run <scratch-repo>` (or install
+      signal present) (verifier: `pass: 168 fail: 0`, exit 0)
+- [x] MANUAL: run `bin/install-gates --dry-run <scratch-repo>` (or install
       for real into a scratch git repo) with a Node `.scripts.build` entry
       and confirm the rendered `scripts/check.sh` runs the build stage
-      before lint/typecheck/test
-- [ ] MANUAL: repeat with a `.claude/build-prereq` marker file and confirm
-      its literal command runs as the build stage
-- [ ] MANUAL: repeat with neither signal and confirm no build stage is added
+      before lint/typecheck/test (verifier scratch repo: `run_stage "build"
+    npm run build` first, before lint/tests)
+- [x] MANUAL: repeat with a `.claude/build-prereq` marker file and confirm
+      its literal command runs as the build stage (verifier scratch repo,
+      python stack, marker `make compile-protos`: `run_stage "build" make
+    compile-protos` before lint)
+- [x] MANUAL: repeat with neither signal and confirm no build stage is added
+      (verifier scratch repo: no `run_stage "build"` line present)
