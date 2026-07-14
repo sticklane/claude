@@ -88,3 +88,14 @@ which depends on this one). Do not edit any other skill's files.
       tree in /private/tmp scratchpad). Verifier/scout dispatch tool not
       exposed to this unattended worker, so the read-only procedure was run
       directly.
+
+## Discovered
+
+- `.claude/skills/drain/SKILL.md` is 503 lines, exceeding the 500-line
+  SKILL.md budget enforced by `evals/lint-skill-size-gate.sh` (repo-wide
+  scan). Pre-existing at this task's base commit (unrelated to this task's
+  own files, which are well within budget) -- `specs/skill-doc-size-guards`
+  already fixed this once (fully closed, 5/5 done + 1 obsolete) but later,
+  unrelated doc edits (mirroring "sole check entrypoint" wording, a plugin
+  bump) pushed it back over the line. A fresh regression, not covered by
+  that closed spec.
