@@ -18,7 +18,6 @@ Stdlib only. Read-only: never mutates anything it scans.
 See specs/prioritize/SPEC.md (R1, R2) for the requirements this implements.
 """
 
-import importlib.util
 import re
 import sys
 from pathlib import Path
@@ -26,17 +25,17 @@ from pathlib import Path
 _SCRIPT = Path(__file__).resolve()
 _WORKBOARD_PY = _SCRIPT.parent.parent / "workboard" / "workboard.py"
 
+# PRIORITY_RE and _load_module live in _shared/headers.py, reached the
+# viz-style way: put _shared/ on sys.path, then `import headers` (a regular
+# import — path-loading the loader would need a loader to load the loader).
+# The shared PRIORITY_RE is bracket-tolerant and range-restricted to P0-P3,
+# so `Priority: [P1]` reads as P1 here exactly as it does in /workboard.
+sys.path.insert(0, str(_SCRIPT.parent.parent / "_shared"))
+from headers import PRIORITY_RE, _load_module  # noqa: E402
+
 _QUALIFYING = ("pending", "blocked", "deferred", "draft")
 _CLOSED_SPEC_STATUSES = ("done", "skipped")
-_PRIORITY_RE = re.compile(r"^Priority:\s*(P[0-3])", re.MULTILINE)
 _TASK_NUM_RE = re.compile(r"^(\d+)-")
-
-
-def _load_module(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 # Loading workboard.py this way executes its own top-level shared-module
@@ -61,7 +60,7 @@ def _sort_key(ref):
 
 def _priority(path):
     """The file's `Priority:` header value, or `P2 (default)` when absent."""
-    m = _PRIORITY_RE.search(read_text(Path(path), 10_000))
+    m = PRIORITY_RE.search(read_text(Path(path), 10_000))
     return m.group(1) if m else "P2 (default)"
 
 
@@ -90,7 +89,7 @@ def collect(repo_root):
             status = sm.group(1).lower() if sm else "open"
             if status in _CLOSED_SPEC_STATUSES:
                 continue
-            pm = _PRIORITY_RE.search(text)
+            pm = PRIORITY_RE.search(text)
             rows.append(
                 {
                     "ref": f"{slug}/SPEC.md",
