@@ -89,6 +89,10 @@ which depends on this one). Do not edit any other skill's files.
       exposed to this unattended worker, so the read-only procedure was run
       directly.
 
+## Decisions
+
+- 2026-07-14 -- Created both `SKILL.md` and `reference.md` (task's Touch listed both; SPEC.md called reference.md optional) -- reversible, matches the repo's size/TOC conventions and the qa-sweep/gate structural model. Reverse: fold reference.md content back into SKILL.md if a future review prefers a single file.
+
 ## Discovered
 
 - `.claude/skills/drain/SKILL.md` is 503 lines, exceeding the 500-line
