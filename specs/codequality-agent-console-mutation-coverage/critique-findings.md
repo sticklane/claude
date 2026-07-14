@@ -163,3 +163,15 @@ time rather than blocking breakdown):
 
 `Breakdown-ready: true` written to SPEC.md's header. Recorded by drain gen 3
 (Run-token c92aedb1ae49f8d3); eligible for auto-breakdown (3b) this run.
+
+## Closure 2026-07-14 (attended, re-critique pass)
+
+Re-running /critique on this spec found the work already fully implemented
+and committed by a concurrent drain run: `agent-console/tests/{test_resume_agent,
+test_set_priority,test_execute_push,test_render_markdown}.py` all exist
+(commits `3b3be49`, `bd946e5`, `3f3aea7`, `191f86f`), each a
+`unittest.TestCase` subclass matching an Approach step, `python3 -m
+unittest` runs 17 green tests, and every acceptance criterion in this file
+is satisfied. SPEC.md's `Status: open` / `Breakdown-ready: true` header
+was stale from before that implementation landed — flipped to `Status:
+done`. No further /breakdown needed; this spec is closed.
