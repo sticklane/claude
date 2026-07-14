@@ -205,52 +205,18 @@ CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
       this deliberately also catches `--actions-out`, not just `--out`).
 - [ ] Dead-code reachability check (R4 — count-independent, catches the
       full orphaned set rather than a fixed name list that will drift as
-      the file changes again): save as `/tmp/orphan_check.py` and run
+      the file changes again): save the script from the "Reachability
+      check script" section below as `/tmp/orphan_check.py` and run
       `python3 /tmp/orphan_check.py .claude/skills/workboard/workboard.py`
-      → prints `clean` (exit 0); any remaining orphan fails loudly with
-      the name list.
-      ```python
-      import ast, sys
-      path = sys.argv[1]
-      tree = ast.parse(open(path).read())
-      funcs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
-
-      class Calls(ast.NodeVisitor):
-                  def __init__(self):
-                      self.names = set()
-                  def visit_Call(self, node):
-                      if isinstance(node.func, ast.Name):
-                          self.names.add(node.func.id)
-                      self.generic_visit(node)
-
-              graph = {}
-              for name, node in funcs.items():
-                  c = Calls()
-                  for stmt in node.body:
-                      c.visit(stmt)
-                  graph[name] = c.names
-
-              module_calls = Calls()
-              for node in tree.body:
-                  if not isinstance(node, ast.FunctionDef):
-                      module_calls.visit(node)
-
-              entry = {"main", "assemble", "attention_items", "ready_items",
-                       "default_roots"} | module_calls.names
-              visited, frontier = set(), list(entry)
-              while frontier:
-                  n = frontier.pop()
-                  if n in visited:
-                      continue
-                  visited.add(n)
-                  frontier.extend(graph.get(n, set()))
-
-              orphaned = set(funcs) - visited - {"main"}
-              if orphaned:
-                  print("ORPHANED:", sorted(orphaned))
-                  sys.exit(1)
-              print("clean")
-              ```
+      **after** deleting `render_html`/`build_actions_script` and their
+      orphaned callees — it prints `clean` (exit 0) once the deletion is
+      complete; any remaining orphan fails loudly with the name list. Run
+      it **before** any deletion first and confirm it prints `clean` too
+      (expected: `render_html` is still reachable from `main()` pre-edit,
+      so the whole file is "clean" in that state — this is a real
+      behavior, not a bug; the check only fails when something is
+      deleted incompletely, not when nothing is deleted yet). Don't
+      mistake a pre-deletion `clean` for "nothing to delete."
 
 - [ ] `grep -n "Fallback (machines without agent-console)"
 .claude/skills/workboard/SKILL.md` returns no match.
@@ -297,6 +263,57 @@ CLAUDE.md .claude-plugin/` shows only: (a) the new inline-table
       manual-pending with this reason rather than deferring or guessing
       (docs/memory/unattended-worker-tool-limits.md); the orchestrator or
       a human runs it post-merge.
+
+## Reachability check script
+
+Referenced by the R4 dead-code acceptance criterion above. Deliberately
+placed at the top level, not nested inside a list item — a prior draft
+embedded it inside the AC bullet's own fenced code block and this repo's
+prose-formatter hook reflowed the indentation, breaking the script with
+an `IndentationError` (caught by re-critique; see critique-findings.md).
+Save verbatim as `/tmp/orphan_check.py`:
+
+```python
+import ast, sys
+path = sys.argv[1]
+tree = ast.parse(open(path).read())
+funcs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+
+class Calls(ast.NodeVisitor):
+    def __init__(self):
+        self.names = set()
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name):
+            self.names.add(node.func.id)
+        self.generic_visit(node)
+
+graph = {}
+for name, node in funcs.items():
+    c = Calls()
+    for stmt in node.body:
+        c.visit(stmt)
+    graph[name] = c.names
+
+module_calls = Calls()
+for node in tree.body:
+    if not isinstance(node, ast.FunctionDef):
+        module_calls.visit(node)
+
+entry = {"main", "assemble", "attention_items", "ready_items", "default_roots"} | module_calls.names
+visited, frontier = set(), list(entry)
+while frontier:
+    n = frontier.pop()
+    if n in visited:
+        continue
+    visited.add(n)
+    frontier.extend(graph.get(n, set()))
+
+orphaned = set(funcs) - visited - {"main"}
+if orphaned:
+    print("ORPHANED:", sorted(orphaned))
+    sys.exit(1)
+print("clean")
+```
 
 ## Open questions
 
