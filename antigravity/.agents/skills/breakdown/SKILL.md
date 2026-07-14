@@ -80,6 +80,17 @@ hard-coded pre-task literal — a sibling task can land first and bump the
 same file, so a pinned literal false-fails once the on-disk value has
 already moved past it.
 
+While authoring a task's acceptance commands, classify each for privileged/
+OS-level access: a task whose acceptance commands require `launchctl`, a
+system installer/package-manager install step, or interactive OAuth is
+**never drain-completable unattended** — a sandboxed worker can only fail
+BLOCKED on the privileged denial, never satisfy the criterion. Flag such a
+task MANUAL / human-pending at breakdown time rather than dispatching it to
+a worker, reusing the existing manual-pending escape (mark that criterion
+manual-pending with the reason stated) rather than inventing new
+vocabulary — `docs/memory/unattended-worker-tool-limits.md` is the
+precedent this mirrors.
+
 4. Order tasks so each leaves the build green — no task may depend on a
    later one to compile or pass tests. Assign each task's `Priority:` by
    this rubric:
