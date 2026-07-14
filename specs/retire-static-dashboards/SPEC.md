@@ -14,8 +14,8 @@ produces a static file.
 An earlier version of this spec proposed retiring `/fleet` entirely and
 folding its capability into `/workboard`'s live dashboard as a session
 filter. That's unbuildable as described: `/fleet`'s data — background
-`TaskList` entries and `git worktree list` output for *this specific
-session* — comes from in-process harness state only the invoking session
+`TaskList` entries and `git worktree list` output for _this specific
+session_ — comes from in-process harness state only the invoking session
 can see (`fleet/SKILL.md` step 1). `agent-console` is a separate,
 shared server process reached via a bare URL with no session id passed;
 `workboard.py`'s own `scan_sessions` only enumerates whole top-level
@@ -26,9 +26,9 @@ favor of it would be a real capability loss, not a consolidation.
 
 ## Solution
 
-Keep `/fleet` — its *data-gathering* mechanism (steps 1-2 of its current
+Keep `/fleet` — its _data-gathering_ mechanism (steps 1-2 of its current
 SKILL.md: harness `TaskList` + `git worktree list`, normalized into one
-record per agent) is correct and stays exactly as-is. Only its *output*
+record per agent) is correct and stays exactly as-is. Only its _output_
 changes: instead of rendering an HTML template to a scratchpad file and
 presenting that file, it prints a markdown table directly in the
 response (the same output shape `/list-specs` already establishes) — no
@@ -61,7 +61,7 @@ Solution below.
 
 - **R1**: Every reference to `/fleet` in this repo is inventoried via
   `git grep -n '\bfleet\b' -- .claude/ antigravity/ docs/ AGENTS.md
-  CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
+CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
   `.claude/worktrees/`'s transient full-repo copies, unlike a recursive
   `grep -rn`) and updated to describe fleet's
   new inline-table output instead of an HTML snapshot — including but not
@@ -78,9 +78,27 @@ Solution below.
   pointing at the now-deleted `fleet/reference.md`. Legitimate unrelated
   prose uses of the word "fleet" (e.g. `token-discipline.md`'s "scale the
   fleet", `human-gates.md`'s "a fleet of launched [workers]") are left
-  alone — they don't refer to the skill.
+  alone — they don't refer to the skill. Separately, **every dangling
+  citation of the deleted `fleet/reference.md` path anywhere in the
+  repo** — not enumerated by file/line, since these are code comments and
+  docstrings scattered across both the `.claude` and `antigravity` trees'
+  `workboard.py`, `test_workboard.py`, `reference.md`, and `SKILL.md`
+  (workboard reuses fleet's glyph+word status-chip visual convention in
+  its own independently-rendered spawn-tree/status-chip code, and cites
+  the file that documented it) — is reworded to stop citing a deleted
+  file: either drop the file citation and describe the chip convention
+  inline, or point at `fleet/SKILL.md` if it still documents the
+  convention there. The convention itself (glyph + word status chips) is
+  UNCHANGED by this spec — only fleet's own HTML-rendering mode and its
+  now-orphaned `reference.md` are removed — so this is a citation fix,
+  not a rewrite of workboard's chip-rendering logic.
 - **R2**: `fleet/SKILL.md` no longer contains an HTML-rendering step;
-  `fleet/reference.md` no longer exists.
+  `fleet/reference.md` no longer exists. Its frontmatter `description`
+  (currently: "...as a self-contained HTML snapshot with status tiles, a
+  timeline, and per-agent detail") is rewritten to describe the new
+  inline markdown-table output instead — this is the skill's actual
+  auto-invocation trigger surface, not incidental prose, so it must match
+  the new behavior, not just the body text.
 - **R3**: `.claude/skills/_shared/viz.py`'s `_emit_fleet_css` function and
   `--emit-fleet-css` CLI flag are removed, along with any docstring/
   comment referencing fleet's CSS generation — confirmed via grep that
@@ -113,15 +131,24 @@ Solution below.
   `test_workboard.py`) and `antigravity/.agents/skills/_shared/viz.py`
   (its own `_emit_fleet_css`/`--emit-fleet-css`, per R3 — this file exists
   in the Antigravity mirror independent of fleet not being ported there,
-  since `_shared` is used by workboard's mirror too). Two remaining
-  antigravity-side mentions of the word "fleet" are explicitly left
-  untouched by this spec: `antigravity/README.md:35`'s not-ported row
-  itself (it correctly records that fleet isn't ported — it is not stale
-  and is not reworded to "inline table," since there's no ported fleet
-  skill there to describe) and `antigravity/AGENTS.md`'s "scale the fleet
-  only for genuinely divisible" line (the mirror of
-  `token-discipline.md`'s identical unrelated prose, already exempted for
-  the `.claude/` copy in R1).
+  since `_shared` is used by workboard's mirror too). R1's dangling-
+  `fleet/reference.md`-citation cleanup applies here too — antigravity's
+  own `workboard.py`, `test_workboard.py`, `reference.md`, and
+  `SKILL.md` carry the same citation pattern independently (this mirror
+  is not a copy of the `.claude` files, so its citations are a separate
+  cleanup, not automatically fixed by R1's edit to the `.claude` leg).
+  Exactly two antigravity-side mentions of the word "fleet" are
+  explicitly left untouched by this spec — every OTHER antigravity
+  mention (the dangling-citation set above, plus any generic "fleet-style"/
+  "fleet convention"/"fleet's status chip(s)" phrasing describing
+  workboard's reused visual convention, per R1) is in scope, not exempt
+  by default: `antigravity/README.md:35`'s not-ported row itself (it
+  correctly records that fleet isn't ported — it is not stale and is not
+  reworded to "inline table," since there's no ported fleet skill there
+  to describe) and `antigravity/AGENTS.md`'s "scale the fleet only for
+  genuinely divisible" line (the mirror of `token-discipline.md`'s
+  identical unrelated prose, already exempted for the `.claude/` copy in
+  R1).
 - **R7**: `.claude-plugin/plugin.json`'s version is bumped (skill behavior
   changed in two skills).
 - **R8**: Any existing test that exercises `workboard.py --out ...`,
@@ -143,21 +170,35 @@ Solution below.
 - [ ] `.claude/skills/fleet/reference.md` does not exist;
       `.claude/skills/fleet/SKILL.md` describes printing a markdown table,
       not rendering/writing HTML.
+- [ ] `grep -c "self-contained HTML snapshot" .claude/skills/fleet/SKILL.md`
+      → 0 (confirmed present today, must go to 0 — the frontmatter
+      `description` line is rewritten to describe the inline markdown-table
+      output, per R2; this is the skill's auto-invocation trigger surface,
+      not just body prose).
 - [ ] `grep -n "_emit_fleet_css\|--emit-fleet-css" .claude/skills/_shared/viz.py`
       returns no matches.
 - [ ] `grep -n "render_html\|build_actions_script\|--out\|--actions-out"
-      .claude/skills/workboard/workboard.py` returns no matches (R4 — note
+.claude/skills/workboard/workboard.py` returns no matches (R4 — note
       this deliberately also catches `--actions-out`, not just `--out`).
 - [ ] `grep -n "Fallback (machines without agent-console)"
-      .claude/skills/workboard/SKILL.md` returns no match.
+.claude/skills/workboard/SKILL.md` returns no match.
 - [ ] `python3 .claude/skills/workboard/workboard.py --json` still runs
       and produces valid JSON (unaffected mode).
 - [ ] `git grep -n '\bfleet\b' -- .claude/ antigravity/ docs/ AGENTS.md
-      CLAUDE.md .claude-plugin/` shows only: (a) the new inline-table
-      description, (b) the legitimate unrelated prose uses named in R1
-      (including `antigravity/AGENTS.md`'s "scale the fleet" line), or
-      (c) `antigravity/README.md:35`'s not-ported row, left exactly as-is
-      — no stale HTML-snapshot description remains anywhere else.
+CLAUDE.md .claude-plugin/` shows only: (a) the new inline-table
+      description, (b) legitimate unrelated prose (any generic idiom like
+      "scale the fleet", "a fleet of launched [workers]", or a citation to
+      workboard's own reused glyph+word status-chip visual convention —
+      "fleet-style", "fleet's status chip(s)", "fleet convention" — not
+      limited to the specific instances R1 happens to name, since new
+      instances of these same patterns can appear as the tree changes),
+      or (c) `antigravity/README.md:35`'s not-ported row, left exactly
+      as-is — no stale HTML-snapshot description and no dangling citation
+      of the deleted `fleet/reference.md` remains anywhere else.
+- [ ] `git grep -rn 'fleet/reference\.md' -- .claude/ antigravity/`
+      returns no matches (confirms R1/R6's dangling-citation cleanup is
+      complete in both trees — a mechanical, count-independent backstop
+      for the sweep AC above).
 - [ ] `antigravity/.agents/skills/fleet/` does not exist (unchanged from
       before this spec — R6 confirms, doesn't create).
 - [ ] The workboard/viz.py checks above (workboard `--out`/`--actions-out`
