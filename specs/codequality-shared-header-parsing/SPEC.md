@@ -69,7 +69,7 @@ spanning both trees collides on module names.
 
 ## Out of scope
 
-- Changing what any header *means* (P0–P3 semantics, defaults) — this is
+- Changing what any header _means_ (P0–P3 semantics, defaults) — this is
   parse-consistency only.
 - agent-console's parsers (it imports workboard already and follows along
   for free).
@@ -95,3 +95,8 @@ spanning both trees collides on module names.
       including all regex definitions, the `_load_module` import, and any
       other docstring content, must diff empty. `.claude-plugin/plugin.json`
       version is bumped in the same change.
+
+## Parallelization
+
+Task 02 depends on task 01 (it mirrors task 01's finalized file content) —
+no parallel groups; both run solo, serialized.
