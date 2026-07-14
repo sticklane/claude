@@ -169,6 +169,22 @@ class CollectTestCase(unittest.TestCase):
         rows = prioritize_scan.collect(self.root)
         self.assertEqual(rows[0]["priority"], "P2 (default)")
 
+    def test_bracketed_priority_header_reads_as_that_value(self):
+        # `Priority: [P1]` — the bracketed shape STATUS_RE already tolerates —
+        # must read as P1 here too, matching /workboard (shared PRIORITY_RE).
+        make_spec_md(self.root, "foo")
+        make_task(self.root, "foo", "01-a.md", status="pending", priority="[P1]")
+        rows = prioritize_scan.collect(self.root)
+        self.assertEqual(rows[0]["priority"], "P1")
+
+    def test_out_of_range_priority_falls_through_to_default(self):
+        # `Priority: P7` is outside the toolkit's P0-P3 range: it must NOT
+        # match, falling through to the P2 default (pins the range).
+        make_spec_md(self.root, "foo")
+        make_task(self.root, "foo", "01-a.md", status="pending", priority="P7")
+        rows = prioritize_scan.collect(self.root)
+        self.assertEqual(rows[0]["priority"], "P2 (default)")
+
     def test_headerless_task_counts_as_pending_and_is_listed(self):
         make_spec_md(self.root, "foo")
         make_task(self.root, "foo", "01-noheader.md", status=None)

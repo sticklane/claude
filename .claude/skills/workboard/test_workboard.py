@@ -187,6 +187,32 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
             self.assertEqual(len(specs[0]["tasks_blocked"]), 1)
 
 
+class TestPriorityRegexRange(unittest.TestCase):
+    """The shared PRIORITY_RE reads `Priority: [P1]` as P1 (bracket-tolerant)
+    and rejects out-of-range values like P7 (falls through to no match),
+    pinning the same reading /prioritize uses (specs/codequality-shared-header-parsing)."""
+
+    def test_bracketed_priority_reads_as_that_value(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = Path(tmp) / "specs" / "demo"
+            (spec / "tasks").mkdir(parents=True)
+            (spec / "SPEC.md").write_text("# Demo\nPriority: [P1]\n", encoding="utf-8")
+
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+
+            self.assertEqual(specs[0]["priority"], "P1")
+
+    def test_out_of_range_priority_does_not_match(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = Path(tmp) / "specs" / "demo"
+            (spec / "tasks").mkdir(parents=True)
+            (spec / "SPEC.md").write_text("# Demo\nPriority: P7\n", encoding="utf-8")
+
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+
+            self.assertEqual(specs[0]["priority"], "")
+
+
 class TestSimpleCommandsInInbox(unittest.TestCase):
     def test_unpushed_commits_item_carries_git_push_command(self):
         repo = make_repo_record(ahead=2)

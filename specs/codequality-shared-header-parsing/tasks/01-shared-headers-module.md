@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 22 turns
@@ -79,8 +79,13 @@ _shared>)` then `import headers` — a regular import, never
 
 ## Acceptance
 
-- [ ] `grep -rn "Priority:" .claude/skills/*/[a-z_]*.py | grep -c "re.compile"` returns 1 — a single compiled Priority regex definition, in `_shared/`, imported everywhere else
-- [ ] A fixture task file containing `Priority: [P1]` yields P1 (not the P2 default) from both `prioritize_scan.py` and `workboard.py` scanning code paths, asserted by named tests in both test files
-- [ ] A fixture task file containing `Priority: P7` does NOT match (falls through to P2 default) in both `prioritize_scan.py` and `workboard.py`, asserted by named tests in both test files
-- [ ] `grep -c "def _load_module" .claude/skills/list-specs/list_specs.py .claude/skills/prioritize/prioritize_scan.py` shows 0 for both (loader lives in `_shared/` only)
-- [ ] `python3 -m pytest .claude/skills` exits 0 (do not widen the run to `antigravity/` — mirror basenames collide)
+- [x] `grep -rn "Priority:" .claude/skills/*/[a-z_]*.py | grep -c "re.compile"` returns 1 — a single compiled Priority regex definition, in `_shared/`, imported everywhere else
+  - Evidence: grep returns `1`; sole match is `.claude/skills/_shared/headers.py:27: PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P[0-3])\]?", re.MULTILINE)`.
+- [x] A fixture task file containing `Priority: [P1]` yields P1 (not the P2 default) from both `prioritize_scan.py` and `workboard.py` scanning code paths, asserted by named tests in both test files
+  - Evidence: `test_prioritize_scan.py::CollectTestCase::test_bracketed_priority_header_reads_as_that_value` and `test_workboard.py::TestPriorityRegexRange::test_bracketed_priority_reads_as_that_value` both pass (were RED before the shared-regex wiring for prioritize).
+- [x] A fixture task file containing `Priority: P7` does NOT match (falls through to P2 default) in both `prioritize_scan.py` and `workboard.py`, asserted by named tests in both test files
+  - Evidence: `test_prioritize_scan.py::CollectTestCase::test_out_of_range_priority_falls_through_to_default` and `test_workboard.py::TestPriorityRegexRange::test_out_of_range_priority_does_not_match` both pass (the workboard one was RED before the `P\d`→`P[0-3]` range fix).
+- [x] `grep -c "def _load_module" .claude/skills/list-specs/list_specs.py .claude/skills/prioritize/prioritize_scan.py` shows 0 for both (loader lives in `_shared/` only)
+  - Evidence: grep reports `0` for each; the sole `def _load_module` now lives in `.claude/skills/_shared/headers.py` (grep -c → 1 there).
+- [x] `python3 -m pytest .claude/skills` exits 0 (do not widen the run to `antigravity/` — mirror basenames collide)
+  - Evidence: `217 passed`, `exit=0`.

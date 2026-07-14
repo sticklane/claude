@@ -12,7 +12,6 @@ implements.
 Stdlib only. Read-only: never mutates anything it scans.
 """
 
-import importlib.util
 import sys
 from pathlib import Path
 
@@ -20,12 +19,11 @@ _SCRIPT = Path(__file__).resolve()
 _WORKBOARD_PY = _SCRIPT.parent.parent / "workboard" / "workboard.py"
 _SPEC_READINESS_PY = _SCRIPT.parent.parent / "_shared" / "spec_readiness.py"
 
-
-def _load_module(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+# _load_module lives in _shared/headers.py, reached the viz-style way: put
+# _shared/ on sys.path, then `import headers` (a regular import — path-loading
+# the loader would need a loader to load the loader).
+sys.path.insert(0, str(_SCRIPT.parent.parent / "_shared"))
+from headers import _load_module  # noqa: E402
 
 
 # Loading workboard.py this way executes its own top-level
