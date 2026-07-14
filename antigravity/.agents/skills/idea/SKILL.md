@@ -46,28 +46,56 @@ Create `specs/<kebab-slug>/SPEC.md`:
 # <Title>
 
 ## Problem
+
 One paragraph. Who, what, why now.
 
 ## Solution
+
 The approach in a few sentences, naming real files/interfaces from the
 scout findings (path:line where useful).
 
 ## Requirements
+
 Numbered. Each one testable — "R3: POST /api/x returns 422 when body lacks
 `name`" not "handle errors gracefully".
 
 ## Out of scope
+
 Explicit exclusions, so an agent doesn't wander into them.
 
 ## Acceptance criteria
+
 Runnable checks, one per requirement where possible:
+
 - [ ] `npm test -- x.test.ts` passes (covers R1–R3)
 - [ ] `curl -s localhost:3000/api/x | jq .status` → "ok"
-End with one end-to-end check that exercises the feature as a user would.
+      End with one end-to-end check that exercises the feature as a user would.
 
 ## Open questions
+
 Must be EMPTY before implementation starts.
 ```
+
+**Anchor every grep/count-based acceptance criterion.** Apply the
+anchored-acceptance-criteria check (doctrine in
+`docs/memory/anchored-acceptance-criteria.md`, cited not restated) to each
+grep- or count-based criterion the moment you draft it — before that
+criterion is written into the SPEC.md above, never deferred to
+`/breakdown`:
+
+1. Run `grep -ci '<phrase>'` (or the equivalent count check) against the
+   target file's CURRENT on-disk state, and confirm the criterion's expected
+   result actually differs from today's — a criterion whose phrase is already
+   present (or whose count already satisfies the bound) passes vacuously.
+2. Reject and rewrite any criterion whose target phrase is itself an
+   incidental byproduct of this same spec's own Requirements — the
+   self-referential trap, where a worker satisfies the check by writing only
+   the literal search string without implementing the requirement's actual
+   behavior. The rewrite must depend on genuine implementation: an observable
+   behavior, a runnable test, or a phrase tied to functional content.
+3. Record the check's outcome inline next to the criterion in the SPEC.md
+   draft, matching the memory file's convention — e.g. "phrase absent today,
+   verified <date>".
 
 ## 4. Adversarial pass
 
