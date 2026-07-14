@@ -114,3 +114,40 @@ Verdict: fix applied. R8's prose and AC swapped
 Finding 2 (R4 has no verifying check, conf 60, spec-range nit) remains
 unaddressed and not part of this approval — carried forward for the next
 round. Re-run `/critique` to check whether this earns `Breakdown-ready: true`.
+
+## Re-critique 2026-07-14 (drain critique intake, gen 3, run c92aedb1ae49f8d3) — still NOT READY
+
+Finding 1's fix (idea/breakdown mirror paths) verified correct and accurate
+against the live tree: `antigravity/.agents/workflows/{idea,breakdown}.md`
+confirmed as thin 5/19-line launcher stubs, real content at
+`antigravity/.agents/skills/{idea,breakdown}/SKILL.md`, R8 + AC now name
+those correctly. But a new, higher-severity blocker has appeared since:
+
+1. **[confidence 96, BLOCKING] Version pin is now a downgrade; R8 AC is
+   unsatisfiable.** SPEC.md's version-bump text and R8's AC still target
+   `0.8.59`, but `.claude-plugin/plugin.json` is now at **0.9.5** (advanced
+   by later merges this run). Bumping "to 0.8.59" would be a downgrade —
+   the AC can only pass by regressing the plugin version. Exactly the
+   CLAUDE.md failure mode of an acceptance criterion whose numeric bound is
+   no longer satisfiable from the file as it exists. Fix: change the
+   version-bump text to "bumped from its current 0.9.5 to 0.9.6" and the AC
+   to `grep -q '"version": "0.9.6"'` (note: this pin will re-stale again if
+   other work merges before this spec is built — a concrete satisfiable
+   target is required regardless of how often it needs refreshing).
+2. **[confidence 60, nit, non-blocking, carried forward — same as prior
+   finding 2] R4's behavioral core still has no verifying check.** Every AC
+   for the prototype gate-scaling in build/drain only greps for the literal
+   string "Rigor:", proving the header was mentioned, not that the gate
+   actually scales; the one manual behavioral AC exercises R2/idea, not the
+   R4 build/drain path. Doesn't block /breakdown, cheap to close: add one
+   manual-pending behavioral AC exercising the R4 prototype path.
+
+Verified clean: all R8 target paths exist across `.claude/`, antigravity,
+and codex mirrors; no unmentioned mirror obligations (codex list-specs is a
+symlink into antigravity, no antigravity rules mirror exists so R7 needs
+none); every added-string AC anchor still non-vacuous today; the
+lint-ultra-gate AC correctly covers this spec's idea/build/drain edits.
+
+Recovery: fix finding 1 (the version-pin downgrade), then re-run /critique.
+This spec's critique intake is spent for this run (Run-token
+c92aedb1ae49f8d3) — recorded in `DRAIN-BATON.md`'s `Intake-failed:` line.
