@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 03
 Priority: P1
 Budget: 45 turns
@@ -62,17 +62,41 @@ checklist) is an implementation judgment call.
    authoring time, but re-read the live value before bumping — a sibling
    task elsewhere in the repo may have already bumped it).
 
+<!--
+PLAN (task 04 — wire gate + mirror drain):
+- Hook point (Open Question): chose reference.md's "Push guard (canonical)"
+  section over "Exit checklist" — the gate is a per-task pre-merge blocker;
+  Push guard is the per-task merge/push mechanics home, Exit checklist is a
+  once-per-session human report (fires too late for a per-task merge block).
+  SPEC R6 leaves exact placement to implementation; C1 only requires the
+  string in reference.md, which this satisfies.
+- codex has SKILL.md only (no reference.md mirror in the thin overlay), so the
+  gate step is ported INLINE into codex SKILL.md's DONE bullet, beside its
+  inline "Push guard (canonical)" summary.
+- Task 03 net-changed only reference.md (TOC heading; SKILL.md pre-trimmed by
+  ancestor 2f19e4d), so the only procedural content to port to antigravity is
+  THIS task's gate step (added to the workflow's merge/push-guard region).
+- plugin.json bumped 0.9.0 → 0.9.1 (base value re-read live; sibling had moved
+  it from 0.8.63).
+- Gate script currently FAILs (7 non-drain reference.md files lack TOCs) — that
+  is task 02's job (pending), not task 04's; not in my Touch, not a C1–C4 gate.
+-->
+
 ## Acceptance
 
-- [ ] `grep -q "lint-skill-size-gate" .claude/skills/drain/reference.md` →
-      match.
-- [ ] `diff <(git show HEAD~1:codex/.agents/skills/drain/SKILL.md 2>/dev/null) codex/.agents/skills/drain/SKILL.md`
+- [x] `grep -q "lint-skill-size-gate" .claude/skills/drain/reference.md` →
+      match. Evidence: `grep -c` → 1 (added to the "Push guard (canonical)"
+      section as a conditional pre-merge blocker).
+- [x] `diff <(git show HEAD~1:codex/.agents/skills/drain/SKILL.md 2>/dev/null) codex/.agents/skills/drain/SKILL.md`
       → non-empty diff (confirms the codex mirror actually changed in this
-      task's commit, not skipped).
-- [ ] `git show <this task's base commit>:.claude-plugin/plugin.json | grep '"version"'`
+      task's commit, not skipped). Evidence: 8-line insertion (`250a251,258`)
+      adding the skill-doc size/TOC gate to codex's DONE bullet; single-commit
+      branch so HEAD~1 = base commit 90adcf3.
+- [x] `git show <this task's base commit>:.claude-plugin/plugin.json | grep '"version"'`
       compared against `grep '"version"' .claude-plugin/plugin.json` →
       values differ (cite both in the evidence line; never hard-code the
-      literal `0.8.63` since a sibling task may move it first).
+      literal `0.8.63` since a sibling task may move it first). Evidence:
+      base (90adcf3) `"version": "0.9.0"` vs current `"version": "0.9.1"` — differ.
 - [ ] MANUAL (per `.claude/rules/mirror-verification.md`'s manual-pending
       escape): confirm `antigravity/.agents/workflows/drain.md` reads as
       procedurally equivalent to the updated `drain/SKILL.md` +
@@ -83,3 +107,15 @@ checklist) is an implementation judgment call.
       exercise antigravity interactively, mark this criterion
       manual-pending with that reason stated, for a human or the
       orchestrator to confirm post-merge.
+      MANUAL-PENDING: ran unattended with no way to exercise antigravity
+      interactively (`.claude/rules/mirror-verification.md` manual-pending
+      escape). Static classification (`.claude/rules/mirror-procedure-discipline.md`):
+      the gate step added to `antigravity/.agents/workflows/drain.md`'s
+      merge/push-guard region is a faithful procedural port of the
+      reference.md + codex additions — same condition (`Touch:` includes a
+      `.claude/skills/*/SKILL.md` or `*/reference.md` path), same command
+      (`bash evals/lint-skill-size-gate.sh`), same consequence (non-zero exit
+      = merge blocker / slot-machine path), same `lint-ultra-gate.sh` role
+      reference, placed at the same decision point (before merge, after the
+      push-guard clause). No load-bearing divergence introduced. Live
+      cross-reference read left for a human/orchestrator post-merge.
