@@ -1,6 +1,6 @@
 # Task 04: Worktree-removal-before-branch-deletion ordering (R4)
 
-Status: in-progress
+Status: done
 Depends on: 03
 Priority: P2
 Budget: 12 turns
@@ -54,6 +54,6 @@ no change — use it as your model, don't edit it).
 
 ## Acceptance
 
-- [ ] `grep -c "remove the worktree before deleting the branch\|remove the checkout/worktree before deleting the branch" .claude/skills/drain/reference.md` → ≥ 1
-- [ ] `grep -c "remove the worktree before deleting the branch\|remove the checkout/worktree before deleting the branch" .claude/skills/drain/SKILL.md` → ≥ 1
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `grep -c "remove the worktree before deleting the branch\|remove the checkout/worktree before deleting the branch" .claude/skills/drain/reference.md` → ≥ 1 — returns 1 (Tournament "Merge" survivor cleanup)
+- [x] `grep -c "remove the worktree before deleting the branch\|remove the checkout/worktree before deleting the branch" .claude/skills/drain/SKILL.md` → ≥ 1 — returns 1 (step 3 rescue-branch deletion)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — "OK — all ultra mentions gated in 4 files", exit 0
