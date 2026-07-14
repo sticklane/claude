@@ -205,3 +205,25 @@ R6's antigravity paragraph now explicitly mandates the literal phrase
 "not by the sub-reviewer fallback" verbatim, matching its AC. Confirmed
 still absent (0) in the live antigravity/.agents/workflows/build.md.
 Ready for re-critique.
+
+## Re-critique 2026-07-14 (attended, resumed from handoff) — NOT READY, unsatisfiable codex AC
+
+The sub-reviewer-fallback fix verified landed and correct. But a fresh
+pass caught a blocking defect every prior round mis-verified: the codex
+R5 AC (`grep -c "not by \$code-review itself"
+codex/.agents/skills/build/SKILL.md`) is unsatisfiable — inside the
+double-quoted shell command `\$` collapses to a literal `$` before grep
+ever sees it, and a mid-pattern `$` in BRE-mode `grep -c` is not
+guaranteed to match a literal dollar sign. Reproduced directly on this
+repo's own `grep`: the pattern returns 0 even when the exact phrase is
+present in a test file. Every prior round's "confirmed absent today,
+`grep -c ... → 0`" check was reading a false-absent — the pattern was
+broken, not the phrase actually absent — so this AC would have kept
+returning 0 (unsatisfiable) even after a worker wrote the phrase exactly
+as R6 mandates, stalling a drain run on it
+(docs/memory/anchored-acceptance-criteria.md's exact failure mode). Fixed:
+switched to `grep -cF 'not by $code-review itself' ...` (fixed-string
+match, single-quoted so the shell passes the literal `$` through
+untouched) and verified both directions — absent today (0) and matches
+when present (1, tested against a synthetic fixture). Re-run `/critique`
+to confirm READY.

@@ -176,11 +176,20 @@ passes when the count is 1 or more after the edit.
 - [ ] `grep -c "Documentation currency\|AGENTS.md's Map" codex/.agents/skills/build/SKILL.md`
       → 1 or more (R6's codex leg: the inlined reminder, since codex has
       no `quality-discipline.md` to cite).
-- [ ] `grep -c "not by \$code-review itself" codex/.agents/skills/build/SKILL.md`
+- [ ] `grep -cF 'not by $code-review itself' codex/.agents/skills/build/SKILL.md`
       → 1 or more (confirmed absent today; R6's codex leg equivalent of
       R5's note, attached to the `$code-review` invocation — anchored on
       codex's own invocation phrasing so this AC verifies independently
       of the inlined-reminder AC above, rather than sharing its anchor).
+      **`-F` (fixed-string) required, not the bare `grep -c "..."` this AC
+      previously used**: in a double-quoted shell command `\$` collapses
+      to a literal `$` before grep ever sees it, and a mid-pattern `$` in
+      BRE-mode `grep -c` is not guaranteed to match a literal dollar sign
+      on every platform — verified: the unescaped double-quoted form
+      returns 0 (false-absent) on this repo's own `grep` even when the
+      phrase is present, meaning this criterion would also misreport
+      after the correct edit landed — the exact failure mode
+      docs/memory/anchored-acceptance-criteria.md warns about.
 - [ ] `.claude-plugin/plugin.json`'s `version` (currently `"0.9.1"` as of
       2026-07-13, confirmed via `grep -n '"version"' .claude-plugin/plugin.json`
       — re-check at implementation time, this drifts often) is higher
