@@ -12,6 +12,7 @@
 .claude/skills/autopilot/SKILL.md|antigravity/.agents/workflows/autopilot.md|bounded goal
 .claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|Environment kill
 .claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|one focused question each
+.claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|self-referential
 .claude/skills/breakdown/SKILL.md|antigravity/.agents/workflows/breakdown.md|recording a BLOCKED flip
 .claude/skills/critique/SKILL.md|antigravity/.agents/workflows/critique.md|Relay the verdict and findings verbatim
 .claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|credentials or external services beyond
