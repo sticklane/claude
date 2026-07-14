@@ -82,8 +82,13 @@ input to a normal production task, not as done work.
 - R7: quality-discipline.md gains one line scoping its TDD mandate to
   production-rigor work, citing this mechanism.
 - R8: Mirrors receive the equivalent changes in the same commit: the
-  idea, breakdown, build, and drain workflow files under
-  `antigravity/.agents/workflows/`; the list-specs skill mirror at
+  idea and breakdown skill mirrors at
+  `antigravity/.agents/skills/idea/SKILL.md` and
+  `antigravity/.agents/skills/breakdown/SKILL.md` (their
+  `antigravity/.agents/workflows/{idea,breakdown}.md` counterparts are
+  thin launcher stubs, not the real ported content); the build and
+  drain workflow files under `antigravity/.agents/workflows/`, which
+  ARE the real content for those two; the list-specs skill mirror at
   `antigravity/.agents/skills/list-specs/SKILL.md` (list-specs is ported
   under `antigravity/.agents/skills/`, not `workflows/`); and, per
   CLAUDE.md's codex mirroring convention (build and drain are real
@@ -110,7 +115,7 @@ input to a normal production task, not as done work.
       gate check, required before committing changes to any of
       idea/critique/drain/build SKILL.md; this spec's R2 and R4 edit
       idea/build/drain)
-- [ ] `grep -qi "rigor" antigravity/.agents/workflows/idea.md && grep -qi "rigor" antigravity/.agents/workflows/breakdown.md && grep -qi "rigor" antigravity/.agents/workflows/build.md && grep -qi "rigor" antigravity/.agents/workflows/drain.md && grep -qi "rigor" antigravity/.agents/skills/list-specs/SKILL.md && grep -qi "rigor" codex/.agents/skills/build/SKILL.md && grep -qi "rigor" codex/.agents/skills/drain/SKILL.md && grep -q '"version": "0.8.59"' .claude-plugin/plugin.json` (R8)
+- [ ] `grep -qi "rigor" antigravity/.agents/skills/idea/SKILL.md && grep -qi "rigor" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "rigor" antigravity/.agents/workflows/build.md && grep -qi "rigor" antigravity/.agents/workflows/drain.md && grep -qi "rigor" antigravity/.agents/skills/list-specs/SKILL.md && grep -qi "rigor" codex/.agents/skills/build/SKILL.md && grep -qi "rigor" codex/.agents/skills/drain/SKILL.md && grep -q '"version": "0.8.59"' .claude-plugin/plugin.json` (R8)
 - [ ] Fresh-session test: /idea a throwaway-tool pitch, answer "prototype";
       the produced SPEC.md carries `Rigor: prototype` above its first `##`
       (manual, per CLAUDE.md's testing convention).
