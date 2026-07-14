@@ -1,6 +1,6 @@
 # Task 01: Allowlist pre-flights for headless dispatch and baton self-relaunch
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 20 turns
