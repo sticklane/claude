@@ -1,6 +1,6 @@
 # Task 04: docs-only diff detection in the local Stop-hook gate
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 18 turns
@@ -66,13 +66,18 @@ failure-reporting order).
 
 ## Acceptance
 
-- [ ] `grep -c "docs-only diff" templates/stop-gate.sh bin/install-gates | awk -F: '{sum+=$2} END {print sum}'` → greater than 0
-- [ ] `bash tests/test_hook_templates.sh` exits 0, including the new
+- [x] `grep -c "docs-only diff" templates/stop-gate.sh bin/install-gates | awk -F: '{sum+=$2} END {print sum}'` → greater than 0
+      — verifier: sum=2 (evidence/04-docs-only-diff-scoping.md)
+- [x] `bash tests/test_hook_templates.sh` exits 0, including the new
       docs-only-skip and non-docs-still-runs cases
-- [ ] `bash tests/test_install_gates.sh` exits 0 (no regression from Task 01)
-- [ ] MANUAL: trigger the updated Stop hook on a repo with gates installed
+      — verifier: pass 85, fail 0; docs-only-skip, docs/ subtree, clean-tree, and mixed anti-regression cases all present
+- [x] `bash tests/test_install_gates.sh` exits 0 (no regression from Task 01)
+      — verifier: pass 168, fail 0; bin/install-gates untouched
+- [x] MANUAL: trigger the updated Stop hook on a repo with gates installed
       via a docs-only edit (e.g. a one-line HUMAN.md change) and confirm
       the full `scripts/check.sh` run is skipped or narrowed, not run in
-      full
-- [ ] MANUAL: trigger the updated Stop hook on the same repo via a
+      full — verifier: scratch python repo, gates installed; docs-only HUMAN.md
+      edit → "docs-only diff since last commit; skipping check", exit 0, marker absent (check skipped)
+- [x] MANUAL: trigger the updated Stop hook on the same repo via a
       product-code edit and confirm `scripts/check.sh` still runs in full
+      — verifier: app.py edit → exit 0, marker present (check ran in full)
