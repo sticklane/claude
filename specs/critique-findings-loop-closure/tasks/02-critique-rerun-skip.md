@@ -1,6 +1,6 @@
 # Task 02: Critique re-run skip, replacing drain's commit-hash short-circuit (R5, R6)
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 26 turns
