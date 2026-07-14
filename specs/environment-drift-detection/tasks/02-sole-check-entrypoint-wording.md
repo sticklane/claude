@@ -1,6 +1,6 @@
 # Task 02: state scripts/check.sh as the sole required check entrypoint
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 12 turns
