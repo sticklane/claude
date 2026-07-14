@@ -1,7 +1,7 @@
 """Tests for prioritize_scan.py: scan + filter + priority-parse + render.
 
-Run: python3 -m pytest .agents/skills/prioritize/test_prioritize_scan.py -q
-or:  python3 -m unittest discover -s .agents/skills/prioritize
+Run: python3 -m pytest .claude/skills/prioritize/test_prioritize_scan.py -q
+or:  python3 -m unittest discover -s .claude/skills/prioritize
 
 Stdlib-only, like workboard.py / list_specs.py. Each test builds a real
 specs/ tree under a tmp dir and calls the script's functions directly — no
@@ -166,6 +166,22 @@ class CollectTestCase(unittest.TestCase):
     def test_task_without_priority_header_shows_default(self):
         make_spec_md(self.root, "foo")
         make_task(self.root, "foo", "01-a.md", status="pending", priority=None)
+        rows = prioritize_scan.collect(self.root)
+        self.assertEqual(rows[0]["priority"], "P2 (default)")
+
+    def test_bracketed_priority_header_reads_as_that_value(self):
+        # `Priority: [P1]` — the bracketed shape STATUS_RE already tolerates —
+        # must read as P1 here too, matching /workboard (shared PRIORITY_RE).
+        make_spec_md(self.root, "foo")
+        make_task(self.root, "foo", "01-a.md", status="pending", priority="[P1]")
+        rows = prioritize_scan.collect(self.root)
+        self.assertEqual(rows[0]["priority"], "P1")
+
+    def test_out_of_range_priority_falls_through_to_default(self):
+        # `Priority: P7` is outside the toolkit's P0-P3 range: it must NOT
+        # match, falling through to the P2 default (pins the range).
+        make_spec_md(self.root, "foo")
+        make_task(self.root, "foo", "01-a.md", status="pending", priority="P7")
         rows = prioritize_scan.collect(self.root)
         self.assertEqual(rows[0]["priority"], "P2 (default)")
 
