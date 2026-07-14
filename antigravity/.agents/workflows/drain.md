@@ -459,7 +459,11 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    `specs/<slug>/ layout` it also carries the verifier's `evidence/`
    file — for other layouts the task file's inline evidence is the
    artifact) and run
-   the project gates; once gates pass, delete every `rescue/NN-<slug>-*`
+   the project gates — the gate run invokes `scripts/check.sh`, drain's
+   sole required check entrypoint for its merge-time gate, never a
+   hand-derived list of steps read out of AGENTS.md prose (repos without it
+   fall back to their own build/lint/test commands); once gates pass, delete
+   every `rescue/NN-<slug>-*`
    branch for the task — removing each branch's worktree before the branch,
    since a branch still checked out in a live worktree cannot be deleted
    (e.g. `git worktree remove <path>` then `git branch -D <branch>`) — the
