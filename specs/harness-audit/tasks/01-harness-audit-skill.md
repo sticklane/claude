@@ -7,6 +7,20 @@ Budget: 30 turns
 Spec: ../SPEC.md (requirements R1, R2, R3, R4)
 Touch: .claude/skills/harness-audit/SKILL.md, .claude/skills/harness-audit/reference.md
 
+<!-- PLAN (build step 1)
+Files: create .claude/skills/harness-audit/SKILL.md (frontmatter + read-only
+contract in first 30 lines + numbered 5-area procedure + ranking + dispatch
+tier + Next stage) and .claude/skills/harness-audit/reference.md (per-check
+command detail, TOC if >100 lines) modeled on gate/ and qa-sweep/ structure.
+Order: SKILL.md first (satisfies all grep acceptance), then reference.md.
+Risks: (a) grep-anchored criteria must appear verbatim — "command currency",
+"gate coverage", "evalset", "memory hygiene", "allowlist", "read-only",
+"scout-tier"/"dispatch authoring"; (b) SKILL.md <500 lines, reference.md
+needs "## Table of Contents" in first 20 lines if >100. Read-only skill: NOT
+an execution stage, no launch-authorization contract needed. Manual seeded-
+defect test done in a scratch CLAUDE.md copy OUTSIDE the tracked tree.
+-->
+
 ## Goal
 
 A new read-only skill, `.claude/skills/harness-audit/SKILL.md` (optionally
