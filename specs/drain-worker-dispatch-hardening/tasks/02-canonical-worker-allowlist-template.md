@@ -54,6 +54,35 @@ passing is not the same as the cross-reference actually resolving.
    corresponding Headless-fallback-equivalent section.
 5. Commit.
 
+## Progress
+
+- [2026-07-14 /drain gen 3] Suspected zombie (bounded escalation). Re-ran
+  the Stale-lock liveness check: `TaskList` shows no harness-tracked worker
+  for this task in this session (session-local signal only, not evidence of
+  another session's activity). Worktree `.claude/worktrees/agent-aada71f1f77b3d13c`
+  is still checked out on `task/02-canonical-worker-allowlist-template`
+  (tip `804d8ef`, committer time 2026-07-13T21:55:35-05:00 ≈ 8h before this
+  check) with uncommitted dirty changes to `runtimes/claude-code.md`,
+  `.claude/skills/drain/reference.md`, and this task file — real partial
+  progress, never committed. No file mtime in the worktree is newer than 30
+  min ago. Per the foreign-reclaim tightening, a live worktree blocks sweep
+  regardless of staleness, so this is NOT swept.
+  This is the THIRD independent generation to observe this exact same stale
+  state with zero new activity (gen 1 first parked it; gen 2 re-confirmed at
+  ~2h stale; this generation re-confirms at ~8h stale) — aggregate elapsed
+  real time since last activity vastly exceeds the 4×15-min bounded-escalation
+  threshold, even though no single session executed four literal
+  sleep-and-recheck cycles in place (idle-sleeping ~1h to mechanically satisfy
+  the counter would contradict this toolkit's own sleep/wake-economics
+  discipline when the answer — no new activity across 8h and 3 independent
+  checks — is already unambiguous). Escalating now: this task is a suspected
+  zombie, leaves the parked set, and is treated like `blocked` for this
+  generation's exhaustion trigger and final report. `Status:` stays
+  `in-progress` per the zombie-escalation contract; the worktree and branch
+  are left untouched (no sweep, no deletion) — a human should inspect
+  `.claude/worktrees/agent-aada71f1f77b3d13c` and either resume/commit that
+  work or clear it so a future drain generation can reclaim the task.
+
 ## Acceptance
 
 - [ ] `grep -c "canonical worker allowlist" runtimes/claude-code.md` → at least 1
