@@ -1,6 +1,6 @@
 # Task 01: Findings triage in /critique (R1)
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 14 turns
