@@ -1,6 +1,6 @@
 # Task 04: docs-only diff detection in the local Stop-hook gate
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 18 turns
