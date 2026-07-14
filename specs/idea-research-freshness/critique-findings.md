@@ -231,3 +231,19 @@ dogfood ACs (`-A1` → `-A3`) all updated to match. Not yet re-verified by
 a fresh critique pass — next session should re-run `/critique` on this
 spec before treating the breakdown as final, given the wake-budget
 cutoff this fix landed under.
+
+## Re-critique 2026-07-14 (attended, resumed from handoff) — READY WITH NITS
+
+Fresh critic dispatch confirmed the fix: the file-level-vs-heading-level
+rule is unambiguous, no AC still assumes strict file-level adjacency, and
+`tasks/01` already matches the current spec text. One mechanical nit,
+verified directly against the live file before fixing: the spec's own
+replacement text mis-described `docs/guides/large-codebase-context.md`'s
+shape as "a 4-line intro paragraph" immediately after the H1 — the file
+actually has a blank line between the H1 and a 5-line paragraph. Fixed
+(SPEC.md:29-38) to describe it generically ("a blank line, then a
+multi-line intro paragraph") rather than a specific line count, matching
+task 01's already-safer phrasing — avoids re-introducing the exact
+"hardcoded count goes stale" failure mode this whole fix exists to
+correct. Breakdown-ready: true stands; the existing tasks/01-04
+breakdown needs no changes.

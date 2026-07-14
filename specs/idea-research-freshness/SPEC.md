@@ -31,9 +31,10 @@ trustworthy versus stale and due for a refresh.
   H1 title and before the first `##` heading, not necessarily
   immediately adjacent to either (an intro paragraph between the H1 and
   the stamp is fine) — the shape `docs/guides/large-codebase-context.md`
-  already carries today (H1, then a 4-line intro paragraph, then a blank
-  line, then `Verified: 2026-07-11`, then a blank line, then its first
-  `##` heading) — applies to every `##` heading in that file that has no
+  already carries today (H1, a blank line, then a multi-line intro
+  paragraph, then a blank line, then `Verified: 2026-07-11`, then a
+  blank line, then its first `##` heading) — applies to every `##`
+  heading in that file that has no
   more specific stamp of its own, rather than being unrecognized by the
   checker and reading as permanently stale. Heading-level stamps stay
   strict: the next non-blank line immediately after the `##` heading,
