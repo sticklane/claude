@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 18 turns
@@ -52,9 +52,9 @@ this spec touches.
 
 ## Acceptance
 
-- [ ] `grep -rln "execute_push" agent-console/tests/` is non-empty
-- [ ] The new tests cover all three branches directly (rc-0, rc-nonzero, timeout) — not only registry rejection with `subprocess.run` fully mocked (state in your final message which test method covers which branch)
-- [ ] The rc-0 test asserts `_board_cache["ts"]` actually changed via a stale-then-fresh read — not a `_invalidate_board` mock-called-once check
-- [ ] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_execute_push.py` → at least 1
-- [ ] `bash agent-console/scripts/check.sh` → exit 0
-- [ ] New tests assert observable behavior (response payloads, cache state) — no bare `assert_called_once()`-style assertion without an accompanying behavioral check
+- [x] `grep -rln "execute_push" agent-console/tests/` is non-empty — returns `agent-console/tests/test_execute_push.py` (evidence/03-test-execute-push.md)
+- [x] The new tests cover all three branches directly (rc-0, rc-nonzero, timeout) — not only registry rejection with `subprocess.run` fully mocked (state in your final message which test method covers which branch) — `test_rc0_push_succeeds_and_invalidates_board_cache` (rc-0, real bare-remote push), `test_rc_nonzero_push_reports_exit_code_in_message` (rc-nonzero, real push to repointed missing remote), `test_timeout_reports_none_exit_and_timeout_message` (timeout, only `subprocess.run` mocked) (evidence/03-test-execute-push.md)
+- [x] The rc-0 test asserts `_board_cache["ts"]` actually changed via a stale-then-fresh read — not a `_invalidate_board` mock-called-once check — seeds `ts=1234.5`, reads before/after, asserts `assertNotEqual` + `assertEqual(after, 0.0)` (evidence/03-test-execute-push.md)
+- [x] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_execute_push.py` → at least 1 — returns `3` (evidence/03-test-execute-push.md)
+- [x] `bash agent-console/scripts/check.sh` → exit 0 — "Ran 185 tests ... OK", `check: PASS` (evidence/03-test-execute-push.md)
+- [x] New tests assert observable behavior (response payloads, cache state) — no bare `assert_called_once()`-style assertion without an accompanying behavioral check — no `assert_called`/`Mock`/`MagicMock` in file; all assertions hit response payload or cache state (evidence/03-test-execute-push.md)
