@@ -335,7 +335,12 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    > human-gates list (irreversible, blast-radius, spend, authority), do NOT
    > guess and do NOT write the question into any file: stop with verdict
    > DEFERRED and put the exact question, self-contained, in your final
-   > message.
+   > message. Set `Contradicts-premise: true` alongside that question ONLY
+   > when your finding empirically refutes the SPEC's or task's stated root
+   > cause — a premise your work proved false, not merely an open gap; when
+   > you do, name the artifact it contradicts (`SPEC.md` or the task file)
+   > and quote the exact contradicted clause verbatim, short enough to
+   > substring-match. Omit it for an ordinary open question.
    > Task files are append-only for you: you may flip only your own
    > task's Status: line, tick acceptance checkboxes and add
    > evidence-citation lines, and maintain your plan comment block —
@@ -493,7 +498,13 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    the verdict's question into
    the main-checkout task file under `## Deferred questions`, set
    `Status: deferred`, commit and push (path-scoped; guard above),
-   discard the worker's branch/worktree.
+   discard the worker's branch/worktree. When the verdict carries
+   `Contradicts-premise: true` — a worker's finding that empirically
+   refuted the SPEC's or task's stated root cause, not just an open
+   question — also record on that entry the artifact it names (`SPEC.md`
+   or the task file) and the exact excerpt it quoted verbatim, so step
+   5's interview can substring-match that excerpt against the artifact's
+   current text.
    BLOCKED → write `Status: blocked` + reason, and on the line immediately
    after it the `Unblock:` line, then commit and push
    (path-scoped; guard above) — except BLOCKED
@@ -775,14 +786,7 @@ spec path — step 2's tie-break. For the chosen spec:
   compare-and-swap re-read to confirm your `Run-token:`, refuse and skip
   to the next eligible spec on a lost race). This is what stops two
   concurrent drains from racing to critique the same spec.
-- **Cheap-before-expensive short-circuit first.** If `git log` shows no
-  commit to SPEC.md since the commit that produced its last recorded NOT
-  READY verdict, skip the critique dispatch — append a dated re-critique
-  note citing that git evidence and the prior findings already on file,
-  release the lease, continue. A dispatch on byte-identical content is a
-  foregone conclusion at full cost — the same "reprime for zero progress"
-  waste intake-attempt bookkeeping exists to avoid.
-- Otherwise apply the **critique workflow**'s procedure
+- Apply the **critique workflow**'s procedure
   (`.agents/workflows/critique.md`) to the spec **in this same
   conversation** — no new Agent Manager launch, no worktree: critique only
   reads the spec and writes its verdict marker, so there is nothing to
@@ -1050,7 +1054,13 @@ reviewed this run: `spec review: N findings, M fixed, K stubbed` (or the
    of a questions block — answered questions stay as history), ask all
    their `## Deferred questions` in one round, write answers under
    `## Answers`, flip `deferred` → `pending`, commit, and return to
-   step 1. Queue empty → report per-task verdicts and evidence; the terminal
+   step 1. A deferred entry carrying `Contradicts-premise: true` is NOT
+   flipped to `pending` on the human answer alone — it additionally
+   requires the named artifact (`SPEC.md` or the task file) to no longer
+   contain the recorded excerpt (whitespace-normalized substring match).
+   Until the excerpt is observed absent, that task and any dependent stay
+   non-dispatchable, and its exit-checklist entry types as a `decide`, not
+   an `ask`. Queue empty → report per-task verdicts and evidence; the terminal
    distill below then fires. Only
    blocked/failed left → report the blockers and stop; those go back to
    /breakdown or a human working the task directly. Specs that failed auto-breakdown this
