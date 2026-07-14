@@ -69,11 +69,16 @@ touches it.
   never a silent skip (CLAUDE.md's mirroring convention). The codex mirror
   (`codex/.agents/skills/evals/SKILL.md` — real content, not a symlink,
   per CLAUDE.md's port-chain convention) receives the equivalent
-  documentation too: its "v1 grades artifacts only" (line 19) and "never
-  a transcript" (line 41) phrasing directly contradicts the v2 mechanism
-  and must be updated. `.claude-plugin/plugin.json`'s `version` is
-  bumped. Some task's `Touch:` lists all of these paths, including the
-  codex mirror.
+  documentation too: its "v1 grades artifacts only" (line 19) phrasing
+  directly contradicts the v2 mechanism and must be updated. (Its "never
+  a transcript" phrasing at line 41 is a different claim — about the
+  ~10-line budget the grader returns to the orchestrator, not about
+  whether `assert.sh` can read a transcript — and is NOT contradictory;
+  leave it as-is, same as its identical counterpart in
+  `.claude/skills/evals/SKILL.md` and `antigravity/.agents/workflows/evals.md`,
+  neither of which R4 touches either.) `.claude-plugin/plugin.json`'s
+  `version` is bumped. Some task's `Touch:` lists all of these paths,
+  including the codex mirror.
 
 ## Out of scope
 
@@ -96,11 +101,13 @@ touches it.
 - [ ] `grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/SKILL.md && grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/reference.md && ! grep -q "v1 grades artifacts only" .claude/skills/evals/SKILL.md` (R4 — both files must document it, and the stale "v1 grades artifacts only" line must be gone, not just supplemented)
 - [ ] `grep -q "EVAL_TRANSCRIPT" antigravity/.agents/workflows/evals.md` or
       an evidence file records the reviewed carve-out; `grep -q
-    "EVAL_TRANSCRIPT" codex/.agents/skills/evals/SKILL.md && ! grep -q
-    "never a transcript" codex/.agents/skills/evals/SKILL.md`; `grep -q
-    '"version": "0.9.9"' .claude-plugin/plugin.json` (R5 — the codex
-      file's "never a transcript" line directly contradicts the v2
-      mechanism and must be removed, not just supplemented).
+"EVAL_TRANSCRIPT" codex/.agents/skills/evals/SKILL.md && ! grep -q
+"v1 grades artifacts only" codex/.agents/skills/evals/SKILL.md`; `grep -q
+'"version": "0.9.9"' .claude-plugin/plugin.json` (R5 — the codex
+      file's "v1 grades artifacts only" line directly contradicts the v2
+      mechanism and must be removed, not just supplemented; its "never a
+      transcript" line at line 41 is about the grader's ~10-line return
+      budget, not contradictory, and is left as-is).
 
 ## Open questions
 
