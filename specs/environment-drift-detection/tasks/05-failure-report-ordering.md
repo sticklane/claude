@@ -1,6 +1,6 @@
 # Task 05: surface failing-stage output first in check reporting
 
-Status: deferred
+Status: done
 Depends on: 01, 04
 Priority: P3
 Budget: 12 turns
@@ -109,3 +109,10 @@ discover`, emitting only terse one-line `ok` confirmations between
 No code change was made; the working tree was left clean, matching Step 5's
 "a DEFERRED verdict with no code change still needs the repo left green"
 requirement.
+
+## Answers
+
+Acknowledged (2026-07-14): the DEFERRED verdict and its documented search
+are accepted as the task's final resolution — no wrapper exists, no code
+change is warranted, and the task's own OR-acceptance criterion for this
+outcome is already satisfied. Closing.
