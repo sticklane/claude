@@ -25,10 +25,27 @@ SPEC.md or plan.
    READY, remove a stale `Breakdown-ready:` line if one is present — a spec
    that regressed shouldn't keep an old authorization. Never write or remove
    this marker for a plan or diff target.
-4. A reviewer told to find gaps will always find some: recommend fixing
-   findings that change behavior or block verification; flag style-level
-   findings as optional. Apply fixes only if the user asks or the pipeline
-   step you're in requires READY.
+4. **Triage the findings** when the verdict is NOT READY or READY WITH NITS.
+   Classify each finding as MECHANICAL — an edit with no judgment call: a
+   stale path/line reference, a non-deterministic or under-scoped acceptance
+   command, a missing runnable check, a format/header contract violation — or
+   JUDGMENT — an ambiguity, a scope question, a missing design decision, a
+   contested tradeoff. MECHANICAL findings are applied _unconditionally_,
+   without the user-ask/pipeline gate that governs the rest of this step:
+   edit the target file directly, commit (`fix: apply mechanical critique
+findings` or similar), and re-run the critic — this apply→recheck loop is
+   bounded to the 2-4 cycle evaluator-optimizer cap in
+   `.claude/rules/token-discipline.md`'s "Dispatch authoring" (cited, not
+   restated). Auto-apply is scoped to the prose target only — a `SPEC.md`, or
+   the plan file when `/critique` reviewed a plan document; a working-diff or
+   code target is never auto-edited. For the JUDGMENT findings (and any
+   MECHANICAL finding still open after the loop bound): a reviewer told to
+   find gaps will always find some — recommend fixing the ones that change
+   behavior or block verification, flag style-level ones as optional, and
+   apply _these_ only if the user asks or the pipeline step you're in requires
+   READY. Nothing is dropped silently — every finding still open after the
+   bound, plus every JUDGMENT finding from the first pass, is relayed via
+   step 2.
 5. After fixes, re-run the critic on the changed artifact — a critique you
    didn't re-check is a claim, not a verification. Between rounds the author
    re-reads only the sections the critic named, never the whole artifact.
