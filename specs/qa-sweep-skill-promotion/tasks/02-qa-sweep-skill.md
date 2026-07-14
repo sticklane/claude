@@ -1,6 +1,6 @@
 # Task 02: Create the qa-sweep skill
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -104,12 +104,14 @@ guards` spec — check the file's current content and cite
 
 ## Acceptance
 
-- [ ] `test -f .claude/skills/qa-sweep/SKILL.md` → exists
-- [ ] `grep -c "^name: qa-sweep$" .claude/skills/qa-sweep/SKILL.md` → 1
-- [ ] `grep -qi "deploy\|migration\|freshness" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "critique" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "drain" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "browser-automation-handoffs" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "re-verify\|re-run" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "Delegation defaults\|route each page-check\|return a path" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] MANUAL: confirm the browser-automation-handoffs citation reads as a pointer, not a restatement of the SSO handoff behavior
+- [x] `test -f .claude/skills/qa-sweep/SKILL.md` → exists (verifier PASS)
+- [x] `grep -c "^name: qa-sweep$" .claude/skills/qa-sweep/SKILL.md` → 1 (verifier PASS)
+- [x] `grep -qi "deploy\|migration\|freshness" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "critique" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "drain" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "browser-automation-handoffs" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "re-verify\|re-run" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "Delegation defaults\|route each page-check\|return a path" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] MANUAL: browser-automation-handoffs citation reads as a pointer — both references (step c + closing section) name the rule for the login-wall handoff behavior without restating the "at most ONE click strategy"/SSO mechanism (verifier PASS)
+
+Evidence: specs/qa-sweep-skill-promotion/evidence/02-qa-sweep-skill.md
