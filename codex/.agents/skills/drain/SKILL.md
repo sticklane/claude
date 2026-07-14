@@ -248,6 +248,14 @@ branch -D <branch>`) — then **push `main`
   offline push warns and continues (the merge already landed locally). This
   guard applies to every drain commit — owner claim/release, flips, and the
   Deferred/Blocked/discovery commits. The worker never pushes.
+  **Skill-doc size/TOC gate (conditional pre-merge blocker):** before merging a
+  DONE task whose `Touch:` includes any `.claude/skills/*/SKILL.md` or
+  `.claude/skills/*/reference.md` path, run `bash evals/lint-skill-size-gate.sh`;
+  a non-zero exit is a merge blocker for that task (the slot-machine path),
+  exactly as a failed project gate — the same mechanical role
+  `evals/lint-ultra-gate.sh` plays for the ultra-path skills, but fired
+  conditionally on that `Touch:` condition since most drain tasks touch no
+  skill docs.
   If the merge or gates fail: `git merge --abort` first, then slot machine —
   discard the branch and relaunch once, one tier up from the pin (deep →
   frontier), dispatching a fresh worker with the verifier's failure evidence,

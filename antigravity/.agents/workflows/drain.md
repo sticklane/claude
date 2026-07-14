@@ -466,7 +466,15 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    2), and the Deferred/Blocked/discovery commits below — push after
    each, not only after a DONE merge. The worker never
    pushes (its "do not push" clause is unchanged) — only the orchestrator,
-   after each of its own commits. On merge/gate
+   after each of its own commits.
+   **Skill-doc size/TOC gate (conditional pre-merge blocker):** before merging
+   a DONE task whose `Touch:` includes any `.claude/skills/*/SKILL.md` or
+   `.claude/skills/*/reference.md` path, run `bash evals/lint-skill-size-gate.sh`;
+   a non-zero exit is a merge blocker for that task (the slot-machine path),
+   exactly as a failed project gate — the same mechanical role
+   `evals/lint-ultra-gate.sh` plays for the ultra-path skills, but fired
+   conditionally on that `Touch:` condition since most drain tasks touch no
+   skill docs. On merge/gate
    failure abort the merge (a failed merge leaves the checkout
    wedged in a conflicted state), discard the branch, and relaunch once,
    one tier up in the model picker (Pro-class → the strongest model in
