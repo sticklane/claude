@@ -164,3 +164,29 @@ names. The embedded chip-CSS block (previously flagged) needed no separate
 action — it's inside `render_html`'s own returned string, deleted
 automatically. Confirmed non-vacuous in both trees today (10 matches on
 the `.claude` leg). Re-run `/critique` to confirm READY.
+
+## Re-critique 2026-07-14 (attended, /critique) — R4's 4-item fix was itself incomplete
+
+The four-item enumeration verified accurate as far as it went, but a
+fresh critic pass found it named a fraction of the real orphan set — the
+same fragile-enumeration mistake this file has already hit twice
+(finding 1's "10, not 2" antigravity count; this file's own note that a
+hardcoded list goes stale). Independently verified via AST call-graph
+reachability from the surviving entry points ({main, assemble,
+attention_items, ready_items, default_roots} minus the render_html/
+build_actions_script edges): **27 functions** are orphaned, not 4 —
+including `render_batons`, `render_ready`, `render_actions`,
+`render_inbox`, `render_filter_tiles`, `render_spend_section`, and 21
+more, each confirmed to have its only call site(s) inside `render_html`'s
+body. Fixed: R4 rewritten to state the reachability RULE rather than an
+enumerated list (a hardcoded list will drift again as the file changes),
+with the current 27-name set kept as illustrative, explicitly marked
+"not exhaustive at implementation time." The fragile grep AC replaced
+with a runnable AST-based reachability check (stdlib `ast` only, no new
+dependency) that computes the same analysis mechanically — count-
+independent and self-verifying against whatever the file looks like when
+the task actually runs, rather than a name list that needs re-deriving
+every round. Same check applies to the antigravity mirror since
+workboard.py is confirmed byte-identical across both trees
+(docs/memory/workboard-mirror-verbatim.md). Re-run `/critique` to
+confirm READY.

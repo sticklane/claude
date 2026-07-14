@@ -109,19 +109,33 @@ CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
   both the HTML file and its `.actions.sh` companion — `build_actions_script`
   and `render_html` have no consumer other than that branch (agent-console
   imports only `assemble`/`attention_items`/`ready_items`/`default_roots`).
-  Also deleted as orphaned dead code once `render_html` goes: `_agent_chip`,
-  `_spawn_nodes_html`, `_spawn_tree_html`, and `_session_timeline_html` —
-  each is called only from within `render_html`'s own body (transitively),
-  has no other consumer, and `_spawn_tree_html`'s docstring/comments cite
-  the now-deleted `fleet/reference.md` (R1's dangling-citation cleanup
-  would otherwise have to reword comments on code this task is about to
-  delete anyway). The embedded chip-CSS block citing `fleet/reference.md`
-  (inside `render_html`'s own returned string) is removed automatically
-  as part of deleting `render_html` — no separate action needed for it.
-  `--json` (used by `list-specs`, `workboard-auto-triage`, and step 2's
-  inbox relay) is unaffected. With no `--out` path left, `main()`'s
-  no-`--json`-flag behavior is: print the same one-line summary the HTML
-  path used to log (repo/spec/task/session counts), no file of any kind.
+  The rule for what else goes: delete every module-level function whose
+  only call path — however many hops — starts inside `render_html` or
+  `build_actions_script` and never reaches `main()`'s surviving `--json`
+  branch or the four agent-console-imported entry points. A hardcoded
+  name list goes stale as the file changes (this is the second round this
+  spec has under-enumerated the orphan set — verify with the reachability
+  check below, don't hand-count). As of this spec's authoring, that
+  reachability check finds **27 orphaned functions**, illustrative and
+  not exhaustive at implementation time: `render_batons`, `render_ready`,
+  `render_actions`, `render_inbox`, `render_filter_tiles`,
+  `render_spend_section`, `_session_timeline_html`, `_spawn_tree_html`,
+  `_spawn_nodes_html`, `_agent_chip`, `_agent_time_html`,
+  `_count_spawn_nodes`, `_inbox_group`, `_spec_dag_html`,
+  `_spec_dag_tasks`, `_spec_health_marker`, `_unblock_marker`,
+  `progress_bar`, `handoff_pickup_cmd`, `cmd_html`, `badge`, `esc`,
+  `_fmt_dollars`, `_fmt_tokens`, `_short_model_name`, `_session_badge`,
+  `_fmt_dur`. (Several — `_spawn_tree_html`'s docstring in particular —
+  also cite the now-deleted `fleet/reference.md`; deleting the function
+  removes the citation too, so R1's dangling-citation cleanup needs no
+  separate pass over code this task deletes anyway. The embedded
+  chip-CSS block inside `render_html`'s own returned string goes
+  automatically with the function, same reasoning.) `--json` (used by
+  `list-specs`, `workboard-auto-triage`, and step 2's inbox relay) is
+  unaffected — it does not call any function in the orphaned set. With
+  no `--out` path left, `main()`'s no-`--json`-flag behavior is: print
+  the same one-line summary the HTML path used to log (repo/spec/task/
+  session counts), no file of any kind.
 - **R5**: `workboard/SKILL.md` no longer documents a static-HTML fallback.
   If `curl .../healthz` fails AND the direct background-start attempt
   also fails, the skill reports the failure and what to check (is Python
@@ -189,9 +203,55 @@ CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
 - [ ] `grep -n "render_html\|build_actions_script\|--out\|--actions-out"
 .claude/skills/workboard/workboard.py` returns no matches (R4 — note
       this deliberately also catches `--actions-out`, not just `--out`).
-- [ ] `grep -n "_agent_chip\|_spawn_nodes_html\|_spawn_tree_html\|_session_timeline_html"
-.claude/skills/workboard/workboard.py` returns no matches (R4 — the
-      orphaned dead-code helpers that only `render_html` consumed).
+- [ ] Dead-code reachability check (R4 — count-independent, catches the
+      full orphaned set rather than a fixed name list that will drift as
+      the file changes again): save as `/tmp/orphan_check.py` and run
+      `python3 /tmp/orphan_check.py .claude/skills/workboard/workboard.py`
+      → prints `clean` (exit 0); any remaining orphan fails loudly with
+      the name list.
+      ```python
+      import ast, sys
+      path = sys.argv[1]
+      tree = ast.parse(open(path).read())
+      funcs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+
+      class Calls(ast.NodeVisitor):
+                  def __init__(self):
+                      self.names = set()
+                  def visit_Call(self, node):
+                      if isinstance(node.func, ast.Name):
+                          self.names.add(node.func.id)
+                      self.generic_visit(node)
+
+              graph = {}
+              for name, node in funcs.items():
+                  c = Calls()
+                  for stmt in node.body:
+                      c.visit(stmt)
+                  graph[name] = c.names
+
+              module_calls = Calls()
+              for node in tree.body:
+                  if not isinstance(node, ast.FunctionDef):
+                      module_calls.visit(node)
+
+              entry = {"main", "assemble", "attention_items", "ready_items",
+                       "default_roots"} | module_calls.names
+              visited, frontier = set(), list(entry)
+              while frontier:
+                  n = frontier.pop()
+                  if n in visited:
+                      continue
+                  visited.add(n)
+                  frontier.extend(graph.get(n, set()))
+
+              orphaned = set(funcs) - visited - {"main"}
+              if orphaned:
+                  print("ORPHANED:", sorted(orphaned))
+                  sys.exit(1)
+              print("clean")
+              ```
+
 - [ ] `grep -n "Fallback (machines without agent-console)"
 .claude/skills/workboard/SKILL.md` returns no match.
 - [ ] `python3 .claude/skills/workboard/workboard.py --json` still runs
@@ -214,8 +274,7 @@ CLAUDE.md .claude-plugin/` shows only: (a) the new inline-table
 - [ ] `antigravity/.agents/skills/fleet/` does not exist (unchanged from
       before this spec — R6 confirms, doesn't create).
 - [ ] The workboard/viz.py checks above (workboard `--out`/`--actions-out`
-      gone, the orphaned `_agent_chip`/`_spawn_nodes_html`/
-      `_spawn_tree_html`/`_session_timeline_html` helpers gone, viz.py
+      gone, the dead-code reachability check clean, viz.py
       `--emit-fleet-css` gone, fallback bullet gone) also hold under
       `antigravity/.agents/skills/workboard/` and
       `antigravity/.agents/skills/_shared/viz.py` (R6).
