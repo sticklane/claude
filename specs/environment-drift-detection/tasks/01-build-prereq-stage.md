@@ -1,6 +1,6 @@
 # Task 01: build/dist prerequisite stage in install-gates + check.sh.tmpl
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 20 turns
