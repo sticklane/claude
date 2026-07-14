@@ -108,3 +108,32 @@ message admitted but this file never recorded, ranked by cost-if-missed:
 Recovery: fix findings 1-3, then re-run /critique. This spec's critique
 intake is spent for this run (Run-token c92aedb1ae49f8d3) — recorded in
 `DRAIN-BATON.md`'s `Intake-failed:` line.
+
+## Fix applied 2026-07-14 (attended, human-authorized HUMAN.md cleanup pass)
+
+All three findings fixed directly in SPEC.md, re-verified live against the
+current tree:
+
+1. Rather than enumerating every dangling `fleet/reference.md` citation by
+   file/line (fragile — this file is under active concurrent development,
+   and the exact set already drifted once per the finding's own "10, not
+   2" count), added a general requirement to R1/R6: every comment/
+   docstring anywhere in both the `.claude` and `antigravity` trees
+   (`workboard.py`, `test_workboard.py`, `reference.md`, `SKILL.md`) that
+   cites the deleted `fleet/reference.md` path is reworded to stop citing
+   it. Backed by a mechanical, count-independent AC:
+   `git grep -rn 'fleet/reference\.md' -- .claude/ antigravity/` → 0
+   matches (confirmed 4 today, across both trees).
+2. Broadened the sweep AC's whitelist clause (b) to accept any generic
+   "fleet-style"/"fleet convention"/"fleet's status chip(s)" phrasing
+   describing workboard's reused visual convention, not only the specific
+   instances R1 names — this also covers `docs/agent-dashboards.md`'s
+   generic "fleet view" prose, and is necessary for the AC to stay
+   satisfiable after finding 1's own fix rewords citations but leaves the
+   "fleet-style" phrase itself in place.
+3. R2 now requires `fleet/SKILL.md`'s frontmatter `description` be
+   rewritten (its actual auto-invocation trigger surface, not just body
+   prose). Added AC: `grep -c "self-contained HTML snapshot"
+.claude/skills/fleet/SKILL.md` → 0 (confirmed 1 today).
+
+Ready for re-critique.
