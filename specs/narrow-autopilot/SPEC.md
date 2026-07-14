@@ -115,10 +115,17 @@ reference.md`. `drain/reference.md` has TWO separate `/autopilot`
   sweep gives every other passing reference.
 - **R4**: Every skill with a `Next stage:` line naming `/autopilot` gets a
   concrete replacement, not a deletion that leaves it dangling:
-  - `gate/SKILL.md`'s closing `Next stage: /autopilot specs/<slug>/
-tasks/NN-*.md (human-launched)` becomes
-    `Next stage: /build specs/<slug>/tasks/NN-*.md (human-launched;
-/goal-bound it per build/reference.md for an unattended-feeling run)`.
+  - `gate/SKILL.md` has TWO separate `/autopilot` mentions, not one — its
+    closing `Next stage: /autopilot specs/<slug>/tasks/NN-*.md
+(human-launched)` becomes `Next stage: /build specs/<slug>/tasks/NN-*.md
+(human-launched; /goal-bound it per build/reference.md for an
+unattended-feeling run)`; separately, the prose sentence just above
+    it ("...with gates in place, tasks qualify for `/autopilot`. Close
+    with:") is reworded to "...with gates in place, tasks qualify for an
+    unattended `/goal`-bounded `/build` run (or `/drain` for a queue).
+    Close with:" — the antigravity mirror's gate workflow has only the
+    `Next stage:` line, not this extra sentence, so this second mention
+    is a `.claude`-leg-only fix.
   - `breakdown/SKILL.md:166`'s routing sentence recommending `/autopilot`
     "for unattended execution of peripheral tasks" is reworded to
     recommend `/drain` for queue/unattended work and `/build` (optionally

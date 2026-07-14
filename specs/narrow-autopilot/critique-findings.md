@@ -268,3 +268,32 @@ wrong phrase are absent today, i.e. non-vacuous either way). Also fixed a
 minor count nit: R6 said `codex/README.md` had "4 mentions", live count
 is 5 (lines 17, 22, 89, 121, 129) — corrected, backstopped either way by
 AC7's whole-file sweep. Re-run `/critique` to confirm READY.
+
+## Re-critique 2026-07-14 (attended, resumed from handoff) — NOT READY, R6 sweep excluded 7 trees
+
+Fresh critic pass found R6's prose promised a "whole repo" sweep but its
+verifying grep scoped to only `.claude/ docs/ CLAUDE.md .claude-plugin/
+codex/ antigravity/`, silently excluding `evals/`, `runtimes/`,
+`README.md`, `AGENTS.md`, `bin/`, `tests/`, and `agent-console/` — each
+confirmed to hold a living `/autopilot` reference, including a whole
+orphaned evalset (`evals/autopilot/01-security-refusal/`) and stale gate
+machinery (`bin/check-token-discipline`'s `IN_SCOPE` list pointing at
+paths R1 deletes). Fixed: broadened the swept pathspec, named every
+newly-found file's disposition (delete/reword), added two more
+exemptions for genuinely historical mentions, added three new ACs, and
+cross-checked by re-running the full broadened sweep — every hit
+accounted for. Commit ef44c54.
+
+## Re-critique 2026-07-14 (attended, resumed from handoff) — READY WITH NITS
+
+Fresh critic pass ran the exact broadened grep and cross-checked all 42
+hits against the spec's enumeration — everything accounted for, every
+newly-added disposition verified factually accurate against live files.
+One more gap found: `gate/SKILL.md` has TWO `/autopilot` mentions, not
+one — R4 only named the closing `Next stage:` line, missing the prose
+sentence just above it ("...tasks qualify for `/autopilot`"). Backstopped
+by AC7 (gate/SKILL.md isn't exempt, so it can't ship with a stray
+mention), but a worker would have had to improvise the rewording with no
+guidance, unlike every other file in R6. Fixed: R4's gate bullet now
+names and rewords both lines explicitly. This spec is now READY WITH
+NITS — ready for `/breakdown`.
