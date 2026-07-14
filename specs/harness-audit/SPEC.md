@@ -98,3 +98,9 @@ manifest points at the `.claude/skills/` directory generically).
 ## Open questions
 
 None — delivery shape resolved above (standalone skill).
+
+## Parallelization
+
+Task 02 depends on task 01 (it ports task 01's merged skill file), so the two
+tasks form a strict dependency chain -- no concurrent-safe group. Both run
+solo, in order.
