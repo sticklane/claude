@@ -1,25 +1,11 @@
 # Task 01: Build the harness-audit skill
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 30 turns
 Spec: ../SPEC.md (requirements R1, R2, R3, R4)
 Touch: .claude/skills/harness-audit/SKILL.md, .claude/skills/harness-audit/reference.md
-
-<!-- PLAN (build step 1)
-Files: create .claude/skills/harness-audit/SKILL.md (frontmatter + read-only
-contract in first 30 lines + numbered 5-area procedure + ranking + dispatch
-tier + Next stage) and .claude/skills/harness-audit/reference.md (per-check
-command detail, TOC if >100 lines) modeled on gate/ and qa-sweep/ structure.
-Order: SKILL.md first (satisfies all grep acceptance), then reference.md.
-Risks: (a) grep-anchored criteria must appear verbatim — "command currency",
-"gate coverage", "evalset", "memory hygiene", "allowlist", "read-only",
-"scout-tier"/"dispatch authoring"; (b) SKILL.md <500 lines, reference.md
-needs "## Table of Contents" in first 20 lines if >100. Read-only skill: NOT
-an execution stage, no launch-authorization contract needed. Manual seeded-
-defect test done in a scratch CLAUDE.md copy OUTSIDE the tracked tree.
--->
 
 ## Goal
 
@@ -79,12 +65,26 @@ which depends on this one). Do not edit any other skill's files.
 
 ## Acceptance
 
-- [ ] `grep -qi "read-only" .claude/skills/harness-audit/SKILL.md` (R1)
-- [ ] `F=.claude/skills/harness-audit/SKILL.md; grep -qi "command currency" $F && grep -qi "gate coverage" $F && grep -qi "evalset" $F && grep -qi "memory hygiene" $F && grep -qi "allowlist" $F` (R2)
-- [ ] `grep -qi "dispatch authoring\|scout-tier\|scout agent" .claude/skills/harness-audit/SKILL.md` (R4)
-- [ ] Fresh-session manual test on this repo with one seeded defect (a fake
+- [x] `grep -qi "read-only" .claude/skills/harness-audit/SKILL.md` (R1) —
+      PASS (exit 0).
+- [x] `F=.claude/skills/harness-audit/SKILL.md; grep -qi "command currency" $F && grep -qi "gate coverage" $F && grep -qi "evalset" $F && grep -qi "memory hygiene" $F && grep -qi "allowlist" $F` (R2) —
+      PASS: all five area names present (exit 0).
+- [x] `grep -qi "dispatch authoring\|scout-tier\|scout agent" .claude/skills/harness-audit/SKILL.md` (R4) —
+      PASS (exit 0); SKILL.md's "Dispatch tier" section cites
+      token-discipline's "Dispatch authoring" and uses "scout-tier".
+- [x] Fresh-session manual test on this repo with one seeded defect (a fake
       stale command in a scratch copy of CLAUDE.md, outside the repo's
       tracked tree): invoking the skill reports it as a finding naming the
       file and a one-line fix, and `git status` is clean afterward (R1-R3).
       Manual per CLAUDE.md's testing convention -- record the transcript
       excerpt or a one-line evidence note in this task file.
+      EVIDENCE: fixture at scratchpad/harness-audit-fixture/CLAUDE.md seeded a
+      stale documented command `bash scripts/run-all-checks.sh` (referenced
+      script absent). Applying the skill's area-1 (command currency)
+      procedure flagged it: "scripts/run-all-checks.sh: MISSING -> dangling
+      reference (FINDING)" — finding names the file (CLAUDE.md) and the fix
+      (update the `## Checks` entry / restore the script). `git status --short`
+      empty afterward (audit edited nothing; fixture lives outside the tracked
+      tree in /private/tmp scratchpad). Verifier/scout dispatch tool not
+      exposed to this unattended worker, so the read-only procedure was run
+      directly.
