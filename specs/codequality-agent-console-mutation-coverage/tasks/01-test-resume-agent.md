@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 14 turns
@@ -57,8 +57,8 @@ session")` (or the equivalent JSON/response shape the real handler
 
 ## Acceptance
 
-- [ ] `grep -rln "api/agent/resume\|resume_agent" agent-console/tests/` is non-empty
-- [ ] The new resume_agent success-branch test fails when `resume_agent`'s success branch is manually stubbed to return `(False, "x")` (demonstrate this red-first, then restore and confirm green — record the evidence in your final message, do not leave the stub applied)
-- [ ] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_resume_agent.py` → at least 1
-- [ ] `bash agent-console/scripts/check.sh` → exit 0
-- [ ] No `assert_called_once()`-style assertion appears without an accompanying behavioral assertion in the same test: `grep -n "assert_called_once" agent-console/tests/test_resume_agent.py` — for every match, the same test method also asserts on a response/state value (state this explicitly in your final message; the grep alone doesn't prove it)
+- [x] `grep -rln "api/agent/resume\|resume_agent" agent-console/tests/` is non-empty — returns `agent-console/tests/test_resume_agent.py` (verifier PASS; evidence/01-test-resume-agent.md)
+- [x] The new resume_agent success-branch test fails when `resume_agent`'s success branch is manually stubbed to return `(False, "x")` — demonstrated: stub → success test `FAILED (AssertionError: False is not true` on `assertTrue(ok)`), restored → green; source left clean (verifier reproduced independently; evidence/01-test-resume-agent.md)
+- [x] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_resume_agent.py` → 3 (verifier PASS)
+- [x] `bash agent-console/scripts/check.sh` → exit 0 — `check: PASS`, 179 tests (verifier PASS; evidence/01-test-resume-agent.md)
+- [x] No `assert_called_once()`-style assertion appears without an accompanying behavioral assertion in the same test: matches at lines 84 and 101, each inside a test that also asserts `assertTrue(ok)` and `assertEqual(msg, "resumed")` on the response tuple (verifier PASS; evidence/01-test-resume-agent.md)
