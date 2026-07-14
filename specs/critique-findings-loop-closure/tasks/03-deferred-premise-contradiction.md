@@ -1,6 +1,6 @@
 # Task 03: Deferred-verdict premise-contradiction flag and blocked re-dispatch (R3, R4)
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 20 turns
@@ -73,9 +73,11 @@ batch interview`) and its `Status: deferred` handling in step 3.
 
 ## Acceptance
 
-- [ ] `grep -c "Contradicts-premise" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md`
+- [x] `grep -c "Contradicts-premise" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md`
       → ≥ 1 combined (today: 0 in both, confirmed absent)
-- [ ] `bash evals/lint-ultra-gate.sh` → exits 0
+      — verifier: SKILL.md 3 + reference.md 7 = 10 (≥1). Evidence: evidence/03-deferred-premise-contradiction.md
+- [x] `bash evals/lint-ultra-gate.sh` → exits 0
+      — verifier: "OK — all ultra mentions gated in 4 files", exit 0. Evidence: evidence/03-deferred-premise-contradiction.md
 - [ ] MANUAL: exercise R3/R4 with a synthetic DEFERRED verdict carrying
       `Contradicts-premise: true` (naming `SPEC.md` as the contradicted
       artifact and quoting a real excerpt from it) and confirm the batch
@@ -83,3 +85,5 @@ batch interview`) and its `Status: deferred` handling in step 3.
       `pending` until that exact quoted excerpt is no longer present
       unchanged in `SPEC.md` — then edit `SPEC.md` to remove/alter the
       excerpt and confirm the flip is permitted.
+      — MANUAL: not exercised by unattended worker; standing manual-pending
+      (needs a live drain batch-interview loop to drive the flip gate).
