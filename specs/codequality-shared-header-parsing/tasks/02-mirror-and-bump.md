@@ -66,3 +66,15 @@ finalized that content; this task only mirrors it. Do not touch
   - Evidence: ran `bash tests/test_antigravity_parity.sh` → exit 0, no output.
 - [x] `bash tests/test_antigravity_content_parity.sh` exits 0 (if present on this tree)
   - Evidence: ran `bash tests/test_antigravity_content_parity.sh` → exit 0, no output (the gate this task closes). Full `tests/test_*.sh` loop also all green.
+
+## Discovered
+
+- Forcing `test_workboard.py`/`test_prioritize_scan.py` byte-identical to
+  satisfy this task's diff criterion dropped their antigravity `Run:`
+  docstring path adaptation (`.claude/skills/...` → `.agents/skills/...`),
+  which a sibling spec's task (`codequality-antigravity-content-parity`
+  task 01, same run) independently treated as sanctioned and preserved on
+  `workboard/test_workboard.py`. Cosmetic-only (a comment), but the two
+  outcomes are now inconsistent — see
+  `specs/codequality-shared-header-parsing/tasks/03-antigravity-test-docstring-run-path.md`
+  (draft stub scaffolded).
