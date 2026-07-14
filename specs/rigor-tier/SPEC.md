@@ -94,7 +94,7 @@ input to a normal production task, not as done work.
   CLAUDE.md's codex mirroring convention (build and drain are real
   content there, not symlinks), `codex/.agents/skills/build/SKILL.md`
   and `codex/.agents/skills/drain/SKILL.md`. `.claude-plugin/plugin.json`
-  is bumped from its current 0.8.58 to 0.8.59. Some task's `Touch:` must
+  is bumped from its current 0.9.8 to 0.9.9. Some task's `Touch:` must
   list all of these paths (CLAUDE.md's mirroring convention).
 
 ## Out of scope
@@ -115,7 +115,7 @@ input to a normal production task, not as done work.
       gate check, required before committing changes to any of
       idea/critique/drain/build SKILL.md; this spec's R2 and R4 edit
       idea/build/drain)
-- [ ] `grep -qi "rigor" antigravity/.agents/skills/idea/SKILL.md && grep -qi "rigor" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "rigor" antigravity/.agents/workflows/build.md && grep -qi "rigor" antigravity/.agents/workflows/drain.md && grep -qi "rigor" antigravity/.agents/skills/list-specs/SKILL.md && grep -qi "rigor" codex/.agents/skills/build/SKILL.md && grep -qi "rigor" codex/.agents/skills/drain/SKILL.md && grep -q '"version": "0.8.59"' .claude-plugin/plugin.json` (R8)
+- [ ] `grep -qi "rigor" antigravity/.agents/skills/idea/SKILL.md && grep -qi "rigor" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "rigor" antigravity/.agents/workflows/build.md && grep -qi "rigor" antigravity/.agents/workflows/drain.md && grep -qi "rigor" antigravity/.agents/skills/list-specs/SKILL.md && grep -qi "rigor" codex/.agents/skills/build/SKILL.md && grep -qi "rigor" codex/.agents/skills/drain/SKILL.md && grep -q '"version": "0.9.9"' .claude-plugin/plugin.json` (R8)
 - [ ] Fresh-session test: /idea a throwaway-tool pitch, answer "prototype";
       the produced SPEC.md carries `Rigor: prototype` above its first `##`
       (manual, per CLAUDE.md's testing convention).

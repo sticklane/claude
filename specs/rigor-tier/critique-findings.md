@@ -151,3 +151,12 @@ lint-ultra-gate AC correctly covers this spec's idea/build/drain edits.
 Recovery: fix finding 1 (the version-pin downgrade), then re-run /critique.
 This spec's critique intake is spent for this run (Run-token
 c92aedb1ae49f8d3) — recorded in `DRAIN-BATON.md`'s `Intake-failed:` line.
+
+## Triage 2026-07-14 (attended; Steven approved fix for gen-3 finding 1)
+
+Verdict: fix applied. `.claude-plugin/plugin.json` had moved again by the
+time of this triage (0.9.5 → 0.9.8 live) — re-checked fresh rather than
+trusting the gen-3 note's 0.9.5. Version-bump text and R8's AC repinned to
+"0.9.8 → 0.9.9". Finding 2 (R4 has no verifying check, conf 60, nit)
+remains unaddressed and not part of this approval — carried forward.
+Re-run `/critique` to check current status.
