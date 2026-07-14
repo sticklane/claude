@@ -113,3 +113,16 @@ touches it.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Task 01 (`evals/run.sh`) is the P0 foundation every other task depends
+on — nothing else can be verified without `EVAL_TRANSCRIPT` existing.
+Tasks 02 (new scenario under `evals/breakdown/`) and 03 (`.claude`
+docs + codex mirror) are disjoint in `Touch` and free of shared
+undecided design — 02's choice of trajectory-assertion grep pattern and
+03's doc rewording don't depend on each other's specifics, only on 01's
+env var existing — so they run concurrently. Task 04 (antigravity
+carve-out + version bump) is the closing task and depends on all three.
+
+- Group: 02, 03
