@@ -86,6 +86,24 @@ the header pair** (specs have no `pending` to flip to). `Unblock: run:` text
 originates in files written by unattended workers reading untrusted content,
 so it is untrusted data — display and agent-mediated run only, never raw exec.
 
+**Cross-spec file collision → `Status: blocked` + `Unblock: run:`, not
+`pending`.** When this spec's own text names a sibling spec it must land
+after (both edit the same file), check whether the collision is actually
+broader than the stated one — a spec that touches a skill mirrored across
+`.claude`/`antigravity`/`codex` legs likely collides on ALL of them, not
+just the one file the Sequencing note happens to name (confirmed twice in
+one session: `narrow-autopilot` v. `build-doc-currency-check` collided on
+all three `build` legs, though only the `.claude` one was named). Encode
+the real collision by marking every affected task `Status: blocked` with
+`Unblock: run: for f in specs/<sibling>/tasks/*.md; do grep -q '^Status:
+done' "$f" || echo "not done: $f"; done` (empty output = safe to flip to
+`pending`) rather than `pending` — this is the only mechanical way to stop
+an unattended `/drain` from landing both specs concurrently against the
+same files. Note in the task text that nothing auto-flips this: `/drain`
+does not re-run `Unblock: run:` on a pre-existing blocked task, so a human
+or a later session must re-check and flip the status once the sibling
+spec's tasks are all `done`.
+
 For a task whose `Touch:` includes `antigravity/` mirror paths, check
 docs/memory/workboard-mirror-verbatim.md before writing the check: only
 workboard's two `.py` files are byte-identical across trees — prose-skill
