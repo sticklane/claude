@@ -248,8 +248,8 @@ opening line every time you enter it.
   build/lint/test commands). Once gates pass, delete
   every `rescue/NN-<slug>-*` branch for this task — removing each branch's
   worktree before the branch, since a branch still checked out in a live
-  worktree cannot be deleted (e.g. `git worktree remove <path>` then `git
-branch -D <branch>`) — then **push `main`
+  worktree cannot be deleted (e.g. `git worktree remove <path>` then
+  `git branch -D <branch>`) — then **push `main`
   immediately** so verifier-PASSED work is backed up the moment it lands.
   **Push guard (canonical):** push only if `main` has a configured upstream —
   if none, skip silently; never `--force`; a rejected, non-fast-forward, or
@@ -285,8 +285,9 @@ branch -D <branch>`) — then **push `main`
   fail, abort the merge and move to the next-ranked survivor, cleaning up
   survivor branches only after some merge passes gates and, within that
   cleanup, removing each survivor's worktree before deleting its branch (a
-  branch still checked out in a live worktree cannot be deleted; e.g. `git
-worktree remove <path>` then `git branch -D <branch>`). No survivor and at least one
+  branch still checked out in a live worktree cannot be deleted; e.g.
+  `git worktree remove <path>` then `git branch -D <branch>`). No survivor
+  and at least one
   worker DEFERRED → take the DEFERRED path (write the collected questions,
   `Status: deferred`) in preference to failed; otherwise `Status: failed` with
   every verdict's evidence recorded. Skip the tournament when the relaunch
