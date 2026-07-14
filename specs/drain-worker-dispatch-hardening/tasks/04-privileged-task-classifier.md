@@ -1,6 +1,6 @@
 # Task 04: Privileged/OS-level task classifier
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 15 turns
