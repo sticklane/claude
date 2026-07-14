@@ -230,6 +230,7 @@ class TestAdaptBoard(unittest.TestCase):
 
         self.assertEqual(board["n_repos"], 1)
         self.assertEqual(board["n_open_specs"], 1)
+        self.assertEqual(board["n_open_tasks"], 1)
         self.assertEqual(board["n_active"], 1)
         self.assertEqual(board["actives"][0]["repo"], "r1")
 
