@@ -1,24 +1,11 @@
 # Task 02: Create the qa-sweep skill
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
 Spec: ../SPEC.md (requirements R1, R2, R3, R5)
 Touch: .claude/skills/qa-sweep/SKILL.md
-
-<!-- PLAN (build step 1)
-Single new file: .claude/skills/qa-sweep/SKILL.md, modeled on critique/SKILL.md
-frontmatter shape. Structure: frontmatter (name/description+triggers/argument-hint)
-→ first-30-line human-gating contract (R2f) → procedure a-g in exact order →
-browser-automation-handoffs pointer → Next stage line. Cite (never restate):
-token-discipline.md "Delegation defaults" + "Dispatch authoring"; root CLAUDE.md
-self-chaining conventions; docs/human-gates.md; browser-automation-handoffs.md.
-Verified pre-flight: "Delegation defaults" present in token-discipline.md (use
-that phrase), docs/human-gates.md exists, browser-automation-handoffs.md present.
-Risks: (1) keep body <500 lines; (2) contract must land in first 30 lines;
-(3) citation-not-restatement for the browser rule (MANUAL check).
--->
 
 ## Goal
 
@@ -117,12 +104,14 @@ guards` spec — check the file's current content and cite
 
 ## Acceptance
 
-- [ ] `test -f .claude/skills/qa-sweep/SKILL.md` → exists
-- [ ] `grep -c "^name: qa-sweep$" .claude/skills/qa-sweep/SKILL.md` → 1
-- [ ] `grep -qi "deploy\|migration\|freshness" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "critique" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "drain" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "browser-automation-handoffs" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "re-verify\|re-run" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] `grep -qi "Delegation defaults\|route each page-check\|return a path" .claude/skills/qa-sweep/SKILL.md` → match found
-- [ ] MANUAL: confirm the browser-automation-handoffs citation reads as a pointer, not a restatement of the SSO handoff behavior
+- [x] `test -f .claude/skills/qa-sweep/SKILL.md` → exists (verifier PASS)
+- [x] `grep -c "^name: qa-sweep$" .claude/skills/qa-sweep/SKILL.md` → 1 (verifier PASS)
+- [x] `grep -qi "deploy\|migration\|freshness" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "critique" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "drain" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "browser-automation-handoffs" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "re-verify\|re-run" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] `grep -qi "Delegation defaults\|route each page-check\|return a path" .claude/skills/qa-sweep/SKILL.md` → match found (verifier PASS)
+- [x] MANUAL: browser-automation-handoffs citation reads as a pointer — both references (step c + closing section) name the rule for the login-wall handoff behavior without restating the "at most ONE click strategy"/SSO mechanism (verifier PASS)
+
+Evidence: specs/qa-sweep-skill-promotion/evidence/02-qa-sweep-skill.md
