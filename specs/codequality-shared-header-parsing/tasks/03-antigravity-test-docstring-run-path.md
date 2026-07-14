@@ -1,6 +1,6 @@
 # Task 03: Reconcile antigravity Run-path docstring adaptation
 
-Status: in-progress
+Status: done
 Promotion-ready: true
 Promoted-by-run: c92aedb1ae49f8d3
 Depends on: none
@@ -41,9 +41,9 @@ mirror or `plugin.json` bump obligation applies.
 
 ## Acceptance
 
-- [ ] `grep -q '.agents/skills/workboard' antigravity/.agents/skills/workboard/test_workboard.py`
-- [ ] `grep -c '.agents/skills/prioritize' antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → 2
-- [ ] `diff -q .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py; [ $? -ne 0 ]` (differs only on the Run: line)
-- [ ] `diff -q .claude/skills/prioritize/test_prioritize_scan.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py; [ $? -ne 0 ]` (differs only on the Run: lines)
-- [ ] `bash tests/test_antigravity_content_parity.sh` → exit 0
-- [ ] `bash tests/test_antigravity_parity.sh` → exit 0
+- [x] `grep -q '.agents/skills/workboard' antigravity/.agents/skills/workboard/test_workboard.py`
+- [x] `grep -c '.agents/skills/prioritize' antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → 2
+- [x] `diff -q .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py; [ $? -ne 0 ]` (differs only on the Run: line)
+- [x] `diff -q .claude/skills/prioritize/test_prioritize_scan.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py; [ $? -ne 0 ]` (differs only on the Run: lines)
+- [x] `bash tests/test_antigravity_content_parity.sh` → exit 0
+- [x] `bash tests/test_antigravity_parity.sh` → exit 0
