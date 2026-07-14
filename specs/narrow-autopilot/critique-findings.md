@@ -247,3 +247,24 @@ refreshed `breakdown/SKILL.md:98` → `:166` (stale since this spec's
 authoring; the routing sentence moved when breakdown/SKILL.md grew).
 Both confirmed accurate against the live files. Re-run `/critique` to
 confirm READY.
+
+## Re-critique 2026-07-14 (attended, /critique) — a real doctrine-corruption bug found
+
+The anchor fixes verified accurate. But a fresh pass caught something
+serious: R6's CLAUDE.md sub-bullet quoted STALE pre-2026-07-11 text for
+the execution-stages doctrine line ("Execution stages (`/build`,
+`/autopilot`, `/drain`, `/evals`) keep `disable-model-invocation: true`")
+that doesn't match live CLAUDE.md:36 at all, and prescribed dropping
+`/autopilot` → "`/build`, `/drain`, `/evals`" — which is factually wrong:
+line 36 is the model-invocable list, and `/evals` is explicitly the ONE
+stage CLAUDE.md pins as never model-invocable, three sentences later. A
+worker following this verbatim would corrupt CLAUDE.md's own launch-
+authorization doctrine while passing every existing AC (none of them
+pinned line 36's actual outcome). Fixed: reworded R6's sub-bullet to
+quote CLAUDE.md's live text and state the correct target
+("`/build`, `/drain`, `/prioritize`", explicitly not `/evals`), and added
+a new AC pinning that exact phrase (confirmed both the correct and the
+wrong phrase are absent today, i.e. non-vacuous either way). Also fixed a
+minor count nit: R6 said `codex/README.md` had "4 mentions", live count
+is 5 (lines 17, 22, 89, 121, 129) — corrected, backstopped either way by
+AC7's whole-file sweep. Re-run `/critique` to confirm READY.
