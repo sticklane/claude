@@ -118,6 +118,7 @@ or an anchored row here whose second cell contains "Not ported".
 | `fleet` | Not ported — inherited from `antigravity/README.md`: Antigravity's Agent Manager is this surface natively, and Codex has no equivalent to port from. |
 | `workflow-author` | Not ported — inherited from `antigravity/README.md`: its entire job is authoring `.claude/workflows/*.js` for the Claude-Code-specific `Workflow` tool; neither Antigravity nor Codex has a scripted fan-out primitive to author against. |
 | `critique` | Not ported — Antigravity itself only has `critique` as a workflow (`antigravity/.agents/workflows/critique.md`), not a skill; Codex has no workflow mechanism to reuse (no custom slash commands, per "What degrades on Codex" above), and there is no skill-shaped antigravity source to symlink. The procedure is reachable only by opening the file directly. |
+| `qa-sweep` | Not ported — qa-sweep is a skill, not one of the four explicit-invocation-only skill wrappers (drain/build/autopilot/evals) Codex ships as real content, so per root CLAUDE.md's mirror-chain convention no `codex/.agents/skills/qa-sweep` entry is created. |
 
 ## Keeping the ports in sync
 
