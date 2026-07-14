@@ -434,17 +434,13 @@ no parked tasks remain:
   numbered list), write each answer under `## Answers`, flip to `pending`,
   commit, return to step 1 (gating on the status, not the questions block,
   stops answered questions being re-asked). **`Contradicts-premise: true`
-  gate:** for a deferred task whose block carries `Contradicts-premise: true`,
-  a plain human answer alone does NOT flip it to `pending`. Additionally
-  require the named artifact (`SPEC.md` or the task file) to no longer contain
-  the recorded excerpt — a whitespace-normalized substring match (collapse
-  runs of whitespace/newlines in both the recorded excerpt and the artifact's
-  current full text before comparing, so an untouched reflow does not register
-  as a change and an edited excerpt cannot hide behind line wrapping). Until
-  the excerpt is observed absent post-normalization, the task (and any
-  dependent) stays non-dispatchable, and its HUMAN.md entry types as `decide`
-  ("spec amendment needed" or "task amendment needed", matching the named
-  artifact) rather than `ask` (reference.md "HUMAN.md filing (R2)").
+  gate:** a deferred task whose block carries `Contradicts-premise: true` is
+  NOT flipped to `pending` on a human answer alone — it additionally requires
+  the named artifact (`SPEC.md` or the task file) to no longer contain the
+  recorded excerpt (whitespace-normalized substring match; mechanics in
+  reference.md "Deferred question format"). Until the excerpt is observed
+  absent, the task and any dependent stay non-dispatchable, and its HUMAN.md
+  entry types as `decide` not `ask` (reference.md "HUMAN.md filing (R2)").
 - **Queue empty**: report the run (per-task verdict + acceptance evidence +
   merged branches). The terminal distill below then fires.
 - **Only blocked/failed remain**: report each blocker with its evidence and
