@@ -1,6 +1,6 @@
 # Task 01: Add the anchored-acceptance-criteria check to /idea's step 3
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 8 turns
