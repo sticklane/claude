@@ -360,6 +360,11 @@ openai.yaml`; confirmed not a symlink) — is deleted; its content is
 - [ ] `.claude/skills/build/SKILL.md` contains the classification gate and
       the two escalation triggers, plus a pointer to
       `build/reference.md`'s baton section.
+- [ ] `grep -qF 'Two triggers escalate to a human' .claude/skills/build/SKILL.md`
+      (pins the literal sentence the mirror-manifest canary at R6/AC below
+      depends on: the coverage test skips silently if its _source_ leg
+      lacks the phrase, so R2's fold-in must preserve it verbatim, not
+      just convey the same meaning in different words).
 - [ ] `onboard/SKILL.md` and `drain/reference.md` point at
       `build/reference.md`, not `autopilot/reference.md`.
 - [ ] `gate/SKILL.md` and `breakdown/SKILL.md` close with the replacement
