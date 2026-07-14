@@ -1,6 +1,6 @@
 # Task 03: Antigravity mirror, codex exemption, and plugin version bump
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02
 Priority: P2
 Budget: 12 turns
