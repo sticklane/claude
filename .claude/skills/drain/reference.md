@@ -38,7 +38,7 @@ below, rather than routing the task to a different execution mode.
 
 ## Gen-1 startup advisories
 
-Three best-effort, never-blocking advisories drain runs at gen-1 startup ONLY
+Four best-effort, never-blocking actions drain runs at gen-1 startup ONLY
 (never on baton generations — they inherit gen 1's) — none gates dispatch;
 correctness comes from the owner-lease claim, not these. SKILL.md's "Gen-1
 startup advisories" names them and points here.
@@ -84,6 +84,39 @@ model. (b) _heavy-hub_ — when the drain launch arrives beyond the session's
 first few turns (the observable heuristic), print one line recommending that
 same fresh-session relaunch. Advisory only: neither line blocks dispatch, and
 neither prints on baton generations.
+
+**Mechanical preflight sweep (gen-1 only, before step 1's spec-scoped work).**
+One mechanical pass, scoped to EVERY spec in the drain run's launched scope (a
+no-argument launch means the whole `specs/` queue, per the exhaustion
+contract) — not only the spec about to be claimed — that replaces the manual
+"kill any zombie drains" ritual. Best-effort and never blocking, like the
+advisories above; correctness still rests on the owner-lease claim. Two passes,
+both reusing definitions already pinned in this file rather than redefining them:
+
+- **(a) Reclaim dead leases.** For every spec under scope carrying a
+  `DRAIN-OWNER.md`, apply the Owner lease section's existing **Owner
+  liveness** definition (newest of the last commit touching that spec's
+  `specs/<slug>/` path, or its `in-progress` tasks' Stale-lock liveness
+  signals, against the same grace window). When that lease is ALL STALE,
+  reclaim it exactly as the per-spec **Reclaim (foreign-reclaim tightening)**
+  already does — sweep a task only when its activity signals are stale AND no
+  worktree/checkout is on its `task/NN-<slug>` branch — then replace
+  `DRAIN-OWNER.md` with drain's own claim in one commit.
+- **(b) Prune orphaned worktrees.** Enumerate every checkout/worktree the VCS
+  reports (VCS-neutral first — "the VCS's checkouts/worktrees," e.g. under git
+  `git worktree list`, matching `.claude/rules/concurrent-sessions.md`'s
+  pre-flight) and prune any with no corresponding live `in-progress` task or
+  live session. A **live session** is defined mechanically the same way that
+  rule's own pre-flight defines it: a session reported by the harness's
+  live-session listing (e.g. `claude agents --json`) whose `cwd` resolves into
+  that worktree's path. Fail-safe: when a worktree's liveness cannot be
+  determined (the live-session listing is unavailable, or `cwd` resolution is
+  ambiguous), skip that worktree rather than prune it — a wrong prune is
+  irreversible and strictly worse than leaving a zombie for the next sweep.
+
+Report a one-line summary (leases reclaimed, worktrees pruned) in the gen-1
+startup advisories; on any failure, one "sweep unavailable" line, never
+blocking.
 
 ## Wake economics
 
