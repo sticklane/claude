@@ -14,7 +14,7 @@ Findings, ranked:
 
 1. **R6 / AC7 grep is non-deterministic across checkout states.** The pinned
    acceptance grep `grep -rln '\bautopilot\b' .claude/ docs/ CLAUDE.md
-   .claude-plugin/` returns **887 files** in the current main checkout —
+.claude-plugin/` returns **887 files** in the current main checkout —
    only **19 are git-tracked**; the other ~868 are transient
    `.claude/worktrees/agent-*/` drain worktrees (each a full checkout copy
    containing autopilot mentions). A fresh implementation worktree has no
@@ -53,7 +53,7 @@ Findings, ranked:
 
 5. **R7 antigravity fold-in is underspecified.** No
    `antigravity/.agents/skills/autopilot/` exists (confirmed), so R7's mirror
-   *delete* is a no-op; but "fold in ... to build's mirror ... only what
+   _delete_ is a no-op; but "fold in ... to build's mirror ... only what
    actually applies" leaves the antigravity build-side change undefined.
    Name the concrete antigravity target (skill vs workflow) or state
    explicitly that no antigravity change is required.
@@ -99,15 +99,15 @@ surfaced findings outside this revision's approved scope:
 1. **The codex leg is entirely unaddressed (confidence 88, blocker).**
    `codex/.agents/skills/autopilot/` exists as real content (not a
    symlink) per CLAUDE.md's port-chain rule naming `drain/build/autopilot/
-   evals` as the four codex wrappers. This spec's R7 addresses only
+evals` as the four codex wrappers. This spec's R7 addresses only
    `antigravity/`; R6's sweep grep is scoped to `.claude/ docs/ CLAUDE.md
-   .claude-plugin/`, excluding `codex/` and `antigravity/` entirely, so
+.claude-plugin/`, excluding `codex/` and `antigravity/` entirely, so
    AC7 passing proves nothing about the codex leg. A literal decomposition
    ships `codex/.agents/skills/autopilot/SKILL.md` orphaned and
    `codex/AGENTS.md` + `codex/README.md` stale.
 2. **R6's enumeration misses 4 tracked git-grep hits and mis-instructs
    their disposition (confidence 72).** `.claude/rules/
-   mirror-procedure-discipline.md:55` (historical bug reference),
+mirror-procedure-discipline.md:55` (historical bug reference),
    `.claude/skills/resume-handoff/SKILL.md:28`, `docs/TASKS.md:54`, and
    `docs/memory/multi-runtime-live-testing.md:62` are in the 21-file
    git-grep set but not in R6's "known hits" list; list-membership hits
@@ -117,9 +117,54 @@ surfaced findings outside this revision's approved scope:
 3. **Finding 5 (R7 antigravity fold-in underspecified) still stands
    (confidence 65)** — out of this revision's approved scope, so left
    unchanged, but not resolved: whether `antigravity/.agents/skills/
-   build/` needs the new classification gate/escalation triggers ported
+build/` needs the new classification gate/escalation triggers ported
    is still undefined.
 
 Next step for a human: findings 1–2 need the same triage-and-approve
 treatment as the prior round before another revision round; finding 3
 repeats prior finding 5, unresolved by design this round.
+
+## Triage 2026-07-13 (attended; Steven approved, walk-through item 21)
+
+Verdict: REVISE, applied directly. Resolves findings 1-3 and goes further
+than the critic's own finding 1 asked for — investigation surfaced that
+R7's original antigravity check was wrong-scoped, not merely unspecified:
+
+1. **Codex leg (finding 1, blocker) — new R7a.**
+   `codex/.agents/skills/autopilot/` confirmed real content (SKILL.md +
+   agents/openai.yaml, not a symlink); deletion + fold-in into
+   `codex/.agents/skills/build/SKILL.md` now required. R6 extended to
+   sweep `codex/` too and covers `codex/AGENTS.md`, `codex/README.md` (4
+   mentions), `drain/SKILL.md`, `evals/SKILL.md` — each drops autopilot
+   from "the four" to the three-skill set. CLAUDE.md's own codex-leg
+   authoring convention (2 separate mentions, not the 1 previously named)
+   gets the same three-skill fix — a doctrine change, not a
+   grep-and-reword, called out explicitly so a drained worker doesn't
+   under-scope it to a literal find-replace.
+2. **R6's 4 missed hits (finding 2) — dispositioned individually.**
+   `resume-handoff/SKILL.md` and `docs/TASKS.md` and
+   `multi-runtime-live-testing.md`: `/autopilot` dropped from their
+   enumerations (list-membership, not reworded). `mirror-procedure-
+discipline.md`: exempted (historical bug citation, not living
+   doctrine) — joins the existing `orchestration-research-2026-07.md`
+   exemption.
+3. **Antigravity fold-in (finding 3) — corrected, not just resolved.**
+   The original R7 hedge checked `antigravity/.agents/skills/autopilot/`
+   (absent) and concluded there was nothing to mirror. Direct inspection
+   found the real mirror lives at `antigravity/.agents/workflows/
+autopilot.md` (90 lines, real content) — autopilot is ported as a
+   _workflow_, not a skill, matching CLAUDE.md's own port-chain
+   convention for human-only skills. R7 rewritten to delete that file and
+   fold its content into `antigravity/.agents/workflows/build.md`. R6
+   extended to also cover `antigravity/README.md`, `gate/SKILL.md`,
+   `resume-handoff/SKILL.md`, and `drain.md`'s own autopilot mentions.
+
+Acceptance criteria extended to match: the R6 grep AC now scopes to
+`codex/` and `antigravity/` too (31 tracked files today, must drop to
+exactly the 2 exempt files), new ACs for the antigravity workflow and
+codex skill fold-ins, and a CLAUDE.md three-vs-four doctrine check. Also
+fixed a formatter-introduced markdown nesting regression in the existing
+`build/reference.md` per-section AC (unrelated to the findings, caught in
+passing).
+
+Ready for re-critique.
