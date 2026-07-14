@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 16 turns
@@ -90,10 +90,31 @@ the include-list below.
    and confirm no `FAIL` lines print.
 8. Commit.
 
+<!-- Plan / decision note (worker-maintained):
+- test_viz.py drift was ALREADY fixed on main (byte-identical; `diff` exits 0
+  before any edit — prior commit 1299f93 mirrored it), so step 1 was a
+  verified no-op; test_viz.py left untouched.
+- DECISION (reversible): `workboard/test_workboard.py` is EXCLUDED from the
+  include-list. It has since acquired a sanctioned `.agents/skills/` `Run:`
+  docstring run-path adaptation (antigravity commit cf8e2b3 "re-apply .agents
+  Run: path"), the same class as the already-excluded
+  `list-specs/test_list_specs.py`. Including it would make the gate
+  permanently red on a legitimate divergence. The current byte-identical
+  subset is exactly 6 files — matching SPEC.md's "6 files" claim — and is
+  enumerated (fixed, not globbed) in the gate script.
+- AGENTS.md left untouched: its `for t in tests/test_*.sh` Commands loop
+  picks up the new script by glob (verified — full loop prints no FAIL).
+-->
+
 ## Acceptance
 
-- [ ] `tests/fixtures/content-parity/claude-side/example.py` and `tests/fixtures/content-parity/antigravity-side/example.py` exist and differ from each other; pointing the gate's fixture-redirect seam at them makes it exit nonzero and name `example.py`
-- [ ] `diff .claude/skills/_shared/test_viz.py antigravity/.agents/skills/_shared/test_viz.py` exits 0
-- [ ] `bash tests/test_antigravity_content_parity.sh` exits 0 with no output on the real (fixed) tree
-- [ ] `bash tests/test_antigravity_parity.sh` still exits 0 (existence gate unaffected)
-- [ ] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done` prints no FAIL lines
+- [x] `tests/fixtures/content-parity/claude-side/example.py` and `tests/fixtures/content-parity/antigravity-side/example.py` exist and differ from each other; pointing the gate's fixture-redirect seam at them makes it exit nonzero and name `example.py`
+  - Evidence: `bash tests/test_antigravity_content_parity.sh --fixture` and `CONTENT_PARITY_FIXTURE=1 bash …` both print `example.py` and exit 1; the two fixtures differ (distinct docstrings + return strings).
+- [x] `diff .claude/skills/_shared/test_viz.py antigravity/.agents/skills/_shared/test_viz.py` exits 0
+  - Evidence: `diff …/_shared/test_viz.py …` → exit 0 (already byte-identical on main; no edit required).
+- [x] `bash tests/test_antigravity_content_parity.sh` exits 0 with no output on the real (fixed) tree
+  - Evidence: ran it → no output, exit 0.
+- [x] `bash tests/test_antigravity_parity.sh` still exits 0 (existence gate unaffected)
+  - Evidence: ran it → exit 0 (file untouched).
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done` prints no FAIL lines
+  - Evidence: full loop over all 17 `tests/test_*.sh` (incl. the new gate) → no FAIL lines printed.
