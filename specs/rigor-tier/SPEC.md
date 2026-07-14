@@ -129,3 +129,13 @@ input to a normal production task, not as done work.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Tasks 01 (idea/breakdown), 02 (build/drain), and 03 (list-specs/quality-
+discipline) are disjoint in `Touch` and share no undecided design — the
+`Rigor:` header syntax is fully pinned by R1, so none of the three make an
+open choice the others depend on. Task 04 (version bump) depends on all
+three landing first.
+
+- Group: 01, 02, 03
