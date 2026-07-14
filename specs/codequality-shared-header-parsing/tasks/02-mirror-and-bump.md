@@ -4,7 +4,7 @@
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 12 turns
@@ -58,7 +58,11 @@ finalized that content; this task only mirrors it. Do not touch
 
 ## Acceptance
 
-- [ ] `diff -r` of every touched `.py` against its `antigravity/.agents/skills/` counterpart is empty, with the one named exception: `prioritize_scan.py`'s module docstring may keep its existing standalone-install note — every other line (all regex definitions, the `_load_module` import, any other docstring content) must diff empty
-- [ ] `.claude-plugin/plugin.json` version differs from its value at this task's own base commit (`git show <base-commit>:.claude-plugin/plugin.json | grep version` vs the current value)
-- [ ] `bash tests/test_antigravity_parity.sh` exits 0
-- [ ] `bash tests/test_antigravity_content_parity.sh` exits 0 (if present on this tree)
+- [x] `diff -r` of every touched `.py` against its `antigravity/.agents/skills/` counterpart is empty, with the one named exception: `prioritize_scan.py`'s module docstring may keep its existing standalone-install note — every other line (all regex definitions, the `_load_module` import, any other docstring content) must diff empty
+  - Evidence: `diff` of headers.py, workboard.py, list_specs.py, test_workboard.py, test_prioritize_scan.py all exit 0; `diff prioritize_scan.py` shows ONLY docstring lines 18-20 (the standalone-install note), everything else empty.
+- [x] `.claude-plugin/plugin.json` version differs from its value at this task's own base commit (`git show <base-commit>:.claude-plugin/plugin.json | grep version` vs the current value)
+  - Evidence: base commit 0284e23 had `"version": "0.9.5"`; bumped to `"version": "0.9.6"`.
+- [x] `bash tests/test_antigravity_parity.sh` exits 0
+  - Evidence: ran `bash tests/test_antigravity_parity.sh` → exit 0, no output.
+- [x] `bash tests/test_antigravity_content_parity.sh` exits 0 (if present on this tree)
+  - Evidence: ran `bash tests/test_antigravity_content_parity.sh` → exit 0, no output (the gate this task closes). Full `tests/test_*.sh` loop also all green.
