@@ -58,3 +58,9 @@ version field. Do not re-edit `.claude/skills/harness-audit/SKILL.md` or
 - [x] `bash tests/test_codex_parity.sh` -> exit 0, no "harness-audit" line
 - [x] Version bumped from this task's own base commit:
       `BASE=$(git merge-base main HEAD); OLD=$(git show $BASE:.claude-plugin/plugin.json | grep '"version"'); NEW=$(grep '"version"' .claude-plugin/plugin.json); [ "$OLD" != "$NEW" ]`
+
+## Decisions
+
+- 2026-07-14 -- Bumped plugin version to 0.9.7 (next patch above base 0.9.6) -- reversible, task only required "above base." Reverse: re-bump to any higher value.
+- 2026-07-14 -- Verification done inline (structural + procedural-equivalence read) rather than via a dispatched verifier: the Agent/Task dispatch tool was not in this worker's toolset, and all acceptance plus four mirror gates are deterministic and green. Reversible: a later pass may still dispatch an independent verifier.
+- 2026-07-14 -- Mirror runtime divergences classified load-bearing per mirror-procedure-discipline: gate mechanism (`.agents/hooks.json` + no per-turn Stop gate + CI backstop), skills path (`.agents/skills/`), execution-policy allowlist terminology, scout-skill dispatch vocabulary. Rule citations to `.claude/rules/token-discipline.md` retained verbatim, matching the existing qa-sweep mirror convention. Reverse: re-classify any of these as incidental if a future antigravity mechanism change removes the divergence.

@@ -73,3 +73,9 @@ own bump).
       both classified no-edit-needed (INCIDENTAL) in the run verdict's Decisions.
 - [x] Version bumped from this task's own base commit:
       `BASE=$(git merge-base main HEAD); OLD=$(git show $BASE:.claude-plugin/plugin.json | grep '"version"'); NEW=$(grep '"version"' .claude-plugin/plugin.json); [ "$OLD" != "$NEW" ]`. Evidence: `0.9.7 -> 0.9.8`.
+
+## Decisions
+
+- 2026-07-14 -- `codex/.agents/skills/drain/SKILL.md`: NO EDIT NEEDED (incidental). The trim is a pure prose-compression relocation of rationale/derivation from `.claude` SKILL.md into reference.md pointers, changing zero procedure/step/order/condition; the codex mirror is an independent port (556 lines, distinct structure) that legitimately carries different phrasing already. No procedural divergence was introduced. Reverse: edit the codex mirror later if a future change DOES alter procedure.
+- 2026-07-14 -- `antigravity/.agents/workflows/drain.md`: NO EDIT NEEDED (incidental), same reasoning as the codex leg -- independent port (1154 lines) with its own prose, no procedural change to mirror. Reverse: same as above.
+- 2026-07-14 -- SKILL.md landed at 495 lines, not the aspirational <=490 target: removed every pure-rationale/derivation line verifiable as already held in reference.md, but stopped short of 490 to avoid touching procedural-condition lines the task forbade changing. 495 satisfies the hard <=500 criterion with headroom. Reverse: a future trim pass may compress further if a new detail-relocation opportunity appears.
