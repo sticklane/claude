@@ -1,6 +1,6 @@
 # Task 04: Worktree-removal-before-branch-deletion ordering (R4)
 
-Status: pending
+Status: in-progress
 Depends on: 03
 Priority: P2
 Budget: 12 turns
