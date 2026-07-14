@@ -118,3 +118,46 @@ edit, same pattern as the prior triage). Fixes landed in SPEC.md:
    not named) got a new acceptance-criterion bullet instead.
 
 Ready for re-critique.
+
+## Re-critique 2026-07-14 (drain critique intake, gen 3, run c92aedb1ae49f8d3) — still NOT READY
+
+The 2026-07-13 triage's fix landed correctly for the `.claude` leg but was
+not propagated to the antigravity and codex legs, leaving two of the same
+class of defect the triage just fixed elsewhere:
+
+1. **Antigravity `build.md` "Documentation currency" AC contradicts R6's
+   citation wording** (confidence 80). The AC demands
+   `grep -c "Documentation currency" antigravity/.agents/workflows/build.md`
+   → ≥1, but R6 specifies the antigravity build.md citation reads "see
+   AGENTS.md's Quality discipline section" — deliberately not naming
+   "Documentation currency" since antigravity has no `quality-discipline.md`.
+   A worker following R6 literally satisfies the separate "Quality discipline
+   section" AC but fails this one. Fix: drop
+   `antigravity/.agents/workflows/build.md` from the "Documentation currency"
+   AC (keep it only on `antigravity/AGENTS.md`, which R6 does populate with
+   R1 content).
+2. **Codex R5 AC has no satisfiable/independent anchor** (confidence 80).
+   `grep -c "quality-discipline\|Documentation currency"
+codex/.agents/skills/build/SKILL.md` → ≥1 is unsatisfiable as written:
+   R6 forbids "quality-discipline" appearing in the codex file (not a
+   citation to a file codex can't resolve), and "Documentation currency"
+   isn't produced by the codex R4/R5 edits either (the codex R4 reminder
+   example uses "AGENTS.md's Map/Commands/State," the R5 note's anchor is
+   "not by /code-review itself" — neither phrase). Fix: give the codex R5
+   note a distinct literal anchor matching its actual wording, e.g.
+   `grep -c "not by \$code-review itself"
+codex/.agents/skills/build/SKILL.md`, and require R6 to mandate that
+   exact phrase.
+
+Verified clean (not findings): all nine confirmed-absent grep anchors still
+0 in the live tree; codex build/SKILL.md is real content (not a symlink)
+with `$code-review` at close-out; antigravity/AGENTS.md `## Quality
+discipline` exists; the embedded self-contradicting critique section stays
+removed; plugin version is 0.9.5 (spec's 0.9.1 snapshot is hedged); R1's
+attended-scope tension is adequately handled.
+
+Recovery: fix the two ACs above (narrow the antigravity AC to AGENTS.md
+only; give the codex R5 AC a distinct anchor matching R6's actual codex
+wording), then re-run /critique. This spec's critique intake is spent for
+this run (Run-token c92aedb1ae49f8d3) — recorded in
+`DRAIN-BATON.md`'s `Intake-failed:` line.
