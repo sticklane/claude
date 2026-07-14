@@ -83,6 +83,18 @@ passing is not the same as the cross-reference actually resolving.
   `.claude/worktrees/agent-aada71f1f77b3d13c` and either resume/commit that
   work or clear it so a future drain generation can reclaim the task.
 
+- [2026-07-14 /drain gen 5] Re-confirmed: worktree still checked out on
+  `task/02-canonical-worker-allowlist-template` at the SAME tip `804d8ef`,
+  same 3 dirty files, zero new activity across two more full generations
+  (gen 4 re-confirmed byte-identical state per its own baton entry; this
+  generation's own check again finds no drift and no live agent process
+  attached via `claude agents --json`). Fourth independent generation to
+  observe this exact stale state. Not re-swept (worktree still present with
+  real uncommitted work — the mechanical sweep precondition of no checked-out
+  worktree is not met). Not re-litigated further per gen 3/4's established
+  reasoning; recommendation unchanged: a human should inspect
+  `.claude/worktrees/agent-aada71f1f77b3d13c` directly.
+
 ## Acceptance
 
 - [ ] `grep -c "canonical worker allowlist" runtimes/claude-code.md` → at least 1
