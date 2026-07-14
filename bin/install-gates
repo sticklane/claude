@@ -333,6 +333,33 @@ elif [ -f "$REPO/go.mod" ]; then
   detect_go
 fi
 
+# --- build/dist prerequisite stage (R1) ------------------------------------
+# A repo-declared build/dist prerequisite runs BEFORE lint/typecheck/test so
+# scripts/check.sh is self-sufficient. Two opt-in signals, mirroring the
+# existing "read a conventional script name" precedent:
+#   - Node: package.json .scripts.build → `$pm run build`.
+#   - Any other stack: a .claude/build-prereq marker file whose single line is
+#     the literal build command (presence is the opt-in; absence adds nothing).
+# Only rendered where check.sh is (TIER != generic), like every other stage.
+BUILD_CMD=""
+if [ "$STACK" = node ]; then
+  build_script="$(jq -r '.scripts.build // empty' "$REPO/package.json" 2>/dev/null)"
+  if [ -n "$build_script" ]; then
+    pm=npm
+    [ -f "$REPO/pnpm-lock.yaml" ] && pm=pnpm
+    [ -f "$REPO/yarn.lock" ] && pm=yarn
+    BUILD_CMD="$pm run build"
+  fi
+fi
+if [ -z "$BUILD_CMD" ] && [ -f "$REPO/.claude/build-prereq" ]; then
+  BUILD_CMD="$(head -n1 "$REPO/.claude/build-prereq")"
+fi
+if [ -n "$BUILD_CMD" ]; then
+  CHECK_STAGES="run_stage \"build\" $BUILD_CMD${CHECK_STAGES:+
+}${CHECK_STAGES}"
+  STAGE_DESC="build${STAGE_DESC:+, }${STAGE_DESC}"
+fi
+
 if [ "$STACK" = generic ]; then
   TIER=generic
 elif [ "$tests_present" -eq 1 ]; then
