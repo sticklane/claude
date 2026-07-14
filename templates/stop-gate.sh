@@ -53,6 +53,38 @@ if [ ! -f "$check" ] || [ ! -r "$check" ]; then
   exit 0
 fi
 
+# docs-only diff scoping: when every file changed since the last commit
+# matches CLAUDE.md's paths-ignore globs (**.md, docs/**, specs/**,
+# .claude/**), skip the full check — the same convention CLAUDE.md states for
+# push-triggered CI, applied to the local Stop-hook gate. A change that
+# touches any non-docs path still runs scripts/check.sh in full; this is a
+# scoping optimization, never a blanket skip. No change since HEAD (a clean
+# tree) is NOT docs-only and runs the check.
+docs_only_diff() { # docs_only_diff <repo-root>
+  local changed line path
+  changed="$(git -C "$1" status --porcelain --untracked-files=all 2>/dev/null)" \
+    || return 1
+  [ -n "$changed" ] || return 1
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    path="${line:3}"                                # strip "XY " status prefix
+    case "$path" in *" -> "*) path="${path##* -> }" ;; esac  # rename: destination
+    path="${path#\"}"; path="${path%\"}"            # unquote paths with specials
+    case "$path" in
+      *.md|docs/*|specs/*|.claude/*) : ;;           # docs path: keep scanning
+      *) return 1 ;;                                 # non-docs change: run check
+    esac
+  done <<EOF
+$changed
+EOF
+  return 0
+}
+
+if docs_only_diff "$root"; then
+  warn "docs-only diff since last commit; skipping check"
+  exit 0
+fi
+
 output="$(cd "$root" && bash "$check" 2>&1)"
 status=$?
 if [ "$status" -ne 0 ]; then
