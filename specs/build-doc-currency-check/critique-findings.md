@@ -72,3 +72,49 @@ stand verbatim, plus one new nit:
 Recovery: apply the three approved triage edits to SPEC.md itself (not just
 recorded in this file), add the lint-ultra-gate note, then re-run /critique.
 This spec's critique intake is spent for this run.
+
+## Re-critique (drain critique intake) — still NOT READY, edits landed with new gaps
+
+Findings 1-3 from the prior round landed in SPEC.md's Requirements this time
+(codex leg added to R6, R1 rescoped, ACs converted to anchored greps), but
+introduced a self-contradicting artifact — SPEC.md gained its own embedded
+`## Critique findings (2026-07-13)` section asserting NOT READY on top of the
+now-fixed Requirements — plus new gaps surfaced underneath the fix:
+
+1. R4's AC demands capital "Documentation currency" but R4's own example
+   citation text was lowercase "documentation currency" — the edit could
+   satisfy R4's prose and still fail its own AC (conf 78).
+2. R5's AC (`grep -c "quality-discipline"`) overlapped with R4's citation
+   text (which also contains "quality-discipline.md"), so R5's edit wasn't
+   independently verified — R4's edit alone could satisfy both ACs (conf 74).
+3. R6's antigravity citation named `quality-discipline.md`, a file that
+   doesn't exist in antigravity — its real equivalent is `AGENTS.md`'s
+   `## Quality discipline` section (conf 70).
+4. The embedded `## Critique findings` section in SPEC.md itself still
+   asserted NOT READY and described already-fixed problems as current,
+   self-contradicting if the spec were fed to `/breakdown` (conf 70).
+
+## Triage 2026-07-13 (attended; Steven approved, walk-through item 18)
+
+Verdict: REVISE, applied directly (not just recorded — low-risk spec-text
+edit, same pattern as the prior triage). Fixes landed in SPEC.md:
+
+1. R4's example citation reworded to name the section by its proper noun
+   ("see quality-discipline.md's Documentation currency section") so it
+   matches the AC's capitalization naturally, instead of a case mismatch.
+2. R5's citation and AC reworded onto a distinct anchor
+   (`"not by /code-review itself"`) that R4's edit cannot satisfy alone —
+   verified absent today via `grep -c`.
+3. R6's antigravity citation reworded to name `AGENTS.md`'s Quality
+   discipline section instead of the nonexistent `quality-discipline.md`;
+   antigravity ACs split into two independently-anchored checks
+   (`"Quality discipline section"` for the R4-equivalent citation,
+   `"not by the sub-reviewer fallback"` for the R5-equivalent note) —
+   both verified absent today.
+4. The stale embedded `## Critique findings (2026-07-13)` section removed
+   from SPEC.md entirely (this file is where critique history belongs,
+   per this spec's own multi-round convention) — findings 1/2/4 above were
+   already fixed by the Requirements edits; finding 3 (lint-ultra-gate.sh
+   not named) got a new acceptance-criterion bullet instead.
+
+Ready for re-critique.
