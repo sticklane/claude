@@ -1,6 +1,6 @@
 # Task 02: Mirror the check into antigravity, bump plugin version, seed the manifest
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 8 turns
