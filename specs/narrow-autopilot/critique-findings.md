@@ -210,3 +210,25 @@ so no live-request naming it is required"` — landed via the qa-sweep
 Recovery: fix findings 1-3, then re-run /critique. This spec's critique
 intake is spent for this run (Run-token c92aedb1ae49f8d3) — recorded in
 `DRAIN-BATON.md`'s `Intake-failed:` line.
+
+## Fix applied 2026-07-14 (attended, human-authorized HUMAN.md cleanup pass)
+
+All three findings fixed directly in SPEC.md, re-verified live against the
+current tree (32 tracked autopilot hits today, up from 31, confirming
+finding 1's premise):
+
+1. R6's antigravity enumeration now includes
+   `antigravity/.agents/skills/qa-sweep/SKILL.md` (the newly-landed mirror
+   hit at its current line 82), with the same three-skill-set treatment
+   as its siblings.
+2. R3 now names BOTH of `drain/reference.md`'s `/autopilot` mentions
+   (`:1007`'s headless-rule citation and `:158`'s "Orchestrator isolation"
+   paragraph), with anchors refreshed and explicitly marked as snapshots.
+3. AC7 dropped its stale pinned count entirely — the gate condition was
+   already the count-independent "returns exactly the 2 exempt files"
+   form, so this was a cosmetic/informational fix (removing the
+   misleading "(currently 31 tracked files...)" parenthetical) rather
+   than a substantive one; added a note stating the count is deliberately
+   not gated on, since the mirror set churns day to day.
+
+Ready for re-critique.

@@ -102,8 +102,14 @@ concrete mechanism templates.
   not inside it.
 - **R3**: `onboard/SKILL.md:78-79`'s pointer to the scoped-permissions
   template is updated from `autopilot/reference.md` to `build/
-reference.md`. `drain/reference.md:884`'s citation of "the autopilot
-  reference's headless rule" is updated to cite `build/reference.md`.
+reference.md`. `drain/reference.md` has TWO separate `/autopilot`
+  mentions, both updated (line numbers are snapshots as of 2026-07-14,
+  not a contract — find them by section content, not by re-reading stale
+  numbers): `:1007`'s citation of "the autopilot reference's headless
+  rule" is updated to cite `build/reference.md`; `:158`'s "Orchestrator
+  isolation (default ON)" paragraph ("Build/autopilot worktrees...")
+  drops the `/autopilot` mention, the same treatment R6's whole-repo
+  sweep gives every other passing reference.
 - **R4**: Every skill with a `Next stage:` line naming `/autopilot` gets a
   concrete replacement, not a deletion that leaves it dangling:
   - `gate/SKILL.md`'s closing `Next stage: /autopilot specs/<slug>/
@@ -188,9 +194,14 @@ skills/drain/SKILL.md`, and `codex/.agents/skills/evals/SKILL.md` all
     skills — each becomes the three-skill set, mirroring R7a below.
   - `antigravity/README.md` (2 mentions), `antigravity/.agents/skills/
 gate/SKILL.md`'s `Next stage:` line, `antigravity/.agents/skills/
-resume-handoff/SKILL.md`'s stage enumeration, and `antigravity/.agents/
-workflows/drain.md` all reference autopilot — each updated the same
-    way its `.claude`-leg counterpart is (R3/R4/R5), mirroring R7 below.
+resume-handoff/SKILL.md`'s stage enumeration, `antigravity/.agents/
+workflows/drain.md`, and `antigravity/.agents/skills/qa-sweep/SKILL.md`
+    (its "(build/autopilot/drain/prioritize), so no live-request naming it
+    is required" parenthetical — landed after this spec's own authoring,
+    via the `qa-sweep-skill-promotion` spec's antigravity mirror; drops
+    to the three-stage set the same way) all reference autopilot — each
+    updated the same way its `.claude`-leg counterpart is (R3/R4/R5),
+    mirroring R7 below.
     **Exempted**: files that are explicitly historical research dumps or bug
     citations rather than living doctrine — `docs/orchestration-research-
 2026-07.md` (a research record) and `.claude/rules/
@@ -267,13 +278,19 @@ openai.yaml`; confirmed not a symlink) — is deleted; its content is
       Reason 2 reads "`/build`'s bounded mode and `/drain`" (no
       `/autopilot`) — `grep -c autopilot docs/human-gates.md` returns 0.
 - [ ] `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/`
-      (currently 31 tracked files, confirmed 2026-07-13) returns exactly
-      the 2 files R6 lists as exempt (`docs/orchestration-research-
-    2026-07.md`, `.claude/rules/mirror-procedure-discipline.md`) — every
-      other hit has either been reworded (R6) or deleted entirely (R1
-      × `.claude`, R7 × antigravity, R7a × codex — 4 files: `.claude/
-    skills/autopilot/{SKILL,reference}.md`, `antigravity/.agents/
-    workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`).
+      returns exactly the 2 files R6 lists as exempt
+      (`docs/orchestration-research-2026-07.md`,
+      `.claude/rules/mirror-procedure-discipline.md`) — every other hit
+      has either been reworded (R6) or deleted entirely (R1 × `.claude`,
+      R7 × antigravity, R7a × codex — 4 files: `.claude/
+skills/autopilot/{SKILL,reference}.md`, `antigravity/.agents/
+workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`).
+      Deliberately NOT gated on a specific tracked-file count (the mirror
+      set churns day to day, e.g. it moved 31→32 between this spec's
+      authoring and its 2026-07-14 re-critique when qa-sweep's antigravity
+      mirror landed) — the exactly-these-2-exempt-files check is the
+      robust, count-independent assertion; re-derive the informational
+      count at implementation/breakdown time if useful, never pin it.
       (Deterministic across checkout state because it scopes to tracked
       files, unlike a plain recursive `grep -rln` over the same paths,
       which also matches transient `.claude/worktrees/agent-*/` drain
