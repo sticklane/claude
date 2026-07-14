@@ -7,7 +7,7 @@ review phase" — but `/code-review` is provided by the harness/an external
 plugin (there is no `.claude/skills/code-review/` in this repo, and
 `docs/anthropic-playbook.md`/`build/SKILL.md:86` both treat it as an
 external command this repo invokes, not one it defines), so it isn't a
-file this repo can edit. What this repo *does* own is `/build`'s completion
+file this repo can edit. What this repo _does_ own is `/build`'s completion
 step and `.claude/rules/quality-discipline.md`. Today, documentation
 staying in sync with code (AGENTS.md's Map/Commands/State, README.md) is
 entirely decentralized: it happens only when a task's own `Touch:` header
@@ -64,9 +64,9 @@ own citation convention — "cite, don't restate").
   pre-commit review bullet (find it by section content — the "## 4. Close
   out" heading, then the "Pre-commit review" bullet adjacent to the
   `/code-review` invocation R5 touches — not by a numbered line, per the
-  sequencing note above), cites this new quality-discipline.md section
-  (one line, e.g. "check documentation currency per
-  quality-discipline.md") rather than restating its content — both R4's
+  sequencing note above), cites this new quality-discipline.md section by
+  name (one line, e.g. "see quality-discipline.md's Documentation
+  currency section") rather than restating its content — both R4's
   citation and R5's note land at the same bullet, not scattered across
   section 4's other close-out steps (simplify, task-file update, commit).
 - **R5**: The nearby `/code-review` invocation (via the Skill tool, args
@@ -75,18 +75,23 @@ own citation convention — "cite, don't restate").
   close-out section, not by a numbered line) is the one place a reader
   could plausibly assume this
   repo owns doc-currency checking through that invocation. Add a
-  one-line note there: doc currency is checked by the new
-  quality-discipline.md section (R1), not by `/code-review` itself —
+  one-line note there, worded distinctly from R4's citation so the two
+  edits are independently verifiable: doc currency is checked by the new
+  quality-discipline.md section (R1), **not by `/code-review` itself** —
   `/code-review` stays scoped to what the harness/plugin defines it to
   check.
 - **R6**: Per CLAUDE.md's mirroring convention ("when a skill changes
   here, mirror the change there in the same commit"), both edits land in
   their mirrors too — antigravity and codex:
   - `antigravity/.agents/workflows/build.md` (mirrors `build/SKILL.md`,
-    including its close-out review logic) gets the same R4 citation;
-    R5's note attaches differently there, since that mirror has no
-    `/code-review` call at all (its close-out step already falls back to
-    a subagent reviewer instead, worded along the lines of "since this
+    including its close-out review logic) gets an R4-equivalent citation
+    — but antigravity has no `quality-discipline.md` file to name (its
+    equivalent lives inline as `antigravity/AGENTS.md`'s Quality
+    discipline section), so this mirror's citation reads "see AGENTS.md's
+    Quality discipline section" instead of naming a file that doesn't
+    exist there. R5's note attaches differently too, since this mirror has
+    no `/code-review` call at all (its close-out step already falls back
+    to a subagent reviewer instead, worded along the lines of "since this
     mirror has no code-review skill to..." — a content snapshot, not a
     line-numbered anchor) — the R5-equivalent note attaches to that
     sub-reviewer fallback bullet, not to a `/code-review` invocation
@@ -136,25 +141,38 @@ passes when the count is 1 or more after the edit.
       → 1 or more (R4's citation, landed at the close-out section's
       pre-commit-review bullet per R4's section-content anchor, not a
       line number).
-- [ ] `grep -c "quality-discipline" .claude/skills/build/SKILL.md`
-      → 1 or more (R5's note that doc-currency checking lives in
-      quality-discipline.md, not in `/code-review`).
+- [ ] `grep -c "not by /code-review itself" .claude/skills/build/SKILL.md`
+      → 1 or more (confirmed absent today; R5's note that doc-currency
+      checking lives in quality-discipline.md, not in `/code-review` —
+      anchored on wording distinct from R4's citation so the two edits
+      verify independently).
 - [ ] `grep -c "Documentation currency" antigravity/.agents/workflows/build.md`
       → 1 or more, and
       `grep -c "Documentation currency" antigravity/AGENTS.md` → 1 or
       more (R6's antigravity mirror of R4/R1).
-- [ ] `grep -c "quality-discipline" antigravity/.agents/workflows/build.md`
+- [ ] `grep -c "Quality discipline section" antigravity/.agents/workflows/build.md`
+      → 1 or more (confirmed absent today; R6's antigravity citation
+      names `AGENTS.md`'s `## Quality discipline` section, since
+      antigravity has no standalone `quality-discipline.md` file to cite).
+- [ ] `grep -c "not by the sub-reviewer fallback" antigravity/.agents/workflows/build.md`
       → 1 or more (confirmed absent today; R6's antigravity mirror of
-      R5's note, attached to the sub-reviewer fallback bullet).
+      R5's note, attached to the sub-reviewer fallback bullet — anchored
+      distinctly from the R4-equivalent citation above).
 - [ ] `grep -c "Documentation currency\|AGENTS.md's Map" codex/.agents/skills/build/SKILL.md`
       → 1 or more (R6's codex leg: the inlined reminder, since codex has
       no `quality-discipline.md` to cite).
 - [ ] `grep -c "quality-discipline\|Documentation currency" codex/.agents/skills/build/SKILL.md`
       → 1 or more (R6's codex leg equivalent of R5's note, attached to
       the `$code-review` invocation).
-- [ ] `.claude-plugin/plugin.json`'s `version` (currently `"0.8.58"`,
-      confirmed via `grep -n '"version"' .claude-plugin/plugin.json`) is
-      higher after this change (R7).
+- [ ] `.claude-plugin/plugin.json`'s `version` (currently `"0.9.1"` as of
+      2026-07-13, confirmed via `grep -n '"version"' .claude-plugin/plugin.json`
+      — re-check at implementation time, this drifts often) is higher
+      after this change (R7).
+- [ ] `build` is one of the four ultra-path skills (critique, drain, build,
+      idea) — `bash evals/lint-ultra-gate.sh` must stay green after this
+      edit (the "ultra"/"active runtime profile" markers this gate checks
+      sit far from the close-out edits above, but the gate must be run,
+      not assumed).
 - [ ] **Manual-pending** (cannot be verified by an unattended
       worker/verifier, since `/build` is `disable-model-invocation` —
       per CLAUDE.md, acceptance must not gate on a skill unattended
@@ -169,33 +187,3 @@ passes when the count is 1 or more after the edit.
 ## Open questions
 
 (none)
-
-## Critique findings (2026-07-13)
-
-Verdict: **NOT READY**
-
-### 1. R6 omits the mandatory codex mirror leg for a build/SKILL.md change — confidence 88
-The spec changes `.claude/skills/build/SKILL.md` (R4 citation, R5 note), but R6 and the acceptance criteria mirror **only** to antigravity. CLAUDE.md's codex-leg convention is explicit and directly applies here:
-
-> "a task whose `Touch:` changes one of the four `.claude/skills/{drain,build,autopilot,evals}/SKILL.md` files must also carry the matching `codex/.agents/skills/<name>/SKILL.md` update in its `Touch:` (those four are real content, not symlinks)"
-
-`codex/.agents/skills/build/SKILL.md` is real content (not a symlink), with its own `$code-review` invocation and close-out procedure at line 146. This spec touches build's close-out step — exactly the region codex mirrors. As written, `/breakdown` will produce a task set that omits codex, silently shipping un-mirrored per CLAUDE.md's own warning.
-
-**Smallest fix:** Add codex to R6 and to the acceptance criteria: `codex/.agents/skills/build/SKILL.md` gets the R4 citation and the R5-equivalent note (it has a `$code-review` call at line 146, so R5 applies there too, unlike the antigravity mirror).
-
-### 2. Codex has no `quality-discipline.md` to cite — R4's citation is unresolvable there — confidence 82
-Codex has no `quality-discipline` rule file, and codex build/SKILL.md never cites `.claude/rules/`. The literal R4 citation points at a file that does not exist in codex's discovery root — a broken cross-reference under the target runtime. The spec must decide how the citation translates for codex (inline the reminder? cite antigravity/AGENTS.md's `## Quality discipline`? omit with rationale?).
-
-**Smallest fix:** In R6, state explicitly how the doc-currency reminder lands in codex given it has no quality-discipline.md (recommend: inline one line, since codex build already inlines rather than citing `.claude/rules/`).
-
-### 3. build is an ultra-path skill; the required `lint-ultra-gate.sh` gate isn't named in verification — confidence 62
-CLAUDE.md: "The four ultra-path skills (critique, drain, build, idea) also carry a standalone gate check: run `bash evals/lint-ultra-gate.sh` before committing changes to them." No acceptance criterion names this gate. Risk is low in practice (the "ultra"/"active runtime profile" markers sit far from the section-4 close-out edits), but breakdown won't know to include the gate run unless the spec says so.
-
-**Smallest fix:** Add a verification note: "build is an ultra-path skill — `bash evals/lint-ultra-gate.sh` must stay green after the edit."
-
-### 4. Stale antigravity line reference not covered by the sequencing hedge — confidence 60
-The sequencing note's line-number disclaimer is scoped to "every `build/SKILL.md` line reference." R6's `antigravity/.agents/workflows/build.md:63` citation is outside that hedge and is stale (the actual line is ~121).
-
-**Smallest fix:** Extend the sequencing note's "snapshot, not a contract" caveat to cover the antigravity line references too, or drop the `:63`/`:86` numbers in favor of the section-content anchors already given.
-
-Findings 1–2 drive the NOT READY verdict. Fix R6 to cover the codex leg and decide the codex citation translation before this goes to `/breakdown`.
