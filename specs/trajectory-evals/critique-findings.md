@@ -96,3 +96,14 @@ codex/.agents/skills/evals/SKILL.md`) or anchor on the new v2 phrasing,
 Recovery: fix findings 1-2, then re-run /critique. This spec's critique
 intake is spent for this run (Run-token c92aedb1ae49f8d3) — recorded in
 `DRAIN-BATON.md`'s `Intake-failed:` line.
+
+## Triage 2026-07-14 (attended; Steven approved fix for gen-3 findings 1-2)
+
+Verdict: both findings fixed. Re-checked plugin.json fresh at fix time
+(had moved again, 0.9.5 → 0.9.8 live) — repinned R5's version-bump AC to
+"0.9.8 → 0.9.9" rather than trusting the gen-3 note's stale 0.9.5. Added
+`! grep -q "v1 grades artifacts only"` to R4's AC and `! grep -q "never a
+transcript"` to R5's AC so a worker can't pass by appending EVAL_TRANSCRIPT
+text while leaving the contradictory lines in place. Confirmed both
+negative-assertion anchors non-vacuous today (stale phrases still present
+in both files). Re-run `/critique` to check current status.

@@ -93,11 +93,14 @@ touches it.
       one committed scenario asserts against the transcript (R3 — the
       "asserts" half). The "passes" half is manual-pending: `./evals/run.sh`
       is a paid headless run, human-launched (R3).
-- [ ] `grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/SKILL.md && grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/reference.md` (R4 — both files must document it)
+- [ ] `grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/SKILL.md && grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/reference.md && ! grep -q "v1 grades artifacts only" .claude/skills/evals/SKILL.md` (R4 — both files must document it, and the stale "v1 grades artifacts only" line must be gone, not just supplemented)
 - [ ] `grep -q "EVAL_TRANSCRIPT" antigravity/.agents/workflows/evals.md` or
       an evidence file records the reviewed carve-out; `grep -q
-      "EVAL_TRANSCRIPT" codex/.agents/skills/evals/SKILL.md`; `grep -q
-      '"version": "0.8.59"' .claude-plugin/plugin.json` (R5).
+    "EVAL_TRANSCRIPT" codex/.agents/skills/evals/SKILL.md && ! grep -q
+    "never a transcript" codex/.agents/skills/evals/SKILL.md`; `grep -q
+    '"version": "0.9.9"' .claude-plugin/plugin.json` (R5 — the codex
+      file's "never a transcript" line directly contradicts the v2
+      mechanism and must be removed, not just supplemented).
 
 ## Open questions
 
