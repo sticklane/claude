@@ -1044,10 +1044,17 @@ verdict DEFERRED with the exact question. Final output: verdict
 result), files changed, a Discovered: section — single-line items of
 out-of-scope work found, empty means none, never create task files for
 them — and for non-DONE verdicts one Done vs remaining: line." \
-  --allowedTools "Read,Edit,Write,Glob,Grep,Bash(<verified test/lint/build cmds>),Bash(git add *),Bash(git commit *)" \
+  --allowedTools "<the canonical worker allowlist — runtimes/claude-code.md § Headless>" \
   --permission-mode dontAsk --max-turns <N from the task's Budget header, else 80> \
   --model <tier alias>
 ```
+
+The `--allowedTools` value above is the **canonical worker allowlist** —
+the tool-complete default for compute-heavy specs, defined once in the
+active runtime profile's `## Headless` section (Claude Code:
+`runtimes/claude-code.md`) rather than restated ad hoc here. The allowlist
+pre-flight above widens it to cover any tool a pending task's acceptance
+command needs beyond that default.
 
 `--model` carries the same ladder as SKILL.md's Task-tool
 dispatch: `opus` on attempt 1, `fable` on the single relaunch, `fable`
