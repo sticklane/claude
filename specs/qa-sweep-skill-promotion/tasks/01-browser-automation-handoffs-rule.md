@@ -1,6 +1,6 @@
 # Task 01: Add browser-automation-handoffs rule
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 8 turns
