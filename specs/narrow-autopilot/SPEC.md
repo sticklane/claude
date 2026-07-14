@@ -164,9 +164,16 @@ skill-retirement-checklist.md`, `.claude/skills/fleet/SKILL.md` (its
     updated to describe `/build`'s bounded mode where it previously
     described `/autopilot`.
   - `CLAUDE.md` has three separate `/autopilot` mentions, not one: the
-    execution-stages doctrine line ("Execution stages (`/build`,
-    `/autopilot`, `/drain`, `/evals`) keep `disable-model-invocation:
-true`" → "`/build`, `/drain`, `/evals`"), and — a distinct doctrine
+    execution-stages doctrine line — its CURRENT text (verify fresh at
+    implementation time, this doctrine line has already drifted once)
+    reads "Execution stages (`/build`, `/autopilot`, `/drain`,
+    `/prioritize`) are model-invocable ONLY on explicit user
+    authorization..."; drop `/autopilot` only, leaving "`/build`,
+    `/drain`, `/prioritize`" — **not** `/evals`, which this same doctrine
+    block explicitly carves out as the one stage that stays
+    `disable-model-invocation: true` (never model-invocable) three
+    sentences later; adding it to the model-invocable list here would
+    corrupt that doctrine — and — a distinct doctrine
     point, easy to miss because it reads as a passing mention rather than
     a rule — the codex-leg authoring convention naming autopilot as one of
     "the four explicit-invocation-only skill wrappers — drain/build/
@@ -188,7 +195,9 @@ evals}/SKILL.md` files": both become the **three**-skill set
     drops `autopilot`, becoming the three-skill set — same treatment as
     CLAUDE.md's codex-convention mentions above (this file documents that
     same convention).
-  - `codex/AGENTS.md`, `codex/README.md` (4 mentions), `codex/.agents/
+  - `codex/AGENTS.md`, `codex/README.md` (5 mentions: lines 17, 22, 89,
+    121, 129 as of this spec's authoring — re-verify at implementation time,
+    backstopped either way by AC7's whole-file sweep), `codex/.agents/
 skills/drain/SKILL.md`, and `codex/.agents/skills/evals/SKILL.md` all
     name autopilot as one of "the four" launch-gated/real-content codex
     skills — each becomes the three-skill set, mirroring R7a below.
@@ -305,6 +314,15 @@ workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`).
 - [ ] `grep -c autopilot CLAUDE.md` returns 0, and CLAUDE.md's codex-leg
       authoring convention names the three-skill set (`drain`/`build`/
       `evals`), not four (R6).
+- [ ] `grep -qc '`/build`, `/drain`, `/prioritize`' CLAUDE.md && ! grep -qc
+  '`/build`, `/drain`, `/evals`' CLAUDE.md` — confirms the
+      execution-stages doctrine line's model-invocable list reads the
+      three-skill set that actually stays model-invocable —
+      `/prioritize`, not `/evals` — after `/autopilot` is dropped (R6;
+      confirmed both phrases absent today, so this is non-vacuous; a
+      worker misreading the stale-quote warning above could otherwise
+      corrupt this line to include `/evals`, which this same doctrine
+      block elsewhere pins as never model-invocable).
 - [ ] `.claude-plugin/plugin.json`'s `version` is higher than before.
 - [ ] `bash evals/lint-ultra-gate.sh` exits 0. `.claude/skills/build/
 SKILL.md` is one of the four ultra-path skills the script checks
