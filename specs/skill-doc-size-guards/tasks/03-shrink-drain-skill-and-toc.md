@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 40 turns
@@ -65,15 +65,21 @@ or `.claude-plugin/plugin.json` — those are task 04's.
 
 ## Acceptance
 
-- [ ] `wc -l < .claude/skills/drain/SKILL.md` → a number ≤ 500 (ideally
-      ≤ 490).
-- [ ] `grep -c "agentprof:stage=" .claude/skills/drain/SKILL.md` → 9 and
+- [x] `wc -l < .claude/skills/drain/SKILL.md` → a number ≤ 500 (ideally
+      ≤ 490). Evidence: `489` (SKILL.md already trimmed to 489 via ancestor
+      commit 2f19e4d "docs: trim drain SKILL.md below 500-line convention
+      (539->489)", present in this task's base; no further move needed).
+- [x] `grep -c "agentprof:stage=" .claude/skills/drain/SKILL.md` → 9 and
       `grep -c "agentprof:role=" .claude/skills/drain/SKILL.md` → 3
-      (unchanged from the pre-task baseline recorded in step 1).
-- [ ] `grep -qi "dispatchable work remains" .claude/skills/drain/SKILL.md && grep -qi "critique intake" .claude/skills/drain/SKILL.md && grep -q "## Decisions" .claude/skills/drain/SKILL.md && grep -q "/handoff" .claude/skills/drain/SKILL.md && grep -qi "checklist" .claude/skills/drain/SKILL.md`
-      → all match (exit 0).
-- [ ] `grep -qiE '^## (Table of [Cc]ontents|Contents)\b' <(head -20 .claude/skills/drain/reference.md)`
-      → match.
-- [ ] `bash evals/lint-ultra-gate.sh; echo "exit:$?"` → `exit:0` (the
+      (unchanged from the pre-task baseline recorded in step 1). Evidence:
+      `9` and `3` — inventory unchanged (SKILL.md untouched this task).
+- [x] `grep -qi "dispatchable work remains" .claude/skills/drain/SKILL.md && grep -qi "critique intake" .claude/skills/drain/SKILL.md && grep -q "## Decisions" .claude/skills/drain/SKILL.md && grep -q "/handoff" .claude/skills/drain/SKILL.md && grep -qi "checklist" .claude/skills/drain/SKILL.md`
+      → all match (exit 0). Evidence: `exit:0`.
+- [x] `grep -qiE '^## (Table of [Cc]ontents|Contents)\b' <(head -20 .claude/skills/drain/reference.md)`
+      → match. Evidence: `exit:0` under bash (heading `## Table of contents`
+      now at line 3 of reference.md, promoted from the former `Contents:`
+      prose and listing the file's `## `-level sections).
+- [x] `bash evals/lint-ultra-gate.sh; echo "exit:$?"` → `exit:0` (the
       pre-existing ultra-path gate must stay green — drain/SKILL.md is one
-      of its four checked files).
+      of its four checked files). Evidence: `lint-ultra-gate: OK — all ultra
+    mentions gated in 4 files` / `exit:0`.
