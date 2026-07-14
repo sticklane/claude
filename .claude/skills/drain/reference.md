@@ -949,8 +949,11 @@ mechanical ranker always terminates with an order — lowest angle index
 the slot machine does not re-enter: if the winner's merge or post-merge
 gates fail, abort the merge, then move to the next-ranked
 survivor. Delete survivor branches
-and worktrees only after some merge passes gates. All survivors failing
-to merge → `Status: failed`, no relaunch.
+and worktrees only after some merge passes gates — and within that
+cleanup, remove the worktree before deleting the branch it was checked
+out on (a branch that is still checked out in a live worktree cannot be
+deleted; e.g. `git worktree remove <path>` then `git branch -D <branch>`).
+All survivors failing to merge → `Status: failed`, no relaunch.
 
 **Verdict routing** (also the landing point when the tournament is
 skipped): if a DONE candidate merged, the other candidates' DEFERRED

@@ -229,7 +229,11 @@ so a per-session emission would misattribute later iterations.
   dispatches a scout.** (The machinery this ban must NOT weaken is in
   [reference.md](reference.md)'s "Wake economics".)
   Then **merge → run project gates → delete this task's `rescue/NN-<slug>-*`
-  branches → push**, the push following the **canonical push guard** (applies to
+  branches → push** — when deleting a rescue branch,
+  remove the worktree before deleting the branch it was checked out on
+  (a branch still checked out in a live worktree cannot be deleted;
+  e.g. `git worktree remove <path>` then `git branch -D <branch>`) —
+  the push following the **canonical push guard** (applies to
   every drain bookkeeping commit — step 1's lease, step 2's flips, and the
   Deferred/Blocked/discovery commits below — not only DONE merges; full rule in
   [reference.md](reference.md)'s "Push guard"). The merged branch carries the
