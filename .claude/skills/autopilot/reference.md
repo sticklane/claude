@@ -1,6 +1,8 @@
 # Unattended-execution configs
 
-Contents: Scoped permissions · Bounded goals · Background worktree
+## Table of contents
+
+Scoped permissions · Bounded goals · Background worktree
 agent · Headless · Pre-cap baton boundary · Containment ladder ·
 Failure recovery
 

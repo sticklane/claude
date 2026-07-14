@@ -1,6 +1,7 @@
 # workflow-author reference
 
-Contents:
+## Table of contents
+
 1. [Workflow script API summary](#workflow-script-api-summary)
 2. [Template: tournament.js](#template-tournamentjs)
 3. [Template: queue-wave.js](#template-queue-wavejs)

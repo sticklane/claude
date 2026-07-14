@@ -1,6 +1,8 @@
 # /fleet reference — dashboard template
 
-Contents: Data shape · Fill rules · Palette constraints · Template
+## Table of contents
+
+Data shape · Fill rules · Palette constraints · Template
 
 Loaded on demand by step 3 of the skill. Contains the data shape, the fill
 rules, and the full HTML template.
