@@ -8,23 +8,30 @@ agent-console's read paths are well tested (13 test files drive real
 `do_GET`/`do_POST` and assert HTML structure), but the highest-risk
 surface — the endpoints that mutate sessions, files, and git state — is
 the least covered (verified by grep across `agent-console/tests/`,
-2026-07-10):
+2026-07-10). **Line numbers below are snapshots, not a contract** —
+`agent-console.py` has drifted between every critique round on this spec
+so far; find each function by name (`def resume_agent`, `def
+set_priority`, `def execute_push`, `def render_markdown`) at
+implementation time rather than trusting a stale number.
 
-- `resume_agent()` (`agent-console/agent-console.py:2940`) and its route
-  `/api/agent/resume` (`agent-console.py:3260`) have **zero** test
+- `resume_agent()` (`agent-console/agent-console.py:3134`) and its route
+  `/api/agent/resume` (`agent-console.py:3465`) have **zero** test
   references, while the sibling start/stop mutations are tested
   (`tests/test_parsers.py`, `tests/test_stop_actions.py`).
-- `set_priority()` (`agent-console.py:2843`, route `/api/priority` at
-  `:3250`) — the wrapper that edits a spec file's `Priority:` header and
+- `set_priority()` (`agent-console.py:3037`, route `/api/priority` at
+  `:3455`) — the wrapper that edits a spec file's `Priority:` header and
   commits — is untested; only the pure `apply_priority` transform is.
-- `execute_push()` (`agent-console.py:2362`, registered at `:2441`) is
-  never exercised on a success path: existing tests reach it only via
-  403-rejection (handler returns before execution) or with
-  `subprocess.run` fully mocked, so the dirty-check / commit-message
-  assembly (`:2872`) / ahead-behind branching has no coverage.
+- `execute_push()` (`agent-console.py:2554`, dispatched via the `"push"`
+  action-kind table at `:2633`) is never exercised on a success path:
+  existing tests reach it only via 403-rejection (handler returns before
+  execution) or with `subprocess.run` fully mocked. Its real branches are
+  `subprocess.TimeoutExpired` → `exit:None`; `returncode==0` →
+  `_invalidate_board()` + `ok:true`; `returncode!=0` → `ok:false` with the
+  exit code — no dirty-check or ahead/behind logic exists, none of these
+  branches have coverage.
 
 Secondary coverage gap, same theme: `render_markdown()`'s list/header
-parsing (`agent-console.py:1115-1161`) runs on every `/spec/` GET but
+parsing (`agent-console.py:1211-1256`) runs on every `/spec/` GET but
 nothing asserts its structured output.
 
 ## Approach
@@ -38,7 +45,7 @@ skill tests as long as runs stay scoped to `agent-console/`):
    boundary (`subprocess`/spawn) mocked at the edge only — assert the
    response JSON and the observable dispatch effect (what command/cwd was
    launched). Cover both real failure branches of `resume_agent()`
-   (agent-console.py:3122): unknown sid → `(False, "not a known session")`,
+   (agent-console.py:3134): unknown sid → `(False, "not a known session")`,
    and `_claude_run_bg` raising `OSError`/`RuntimeError` (e.g. `claude` not
    on PATH) → `(False, str(e))`. An empty/whitespace prompt is NOT a
    failure — `resume_agent` defaults it to `"continue"` and succeeds; do
@@ -46,7 +53,7 @@ skill tests as long as runs stay scoped to `agent-console/`):
 2. set_priority: temp git repo fixture, real `git` (it is local and fast),
    assert the file's `Priority:` header changed and a commit exists —
    behavior, not call order.
-3. execute_push: drive `execute_push(action)` directly (agent-console.py:2542)
+3. execute_push: drive `execute_push(action)` directly (agent-console.py:2554)
    with `action["argv"]` pointed at a real git push against a bare "remote" —
    no dirty-check or ahead/behind logic exists, so cover exactly its three
    branches: (a) rc 0 → response `ok:true`, `exit:0`, and the board cache
