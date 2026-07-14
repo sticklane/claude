@@ -1,6 +1,8 @@
 # /evals reference: the breakdown scenario, verbatim
 
-Contents: setup.sh · prompt.txt · assert.sh · allowed-tools.txt
+## Table of contents
+
+setup.sh · prompt.txt · assert.sh · allowed-tools.txt
 
 The runner is [evals/run.sh](../../../evals/run.sh) — read it there
 rather than duplicating it here. Runner and scenarios ship in the

@@ -1,6 +1,8 @@
 # /factcheck reference
 
-Contents: Primary-vs-secondary source rubric · The web-worker prompt
+## Table of contents
+
+Primary-vs-secondary source rubric · The web-worker prompt
 template · Clustering sources into workers · Assembling the cited report
 
 Loaded on demand. The SKILL.md body is the checklist; this file holds the
