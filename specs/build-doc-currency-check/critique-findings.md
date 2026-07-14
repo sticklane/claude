@@ -180,3 +180,16 @@ Verified both new anchor phrases confirmed absent today (2026-07-14):
 `grep -c "Documentation currency" antigravity/AGENTS.md` → 0;
 `grep -c "not by \$code-review itself" codex/.agents/skills/build/SKILL.md`
 → 0. Ready for re-critique.
+
+## Re-critique 2026-07-14 (attended, /critique) — one nit found
+
+Findings A/B (the antigravity and codex AC fixes above) verified landed
+and correct. One new finding: R5's own prose example at SPEC.md:80 wrote
+"not by `/code-review` itself" WITH backticks around `/code-review`
+(matching this file's own slash-command convention), but the AC checks
+the plain literal "not by /code-review itself" with no backticks — a
+worker following the prose example verbatim would fail the AC. Fixed:
+reworded R5's prose to state explicitly that the phrase must be written
+with no backticks, verbatim matching the AC. The codex-leg equivalent
+("not by $code-review itself") was already stated as plain text with no
+backtick risk — no fix needed there. Re-run `/critique` to confirm READY.
