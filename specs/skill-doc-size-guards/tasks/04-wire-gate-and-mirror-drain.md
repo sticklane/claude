@@ -119,3 +119,15 @@ PLAN (task 04 — wire gate + mirror drain):
       reference, placed at the same decision point (before merge, after the
       push-guard clause). No load-bearing divergence introduced. Live
       cross-reference read left for a human/orchestrator post-merge.
+
+## Decisions
+
+- [2026-07-14 /drain] Open Question (SPEC R6, hook-point placement):
+  chose reference.md's "Push guard (canonical)" section over "Exit
+  checklist" for the new lint-skill-size-gate merge-blocker step.
+  Rationale: the gate is a per-task pre-merge blocker; Push guard is
+  the per-task merge/push-mechanics home, while Exit checklist is a
+  once-per-session human report that fires too late to block a
+  per-task merge. Reversible: move the added paragraph (and the
+  matching codex/antigravity mirror spots) to "Exit checklist (seven
+  sections)" if a different placement is preferred later.
