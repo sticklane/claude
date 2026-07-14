@@ -294,3 +294,30 @@ its antigravity counterpart) — confirmed all three commands run today
 (137 unittest tests pass in each tree; the deletion-check correctly
 fails pre-deletion, confirming it's non-vacuous). Re-run `/critique` to
 confirm READY.
+
+## Re-critique 2026-07-14 (attended, resumed from handoff) — NOT READY, R8 under-enumerated one layer down
+
+The three-shell-test deletion and the unittest-discover AC verified
+sound. But R8's `test_workboard.py` bullet itself repeated the exact
+failure mode it was just written to fix: it scoped deletion to methods
+calling `render_html(...)` and claimed the surviving tests (`assemble`/
+`attention_items`/`ready_items`/`default_roots`/`--json`) were
+unaffected — false. Confirmed today, in both trees, `test_workboard.py`
+also directly calls six more functions in R4's orphaned set:
+`render_batons`, `render_inbox`, `render_filter_tiles`,
+`render_spend_section`, `_spec_dag_html`, `_short_model_name`. The
+`unittest discover` AC would eventually force a worker to notice (a
+`NameError`/`AttributeError` on the surviving calls), but the prose
+directly contradicted its own AC — exactly the kind of self-contradiction
+that wastes a worker's turns reconciling instructions rather than a
+clean single pass. Fixed: R8 now says "render_html(...) or any other
+function or constant in R4's orphaned-deletion set," names the six
+additionally-confirmed calls, and reframes "the surviving tests" as
+whichever calls none of R4's orphaned names, not a list assumed safe in
+advance. Also fixed a related nit (confidence 60): the two deleted shell
+tests' fixture trees (`tests/fixtures/workboard/`,
+`tests/fixtures/workboard-actionability/`) were left unaddressed —
+confirmed each is consumed exclusively by the test file being deleted,
+so both are now named for deletion too, with a widened AC covering all
+five paths (three test files, two fixture trees) and confirmed
+non-vacuous. Re-run `/critique` to confirm READY.
