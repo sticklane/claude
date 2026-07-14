@@ -1,6 +1,8 @@
 # /factcheck reference
 
-Contents: Primary-vs-secondary source rubric · The general-purpose worker
+## Table of contents
+
+Primary-vs-secondary source rubric · The general-purpose worker
 prompt template · Clustering sources into workers · Assembling the cited
 report
 
