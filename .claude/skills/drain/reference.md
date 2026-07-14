@@ -1,10 +1,13 @@
 # /drain reference
 
-Contents: When NOT to drain · Gen-1 startup advisories · Wake economics ·
-Orchestrator isolation · Owner lease (DRAIN-OWNER.md format,
-liveness, reclaim, remote divergence check) · Status field semantics · Stale-lock liveness
-check · Worker prompt · Deferred question format · Relaunch-with-evidence
-prompt · Tournament · Headless fallback · Baton pass (self-relaunch) ·
+## Table of contents
+
+Drain-readiness gate (when NOT to drain) · Gen-1 startup advisories · Wake
+economics · Orchestrator isolation · Owner lease (DRAIN-OWNER.md format,
+liveness, reclaim, remote divergence check) · Status field semantics ·
+Stale-lock liveness check · Worker prompt · Spec-completion review worker ·
+Deferred question format · Relaunch-with-evidence prompt · Tournament ·
+Headless fallback · Baton pass (self-relaunch) · Done / next · Anomalies ·
 Critique intake · Stub intake (assess → gate → act) · Auto-breakdown
 (lowest priority) · Push guard (canonical) · Rolling-window admission & merge
 (R1–R4) · Exit checklist (seven sections) · HUMAN.md filing (R2)
