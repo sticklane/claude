@@ -98,3 +98,13 @@ skill tests as long as runs stay scoped to `agent-console/`):
 - [ ] New tests assert observable behavior (response payloads, file/git
       state) — no bare `assert_called_once()`-style assertions without an
       accompanying behavioral check.
+
+## Parallelization
+
+All four tasks target independently-specified functions with disjoint
+`Touch` (each writes its own new test file only) and no shared undecided
+design — each covers a concretely pinned set of branches with no open
+naming/schema/interface choice a sibling task could collide with. All four
+are safe to run concurrently.
+
+- Group: 01, 02, 03, 04
