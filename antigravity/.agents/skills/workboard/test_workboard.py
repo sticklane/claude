@@ -1,6 +1,6 @@
 """Tests for workboard's Antigravity abandon mechanism.
 
-Run: python3 -m unittest discover -s .agents/skills/workboard
+Run: python3 -m unittest discover -s .claude/skills/workboard
 Stdlib-only, like the scanner. Each test builds a throwaway HOME with a
 fake ~/.gemini/antigravity/brain store — the real one is never touched.
 """
@@ -185,6 +185,32 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
             specs = workboard.scan_toolkit_specs(Path(tmp))
 
             self.assertEqual(len(specs[0]["tasks_blocked"]), 1)
+
+
+class TestPriorityRegexRange(unittest.TestCase):
+    """The shared PRIORITY_RE reads `Priority: [P1]` as P1 (bracket-tolerant)
+    and rejects out-of-range values like P7 (falls through to no match),
+    pinning the same reading /prioritize uses (specs/codequality-shared-header-parsing)."""
+
+    def test_bracketed_priority_reads_as_that_value(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = Path(tmp) / "specs" / "demo"
+            (spec / "tasks").mkdir(parents=True)
+            (spec / "SPEC.md").write_text("# Demo\nPriority: [P1]\n", encoding="utf-8")
+
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+
+            self.assertEqual(specs[0]["priority"], "P1")
+
+    def test_out_of_range_priority_does_not_match(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = Path(tmp) / "specs" / "demo"
+            (spec / "tasks").mkdir(parents=True)
+            (spec / "SPEC.md").write_text("# Demo\nPriority: P7\n", encoding="utf-8")
+
+            specs = workboard.scan_toolkit_specs(Path(tmp))
+
+            self.assertEqual(specs[0]["priority"], "")
 
 
 class TestSimpleCommandsInInbox(unittest.TestCase):

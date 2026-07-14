@@ -43,6 +43,7 @@ from pathlib import Path
 SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parent.parent / "_shared"))
 import viz  # noqa: E402
+from headers import DEPENDS_RE, PRIORITY_RE, STATUS_RE  # noqa: E402
 
 # runtimes/ ships alongside the toolkit's .claude/, four levels up from this
 # file (.claude/skills/workboard/workboard.py). parse_headless resolves each
@@ -232,9 +233,9 @@ def git_info(repo):
 
 # ---------------------------------------------------------------- specs
 
-STATUS_RE = re.compile(r"^Status:\s*\[?([A-Za-z_-]+)\]?", re.MULTILINE)
-DEPENDS_RE = re.compile(r"^Depends on:\s*(.*)$", re.MULTILINE)
-PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P\d)\]?", re.MULTILINE)
+# STATUS_RE, DEPENDS_RE, PRIORITY_RE now live in _shared/headers.py (imported
+# at the top of this module) so /workboard and /prioritize parse the same
+# header one way. PRIORITY_RE there is range-restricted to P0-P3.
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 UNBLOCK_RE = re.compile(r"^Unblock:\s*(run|agent|ask):\s*(\S.*?)\s*$", re.MULTILINE)
 DEFERRED_RE = re.compile(
