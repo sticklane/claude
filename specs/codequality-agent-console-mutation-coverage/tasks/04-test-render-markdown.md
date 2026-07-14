@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 12 turns
@@ -50,8 +50,8 @@ this spec touches.
 
 ## Acceptance
 
-- [ ] `grep -rln "render_markdown" agent-console/tests/` is non-empty
-- [ ] The new heading-level test fails when heading-level parsing is manually stubbed to always emit `<h1>` (demonstrate this red-first, then restore and confirm green — record the evidence in your final message)
-- [ ] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_render_markdown.py` → at least 1
-- [ ] `bash agent-console/scripts/check.sh` → exit 0
-- [ ] New tests assert on parsed structure (heading levels, list items, code fence content) — not full-string HTML comparison
+- [x] `grep -rln "render_markdown" agent-console/tests/` is non-empty — returns `agent-console/tests/test_render_markdown.py`
+- [x] The new heading-level test fails when heading-level parsing is manually stubbed to always emit `<h1>` (demonstrate this red-first, then restore and confirm green — record the evidence in your final message) — RED: stubbing `level = len(heading.group(1))` → `level = 1` produced `FAILED (failures=2)`; GREEN: restoring the real computation passed 6/6 new tests, `git diff main -- agent-console/agent-console.py` empty (no residue)
+- [x] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_render_markdown.py` → at least 1 — returns 3
+- [x] `bash agent-console/scripts/check.sh` → exit 0 — `check: PASS`, 191 tests OK
+- [x] New tests assert on parsed structure (heading levels, list items, code fence content) — not full-string HTML comparison — confirmed, assertions target `<hN>`/`<li>`/`<pre><code>` regions
