@@ -9,12 +9,12 @@ mechanisms with retry ladders and verification gates autopilot lacks — its
 "background worktree agent" row is, concretely, the same
 worktree+Agent-tool+verdict-only pattern `/drain` already runs per queued
 task). The fourth — never-auto-push, human-reviews-every-PASS — was
-confirmed in conversation to be a *negative*, not a selling point, for a
+confirmed in conversation to be a _negative_, not a selling point, for a
 user who values `/drain`'s auto-landing. That leaves exactly one
 genuinely distinct capability worth keeping: same-session, `/goal`-bounded
 runs with a pre-cap baton hand-off. `/goal` itself is a **runtime
 built-in** (Claude Code's own transcript-evaluator command, not a
-`.claude/skills/` file) that wraps *around* any procedure — autopilot
+`.claude/skills/` file) that wraps _around_ any procedure — autopilot
 never implemented it, it only documented the pattern of wrapping its own
 walk-away contract in a `/goal` invocation. `autopilot/reference.md` also
 holds content with live consumers elsewhere: `onboard/SKILL.md:78-79` points
@@ -43,14 +43,14 @@ in isolation of the sibling edit (critique-findings.md finding 6).
 
 ## Solution
 
-Delete `.claude/skills/autopilot/` (SKILL.md *and* reference.md) and
+Delete `.claude/skills/autopilot/` (SKILL.md _and_ reference.md) and
 create `.claude/skills/build/reference.md` (new file) as the new home for
 everything in the old reference.md that still has live consumers:
 
 - **Scoped permissions JSON template** — moves verbatim. `onboard/
-  SKILL.md:78-79`'s pointer is updated to `build/reference.md`.
+SKILL.md:78-79`'s pointer is updated to `build/reference.md`.
 - **Bounded goals (`/goal` pattern)** — moves verbatim, documenting that
-  `/goal` is the *runtime's* mechanism: a human wraps `/build`'s own
+  `/goal` is the _runtime's_ mechanism: a human wraps `/build`'s own
   procedure in a `/goal "<criteria>, or stop after N turns"` invocation.
   `/build` itself parses no new flag and needs no code change to
   "support" this — bounded mode is a documented usage pattern, not a new
@@ -102,14 +102,14 @@ concrete mechanism templates.
   not inside it.
 - **R3**: `onboard/SKILL.md:78-79`'s pointer to the scoped-permissions
   template is updated from `autopilot/reference.md` to `build/
-  reference.md`. `drain/reference.md:884`'s citation of "the autopilot
+reference.md`. `drain/reference.md:884`'s citation of "the autopilot
   reference's headless rule" is updated to cite `build/reference.md`.
 - **R4**: Every skill with a `Next stage:` line naming `/autopilot` gets a
   concrete replacement, not a deletion that leaves it dangling:
   - `gate/SKILL.md`'s closing `Next stage: /autopilot specs/<slug>/
-    tasks/NN-*.md (human-launched)` becomes
+tasks/NN-*.md (human-launched)` becomes
     `Next stage: /build specs/<slug>/tasks/NN-*.md (human-launched;
-    /goal-bound it per build/reference.md for an unattended-feeling run)`.
+/goal-bound it per build/reference.md for an unattended-feeling run)`.
   - `breakdown/SKILL.md:98`'s routing sentence recommending `/autopilot`
     "for unattended execution of peripheral tasks" is reworded to
     recommend `/drain` for queue/unattended work and `/build` (optionally
@@ -129,43 +129,95 @@ concrete mechanism templates.
   - Reason 2's "`/autopilot` and `/drain` open with ... a classification
     gate" becomes "`/build`'s bounded mode and `/drain` open with ... a
     classification gate".
-- **R6**: Every reference to `/autopilot` across the **whole repo** is
-  updated or removed — the verifying grep is
-  `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/`
+- **R6**: Every reference to `/autopilot` across the **whole repo** —
+  including `codex/` and `antigravity/`, not just the `.claude`-leg paths
+  — is updated or removed, EXCEPT the two real-content mirror files R7/R7a
+  handle by deletion+fold-in below (their own paths are excluded from this
+  grep-and-reword treatment; they don't get "reworded in place," they stop
+  existing). The verifying grep is
+  `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/`
   (tracked files only — a plain recursive `grep -rln` over the same paths
   also matches every transient `.claude/worktrees/agent-*/` drain
   worktree, which is non-deterministic across checkout states; `git grep`
-  scopes to tracked content and returns the same 21-file set regardless of
-  how many worktrees are live), not a narrower subset. Known hits beyond
-  SKILL.md/reference.md/
-  human-gates.md, confirmed present today: `docs/external-playbooks.md`
-  (the `/drain`-and-`/autopilot` worker-prompt hardening clause, and a
-  citation pointer to autopilot's walk-away contract),
-  `docs/decisions/orchestrator-context.md`,
-  `docs/decisions/orchestration.md`, `docs/memory/
-  unattended-worker-tool-limits.md`, `docs/memory/
-  worktree-base-tracking-ref.md`, `docs/memory/
-  skill-retirement-checklist.md`, `.claude/skills/fleet/SKILL.md` (its
-  frontmatter description's trigger phrase "watch a /drain or /autopilot
-  dispatch," and a body mention), `.claude/skills/gate/reference.md`
-  ("workers (drain/autopilot dispatch, and the verifier)"), and
-  `CLAUDE.md`'s own execution-stages doctrine line ("Execution stages
-  (`/build`, `/autopilot`, `/drain`, `/evals`) keep
-  `disable-model-invocation: true`" — becomes "`/build`, `/drain`,
-  `/evals`"). Each is updated to describe `/build`'s bounded mode where it
-  previously described `/autopilot`. **Exempted**:
-  files that are explicitly historical research dumps rather than living
-  doctrine (e.g. `docs/orchestration-research-2026-07.md`) — these keep
-  their `/autopilot` mentions as a record of what was researched at the
-  time; list any file treated as exempt in the implementation's own
-  evidence so the exemption is a visible decision, not a silent skip.
-- **R7**: Per CLAUDE.md's mirroring convention, the equivalent change
-  (autopilot's mirror deleted, its content folded into build's mirror)
-  lands in `antigravity/.agents/skills/` in the same commit, if an
-  `antigravity/.agents/skills/autopilot/` exists (confirm before
-  implementation; antigravity's own human-gate model may differ, per
-  antigravity/README.md's gotchas — fold in only what actually applies
-  there).
+  scopes to tracked content), not a narrower subset. Known hits, confirmed
+  present today, beyond `.claude/skills/autopilot/{SKILL,reference}.md`,
+  `onboard/SKILL.md`, `drain/reference.md`, `gate/SKILL.md`,
+  `breakdown/SKILL.md`, `docs/human-gates.md` (handled by R1-R5), and
+  `antigravity/.agents/workflows/autopilot.md` /
+  `codex/.agents/skills/autopilot/` (handled by R7/R7a below):
+  - `docs/external-playbooks.md` (the `/drain`-and-`/autopilot`
+    worker-prompt hardening clause, and a citation pointer to autopilot's
+    walk-away contract), `docs/decisions/orchestrator-context.md`,
+    `docs/decisions/orchestration.md`, `docs/memory/
+unattended-worker-tool-limits.md`, `docs/memory/
+worktree-base-tracking-ref.md`, `docs/memory/
+skill-retirement-checklist.md`, `.claude/skills/fleet/SKILL.md` (its
+    frontmatter description's trigger phrase "watch a /drain or /autopilot
+    dispatch," and a body mention), `.claude/skills/gate/reference.md`
+    ("workers (drain/autopilot dispatch, and the verifier)") — each is
+    updated to describe `/build`'s bounded mode where it previously
+    described `/autopilot`.
+  - `CLAUDE.md` has three separate `/autopilot` mentions, not one: the
+    execution-stages doctrine line ("Execution stages (`/build`,
+    `/autopilot`, `/drain`, `/evals`) keep `disable-model-invocation:
+true`" → "`/build`, `/drain`, `/evals`"), and — a distinct doctrine
+    point, easy to miss because it reads as a passing mention rather than
+    a rule — the codex-leg authoring convention naming autopilot as one of
+    "the four explicit-invocation-only skill wrappers — drain/build/
+    autopilot/evals" and "the four `.claude/skills/{drain,build,autopilot,
+evals}/SKILL.md` files": both become the **three**-skill set
+    (drain/build/evals), reflecting R7a's codex deletion below — this is a
+    doctrine change, not a find-and-replace of the word "autopilot".
+  - `.claude/skills/resume-handoff/SKILL.md`'s "four gated execution
+    stages (`/build`, `/autopilot`, `/drain`, `/prioritize`)" enumeration
+    drops `/autopilot`, becoming the three-stage list — a list-membership
+    hit, not reworded to "build's bounded mode" (there's nothing to
+    reword, autopilot is simply no longer one of the gated stages).
+  - `docs/TASKS.md`'s item "`build`, `drain`, and `autopilot` SKILL.md
+    files have no `Next stage:` line" drops "and `autopilot`" — the same
+    list-membership treatment (autopilot no longer exists to have this
+    problem).
+  - `docs/memory/multi-runtime-live-testing.md`'s "the disable-model-
+    invocation tier: `drain`/`build`/`autopilot`/`evals`" enumeration
+    drops `autopilot`, becoming the three-skill set — same treatment as
+    CLAUDE.md's codex-convention mentions above (this file documents that
+    same convention).
+  - `codex/AGENTS.md`, `codex/README.md` (4 mentions), `codex/.agents/
+skills/drain/SKILL.md`, and `codex/.agents/skills/evals/SKILL.md` all
+    name autopilot as one of "the four" launch-gated/real-content codex
+    skills — each becomes the three-skill set, mirroring R7a below.
+  - `antigravity/README.md` (2 mentions), `antigravity/.agents/skills/
+gate/SKILL.md`'s `Next stage:` line, `antigravity/.agents/skills/
+resume-handoff/SKILL.md`'s stage enumeration, and `antigravity/.agents/
+workflows/drain.md` all reference autopilot — each updated the same
+    way its `.claude`-leg counterpart is (R3/R4/R5), mirroring R7 below.
+    **Exempted**: files that are explicitly historical research dumps or bug
+    citations rather than living doctrine — `docs/orchestration-research-
+2026-07.md` (a research record) and `.claude/rules/
+mirror-procedure-discipline.md:55` (cites "the codex-autopilot
+    content-swap fix" as a past-incident example, not a description of
+    autopilot's current role) — these keep their `/autopilot` mentions
+    unchanged; list any file treated as exempt in the implementation's own
+    evidence so the exemption is a visible decision, not a silent skip.
+- **R7**: `antigravity/.agents/workflows/autopilot.md` — confirmed real
+  content (90 lines: classification gate, containment ladder, escalation
+  triggers) via direct inspection, not the absent `antigravity/.agents/
+skills/autopilot/` the original hedge checked for (autopilot is a
+  human-launched execution stage, so per CLAUDE.md's port-chain
+  convention it's mirrored as a **workflow**, not a skill — the earlier
+  "confirm before implementation" language checked the wrong path and
+  concluded no mirror existed, which is wrong) — is deleted; its
+  classification-gate and escalation-trigger content, and only what
+  actually applies given antigravity's own human-gate model (per
+  `antigravity/README.md`'s gotchas), is folded into `antigravity/.agents/
+workflows/build.md`, mirroring R1/R2's `.claude`-leg treatment.
+- **R7a**: `codex/.agents/skills/autopilot/` — real content per CLAUDE.md's
+  codex port-chain convention (`SKILL.md`, 110 lines, plus `agents/
+openai.yaml`; confirmed not a symlink) — is deleted; its content is
+  folded into `codex/.agents/skills/build/SKILL.md` (codex has no
+  `reference.md` pattern the way the `.claude` leg does — everything
+  folds into the one SKILL.md file, the same file R7a's codex-doctrine
+  fixes in R6 above also touch).
 - **R8**: `.claude-plugin/plugin.json`'s `version` is bumped.
 
 ## Out of scope
@@ -177,7 +229,7 @@ concrete mechanism templates.
 - Migrating in-flight autopilot runs — none expected at merge time; flag
   rather than silently discard if one is found.
 - Building any new code path in `/build` to parse a `--goal`/turn-cap
-  argument — per Solution, `/goal` is a runtime feature applied *around*
+  argument — per Solution, `/goal` is a runtime feature applied _around_
   `/build`'s invocation, not a flag `/build` itself implements.
 
 ## Acceptance criteria
@@ -186,25 +238,22 @@ concrete mechanism templates.
 - [ ] `.claude/skills/build/reference.md` exists and contains the six
       named sections (permissions template, `/goal` pattern, containment
       ladder, headless template, pre-cap baton, failure recovery), checked
-      per section rather than as one whole-file diff:
-      - Five sections (permissions template, `/goal` pattern, containment
-        ladder, headless template, pre-cap baton) move strictly verbatim:
-        for each, extract the section's text from
-        `git show HEAD:.claude/skills/autopilot/reference.md` by its
-        heading and diff it against the corresponding section in
-        `build/reference.md` — the diff must be empty.
-      - Failure recovery is exempt from the strict empty-diff check: per
-        Solution, it moves into `build/reference.md` *alongside* the
-        walk-away contract's escalation triggers (R2), so its content may
-        be adjacent to new material rather than byte-identical in
-        isolation — the check is that the failure-recovery doctrine's
-        full text is present verbatim somewhere in `build/reference.md`
-        (a substring match against the extracted old-reference.md
-        section), not that the section boundary is unchanged.
-      - The "background worktree agent" section is exempt from presence
-        entirely — confirmed dropped, not moved: `build/reference.md`
-        must NOT contain it, only the one-line pointer to `/drain` named
-        in Solution.
+      per section rather than as one whole-file diff: - Five sections (permissions template, `/goal` pattern, containment
+      ladder, headless template, pre-cap baton) move strictly verbatim:
+      for each, extract the section's text from
+      `git show HEAD:.claude/skills/autopilot/reference.md` by its
+      heading and diff it against the corresponding section in
+      `build/reference.md` — the diff must be empty. - Failure recovery is exempt from the strict empty-diff check: per
+      Solution, it moves into `build/reference.md` _alongside_ the
+      walk-away contract's escalation triggers (R2), so its content may
+      be adjacent to new material rather than byte-identical in
+      isolation — the check is that the failure-recovery doctrine's
+      full text is present verbatim somewhere in `build/reference.md`
+      (a substring match against the extracted old-reference.md
+      section), not that the section boundary is unchanged. - The "background worktree agent" section is exempt from presence
+      entirely — confirmed dropped, not moved: `build/reference.md`
+      must NOT contain it, only the one-line pointer to `/drain` named
+      in Solution.
 - [ ] `.claude/skills/build/SKILL.md` contains the classification gate and
       the two escalation triggers, plus a pointer to
       `build/reference.md`'s baton section.
@@ -217,18 +266,31 @@ concrete mechanism templates.
       stages reads `/build`, `/drain`, `/prioritize` (no `/autopilot`), and
       Reason 2 reads "`/build`'s bounded mode and `/drain`" (no
       `/autopilot`) — `grep -c autopilot docs/human-gates.md` returns 0.
-- [ ] `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/`
-      returns only files explicitly listed as exempt in R6's evidence (if
-      any) — every other hit has been updated. (Deterministic across
-      checkout state because it scopes to tracked files, unlike a plain
-      recursive `grep -rln` over the same paths, which also matches
-      transient `.claude/worktrees/agent-*/` drain worktrees.)
-- [ ] `antigravity/.agents/skills/autopilot/` does not exist (if it existed
-      before this change), and `antigravity/.agents/skills/build/`
-      reflects the equivalent fold-in (R7).
+- [ ] `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/`
+      (currently 31 tracked files, confirmed 2026-07-13) returns exactly
+      the 2 files R6 lists as exempt (`docs/orchestration-research-
+    2026-07.md`, `.claude/rules/mirror-procedure-discipline.md`) — every
+      other hit has either been reworded (R6) or deleted entirely (R1
+      × `.claude`, R7 × antigravity, R7a × codex — 4 files: `.claude/
+    skills/autopilot/{SKILL,reference}.md`, `antigravity/.agents/
+    workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`).
+      (Deterministic across checkout state because it scopes to tracked
+      files, unlike a plain recursive `grep -rln` over the same paths,
+      which also matches transient `.claude/worktrees/agent-*/` drain
+      worktrees.)
+- [ ] `antigravity/.agents/workflows/autopilot.md` does not exist, and
+      `antigravity/.agents/workflows/build.md` contains the folded-in
+      classification-gate and escalation-trigger content that applies
+      under antigravity's own human-gate model (R7).
+- [ ] `codex/.agents/skills/autopilot/` does not exist, and
+      `codex/.agents/skills/build/SKILL.md` contains the folded-in content
+      (R7a).
+- [ ] `grep -c autopilot CLAUDE.md` returns 0, and CLAUDE.md's codex-leg
+      authoring convention names the three-skill set (`drain`/`build`/
+      `evals`), not four (R6).
 - [ ] `.claude-plugin/plugin.json`'s `version` is higher than before.
 - [ ] `bash evals/lint-ultra-gate.sh` exits 0. `.claude/skills/build/
-      SKILL.md` is one of the four ultra-path skills the script checks
+SKILL.md` is one of the four ultra-path skills the script checks
       (`critique`, `drain`, `build`, `idea`); this spec edits it directly
       (R2) and edits `drain/reference.md` (R3), so per CLAUDE.md's
       standalone ultra-gate check this must run and pass before commit —
