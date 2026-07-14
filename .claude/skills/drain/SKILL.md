@@ -213,6 +213,10 @@ so a per-session emission would misattribute later iterations.
   [reference.md](reference.md)'s "Push guard"). The merged branch carries the
   task file with `Status: done` and ticked boxes per /build (plus the verifier's
   `evidence/` file under the `specs/<slug>/` layout, else inline evidence).
+  The **run project gates** step invokes `scripts/check.sh`, drain's
+  sole required check entrypoint for its own merge-time gate run — never a
+  hand-derived list of steps read out of CLAUDE.md prose (repos without it
+  fall back to their own build/lint/test commands).
   If the merge or gates fail: abort the in-progress merge, then **slot
   machine** — discard the branch and relaunch once, one tier up from the pin
   (Claude default: `opus` → `fable`), dispatching `implementation-worker` with

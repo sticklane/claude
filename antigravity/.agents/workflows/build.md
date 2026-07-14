@@ -61,7 +61,10 @@ task/spec with runnable acceptance criteria.
 4. **Verify with fresh eyes.** Open this step by emitting
    `<!-- agentprof:stage=verify -->` verbatim each time you enter it.
    Run every acceptance command; fix until all
-   pass. Run the project's standard gates (per AGENTS.md). Then apply the
+   pass. Run the project's standard gates: run `scripts/check.sh`, the
+   sole required check entrypoint — never a hand-derived list of steps read
+   out of AGENTS.md prose (repos without it fall back to their own
+   build/lint/test commands). Then apply the
    verifier skill against the task file, passing an evidence file path
    derived from the task file's location: `specs/<slug>/tasks/<name>.md` →
    `specs/<slug>/evidence/<name>.md`; a bare `specs/<slug>/SPEC.md` →
