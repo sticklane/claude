@@ -1,6 +1,6 @@
 # Task 01: Allowlist pre-flights for headless dispatch and baton self-relaunch
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -74,7 +74,11 @@ or `.claude/skills/breakdown/SKILL.md` — those are sibling tasks' scope.
 
 ## Acceptance
 
-- [ ] `grep -c "validate its allowlist against" .claude/skills/drain/reference.md` → at least 1
-- [ ] `grep -n "Headless fallback" .claude/skills/drain/reference.md` shows the new pre-flight text appears before the existing `--allowedTools` invocation line, not after
-- [ ] inspect by hand: the orchestrator-allowlist pre-flight sits next to the ORCHESTRATOR allowlist literal in the "Relaunch command template" subsection inside "## Baton pass (self-relaunch)", and names `Task`, `Bash(git *)`, and a project check command — not a single grep-able literal, since the surrounding text already contains all three tokens today
-- [ ] `grep -n "validate its allowlist\|self-relaunching" antigravity/.agents/workflows/drain.md` shows both pre-flights ported
+- [x] `grep -c "validate its allowlist against" .claude/skills/drain/reference.md` → at least 1
+  - Evidence: `grep -c` → 1.
+- [x] `grep -n "Headless fallback" .claude/skills/drain/reference.md` shows the new pre-flight text appears before the existing `--allowedTools` invocation line, not after
+  - Evidence: pre-flight "validate its allowlist against" at line 985; `--allowedTools` invocation at line 1018 (pre-flight precedes it), both inside the "Headless fallback" section.
+- [x] inspect by hand: the orchestrator-allowlist pre-flight sits next to the ORCHESTRATOR allowlist literal in the "Relaunch command template" subsection inside "## Baton pass (self-relaunch)", and names `Task`, `Bash(git *)`, and a project check command — not a single grep-able literal, since the surrounding text already contains all three tokens today
+  - Evidence: orchestrator pre-flight at reference.md:1180-1190, directly under the ORCHESTRATOR allowlist literal, inside "## Baton pass (self-relaunch)" (the `## Anomalies` at ~1111 is fenced illustration, confirmed); names `Task`, `Bash(git *)`, and `Bash(<project gate/test/lint cmds>)`, and states it is "NOT the per-task acceptance-command tool scan the headless-worker pre-flight runs" (distinct check). Independent verifier confirmed.
+- [x] `grep -n "validate its allowlist\|self-relaunching" antigravity/.agents/workflows/drain.md` shows both pre-flights ported
+  - Evidence: line 273 ("validate its allowlist against the pending tasks") and line 655 ("Orchestrator-allowlist pre-flight (before self-relaunching)"); both ported, adapted to Antigravity's Agent Manager launch model.
