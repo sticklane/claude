@@ -1,6 +1,6 @@
 # Task 05: Mirror obligations, plugin version bump, and SKILL.md line-budget trim (R5)
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03, 04
 Priority: P2
 Budget: 25 turns
