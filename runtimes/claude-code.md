@@ -29,16 +29,16 @@ enforces the agent pins. Aliases only, never dated model ids, so pins
 survive model releases. The other profiles carry the same table in
 their runtime's vocabulary.
 
-| Role                                                                 | Claude default                                                                                                       |
-| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| session default                                                      | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution                                 |
-| implementation workers (drain dispatch, incl. group throughput mode) | `opus` — deep-tier adopted default; the alias always resolves to the current Opus release, never a dated snapshot   |
-| explore / codebase-search (`scout`)                                  | `haiku`                                                                                                              |
-| verifier (acceptance evidence; advisory reviewer lane)               | `sonnet`                                                                                                             |
-| `critic` (spec/plan/diff critique)                                   | `opus` — deep-tier per token-discipline ("architecture critique"); a critic pass costs ~1% of a wrong implementation |
-| `/distill` (skill frontmatter)                                       | `opus`                                                                                                               |
+| Role                                                                 | Claude default                                                                                                                 |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| session default                                                      | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution                                           |
+| implementation workers (drain dispatch, incl. group throughput mode) | `opus` — deep-tier adopted default; the alias always resolves to the current Opus release, never a dated snapshot              |
+| explore / codebase-search (`scout`)                                  | `haiku`                                                                                                                        |
+| verifier (acceptance evidence; advisory reviewer lane)               | `sonnet`                                                                                                                       |
+| `critic` (spec/plan/diff critique)                                   | `opus` — deep-tier per token-discipline ("architecture critique"); a critic pass costs ~1% of a wrong implementation           |
+| `/distill` (skill frontmatter)                                       | `opus`                                                                                                                         |
 | retry escalation (attempt 2, verifier evidence in prompt)            | `fable` — a retry after a deep-tier (`opus`) attempt failed, the frontier-tier sanction in `.claude/rules/token-discipline.md` |
-| tournament escalation (attempts 3+, after the `fable` retry failed)  | `fable` — same frontier-tier alias as the retry above, now run as 3 concurrent angle-variant attempts instead of 1   |
+| tournament escalation (attempts 3+, after the `fable` retry failed)  | `fable` — same frontier-tier alias as the retry above, now run as 3 concurrent angle-variant attempts instead of 1             |
 
 Frontier stays sparing beyond that one active rung: security-critical
 review and novel-architecture sessions are the other two sanctioned
@@ -73,6 +73,21 @@ test/lint/build cmds>),Bash(git add *),Bash(git commit *)"`.
 
 `dontAsk` makes unapproved tools abort instead of hanging — the CI
 baseline from the playbook's mechanism ladder.
+
+This is drain's **canonical worker allowlist** — the tool-complete
+`<allowlist>` default for compute-heavy specs, one named template, defined
+here once, that drain's Headless fallback references by name instead of
+restating an allowlist ad hoc. It covers the common toolchains (`go`,
+`bash`, `npm`, `python3`) plus `git` scoped to `add`/`commit` (never push —
+the worker prompt forbids it):
+
+```
+"Read,Edit,Write,Glob,Grep,Bash(go *),Bash(bash *),Bash(npm *),Bash(python3 *),Bash(git add *),Bash(git commit *)"
+```
+
+The drain reference's allowlist pre-flight still widens this per the pending
+tasks' acceptance commands — a spec whose tests invoke a tool outside the
+default gets it added before dispatch.
 
 ## Orchestration
 
