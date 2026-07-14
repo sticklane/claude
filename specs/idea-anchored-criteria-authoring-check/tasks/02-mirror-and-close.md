@@ -1,6 +1,6 @@
 # Task 02: Mirror the check into antigravity, bump plugin version, seed the manifest
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 8 turns
@@ -68,17 +68,27 @@ truth to mirror from — read it, don't second-guess its wording).
 
 ## Acceptance
 
-- [ ] `grep -c "anchored-acceptance-criteria" antigravity/.agents/skills/idea/SKILL.md` → 1 or more.
-- [ ] `grep -c "self-referential" antigravity/.agents/skills/idea/SKILL.md` → 1 or more.
-- [ ] `grep -Fc '.claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|self-referential' tests/mirror-procedure-manifest.txt` → 1 or more.
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (with the new
+- [x] `grep -c "anchored-acceptance-criteria" antigravity/.agents/skills/idea/SKILL.md` → 1 or more. — 2
+- [x] `grep -c "self-referential" antigravity/.agents/skills/idea/SKILL.md` → 1 or more. — 1
+- [x] `grep -Fc '.claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|self-referential' tests/mirror-procedure-manifest.txt` → 1 or more. — 1
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (with the new
       manifest line in place, this now actually fails if the antigravity
       mirror lacks the phrase — confirm it passes for real, not vacuously,
       by temporarily noting the check depends on both this task's edit AND
-      Task 01's).
-- [ ] This task's own commit modifies `.claude-plugin/plugin.json`'s
-      version line: `git show <this-commit> -- .claude-plugin/plugin.json | grep -q '^+.*"version"'` → match.
-- [ ] Re-read the antigravity step-3 edit once and confirm by inspection it
+      Task 01's). — exit 0, confirmed non-vacuous
+- [x] This task's own commit modifies `.claude-plugin/plugin.json`'s
+      version line: `git show <this-commit> -- .claude-plugin/plugin.json | grep -q '^+.*"version"'` → match. — 0.9.3 → 0.9.4
+- [x] Re-read the antigravity step-3 edit once and confirm by inspection it
       states the same three sub-checks (current-state grep,
       self-referential rejection, inline outcome recording) in the same
-      order as the `.claude/` edit from Task 01.
+      order as the `.claude/` edit from Task 01. — confirmed, same order
+
+## Evidence
+
+Merged `task/02-mirror-and-close` (commit f76d057) via merge commit
+`58e0daa`. All 6 acceptance checks pass. `./specs/status.sh`, `claude
+plugin validate .`, and `bash tests/test_mirror_procedure_coverage.sh`
+green. Full `tests/test_*.sh` suite green except the same pre-existing
+`test_antigravity_parity.sh`/`test_codex_parity.sh` qa-sweep-mirror-gap
+failures noted on earlier tasks, unaffected by this change. This closes
+the spec: 2/2 tasks done.
