@@ -269,7 +269,13 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    your own flip is present before dispatching. Isolate the task in its own
    worktree on branch `task/NN-<slug>`, cut from the current commit so it is
    always fresh (if a runtime instead pins the worktree base to a lagging
-   tracking ref, force-sync it to the default branch before working), then
+   tracking ref, force-sync it to the default branch before working). **Allowlist pre-flight (before the
+   generation's first launch):** validate its allowlist against the pending
+   tasks it will run — scan each task's acceptance-criteria commands for the
+   tool and command names they invoke (test, lint, build binaries, and any
+   other command), confirm the worker launch's tool/permission grant covers
+   every one, and widen that grant before launching if a gap. An uncovered tool
+   aborts the worker mid-run and burns the whole launch. Then
    give
    the user one Agent Manager launch — a fresh agent at the worker tier
    (Pro-class in the picker)
@@ -645,7 +651,18 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    `claude`, so the human re-launches /drain from the Agent Manager
    pointing at the baton (write the baton's `Run-token:` line as the
    owner lease's `Run-token` — the sole lineage proof; a fresh process
-   otherwise has no way to prove it's the legitimate heir). The next
+   otherwise has no way to prove it's the legitimate heir).
+   **Orchestrator-allowlist pre-flight (before self-relaunching):** the
+   `.claude` runtime self-relaunches at this point, so before it does — and, in
+   Antigravity, before writing the baton for the human re-launch, since the same
+   check applies to the next generation — confirm the ORCHESTRATOR grant still
+   carries worker-dispatch (the `Task`-equivalent Agent Manager launch
+   capability), `Bash(git *)` operations, and the repo's actual project
+   gate/lint/test command(s), widening it before handing off if the repo's
+   check command drifted. This is a fixed, repo-level check — NOT the per-task
+   acceptance-command tool scan the worker pre-flight runs — because the
+   orchestrator dispatches workers rather than running their acceptance
+   commands itself. The next
    generation's first acts are the read-state-then-verify ritual: (1)
    reconcile `specs/<slug>/DRAIN-OWNER.md` against the baton — matching
    `Run-token` and `Generation` — before touching anything else; a
