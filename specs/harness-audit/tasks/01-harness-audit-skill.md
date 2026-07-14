@@ -1,6 +1,6 @@
 # Task 01: Build the harness-audit skill
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 30 turns
