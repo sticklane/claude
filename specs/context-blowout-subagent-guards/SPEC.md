@@ -1,6 +1,5 @@
 Status: open
 Priority: P2
-Breakdown-ready: true
 
 ## Problem
 
@@ -123,8 +122,9 @@ both edits land entirely inside `.claude/rules/token-discipline.md`.
    a `scout`-tier subagent to run the scan and return only the curated
    needs-attention summary (capped items per repo, with an explicit "N more
    not shown, see the live dashboard" line when the cap truncates anything —
-   token-discipline.md's "no silent caps" rule, cited not restated). One new
-   bullet in `token-discipline.md`'s "Delegation defaults" section states
+   this spec's own R5 bullet is what introduces that disclosure requirement
+   into `token-discipline.md`, not a citation of an existing rule there). One
+   new bullet in `token-discipline.md`'s "Delegation defaults" section states
    the general form (route a multi-repo/multi-item scanner's raw output
    through a subagent before it reaches the orchestrating session, same
    shape as the browser-screenshot and deferred-tool bullets above), and
@@ -203,8 +203,9 @@ effort matching`) requiring any skill that scans multiple repos or
   evidenced case) to route the raw scan through a subagent — never run the
   scanner directly in the orchestrating session and parse its output there
   — and to cap the relayed summary with an explicit "N more not shown"
-  line when truncating (citing this same section's existing "no silent
-  caps" principle, not restating it).
+  line when truncating — this bullet is what introduces that disclosure
+  requirement into `token-discipline.md`; no such principle exists there
+  yet to cite.
 - **R6**: `.claude/skills/workboard/SKILL.md`'s step 2 ("Relay the inbox")
   is rewritten to dispatch a `scout`-tier subagent that runs
   `workboard.py --json` (or the fallback scanner) and returns only the
@@ -212,11 +213,12 @@ effort matching`) requiring any skill that scans multiple repos or
   never invokes the scanner directly. The live-dashboard step (step 1) is
   unchanged: it already runs server-side and costs the orchestrating
   session nothing.
-- **R7**: `antigravity/`'s workboard mirror (if one exists covering the
-  "Relay the inbox" step) is updated to match, per this repo's
-  mirror-procedure-discipline rule (cited, not restated) — confirm at
-  breakdown time whether `antigravity/.agents/skills/workboard/` mirrors
-  this specific step or only the dashboard-launch step.
+- **R7**: `antigravity/.agents/skills/workboard/SKILL.md`'s own step 2
+  ("Relay the inbox", confirmed to run `workboard.py --json` directly, the
+  same shape R6 rewrites) is updated to match R6, per this repo's
+  mirror-procedure-discipline rule (cited, not restated). This is
+  unconditional, not contingent on confirming the mirror exists — it does,
+  and it covers this exact step.
 - **R8**: Both R5 and R6's edits stay minimal — a pointer bullet plus the
   delegation instruction, not a rewritten section — so fixing this
   context-cost problem does not itself add meaningfully to the
@@ -255,8 +257,9 @@ effort matching`) requiring any skill that scans multiple repos or
 - `grep -c "^## " .claude/rules/token-discipline.md` returns the same count as before the change (8 sections; new content is bullets inside existing sections, not new headers) — verify against `git show HEAD:.claude/rules/token-discipline.md | grep -c '^## '` at breakdown time.
 - MANUAL: a human or reviewing agent reads both new bullets in context and confirms they cite rather than restate the RETRY evidence and the `scout` tool-grant constraint, per R3.
 - `grep -c "route the raw scan through a subagent" .claude/rules/token-discipline.md` → 1 (currently 0; confirms R5's bullet landed).
-- `grep -c "scout\`-tier subagent" .claude/skills/workboard/SKILL.md` → ≥ 1 (currently 0; confirms R6's rewrite landed — adjust the exact phrase during breakdown if wording changes).
+- `grep -c "dispatch a" .claude/skills/workboard/SKILL.md` → ≥ 1 within step 2's text (currently 0; confirms R6's rewrite landed — adjust the exact phrase during breakdown if wording changes).
 - `grep -n "^## " .claude/skills/workboard/SKILL.md` shows the same section count and titles as before this spec's change (step 2 content changed, no section added/removed/renamed) — verify against `git show HEAD:.claude/skills/workboard/SKILL.md | grep -n '^## '` at breakdown time.
+- `grep -c "dispatch a" antigravity/.agents/skills/workboard/SKILL.md` → ≥ 1 within its step 2 (currently 0; confirms R7's mirror update landed) and `diff <(grep -n "^## " .claude/skills/workboard/SKILL.md | sed 's/^[0-9]*://') <(grep -n "^## " antigravity/.agents/skills/workboard/SKILL.md | sed 's/^[0-9]*://')` → empty (section titles stay in lockstep between source and mirror).
 - MANUAL-PENDING: a human or a reviewing agent invokes `/workboard` in a repo with a large synthetic inbox (or this repo's own current inbox) and confirms, by reading the orchestrating session's own tool-call history, that no raw scanner JSON output appears in the orchestrator's own Bash tool result — only the subagent's capped summary does. An unattended worker cannot self-certify this (it would need to observe its own context from outside), so this is left MANUAL-PENDING per `.claude/rules/mirror-verification.md`'s escape clause, cited not restated.
 
 ## Parallelization
@@ -269,10 +272,13 @@ test; no `- Group:` line applies.
 R5–R8 need a second task: R5 shares `token-discipline.md` with task 01 (same
 file — sequential, not concurrent, whichever task lands second must not
 stomp the other's diff), while R6/R7 touch `.claude/skills/workboard/SKILL.md`
-(and possibly its `antigravity/` mirror) — a disjoint `Touch` set from task
-01's file, but still bundled with R5 into one task since R5/R6 are one
-conceptual change (the doctrine bullet and the skill fix that cites it ship
-together, matching how R1/R2 already ship as one task above). Breakdown
+and its `antigravity/.agents/skills/workboard/SKILL.md` mirror — a disjoint
+`Touch` set from task 01's file, but still bundled with R5 into one task
+since R5/R6/R7 are one conceptual change (the doctrine bullet and the skill
+fix plus its mirror ship together, matching how R1/R2 already ship as one
+task above; the mirror path must appear in that task's `Touch`, per
+CLAUDE.md's mirror-`Touch` rule — an unlisted mirror silently ships
+un-mirrored). Breakdown
 should decide: fold R5–R8 into task 01 (if task 01 hasn't been dispatched
 yet) or add task 02 with `Depends on: 01` (if task 01 is already in flight)
 — see Open questions.
