@@ -1,5 +1,8 @@
 # Documentation-currency check in /build's completion step
 
+Status: open
+Breakdown-ready: true
+
 ## Problem
 
 The original ask was to make documentation updates "part of the code
