@@ -53,3 +53,24 @@ is a freshly-discovered `Status: draft` stub
 (`03-antigravity-test-docstring-run-path.md`), left for a future stub
 intake pass — never dispatchable, does not block this spec's terminal
 state.
+
+## Second review pass (gen 5, task 03 -- stub-promoted after this spec's first release)
+
+spec review skipped: tiny-diff (4)
+
+Task 03 (antigravity docstring Run-path reconciliation) was promoted from a
+draft stub and dispatched after this spec's lease had already been released
+and reviewed above (0 findings). Diff base for this increment: task 03's own
+pinned flip commit `ee09c0120` (using the latest flip rather than the
+spec's original first-flip commit, since the original diff was already fully
+reviewed and this increment is independent). `git diff --numstat
+ee09c0120..main` restricted to task 03's Touch:
+
+```
+2  2  antigravity/.agents/skills/prioritize/test_prioritize_scan.py
+1  1  antigravity/.agents/skills/workboard/test_workboard.py
+```
+
+Both are product paths (not matched by build's NON-product classifier), but
+total added+deleted lines = 6, under the 25-line skip threshold. Skipped per
+drain's spec-completion review skip gate.
