@@ -456,3 +456,17 @@ SKILL.md` is one of the four ultra-path skills the script checks
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Task 01 (P0) restructures both `.claude/skills/build/SKILL.md` and creates
+`build/reference.md` — every other task either cites its resulting content
+(Tasks 02, 03) or mirrors its treatment into a disjoint tree (Tasks 04, 05),
+so it lands alone first. Tasks 02-05 then touch fully disjoint file sets
+(`.claude`-leg direct consumers; the core docs/README/CLAUDE.md/bin/tests
+sweep; the antigravity tree; the codex tree) with no shared undecided
+design — each just applies the terminology Task 01 established to its own
+tree — so they run concurrently. Task 06 is the sink: its whole-tree grep
+AC and sequencing check can only pass once every sweep has landed.
+
+- Group: 02, 03, 04, 05
