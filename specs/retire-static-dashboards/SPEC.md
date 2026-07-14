@@ -1,5 +1,7 @@
 # Drop static HTML output: /fleet prints a table instead of a file, workboard's HTML fallback goes
 
+Breakdown-ready: true
+
 ## Problem
 
 Two skills produce static HTML snapshots, confirmed not useful in
@@ -213,8 +215,9 @@ TEMPLATE.format(...)` — so it is covered by the module-level-constant
     doesn't reach them on its own) are deleted along with those functions
     — not `render_html` alone: confirmed today, this file also directly
     calls `render_batons`, `render_inbox`, `render_filter_tiles`,
-    `render_spend_section`, `_spec_dag_html`, and `_short_model_name`, all
-    six in R4's orphaned set. Illustrative-not-exhaustive, same caveat as
+    `render_spend_section`, `_spec_dag_html`, `_spec_dag_tasks`, and
+    `_short_model_name`, all seven in R4's orphaned set.
+    Illustrative-not-exhaustive, same caveat as
     R4's own function list — verify against whatever the file's calls
     look like at implementation time, don't trust this name list blindly.
     The tests that genuinely survive (covering `assemble`/

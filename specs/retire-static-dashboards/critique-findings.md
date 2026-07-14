@@ -321,3 +321,19 @@ confirmed each is consumed exclusively by the test file being deleted,
 so both are now named for deletion too, with a widened AC covering all
 five paths (three test files, two fixture trees) and confirmed
 non-vacuous. Re-run `/critique` to confirm READY.
+
+## Re-critique 2026-07-14 (attended, resumed from handoff) — READY WITH NITS
+
+One more function missed: `_spec_dag_tasks` (called at
+`test_workboard.py:1145,1160,1187` in both trees) is in R4's orphaned set
+but wasn't in R8's named list. Confirmed via direct grep. Added to R8's
+list (now seven named functions, not six). The critic also confirmed:
+no other consumer anywhere in the repo of any function/constant in R4's
+orphaned set (checked via whole-repo grep — `agent-console.py` only
+imports the surviving `assemble`/`default_roots`); the reachability
+script runs and prints pre-deletion `clean` as documented; the rest of
+the spec (Problem through Acceptance criteria) has no other gap. This
+spec is now READY WITH NITS — the remaining "illustrative not exhaustive"
+caveat on R8's list is by design (the `unittest discover` AC is the
+actual completeness backstop, not the name list), not a blocking gap.
+Ready for `/breakdown`.
