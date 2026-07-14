@@ -81,3 +81,16 @@ failure-reporting order).
 - [x] MANUAL: trigger the updated Stop hook on the same repo via a
       product-code edit and confirm `scripts/check.sh` still runs in full
       — verifier: app.py edit → exit 0, marker present (check ran in full)
+
+## Discovered
+
+- [2026-07-14 /drain spec-completion review] In THIS toolkit repo
+  specifically, `.claude/` is the product, not incidental config — a
+  SKILL.md-only edit classifies as docs-only under this task's
+  `**/*.md`-style skip rules, so a local Stop-gate run now skips the full
+  `scripts/check.sh` (including `evals/lint-ultra-gate.sh`) for a change
+  that could actually break the ultra-gate lint. Not a correctness bug —
+  it's the intended `paths-ignore`-style convention applied consistently —
+  but the CI-cost rationale for treating `.claude/**` as docs-only doesn't
+  fully transfer to a free local gate. See stub
+  `specs/environment-drift-detection/tasks/06-stop-gate-claude-dir-scope-review.md`.
