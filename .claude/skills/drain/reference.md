@@ -1565,6 +1565,15 @@ owner claim/release commits (SKILL.md step 1), every flip (step 2), and the
 Deferred/Blocked/discovery commits (step 3). The worker never pushes — only the
 orchestrator session, after each of its own commits.
 
+**Skill-doc size/TOC gate (conditional pre-merge blocker).** Before merging a
+DONE task whose `Touch:` includes any `.claude/skills/*/SKILL.md` or
+`.claude/skills/*/reference.md` path, run `bash evals/lint-skill-size-gate.sh`;
+a non-zero exit is a **merge blocker** for that task (the slot-machine path),
+exactly as a failed project gate. This plays the same mechanical role for the
+skill docs' size/TOC limits that `evals/lint-ultra-gate.sh` plays for the
+ultra-path skills — but fires **conditionally** on the skill-doc `Touch:`
+condition above, since most drain tasks touch no skill docs at all.
+
 ## Rolling-window admission & merge (R1–R4)
 
 The full rules SKILL.md step 2's "Rolling-window admission & merge (R1–R4)"
