@@ -107,3 +107,19 @@ transcript"` to R5's AC so a worker can't pass by appending EVAL_TRANSCRIPT
 text while leaving the contradictory lines in place. Confirmed both
 negative-assertion anchors non-vacuous today (stale phrases still present
 in both files). Re-run `/critique` to check current status.
+
+## Re-critique 2026-07-14 (attended, /critique) — one misdiagnosed anchor found
+
+The version pin and the SKILL.md anchor were sound. But R5's codex anchor
+was wrong: codex `SKILL.md:41`'s "never a transcript" phrase is about the
+grader's ~10-line failure-message budget returned to the orchestrator, NOT
+about whether `assert.sh` can read a transcript — it does not contradict
+v2 and R4 explicitly requires keeping that exact budget rule. The actually
+contradictory codex line is `:19`, "v1 grades artifacts only" (parallel to
+the SKILL.md:11 line R4 already targets correctly). Fixed: R5's prose and
+AC now anchor on "v1 grades artifacts only" for the codex file instead of
+"never a transcript"; added a note that line 41 is intentionally left
+untouched (same as its identical counterparts in `.claude/skills/evals/
+SKILL.md:38` and `antigravity/.agents/workflows/evals.md:27`, which R4/R5
+also don't touch — avoids introducing a fresh mirror-procedure divergence).
+Re-run `/critique` to confirm READY.
