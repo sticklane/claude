@@ -375,7 +375,10 @@ merge passes gates, no rescue.)
 
 DONE bookkeeping deletes a task's rescues: after the task's branch merges
 and project gates pass, drain deletes every `rescue/NN-<slug>-*` branch for
-that task.
+that task. Those project gates run through `scripts/check.sh` — the sole
+required check entrypoint for drain's merge-time gate, never a hand-derived
+list of steps read out of CLAUDE.md prose (repos without it fall back to
+their own build/lint/test commands).
 
 ### Draft status (discovered-work stubs)
 
