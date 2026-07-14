@@ -415,3 +415,17 @@ behind; this version correctly flags it) is in this spec's
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Tasks 01 (fleet + viz.py), 02 (workboard.py + workboard/SKILL.md), and 04
+(the full antigravity mirror) touch fully disjoint trees with no shared
+undecided design — each independently runs the same reachability-check
+procedure against its own copy — so they run concurrently. Task 03 (test
+deletions) depends on both 01 and 02: it needs viz.py's flag gone
+(test_fleet_css_drift.sh's premise) and workboard.py's exact deleted-name
+set (to find every orphan-calling test method), so it runs after that
+pair lands. Task 05 is the sink: its whole-repo grep sweep and dangling-
+citation AC can only pass once every deletion has landed.
+
+- Group: 01, 02, 04
