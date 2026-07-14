@@ -1,6 +1,6 @@
 # Task 01: Add the anchored-acceptance-criteria check to /idea's step 3
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -71,18 +71,24 @@ work, done after this task's exact wording exists to mirror.
 
 ## Acceptance
 
-- [ ] `grep -c "anchored-acceptance-criteria" .claude/skills/idea/SKILL.md` → 1 or more.
-- [ ] `grep -c "self-referential" .claude/skills/idea/SKILL.md` → 1 or more.
-- [ ] The new prose sits after the closing fence of the SPEC.md template
+- [x] `grep -c "anchored-acceptance-criteria" .claude/skills/idea/SKILL.md` → 1 or more.
+      Evidence: verifier → 2 (evidence/01-add-authoring-time-check.md).
+- [x] `grep -c "self-referential" .claude/skills/idea/SKILL.md` → 1 or more.
+      Evidence: verifier → 1 (evidence/01-add-authoring-time-check.md).
+- [x] The new prose sits after the closing fence of the SPEC.md template
       block, not inside it: `awk '/^```markdown$/{f=1} f&&/^```$/{print NR; exit}' .claude/skills/idea/SKILL.md`
       prints a line number, and both anchor-phrase line numbers from the
       two checks above are greater than it (confirm with
       `grep -n "anchored-acceptance-criteria\|self-referential" .claude/skills/idea/SKILL.md`).
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0 (idea/SKILL.md is one of the
+      Evidence: verifier → fence line 81; anchor lines 84, 85, 96 all > 81.
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (idea/SKILL.md is one of the
       four ultra-path skills this gate checks; the edit must not disturb
       its "ultra" mentions' ±3-line marker pairing).
-- [ ] Re-read the edited step 3 once and confirm by inspection it states
+      Evidence: verifier → "all ultra mentions gated in 4 files", exit 0.
+- [x] Re-read the edited step 3 once and confirm by inspection it states
       all three sub-checks from the Goal above, in that order (current-
       state grep → self-referential rejection → inline outcome
       recording) — this is the exact content Task 02 must mirror
       verbatim in procedure.
+      Evidence: verifier inspection of lines 82-102 → three sub-checks in
+      Goal order, cites the memory file by path, placed before "## 4".
