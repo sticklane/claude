@@ -127,3 +127,39 @@ Verdict: REVISE, applied directly. Fixes landed in SPEC.md:
    time.
 
 Ready for re-critique.
+
+## Re-critique 2026-07-14 (drain critique intake, gen 3, run c92aedb1ae49f8d3) — READY WITH NITS
+
+Verdict: **READY** (non-blocking nits only). The spec is now accurate
+against the current `agent-console/agent-console.py`: all four named
+functions (`resume_agent :3136`, `set_priority :3039`, `execute_push
+:2556`, `render_markdown :1213`) verified to exist with the exact behavior
+Problem/Approach describe; all five prior rounds' findings confirmed still
+fixed (execute_push's real rc-0/rc-nonzero/timeout branches, resume_agent's
+real failure modes, split non-OR greps, unittest.TestCase requirement,
+render_markdown AC present with a runnable mutation-kill anchor). Line
+anchors drifted ~2 lines from the last triage, immaterial under the
+spec's own "snapshots, not a contract / find by name" hedge. No test
+references any of the four functions — the gap is real.
+
+Two sub-critical, non-blocking findings (optional, left for implementation
+time rather than blocking breakdown):
+
+1. **resume_agent's success-branch test has an unstated dependency on
+   `_claude_json` (conf 62).** Approach step 1 says mock "the process
+   boundary (subprocess/spawn) only," but the success path needs a known
+   sid to pass the `sid not in sids` guard (`:3139`), and that set comes
+   from `_claude_json("agents", "--all")` (`:3137`), not the spawn edge. A
+   literal reading leaves the success branch undrivable deterministically.
+   Optional fix: add "stub `_claude_json` to return a session list
+   containing the test sid" to step 1.
+2. **Only resume_agent and render_markdown carry a concrete mutation-kill
+   bar; set_priority and execute_push fall back to wrapper-branch
+   coverage (conf 55).** execute_push's AC is unusually concrete already
+   (stale-then-fresh `_board_cache["ts"]`, `exit:<code>`, timeout message)
+   so it's runnable-verifiable regardless; set_priority is the weakest.
+   Optional fix: give set_priority a kill bar, e.g. "tests fail if the
+   `_git commit` call is stubbed out."
+
+`Breakdown-ready: true` written to SPEC.md's header. Recorded by drain gen 3
+(Run-token c92aedb1ae49f8d3); eligible for auto-breakdown (3b) this run.

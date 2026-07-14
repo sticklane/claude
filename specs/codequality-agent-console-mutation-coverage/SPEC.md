@@ -1,6 +1,7 @@
 # agent-console: test the mutation endpoints that currently have none
 
 Status: open
+Breakdown-ready: true
 
 ## Problem
 
