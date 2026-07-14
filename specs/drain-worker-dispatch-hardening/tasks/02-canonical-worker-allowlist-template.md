@@ -1,6 +1,6 @@
 # Task 02: Canonical worker allowlist template
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 15 turns
@@ -97,7 +97,11 @@ passing is not the same as the cross-reference actually resolving.
 
 ## Acceptance
 
-- [ ] `grep -c "canonical worker allowlist" runtimes/claude-code.md` → at least 1
-- [ ] `grep -c "canonical worker allowlist" .claude/skills/drain/reference.md` → at least 1
-- [ ] `grep -n "allowedTools" .claude/skills/drain/reference.md` (Headless fallback section) shows a reference to the named template, not a re-listed ad hoc tool string
-- [ ] `grep -c "canonical worker allowlist" antigravity/.agents/workflows/drain.md` → at least 1
+- [x] `grep -c "canonical worker allowlist" runtimes/claude-code.md` → at least 1
+      (returns 1)
+- [x] `grep -c "canonical worker allowlist" .claude/skills/drain/reference.md` → at least 1
+      (returns 2)
+- [x] `grep -n "allowedTools" .claude/skills/drain/reference.md` (Headless fallback section) shows a reference to the named template, not a re-listed ad hoc tool string
+      (line 1047's `--allowedTools` value is now `"<the canonical worker allowlist — runtimes/claude-code.md § Headless>"`, a named pointer)
+- [x] `grep -c "canonical worker allowlist" antigravity/.agents/workflows/drain.md` → at least 1
+      (returns 1; framed as a cross-runtime reference point per mirror-verification.md — Antigravity grants tools per-launch via Agent Manager, no template to port verbatim)

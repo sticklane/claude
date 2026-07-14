@@ -275,7 +275,13 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    tool and command names they invoke (test, lint, build binaries, and any
    other command), confirm the worker launch's tool/permission grant covers
    every one, and widen that grant before launching if a gap. An uncovered tool
-   aborts the worker mid-run and burns the whole launch. Then
+   aborts the worker mid-run and burns the whole launch. Claude Code's
+   runtime defines a fixed **canonical worker allowlist** template — the
+   tool-complete default for compute-heavy specs (`runtimes/claude-code.md`'s
+   `## Headless` section) — as a cross-runtime reference point only:
+   Antigravity grants tools per-launch through the Agent Manager rather than
+   a fixed CLI flag, so there is no template to port verbatim here; the
+   allowlist pre-flight above is this runtime's equivalent mechanism. Then
    give
    the user one Agent Manager launch — a fresh agent at the worker tier
    (Pro-class in the picker)
