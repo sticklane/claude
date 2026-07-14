@@ -1,6 +1,6 @@
 # Task 03: Mechanical preflight sweep at drain startup (R3)
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P1
 Budget: 22 turns
@@ -76,13 +76,22 @@ orchestrator-isolation text (task 01) or R2's owner-lease re-read text
 
 ## Acceptance
 
-- [ ] `grep -c "mechanical preflight sweep" .claude/skills/drain/SKILL.md` → ≥ 1
-- [ ] `grep -c "skip that worktree rather than prune" .claude/skills/drain/reference.md` → ≥ 1 (confirmed absent — baseline 0 — at task start; this is the fail-safe skip rule's specific anchor, distinct from the pre-existing generic "fail-safe/skip" hits already present in this file)
-- [ ] `grep -n "live session" .claude/skills/drain/reference.md` shows YOUR
+- [x] `grep -c "mechanical preflight sweep" .claude/skills/drain/SKILL.md` → ≥ 1
+      — evidence: returns 1 (SKILL.md gen-1 advisories paragraph).
+- [x] `grep -c "skip that worktree rather than prune" .claude/skills/drain/reference.md` → ≥ 1 (confirmed absent — baseline 0 — at task start; this is the fail-safe skip rule's specific anchor, distinct from the pre-existing generic "fail-safe/skip" hits already present in this file)
+      — evidence: returns 1 (reference.md preflight-sweep pass (b) fail-safe).
+- [x] `grep -n "live session" .claude/skills/drain/reference.md` shows YOUR
       new mechanical definition (a session reported by the harness's
       live-session listing whose `cwd` resolves into the worktree's path),
       not only the pre-existing "foreign live session" phrase already at
       reference.md:62 — confirm by reading the surrounding lines you added
-- [ ] Net new lines added to `.claude/skills/drain/SKILL.md` by this task's
+      — evidence: new match at reference.md:109 ("A **live session** is
+      defined mechanically … a session reported by the harness's
+      live-session listing (e.g. `claude agents --json`) whose `cwd`
+      resolves into that worktree's path"), distinct from line 71.
+- [x] Net new lines added to `.claude/skills/drain/SKILL.md` by this task's
       diff ≤ 6 (`git diff HEAD~1 -- .claude/skills/drain/SKILL.md`)
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+      — evidence: `git diff a1207c2 --numstat -- .claude/skills/drain/SKILL.md`
+      → 6 additions, 1 deletion (≤ 6).
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0
+      — evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0.
