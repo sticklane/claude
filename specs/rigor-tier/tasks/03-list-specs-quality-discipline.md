@@ -12,8 +12,12 @@ Touch: .claude/skills/list-specs/SKILL.md, .claude/skills/list-specs/list_specs.
 `/list-specs`'s rendered table shows each spec's `Rigor:` tier, not just a
 prose mention — `list_specs.py`'s `render_table` (SKILL.md just runs this
 scanner and prints its stdout) gains a column or per-row annotation
-surfacing the tier read from each spec/task's header, the same way
-`Status` and `Priority` are already read. `.claude/rules/quality-discipline.md`
+surfacing the tier read from each spec/task's header — parse `Rigor:`
+from each spec's SPEC.md `text` in `scan_and_classify` (list_specs.py
+~line 250) and add it to the row dict, the same place `Status` is
+already parsed (note: `list_specs.py` does NOT currently read
+`Priority:` at all — don't go looking for that precedent, it isn't
+there). `.claude/rules/quality-discipline.md`
 gains one line scoping its TDD mandate to production-rigor work, citing
 this mechanism. The antigravity list-specs mirror (its own
 `list_specs.py` + `SKILL.md`) carries the equivalent display change.
@@ -32,8 +36,9 @@ mirrors — those belong to tasks 01 and 02. Do not touch
    with the tier visible in `render_table`'s output; a spec with no
    `Rigor:` header renders with no tier marker (or an explicit
    "production" marker — pick one and keep it consistent).
-2. Make it pass: `list_specs.py` reads the `Rigor:` header the same way it
-   already reads `Priority:`, and `render_table` (around line 256-259,
+2. Make it pass: `list_specs.py` reads the `Rigor:` header via
+   `scan_and_classify`, the same place `Status` is parsed (see Goal
+   above), and `render_table` (around line 256-259,
    columns `Spec | Status | Next command`) surfaces the tier — either as
    a new column or an inline annotation on the `Spec` cell for
    prototype-tagged rows only (production/absent rows stay unchanged, so

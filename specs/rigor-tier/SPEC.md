@@ -121,7 +121,13 @@ input to a normal production task, not as done work.
       gate check, required before committing changes to any of
       idea/critique/drain/build SKILL.md; this spec's R2 and R4 edit
       idea/build/drain)
-- [ ] `grep -qi "rigor" antigravity/.agents/skills/idea/SKILL.md && grep -qi "rigor" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "rigor" antigravity/.agents/workflows/build.md && grep -qi "rigor" antigravity/.agents/workflows/drain.md && grep -qi "rigor" antigravity/.agents/skills/list-specs/SKILL.md && grep -qi "rigor" codex/.agents/skills/build/SKILL.md && grep -qi "rigor" codex/.agents/skills/drain/SKILL.md && grep -q '"version": "0.9.9"' .claude-plugin/plugin.json` (R8)
+- [ ] `grep -qi "rigor" antigravity/.agents/skills/idea/SKILL.md && grep -qi "rigor" antigravity/.agents/skills/breakdown/SKILL.md && grep -qi "rigor" antigravity/.agents/workflows/build.md && grep -qi "rigor" antigravity/.agents/workflows/drain.md && grep -qi "rigor" antigravity/.agents/skills/list-specs/SKILL.md && grep -qi "rigor" codex/.agents/skills/build/SKILL.md && grep -qi "rigor" codex/.agents/skills/drain/SKILL.md` (R8, mirror content half). The
+      version-bump half of R8 is checked by task 04's own acceptance
+      criterion, not repeated here — a hard-coded version literal at the
+      spec level goes stale the moment any unrelated work bumps
+      `plugin.json` first (this spec's own critique history hit this
+      exact failure mode twice); task 04's `HEAD~1`-relative check is the
+      version pin of record.
 - [ ] Fresh-session test: /idea a throwaway-tool pitch, answer "prototype";
       the produced SPEC.md carries `Rigor: prototype` above its first `##`
       (manual, per CLAUDE.md's testing convention).
