@@ -1,6 +1,6 @@
 # Task 02: state scripts/check.sh as the sole required check entrypoint
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 12 turns
@@ -72,16 +72,25 @@ check entrypoint` must appear verbatim in both mirrors — this task's
 
 ## Acceptance
 
-- [ ] `grep -c "sole required check entrypoint" .claude/skills/build/SKILL.md` → greater than 0
-- [ ] `grep -c "sole required check entrypoint" .claude/skills/drain/SKILL.md` → greater than 0
-- [ ] `grep -c "sole required check entrypoint" .claude/skills/drain/reference.md` → greater than 0
-- [ ] `grep -c "sole required check entrypoint" antigravity/.agents/workflows/build.md` → greater than 0
-- [ ] `grep -c "sole required check entrypoint" antigravity/.agents/workflows/drain.md` → greater than 0
-- [ ] `grep -c "sole required check entrypoint" codex/.agents/skills/build/SKILL.md` → greater than 0
-- [ ] `grep -c "sole required check entrypoint" codex/.agents/skills/drain/SKILL.md` → greater than 0
-- [ ] `bash evals/lint-ultra-gate.sh` → exits 0
-- [ ] the `version` field in `.claude-plugin/plugin.json` differs from its
+- [x] `grep -c "sole required check entrypoint" .claude/skills/build/SKILL.md` → greater than 0
+- [x] `grep -c "sole required check entrypoint" .claude/skills/drain/SKILL.md` → greater than 0
+- [x] `grep -c "sole required check entrypoint" .claude/skills/drain/reference.md` → greater than 0
+- [x] `grep -c "sole required check entrypoint" antigravity/.agents/workflows/build.md` → greater than 0
+- [x] `grep -c "sole required check entrypoint" antigravity/.agents/workflows/drain.md` → greater than 0
+- [x] `grep -c "sole required check entrypoint" codex/.agents/skills/build/SKILL.md` → greater than 0
+- [x] `grep -c "sole required check entrypoint" codex/.agents/skills/drain/SKILL.md` → greater than 0
+- [x] `bash evals/lint-ultra-gate.sh` → exits 0
+- [x] the `version` field in `.claude-plugin/plugin.json` differs from its
       value at this task's own base commit (compare via
       `git show <base-commit>:.claude-plugin/plugin.json | grep version`,
       never a hard-coded pre-task literal, per breakdown's version-bump
       acceptance convention)
+
+## Evidence
+
+Merged `task/02-sole-check-entrypoint-wording` (commits a74b2c9, 6ecd9cf) via
+merge commit `e2bd5d9`. All 9 acceptance checks pass; plugin.json version
+0.9.2 → 0.9.3. `./specs/status.sh`, `claude plugin validate .`, and
+`evals/lint-ultra-gate.sh` green. Full `tests/test_*.sh` suite green except
+the same pre-existing `test_antigravity_parity.sh`/`test_codex_parity.sh`
+qa-sweep-mirror-gap failures noted on task 04, unaffected by this change.
