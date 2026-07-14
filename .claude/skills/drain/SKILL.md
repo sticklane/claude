@@ -56,8 +56,7 @@ procedures are in [reference.md](reference.md)'s "Gen-1 startup advisories" —
 load only the named section. It also pins the **mechanical preflight sweep** — a
 gen-1 pass, before step 1's spec-scoped work, across EVERY spec in the launched
 scope (not only the one about to be claimed) that reclaims dead leases and prunes
-orphaned worktrees (replacing the manual "kill any zombie drains" ritual),
-reporting a one-line summary (leases reclaimed, worktrees pruned).
+orphaned worktrees, reporting a one-line summary (leases reclaimed, worktrees pruned).
 
 **Orchestrator isolation (default ON).** Before any bookkeeping, drain runs
 its own dispatch loop inside a VCS-level isolated checkout of the target repo —
@@ -134,11 +133,9 @@ dispatchability check does), then lexicographic task-file path. Drain computes
 the order; the model never reorders the queue mid-run.
 
 **Wake economics — keep the hub context small.** The hub's context _size_, not
-the number of verdict wakes, is the cost lever: each wake re-caches it at the
-1.25× cache-write rate, so a fat hub pays on every worker — hence the verdict cap
-above, the merge-time re-read ban below, the context-budget baton (3a), and a
-drain hub on the default (`opus`) tier or below (a frontier hub roughly doubles
-wake cost for no quality gain). Full cost derivation in
+the number of verdict wakes, is the cost lever; hence the verdict cap above, the
+merge-time re-read ban below, the context-budget baton (3a), and a drain hub on
+the default (`opus`) tier or below. Full derivation in
 [reference.md](reference.md)'s "Wake economics".
 
 **Window size W (a rolling window, topped up on each verdict — not a wave
@@ -204,19 +201,16 @@ so a per-session emission would misattribute later iterations.
   the ≤ 2k-token verdict; needing file contents, it dispatches a scout**
   (reference.md's "Wake economics").
   Then **merge → run project gates → delete this task's `rescue/NN-<slug>-*`
-  branches → push** — when deleting a rescue branch,
-  remove the worktree before deleting the branch it was checked out on
-  (a branch still checked out in a live worktree cannot be deleted;
-  e.g. `git worktree remove <path>` then `git branch -D <branch>`) —
+  branches → push** — removing each rescue branch's worktree before deleting the
+  branch it was checked out on (mechanics in reference.md's Tournament merge) —
   the push following the **canonical push guard** (it applies to every drain
   bookkeeping commit, not only DONE merges; full rule in
   [reference.md](reference.md)'s "Push guard"). The merged branch carries the
   task file with `Status: done` and ticked boxes per /build (plus the verifier's
   `evidence/` file under the `specs/<slug>/` layout, else inline evidence).
-  The **run project gates** step invokes `scripts/check.sh`, drain's
-  sole required check entrypoint for its own merge-time gate run — never a
-  hand-derived list of steps read out of CLAUDE.md prose (repos without it
-  fall back to their own build/lint/test commands).
+  The **run project gates** step invokes `scripts/check.sh`, drain's sole
+  required merge-time check entrypoint — never a hand-derived list read out of
+  CLAUDE.md prose (repos without it fall back to their own build/lint/test).
   If the merge or gates fail: abort the in-progress merge, then **slot
   machine** — discard the branch and relaunch once, one tier up from the pin
   (Claude default: `opus` → `fable`), dispatching `implementation-worker` with
@@ -279,9 +273,8 @@ Keep verdicts, not transcripts; log one line per task as you go (/fleet shows
 workers live). **Every recorded verdict ends here, not at step 2**: before
 dispatching the next worker or touching the queue again, evaluate 3a's relaunch
 trigger below. Skipping that check when looping back is a process violation, not
-a discretionary skip (a 2026-07 audit found a generation run 9 verdicts over 6+
-hours with 3a never once evaluated; specs/drain-wake-cost/EVIDENCE.md, "Task 05
-findings"). Only after 3a clears — trigger not met, or fired and this turn has
+a discretionary skip (specs/drain-wake-cost/EVIDENCE.md, "Task 05 findings").
+Only after 3a clears — trigger not met, or fired and this turn has
 ended — does the hub loop to step 2 while anything is dispatchable.
 
 ## 3a. Baton pass (self-relaunch)
@@ -296,12 +289,11 @@ it), or on a **degradation override** — re-reading files already read, losing
 queue position, repeated failed corrections, or a compaction event.
 **Critique-intake and stub-intake attempts never count toward this threshold**
 — they carry their own per-run at-most-once bookkeeping (`Intake-failed:` /
-`Stub-intake-failed:` below), and counting them pays a full reprime for zero
-dispatch progress (specs/drain-wake-cost/EVIDENCE.md, "Follow-up (2026-07-13)").
+`Stub-intake-failed:` below; specs/drain-wake-cost/EVIDENCE.md).
 The `max(2, 6 − W)` count is size-adaptive — a wider W batons sooner (W=1→5,
-W=3→3, W=5→2); full derivation in [reference.md](reference.md)'s "Baton pass" —
-load only the named section. On fire:
-write the baton `specs/<slug>/DRAIN-BATON.md` (grammar + relaunch command in
+W=3→3, W=5→2); full derivation in [reference.md](reference.md)'s "Baton pass"
+(load only the named section). On fire: write the baton
+`specs/<slug>/DRAIN-BATON.md` (grammar + relaunch command in
 reference.md), spawn the successor generation (awaited where a parent can
 supervise; else headless), report the pass, and **end your turn at once,
 stating this session will not touch the queue again** (one-writer invariant). A
@@ -325,8 +317,8 @@ baton and stops; the final generation deletes the baton when the queue completes
 
 Emit `<!-- agentprof:stage=critique-intake -->` verbatim as this step's
 opening line every time you enter it. At the exhaustion trigger (the "nothing
-dispatchable, in-progress, or parked"
-check that gates 3b, evaluated **immediately before 3b**), scan scope for a
+dispatchable, in-progress, or parked" check that gates 3b, evaluated
+**immediately before 3b**), scan scope for a
 **draft spec** — a spec dir with a `SPEC.md`, no `tasks/`, and **no
 `Breakdown-ready:` header**. Order eligible specs by `Priority` then spec path
 (step 2's tie-break); claim the chosen spec's owner lease, invoke **/critique**
@@ -343,8 +335,8 @@ screens those (docs/human-gates.md reason 4).
 
 Emit `<!-- agentprof:stage=stub-intake -->` verbatim as this step's opening
 line every time you enter it. At the same exhaustion trigger (evaluated **after
-critique intake, before 3b**),
-drain works its in-scope `Status: draft` stubs — the sibling of critique intake,
+critique intake, before 3b**), drain works its in-scope `Status: draft` stubs —
+the sibling of critique intake,
 lower priority than dispatch, never preempting a dispatchable task. Each stub is
 attempted **at most once per stub per run, spanning every baton generation**,
 tracked by a `Stub-intake-failed:` baton line (grammar in reference.md's "Baton
