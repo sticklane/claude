@@ -112,7 +112,11 @@ own citation convention — "cite, don't restate").
     end users — update it in the same commit"), not a citation to a file
     codex can't resolve. Codex's close-out step does invoke `$code-review`
     (unlike the antigravity mirror), so the R5-equivalent note attaches
-    there the same way it does in `.claude/skills/build/SKILL.md`.
+    there the same way it does in `.claude/skills/build/SKILL.md` — but
+    using the distinct literal phrase "not by $code-review itself" (codex's
+    own invocation syntax, not the main repo's slash-command phrasing), so
+    this edit is independently verifiable from the inlined reminder above
+    rather than sharing its anchor.
 - **R7**: `.claude-plugin/plugin.json`'s `version` is bumped (skill
   behavior changed in `/build`).
 
@@ -146,10 +150,12 @@ passes when the count is 1 or more after the edit.
       checking lives in quality-discipline.md, not in `/code-review` —
       anchored on wording distinct from R4's citation so the two edits
       verify independently).
-- [ ] `grep -c "Documentation currency" antigravity/.agents/workflows/build.md`
-      → 1 or more, and
-      `grep -c "Documentation currency" antigravity/AGENTS.md` → 1 or
-      more (R6's antigravity mirror of R4/R1).
+- [ ] `grep -c "Documentation currency" antigravity/AGENTS.md` → 1 or more
+      (R6's antigravity mirror of R1's new section; deliberately NOT
+      checked against `antigravity/.agents/workflows/build.md` — R6
+      specifies that mirror's citation reads "see AGENTS.md's Quality
+      discipline section," not the literal phrase "Documentation
+      currency", so this AC only targets the file that actually gains it).
 - [ ] `grep -c "Quality discipline section" antigravity/.agents/workflows/build.md`
       → 1 or more (confirmed absent today; R6's antigravity citation
       names `AGENTS.md`'s `## Quality discipline` section, since
@@ -161,9 +167,11 @@ passes when the count is 1 or more after the edit.
 - [ ] `grep -c "Documentation currency\|AGENTS.md's Map" codex/.agents/skills/build/SKILL.md`
       → 1 or more (R6's codex leg: the inlined reminder, since codex has
       no `quality-discipline.md` to cite).
-- [ ] `grep -c "quality-discipline\|Documentation currency" codex/.agents/skills/build/SKILL.md`
-      → 1 or more (R6's codex leg equivalent of R5's note, attached to
-      the `$code-review` invocation).
+- [ ] `grep -c "not by \$code-review itself" codex/.agents/skills/build/SKILL.md`
+      → 1 or more (confirmed absent today; R6's codex leg equivalent of
+      R5's note, attached to the `$code-review` invocation — anchored on
+      codex's own invocation phrasing so this AC verifies independently
+      of the inlined-reminder AC above, rather than sharing its anchor).
 - [ ] `.claude-plugin/plugin.json`'s `version` (currently `"0.9.1"` as of
       2026-07-13, confirmed via `grep -n '"version"' .claude-plugin/plugin.json`
       — re-check at implementation time, this drifts often) is higher
