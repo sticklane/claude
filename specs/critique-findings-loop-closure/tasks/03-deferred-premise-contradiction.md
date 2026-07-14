@@ -1,6 +1,6 @@
 # Task 03: Deferred-verdict premise-contradiction flag and blocked re-dispatch (R3, R4)
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 20 turns
