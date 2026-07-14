@@ -220,3 +220,39 @@ squash or rebase, the fragility this change fixes. The original evidence
 still stands: four fresh critic runs on 2026-07-13 (~40k subagent tokens
 each) on an unchanged spec reproduced the identical verdict — which is what
 motivated mechanizing the skip rather than re-deriving it each session.
+
+## Record a worker's reported `Decisions:` into the task file — nothing gates it mechanically
+
+Drain's SKILL.md/reference.md say the orchestrator appends each worker's
+verdict `Decisions:` bullets into the task file's own `## Decisions` section
+(path-scoped commit) — this is separate from the worker ticking its own
+acceptance boxes and flipping its own `Status:` line. Nothing mechanically
+checks this happened: no gate greps for a `## Decisions` section, so it is
+easy to collect a DONE verdict, merge it, and move on to the next dispatch
+without ever writing the reported decisions into the file. Observed
+2026-07-14 (drain generation 5, `c92aedb1ae49f8d3`): two of three dispatched
+tasks' verdicts carried non-empty `Decisions:` bullets that went unwritten
+until a deliberate catch-up pass just before the exit checklist. Treat
+"write worker Decisions into the task file" as a checklist item at collect-verdict
+time, not something to remember to do later — by the time you notice the gap,
+you're reconstructing it from verdict text still in context rather than from
+the file itself.
+
+## A HUMAN.md entry citing a `critique-findings.md` can go stale mid-run — check the file's OWN latest round before trusting the entry
+
+`critique-findings.md` accumulates rounds over multiple critique passes; only
+the LAST round's `Verdict:` line is current — an earlier round's NOT READY
+can be superseded by a later READY in the same file, especially across
+different drain runs (different `Run-token:`). A HUMAN.md `## Agent-filed
+blockers` entry citing that file is filed once and never mechanically
+re-checked, so it can outlive the concern it named: the spec gets revised,
+critiqued again, marked READY, broken down, and fully completed — while the
+stale entry keeps telling a human "this needs your decision." Observed
+2026-07-14 (drain generation 5): `codequality-agent-console-mutation-coverage`'s
+HUMAN.md entry cited a 5th-round NOT READY verdict, but the same
+`critique-findings.md` file's actual final (6th) round said READY, and the
+spec's `tasks/` directory showed 4/4 done. Before trusting any HUMAN.md entry
+that cites a `critique-findings.md`, `grep -n "^Verdict:" <file> | tail -1`
+and cross-check the spec's own `tasks/` status — a resolved concern gets its
+HUMAN.md entry deleted (human-blockers.md's "open items only" rule), not left
+as a stale checkbox.
