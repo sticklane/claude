@@ -348,8 +348,17 @@ echo "# readme" > "$DOCS_REPO/README.md"
 git -C "$DOCS_REPO" add -A
 git -C "$DOCS_REPO" commit -qm baseline
 
+# clean tree (no changes since HEAD) is NOT docs-only -> full check runs
+git -C "$DOCS_REPO" clean -fdq
+rm -f "$DOCS_REPO/check-ran.marker"
+run_hook "$STOP_GATE" "$json_stop_false" "$DOCS_REPO"
+assert_eq "stop-gate exits 0 on a clean tree" 0 "$RH_EXIT"
+assert "check.sh runs on a clean tree (not skipped as docs-only)" \
+  test -f "$DOCS_REPO/check-ran.marker"
+
 # docs-only change (a new .md file) -> check skipped, exit 0, no marker
 git -C "$DOCS_REPO" clean -fdq
+rm -f "$DOCS_REPO/check-ran.marker"
 echo "note" >> "$DOCS_REPO/HUMAN.md"
 run_hook "$STOP_GATE" "$json_stop_false" "$DOCS_REPO"
 assert_eq "stop-gate exits 0 on docs-only (.md) diff" 0 "$RH_EXIT"
