@@ -144,11 +144,18 @@ tasks/NN-*.md (human-launched)` becomes
   handle by deletion+fold-in below (their own paths are excluded from this
   grep-and-reword treatment; they don't get "reworded in place," they stop
   existing). The verifying grep is
-  `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/`
+  `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/ evals/ runtimes/ README.md AGENTS.md bin/ tests/ agent-console/`
   (tracked files only — a plain recursive `grep -rln` over the same paths
   also matches every transient `.claude/worktrees/agent-*/` drain
   worktree, which is non-deterministic across checkout states; `git grep`
-  scopes to tracked content), not a narrower subset. Known hits, confirmed
+  scopes to tracked content). This path list — not the narrower `.claude/
+docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/` set an earlier
+  draft of this requirement used — is the actual "whole repo" this
+  requirement's own prose promises: the narrower set silently excluded
+  `evals/`, `runtimes/`, `README.md`, `AGENTS.md`, `bin/`, `tests/`, and
+  `agent-console/`, each confirmed today to hold a living `/autopilot`
+  reference no earlier round caught (a worker could pass every other AC
+  in this spec while leaving all of them stale). Known hits, confirmed
   present today, beyond `.claude/skills/autopilot/{SKILL,reference}.md`,
   `onboard/SKILL.md`, `drain/reference.md`, `gate/SKILL.md`,
   `breakdown/SKILL.md`, `docs/human-gates.md` (handled by R1-R5), and
@@ -214,12 +221,58 @@ workflows/drain.md`, and `antigravity/.agents/skills/qa-sweep/SKILL.md`
     to the three-stage set the same way) all reference autopilot — each
     updated the same way its `.claude`-leg counterpart is (R3/R4/R5),
     mirroring R7 below.
+  - Outside the six trees the earlier draft of this requirement swept,
+    confirmed today: `evals/autopilot/01-security-refusal/` (a whole
+    evalset directory — `prompt.txt`, `setup.sh`, `assert.sh` — that
+    grades an `/autopilot` run; deleted outright, the same "nothing left
+    to assert against" treatment R8 gives `/fleet`'s old tests in the
+    sibling `retire-static-dashboards` spec — an evalset for a skill that
+    no longer exists has no reason to survive). `runtimes/codex.md`'s
+    "the four launch-gated skills (`drain`/`build`/`autopilot`/`evals`,
+    `allow_implicit_invocation: false`)" becomes the three-skill set,
+    the identical doctrine change CLAUDE.md's codex-convention mention
+    gets above. `runtimes/README.md`'s two mentions ("the drain and
+    autopilot references," "the drain/autopilot headless fallbacks") and
+    `runtimes/claude-code.md`'s "the drain and autopilot headless
+    fallbacks" (citing `drain/reference.md` as the authoritative copy)
+    all reword `autopilot` → `build`, since R1 moves the canonical
+    headless template into `build/reference.md`, which is what these
+    generic examples should now be citing. `README.md` has four separate
+    spots: the pipeline-stage ASCII diagram (line ~20) drops the
+    `/autopilot` column entirely; the command-reference table (line ~49)
+    loses its `/autopilot` row outright; the launch-authorization
+    sentence (line ~85) drops `/autopilot` from the parenthetical stage
+    list, same three-skill set as CLAUDE.md/human-gates.md; the
+    codex-wrapper paragraph (line ~186) becomes the three-skill set.
+    `AGENTS.md`'s `codex/` bullet ("four real-content wrappers
+    (drain/build/autopilot/evals)") becomes the three-skill set, same
+    treatment as its CLAUDE.md/docs/memory counterparts. `agent-console/
+agent-console.py`'s comment citing "the drain/autopilot reference
+    docs" rewords to "drain/build" (both now hold the canonical headless
+    dispatch documentation this comment points at). `bin/
+check-token-discipline`'s `IN_SCOPE` list drops its two
+    `.claude/skills/autopilot/{SKILL,reference}.md` lines outright — R1
+    deletes both paths, so leaving them in a gate script's scope list
+    points the gate at nonexistent files. `tests/
+mirror-procedure-manifest.txt`'s source→mirror pairing line
+    (`.claude/skills/autopilot/SKILL.md|antigravity/.agents/workflows/
+autopilot.md|bounded goal`) is deleted outright — both sides of the
+    pairing are removed by R1/R7, so the entry has nothing left to pair.
     **Exempted**: files that are explicitly historical research dumps or bug
     citations rather than living doctrine — `docs/orchestration-research-
-2026-07.md` (a research record) and `.claude/rules/
+2026-07.md` (a research record), `.claude/rules/
 mirror-procedure-discipline.md:55` (cites "the codex-autopilot
     content-swap fix" as a past-incident example, not a description of
-    autopilot's current role) — these keep their `/autopilot` mentions
+    autopilot's current role), `tests/mirror-procedure-manifest.txt`'s
+    OTHER `autopilot` mentions beyond the deleted pairing line above (its
+    header-comment citing "codex-autopilot's content-swap" and a
+    long-form note mentioning "autopilot.md and drain.md do the same" in
+    passing while describing an unrelated skill's port — both are
+    incident/example citations about other skills' mirror history, not
+    descriptions of autopilot's current role), and `tests/
+test_check_token_discipline.sh:113`'s comment citing
+    `autopilot/reference.md`'s "relaunch clean" rule as a past design
+    example — these keep their `/autopilot` mentions
     unchanged; list any file treated as exempt in the implementation's own
     evidence so the exemption is a visible decision, not a silent skip.
 - **R7**: `antigravity/.agents/workflows/autopilot.md` — confirmed real
@@ -289,18 +342,21 @@ openai.yaml`; confirmed not a symlink) — is deleted; its content is
       stages reads `/build`, `/drain`, `/prioritize` (no `/autopilot`), and
       Reason 2 reads "`/build`'s bounded mode and `/drain`" (no
       `/autopilot`) — `grep -c autopilot docs/human-gates.md` returns 0.
-- [ ] `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/`
-      returns exactly the 2 files R6 lists as exempt
+- [ ] `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/ evals/ runtimes/ README.md AGENTS.md bin/ tests/ agent-console/`
+      returns exactly the 4 files R6 lists as exempt
       (`docs/orchestration-research-2026-07.md`,
-      `.claude/rules/mirror-procedure-discipline.md`) — every other hit
-      has either been reworded (R6) or deleted entirely (R1 × `.claude`,
-      R7 × antigravity, R7a × codex — 4 files: `.claude/
+      `.claude/rules/mirror-procedure-discipline.md`,
+      `tests/mirror-procedure-manifest.txt`,
+      `tests/test_check_token_discipline.sh`) — every other hit has
+      either been reworded (R6) or deleted entirely: R1 × `.claude`,
+      R7 × antigravity, R7a × codex (`.claude/
 skills/autopilot/{SKILL,reference}.md`, `antigravity/.agents/
-workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`).
+workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`),
+      plus R6's own `evals/autopilot/` directory deletion.
       Deliberately NOT gated on a specific tracked-file count (the mirror
       set churns day to day, e.g. it moved 31→32 between this spec's
       authoring and its 2026-07-14 re-critique when qa-sweep's antigravity
-      mirror landed) — the exactly-these-2-exempt-files check is the
+      mirror landed) — the exactly-these-4-exempt-files check is the
       robust, count-independent assertion; re-derive the informational
       count at implementation/breakdown time if useful, never pin it.
       (Deterministic across checkout state because it scopes to tracked
@@ -314,6 +370,15 @@ workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`).
 - [ ] `codex/.agents/skills/autopilot/` does not exist, and
       `codex/.agents/skills/build/SKILL.md` contains the folded-in content
       (R7a).
+- [ ] `[ ! -d evals/autopilot ]` (R6 — the orphaned evalset for a deleted
+      skill is removed, not left grading a nonexistent command).
+- [ ] `! grep -q '\.claude/skills/autopilot/SKILL\.md\|\.claude/skills/autopilot/reference\.md' bin/check-token-discipline`
+      (R6 — the gate script's `IN_SCOPE` list no longer names either
+      deleted path).
+- [ ] `! grep -q '^\.claude/skills/autopilot/SKILL\.md|' tests/mirror-procedure-manifest.txt`
+      (R6 — the dead source→mirror pairing line is removed; the file's
+      other, exempted `autopilot` mentions are unaffected and still
+      present, per R6's exemption list).
 - [ ] `grep -c autopilot CLAUDE.md` returns 0, and CLAUDE.md's codex-leg
       authoring convention names the three-skill set (`drain`/`build`/
       `evals`), not four (R6).
