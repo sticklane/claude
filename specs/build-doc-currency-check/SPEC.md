@@ -98,9 +98,12 @@ own citation convention — "cite, don't restate").
     mirror has no code-review skill to..." — a content snapshot, not a
     line-numbered anchor) — the R5-equivalent note attaches to that
     sub-reviewer fallback bullet, not to a `/code-review` invocation
-    that doesn't exist in this mirror. `antigravity/AGENTS.md`'s
-    `## Quality discipline` section (mirrors `quality-discipline.md`)
-    gets the same new "Documentation currency" content from R1.
+    that doesn't exist in this mirror, and must use the literal phrase
+    "not by the sub-reviewer fallback" verbatim so it matches its AC
+    (same requirement as the codex leg's mandated literal below).
+    `antigravity/AGENTS.md`'s `## Quality discipline` section (mirrors
+    `quality-discipline.md`) gets the same new "Documentation currency"
+    content from R1.
   - Per CLAUDE.md's codex-leg convention ("a task whose `Touch:` changes
     one of the four `.claude/skills/{drain,build,autopilot,evals}/SKILL.md`
     files must also carry the matching
