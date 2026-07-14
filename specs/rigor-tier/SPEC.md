@@ -109,6 +109,11 @@ input to a normal production task, not as done work.
 
 - [ ] `grep -q "Rigor:" .claude/skills/idea/SKILL.md && grep -q "Rigor:" .claude/skills/breakdown/SKILL.md` (R2, R3)
 - [ ] `grep -q "Rigor:" .claude/skills/build/SKILL.md && grep -q "Rigor:" .claude/skills/drain/SKILL.md` (R4)
+- [ ] `grep -qi "re-running the full gates" .claude/skills/build/SKILL.md && grep -qi "re-running the full gates" .claude/skills/drain/SKILL.md`
+      (R6 — the promotion rule itself, not just the `Rigor:` header string,
+      must appear in both skills' text; "promot" alone is vacuous since
+      drain/SKILL.md already uses that root for unrelated task-promotion
+      machinery)
 - [ ] `grep -qi "prototype" .claude/skills/list-specs/SKILL.md || grep -qi "Rigor" .claude/skills/list-specs/*` (R5)
 - [ ] `grep -qi "rigor" .claude/rules/quality-discipline.md` (R7)
 - [ ] `bash evals/lint-ultra-gate.sh` passes (CLAUDE.md's standalone ultra-path

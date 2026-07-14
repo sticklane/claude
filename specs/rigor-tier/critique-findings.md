@@ -160,3 +160,18 @@ trusting the gen-3 note's 0.9.5. Version-bump text and R8's AC repinned to
 "0.9.8 → 0.9.9". Finding 2 (R4 has no verifying check, conf 60, nit)
 remains unaddressed and not part of this approval — carried forward.
 Re-run `/critique` to check current status.
+
+## Re-critique 2026-07-14 (attended, /critique) — READY WITH NITS
+
+Finding 1's version pin verified accurate against the live tree (0.9.8 →
+0.9.9); all R8 target paths, non-vacuous anchors, and the lint-ultra-gate
+check confirmed clean. One new finding: R6 (the promotion rule text
+itself, not just the `Rigor:` header string) had no acceptance criterion —
+a worker could satisfy every runnable AC while never writing the R6 prose.
+Fixed: added an AC anchoring the exact promotion-rule phrase ("re-running
+the full gates") in both build/SKILL.md and drain/SKILL.md — a plain
+`grep -qi "promot"` anchor was tried first and rejected as vacuous, since
+drain/SKILL.md already uses that root for unrelated task-promotion
+machinery (lines 89, 261, 356-364). The carried-forward R4
+behavioral-verification nit (conf 60) remains open and non-blocking.
+Re-run `/critique` to confirm READY.
