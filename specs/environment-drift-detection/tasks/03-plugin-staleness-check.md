@@ -1,6 +1,6 @@
 # Task 03: plugin-staleness detection and warning
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 20 turns
