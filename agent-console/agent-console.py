@@ -617,6 +617,7 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
     open_spec_list: list[dict] = []
     active_list: list[dict] = []
     open_specs = 0
+    open_tasks = 0
 
     for r in assembled["repos"]:
         extra, gh = _repo_extras(r["path"], vis)
@@ -632,6 +633,7 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
             done, total = sp.get("tasks_done", 0), sp.get("tasks_total", 0)
             if total and done < total:
                 open_specs += 1
+                open_tasks += total - done
                 open_spec_list.append(
                     {
                         "repo": r["name"],
@@ -770,7 +772,7 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
         "health": health,
         "n_repos": len(board_repos),
         "n_open_specs": open_specs,
-        "n_open_tasks": 0,
+        "n_open_tasks": open_tasks,
         "n_active": len(active_list),
     }
 
@@ -2296,7 +2298,7 @@ def render_workboard(
                     )
                     item = (
                         f'<details class="spec" data-k="s:{esc(r["name"])}/{esc(sp["slug"])}"'
-                        f'{" open" if is_open else ""}>'
+                        f"{' open' if is_open else ''}>"
                         f'<summary><div class="line">{row}</div>'
                         f"</summary>{graph}</details>"
                     )
