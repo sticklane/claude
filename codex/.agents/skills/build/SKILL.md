@@ -86,7 +86,10 @@ Emit `<!-- agentprof:stage=verify -->` verbatim as this step's opening line
 every time you enter it.
 
 1. Run every acceptance command yourself; fix until all pass.
-2. Run the project's standard gates (build/lint/tests per CLAUDE.md/AGENTS.md).
+2. Run the project's standard gates. Run `scripts/check.sh`, the
+   sole required check entrypoint — never a hand-derived list of steps read
+   out of CLAUDE.md/AGENTS.md prose (repos without it fall back to their own
+   build/lint/test commands).
 3. Spawn the `verifier` agent with the task file path and instruct it to
    verify the working tree against the acceptance criteria. It has no memory of
    your implementation and won't rationalize shortcuts. Pass it the base commit
