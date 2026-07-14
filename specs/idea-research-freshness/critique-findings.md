@@ -177,3 +177,26 @@ one-line implementation note (conf 55).
 Recovery: fix findings 1-3, then re-run /critique. This spec's critique
 intake is spent for this run (Run-token c92aedb1ae49f8d3) — recorded in
 `DRAIN-BATON.md`'s `Intake-failed:` line.
+
+## Fix applied 2026-07-14 (attended, human-authorized HUMAN.md cleanup pass)
+
+All three findings fixed directly in SPEC.md:
+
+1. Cross-reference AC pattern changed from `step [0-9]` to `step[ -][0-9]`,
+   with the hyphenated `post-step-3` references at SKILL.md's current
+   lines 127/130/137 called out explicitly (re-verified live today).
+2. R7 now states the mirroring boundary explicitly: `check-freshness.sh`
+   and its fixtures are `.claude`-only tooling, out of scope to port; the
+   antigravity grounding-check step describes the fresh/stale/absent
+   logic inline instead of citing the script's path. Added a matching AC
+   confirming the inline description exists (`90.day\|90 day` present)
+   and the non-resolving path reference never appears
+   (`check-freshness.sh` absent) — both confirmed absent today.
+3. The Solution/checker description and R1 now recognize a file-level
+   `Verified:` stamp (the next non-blank line after a file's H1 title,
+   the shape `docs/guides/large-codebase-context.md` already carries) as
+   covering every `##` heading in that file lacking its own stamp, with a
+   `##`-level stamp always taking precedence where both exist. Added a
+   `file-level-stamp/` fixture and matching AC exercising the fallback.
+
+Ready for re-critique.
