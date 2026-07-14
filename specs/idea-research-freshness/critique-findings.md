@@ -83,7 +83,7 @@ edit:
 
 1. **(conf 78) The renumbering instruction ("today's steps 2-6 renumber to
    3-7") and its cross-reference criterion target `.claude/skills/idea/
-   SKILL.md` (6 steps) only.** `antigravity/.agents/skills/idea/SKILL.md`
+SKILL.md` (6 steps) only.** `antigravity/.agents/skills/idea/SKILL.md`
    has only 5 steps (its own numbering: Adversarial pass is step 4, Hand
    off is step 5) with one internal `step 5` reference. R7 already
    requires mirroring the grounding-check step into antigravity, but
@@ -109,3 +109,23 @@ invent new changes), finding 1 was not fixed in this pass — it needs a
 human decision on how R7/the antigravity mirror should state its own
 renumbering. `Breakdown-ready:` is not set; do not `/breakdown` until a
 human resolves finding 1 (2-4 are nits, fixable in the same pass).
+
+## Triage 2026-07-13 (attended; Steven approved, walk-through item 20)
+
+Verdict: REVISE, applied directly. Resolves finding 1 (the only blocker;
+2-4 were nits, left as-is per the prior pass's scoping decision):
+
+R7 now states antigravity's own renumbering explicitly instead of
+implicitly reusing `.claude`'s 6-step instruction: antigravity's
+`SKILL.md` has its own independent 5-step numbering (confirmed via grep —
+Scout/Interview/Write the spec/Adversarial pass/Hand off); inserting the
+grounding-check step the same way (between antigravity steps 1 and 2)
+renumbers its steps 2-5 to 3-6, and its one internal cross-reference
+("step 5's hand-off" in step 4) must become "step 6's hand-off". Also
+confirmed `antigravity/.agents/workflows/idea.md` has zero step-text
+occurrences (a launcher stub, nothing to mirror there), closing the R7
+parenthetical's open conditional. Added a parallel cross-reference AC
+(`grep -c "step 6's hand-off"`, confirmed absent today) mirroring the
+`.claude` leg's consistency check.
+
+Ready for re-critique.
