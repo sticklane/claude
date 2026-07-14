@@ -1,6 +1,6 @@
 # Task 03: plugin-staleness detection and warning
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 20 turns
@@ -67,6 +67,11 @@ plugin.json`'s version differs from the version `claude plugin list`
 
 ## Acceptance
 
-- [ ] `grep -rc "plugin-staleness" bin/refresh-plugins hooks/ 2>/dev/null | awk -F: '{sum+=$2} END {print sum}'` → greater than 0 (the phrase must appear in whichever of this task's two allowed hosts was actually chosen)
-- [ ] MANUAL: on a repo with a deliberately stale plugin cache (mismatched `.claude-plugin/plugin.json` version vs. what's installed), confirm the check surfaces a warning rather than silently proceeding or hard-blocking
-- [ ] Whatever automated test this task adds (e.g. a `hooks/plugin-staleness/test.sh` or an addition to an existing test file) exits 0
+- [x] `grep -rc "plugin-staleness" bin/refresh-plugins hooks/ 2>/dev/null | awk -F: '{sum+=$2} END {print sum}'` → greater than 0 (the phrase must appear in whichever of this task's two allowed hosts was actually chosen) — verifier: sum = 6 (phrase appears in hooks/plugin-staleness/staleness-check.sh, README.md, test.sh)
+- [ ] MANUAL (manual-pending): on a repo with a deliberately stale plugin cache (mismatched `.claude-plugin/plugin.json` version vs. what's installed), confirm the check surfaces a warning rather than silently proceeding or hard-blocking — an unattended worker cannot exercise an interactive plugin-cache mismatch against the real installed state (docs/memory/unattended-worker-tool-limits.md manual-pending escape). Automated synthetic-fixture equivalent PASSES (verifier: behind case warns naming both versions, matching case silent, both exit 0).
+- [x] Whatever automated test this task adds (e.g. a `hooks/plugin-staleness/test.sh` or an addition to an existing test file) exits 0 — verifier: `bash hooks/plugin-staleness/test.sh` → pass: 12 fail: 0, exit 0
+
+## Decisions
+
+- Host/checkpoint choice: took the **default** (Option 1) — a `hooks/plugin-staleness/` SessionStart hook following `hooks/handoff-resume/`'s shape (script + README + test.sh), wired via `.claude/settings.json`'s `hooks.SessionStart` array. The SessionStart-hook shape was a clean fit with no concrete reason it's unworkable, so the Option-2 fallback (extending `bin/refresh-plugins --check`) was not needed. Reversal: delete `hooks/plugin-staleness/`, revert the settings.json SessionStart array, and implement the check as a `--check` mode in `bin/refresh-plugins` instead.
+- `docs/memory.md` was in the Touch list but left untouched: no narrow per-topic memory entry was warranted for a self-documenting hook (it has its own README). Reversal: add an index line if a future lesson emerges.
