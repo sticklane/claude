@@ -1,37 +1,49 @@
-Status: draft
-Discovered-from: specs/codequality-shared-header-parsing/tasks/02-mirror-and-bump.md
+# Task 03: Reconcile antigravity Run-path docstring adaptation
+
+Status: pending
+Promotion-ready: true
+Promoted-by-run: c92aedb1ae49f8d3
+Depends on: none
+Priority: P2
+Budget: 3 turns
 Spec: ../SPEC.md
-Blocking: no
+Touch: antigravity/.agents/skills/workboard/test_workboard.py, antigravity/.agents/skills/prioritize/test_prioritize_scan.py
 
-# Reconcile the antigravity Run-path docstring adaptation across mirrored test files
+## Goal
 
-Task 02's acceptance criterion required `diff -r` emptiness for every
-touched `.py` mirror except `prioritize_scan.py`'s docstring (the one
-divergence SPEC.md names as sanctioned). To satisfy that literal
-criterion, task 02 made `antigravity/.agents/skills/workboard/test_workboard.py`
-and `antigravity/.agents/skills/prioritize/test_prioritize_scan.py` fully
-byte-identical to their `.claude/skills/` counterparts — which dropped a
-`Run:` docstring comment adapting the standalone-run path from
-`.claude/skills/...` to `.agents/skills/...`.
+Re-apply the sanctioned `.agents/skills/` Run-path docstring adaptation to
+`antigravity/.agents/skills/workboard/test_workboard.py` and
+`antigravity/.agents/skills/prioritize/test_prioritize_scan.py`, matching the
+pattern already preserved in `antigravity/.agents/skills/list-specs/test_list_specs.py`
+and confirmed sanctioned by the sibling `codequality-antigravity-content-parity`
+spec's task 01. Task 02 of this spec made these two files fully byte-identical
+to their `.claude/skills/` counterparts to satisfy its literal acceptance
+criterion, which incidentally dropped this docstring adaptation -- this task
+restores it, resolving the inconsistency with the sibling spec's outcome.
 
-A sibling spec (`codequality-antigravity-content-parity`, task 01, same
-drain run) independently discovered and preserved this exact class of
-adaptation on `workboard/test_workboard.py`, treating it as sanctioned
-(the same category as `list-specs/test_list_specs.py`'s already-excluded
-run-path adaptation) and excluding it from that spec's content-parity
-gate's include-list for this reason.
+## Touch
 
-These two outcomes are now inconsistent: one spec's task preserved the
-`Run:` path adaptation as sanctioned; this spec's task erased it (in
-files the content-parity gate doesn't check, so no gate caught the
-inconsistency). Impact is cosmetic only — a comment, not executable
-behavior — but worth a human/spec decision on which reading is
-authoritative going forward: (a) re-apply the `.agents/skills/` `Run:`
-path adaptation to these two test files' docstrings, treating it as a
-standing sanctioned-divergence category, or (b) treat plain byte-parity
-as the default for test-file docstrings too, and let sibling specs know
-this class of adaptation is not exempt.
+Only the two antigravity test files' `Run:` docstring lines. This is an
+antigravity-side-only fix (no `.claude/skills/` file changes), so no further
+mirror or `plugin.json` bump obligation applies.
+
+## Steps
+
+1. Update `antigravity/.agents/skills/workboard/test_workboard.py`'s `Run:`
+   docstring line to reference `.agents/skills/workboard` instead of
+   `.claude/skills/workboard`.
+2. Update `antigravity/.agents/skills/prioritize/test_prioritize_scan.py`'s
+   two `Run:`-adjacent docstring lines to reference `.agents/skills/prioritize`
+   instead of `.claude/skills/prioritize`.
+3. Confirm both antigravity parity gates stay green (they already exclude
+   these files/paths from byte-diff checks per prior sanctioned-adaptation
+   precedent).
 
 ## Acceptance
 
-<!-- draft: needs runnable criteria before promotion -->
+- [ ] `grep -q '.agents/skills/workboard' antigravity/.agents/skills/workboard/test_workboard.py`
+- [ ] `grep -c '.agents/skills/prioritize' antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → 2
+- [ ] `diff -q .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py; [ $? -ne 0 ]` (differs only on the Run: line)
+- [ ] `diff -q .claude/skills/prioritize/test_prioritize_scan.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py; [ $? -ne 0 ]` (differs only on the Run: lines)
+- [ ] `bash tests/test_antigravity_content_parity.sh` → exit 0
+- [ ] `bash tests/test_antigravity_parity.sh` → exit 0
