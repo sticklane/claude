@@ -79,6 +79,37 @@ runtime discloses no session model. (b) _heavy-hub_ — when the drain
 launch arrives beyond the session's first few turns, print one line
 recommending that same fresh-session relaunch.
 
+**Orchestrator isolation (default ON).** Before any bookkeeping, drain runs its
+own dispatch-loop bookkeeping from a VCS-level isolated checkout of the target
+repo — its own working tree isolated the same way each dispatched worker's
+worktree already is (e.g. under git, `git worktree add` for drain's own working
+directory). On with no opt-in step; a repo keeps the old shared checkout by
+carrying an `Isolation: off` header, running on lease-file discipline alone as
+before. Fallback: where the environment cannot provide isolated checkouts,
+drain falls back to that lease-only discipline (advisory-only) rather than
+blocking dispatch. Drain-only; build/autopilot orchestrator isolation is out of
+scope.
+
+**Mechanical preflight sweep (gen-1 only, before step 1's spec-scoped work).**
+One mechanical pass across EVERY spec in the launched scope (a no-argument
+launch means the whole `specs/` queue) — not only the spec about to be claimed
+— replacing the manual "kill any zombie drains" ritual; best-effort and never
+blocking, correctness still resting on the owner-lease claim. Two passes: (a)
+**reclaim dead leases** — for every spec carrying a `DRAIN-OWNER.md`, when its
+owner liveness is ALL STALE (newest of the last commit touching the spec dir or
+its in-progress tasks' signals, against the grace window), reclaim it as the
+per-spec reclaim path does — sweeping a task only when its signals are stale AND
+no worktree is checked out on its `task/NN-<slug>` branch — and replace the file
+with drain's own claim in one path-scoped commit; (b) **prune orphaned
+worktrees** — enumerate every worktree the VCS reports (`git worktree list`) and
+prune any with no corresponding live `in-progress` task or live session, where a
+live session is one the harness's session listing reports whose working
+directory resolves into that worktree's path; fail-safe, skip any worktree whose
+liveness cannot be determined (listing unavailable or path resolution ambiguous)
+rather than prune it — a wrong prune is irreversible and strictly worse than
+leaving a zombie for the next sweep. Report one summary line (leases reclaimed,
+worktrees pruned); on failure, one "sweep unavailable" line, never blocking.
+
 ## 1. Inventory
 
 Emit `<!-- agentprof:stage=inventory -->` verbatim as this step's opening
@@ -102,6 +133,17 @@ compare-and-swap-confirm your `Run-token:` is at HEAD. If it exists and is
 FRESH, refuse and report unless this generation's baton token matches. If all
 liveness signals are stale, reclaim it. Release (delete, path-scoped,
 committed, pushed) at step 4's report.
+
+**Lease re-confirm before every subsequent status-flip commit.** The claim-time
+`Run-token:` confirmation is not a one-time gate: re-read `DRAIN-OWNER.md` at
+HEAD and confirm your `Run-token:` immediately before EVERY subsequent
+status-flip commit in the spec's cycle — each `in-progress` →
+`done`/`deferred`/`blocked`/`failed` flip and each stub-intake flip, not only
+the opening `pending` → `in-progress` claim. A mismatch means the session lost
+ownership mid-cycle (a crossed-yield race or another session's liveness
+reclaim); abort the flip, never commit it, and treat the spec as lost via the
+same FRESH refuse path (report and skip; do not force the flip over another
+owner's token).
 
 Report the plan in one block: dispatch order, what is already done, what is
 deferred/blocked and why. An `in-progress` task is a dead worker's lock only
@@ -196,7 +238,10 @@ opening line every time you enter it.
   inline.** Then merge the task branch (it carries the task file with
   `Status: done` and ticked boxes, plus the verifier's `evidence/` file for
   `specs/<slug>/` layouts) and run the project gates. Once gates pass, delete
-  every `rescue/NN-<slug>-*` branch for this task, then **push `main`
+  every `rescue/NN-<slug>-*` branch for this task — removing each branch's
+  worktree before the branch, since a branch still checked out in a live
+  worktree cannot be deleted (e.g. `git worktree remove <path>` then `git
+branch -D <branch>`) — then **push `main`
   immediately** so verifier-PASSED work is backed up the moment it lands.
   **Push guard (canonical):** push only if `main` has a configured upstream —
   if none, skip silently; never `--force`; a rejected, non-fast-forward, or
@@ -221,8 +266,11 @@ opening line every time you enter it.
   findings, then smallest total diff, then lowest angle index (t1 before t2
   before t3) as the final tie-break. Merge the top-ranked survivor through the
   normal DONE bookkeeping with no relaunch; if its merge or post-merge gates
-  fail, abort the merge and move to the next-ranked survivor, deleting survivor
-  branches only after some merge passes gates. No survivor and at least one
+  fail, abort the merge and move to the next-ranked survivor, cleaning up
+  survivor branches only after some merge passes gates and, within that
+  cleanup, removing each survivor's worktree before deleting its branch (a
+  branch still checked out in a live worktree cannot be deleted; e.g. `git
+worktree remove <path>` then `git branch -D <branch>`). No survivor and at least one
   worker DEFERRED → take the DEFERRED path (write the collected questions,
   `Status: deferred`) in preference to failed; otherwise `Status: failed` with
   every verdict's evidence recorded. Skip the tournament when the relaunch
