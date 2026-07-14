@@ -384,6 +384,51 @@ assert "check.sh DID run when a non-docs file changed" \
   test -f "$DOCS_REPO/check-ran.marker"
 git -C "$DOCS_REPO" clean -fdq
 
+# a .claude/** change is docs-only in a repo with NO .claude-plugin/ marker
+# (a typical consumer repo, where .claude/ is incidental config) -> skipped
+git -C "$DOCS_REPO" clean -fdq
+mkdir -p "$DOCS_REPO/.claude/skills/foo"
+echo "skill" > "$DOCS_REPO/.claude/skills/foo/SKILL.md"
+run_hook "$STOP_GATE" "$json_stop_false" "$DOCS_REPO"
+assert_eq "stop-gate exits 0 on .claude/** diff (no plugin marker)" 0 "$RH_EXIT"
+assert "check.sh NOT run for .claude/** diff without a .claude-plugin/ marker" \
+  test ! -f "$DOCS_REPO/check-ran.marker"
+git -C "$DOCS_REPO" clean -fdq
+rm -rf "$DOCS_REPO/.claude"
+
+# a .claude/** change is NOT docs-only in a repo WITH a .claude-plugin/
+# marker (this toolkit's own shape: .claude/ IS the shipped product) -> runs
+PLUGIN_REPO="$TMP/plugin repo"
+mkdir -p "$PLUGIN_REPO/scripts" "$PLUGIN_REPO/.claude-plugin" "$PLUGIN_REPO/.claude/skills/foo"
+git -C "$PLUGIN_REPO" init -q
+git -C "$PLUGIN_REPO" config user.email test@example.com
+git -C "$PLUGIN_REPO" config user.name test
+cat > "$PLUGIN_REPO/scripts/check.sh" <<'EOF'
+#!/usr/bin/env bash
+touch check-ran.marker
+exit 0
+EOF
+chmod 755 "$PLUGIN_REPO/scripts/check.sh"
+echo '{"name": "agentic"}' > "$PLUGIN_REPO/.claude-plugin/plugin.json"
+echo "skill" > "$PLUGIN_REPO/.claude/skills/foo/SKILL.md"
+git -C "$PLUGIN_REPO" add -A
+git -C "$PLUGIN_REPO" commit -qm baseline
+echo "skill v2" > "$PLUGIN_REPO/.claude/skills/foo/SKILL.md"
+run_hook "$STOP_GATE" "$json_stop_false" "$PLUGIN_REPO"
+assert_eq "stop-gate exits 0 on .claude/** diff (plugin marker present)" 0 "$RH_EXIT"
+assert "check.sh DID run for .claude/** diff with a .claude-plugin/ marker" \
+  test -f "$PLUGIN_REPO/check-ran.marker"
+
+# a pure-docs change (.md) in that same plugin repo is still docs-only
+git -C "$PLUGIN_REPO" checkout -q -- .
+git -C "$PLUGIN_REPO" clean -fdq
+echo "note" >> "$PLUGIN_REPO/HUMAN.md"
+run_hook "$STOP_GATE" "$json_stop_false" "$PLUGIN_REPO"
+assert_eq "stop-gate exits 0 on .md diff in a plugin repo" 0 "$RH_EXIT"
+assert "check.sh NOT run for .md diff in a plugin repo" \
+  test ! -f "$PLUGIN_REPO/check-ran.marker"
+git -C "$PLUGIN_REPO" clean -fdq
+
 # --- Summary -----------------------------------------------------------------
 
 echo "pass: $pass, fail: $fail"
