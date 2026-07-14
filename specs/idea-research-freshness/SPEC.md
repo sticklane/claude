@@ -27,13 +27,19 @@ trustworthy versus stale and due for a refresh.
 \d{4}-\d{2}-\d{2}$` exactly (no other text on that line). This is the
   one signal both a human and a future `/idea` run check before deciding
   whether a topic needs fresh research. **File-level stamps also count**:
-  a `Verified:` line positioned as the next non-blank line after a file's
-  H1 title (before its first `##` heading) — the shape
-  `docs/guides/large-codebase-context.md` already carries today — applies
-  to every `##` heading in that file that has no more specific stamp of
-  its own, rather than being unrecognized by the checker and reading as
-  permanently stale. A heading with its own `##`-level stamp always wins
-  over the file-level one where both exist.
+  a `Verified:` line appearing anywhere in a file's preamble — after the
+  H1 title and before the first `##` heading, not necessarily
+  immediately adjacent to either (an intro paragraph between the H1 and
+  the stamp is fine) — the shape `docs/guides/large-codebase-context.md`
+  already carries today (H1, then a 4-line intro paragraph, then a blank
+  line, then `Verified: 2026-07-11`, then a blank line, then its first
+  `##` heading) — applies to every `##` heading in that file that has no
+  more specific stamp of its own, rather than being unrecognized by the
+  checker and reading as permanently stale. Heading-level stamps stay
+  strict: the next non-blank line immediately after the `##` heading,
+  no intro prose permitted there — only the file-level fallback tolerates
+  a preamble before it. A heading with its own `##`-level stamp always
+  wins over the file-level one where both exist.
 - **A deterministic freshness checker.**
   `.claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh
   <dir> [--today YYYY-MM-DD]` scans a `docs/`-shaped directory tree for
@@ -195,10 +201,12 @@ choice explicit` heading has a real, current-dated `Verified:` line
 - [ ] `bash check-freshness.sh <fixtures-dir>/file-level-stamp --today
 <fixed-date>` prints `fresh` for a `##` heading that itself has no
       `Verified:` line but whose file carries a fresh file-level stamp
-      (the next non-blank line after the H1 title) — confirming the
-      fallback the Solution/checker description above pins, exercised on
-      a fixture rather than only on the pre-existing
-      `docs/guides/large-codebase-context.md` case.
+      somewhere in its preamble (after the H1, before the first `##`) —
+      the fixture's preamble MUST include an intro paragraph between the
+      H1 and the stamp (not stamp-immediately-after-H1), matching
+      `docs/guides/large-codebase-context.md`'s real shape exactly, so
+      the fixture actually exercises the fallback the real file needs
+      rather than a stricter shape that happens to also pass.
 - [ ] `.claude/skills/idea/SKILL.md` contains the new grounding-check step
       as step 2 (between today's steps 1 and 2), naming the 90-day
       window, directing that `check-freshness.sh` (or the equivalent

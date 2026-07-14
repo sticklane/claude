@@ -200,3 +200,34 @@ All three findings fixed directly in SPEC.md:
    `file-level-stamp/` fixture and matching AC exercising the fallback.
 
 Ready for re-critique.
+
+## Re-critique 2026-07-14 (attended, /critique + breakdown sanity check) — READY WITH NITS, then one real breakdown-time bug found
+
+`/critique` confirmed all three findings above landed correctly (verified
+independently: `step[ -][0-9]` pattern, R7's inline antigravity
+description, the file-level-stamp fixture/AC) and found only low-severity
+nits (checker output line format unpinned, no exact-90-day fixture, date-
+diff portability) — none blocking. `Breakdown-ready: true` written;
+`/breakdown` produced 4 tasks (01 checker+fixtures+stamps, 02 SKILL.md
+step insertion, 03 antigravity mirror, 04 closing).
+
+A breakdown-sanity-check pass then found a real bug in finding 3's own
+fix (task 03's counterpart is fine): the "next non-blank line after H1"
+wording is factually wrong about the file it cites as the model —
+`docs/guides/large-codebase-context.md` has a 4-line intro PARAGRAPH
+between its H1 and its `Verified:` line, not immediate adjacency. Two
+consequences: (a) a literal "next non-blank line after H1" implementation
+would NOT recognize the cited file's own stamp, and (b) task 01's dogfood
+acceptance greps used `-A1` (assumes strict heading-to-stamp adjacency),
+which would fail on a spec-compliant `## heading\n\nVerified:` (blank
+line, then stamp) even though the checker itself is meant to tolerate
+that. Fixed: Solution/R1 now state the file-level rule as "anywhere in
+the preamble, intro paragraph tolerated" while keeping heading-level
+stamps strict (no intro prose permitted there — only the file-level
+fallback tolerates a preamble); task 01's checker-implementation step,
+its `file-level-stamp/` fixture description (now explicitly requires an
+intro paragraph before the stamp, matching the real file), and its two
+dogfood ACs (`-A1` → `-A3`) all updated to match. Not yet re-verified by
+a fresh critique pass — next session should re-run `/critique` on this
+spec before treating the breakdown as final, given the wake-budget
+cutoff this fix landed under.

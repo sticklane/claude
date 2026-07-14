@@ -47,17 +47,28 @@ state for unverified content).
 2. Implement `check-freshness.sh`: parse `--today` (default: real current
    date), walk the target directory's markdown files, find each `##`
    heading, look for a `Verified: \d{4}-\d{2}-\d{2}` line as the next
-   non-blank line below it (exact format, no other text on that line); if
-   absent, look for the same pattern as the next non-blank line after the
-   file's H1 title and treat it as that heading's stamp; classify
-   fresh/stale (90-day window)/absent per heading.
+   non-blank line below it (exact format, no other text on that line,
+   strict adjacency — no intro prose permitted between a `##` heading and
+   its own stamp); if absent, fall back to a file-level stamp: a
+   `Verified:` line appearing ANYWHERE in the file's preamble (after the
+   H1, before the first `##`) — this fallback tolerates an intro
+   paragraph between the H1 and the stamp, unlike the strict
+   heading-level case. Classify fresh/stale (90-day window)/absent per
+   heading.
 3. Create the four fixture trees under
    `.claude/skills/idea/test-fixtures/research-freshness/`: `fresh/` (a
-   heading-level stamp within 90 days of a fixed `--today`), `stale/` (a
-   heading-level stamp 100+ days before), `no-stamp/` (a heading with
-   neither a heading- nor file-level stamp), `file-level-stamp/` (a
-   heading with NO stamp of its own, but the file's H1 carries a stamp
-   within 90 days of `--today`).
+   heading-level stamp, strictly adjacent, within 90 days of a fixed
+   `--today`), `stale/` (a heading-level stamp 100+ days before),
+   `no-stamp/` (a heading with neither a heading- nor file-level stamp),
+   `file-level-stamp/` (a heading with NO stamp of its own, whose file's
+   preamble carries a stamp within 90 days of `--today` — **the preamble
+   must include an intro paragraph between the H1 and the stamp**,
+   matching `docs/guides/large-codebase-context.md`'s actual shape
+   exactly: H1, blank line, multi-line intro paragraph, blank line,
+   `Verified:` line, blank line, first `##` heading — a fixture with the
+   stamp immediately after the H1 would pass a stricter checker
+   implementation than the real file needs and wouldn't prove the
+   fallback actually works on it).
 4. Add the `Verified: <today>` stamp to both
    `docs/guides/model-routing.md`'s `## Dispatch authoring: making the
 choice explicit` heading and its `## Cross-vendor grounding` heading.
@@ -68,6 +79,9 @@ choice explicit` heading and its `## Cross-vendor grounding` heading.
 - [ ] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/stale --today <fixed-date>` prints `stale`
 - [ ] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/no-stamp --today <fixed-date>` prints `absent`
 - [ ] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/file-level-stamp --today <fixed-date>` prints `fresh`
-- [ ] `grep -A1 "## Dispatch authoring: making the choice explicit" docs/guides/model-routing.md | grep -qE "^Verified: [0-9]{4}-[0-9]{2}-[0-9]{2}$"`
-- [ ] `grep -A1 "## Cross-vendor grounding" docs/guides/model-routing.md | grep -qE "^Verified: [0-9]{4}-[0-9]{2}-[0-9]{2}$"`
+- [ ] `grep -A3 "## Dispatch authoring: making the choice explicit" docs/guides/model-routing.md | grep -qE "^Verified: [0-9]{4}-[0-9]{2}-[0-9]{2}$"` (`-A3`,
+      not `-A1` — the stamp must be the next NON-BLANK line per the
+      heading-level rule, but a literal blank line between the heading
+      and the stamp is normal markdown and shouldn't fail this check)
+- [ ] `grep -A3 "## Cross-vendor grounding" docs/guides/model-routing.md | grep -qE "^Verified: [0-9]{4}-[0-9]{2}-[0-9]{2}$"`
 - [ ] `bash tests/test_doc_links.sh` still passes after the stamp additions
