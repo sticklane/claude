@@ -1,6 +1,6 @@
 # Task 01: Findings triage in /critique (R1)
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 14 turns
@@ -72,14 +72,16 @@ triage-classify-apply-recommit-recheck loop.
 
 ## Acceptance
 
-- [ ] `grep -c "MECHANICAL" .claude/skills/critique/SKILL.md` → ≥ 1 (today:
+- [x] `grep -c "MECHANICAL" .claude/skills/critique/SKILL.md` → ≥ 1 (today:
       0, confirmed absent)
-- [ ] `grep -c "JUDGMENT" .claude/skills/critique/SKILL.md` → ≥ 1
-- [ ] `bash evals/lint-ultra-gate.sh` → exits 0 (critique/SKILL.md carries
+- [x] `grep -c "JUDGMENT" .claude/skills/critique/SKILL.md` → ≥ 1
+- [x] `bash evals/lint-ultra-gate.sh` → exits 0 (critique/SKILL.md carries
       a `## Ultra path` section; every "ultra" mention must stay within ±3
       lines of "active runtime profile" — don't let the new triage section
       land between an "ultra" mention and its marker)
-- [ ] MANUAL: invoke `/critique` directly (attended, not via drain) against
+- [ ] MANUAL — not attempted (unattended worker cannot invoke launch-gated
+      /critique; requires a human or an attended session). invoke `/critique`
+      directly (attended, not via drain) against
       a real spec with a recorded NOT READY or READY WITH NITS verdict and
       at least one findable mechanical finding (e.g. a stale line-number
       reference or a non-deterministic grep in an existing
