@@ -211,3 +211,45 @@ before AND after correct deletion (pre-deletion, everything is still
 reachable through the not-yet-deleted `render_html`) — a worker must not
 mistake a pre-deletion `clean` for "nothing to delete." Re-run
 `/critique` to confirm READY.
+
+## Re-critique 2026-07-14 (attended, resumed from handoff) — R4's function-only rule missed orphaned module-level constants
+
+The 27-function reachability check itself was confirmed correct as far as
+it went, but it walks only `ast.FunctionDef` nodes, so it cannot see
+**module-level constants** orphaned by deleting `render_html` — chiefly
+`TEMPLATE` (`workboard.py:2577-2827`, 251 lines, the HTML template
+string; only consumer is `TEMPLATE.format(...)` inside `render_html`),
+plus `STATE_BADGE`, `_NO_UNBLOCK_CHIP`, `_AGENT_CHIP_GLYPH`,
+`INBOX_CATEGORIES`, `FILTER_CATEGORIES`, `_MODEL_DATE_RE` — each
+confirmed today to have its only referencing code inside a function that
+is itself in the deleted set (`badge`, `_unblock_marker`, `_agent_chip`,
+`render_inbox`, `render_filter_tiles`, `_short_model_name`, all already
+named in the 27-item list). R4 also made an affirmatively FALSE claim
+that "the embedded chip-CSS block inside `render_html`'s own returned
+string goes automatically with the function" — the chip CSS is actually
+inside the module-level `TEMPLATE` constant, not inside `render_html`'s
+body (which only does `return TEMPLATE.format(...)`). Both trees are
+byte-identical (docs/memory/workboard-mirror-verbatim.md), so
+antigravity has the same gap.
+
+Fixed, addressing the recurring "the mechanical gate doesn't see X"
+failure mode structurally rather than patching R4's prose a third time
+(this is the second time a hardcoded/narrow enumeration under-covered the
+real orphan set — see the two entries above): rewrote the reachability
+script to walk general `Name`-Load references instead of only `Call`
+edges, and to treat top-level simple `NAME = <expr>` assignments as
+`defs` alongside functions — so one graph and one traversal now catches
+both orphaned functions and orphaned module-level constants, with no
+separate enumeration to keep in sync. Sanity-tested with a synthetic
+before/after/incomplete-deletion fixture: a function-only version would
+pass an incomplete deletion that leaves an orphaned constant behind (only
+the function gone); the extended version correctly flags it
+(`ORPHANED: ['CONST']`). Re-ran the exact script extracted from the
+committed SPEC.md against both the `.claude` and `antigravity` copies of
+`workboard.py` today — both print `clean` pre-deletion, matching the
+documented pre-deletion-is-clean behavior. R4 rewritten to name the
+constants explicitly (illustrative, not exhaustive, same caveat as the
+function list) and to correct the false chip-CSS claim. New AC added:
+`grep -n "^TEMPLATE = " workboard.py` → no match, as a concrete backstop
+for the single largest orphaned item, alongside the now-dual-purpose
+reachability-check AC. Re-run `/critique` to confirm READY.

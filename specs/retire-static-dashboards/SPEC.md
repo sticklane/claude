@@ -129,8 +129,24 @@ CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
   also cite the now-deleted `fleet/reference.md`; deleting the function
   removes the citation too, so R1's dangling-citation cleanup needs no
   separate pass over code this task deletes anyway. The embedded
-  chip-CSS block inside `render_html`'s own returned string goes
-  automatically with the function, same reasoning.) `--json` (used by
+  chip-CSS block lives inside the module-level `TEMPLATE` constant below
+  — not inside `render_html`'s own body, which only does `return
+TEMPLATE.format(...)` — so it is covered by the module-level-constant
+  rule below, not automatically deleted along with the function itself.)
+  The same reachability rule applies one level up, to **module-level
+  constants** (a simple top-level `NAME = <expr>` assignment), not just
+  functions: any such constant whose only referencing code sits inside
+  the deleted function set is deleted too. As of this spec's authoring,
+  that is **`TEMPLATE`** (`workboard.py:2577-2827`, 251 lines — the HTML
+  template string itself, including the embedded chip-CSS above; its only
+  consumer is `TEMPLATE.format(...)` inside `render_html`), plus
+  `STATE_BADGE` (consumed only by `badge`), `INBOX_CATEGORIES` and
+  `FILTER_CATEGORIES` (consumed only by `render_inbox`/
+  `render_filter_tiles`), `_AGENT_CHIP_GLYPH` (consumed only by
+  `_agent_chip`), `_NO_UNBLOCK_CHIP` (consumed only by `_unblock_marker`),
+  and `_MODEL_DATE_RE` (consumed only by `_short_model_name`) — same
+  illustrative-not-exhaustive caveat as the function list; verify with the
+  reachability check below, which now covers both. `--json` (used by
   `list-specs`, `workboard-auto-triage`, and step 2's inbox relay) is
   unaffected — it does not call any function in the orphaned set. With
   no `--out` path left, `main()`'s no-`--json`-flag behavior is: print
@@ -203,20 +219,28 @@ CLAUDE.md .claude-plugin/` (not a narrower guess — `git grep` excludes
 - [ ] `grep -n "render_html\|build_actions_script\|--out\|--actions-out"
 .claude/skills/workboard/workboard.py` returns no matches (R4 — note
       this deliberately also catches `--actions-out`, not just `--out`).
+- [ ] `grep -n "^TEMPLATE = " .claude/skills/workboard/workboard.py` returns
+      no match (R4's module-level-constant rule — a concrete backstop for
+      the single largest orphaned item, the 251-line HTML template
+      string; the reachability check below is the general-purpose
+      catch-all, this is belt-and-suspenders for the biggest piece).
 - [ ] Dead-code reachability check (R4 — count-independent, catches the
       full orphaned set rather than a fixed name list that will drift as
-      the file changes again): save the script from the "Reachability
-      check script" section below as `/tmp/orphan_check.py` and run
-      `python3 /tmp/orphan_check.py .claude/skills/workboard/workboard.py`
-      **after** deleting `render_html`/`build_actions_script` and their
-      orphaned callees — it prints `clean` (exit 0) once the deletion is
-      complete; any remaining orphan fails loudly with the name list. Run
-      it **before** any deletion first and confirm it prints `clean` too
-      (expected: `render_html` is still reachable from `main()` pre-edit,
-      so the whole file is "clean" in that state — this is a real
-      behavior, not a bug; the check only fails when something is
-      deleted incompletely, not when nothing is deleted yet). Don't
-      mistake a pre-deletion `clean` for "nothing to delete."
+      the file changes again; covers **both functions and module-level
+      constants** in one pass, per R4's constants rule): save the script
+      from the "Reachability check script" section below as
+      `/tmp/orphan_check.py` and run `python3 /tmp/orphan_check.py
+  .claude/skills/workboard/workboard.py` **after** deleting
+      `render_html`/`build_actions_script` and their orphaned callees and
+      constants — it prints `clean` (exit 0) once the deletion is
+      complete; any remaining orphan (function or constant) fails loudly
+      with the name list. Run it **before** any deletion first and
+      confirm it prints `clean` too (expected: `render_html` is still
+      reachable from `main()` pre-edit, so the whole file is "clean" in
+      that state — this is a real behavior, not a bug; the check only
+      fails when something is deleted incompletely, not when nothing is
+      deleted yet). Don't mistake a pre-deletion `clean` for "nothing to
+      delete."
 
 - [ ] `grep -n "Fallback (machines without agent-console)"
 .claude/skills/workboard/SKILL.md` returns no match.
@@ -271,35 +295,54 @@ placed at the top level, not nested inside a list item — a prior draft
 embedded it inside the AC bullet's own fenced code block and this repo's
 prose-formatter hook reflowed the indentation, breaking the script with
 an `IndentationError` (caught by re-critique; see critique-findings.md).
-Save verbatim as `/tmp/orphan_check.py`:
+This version generalizes the graph from function-call edges to general
+Name-reference edges, so the same pass catches both orphaned functions
+and orphaned module-level constants (e.g. `TEMPLATE`) in one run — a
+constant-call-only graph would miss `STATE_BADGE.get(...)`-style
+attribute/subscript access on a constant, since that isn't a `Call` whose
+`func` is the constant's own name. Save verbatim as `/tmp/orphan_check.py`:
 
 ```python
 import ast, sys
 path = sys.argv[1]
 tree = ast.parse(open(path).read())
-funcs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
 
-class Calls(ast.NodeVisitor):
+class Refs(ast.NodeVisitor):
     def __init__(self):
         self.names = set()
-    def visit_Call(self, node):
-        if isinstance(node.func, ast.Name):
-            self.names.add(node.func.id)
+    def visit_Name(self, node):
+        if isinstance(node.ctx, ast.Load):
+            self.names.add(node.id)
         self.generic_visit(node)
 
-graph = {}
-for name, node in funcs.items():
-    c = Calls()
-    for stmt in node.body:
-        c.visit(stmt)
-    graph[name] = c.names
+def is_simple_assign(node):
+    return (isinstance(node, ast.Assign) and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)) or (
+            isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name))
 
-module_calls = Calls()
+def assign_name(node):
+    return node.targets[0].id if isinstance(node, ast.Assign) else node.target.id
+
+defs = {}
 for node in tree.body:
-    if not isinstance(node, ast.FunctionDef):
-        module_calls.visit(node)
+    if isinstance(node, ast.FunctionDef):
+        defs[node.name] = node.body
+    elif is_simple_assign(node):
+        defs[assign_name(node)] = [node.value] if getattr(node, "value", None) else []
 
-entry = {"main", "assemble", "attention_items", "ready_items", "default_roots"} | module_calls.names
+graph = {}
+for name, body in defs.items():
+    r = Refs()
+    for stmt in body:
+        r.visit(stmt)
+    graph[name] = r.names
+
+module_refs = Refs()
+for node in tree.body:
+    if not (isinstance(node, ast.FunctionDef) or is_simple_assign(node)):
+        module_refs.visit(node)
+
+entry = {"main", "assemble", "attention_items", "ready_items", "default_roots"} | module_refs.names
 visited, frontier = set(), list(entry)
 while frontier:
     n = frontier.pop()
@@ -308,12 +351,20 @@ while frontier:
     visited.add(n)
     frontier.extend(graph.get(n, set()))
 
-orphaned = set(funcs) - visited - {"main"}
+orphaned = set(defs) - visited - {"main"}
 if orphaned:
     print("ORPHANED:", sorted(orphaned))
     sys.exit(1)
 print("clean")
 ```
+
+Sanity-checked against both trees today: pre-deletion, both `.claude` and
+`antigravity` copies of `workboard.py` print `clean` (expected — nothing
+deleted yet, everything is still reachable through `render_html`). A
+synthetic before/after/incomplete-deletion test (a function-only orphan
+check would pass an incomplete deletion that leaves an orphaned constant
+behind; this version correctly flags it) is in this spec's
+`critique-findings.md`.
 
 ## Open questions
 
