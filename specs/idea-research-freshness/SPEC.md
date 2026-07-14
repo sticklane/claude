@@ -21,7 +21,7 @@ trustworthy versus stale and due for a refresh.
   external research (currently `docs/external-playbooks.md` and
   `docs/guides/*.md`) carries a `Verified: YYYY-MM-DD` line as the next
   non-blank line after its `##` heading, matching `^Verified:
-  \d{4}-\d{2}-\d{2}$` exactly (no other text on that line). This is the
+\d{4}-\d{2}-\d{2}$` exactly (no other text on that line). This is the
   one signal both a human and a future `/idea` run check before deciding
   whether a topic needs fresh research.
 - **A deterministic freshness checker.**
@@ -108,16 +108,24 @@ trustworthy versus stale and due for a refresh.
   Extending it to `/design`'s "Frame it" step (which can also need
   external grounding for a technology choice) is explicitly deferred.
 - **R7**: Per CLAUDE.md's mirroring convention, the new grounding-check
-  step is mirrored into `antigravity/.agents/skills/idea` (and
-  `antigravity/.agents/workflows/idea.md` if that file also documents
-  idea's step sequence), in the same commit — not left un-mirrored.
+  step is mirrored into `antigravity/.agents/skills/idea/SKILL.md`
+  (`antigravity/.agents/workflows/idea.md` is a thin launcher stub with no
+  step text of its own — confirmed via grep, nothing to mirror there) in
+  the same commit — not left un-mirrored. Antigravity's SKILL.md has its
+  own, independent 5-step numbering (1. Scout, 2. Interview, 3. Write the
+  spec, 4. Adversarial pass, 5. Hand off) — do not apply `.claude`'s
+  6-step renumbering instruction to it literally. The grounding-check step
+  inserts the same way — between today's antigravity step 1 and step 2 —
+  which renumbers antigravity's own steps 2-5 to 3-6. Antigravity step 4
+  ("Adversarial pass") contains one internal cross-reference, "step 5's
+  hand-off", which must become "step 6's hand-off" in the same edit.
 - **R8**: `.claude-plugin/plugin.json`'s `version` is bumped (skill
   behavior changed in `/idea`).
 - **R9**: Since `/idea` is one of the four ultra-path skills (critique,
   drain, build, idea) with a standalone gate check, `bash
-  evals/lint-ultra-gate.sh` is run and passes after this edit — the new
+evals/lint-ultra-gate.sh` is run and passes after this edit — the new
   step is inserted before `.claude/skills/idea/SKILL.md`'s `## Ultra
-  path` section, so this confirms no "ultra" mention drifted outside its
+path` section, so this confirms no "ultra" mention drifted outside its
   required ±3-line window around the "active runtime profile" marker.
 
 ## Out of scope
@@ -144,7 +152,7 @@ present) is computed relative to the check's `--today` argument rather
 than hardcoded, so the fixtures stay valid as the calendar advances.
 
 - [ ] `docs/guides/model-routing.md`'s `## Dispatch authoring: making the
-      choice explicit` heading has a real, current-dated `Verified:` line
+  choice explicit` heading has a real, current-dated `Verified:` line
       (and `## Cross-vendor grounding` too, if that sibling spec has
       already landed — see R1). No other heading in
       `docs/external-playbooks.md` or `docs/guides/*.md` gets a stamp
@@ -158,7 +166,7 @@ than hardcoded, so the fixtures stay valid as the calendar advances.
       prints `stale` for the fixture's stamped heading (a `Verified:`
       date 100+ days before `--today`).
 - [ ] `bash check-freshness.sh <fixtures-dir>/no-stamp --today
-      <fixed-date>` prints `absent` for the fixture's heading (no
+  <fixed-date>` prints `absent` for the fixture's heading (no
       `Verified:` line at all).
 - [ ] `.claude/skills/idea/SKILL.md` contains the new grounding-check step
       as step 2 (between today's steps 1 and 2), naming the 90-day
@@ -193,9 +201,15 @@ than hardcoded, so the fixtures stay valid as the calendar advances.
 - [ ] `bash tests/test_doc_links.sh` (existing link-checker gate) still
       passes after the `Verified:` lines are added.
 - [ ] `bash evals/lint-ultra-gate.sh` passes after the SKILL.md edit (R9).
-- [ ] `antigravity/.agents/skills/idea` (and `workflows/idea.md` if
-      applicable) reflect the same grounding-check step as
-      `.claude/skills/idea/SKILL.md` (R7).
+- [ ] `antigravity/.agents/skills/idea/SKILL.md` contains the new
+      grounding-check step as its own step 2 (between antigravity's
+      current steps 1 and 2), and its steps 2-5 are renumbered to 3-6
+      (R7) — checked by grep over the SKILL.md's `## N.` headings.
+- [ ] `grep -c "step 6's hand-off" antigravity/.agents/skills/idea/SKILL.md`
+      → 1 or more (confirmed absent today; the mirror's own cross-reference
+      consistency check, parallel to the `.claude` one above — the old
+      "step 5's hand-off" reference in antigravity step 4 must become
+      "step 6's hand-off" after the renumbering).
 - [ ] `.claude-plugin/plugin.json`'s `version` is higher than before this
       change (R8).
 
