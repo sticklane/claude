@@ -129,3 +129,51 @@ parenthetical's open conditional. Added a parallel cross-reference AC
 `.claude` leg's consistency check.
 
 Ready for re-critique.
+
+## Re-critique 2026-07-14 (drain critique intake, gen 3, run c92aedb1ae49f8d3) — still NOT READY
+
+The 2026-07-13 triage's antigravity-renumbering fix is verified correct and
+internally consistent (antigravity SKILL.md's real 5-step structure, `step
+5's hand-off` → `step 6's hand-off`, confirmed live). That blocker stays
+closed. Three new gaps surfaced on an end-to-end re-check:
+
+1. **Cross-reference consistency AC's grep pattern can't catch hyphenated
+   refs (confidence 72).** SPEC.md's AC greps `step [0-9]` (space-delimited),
+   but `.claude/skills/idea/SKILL.md` has hyphenated `post-step-3`
+   references (lines 127, 130, 137) that must become `post-step-4` once
+   "Write the spec" moves 3→4. The space-form pattern doesn't match the
+   hyphen form, so a worker could renumber only the space-form refs, the
+   verifier's own grep passes, and a stale `post-step-3` ships — the exact
+   failure class an earlier round's blocker #3 existed to prevent. Fix:
+   change the AC pattern to `step[ -][0-9]`.
+2. **Antigravity's mirrored grounding step's `check-freshness.sh` reference
+   is unspecified and the script doesn't exist in antigravity's tree
+   (confidence 63).** R7 mirrors the step but the checker lives only at
+   `.claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh`;
+   `antigravity/.agents/skills/idea/` has no fixtures or script. Doesn't say
+   whether the antigravity step hardcodes the `.claude/...` path (a
+   non-resolving cross-reference under antigravity, forbidden by
+   mirror-verification.md), describes the logic abstractly, or mirrors the
+   script too — and the antigravity AC only checks step presence +
+   renumbering, so nothing catches a broken reference. Fix: state in R7
+   what the antigravity step references for the checker.
+3. **A pre-existing `Verified:` stamp doesn't conform to the spec's own
+   placement rule, unacknowledged (confidence 65).**
+   `docs/guides/large-codebase-context.md:9` already carries `Verified:
+2026-07-11` positioned under the H1 title, not as "the next non-blank
+   line after its `##` heading" (the convention R1 pins). A `##`-heading
+   scan would report that file's headings as stale despite a fresh stamp —
+   defeating dedup for that file, and `domain-knowledge-base` depends on
+   this convention being consistent from the start. Fix: bring the stamp
+   under a `##` heading, or state file-level H1 stamps are also valid and
+   have the checker handle them.
+
+Nits carried forward, still unfixed (non-blocking): check-freshness.sh
+output line format unpinned (conf 55); no fixture at the exact 90-day
+boundary, test-coverage-only since boundary semantics ARE pinned in R3
+(conf 50); date-diff portability (BSD `date -j` vs GNU `date -d`) needs a
+one-line implementation note (conf 55).
+
+Recovery: fix findings 1-3, then re-run /critique. This spec's critique
+intake is spent for this run (Run-token c92aedb1ae49f8d3) — recorded in
+`DRAIN-BATON.md`'s `Intake-failed:` line.
