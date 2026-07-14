@@ -60,8 +60,16 @@ fi
 # touches any non-docs path still runs scripts/check.sh in full; this is a
 # scoping optimization, never a blanket skip. No change since HEAD (a clean
 # tree) is NOT docs-only and runs the check.
+#
+# .claude/** carve-out: a repo whose root has a `.claude-plugin/` directory
+# ships `.claude/` itself as its product (a Claude Code plugin manifest is
+# the generic signal, e.g. this toolkit repo) rather than incidental config,
+# so a `.claude/**`-only diff there is NOT docs-only and still runs the full
+# check — every other docs-only path (`**.md`, `docs/**`, `specs/**`) is
+# unaffected and stays skippable regardless of this marker.
 docs_only_diff() { # docs_only_diff <repo-root>
-  local changed line path
+  local changed line path claude_is_product=0
+  [ -d "$1/.claude-plugin" ] && claude_is_product=1
   changed="$(git -C "$1" status --porcelain --untracked-files=all 2>/dev/null)" \
     || return 1
   [ -n "$changed" ] || return 1
@@ -71,7 +79,8 @@ docs_only_diff() { # docs_only_diff <repo-root>
     case "$path" in *" -> "*) path="${path##* -> }" ;; esac  # rename: destination
     path="${path#\"}"; path="${path%\"}"            # unquote paths with specials
     case "$path" in
-      *.md|docs/*|specs/*|.claude/*) : ;;           # docs path: keep scanning
+      .claude/*) [ "$claude_is_product" -eq 0 ] || return 1 ;;  # product repo: run check
+      *.md|docs/*|specs/*) : ;;                     # docs path: keep scanning
       *) return 1 ;;                                 # non-docs change: run check
     esac
   done <<EOF
