@@ -145,9 +145,11 @@ unattended-feeling run)`; separately, the prose sentence just above
   - Reason 2's "`/autopilot` and `/drain` open with ... a classification
     gate" becomes "`/build`'s bounded mode and `/drain` open with ... a
     classification gate".
-- **R6**: Every reference to `/autopilot` across the **whole repo** —
-  including `codex/` and `antigravity/`, not just the `.claude`-leg paths
-  — is updated or removed, EXCEPT the two real-content mirror files R7/R7a
+- **R6**: Every reference to `/autopilot` across all shipped/consumed
+  trees — including `codex/` and `antigravity/`, not just the
+  `.claude`-leg paths, but excluding `specs/` (planning artifacts,
+  re-verified at their own implementation time rather than swept here) —
+  is updated or removed, EXCEPT the two real-content mirror files R7/R7a
   handle by deletion+fold-in below (their own paths are excluded from this
   grep-and-reword treatment; they don't get "reworded in place," they stop
   existing). The verifying grep is
@@ -157,7 +159,7 @@ unattended-feeling run)`; separately, the prose sentence just above
   worktree, which is non-deterministic across checkout states; `git grep`
   scopes to tracked content). This path list — not the narrower `.claude/
 docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/` set an earlier
-  draft of this requirement used — is the actual "whole repo" this
+  draft of this requirement used — is the actual scope this
   requirement's own prose promises: the narrower set silently excluded
   `evals/`, `runtimes/`, `README.md`, `AGENTS.md`, `bin/`, `tests/`, and
   `agent-console/`, each confirmed today to hold a living `/autopilot`
@@ -227,7 +229,12 @@ workflows/drain.md`, and `antigravity/.agents/skills/qa-sweep/SKILL.md`
     via the `qa-sweep-skill-promotion` spec's antigravity mirror; drops
     to the three-stage set the same way) all reference autopilot — each
     updated the same way its `.claude`-leg counterpart is (R3/R4/R5),
-    mirroring R7 below.
+    mirroring R7 below. `antigravity/.agents/skills/onboard/SKILL.md` and
+    `antigravity/.agents/skills/breakdown/SKILL.md` — the mirrors of the
+    two `.claude`-leg files R3 and R4 rework — were checked directly and
+    carry no `/autopilot` mention or reworked pointer/routing content to
+    begin with, so they need no parallel edit; this is confirmed, not
+    assumed.
   - Outside the six trees the earlier draft of this requirement swept,
     confirmed today: `evals/autopilot/01-security-refusal/` (a whole
     evalset directory — `prompt.txt`, `setup.sh`, `assert.sh` — that
@@ -265,6 +272,14 @@ mirror-procedure-manifest.txt`'s source→mirror pairing line
     (`.claude/skills/autopilot/SKILL.md|antigravity/.agents/workflows/
 autopilot.md|bounded goal`) is deleted outright — both sides of the
     pairing are removed by R1/R7, so the entry has nothing left to pair.
+    A new pairing line is added in its place: `.claude/skills/build/
+SKILL.md|antigravity/.agents/workflows/build.md|escalation triggers` —
+    R2 and R7 fold the walk-away contract's classification gate and
+    escalation triggers into both mirror legs, so this is a procedure that
+    _moved_ rather than one that disappeared, and
+    `.claude/rules/mirror-procedure-discipline.md`'s coverage manifest is
+    required to track a moved procedure, not just shrink when one is
+    deleted.
     **Exempted**: files that are explicitly historical research dumps or bug
     citations rather than living doctrine — `docs/orchestration-research-
 2026-07.md` (a research record), `.claude/rules/
@@ -386,6 +401,11 @@ workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`),
       (R6 — the dead source→mirror pairing line is removed; the file's
       other, exempted `autopilot` mentions are unaffected and still
       present, per R6's exemption list).
+- [ ] `grep -qF '.claude/skills/build/SKILL.md|antigravity/.agents/workflows/build.md|escalation triggers' tests/mirror-procedure-manifest.txt`
+      (R6 — the moved-procedure pairing line replaces the deleted
+      autopilot→autopilot.md line, so the coverage manifest keeps tracking
+      the classification-gate/escalation-trigger procedure once it lives
+      in `build`).
 - [ ] `grep -c autopilot CLAUDE.md` returns 0, and CLAUDE.md's codex-leg
       authoring convention names the three-skill set (`drain`/`build`/
       `evals`), not four (R6).
