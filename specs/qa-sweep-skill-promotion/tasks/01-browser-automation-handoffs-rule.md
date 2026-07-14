@@ -1,6 +1,6 @@
 # Task 01: Add browser-automation-handoffs rule
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -51,6 +51,6 @@ shared undecided design with the sibling).
 
 ## Acceptance
 
-- [ ] `test -f .claude/rules/browser-automation-handoffs.md` → exists
-- [ ] `grep -qi "one-tap\|single sign-on\|sso" .claude/rules/browser-automation-handoffs.md` → match found
-- [ ] `git diff --stat` shows only `.claude/rules/browser-automation-handoffs.md` added — no other files touched
+- [x] `test -f .claude/rules/browser-automation-handoffs.md` → exists (verifier PASS; evidence/01-browser-automation-handoffs-rule.md)
+- [x] `grep -qi "one-tap\|single sign-on\|sso" .claude/rules/browser-automation-handoffs.md` → match found ("SSO/One-Tap", "single sign-on"; verifier PASS)
+- [x] `git diff --stat` shows only `.claude/rules/browser-automation-handoffs.md` added — no other files touched (29 insertions, 1 file; verifier PASS)
