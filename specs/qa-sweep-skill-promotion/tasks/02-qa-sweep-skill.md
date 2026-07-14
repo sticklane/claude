@@ -7,6 +7,19 @@ Budget: 16 turns
 Spec: ../SPEC.md (requirements R1, R2, R3, R5)
 Touch: .claude/skills/qa-sweep/SKILL.md
 
+<!-- PLAN (build step 1)
+Single new file: .claude/skills/qa-sweep/SKILL.md, modeled on critique/SKILL.md
+frontmatter shape. Structure: frontmatter (name/description+triggers/argument-hint)
+→ first-30-line human-gating contract (R2f) → procedure a-g in exact order →
+browser-automation-handoffs pointer → Next stage line. Cite (never restate):
+token-discipline.md "Delegation defaults" + "Dispatch authoring"; root CLAUDE.md
+self-chaining conventions; docs/human-gates.md; browser-automation-handoffs.md.
+Verified pre-flight: "Delegation defaults" present in token-discipline.md (use
+that phrase), docs/human-gates.md exists, browser-automation-handoffs.md present.
+Risks: (1) keep body <500 lines; (2) contract must land in first 30 lines;
+(3) citation-not-restatement for the browser rule (MANUAL check).
+-->
+
 ## Goal
 
 A new skill `.claude/skills/qa-sweep/SKILL.md` exists that captures the
