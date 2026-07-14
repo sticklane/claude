@@ -60,7 +60,7 @@ to avoid flagging the sanctioned port adaptations as false positives.
 ## Out of scope
 
 - Content parity for SKILL.md prose, agents→skills ports, or hook JSON —
-  those diverge by design (antigravity is a *port*, not a copy).
+  those diverge by design (antigravity is a _port_, not a copy).
 - Changing `test_antigravity_parity.sh` itself.
 
 ## Acceptance criteria
@@ -81,3 +81,7 @@ to avoid flagging the sanctioned port adaptations as false positives.
       unaffected).
 - [ ] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL $t"; done`
       prints no FAIL lines.
+
+## Parallelization
+
+Single task (01) — no parallel groups; it runs solo.
