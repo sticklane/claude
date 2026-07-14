@@ -1,5 +1,8 @@
 # Retire /autopilot, fold its distinct capability + reusable reference content into /build
 
+Status: open
+Breakdown-ready: true
+
 ## Problem
 
 `/autopilot`'s mechanism table (`autopilot/SKILL.md:39-46`) has four rows.
@@ -315,7 +318,7 @@ workflows/autopilot.md`, `codex/.agents/skills/autopilot/SKILL.md`).
       authoring convention names the three-skill set (`drain`/`build`/
       `evals`), not four (R6).
 - [ ] `grep -qc '`/build`, `/drain`, `/prioritize`' CLAUDE.md && ! grep -qc
-  '`/build`, `/drain`, `/evals`' CLAUDE.md` — confirms the
+'`/build`, `/drain`, `/evals`' CLAUDE.md` — confirms the
       execution-stages doctrine line's model-invocable list reads the
       three-skill set that actually stays model-invocable —
       `/prioritize`, not `/evals` — after `/autopilot` is dropped (R6;
