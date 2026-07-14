@@ -1,11 +1,26 @@
 # Task 03: Antigravity mirror, codex exemption, and plugin version bump
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 12 turns
 Spec: ../SPEC.md (requirements R1, R7, R8; acceptance criteria 6, 7, 12, 15)
 Touch: antigravity/.agents/skills/qa-sweep/SKILL.md, .claude-plugin/plugin.json, codex/README.md
+
+<!-- PLAN (worker, task 03):
+1. Reset worktree to main (bcaa562); branch task/03-mirror-and-version-bump.
+2. Port .claude/skills/qa-sweep/SKILL.md -> antigravity/.agents/skills/qa-sweep/SKILL.md,
+   faithful (R2b-g, R2f contract, R2g two branches); load-bearing adaptations per
+   antigravity mechanism: Skill-tool self-chain -> "apply the workflow's procedure",
+   Agent tool -> Agent Manager conversations, /critique+/drain -> .agents/workflows/*.md;
+   rule + docs/human-gates.md citations kept verbatim (task step 2). Commit.
+3. Add anchored "Not ported" qa-sweep row to codex/README.md; NO codex dir. Bump
+   plugin.json version 0.9.4->0.9.5 (agents array untouched). Commit.
+   NOTE: Edit tool triggers a whole-file markdown formatter on codex/README.md
+   (scope creep); injected the single row via python to keep the diff to one line.
+4. Gates: full tests/test_*.sh suite + status.sh + plugin validate all green;
+   awaited verifier confirmed all 5 criteria + faithful port.
+-->
 
 ## Goal
 
@@ -69,8 +84,8 @@ handoffs.md` as the source skill does — it is not itself mirrored, just
 
 ## Acceptance
 
-- [ ] `test -f antigravity/.agents/skills/qa-sweep/SKILL.md` → exists
-- [ ] `test ! -e codex/.agents/skills/qa-sweep` → confirmed absent
-- [ ] `bash tests/test_codex_parity.sh` → exit 0, no output
-- [ ] `git show <task-base-commit>:.claude-plugin/plugin.json | grep '"version"'` differs from the current file's `"version"` line — confirms the version actually changed from this task's own starting point, not a hard-coded pre-task literal
-- [ ] `git diff .claude-plugin/plugin.json` touches only the `version` line — no lines inside the `agents` array change
+- [x] `test -f antigravity/.agents/skills/qa-sweep/SKILL.md` → exists — evidence: created, 121 lines
+- [x] `test ! -e codex/.agents/skills/qa-sweep` → confirmed absent — evidence: no codex dir created
+- [x] `bash tests/test_codex_parity.sh` → exit 0, no output — evidence: green after anchored qa-sweep "Not ported" row added
+- [x] `git show <task-base-commit>:.claude-plugin/plugin.json | grep '"version"'` differs from the current file's `"version"` line — confirms the version actually changed from this task's own starting point, not a hard-coded pre-task literal — evidence: base bcaa562 = `0.9.4`, current = `0.9.5`
+- [x] `git diff .claude-plugin/plugin.json` touches only the `version` line — no lines inside the `agents` array change — evidence: `git diff bcaa562 -- .claude-plugin/plugin.json` is a single `version` line change
