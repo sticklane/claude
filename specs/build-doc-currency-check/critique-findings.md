@@ -193,3 +193,15 @@ reworded R5's prose to state explicitly that the phrase must be written
 with no backticks, verbatim matching the AC. The codex-leg equivalent
 ("not by $code-review itself") was already stated as plain text with no
 backtick risk — no fix needed there. Re-run `/critique` to confirm READY.
+
+## Re-critique 2026-07-14 (attended, /critique) — READY WITH NITS
+
+The backtick fix verified landed and correct; all confirmed-absent
+anchors still 0. One more nit, same class: R6's antigravity paragraph
+described the R5-equivalent note attaching to the sub-reviewer fallback
+bullet but never mandated its exact literal wording, unlike the codex
+leg (which explicitly mandates "not by $code-review itself"). Fixed:
+R6's antigravity paragraph now explicitly mandates the literal phrase
+"not by the sub-reviewer fallback" verbatim, matching its AC. Confirmed
+still absent (0) in the live antigravity/.agents/workflows/build.md.
+Ready for re-critique.
