@@ -190,10 +190,27 @@ TEMPLATE.format(...)` — so it is covered by the module-level-constant
   R1).
 - **R7**: `.claude-plugin/plugin.json`'s version is bumped (skill behavior
   changed in two skills).
-- **R8**: Any existing test that exercises `workboard.py --out ...`,
-  fleet's old HTML template, or `viz.py --emit-fleet-css` is deleted or
-  rewritten to match the new behavior — no dangling test referencing a
-  removed code path, in either `.claude/` or its `antigravity/` mirror.
+- **R8**: Every existing test that exercises a code path this spec
+  deletes is removed, in both `.claude/` and its `antigravity/` mirror —
+  no dangling test referencing removed functionality:
+  - `tests/test_workboard_render.sh` and `tests/test_workboard_actionability.sh`
+    are **deleted outright**, not rewritten — both files' entire premise
+    is the `--out`/`--actions-out` HTML-and-actions-script output (copy
+    buttons, filter tiles, inbox grouping, the actions-script content),
+    and R4 removes that whole output surface; nothing of either file's
+    assertions has anything left to assert against once `render_html`/
+    `build_actions_script` are gone.
+  - `tests/test_fleet_css_drift.sh` is **deleted outright**: both sides
+    of the diff it runs (`viz.py --emit-fleet-css`, removed by R3;
+    `fleet/reference.md`, removed by R2) are gone.
+  - `.claude/skills/workboard/test_workboard.py`'s test methods that call
+    `render_html(...)` directly (not via `--out` — these are unittest
+    calls into the function itself, so R4's `--out`-focused language
+    doesn't reach them on its own) are deleted along with `render_html`;
+    the surviving tests (covering `assemble`/`attention_items`/
+    `ready_items`/`default_roots`/`--json`) are unaffected.
+  - The antigravity mirror's `test_workboard.py` gets the identical
+    render_html-test deletion (R6).
 
 ## Out of scope
 
@@ -230,7 +247,7 @@ TEMPLATE.format(...)` — so it is covered by the module-level-constant
       constants** in one pass, per R4's constants rule): save the script
       from the "Reachability check script" section below as
       `/tmp/orphan_check.py` and run `python3 /tmp/orphan_check.py
-  .claude/skills/workboard/workboard.py` **after** deleting
+.claude/skills/workboard/workboard.py` **after** deleting
       `render_html`/`build_actions_script` and their orphaned callees and
       constants — it prints `clean` (exit 0) once the deletion is
       complete; any remaining orphan (function or constant) fails loudly
@@ -278,6 +295,18 @@ CLAUDE.md .claude-plugin/` shows only: (a) the new inline-table
 - [ ] `bash evals/lint-ultra-gate.sh` exits 0 (R1's edit to
       `drain/SKILL.md`, an ultra-path skill, must not disturb the
       ultra-gate marker).
+- [ ] R8 test deletions, deterministic: `[ ! -f tests/test_workboard_render.sh
+    ] && [ ! -f tests/test_workboard_actionability.sh ] && [ ! -f
+    tests/test_fleet_css_drift.sh ]` (all three deleted outright, not
+      rewritten — R8).
+- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` exits 0 —
+      the full gated shell-test suite (AGENTS.md's canonical command) is
+      green after R8's deletions, catching any other test this spec's
+      removals broke beyond the three named above.
+- [ ] `python3 -m unittest discover -s .claude/skills/workboard` exits 0,
+      and the same command against `antigravity/.agents/skills/workboard`
+      exits 0 — no `render_html`-calling test method survives in either
+      tree's `test_workboard.py` (R8).
 - [ ] End-to-end: running `/fleet` in a session with at least one
       background agent prints the markdown table and summary line
       directly in the response — no `fleet.html` (or any file) is written
