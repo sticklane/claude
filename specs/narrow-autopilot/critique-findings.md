@@ -232,3 +232,18 @@ finding 1's premise):
    not gated on, since the mirror set churns day to day.
 
 Ready for re-critique.
+
+## Re-critique 2026-07-14 (attended, /critique) — one leftover anchor found
+
+A fresh critic dispatch found the qa-sweep enumeration, the second
+drain/reference.md mention, and the AC7 count fix (findings 1 and the
+"both mentions named" half of finding 2 above) already correctly landed
+— verified directly against the live tree. One thing was missed by the
+prior pass: the `:884` anchor for `drain/reference.md`'s headless-rule
+citation was never actually refreshed to its current `:1007` in three
+prose spots (Problem section, R3's Headless-template bullet), despite
+the "Fix applied" note above claiming anchors were refreshed. Also
+refreshed `breakdown/SKILL.md:98` → `:166` (stale since this spec's
+authoring; the routing sentence moved when breakdown/SKILL.md grew).
+Both confirmed accurate against the live files. Re-run `/critique` to
+confirm READY.
