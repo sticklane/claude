@@ -92,8 +92,9 @@ after (both edit the same file), check whether the collision is actually
 broader than the stated one — a spec that touches a skill mirrored across
 `.claude`/`antigravity`/`codex` legs likely collides on ALL of them, not
 just the one file the Sequencing note happens to name (confirmed twice in
-one session: `narrow-autopilot` v. `build-doc-currency-check` collided on
-all three `build` legs, though only the `.claude` one was named). Encode
+one session: a spec folding a sibling skill into `build` v.
+`build-doc-currency-check` collided on all three `build` legs, though only
+the `.claude` one was named). Encode
 the real collision by marking every affected task `Status: blocked` with
 `Unblock: run: for f in specs/<sibling>/tasks/*.md; do grep -q '^Status:
 done' "$f" || echo "not done: $f"; done` (empty output = safe to flip to
