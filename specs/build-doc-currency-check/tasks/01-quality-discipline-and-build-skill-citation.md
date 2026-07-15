@@ -33,23 +33,29 @@ existence-only and the content-parity gate covers only enumerated `.py`
 files, not SKILL.md prose — so this task's intermediate commit (`.claude`
 edited, mirrors not yet) trips no gate.
 
-**BLOCKING PRECONDITION — do not start until unblocked.** `specs/narrow-autopilot`
-also edits `.claude/skills/build/SKILL.md` (inserting a classification gate
-"near its start," shifting every line number after it) and must land
-first — both specs' own text state this explicitly (this spec's Sequencing
-note; narrow-autopilot's Problem section and critique-findings finding 6).
-This task's `Unblock: run:` line checks that every narrow-autopilot task
-file reads `Status: done`; if it doesn't, STOP — do not edit
-`build/SKILL.md` regardless of what this task file's other content says.
-Once narrow-autopilot has landed, find the pre-commit-review bullet in
+**BLOCKING PRECONDITION — cleared by human judgment call, 2026-07-15.**
+`specs/narrow-autopilot` also edited `.claude/skills/build/SKILL.md`
+(inserting a classification gate "near its start," shifting every line
+number after it) and had to land first — both specs' own text stated
+this explicitly (this spec's Sequencing note; narrow-autopilot's Problem
+section and critique-findings finding 6). All 6 of narrow-autopilot's
+real tasks (01-06) are `Status: done` and merged. One additional stub,
+`specs/narrow-autopilot/tasks/07-antigravity-build-md-char-cap.md`, was
+discovered mid-drain and remains `Status: draft` — but it is an
+unrelated documentation item (antigravity's `build.md` character count)
+touching only `antigravity/.agents/workflows/build.md`, never
+`.claude/skills/build/SKILL.md`. The line-shift race this precondition
+guards against is fully resolved; the orchestrating session made this
+call explicitly rather than waiting on task 07 (which was never part of
+narrow-autopilot's original scope). Find the pre-commit-review bullet in
 `build/SKILL.md`'s "## 4. Close out" section by content (the bullet
 adjacent to the `/code-review` invocation), not by a line number — the
 spec's own line references are pre-narrow-autopilot snapshots.
 
 ## Steps
 
-1. Confirm the blocking precondition above is satisfied (re-run the
-   `Unblock: run:` check yourself before editing).
+1. The blocking precondition above is already confirmed cleared (human
+   judgment call, 2026-07-15) — no re-check needed; proceed directly.
 2. Add a "## Documentation currency" section to
    `.claude/rules/quality-discipline.md`, alongside its existing TDD/
    Commits/Checks sections, scoped explicitly to `/build`'s attended
