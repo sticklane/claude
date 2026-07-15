@@ -1,6 +1,6 @@
 # Task 01: Delete /autopilot, create build/reference.md, fold gate+triggers into build/SKILL.md
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 8 turns
@@ -58,8 +58,9 @@ check).
 
 ## Acceptance
 
-- [ ] `[ ! -d .claude/skills/autopilot ]`
-- [ ] `.claude/skills/build/reference.md` exists and contains the six named
+- [x] `[ ! -d .claude/skills/autopilot ]`
+      Evidence: dir absent after final commit; verifier confirmed PASS.
+- [x] `.claude/skills/build/reference.md` exists and contains the six named
       sections. For each of permissions template, `/goal` pattern,
       containment ladder, headless template, pre-cap baton: extract the
       section's text from `git show HEAD~1:.claude/skills/autopilot/reference.md`
@@ -68,15 +69,23 @@ check).
       recovery is exempt from the strict empty-diff check (its content may
       be adjacent to the new escalation-trigger material) but its full text
       must be present verbatim somewhere in `build/reference.md`.
-- [ ] `! grep -q "background worktree agent" .claude/skills/build/reference.md`
+      Evidence: all 5 sections empty-diff vs HEAD~1; failure-recovery text
+      present verbatim; verifier confirmed PASS.
+- [x] `! grep -q "background worktree agent" .claude/skills/build/reference.md`
       (the section is dropped, not moved) and `grep -q '/drain' .claude/skills/build/reference.md`
       (the one-line pointer replacing it exists).
-- [ ] `.claude/skills/build/SKILL.md` contains the classification gate and
+      Evidence: bg-worktree phrase absent; `/drain` pointer present (line 63).
+- [x] `.claude/skills/build/SKILL.md` contains the classification gate and
       the two escalation triggers, plus a pointer to `build/reference.md`'s
       baton section.
-- [ ] `grep -qF 'Two triggers escalate to a human' .claude/skills/build/SKILL.md`
+      Evidence: new "Bounded, walk-away runs (/goal)" section (SKILL.md
+      ~L21-49) holds the go/no-go gate, both escalation triggers, and the
+      reference.md pre-cap-baton pointer; verifier confirmed PASS.
+- [x] `grep -qF 'Two triggers escalate to a human' .claude/skills/build/SKILL.md`
       (pins the literal sentence a later task's mirror-manifest canary line
       depends on — the coverage test skips silently if this source leg
       lacks the phrase, so this fold-in must preserve it verbatim, not
       just convey the same meaning in different words).
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0.
+      Evidence: literal sentence present verbatim (SKILL.md L36).
+- [x] `bash evals/lint-ultra-gate.sh` exits 0.
+      Evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0.

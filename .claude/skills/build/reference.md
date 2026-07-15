@@ -2,9 +2,8 @@
 
 ## Table of contents
 
-Scoped permissions · Bounded goals · Background worktree
-agent · Headless · Pre-cap baton boundary · Containment ladder ·
-Failure recovery
+Scoped permissions · Bounded goals · Containment ladder · Headless ·
+Pre-cap baton boundary · Failure recovery
 
 Verified against code.claude.com/docs (permissions, headless, goal,
 sandboxing) as of July 2026.
@@ -59,39 +58,22 @@ shown in this conversation, and lint is clean, or stop after 20 turns
 - Works headless: `claude -p "/goal <condition>"` runs the loop to
   completion in one invocation.
 
-## Background worktree agent (fire-and-forget, local)
+## Fire-and-forget, unattended
 
-The mechanism, concretely: delegate with the **Agent tool** — subagent type
-`general-purpose` on the session model, `isolation: worktree` (fresh
-checkout, auto-dispatched), run in background so the session stays free.
-Completion returns only a structured **verdict + evidence**, never the
-transcript, and arrives as a notification in the main conversation; no
-polling. At dispatch time,
-resolve build's SKILL.md to a concrete path —
-`.claude/skills/build/SKILL.md` when the toolkit is in-repo, otherwise
-the plugin cache path found at dispatch — and substitute it for
-`<build-skill-path>` (workers cannot invoke launch-gated execution
-skills — no live-user authorization in their context — so the prompt
-must carry a readable path). Prompt template:
+For unattended, fire-and-forget work on this machine, use `/drain` — its
+worktree + Agent-tool + verdict-only dispatch already runs that pattern per
+queued task, with the retry ladders and verification gates a bare background
+agent lacks.
 
-> Execute the task in <file> following the build skill's procedure, as
-> written in <build-skill-path> (resolved at dispatch). Delegate your own
-> mechanical scouting to Haiku (`effort: low`) scouts.
-> Work only in your worktree, commit to task/NN-<slug>, do not push.
-> The task file's `Budget:` line is a ceiling, not a target: when
-> remaining work clearly exceeds the remaining budget, stop with verdict
-> BLOCKED "over budget" rather than grind on.
-> Final message: verdict, per-criterion evidence, branch, files changed.
+## Containment ladder
 
-Requires Claude Code v2.1.172+ for the worker to spawn its own
-scouts/verifiers; on older versions use headless dispatch below.
-
-Gate interaction: in a repo with gate's Stop hook installed, walk-away
-sessions rely on the hook's sanctioned stop bypass — a worker's final
-message beginning with a verdict line (`DEFERRED`, `BLOCKED`,
-`INCOMPLETE`) passes the gate even while checks are red; without it the
-hook would block the very verdict message the orchestrator needs
-(mechanism in the gate skill's reference).
+1. Worktree: isolates the diff, not the machine. Default for parallel work.
+2. `/sandbox` (OS-level: Seatbelt/bubblewrap): filesystem writes limited to
+   CWD, per-domain network approval.
+3. Network-isolated container (the published devcontainer's default-deny
+   iptables firewall): the only place `--dangerously-skip-permissions` is
+   defensible — and even there, credentials inside the container are
+   exfiltratable by a malicious repo. Prefer auto mode + allowlists.
 
 ## Headless (CI, scripts, cron)
 
@@ -142,16 +124,6 @@ hits `--max-turns`, not after — hitting the cap kills the process mid-thought.
   fresh-instance ritual, relaunch command, and orchestrator flag set
   (drain/reference.md) — autopilot does not define its own. The generations
   cap (drain's default 10) bounds relaunch here too.
-
-## Containment ladder
-
-1. Worktree: isolates the diff, not the machine. Default for parallel work.
-2. `/sandbox` (OS-level: Seatbelt/bubblewrap): filesystem writes limited to
-   CWD, per-domain network approval.
-3. Network-isolated container (the published devcontainer's default-deny
-   iptables firewall): the only place `--dangerously-skip-permissions` is
-   defensible — and even there, credentials inside the container are
-   exfiltratable by a malicious repo. Prefer auto mode + allowlists.
 
 ## Failure recovery
 
