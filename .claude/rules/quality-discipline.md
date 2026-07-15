@@ -40,3 +40,20 @@ Run the repo's canonical check green before calling work done. Repos with
 gates installed enforce this mechanically (two layers: fast staged-file
 pre-commit + full check in the Stop hook) — the gate skill owns the
 mechanism; don't hand-write formatting or lint reminders into workflows.
+
+## Documentation currency
+
+Scoped to `/build`'s attended completion step — not to "any code change,
+attended or unattended" the way this file's opening line otherwise frames
+it. A human is present at `/build` to judge documented-state relevance;
+`/drain`'s unattended workers are out of scope. Before `/build` finishes a
+task, check whether the diff invalidates what `AGENTS.md`'s Map (a
+new/moved/removed top-level component), Commands (a documented command's
+behavior or invocation changed), or State sections claim, or anything
+README.md tells an end user — if so, update it in the same commit, not a
+follow-up task. This is a discipline reminder, not a mechanical gate: no
+automated check diffs AGENTS.md's prose against the codebase. It complements
+rather than replaces a task's own `Touch:` header and acceptance criteria
+scoping doc updates — a safety net for what that decentralized pattern
+misses, applying regardless of whether the task author thought to add
+`AGENTS.md`/README to `Touch:`.
