@@ -2,7 +2,7 @@
 
 One skill carries `disable-model-invocation: true` — /evals (paid
 headless sessions; only a human types it). The other execution stages —
-/build, /autopilot, /drain, /prioritize — are model-invocable since
+/build, /drain, /prioritize — are model-invocable since
 2026-07-11 under a **launch-authorization contract** carried in each
 SKILL.md's first 30 lines: the model may invoke them only on explicit
 user authorization in the live conversation (the human's message names
@@ -37,7 +37,7 @@ case that needs it model-invocable.
    will sometimes do it eagerly and wrongly — the effort-complexity
    mismatch antipattern. The human trigger is the budget signature.
 2. **Autonomy is classified, not assumed — and the classifier must not
-   be the beneficiary.** /autopilot and /drain open with the
+   be the beneficiary.** /build's bounded mode and /drain open with the
    peripheral/core classification gate (anthropic-playbook.md, "How they
    let agents run unattended"). A model invoking them would classify its
    own request for autonomy and then grant it — the same conflict the
@@ -55,13 +55,13 @@ case that needs it model-invocable.
    but a rule is prose. `disable-model-invocation` removed gated skills
    from the model's context entirely (and blocked scheduled firing), so
    injected text could never transitively become a fleet of launched
-   workers. *(2026-07-11 note: on the four ungated stages this hardness
+   workers. _(2026-07-11 note: on the four ungated stages this hardness
    is now carried by the launch-authorization contract — authorization
    must come from the human's live message, which injected file content
    can never be — plus the untrusted-data rule; the flag remains the
    mechanism only for /evals. Unattended workers additionally still lack
    the live conversation entirely, so the transitive-fleet path stays
-   closed for them structurally.)* This same principle now grounds
+   closed for them structurally.)_ This same principle now grounds
    drain's draft-stub promotion, relocated rather than removed. The former shape was a
    blanket human-only rule ("only a human promotes `draft` → `pending`");
    the new shape keeps the hardness where it matters and lets a session
