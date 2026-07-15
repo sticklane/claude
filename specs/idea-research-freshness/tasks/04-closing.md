@@ -1,6 +1,6 @@
 # Task 04: version bump, link-checker recheck, manual-pending evidence
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 6 turns
@@ -45,12 +45,15 @@ Depends on).
 
 ## Acceptance
 
-- [ ] `git show HEAD~1:.claude-plugin/plugin.json | grep -o '"version": "[^"]*"'`
+- [x] `git show HEAD~1:.claude-plugin/plugin.json | grep -o '"version": "[^"]*"'`
       differs from the current file's `"version"` value, and the current
       value is a one-patch-level increment above it (never a decrease).
       `HEAD~1` is the commit immediately before your own version-bump
       commit.
-- [ ] `bash tests/test_doc_links.sh` exits 0
-- [ ] `test -f specs/idea-research-freshness/evidence/manual-live-idea-run.md`
+      Evidence: HEAD~1 = "version": "0.9.8", current = "version": "0.9.9" (one-patch increment).
+- [x] `bash tests/test_doc_links.sh` exits 0
+      Evidence: `pass: 16 fail: 0`, exit 0.
+- [x] `test -f specs/idea-research-freshness/evidence/manual-live-idea-run.md`
       and it lists all four manual-pending scenarios as unchecked
       checkboxes
+      Evidence: file exists; `grep -c '^- \[ \]'` = 4 (fresh/stale/no-stamp/paraphrase).
