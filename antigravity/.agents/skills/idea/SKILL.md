@@ -20,7 +20,32 @@ what the idea touches: relevant modules, existing similar features, test
 conventions, constraints. Keep conclusions (`path:line`), not file dumps.
 Informed questions beat generic ones.
 
-## 2. Interview the user
+## 2. Ground the idea in fresh research
+
+When the idea's framing signals a need for external grounding, check `docs/`
+for a topically-matching `Verified: YYYY-MM-DD` stamp before dispatching any
+research agents. Trigger patterns are illustrative, not exhaustive: phrases
+like "best practices," "how do [vendor/tool] do this," "research X," or
+"backed by research/blogs from ...".
+
+A matching doc section's `Verified:` stamp decides the branching against a
+90-day freshness window (a stamp older than 90 days counts the same as no
+stamp — stale):
+
+- **Fresh match** — a `Verified:` stamp within the last 90 days on a
+  topically-matching doc section: cite it directly as `docs/<path>:<line>`
+  in the spec's Problem/Solution and dispatch no research agents.
+- **Stale or absent match** — a stamp older than 90 days, or no matching
+  stamp at all: dispatch research the existing way — targeted, cited
+  factcheck-style agents for a known-source question (which vendor said
+  what), a broader deep-research pass for a genuinely open-ended one — then
+  write or refresh a `Verified: <today>` stamp on the doc section the
+  findings land in.
+
+If the framing signals no need for external grounding, skip this step and
+proceed to the interview.
+
+## 3. Interview the user
 
 Ask in small numbered batches, waiting for answers. Cover, as relevant:
 
@@ -38,7 +63,7 @@ Ask in small numbered batches, waiting for answers. Cover, as relevant:
 Keep interviewing until you could defend every design decision; don't pad
 with questions whose answers you can infer or scouting already answered.
 
-## 3. Write the spec
+## 4. Write the spec
 
 Create `specs/<kebab-slug>/SPEC.md`:
 
@@ -97,17 +122,17 @@ criterion is written into the SPEC.md above, never deferred to
    draft, matching the memory file's convention — e.g. "phrase absent today,
    verified <date>".
 
-## 4. Adversarial pass
+## 5. Adversarial pass
 
 Apply the critique workflow's procedure (`.agents/workflows/critique.md`) to
 the spec, rather than the critic skill directly — the critique workflow is
 what stamps the spec's `Breakdown-ready: true` header once it reaches READY,
-the token step 5's hand-off and drain's auto-breakdown phase both rely on
+the token step 6's hand-off and drain's auto-breakdown phase both rely on
 (ideally in a fresh Agent Manager conversation for unbiased eyes). Fix what
 it finds; repeat until READY. This costs ~1% of what implementing an
 ambiguous spec costs.
 
-## 5. Hand off
+## 6. Hand off
 
 Tell the user: if the spec leaves a technology or architecture choice open,
 run `/design specs/<slug>/SPEC.md` first; then `/breakdown
