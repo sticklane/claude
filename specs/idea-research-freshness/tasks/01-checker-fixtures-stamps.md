@@ -1,6 +1,6 @@
 # Task 01: check-freshness.sh, its test fixtures, and the R1 dogfood stamps
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 10 turns
@@ -75,13 +75,21 @@ choice explicit` heading and its `## Cross-vendor grounding` heading.
 
 ## Acceptance
 
-- [ ] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/fresh --today <fixed-date>` prints `fresh`
-- [ ] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/stale --today <fixed-date>` prints `stale`
-- [ ] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/no-stamp --today <fixed-date>` prints `absent`
-- [ ] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/file-level-stamp --today <fixed-date>` prints `fresh`
-- [ ] `grep -A3 "## Dispatch authoring: making the choice explicit" docs/guides/model-routing.md | grep -qE "^Verified: [0-9]{4}-[0-9]{2}-[0-9]{2}$"` (`-A3`,
+Verified by independent verifier (fixed-date `2026-06-01`); full report:
+../evidence/01-checker-fixtures-stamps.md
+
+- [x] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/fresh --today <fixed-date>` prints `fresh` — verifier: prints `fresh`
+- [x] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/stale --today <fixed-date>` prints `stale` — verifier: prints `stale`
+- [x] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/no-stamp --today <fixed-date>` prints `absent` — verifier: prints `absent`
+- [x] `bash .claude/skills/idea/test-fixtures/research-freshness/check-freshness.sh .claude/skills/idea/test-fixtures/research-freshness/file-level-stamp --today <fixed-date>` prints `fresh` — verifier: prints `fresh`
+- [x] `grep -A3 "## Dispatch authoring: making the choice explicit" docs/guides/model-routing.md | grep -qE "^Verified: [0-9]{4}-[0-9]{2}-[0-9]{2}$"` (`-A3`,
       not `-A1` — the stamp must be the next NON-BLANK line per the
       heading-level rule, but a literal blank line between the heading
-      and the stamp is normal markdown and shouldn't fail this check)
-- [ ] `grep -A3 "## Cross-vendor grounding" docs/guides/model-routing.md | grep -qE "^Verified: [0-9]{4}-[0-9]{2}-[0-9]{2}$"`
-- [ ] `bash tests/test_doc_links.sh` still passes after the stamp additions
+      and the stamp is normal markdown and shouldn't fail this check) — verifier: exit 0
+- [x] `grep -A3 "## Cross-vendor grounding" docs/guides/model-routing.md | grep -qE "^Verified: [0-9]{4}-[0-9]{2}-[0-9]{2}$"` — verifier: exit 0
+- [x] `bash tests/test_doc_links.sh` still passes after the stamp additions — verifier: `pass: 16 fail: 0`
+
+## Decisions
+
+- Fixed `--today` for the acceptance/test harness = `2026-06-01`; fixture stamps set as deliberate offsets (fresh/file-level = 2026-05-15, stale = 2026-01-01). Reverse: pick a different fixed date and adjust the four fixture stamps accordingly.
+- Reverted an unrelated prettier auto-format (asterisk→underscore emphasis in model-routing.md's DeepSeek section) that the Edit-hook introduced, keeping the file diff stamp-only per the task's Touch mandate. Reverse: re-run prettier on the file to restore underscore emphasis.
