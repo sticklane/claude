@@ -36,6 +36,10 @@ Primary sources
 | Scale posture     | V1 targets 100k files with headroom to 100M: no sync or query path may assume whole-tree enumeration; change detection and storage must be shardable.                                                                                                                                                  |
 | V1 languages      | Python, TypeScript/JavaScript (incl. TSX), Go, Rust, Java, C, C++, Zig, Kotlin, OCaml, Haskell, Bash. Several of these grammars are community-maintained and lack upstream symbol queries, so authoring per-language query files is part of the build cost.                                            |
 | VCS coupling      | No single version-control system assumed: the baseline staleness sweep is plain filesystem mtime+hash and works with no VCS at all; VCS integrations (change feeds, ignore rules, snapshot identity, hooks) are pluggable accelerator adapters behind one interface. Git is the only adapter v1 ships. |
+| Cross-file refs   | Heuristic global-name matching everywhere (powers ranking and "probable callers"; per-file-incremental), upgraded to precise where LSP enrichment runs; every refs answer is labeled `heuristic` or `precise`.                                                                                         |
+| Note shape        | Markdown body plus an optional typed `kind` (gotcha, invariant, rationale, todo) enabling filtered queries; anchors are whole symbols only in v1 — sub-symbol spans are the fragility the research warns about.                                                                                        |
+| Note merges       | Plain VCS semantics, one ULID-named file per note; editing the same note on two branches resolves as an ordinary merge conflict. No custom merge machinery.                                                                                                                                            |
+| Runtime           | Deferred to the pipeline's `/design` stage during spec authoring: Go vs. Rust judged on binding/grammar maturity across the 12 languages, distribution, and the shard story. Python ruled out by the scale posture.                                                                                    |
 
 The rationale for each decision is the research below.
 
@@ -281,29 +285,18 @@ models own judgment (here, only note revalidation, at read time).
 
 ## Open questions
 
-To resolve before or during the spec; the first two are `/design`-shaped.
+The 2026-07-15 follow-up interviews resolved everything except two items
+(all resolutions are in the decisions table above).
 
-1. **Cross-file def/ref resolution strategy.** Heuristic global-name
-   matching (Aider-grade: cheap, wrong on shadowing/overloads) vs. the
-   stack-graphs library (precise, but needs per-language stack-graph rules)
-   vs. LSP-backed resolution where available with heuristic fallback.
-   Leaning: heuristic matching for ranking purposes, LSP for precise refs
-   when enrichment is on, precision labeled in output.
-2. **Implementation runtime.** Go (matches `agentprof/`, static binary) vs.
-   Rust (native tree-sitter) vs. Python (matches the toolkit's scripts,
-   slower, environment-dependent). The evaluation must cover binding and
-   grammar quality across the full 12-language set — the Zig, Kotlin,
-   OCaml, and Haskell grammars are community-maintained.
-3. **Note taxonomy and granularity.** Free-form text vs. typed kinds
-   (gotcha, invariant, rationale, todo); whole-symbol anchors only (leaning
-   yes for v1 — research shows sub-symbol spans are the fragile part) vs.
-   span-in-symbol anchors.
-4. **Note merge/branch semantics.** One file per note with ULID names
-   minimizes conflicts; stale flags recompute per checkout — but concurrent
-   edits to the same note body across branches still need a stated policy.
-5. **Relationship to `scout`.** Whether toolkit doctrine eventually routes
+1. **Implementation runtime.** Deliberately deferred to `/design` during
+   spec authoring: Go vs. Rust, judged on tree-sitter binding and grammar
+   maturity across the full 12-language set (the Zig, Kotlin, OCaml, and
+   Haskell grammars are community-maintained), single-binary distribution,
+   and the shard/store story.
+2. **Relationship to `scout`.** Whether toolkit doctrine eventually routes
    structure questions to `ctx` before dispatching scouts, and what that
-   changes in `.claude/rules/token-discipline.md`.
+   changes in `.claude/rules/token-discipline.md`. Post-v1 doctrine
+   question — revisit once v1 ships, not spec-blocking.
 
 ## Primary sources
 
