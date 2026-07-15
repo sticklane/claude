@@ -1,6 +1,6 @@
 # Task 02: Mirror the doc-currency close-out edits into antigravity and codex
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 6 turns
@@ -63,17 +63,18 @@ number.
 
 ## Acceptance
 
-- [ ] `grep -c "Documentation currency" antigravity/AGENTS.md` → 1 or more.
-- [ ] `grep -c "Quality discipline section" antigravity/.agents/workflows/build.md`
-      → 1 or more.
-- [ ] `grep -c "not by the sub-reviewer fallback" antigravity/.agents/workflows/build.md`
-      → 1 or more.
-- [ ] `grep -cE "Documentation currency|AGENTS.md's Map" codex/.agents/skills/build/SKILL.md`
+- [x] `grep -c "Documentation currency" antigravity/AGENTS.md` → 1 or more.
+      Verified → 1 (evidence/02-mirror-antigravity-and-codex.md).
+- [x] `grep -c "Quality discipline section" antigravity/.agents/workflows/build.md`
+      → 1 or more. Verified → 1 (evidence file).
+- [x] `grep -c "not by the sub-reviewer fallback" antigravity/.agents/workflows/build.md`
+      → 1 or more. Verified → 1 (evidence file).
+- [x] `grep -cE "Documentation currency|AGENTS.md's Map" codex/.agents/skills/build/SKILL.md`
       → 1 or more (`-E`, not a `\|` BRE-alternation escape — not portable
-      to a plain BSD `grep`).
-- [ ] `grep -cF 'not by $code-review itself' codex/.agents/skills/build/SKILL.md`
+      to a plain BSD `grep`). Verified → 1 (evidence file).
+- [x] `grep -cF 'not by $code-review itself' codex/.agents/skills/build/SKILL.md`
       → 1 or more. Use `-F` (fixed-string), not a bare double-quoted
       pattern: `\$` collapses to a literal `$` before grep sees it, and a
       mid-pattern `$` in BRE mode is not guaranteed to match a literal
       dollar sign on every platform — the unescaped form false-reports 0
-      even when the phrase is present.
+      even when the phrase is present. Verified → 1 (evidence file).

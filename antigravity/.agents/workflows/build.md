@@ -153,7 +153,9 @@ own.
    collect its result before close-out; never fire-and-forget, never
    leave a child conversation running past your own finish — the
    awaited-children dispatch rule; the drain workflow's sub-reviewer
-   clause, cited not restated). Fix a finding immediately iff it is a
+   clause, cited not restated). The doc-currency check is a separate
+   close-out step the worker runs directly, not by the sub-reviewer fallback,
+   which stays scoped to correctness/behavior findings. Fix a finding immediately iff it is a
    correctness/behavior defect AND the fix stays inside the task's
    `Touch:` — or, with no `Touch:` header, inside the files touched this
    session — then re-run the acceptance commands; findings needing
@@ -166,7 +168,9 @@ own.
    (specs/spec-completion-review) over the run's whole diff through this
    same pre-commit review machinery — a bare-SPEC run has no per-task pass
    to catch spec-level gaps; task-file /build runs are unchanged, their
-   per-task pass already covers them. Log any reversible-default decisions taken
+   per-task pass already covers them. Before committing, also run the
+   doc-currency check — see AGENTS.md's Quality discipline section (cited, not
+   restated). Log any reversible-default decisions taken
    this session (step 2's rule) to the task file's `## Decisions` section —
    one line each: decision, default taken, how to reverse. Append; never
    overwrite prior entries. No decisions taken → no section needed. Update
