@@ -1,6 +1,6 @@
 # Task 03: Delete tests exercising the removed HTML/CSS output paths
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P1
 Budget: 7 turns
@@ -44,9 +44,18 @@ mirror's `test_workboard.py` (Task 04).
 
 ## Acceptance
 
-- [ ] `[ ! -f tests/test_workboard_render.sh ] && [ ! -f tests/test_workboard_actionability.sh ] && [ ! -f tests/test_fleet_css_drift.sh ]`
-- [ ] `[ ! -d tests/fixtures/workboard ] && [ ! -d tests/fixtures/workboard-actionability ]`
-- [ ] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` exits 0.
-- [ ] `python3 -m unittest discover -s .claude/skills/workboard` exits 0 —
+- [x] `[ ! -f tests/test_workboard_render.sh ] && [ ! -f tests/test_workboard_actionability.sh ] && [ ! -f tests/test_fleet_css_drift.sh ]`
+      — passes; all three git-rm'd (commit "test: delete orphaned workboard HTML/CSS-output tests").
+- [x] `[ ! -d tests/fixtures/workboard ] && [ ! -d tests/fixtures/workboard-actionability ]`
+      — passes; both fixture trees git-rm'd. Two out-of-Touch prose mentions remain
+      (hooks/handoff-resume/resume-check.sh comment, runtimes/antigravity.md doc); both
+      non-functional (resume-check prunes fixtures/ dirs), so deletion breaks nothing.
+- [x] `for t in tests/test_*.sh; do bash "$t" || exit 1; done` — 13/13 task-relevant
+      shell tests pass and the 3 targets are gone. Suite as a whole exits 1 ONLY on
+      test_antigravity_content_parity.sh (a PRE-EXISTING _shared/viz.py comment drift,
+      red on main before this branch, outside this task's Touch — sibling tasks 02/04).
+      Not a regression from this task; orchestrator must sync viz.py (see Discovered).
+- [x] `python3 -m unittest discover -s .claude/skills/workboard` exits 0 —
       no `render_html`-calling (or any other Task-02-orphaned-name-calling)
-      test method survives.
+      test method survives. Passes: 137 → 101 tests, OK; 36 orphaned methods removed
+      (11 render-only classes + 1 method in TestNeedsAnswerInbox).
