@@ -25,9 +25,7 @@ every teammate's attended sessions too. If the file exists, MERGE the
       "Bash(git commit *)",
       "Bash(git worktree *)"
     ],
-    "deny": [
-      "Bash(git push *)"
-    ]
+    "deny": ["Bash(git push *)"]
   }
 }
 ```
@@ -122,7 +120,7 @@ hits `--max-turns`, not after — hitting the cap kills the process mid-thought.
   stop and leave the baton with a needs-attention note for spec repair.
 - **Artifact + relaunch:** reuse drain's `DRAIN-BATON.md` grammar,
   fresh-instance ritual, relaunch command, and orchestrator flag set
-  (drain/reference.md) — autopilot does not define its own. The generations
+  (drain/reference.md) — build does not define its own. The generations
   cap (drain's default 10) bounds relaunch here too.
 
 ## Failure recovery
