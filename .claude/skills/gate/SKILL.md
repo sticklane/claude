@@ -78,5 +78,7 @@ An uninstalled-but-described gate is the trust-then-verify gap in miniature.
 
 Files land in `.claude/settings.json` + `.claude/hooks/*.sh` — commit both
 so the whole team's agents get the same gates; with gates in place, tasks
-qualify for `/autopilot`. Close with:
-`Next stage: /autopilot specs/<slug>/tasks/NN-*.md (human-launched)`.
+qualify for an unattended `/goal`-bounded `/build` run (or `/drain` for a
+queue). Close with:
+`Next stage: /build specs/<slug>/tasks/NN-*.md (human-launched; /goal-bound
+it per build/reference.md for an unattended-feeling run)`.
