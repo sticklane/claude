@@ -50,15 +50,18 @@ mirror (Task 04).
    live server genuinely cannot start, `/workboard` reports the startup
    error and what to check (Python availability, port conflict,
    `SKILLS_DASHBOARD_PORT`/`_HOST`).
-6. Remove the orphaned `fleet/reference.md` citation in the module-level
-   section comment above `_AGENT_CHIP_GLYPH` ("Spawn-tree rendering (SPEC.md
-   R6/R7). Reuses /fleet's status-chip convention exactly
-   (fleet/reference.md:29-30,181): ..."). This is a between-defs comment,
-   not inside any function body, so the reachability check's node deletion
-   in steps 3-4 does not remove it automatically — either drop the file
-   citation and describe the chip convention inline, or point at
-   `.claude/skills/fleet/SKILL.md` if it still documents the convention
-   there. The convention itself is unchanged; this is a citation fix only.
+6. Delete the module-level section comment above `_AGENT_CHIP_GLYPH`
+   ("Spawn-tree rendering (SPEC.md R6/R7). Reuses /fleet's status-chip
+   convention exactly (fleet/reference.md:29-30,181): ..."), lines
+   2245-2247. This is a between-defs comment, not inside any function
+   body, so the reachability check's node deletion in steps 3-4 does not
+   remove it automatically — but `_AGENT_CHIP_GLYPH` and the whole
+   spawn-tree/chip section it heads (`_agent_chip`, `_spawn_nodes_html`,
+   `_spawn_tree_html`, `_agent_time_html`) are themselves in R4's
+   orphaned set and are deleted by steps 3-4. The comment describes code
+   that no longer exists once that deletion lands, so it goes with the
+   section it heads — this is a stray-comment cleanup, not a citation
+   reword; do not keep and reword it.
 7. Confirm `--json` still works: `python3 .claude/skills/workboard/workboard.py --json`.
 
 ## Acceptance
