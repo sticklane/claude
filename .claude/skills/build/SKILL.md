@@ -15,6 +15,35 @@ docs/human-gates.md.
 Execute the task at $ARGUMENTS. This skill assumes an agent-ready task/spec
 with runnable acceptance criteria and is designed to run in a fresh session.
 
+## Bounded, walk-away runs (/goal)
+
+`/build`'s default is unbounded and attended. To run it unattended — the
+human wraps this skill's own procedure in the runtime's built-in `/goal`
+transcript-evaluator so it stops at a bounded condition (`/goal "<criteria>,
+or stop after N turns"`; `/build` parses no new flag and needs no code
+change) — first clear this go/no-go gate.
+
+**Classification (go/no-go).** A peripheral feature, prototype, or migration
+with mechanical, runnable verification is fine for a `/goal`-bounded run.
+Core business logic, security-sensitive code, or verification that is
+inherently "looks right" is not — those don't disqualify the task, they
+raise the bar it must clear first: tighten acceptance criteria to runnable
+commands and confirm worktree isolation covers every side effect, or stay on
+unbounded attended `/build`, today's default. A task whose "correct" is a
+judgment call no test can settle is an unresolved spec question, not a
+walk-away run — file it and resolve the spec instead of launching.
+
+**Escalation triggers.** Two triggers escalate to a human instead of pressing
+on: the same step failing twice (a third attempt in a degraded context won't
+do better), and reaching a high-risk action — push, deploy, data deletion,
+publishing, spending — which the run must never take on its own.
+
+For long `/goal`-bounded runs, hand the baton off BEFORE the turn cap — see
+[reference.md](reference.md)'s pre-cap baton boundary section (it reuses
+drain's baton grammar and generations cap). The scoped-permissions template,
+containment ladder, headless template, and failure-recovery doctrine for
+unattended runs also live in [reference.md](reference.md).
+
 ## 0. Load only the task
 
 Emit `<!-- agentprof:stage=load -->` verbatim as this step's opening line
