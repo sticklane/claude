@@ -1,6 +1,6 @@
 ---
 name: workboard
-description: Opens the live cross-repo dashboard of ALL open work on this machine - specs, task files, handoffs, Kiro/Antigravity state, and every Claude Code session (live, recent, stale) - by launching the agent-console server's Workboard tab, which re-scans on every refresh and leads with a needs-attention inbox. Use when the user asks "what's open across my repos", "show all my work", "work dashboard", "workboard", "what did I leave unfinished", or "show my sessions across projects". For agents in THIS session only, use /fleet instead.
+description: Opens the live cross-repo dashboard of ALL open work on this machine - specs, task files, handoffs, Kiro/Antigravity state, and every Claude Code session (live, recent, stale) - by launching the agent-console server's Workboard tab, which re-scans on every refresh and leads with a needs-attention inbox. Use when the user asks "what's open across my repos", "show all my work", "work dashboard", "workboard", "what did I leave unfinished", or "show my sessions across projects". For agents in THIS session only, use /fleet's inline table instead.
 ---
 
 Show the user every piece of open work on this machine and what needs a

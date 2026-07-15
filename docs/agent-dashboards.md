@@ -1,6 +1,6 @@
 # Agent work-tracking dashboards — what the field does
 
-Research behind `/workboard` (and the session-scoped `/fleet`). This file
+Research behind `/workboard` (and `/fleet`'s session-scoped inline table). This file
 holds the findings and citations; the skills state only the rules. Collected
 2026-07 from Google Antigravity, Amazon Kiro, and published guidance from
 Anthropic, OpenAI, and DeepMind.
@@ -33,7 +33,7 @@ browser), not one dial.
 ([antigravity-cli](https://github.com/michaelw9999/antigravity-cli),
 [agent modes docs](https://antigravity.google/docs/agent-modes-settings))
 
-**Lessons taken**: few, decision-oriented states with *blocked-on-human* as
+**Lessons taken**: few, decision-oriented states with _blocked-on-human_ as
 the load-bearing one; the cross-repo inbox IS the dashboard; artifacts with
 sidecar metadata make state greppable without parsing prose.
 
@@ -96,7 +96,7 @@ cheap version of this).
   the human out of the inner loop. Cheap models for breadth, expensive for
   depth. ([blog](https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/),
   [arXiv:2506.13131](https://arxiv.org/abs/2506.13131))
-- **AGI safety approach**: monitor deployed agent *populations* in
+- **AGI safety approach**: monitor deployed agent _populations_ in
   aggregate, not just per-agent logs — a fleet view is a safety control, not
   a convenience. ([arXiv:2504.01849](https://arxiv.org/html/2504.01849v1))
 

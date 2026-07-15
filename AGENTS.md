@@ -10,7 +10,7 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 - `.claude/`—the source of truth: `skills/` (pipeline stages), `agents/` (scout, critic, verifier...), `rules/` (always-on).
 - `.claude-plugin/`—plugin + marketplace manifests distributing the toolkit as plugin `agentic`.
 - `agentprof/`—pprof profiler for AI-agent token & spend attribution (Claude Code transcripts, GCP billing, OTel; cache re-prime + skill/project attribution metrics—flags and labels in its README/SCHEMA).
-- `agent-console/`—local zero-LLM dashboard (workboard/fleet views, cost panel incl. re-prime line) for this machine's Claude Code setup.
+- `agent-console/`—local zero-LLM dashboard (workboard view, cost panel incl. re-prime line) for this machine's Claude Code setup.
 - `antigravity/`—mirrored port of `.claude/` for the Antigravity runtime.
 - `codex/`—thin overlay on `antigravity/` for the Codex runtime: symlinked skills plus three real-content wrappers (drain/build/evals); port chain is `.claude/` → `antigravity/` → `codex/` (CLAUDE.md's port-chain bullet).
 - `bin/`—installer scripts (quality gates, skill sync).
