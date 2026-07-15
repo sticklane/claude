@@ -31,8 +31,8 @@ STATUS_HEX: dict[str, str] = {
     "blocked": "#d9b063",
 }
 
-# Every real status term in use across agent-console.py, workboard.py, and
-# fleet/reference.md, mapped to one canonical token.
+# Every real status term in use across agent-console.py and workboard.py,
+# mapped to one canonical token.
 _STATUS_ALIASES: dict[str, str] = {
     "running": "running",
     "in-progress": "running",
