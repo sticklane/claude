@@ -1,6 +1,6 @@
 ---
 name: fleet
-description: Renders a dashboard of this session's open agents - running, queued, completed, and failed background workers - as a self-contained HTML snapshot with status tiles, a timeline, and per-agent detail. Use when the user asks "what agents are running", "show my agents", "agent status", "fleet status", "visualize the agents", or wants to watch a /drain or /build dispatch.
+description: Prints a markdown table of this session's open agents - running, queued, completed, and failed background workers - inline in the response, one row per agent (label, kind, status, elapsed, snippet) plus a one-line status summary. Use when the user asks "what agents are running", "show my agents", "agent status", "fleet status", "visualize the agents", or wants to watch a /drain or /build dispatch.
 ---
 
 Show the user what their agents are doing right now. This is a read-only
@@ -13,7 +13,7 @@ it must stay cheap: metadata only, never transcripts.
   it with ToolSearch if deferred). Capture per task: label/description, type,
   status, start time, end time if finished, and the output-file path.
 - Enumerate this session's isolated worktrees — e.g., under git: `git worktree
-  list --porcelain`. Worktrees named for `task/NN-*` branches are dispatched
+list --porcelain`. Worktrees named for `task/NN-*` branches are dispatched
   task workers (a drain queue or group, /build); match them to
   tasks where possible, otherwise list them as their own rows.
 - For each agent, take at most the last 2 lines of its output file
@@ -30,26 +30,24 @@ One record per agent: `label`, `kind` (scout/critic/verifier/build-worker/…),
 `elapsed`, `snippet`, `output` path. Map unknown/pending states to `queued`;
 anything that exited non-zero or reported BLOCKED is `failed`.
 
-## 3. Render
+## 3. Print
 
-Fill the HTML template in [reference.md](reference.md) — status tiles, agent
-table, and timeline; the template is self-contained (no external requests,
-light/dark via `prefers-color-scheme`, pre-validated status palette). Write
-it to the session scratchpad (or `/tmp` if none) as `fleet.html`. Never write
-it into the project repo — it is a disposable snapshot, not a pipeline
-artifact.
+Print one markdown table directly in the response — no file, static or
+otherwise, is produced. One row per agent, columns
+`Label | Kind | Status | Elapsed | Snippet`:
 
-## 4. Present
+```
+| Label | Kind | Status | Elapsed | Snippet |
+| --- | --- | --- | --- | --- |
+| task/03-foo | build-worker | running | 4m12s | … last output line … |
+```
 
-Send the file for inline rendering when the surface supports it (e.g.
-`SendUserFile` with `display: render`); otherwise print the file path plus a
-compact terminal table (label / status / elapsed). Either way, end with one
-summary line, e.g.:
+Then end with one summary line counting each status, e.g.:
 
 > 3 running · 1 queued · 2 completed · 0 failed — snapshot 14:32:05; re-run
 > /fleet to refresh.
 
-The dashboard is a point-in-time snapshot; refreshing means re-running
+The table is a point-in-time snapshot; refreshing means re-running
 /fleet. Next pipeline step: none — when the fleet drains, return to
 the dispatching skill's collection step (drain step 3 for queue and
 group dispatches).
