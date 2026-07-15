@@ -1,6 +1,6 @@
 # Task 02: /idea's new grounding-check step 2, and the full renumbering sweep
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -57,8 +57,8 @@ pinned in the spec).
 
 ## Acceptance
 
-- [ ] `grep -A5 "^## 2\." .claude/skills/idea/SKILL.md | grep -qi "90.day\|90 day"` (the new step 2 names the window)
-- [ ] `grep -c "check-freshness.sh\|equivalent logic" .claude/skills/idea/SKILL.md` → 1 or more
-- [ ] `grep -qi "illustrative, not exhaustive\|illustrative.*not exhaustive" .claude/skills/idea/SKILL.md`
-- [ ] `grep -n "step[ -][0-9]" .claude/skills/idea/SKILL.md` — manually verify each hit references the correct post-renumbering heading (no automatable single-command check; this is the per-reference consistency sweep from the spec's AC)
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0
+- [x] `grep -A5 "^## 2\." .claude/skills/idea/SKILL.md | grep -qi "90.day\|90 day"` (the new step 2 names the window) — PASS ("90-day freshness window" in step 2 body); evidence/02-idea-skill-grounding-step.md
+- [x] `grep -c "check-freshness.sh\|equivalent logic" .claude/skills/idea/SKILL.md` → 1 or more — PASS, count=2; evidence/02-idea-skill-grounding-step.md
+- [x] `grep -qi "illustrative, not exhaustive\|illustrative.*not exhaustive" .claude/skills/idea/SKILL.md` — PASS; evidence/02-idea-skill-grounding-step.md
+- [x] `grep -n "step[ -][0-9]" .claude/skills/idea/SKILL.md` — manually verify each hit references the correct post-renumbering heading (no automatable single-command check; this is the per-reference consistency sweep from the spec's AC) — PASS, all 14 refs resolve under new 1-7 numbering; evidence/02-idea-skill-grounding-step.md
+- [x] `bash evals/lint-ultra-gate.sh` exits 0 — PASS, exit 0; evidence/02-idea-skill-grounding-step.md
