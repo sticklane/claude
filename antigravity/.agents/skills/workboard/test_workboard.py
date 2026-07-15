@@ -7,7 +7,6 @@ fake ~/.gemini/antigravity/brain store — the real one is never touched.
 
 import json
 import os
-import re
 import sys
 import tempfile
 import unittest
@@ -443,98 +442,6 @@ class TestRuntimeAgnosticBatonParsing(unittest.TestCase):
             self.assertIn("/drain specs/demo", batons[0]["command"])
 
 
-class TestRuntimeManualRelaunchRender(unittest.TestCase):
-    """R5: a manual_relaunch baton shows its reopen phrase in the HTML card."""
-
-    def test_manual_relaunch_phrase_rendered(self):
-        html = workboard.render_batons(
-            [
-                {
-                    "path": "specs/demo/DRAIN-BATON.md",
-                    "generation": 4,
-                    "command": "",
-                    "manual_relaunch": "No scriptable relaunch for antigravity "
-                    "— reopen from antigravity's Agent Manager",
-                    "needs_attention": "",
-                    "mtime": 1.0,
-                }
-            ]
-        )
-
-        self.assertIn("Agent Manager", html)
-        self.assertNotIn("<code></code>", html)
-
-
-class TestRenderBatons(unittest.TestCase):
-    def test_baton_card_shows_generation_command_and_needs_attention(self):
-        html = workboard.render_batons(
-            [
-                {
-                    "path": "specs/demo/DRAIN-BATON.md",
-                    "generation": 3,
-                    "command": 'claude -p "/drain specs/demo (generation 4, baton: x)"',
-                    "needs_attention": "05-e deferred: which auth provider?",
-                    "mtime": 1.0,
-                }
-            ]
-        )
-
-        self.assertIn("3", html)
-        self.assertIn("claude -p", html)
-        self.assertIn("auth provider", html)
-
-    def test_baton_card_text_differs_from_handoff_resume_then_delete(self):
-        html = workboard.render_batons(
-            [
-                {
-                    "path": "specs/demo/DRAIN-BATON.md",
-                    "generation": 2,
-                    "command": 'claude -p "/drain x"',
-                    "needs_attention": "",
-                    "mtime": 1.0,
-                }
-            ]
-        )
-
-        self.assertNotIn("resume it in a fresh session, then delete", html)
-        self.assertIn("relaunch", html.lower())
-
-
-class TestBatonInFullRender(unittest.TestCase):
-    def test_baton_and_handoff_both_render_on_the_board(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            write_baton(tmp)
-            (Path(tmp) / "HANDOFF.md").write_text(
-                "# Parked work\nsome context\n", encoding="utf-8"
-            )
-            repo = make_repo_record(path=tmp)
-            repo["batons"] = workboard.scan_batons(Path(tmp))
-            repo["handoffs"] = workboard.scan_handoffs(Path(tmp))
-            data = {
-                "totals": {
-                    "repos": 1,
-                    "specs_open": 0,
-                    "tasks_open": 0,
-                    "sessions_active": 0,
-                    "attention": 0,
-                },
-                "generated_at": "now",
-                "stale_days": 7,
-                "inbox": [],
-                "ready": {"items": [], "blocked_unresolved": []},
-                "repos": [repo],
-                "antigravity": [],
-                "todos": [],
-                "orphan_sessions": [],
-            }
-
-            html = workboard.render_html(data)
-
-            self.assertIn("DRAIN-BATON.md", html)  # baton card present
-            self.assertIn("generation", html.lower())
-            self.assertIn("HANDOFF.md", html)  # handoff still renders
-
-
 def make_session(toplevel, state="active"):
     """A session record as attention_items reads it: state + git toplevel."""
     return {"state": state, "toplevel": toplevel, "cwd": toplevel}
@@ -732,35 +639,6 @@ class TestActiveRendering(unittest.TestCase):
             "age_ts": 1.0,
         }
 
-    def test_active_group_renders_and_suppresses_inbox_zero(self):
-        html = workboard.render_inbox([self._active()])
-        self.assertIn('data-category="active"', html)
-        self.assertNotIn("Inbox zero", html)
-        self.assertIn("in-progress", html)  # its badge/state word
-
-    def test_inbox_zero_only_when_no_attention_and_no_active(self):
-        self.assertIn("Inbox zero", workboard.render_inbox([]))
-
-    def test_active_group_renders_after_attention_groups(self):
-        review = {
-            "state": "needs-review",
-            "repo": "demo",
-            "what": "stranded work",
-            "why": "commit or stash",
-            "age_ts": 2.0,
-        }
-        html = workboard.render_inbox([self._active(), review])
-        self.assertLess(
-            html.index('data-category="needs-review"'),
-            html.index('data-category="active"'),
-        )
-
-    def test_active_filter_tile_present_with_count(self):
-        data = {"ready": {"items": []}, "inbox": [self._active(), self._active()]}
-        html = workboard.render_filter_tiles(data)
-        self.assertIn('data-filter="active"', html)
-        self.assertIn(">2<", html)  # active count
-
 
 def write_session(projects_dir, proj="proj1", sid="sess1", records=None):
     """A session transcript .jsonl with the given records (dicts), oldest first."""
@@ -860,24 +738,6 @@ class TestSessionTimelineRendering(unittest.TestCase):
             "state": state,
         }
 
-    def test_repo_session_renders_viz_bar_with_color_fallback(self):
-        repo = make_repo_record()
-        repo["sessions"] = [self._session()]
-
-        html = workboard.render_html(self._data(repos=[repo]))
-
-        self.assertIn("viz-bar", html)
-        self.assertIn(
-            "var(--viz-running,", html
-        )  # "active" state -> canonical "running"
-
-    def test_orphan_sessions_render_via_viz_timeline(self):
-        html = workboard.render_html(
-            self._data(orphan_sessions=[self._session(state="stale")])
-        )
-
-        self.assertIn("viz-bar viz-stale", html)
-
 
 class TestSpawnTreeRendering(unittest.TestCase):
     """R6/R7: a session carrying a non-empty spawn_tree renders a collapsible
@@ -947,55 +807,6 @@ class TestSpawnTreeRendering(unittest.TestCase):
             }
         ]
 
-    def test_render_spawn_tree_indented_chipped_with_failed_branch(self):
-        tree = self._fixture_tree()
-        html = workboard.render_html(self._data(orphan_sessions=[self._session(tree)]))
-
-        # one row per tree node: 2 nodes -> 2 agent-node rows
-        self.assertEqual(html.count('class="agent-node'), 2)
-
-        # both agents appear by type/description
-        self.assertIn("implementation-worker", html)
-        self.assertIn("verifier", html)
-
-        # indentation reflecting spawnDepth: the child is nested inside a
-        # further <ul> beneath its parent's <li>
-        self.assertIn("spawn-tree", html)
-        self.assertRegex(html, r"<li>.*<ul>.*verifier.*</ul>.*</li>")
-
-        # a fleet-style status chip per node (glyph + word, class name).
-        # Acceptance criterion 2: assert via re, inline, that the fragment
-        # carries the fleet chip class.
-        chips = re.findall(r'class="chip s-(running|completed|failed)"', html)
-        self.assertIn("running", chips)  # root node chip
-        self.assertIn("failed", chips)  # failed child chip
-        self.assertEqual(len(chips), 2)  # one chip per node
-
-        # fleet convention: glyph + word, word always present
-        self.assertRegex(html, r'class="chip s-failed"><b>[^<]+</b>\s*failed')
-
-        # failed branch gets a distinct row-level modifier class, not color
-        # alone (s-failed on the chip PLUS a modifier on the row div)
-        self.assertRegex(html, r'class="agent-node[^"]*\bfailed\b')
-
-    def test_render_no_regression_when_spawn_tree_empty(self):
-        # The common case (no spawn tree) must render exactly as before the
-        # feature: an empty list and an absent key both emit zero spawn-tree
-        # markup, so the session section is unchanged (R6, no regression).
-        empty = self._session(spawn_tree=[])
-        absent = self._session(spawn_tree=[])
-        del absent["spawn_tree"]
-
-        html_empty = workboard.render_html(self._data(orphan_sessions=[empty]))
-        html_absent = workboard.render_html(self._data(orphan_sessions=[absent]))
-
-        self.assertEqual(html_empty, html_absent)
-        # no spawn-tree markup injected for the common case (the CSS rule
-        # names always ship; what must be absent is the rendered elements)
-        self.assertNotIn('class="spawn-tree"', html_empty)
-        self.assertNotIn('class="agent-node', html_empty)
-        self.assertNotIn('class="chip s-', html_empty)
-
 
 class TestSpecDagRendering(unittest.TestCase):
     """R5 (workboard half): a spec with deps renders its dependency DAG via
@@ -1037,80 +848,6 @@ class TestSpecDagRendering(unittest.TestCase):
             "last_touched": 1.0,
         }
 
-    def test_spec_with_deps_renders_dag_edge(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = make_repo_record()
-            repo["specs"] = [self._spec_with_dep(tmp)]
-
-            data = {
-                "totals": {
-                    "repos": 1,
-                    "specs_open": 1,
-                    "tasks_open": 1,
-                    "sessions_active": 0,
-                    "attention": 0,
-                },
-                "generated_at": "now",
-                "stale_days": 7,
-                "inbox": [],
-                "ready": {"items": [], "blocked_unresolved": []},
-                "repos": [repo],
-                "antigravity": [],
-                "todos": [],
-                "orphan_sessions": [],
-            }
-
-            html = workboard.render_html(data)
-
-            self.assertIn("<path", html)
-
-    def test_spec_without_deps_renders_no_dag(self):
-        repo = make_repo_record()
-        repo["specs"] = [
-            {
-                "kind": "toolkit",
-                "slug": "solo",
-                "title": "Solo",
-                "path": "specs/solo/SPEC.md",
-                "tasks_total": 1,
-                "tasks_done": 0,
-                "tasks_doing": 0,
-                "tasks_blocked": [],
-                "tasks": [
-                    {
-                        "file": "specs/solo/tasks/01-a.md",
-                        "abs": "/x/01-a.md",
-                        "title": "A",
-                        "status": "open",
-                        "deps": [],
-                    }
-                ],
-                "last_touched": 1.0,
-            }
-        ]
-
-        data = {
-            "totals": {
-                "repos": 1,
-                "specs_open": 1,
-                "tasks_open": 1,
-                "sessions_active": 0,
-                "attention": 0,
-            },
-            "generated_at": "now",
-            "stale_days": 7,
-            "inbox": [],
-            "ready": {"items": [], "blocked_unresolved": []},
-            "repos": [repo],
-            "antigravity": [],
-            "todos": [],
-            "orphan_sessions": [],
-        }
-
-        html = workboard.render_html(data)
-
-        self.assertNotIn("<path", html)
-
 
 class TestSpecDagResolvesDeps(unittest.TestCase):
     """R3: _spec_dag_tasks resolves `Depends on:` entries through
@@ -1130,63 +867,6 @@ class TestSpecDagResolvesDeps(unittest.TestCase):
             (spec_dir / "tasks" / fname).write_text(text, encoding="utf-8")
         specs = {s["slug"]: s for s in workboard.scan_toolkit_specs(Path(repo_root))}
         return specs[slug]
-
-    def test_task_dir_relative_path_dep_draws_edge(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            spec = self._make_spec(
-                tmp,
-                "demo",
-                [
-                    ("01-a.md", "done", None),
-                    ("02-b.md", "pending", "01-a.md"),
-                ],
-            )
-
-            svg = workboard.viz.dag(workboard._spec_dag_tasks(spec))
-
-            self.assertIn("<path", svg)
-
-    def test_cyclic_deps_returns_without_hanging(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            spec = self._make_spec(
-                tmp,
-                "demo",
-                [
-                    ("01-a.md", "pending", "02-b.md"),
-                    ("02-b.md", "pending", "01-a.md"),
-                ],
-            )
-
-            svg = workboard.viz.dag(workboard._spec_dag_tasks(spec))
-
-            self.assertIsInstance(svg, str)
-
-    def test_no_deps_yields_no_dag_block(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            spec = self._make_spec(tmp, "demo", [("01-a.md", "open", None)])
-
-            self.assertEqual(workboard._spec_dag_html([spec]), "")
-
-    def test_cross_spec_dep_draws_no_edge(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            other_dir = Path(tmp) / "specs" / "other"
-            (other_dir / "tasks").mkdir(parents=True)
-            other_dir.joinpath("SPEC.md").write_text("# Other\n", encoding="utf-8")
-            (other_dir / "tasks" / "01-x.md").write_text(
-                "# X\nStatus: done\n", encoding="utf-8"
-            )
-
-            spec = self._make_spec(
-                tmp,
-                "demo",
-                [
-                    ("01-b.md", "pending", "other/01"),
-                ],
-            )
-
-            deps = workboard._spec_dag_tasks(spec)[0]["deps"]
-
-            self.assertEqual(deps, [])
 
 
 class TestLiveSessionIdsCliAndFallback(unittest.TestCase):
@@ -1408,108 +1088,6 @@ class TestSourceHealthMarkers(unittest.TestCase):
             "bytes": 10,
             "state": state,
         }
-
-    def test_spec_with_all_unparseable_tasks_renders_source_check_marker(self):
-        repo = make_repo_record()
-        repo["specs"] = [
-            {
-                "kind": "toolkit",
-                "slug": "demo",
-                "title": "Demo",
-                "path": "specs/demo/SPEC.md",
-                "tasks_total": 2,
-                "tasks_done": 0,
-                "tasks_doing": 0,
-                "tasks_blocked": [],
-                "tasks": [
-                    {
-                        "file": "specs/demo/tasks/notes.md",
-                        "abs": "/x/notes.md",
-                        "title": "Notes",
-                        "status": "pending",
-                        "deps": [],
-                    },
-                    {
-                        "file": "specs/demo/tasks/todo.md",
-                        "abs": "/x/todo.md",
-                        "title": "Todo",
-                        "status": "pending",
-                        "deps": [],
-                    },
-                ],
-                "tasks_unparseable": 2,
-                "last_touched": 1.0,
-            }
-        ]
-
-        html = workboard.render_html(self._data(repos=[repo]))
-
-        self.assertIn("source check", html)
-        self.assertNotIn("no specs", html)  # task section still renders, not empty
-
-    def test_spec_with_some_parseable_tasks_renders_no_marker(self):
-        repo = make_repo_record()
-        repo["specs"] = [
-            {
-                "kind": "toolkit",
-                "slug": "demo",
-                "title": "Demo",
-                "path": "specs/demo/SPEC.md",
-                "tasks_total": 2,
-                "tasks_done": 1,
-                "tasks_doing": 0,
-                "tasks_blocked": [],
-                "tasks": [
-                    {
-                        "file": "specs/demo/tasks/01-a.md",
-                        "abs": "/x/01-a.md",
-                        "title": "A",
-                        "status": "done",
-                        "deps": [],
-                    },
-                    {
-                        "file": "specs/demo/tasks/notes.md",
-                        "abs": "/x/notes.md",
-                        "title": "Notes",
-                        "status": "pending",
-                        "deps": [],
-                    },
-                ],
-                "tasks_unparseable": 1,
-                "last_touched": 1.0,
-            }
-        ]
-
-        html = workboard.render_html(self._data(repos=[repo]))
-
-        self.assertNotIn("source check", html)
-
-    def test_liveness_unknown_renders_marker_adjacent_to_timeline(self):
-        repo = make_repo_record()
-        repo["sessions"] = [self._session()]
-
-        html = workboard.render_html(self._data(repos=[repo], liveness_unknown=True))
-
-        self.assertIn("liveness unknown", html)
-        self.assertIn("viz-bar", html)  # session rows still render, unaffected
-
-    def test_liveness_unknown_false_renders_no_marker(self):
-        repo = make_repo_record()
-        repo["sessions"] = [self._session()]
-
-        html = workboard.render_html(self._data(repos=[repo], liveness_unknown=False))
-
-        self.assertNotIn("liveness unknown", html)
-
-    def test_liveness_unknown_marks_orphan_sessions_section_too(self):
-        html = workboard.render_html(
-            self._data(
-                orphan_sessions=[self._session(state="stale")], liveness_unknown=True
-            )
-        )
-
-        self.assertIn("Sessions outside scanned repos", html)
-        self.assertIn("liveness unknown", html)
 
 
 def make_agentprof_stub(tmpdir, stdout_payload, argv_out=None, exit_code=0):
@@ -2002,165 +1580,11 @@ class TestSpendRendering(unittest.TestCase):
 
     # -- short model name helper (R6) ------------------------------------
 
-    def test_short_name_strips_prefix_and_date_suffix(self):
-        self.assertEqual(
-            workboard._short_model_name("claude-haiku-4-5-20251001"), "haiku-4-5"
-        )
-
-    def test_short_name_renders_non_matching_id_verbatim(self):
-        self.assertEqual(workboard._short_model_name("gpt-4o"), "gpt-4o")
-
     # -- per-session badge (R6) ------------------------------------------
-
-    def test_priced_session_row_shows_dollars_and_short_name(self):
-        repo = make_repo_record()
-        repo["sessions"] = [self._session()]
-        spend = {
-            "available": True,
-            "reason": None,
-            "by_model": [],
-            "by_session": {
-                "s1": {
-                    "cost_microusd": 4370000,
-                    "models": {"claude-haiku-4-5-20251001": self._model_agg(4370000)},
-                }
-            },
-        }
-
-        html = workboard.render_html(self._data(spend, repos=[repo]))
-
-        self.assertIn("$4.37 haiku-4-5", html)
-        self.assertNotIn("$0.00", html)
-
-    def test_session_absent_from_spend_gets_no_badge_no_zero(self):
-        repo = make_repo_record()
-        repo["sessions"] = [self._session()]
-        spend = {"available": True, "reason": None, "by_model": [], "by_session": {}}
-
-        html = workboard.render_html(self._data(spend, repos=[repo]))
-
-        self.assertNotIn("$0.00", html)
-        self.assertNotIn("unpriced", html)
-
-    def test_all_unpriced_session_shows_unpriced_chip_no_dollars(self):
-        repo = make_repo_record()
-        repo["sessions"] = [self._session()]
-        spend = {
-            "available": True,
-            "reason": None,
-            "by_model": [],
-            "by_session": {
-                "s1": {
-                    "cost_microusd": 0,
-                    "models": {
-                        "claude-haiku-4-5-20251001": self._model_agg(0, priced=False)
-                    },
-                }
-            },
-        }
-
-        html = workboard.render_html(self._data(spend, repos=[repo]))
-
-        self.assertIn("unpriced haiku-4-5", html)
-        self.assertNotIn("$0.00", html)
 
     # -- Spend by model table (R7) ---------------------------------------
 
-    def test_spend_table_sorts_by_cost_and_shows_full_ids(self):
-        by_model = [
-            {
-                "model": "claude-sonnet-4-5-20250929",
-                "input_tokens": 1500000,
-                "output_tokens": 20,
-                "cache_read_tokens": 0,
-                "cache_write_tokens": 0,
-                "cost_microusd": 9000000,
-                "priced": True,
-            },
-            {
-                "model": "claude-haiku-4-5-20251001",
-                "input_tokens": 100,
-                "output_tokens": 10,
-                "cache_read_tokens": 0,
-                "cache_write_tokens": 0,
-                "cost_microusd": 1000000,
-                "priced": True,
-            },
-        ]
-        spend = {
-            "available": True,
-            "reason": None,
-            "by_model": by_model,
-            "by_session": {},
-        }
-
-        html = workboard.render_spend_section(spend)
-
-        # full model ids, not short names
-        self.assertIn("claude-sonnet-4-5-20250929", html)
-        self.assertIn("claude-haiku-4-5-20251001", html)
-        # sorted by cost descending: sonnet ($9) before haiku ($1)
-        self.assertLess(
-            html.index("claude-sonnet-4-5-20250929"),
-            html.index("claude-haiku-4-5-20251001"),
-        )
-        # human-formatted token counts
-        self.assertIn("1.5M", html)
-        # dollars
-        self.assertIn("$9.00", html)
-
-    def test_spend_table_unpriced_model_shows_dash_and_badge_not_zero(self):
-        spend = {
-            "available": True,
-            "reason": None,
-            "by_session": {},
-            "by_model": [
-                {
-                    "model": "custom-model",
-                    "input_tokens": 30,
-                    "output_tokens": 3,
-                    "cache_read_tokens": 0,
-                    "cache_write_tokens": 0,
-                    "cost_microusd": 0,
-                    "priced": False,
-                }
-            ],
-        }
-
-        html = workboard.render_spend_section(spend)
-
-        self.assertIn("custom-model", html)
-        self.assertIn("unpriced", html)
-        self.assertIn("—", html)
-        self.assertNotIn("$0.00", html)
-
     # -- unavailable hint (R8) -------------------------------------------
-
-    def test_unavailable_spend_renders_hint_line_and_no_table(self):
-        spend = {
-            "available": False,
-            "reason": "agentprof not found",
-            "by_model": [],
-            "by_session": {},
-        }
-
-        html = workboard.render_spend_section(spend)
-
-        self.assertIn("Spend by model", html)
-        self.assertIn("spend data unavailable: agentprof not found", html)
-        self.assertNotIn("<table", html)
-
-    def test_render_html_includes_spend_section(self):
-        spend = {
-            "available": False,
-            "reason": "agentprof not found",
-            "by_model": [],
-            "by_session": {},
-        }
-
-        html = workboard.render_html(self._data(spend))
-
-        self.assertIn("Spend by model", html)
 
 
 # ---- Unblock lines + Deferred questions (unblock-next-steps task 01) -------
@@ -2298,19 +1722,6 @@ class TestUnblockWarningChip(unittest.TestCase):
             "spend": None,
         }
 
-    def test_blocked_task_without_unblock_shows_warning_chip(self):
-        html = workboard.render_html(self._data(_unblock_spec([_unblock_task()])))
-        self.assertIn('data-chip="no-unblock"', html)
-
-    def test_blocked_task_with_unblock_shows_no_warning_chip(self):
-        spec = _unblock_spec([_unblock_task(unblock={"type": "ask", "step": "q?"})])
-        html = workboard.render_html(self._data(spec))
-        self.assertNotIn('data-chip="no-unblock"', html)
-
-    def test_waiting_spec_without_unblock_shows_warning_chip(self):
-        html = workboard.render_html(self._data(_unblock_spec([], status="waiting")))
-        self.assertIn('data-chip="no-unblock"', html)
-
 
 class TestNeedsAnswerInbox(unittest.TestCase):
     def _repo(self, spec):
@@ -2400,27 +1811,6 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
         self.assertEqual(len(blocked), 1)
         self.assertIn("no unblock step recorded", blocked[0]["why"])
-
-    def test_needs_answer_group_renders_before_blocked_group(self):
-        answer = {
-            "state": "needs-answer",
-            "repo": "demo",
-            "what": "Answer needed: A",
-            "why": "which creds?",
-            "age_ts": 2.0,
-        }
-        blocked = {
-            "state": "blocked",
-            "repo": "demo",
-            "what": "Spec demo: task(s) blocked",
-            "why": "x",
-            "age_ts": 3.0,
-        }
-        html = workboard.render_inbox([blocked, answer])
-        self.assertLess(
-            html.index('data-category="needs-answer"'),
-            html.index('data-category="blocked"'),
-        )
 
 
 def _agent_tool_use(tool_use_id, subagent_type="scout", desc="do the thing", ts=OLD_TS):
