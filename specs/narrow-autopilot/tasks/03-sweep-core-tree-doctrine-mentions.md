@@ -1,6 +1,6 @@
 # Task 03: Sweep remaining /autopilot mentions across docs/, CLAUDE.md, README.md, and friends
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 13 turns
