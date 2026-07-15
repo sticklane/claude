@@ -1,6 +1,6 @@
 # Task 02: Mirror the doc-currency close-out edits into antigravity and codex
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 6 turns
