@@ -235,7 +235,9 @@ every time you enter it.
 <docs-only|tests-only|tiny-diff (<lines>)>` and go straight to commit — when
   there are no product paths, or total added+deleted product lines is < 25.
   Otherwise invoke `$code-review` with args `low` (bare invocation where args
-  can't pass); where that skill is unavailable, fall back to ONE subagent on
+  can't pass) — the doc-currency reminder below is checked in this close-out
+  bullet, not by $code-review itself, which stays scoped to what the harness
+  defines it to check; where that skill is unavailable, fall back to ONE subagent on
   the diff, prompted for high-confidence correctness/behavior findings only,
   capped at ≤1k tokens returned — run it as an AWAITED child (synchronous
   dispatch); never fire-and-forget. For each finding: fix immediately iff it's
@@ -250,7 +252,10 @@ every time you enter it.
   run the spec-completion review (specs/spec-completion-review) over the run's
   whole diff through this same pre-commit review machinery — a bare-SPEC run
   has no per-task pass to catch spec-level gaps; task-file /build runs are
-  unchanged, their per-task pass already covers them.
+  unchanged, their per-task pass already covers them. Before committing, also
+  check whether the diff invalidates AGENTS.md's Map/Commands/State or anything
+  README.md documents for end users — if so, update it in the same commit, not
+  a follow-up task.
 - Log any reversible-default decisions taken this session (step 1's rule) to
   the task file's `## Decisions` section — one line each: decision, default
   taken, how to reverse. Append; never overwrite. No decisions → no section.
