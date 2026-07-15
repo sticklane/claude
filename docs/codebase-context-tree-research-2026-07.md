@@ -9,7 +9,7 @@ self-documenting, but context windows make whole-file reading the wrong
 default; agents need a compact representation of a repo's what and how that
 they can query and annotate.
 
-Status: research complete, six architecture forks decided with the
+Status: research complete, the major architecture forks decided with the
 maintainer (2026-07-15), spec not yet written. The remaining open questions
 are at the end; the spec (`specs/codebase-context-tree/SPEC.md`) follows
 once they are resolved.
@@ -24,15 +24,17 @@ Primary sources
 
 ## Decisions taken (maintainer interview, 2026-07-15)
 
-| Fork              | Decision                                                                                                                                                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Data model        | Universal **symbol tree** (not a universal AST), extracted per-file by tree-sitter with per-language symbol queries; optional LSP (Language Server Protocol) enrichment adds resolved types where a server is available. |
-| Sync trigger      | Hybrid: file-change-driven is primary; a passing build/typecheck additionally stamps nodes validated and refreshes LSP enrichment.                                                                                       |
-| Sync architecture | Lazy sync-on-query plus hook pre-warming. No always-on daemon.                                                                                                                                                           |
-| Note behavior     | Deterministic re-anchoring; content-hash change flags a note stale; the next agent that reads it revalidates. Maintenance itself never spends tokens.                                                                    |
-| Note storage      | In-repo git-tracked files (one file per note); the queryable index is a derived, gitignored cache.                                                                                                                       |
-| Query surface     | CLI core returning compact plain text (JSON behind a flag); MCP server as a thin wrapper over the same core.                                                                                                             |
-| V1 scope adds     | Import/dependency edges, cross-file def/ref edges, ranked overview (Aider-style, token-budgeted). Semantic/vector search is out.                                                                                         |
+| Fork              | Decision                                                                                                                                                                                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data model        | Universal **symbol tree** (not a universal AST), extracted per-file by tree-sitter with per-language symbol queries; optional LSP (Language Server Protocol) enrichment adds resolved types where a server is available.                                    |
+| Sync trigger      | Hybrid: file-change-driven is primary; a passing build/typecheck additionally stamps nodes validated and refreshes LSP enrichment.                                                                                                                          |
+| Sync architecture | Lazy sync-on-query plus hook pre-warming. No always-on daemon.                                                                                                                                                                                              |
+| Note behavior     | Deterministic re-anchoring; content-hash change flags a note stale; the next agent that reads it revalidates. Maintenance itself never spends tokens.                                                                                                       |
+| Note storage      | In-repo git-tracked files (one file per note); the queryable index is a derived, gitignored cache.                                                                                                                                                          |
+| Query surface     | CLI core returning compact plain text (JSON behind a flag); MCP server as a thin wrapper over the same core.                                                                                                                                                |
+| V1 scope adds     | Import/dependency edges, cross-file def/ref edges, ranked overview (Aider-style, token-budgeted). Semantic/vector search is out.                                                                                                                            |
+| Scale posture     | V1 targets 100k files with headroom to 100M: no sync or query path may assume whole-tree enumeration; change detection and storage must be shardable.                                                                                                       |
+| V1 languages      | Python, TypeScript/JavaScript (incl. TSX), Go, Rust, Java, C, C++, Zig, Kotlin, OCaml, Haskell, Bash. Several of these grammars are community-maintained and lack upstream symbol queries, so authoring per-language query files is part of the build cost. |
 
 The rationale for each decision is the research below.
 
@@ -226,6 +228,18 @@ read. The worst case — first query after a large pull — pays a burst that
 hooks exist to pre-warm; between queries the system does nothing at all,
 which is the answer to the watcher-per-keystroke performance trap.
 
+**Scale posture.** V1 targets 100k files; the design keeps headroom for
+100M. Three rules follow. Change detection delegates to git rather than
+bespoke scanning: `git status --porcelain` already respects ignore rules,
+and with `core.fsmonitor` (Watchman-backed) git scales status checks to
+monorepo size — git's object model is itself a Merkle tree, so VCS-native
+change feeds replace custom whole-tree hashing at the top end. Storage
+shards: one SQLite file is right at 100k files, but per-file facts (the
+stack-graphs isolation rule) partition naturally, so the store splits by
+directory subtree without a design change. Queries stay subtree-scoped by
+default, and the ranked overview reads precomputed per-shard rank rollups
+rather than running graph ranking over the whole repo at query time.
+
 **Note lifecycle.** A note anchors to a symbol ID plus the anchored symbol's
 body hash, stored as one small markdown file with YAML frontmatter (id,
 anchor, hash, author, created, status) under a directory like
@@ -270,23 +284,19 @@ To resolve before or during the spec; the first two are `/design`-shaped.
    vs. LSP-backed resolution where available with heuristic fallback.
    Leaning: heuristic matching for ranking purposes, LSP for precise refs
    when enrichment is on, precision labeled in output.
-2. **Implementation runtime.** Go (matches `agentprof/`, static binary, good
-   tree-sitter bindings) vs. Rust (native tree-sitter) vs. Python (matches
-   the toolkit's scripts, slower, environment-dependent).
-3. **V1 language set.** "Every commonly used language" needs a concrete
-   list; each language costs a grammar plus a symbol-query file. Candidate
-   ten: Python, TypeScript/JavaScript (+TSX), Go, Rust, Java, C, C++, C#,
-   Ruby, Bash.
-4. **Note taxonomy and granularity.** Free-form text vs. typed kinds
+2. **Implementation runtime.** Go (matches `agentprof/`, static binary) vs.
+   Rust (native tree-sitter) vs. Python (matches the toolkit's scripts,
+   slower, environment-dependent). The evaluation must cover binding and
+   grammar quality across the full 12-language set — the Zig, Kotlin,
+   OCaml, and Haskell grammars are community-maintained.
+3. **Note taxonomy and granularity.** Free-form text vs. typed kinds
    (gotcha, invariant, rationale, todo); whole-symbol anchors only (leaning
    yes for v1 — research shows sub-symbol spans are the fragile part) vs.
    span-in-symbol anchors.
-5. **Scale target.** The repo size v1 must handle (10k vs. 100k files) sets
-   the staleness-sweep and store budgets.
-6. **Note merge/branch semantics.** One file per note with ULID names
+4. **Note merge/branch semantics.** One file per note with ULID names
    minimizes conflicts; stale flags recompute per checkout — but concurrent
    edits to the same note body across branches still need a stated policy.
-7. **Relationship to `scout`.** Whether toolkit doctrine eventually routes
+5. **Relationship to `scout`.** Whether toolkit doctrine eventually routes
    structure questions to `ctx` before dispatching scouts, and what that
    changes in `.claude/rules/token-discipline.md`.
 
