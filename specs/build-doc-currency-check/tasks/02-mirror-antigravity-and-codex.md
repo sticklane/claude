@@ -1,7 +1,6 @@
 # Task 02: Mirror the doc-currency close-out edits into antigravity and codex
 
-Status: blocked
-Unblock: run: for f in specs/narrow-autopilot/tasks/*.md; do grep -q '^Status: done' "$f" || echo "not done: $f"; done
+Status: pending
 Depends on: 01
 Priority: P1
 Budget: 6 turns

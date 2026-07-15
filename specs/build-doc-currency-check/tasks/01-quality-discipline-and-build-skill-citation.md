@@ -1,7 +1,6 @@
 # Task 01: Add Documentation-currency section and cite it from build/SKILL.md's close-out
 
-Status: blocked
-Unblock: run: for f in specs/narrow-autopilot/tasks/*.md; do grep -q '^Status: done' "$f" || echo "not done: $f"; done
+Status: pending
 Depends on: none
 Priority: P1
 Budget: 5 turns
