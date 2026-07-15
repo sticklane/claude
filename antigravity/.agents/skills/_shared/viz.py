@@ -1,7 +1,7 @@
 """viz.py — shared status/timeline/DAG rendering primitives (pure stdlib).
 
 Single source of truth for status colors, Gantt timelines, and dependency
-DAGs so /workboard, agent-console, and /fleet render the same way instead of
+DAGs so /workboard and agent-console render the same way instead of
 each hand-rolling its own. See specs/shared-viz-renderer/SPEC.md.
 
 Distribution: /workboard imports this module; agent-console vendors a
