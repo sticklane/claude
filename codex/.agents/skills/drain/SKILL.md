@@ -87,7 +87,7 @@ directory). On with no opt-in step; a repo keeps the old shared checkout by
 carrying an `Isolation: off` header, running on lease-file discipline alone as
 before. Fallback: where the environment cannot provide isolated checkouts,
 drain falls back to that lease-only discipline (advisory-only) rather than
-blocking dispatch. Drain-only; build/autopilot orchestrator isolation is out of
+blocking dispatch. Drain-only; build orchestrator isolation is out of
 scope.
 
 **Mechanical preflight sweep (gen-1 only, before step 1's spec-scoped work).**
