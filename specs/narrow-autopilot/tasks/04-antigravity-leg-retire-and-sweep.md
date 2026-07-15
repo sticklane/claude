@@ -1,6 +1,6 @@
 # Task 04: Retire antigravity's autopilot workflow, fold into build.md, sweep doctrine mentions
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 6 turns
