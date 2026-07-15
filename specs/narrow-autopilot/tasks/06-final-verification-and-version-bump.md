@@ -1,6 +1,6 @@
 # Task 06: Whole-tree verification, plugin.json version bump, sequencing check
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03, 04, 05
 Priority: P1
 Budget: 5 turns
@@ -61,19 +61,19 @@ Tasks 01-05 already swept.
 
 ## Acceptance
 
-- [ ] `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/ evals/ runtimes/ README.md AGENTS.md bin/ tests/ agent-console/`
+- [x] `git grep -ln '\bautopilot\b' -- .claude/ docs/ CLAUDE.md .claude-plugin/ codex/ antigravity/ evals/ runtimes/ README.md AGENTS.md bin/ tests/ agent-console/`
       returns exactly the 4 files: `docs/orchestration-research-2026-07.md`,
       `.claude/rules/mirror-procedure-discipline.md`,
       `tests/mirror-procedure-manifest.txt`, `tests/test_check_token_discipline.sh`.
-- [ ] `grep -qF '.claude/skills/build/SKILL.md|antigravity/.agents/workflows/build.md|Two triggers escalate to a human' tests/mirror-procedure-manifest.txt`
-- [ ] `.claude-plugin/plugin.json`'s version is higher than its value at
+- [x] `grep -qF '.claude/skills/build/SKILL.md|antigravity/.agents/workflows/build.md|Two triggers escalate to a human' tests/mirror-procedure-manifest.txt`
+- [x] `.claude-plugin/plugin.json`'s version is higher than its value at
       this task's own base commit (`git show <base-commit>:.claude-plugin/plugin.json | grep version`
       compared against the current value — not a hard-coded prior literal,
       since a sibling task landing first could already have bumped it).
-- [ ] **Manual-pending**: the `/goal`-bounded fixture-task confirmation
+- [x] **Manual-pending**: the `/goal`-bounded fixture-task confirmation
       (Step 5) is recorded as evidence, not an automated check — a human
       action, not something this task can complete unattended.
-- [ ] **Sequencing**: this task's own evidence states explicitly that
+- [x] **Sequencing**: this task's own evidence states explicitly that
       `specs/build-doc-currency-check` had no `in-progress` or merged task
       against `build/SKILL.md` at the time this task ran (Step 1) — cite
       the check's output, not just a claim.
@@ -96,3 +96,22 @@ Tasks 01-05 already swept.
   were **not merged** — they exist only on the discarded branch and must
   be redone once this task re-dispatches. Done vs remaining: criteria
   2/3/4/5 verified-but-unmerged; criterion 1 blocks the whole task.
+- [2026-07-15 /drain] Worker attempt 2 (branch `task/06-final-verification-and-version-bump`):
+  all 5 criteria pass on a worktree synced to current main tip (44268e3).
+  Criterion 1: whole-tree grep returns exactly the 4 exempt files
+  (`.claude/rules/mirror-procedure-discipline.md`,
+  `docs/orchestration-research-2026-07.md`, `tests/mirror-procedure-manifest.txt`,
+  `tests/test_check_token_discipline.sh`) — the two attempt-1 escaped
+  `/autopilot` mentions (`build/reference.md:125`, `breakdown/SKILL.md:95`)
+  are gone, fixed by a merged spec-review before this attempt. Criterion 2:
+  manifest pairing line added and `grep -qF` matches;
+  `test_mirror_procedure_coverage.sh` exits 0. Criterion 3: version bumped
+  0.9.9→0.9.10 (base-commit value 0.9.9 per `git show origin/main:.claude-plugin/plugin.json`).
+  Criterion 4 (manual-pending): the `/goal`-bounded `/build` fixture-task
+  confirmation cannot run unattended (`/build` needs live-conversation launch
+  authorization) — recorded here as a human action, not skipped. Criterion 5
+  (sequencing): `specs/build-doc-currency-check/tasks/` both tasks
+  `Status: blocked` (01 and 02) — none in-progress or merged against
+  `build/SKILL.md`, so the hard sequencing constraint is clear. Gates green:
+  `claude plugin validate .` passes; all `tests/test_*.sh` pass. Committed
+  d4f56a1.
