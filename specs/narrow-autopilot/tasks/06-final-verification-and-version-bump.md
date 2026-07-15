@@ -1,7 +1,6 @@
 # Task 06: Whole-tree verification, plugin.json version bump, sequencing check
 
-Status: blocked
-Unblock: ask: reword the un-swept '/autopilot'-skill reference at .claude/skills/build/reference.md:125 (Task 01 escaped defect, R8 violation) AND resolve the `narrow-autopilot` spec-slug false-positive at .claude/skills/breakdown/SKILL.md:95 (grep `\bautopilot\b` matches the slug; either exempt the slug or correct criterion 1's "exactly 4 files" list) — both are outside this task's Touch. Then re-run Step 2's whole-tree grep.
+Status: pending
 Depends on: 01, 02, 03, 04, 05
 Priority: P1
 Budget: 5 turns
