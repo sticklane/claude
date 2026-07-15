@@ -22,8 +22,20 @@ universal symbol taxonomy — never a universal AST. A derived, ignored
 SQLite index serves queries; agent notes live as version-tracked files
 under `.context/notes/`. Sync is lazy (staleness sweep on every query),
 change detection is VCS-agnostic with a git accelerator adapter, and every
-query returns compact plain text sized to what was asked. Implementation
-runtime (Go vs. Rust) is resolved by /design — see Open questions.
+query returns compact plain text sized to what was asked.
+
+Implementation runtime: **Rust** (decided by /design, 2026-07-15). All 12
+grammars ship as versioned crates.io releases — including tree-sitter-zig
+1.1.2, tree-sitter-kotlin-ng 1.1.0, tree-sitter-ocaml 0.25.0, and
+tree-sitter-haskell 0.23.1 — and the historical grammar-ABI lag is solved
+(modern grammar crates depend on the version-agnostic
+`tree-sitter-language` shim, so all 12 build against current core). The
+exact architecture this spec needs — many grammars statically linked into
+one CLI — is proven at 4× this scale by difftastic and ast-grep. Stack:
+`tree-sitter` core + 12 grammar crates, `rusqlite` with the `bundled`
+feature (no system SQLite), the official `rmcp` MCP SDK (stdio server),
+`cargo test` + `insta` snapshots for golden-file verification, musl
+targets for static release builds.
 
 Architecture rules binding all requirements (rationale in the research
 doc): per-file isolation at index time; no whole-tree enumeration on any
@@ -164,13 +176,24 @@ command from R17; fixture repo layout is the implementer's choice under
       sync journal); `ctx hooks uninstall` removes the hooks.
 - [ ] End-to-end as a user would: script drives init → `ctx map` →
       `ctx sig` → note add → refactor → stale flag → `ctx notes list
-    --stale`, on a fixture repo containing at least 3 of the 12
+--stale`, on a fixture repo containing at least 3 of the 12
       languages.
 
 ## Open questions
 
-1. Implementation runtime: Go vs. Rust, judged on tree-sitter
-   binding/grammar maturity across the 12-language set (Zig, Kotlin,
-   OCaml, Haskell grammars are community-maintained), single-binary
-   distribution, and the SQLite/store story. To be resolved by /design and
-   recorded here before breakdown.
+None.
+
+## Appendix: rejected options (runtime decision, /design 2026-07-15)
+
+- Go: runner-up. Official Go bindings exist for 11/12 grammars but
+  tree-sitter-zig ships none (hand-maintained cgo shim required), and
+  every future language addition replays that bindings roulette; cgo is
+  mandatory either way, so agentprof/'s pure-Go precedent was unreachable
+  regardless. Flip scenario: maintainer weighs single-toolchain repo
+  uniformity above grammar-ecosystem fit.
+- Python: ruled out by the maintainer before investigation — the
+  100k-file/100M-headroom scale posture sits poorly on interpreter startup
+  for a sync-on-every-query CLI.
+- Investigator evidence (binding coverage, ABI status, SDK maturity, with
+  source URLs) is recorded in this branch's /design run; the research doc
+  carries the surviving citations.
