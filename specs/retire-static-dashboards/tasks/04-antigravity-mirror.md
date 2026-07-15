@@ -1,6 +1,6 @@
 # Task 04: Mirror the workboard/viz.py static-HTML removal into antigravity
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 15 turns
