@@ -1,6 +1,6 @@
 # Task 06: Whole-tree verification, plugin.json version bump, sequencing check
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03, 04, 05
 Priority: P1
 Budget: 5 turns
