@@ -1,6 +1,7 @@
 # Task 06: Whole-tree verification, plugin.json version bump, sequencing check
 
-Status: in-progress
+Status: blocked
+Unblock: ask: reword the un-swept '/autopilot'-skill reference at .claude/skills/build/reference.md:125 (Task 01 escaped defect, R8 violation) AND resolve the `narrow-autopilot` spec-slug false-positive at .claude/skills/breakdown/SKILL.md:95 (grep `\bautopilot\b` matches the slug; either exempt the slug or correct criterion 1's "exactly 4 files" list) — both are outside this task's Touch. Then re-run Step 2's whole-tree grep.
 Depends on: 01, 02, 03, 04, 05
 Priority: P1
 Budget: 5 turns
@@ -77,3 +78,22 @@ Tasks 01-05 already swept.
       `specs/build-doc-currency-check` had no `in-progress` or merged task
       against `build/SKILL.md` at the time this task ran (Step 1) — cite
       the check's output, not just a claim.
+
+## Progress
+
+- [2026-07-15 /drain] Worker attempt 1 (branch `task/06-final-verification-and-version-bump`,
+  not merged — see below): confirmed criteria 2 (manifest line), 3
+  (version bump 0.9.9→0.9.10), 4 (manual-pending recorded), and 5
+  (sequencing clear against `build-doc-currency-check`, both its tasks
+  still `blocked`) all pass in isolation, but criterion 1's whole-tree
+  grep returns 6 files instead of the required 4. Two escaped `/autopilot`
+  mentions: `.claude/skills/build/reference.md:125` ("autopilot does not
+  define its own" — a genuine leftover from Task 01's verbatim fold,
+  flagged by Task 01's own Discovered section and never fixed) and
+  `.claude/skills/breakdown/SKILL.md:95` (a grep false-positive on the
+  `narrow-autopilot` spec slug itself, not a routing reference). Both
+  fixes are outside this task's `Touch:`. Because the task did not fully
+  complete, the worker's product changes (manifest line, version bump)
+  were **not merged** — they exist only on the discarded branch and must
+  be redone once this task re-dispatches. Done vs remaining: criteria
+  2/3/4/5 verified-but-unmerged; criterion 1 blocks the whole task.
