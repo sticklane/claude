@@ -132,6 +132,17 @@ letting them default:
   flag it.
 - Work on a branch; commit checkpoints as you go so recovery is "discard
   the branch", never "untangle the tree".
+- Documentation currency: before the build workflow finishes a task, check
+  whether the diff invalidates what AGENTS.md's Map (a new/moved/removed
+  top-level component), Commands (a documented command's behavior or
+  invocation changed), or State sections claim, or anything README.md tells
+  an end user — if so, update it in the same commit, not a follow-up task.
+  This is a discipline reminder, not a mechanical gate: no automated check
+  diffs AGENTS.md's prose against the codebase. It complements rather than
+  replaces a task's own `Touch:` header and acceptance criteria scoping doc
+  updates — a safety net for what that decentralized pattern misses,
+  applying regardless of whether the task author thought to add
+  AGENTS.md/README to `Touch:`.
 
 ## Untrusted data
 
