@@ -1,6 +1,6 @@
 # Task 03: antigravity /idea mirror gets its own grounding-check step
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -49,7 +49,7 @@ mirror there.
 
 ## Acceptance
 
-- [ ] `grep -c "90.day\|90 day" antigravity/.agents/skills/idea/SKILL.md` → 1 or more
-- [ ] `grep -c "check-freshness.sh" antigravity/.agents/skills/idea/SKILL.md` → 0
-- [ ] `grep -c "step 6's hand-off" antigravity/.agents/skills/idea/SKILL.md` → 1 or more
-- [ ] `grep -n "^## [0-9]\." antigravity/.agents/skills/idea/SKILL.md` — manually confirm exactly 6 numbered steps, sequential 1-6, with the new grounding-check step at position 2
+- [x] `grep -c "90.day\|90 day" antigravity/.agents/skills/idea/SKILL.md` → 1 or more (result: 3)
+- [x] `grep -c "check-freshness.sh" antigravity/.agents/skills/idea/SKILL.md` → 0 (result: 0)
+- [x] `grep -c "step 6's hand-off" antigravity/.agents/skills/idea/SKILL.md` → 1 or more (result: 1; no leftover "step 5's hand-off")
+- [x] `grep -n "^## [0-9]\." antigravity/.agents/skills/idea/SKILL.md` — manually confirm exactly 6 numbered steps, sequential 1-6, with the new grounding-check step at position 2 (confirmed: 1 Scout, 2 Ground the idea in fresh research, 3 Interview, 4 Write the spec, 5 Adversarial pass, 6 Hand off)
