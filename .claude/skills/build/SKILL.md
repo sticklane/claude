@@ -204,7 +204,10 @@ line every time you enter it.
   (specs/spec-completion-review) over the run's whole diff through this same
   pre-commit review machinery — a bare-SPEC run has no per-task pass to catch
   spec-level gaps; task-file /build runs are unchanged, their per-task pass
-  already covers them.
+  already covers them. Before committing, also run the doc-currency check in
+  quality-discipline.md's Documentation currency section (cited, not
+  restated). That check lives there, not by /code-review itself —
+  `/code-review` stays scoped to what the harness/plugin defines it to check.
 - Log any reversible-default decisions taken this session (step 1's rule) to
   the task file's `## Decisions` section — one line each: decision, default
   taken, how to reverse. Append; never overwrite prior entries. No decisions
