@@ -1,6 +1,6 @@
 # Task 01: Delete /autopilot, create build/reference.md, fold gate+triggers into build/SKILL.md
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 8 turns
