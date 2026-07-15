@@ -44,6 +44,8 @@ points include:
 
 ## Dispatch authoring: making the choice explicit
 
+Verified: 2026-07-14
+
 A skill that spawns agents has to state, in its own prompt text, the
 tier, the return budget, and any loop bound — never let these default
 silently. The concrete rules (tier by stage type, capped 1-2k token
@@ -69,6 +71,8 @@ and
 [Multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system).
 
 ## Cross-vendor grounding
+
+Verified: 2026-07-14
 
 The tier ladder above is grounded in Anthropic's published guidance. The
 same "match model capability to task complexity" principle appears in the
