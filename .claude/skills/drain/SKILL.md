@@ -269,8 +269,8 @@ relaunch-with-evidence prompt cites. Uncommitted worktree writes are preserved
 in the rescue snapshot when a dead run is swept dirty; discarded branches stay
 discarded (drain, the single writer, records this in the main checkout).
 
-Keep verdicts, not transcripts; log one line per task as you go (/fleet shows
-workers live). **Every recorded verdict ends here, not at step 2**: before
+Keep verdicts, not transcripts; log one line per task as you go (/fleet prints an
+inline table of the workers). **Every recorded verdict ends here, not at step 2**: before
 dispatching the next worker or touching the queue again, evaluate 3a's relaunch
 trigger below. Skipping that check when looping back is a process violation, not
 a discretionary skip (specs/drain-wake-cost/EVIDENCE.md, "Task 05 findings").
