@@ -1,6 +1,6 @@
 # Task 02: Update onboard/drain/gate/breakdown/human-gates pointers off autopilot
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 5 turns
@@ -52,14 +52,19 @@ Exactly the five files listed above. Do not touch `.claude/skills/build/`
 
 ## Acceptance
 
-- [ ] `onboard/SKILL.md` and `drain/reference.md` point at
+- [x] `onboard/SKILL.md` and `drain/reference.md` point at
       `build/reference.md`, not `autopilot/reference.md`:
       `! grep -q 'autopilot/reference' .claude/skills/onboard/SKILL.md .claude/skills/drain/reference.md`
-- [ ] `gate/SKILL.md` and `breakdown/SKILL.md` close with the replacement
+      — verifier: exit 0, no match. (evidence/02-close-claude-leg-direct-consumers.md)
+- [x] `gate/SKILL.md` and `breakdown/SKILL.md` close with the replacement
       `Next stage:`/routing text — neither is left pointing at a deleted
       skill: `! grep -q '/autopilot' .claude/skills/gate/SKILL.md .claude/skills/breakdown/SKILL.md`
-- [ ] `grep -c autopilot docs/human-gates.md` returns 0.
-- [ ] `docs/human-gates.md`'s opening launch-authorization-contract stage
+      — verifier: exit 0, no match. (evidence/02-close-claude-leg-direct-consumers.md)
+- [x] `grep -c autopilot docs/human-gates.md` returns 0.
+      — verifier: returned 0. (evidence/02-close-claude-leg-direct-consumers.md)
+- [x] `docs/human-gates.md`'s opening launch-authorization-contract stage
       list reads `/build`, `/drain`, `/prioritize`, and Reason 2 reads
       "`/build`'s bounded mode and `/drain`" — spot check both by reading
       the surrounding lines after the grep above.
+      — verifier: stage list line 5 and Reason 2 line 40 both confirmed
+      coherent. (evidence/02-close-claude-leg-direct-consumers.md)
