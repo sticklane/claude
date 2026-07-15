@@ -220,8 +220,10 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   is skipped with one diagnostic line (path + reason); it never aborts a
   query or sync.
 - R13: Re-anchoring is deterministic and layered: when an anchored symbol
-  no longer resolves, sync re-anchors via qualified-name match, then
-  body-hash match (C2), then tree-diff matching — candidates are
+  no longer resolves, sync re-anchors via qualified-name match (a unique
+  definition sharing the anchor's terminal name and kind among the
+  changed files' new symbols; zero or multiple candidates → next layer),
+  then body-hash match (C2), then tree-diff matching — candidates are
   definitions of the same kind in the changed files' new trees; the score
   is token overlap between identifier-excised body texts (C2's byte
   basis, tokenized); the note re-anchors to the highest-scoring candidate
@@ -246,8 +248,9 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   anchored body's hash changes, the note's derived freshness becomes
   stale with a pointer to what changed. Re-anchoring never fires against
   the symbols of a parse-failed file (R1): they are unresolved-transient,
-  not vanished — notes anchored there keep their prior state until the
-  file parses again. Note bodies are never modified
+  not vanished — notes anchored there derive stale for the duration
+  (R12's rule applies unchanged), their anchor bindings stay untouched,
+  and freshness re-derives fresh when the file parses again. Note bodies are never modified
   and note files never deleted by the system; content revalidation is the
   reading agent's job.
 - R14: Notes merge under plain VCS semantics: one file per note, so
@@ -373,7 +376,9 @@ command from R17; fixture layout is the implementer's choice under
       mid-function syntax error, sibling symbols in the same file still
       list, `ctx at` on the broken span resolves to the module fallback
       without error, a note anchored to an untouched sibling keeps its
-      freshness, and no re-anchoring fires for the parse-failed file;
+      freshness, and no re-anchoring fires for the parse-failed file; a
+      note anchored to the BROKEN symbol reads stale while broken with
+      its anchor binding untouched, and re-derives fresh after repair;
       repairing the error restores full facts on the next sync.
 - [ ] `--json` everywhere: for each of tree/sig/map/deps/refs/at, the
       `--json` variant pipes through `jq .` with exit 0 and contains an
@@ -397,13 +402,16 @@ command from R17; fixture layout is the implementer's choice under
 - [ ] Rebuild equivalence (C4, CUJS.md CUJ11): capture `ctx map`,
       `ctx tree`, and `ctx sig` outputs, delete `.context/cache/`,
       re-query — byte-identical; separately, tampering the cache's
-      schema-version field triggers a transparent rebuild (journal
-      records it) and the same query succeeds.
+      schema-version field triggers a transparent rebuild — the
+      post-tamper journal record shows parsed == the full indexed file
+      count — and the same query succeeds.
 - [ ] Re-anchoring (R13), all layers: (d) move a function to another file
-      in the same package WITHOUT rename or edit (Go or Java fixture —
-      languages whose C1 module component is the package, not the file)
-      → re-anchors via qualified-name match (layer 1), freshness fresh,
-      file:line updated; (a) rename a function in-file
+      WITHOUT rename or edit in a file-is-module language (C fixture —
+      the C1 module component changes with the file) → re-anchors via
+      qualified-name match (layer 1), freshness fresh; by contrast the
+      same move in a Go fixture (module = package) leaves the anchor path
+      unchanged with NO pending write — identity survives and only the
+      query-reported file:line updates; (a) rename a function in-file
       → queries show the re-anchored note immediately (index phase),
       derived freshness reads fresh, and the note FILE is unchanged until
       a persistence point; (b) edit the function body → freshness reads
