@@ -151,7 +151,10 @@ Extraction and index:
   version control.
 
 Queries (all: compact plain text by default, `--json` variant, never more
-data than asked; `<symbol>` arguments resolve per C3):
+data than asked; `<symbol>` arguments resolve per C3; `--doc` renders
+docstrings at the depth appropriate to the command — full text on the
+single-symbol `ctx sig`, first line on the multi-symbol tree/map
+surfaces):
 
 - R6: `ctx tree <path> [--depth N] [--limit N] [--doc]` prints the
   containment outline of the requested subtree only, honoring the depth
