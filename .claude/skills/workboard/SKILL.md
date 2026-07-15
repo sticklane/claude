@@ -31,9 +31,13 @@ open http://127.0.0.1:8899/workboard
 - If the launchd job doesn't exist, start the server directly in the
   background (`~/claude/agent-console/agent-console.py`), re-check `/healthz`,
   then open the URL.
-- **Fallback (machines without agent-console):** run the bundled stdlib-only
-  scanner and present the file instead — never write it into a repo:
-  `python3 <this skill dir>/workboard.py [ROOTS ...] --out <scratchpad>/workboard.html`
+- **If the live server genuinely cannot start** (the `/healthz` check fails
+  AND the direct background-start attempt also fails): report the startup
+  error and what to check — is `python3` available, is the port free
+  (another process may hold `SKILLS_DASHBOARD_PORT`, default 8899), are
+  `SKILLS_DASHBOARD_PORT` / `SKILLS_DASHBOARD_HOST` set as intended. Do not
+  fall back to writing a static HTML file — the scanner has no file-output
+  mode; its only outputs are `--json` (step 2) and a one-line summary.
 
 ## 2. Relay the inbox
 
