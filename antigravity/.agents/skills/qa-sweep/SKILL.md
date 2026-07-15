@@ -78,8 +78,8 @@ queue work that can't be verified.
 
 Apply the critique workflow's procedure (`.agents/workflows/critique.md`) to
 each spec filed in step d. This is permitted unconditionally: critique is not
-one of the four gated execution-stage workflows
-(build/autopilot/drain/prioritize), so no live-request naming it is required.
+one of the four gated execution-stage workflows,
+so no live-request naming it is required.
 Antigravity workflows are human-launched in the Agent Manager, so where
 Claude Code self-chains this step via the Skill tool, this port applies the
 critique workflow's procedure in the same conversation instead.

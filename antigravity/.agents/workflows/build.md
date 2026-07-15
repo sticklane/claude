@@ -5,6 +5,31 @@ description: Execute one task file (or a small SPEC.md) end to end - scout, plan
 Execute the task file given after the command. It assumes an agent-ready
 task/spec with runnable acceptance criteria.
 
+## Bounded, walk-away runs
+
+This workflow's default is unbounded and attended. Antigravity has no
+`/goal` transcript-evaluator, so an unattended run means either staying at
+the keyboard with an explicit stop condition stated up front ("<criteria>
+pass, or stop after ~N turns") or a background Agent Manager agent on a
+worktree running the drain workflow's worker prompt. Either way set the
+Terminal Execution Policy deny list (push, deploy, rm) first, then clear
+this go/no-go gate.
+
+**Classification (go/no-go).** A peripheral feature, prototype, or migration
+with mechanical, runnable verification fits a bounded run. Core business
+logic or security-sensitive code doesn't disqualify a task — it raises the
+bar it must clear first: tighten acceptance criteria to runnable commands
+and confirm worktree isolation covers every side effect, or stay on
+unbounded attended execution. A task whose "correct" is a judgment call no
+test can settle is an unresolved spec question, not a walk-away run — file
+it and resolve the spec instead of launching.
+
+**Escalation triggers.** Two triggers escalate to a human instead of
+pressing on: the same step failing twice (a third attempt in a degraded
+context won't do better), and reaching a high-risk action — push, deploy,
+data deletion, publishing, spending — which the run must never take on its
+own.
+
 1. **Load only the task.** Open this step by emitting
    `<!-- agentprof:stage=load -->` verbatim each time you enter it —
    agentprof reads it from this session's transcript to attribute
