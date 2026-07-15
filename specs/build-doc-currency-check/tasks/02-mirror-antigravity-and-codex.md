@@ -19,20 +19,25 @@ neither that file nor a slash-command citation convention).
 Exactly the three files listed above. Do not touch `.claude/` (Task 01
 owns it).
 
-**BLOCKING PRECONDITION — do not start until unblocked.** `specs/narrow-autopilot`
-also edits `antigravity/.agents/workflows/build.md` (folding in the
-classification gate and escalation triggers, Task 04) and
+**BLOCKING PRECONDITION — cleared by human judgment call, 2026-07-15.**
+`specs/narrow-autopilot` also edited `antigravity/.agents/workflows/build.md`
+(folding in the classification gate and escalation triggers, Task 04) and
 `codex/.agents/skills/build/SKILL.md` (folding in autopilot's content,
 Task 05) — the same cross-spec collision this spec's Sequencing note
-flags for the `.claude` leg extends to both mirrors. This task's
-`Unblock: run:` line checks that every narrow-autopilot task file reads
-`Status: done`; if it doesn't, STOP. Once unblocked, find each edit point
-by section content, not by line number.
+flagged for the `.claude` leg extended to both mirrors. All 6 of
+narrow-autopilot's real tasks (01-06) are `Status: done` and merged, so
+both fold-ins are fully landed. One unrelated stub,
+`specs/narrow-autopilot/tasks/07-antigravity-build-md-char-cap.md`
+(`Status: draft`), does concern `antigravity/.agents/workflows/build.md`,
+but a `draft` task is never dispatchable — no active or queued edit
+against that file exists, so there is no live collision risk. Once this
+task starts, find each edit point by section content, not by line
+number.
 
 ## Steps
 
-1. Confirm the blocking precondition above is satisfied (re-run the
-   `Unblock: run:` check yourself before editing), and confirm Task 01 has
+1. The blocking precondition above is already confirmed cleared (human
+   judgment call, 2026-07-15) — no re-check needed. Confirm Task 01 has
    landed (its citation wording is what this task's antigravity/codex
    edits parallel).
 2. `antigravity/.agents/workflows/build.md` (mirrors `build/SKILL.md`,
