@@ -153,16 +153,18 @@ Extraction and index:
 Queries (all: compact plain text by default, `--json` variant, never more
 data than asked; `<symbol>` arguments resolve per C3):
 
-- R6: `ctx tree <path> [--depth N] [--limit N]` prints the containment
-  outline of the requested subtree only, honoring the depth cap AND a
-  result cap (default 200 symbols); truncation appends one line naming
-  the count omitted and the flag to raise. Symbols carrying notes get the
-  C10 marker.
+- R6: `ctx tree <path> [--depth N] [--limit N] [--doc]` prints the
+  containment outline of the requested subtree only, honoring the depth
+  cap AND a result cap (default 200 symbols); truncation appends one line
+  naming the count omitted and the flag to raise. `--doc` appends each
+  symbol's first docstring line to its outline entry. Symbols carrying
+  notes get the C10 marker.
 - R7: `ctx sig <symbol>` prints the signature, first docstring line, and
   the C10 marker when notes exist; `--doc` adds the full docstring.
-- R8: `ctx map [--tokens N]` prints a ranked overview: symbols ordered by
-  reference-graph importance, truncated to the token budget (default
-  1000, counted per C7), with C10 markers.
+- R8: `ctx map [--tokens N] [--doc]` prints a ranked overview: symbols
+  ordered by reference-graph importance, truncated to the token budget
+  (default 1000, counted per C7), with C10 markers. `--doc` appends first
+  docstring lines, counted within the same budget.
 - R9: `ctx deps <path> [--reverse]` prints module-level import edges into
   or out of the requested path.
 - R10: `ctx refs <symbol> [--limit N]` prints definitions and references,
@@ -176,7 +178,8 @@ data than asked; `<symbol>` arguments resolve per C3):
 - R19: `ctx at <file>:<line>` resolves a position to its innermost
   enclosing symbol and prints the containment chain (module → … →
   innermost) with each symbol's kind, qualified path, signature first
-  line, and C10 marker; a position enclosed by no definition resolves to
+  line, first docstring line, and C10 marker; a position enclosed by no
+  definition resolves to
   the file's module symbol. A file the index skips (ignored, unsupported
   extension) or that does not exist prints one line naming the reason and
   exits 4 — stack traces routinely point at generated or ignored files,
@@ -312,10 +315,14 @@ command from R17; fixture layout is the implementer's choice under
 - [ ] The documented check command (R17) runs the component's test suite
       green, covering R1 (per-language extraction golden tests incl. a C++
       overload fixture exercising C1's `#<n>` rule and a C2 test proving a
-      pure rename leaves the body hash unchanged), R4 (ignored file
+      pure rename leaves the body hash unchanged; every language fixture
+      contains at least one documented symbol whose extracted docstring
+      the goldens assert — C8's native conventions, incl. the
+      leading-comment rule for C/Zig/Bash), R4 (ignored file
       excluded from index), R5 (index builds in a fixture directory with
       no `.git`), R6–R10 (query output golden tests incl. depth and
-      result caps with truncation-count lines, C7 token budget, C3
+      result caps with truncation-count lines, C7 token budget, `--doc`
+      first-docstring rendering in tree and map, C3
       ambiguous-suffix exit code 3, C10 note-presence markers, and
       `heuristic`/`precise` labels), R19 (`ctx at` on a line inside a
       nested function prints the containment chain; a line outside any
