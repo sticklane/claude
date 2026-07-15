@@ -1,6 +1,6 @@
 # Task 05: Retire codex's autopilot skill, fold into build/SKILL.md, sweep doctrine mentions
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 6 turns
@@ -40,10 +40,15 @@ Exactly the files listed above. Do not touch `.claude/` or `antigravity/`
 
 ## Acceptance
 
-- [ ] `[ ! -d codex/.agents/skills/autopilot ]`
-- [ ] `codex/.agents/skills/build/SKILL.md` contains the folded-in content
-      from the deleted autopilot skill.
-- [ ] `! grep -q 'autopilot' codex/AGENTS.md codex/README.md codex/.agents/skills/drain/SKILL.md codex/.agents/skills/evals/SKILL.md`
-- [ ] Each of the four files above names the three-skill set
-      (drain/build/evals) wherever it previously named "the four" —
-      spot-check by reading the surrounding context after the grep above.
+- [x] `[ ! -d codex/.agents/skills/autopilot ]` — dir deleted; test exits 0 (AC1 PASS).
+- [x] `codex/.agents/skills/build/SKILL.md` contains the folded-in content
+      from the deleted autopilot skill — new `## Bounded, walk-away runs`
+      section folds classification, preconditions, mechanism selection,
+      walk-away contract, exit checklist, and pre-cap baton; critic
+      confirmed every section of the deleted file landed.
+- [x] `! grep -q 'autopilot' codex/AGENTS.md codex/README.md codex/.agents/skills/drain/SKILL.md codex/.agents/skills/evals/SKILL.md` — exits 0 (AC3 PASS).
+- [x] Each of the four files above names the three-skill set
+      (drain/build/evals) wherever it previously named "the four" — verified
+      no residual `\bfour\b` refs to the stage set in README/AGENTS; drain
+      ("build orchestrator isolation") and evals ("unlike drain/build") read
+      coherently.
