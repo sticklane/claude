@@ -1,6 +1,6 @@
 # Task 01: Add Documentation-currency section and cite it from build/SKILL.md's close-out
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 5 turns
