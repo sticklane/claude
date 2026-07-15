@@ -59,7 +59,7 @@ Codex — reachable only if something happens to grep for it (confirmed:
 Codex's own `scout` skill found `drain.md` via `rg`, not via any
 workflow-discovery path) or a human tells Codex the exact file path.
 Anything ported as workflow-only (the disable-model-invocation tier:
-`drain`/`build`/`autopilot`/`evals`) needs a REAL Codex skill written for
+`drain`/`build`/`evals`) needs a REAL Codex skill written for
 it, not just a symlink into the antigravity mirror.
 
 ## `allow_implicit_invocation: false`'s actual documented semantics

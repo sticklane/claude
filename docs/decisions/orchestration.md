@@ -38,7 +38,7 @@ deterministic and predictable").
   that prefers runnable acceptance commands over judges, and file-based
   resume-from-checkpoint state.
 - **Leave model-driven** — decomposition judgment inside breakdown, routing /
-  next-task selection inside autopilot, and subagent delegation (light-summary
+  next-task selection inside `/build`'s bounded mode, and subagent delegation (light-summary
   returns). This is Anthropic's endorsed hybrid: the script owns the loop, the
   model owns the decisions on intermediate results.
 
@@ -116,7 +116,7 @@ Prompted by "should we use code to manage workflows anywhere we currently
 use text," scouted all six skills that looked mechanical enough to be
 candidates on a first pass — breakdown, prioritize, list-specs, gate,
 fleet, workboard — against `workflow-author/SKILL.md`'s own admission
-criteria: deterministic control flow *over subagents* (loops, fan-out,
+criteria: deterministic control flow _over subagents_ (loops, fan-out,
 staged verification), explicitly rejecting a "single linear sequence."
 None qualify:
 
@@ -130,7 +130,7 @@ None qualify:
 - **gate** is one judgment call plus one idempotent installer run, no
   loop.
 - **breakdown** comes closest but its only "fan-out" is a few scout calls
-  plus one *optional*, single conditional critic call — not the loop/
+  plus one _optional_, single conditional critic call — not the loop/
   fan-out shape a Workflow script exists for.
 
 Being "mechanical" (no model judgment) is necessary but not sufficient —

@@ -1,7 +1,7 @@
 # Worktree agents are cut from `origin/main`, not local HEAD
 
 When to read: debugging why `isolation: worktree` background agents (drain,
-parallel, autopilot workers) see stale files, miss just-merged dependencies,
+parallel, build workers) see stale files, miss just-merged dependencies,
 or produce conflicting merges — especially on a never-pushed / local-only
 repo.
 
@@ -33,5 +33,5 @@ Symptoms observed (2026-07-04 drain of `specs/`):
    worktree is cut fresh.
 
 The `drain` skill now bakes in both (reference.md Worker prompt + Status field
-semantics, v0.7.7). `parallel` / `autopilot` authors dispatching worktree
+semantics, v0.7.7). `parallel` / `build` authors dispatching worktree
 workers should apply the same two defenses.

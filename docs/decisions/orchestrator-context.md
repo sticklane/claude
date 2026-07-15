@@ -7,7 +7,7 @@ Research: [`docs/context-management-research-2026-07.md`](../context-management-
 ## Context
 
 Drain's queue state survives session death (committed `Status:` flips), but the
-orchestrator *session itself* only degrades — its sole prior guidance was "if
+orchestrator _session itself_ only degrades — its sole prior guidance was "if
 this session grows heavy, tell the user to `/clear` and re-run `/drain`":
 manual, and dependent on a human noticing. The research confirms the failure
 mode is real and gradual ("context rot": recall degrades before the hard
@@ -17,7 +17,7 @@ relaunch, each fresh instance following a read-state-then-verify ritual.
 
 ## Decision
 
-Give each orchestrator (drain, autopilot, parallel, and the ultra-mode
+Give each orchestrator (drain, build, parallel, and the ultra-mode
 workflow templates) a **baton-pass step** at every safe boundary (a task
 verdict recorded and committed): evaluate the trigger, and when it fires write
 a mini-handoff (`specs/<slug>/DRAIN-BATON.md`), spawn a fresh detached
@@ -29,12 +29,12 @@ queue.
 
 - **Deterministic generation budget** — hand off after **N recorded verdicts**
   in one session. Default **N=4**, overridable per-spec via a `Relaunch-every:
-  N` header in the drained spec's SPEC.md header block (documented in
+N` header in the drained spec's SPEC.md header block (documented in
   breakdown's queue conventions; absence means 4).
 - **Degradation override** — hand off early at the next boundary if the
   orchestrator notices itself re-reading files it already read, losing queue
   position, repeated failed corrections, or a compaction event. Proactive,
-  never failure-triggered: degradation is a gradient, so hand off *before*
+  never failure-triggered: degradation is a gradient, so hand off _before_
   limits.
 
 ### Cap: max-generations = 10
