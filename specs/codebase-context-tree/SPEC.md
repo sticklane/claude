@@ -67,22 +67,30 @@ invents nothing here.
   body that embeds its own name — recursion — changes on rename and falls
   through to the tree-diff re-anchor path; that is expected.)
 - C3 — Symbol argument resolution: commands taking `<symbol>` accept an
-  exact qualified path (unique by C1) or a suffix of one. A suffix matching
-  multiple symbols prints the candidate list (qualified path + file:line)
-  and exits 3; `ctx notes add` refuses ambiguous anchors the same way.
+  exact qualified path (unique by C1) or a suffix of one on `.`-delimited
+  component boundaries — the argument must equal one or more whole
+  trailing components (`Handler` matches `app.Handler`, not
+  `app.AuthHandler`). A suffix matching multiple symbols prints the
+  candidate list (qualified path + file:line) and exits 3; `ctx notes add`
+  refuses ambiguous anchors the same way.
 - C4 — Project root and layout: the root is the nearest ancestor directory
-  containing `.context/`, else the VCS adapter's root (`.git` in v1).
-  `ctx init` scaffolds `.context/` containing `notes/` (version-tracked),
-  `cache/` (derived index + journal, never committed), and a managed
-  `.context/.gitignore` ignoring `cache/`. Every other command exits 2
-  with a pointer to `ctx init` when no root is found.
+  containing `.context/`. Only `ctx init` falls back to the VCS adapter's
+  root (`.git` in v1) — to decide where to scaffold. `ctx init` creates
+  `.context/` containing `notes/` (version-tracked), `cache/` (derived
+  index + journal, never committed), and a managed `.context/.gitignore`
+  ignoring `cache/`. Every other command exits 2 with a pointer to
+  `ctx init` whenever no ancestor `.context/` exists — even inside a VCS
+  repo.
 - C5 — Sync journal: every sync appends one JSON line — UTC timestamp,
   trigger (`query` | `cli` | `hook`), files scanned/hashed/parsed — to
   `.context/cache/sync-journal.jsonl`. This is the synchronization point
   for observing background syncs.
 - C6 — Store concurrency: SQLite in WAL mode with a busy timeout;
   concurrent syncs serialize on an advisory lock; queries read consistent
-  snapshots and never block on a background sync.
+  snapshots and never block on a background sync. A query whose staleness
+  sweep finds the sync lock already held skips its own sweep and reads the
+  current snapshot (the in-flight sync publishes the update); it never
+  blocks and never runs a second concurrent sweep.
 - C7 — Token budget: token counts are ceil(bytes/4), documented as an
   approximation — deterministic, no tokenizer dependency.
 - C8 — Docstrings: languages with a native convention use it (Python
@@ -113,7 +121,8 @@ Extraction and index:
   fixture, parsed == 1 and hashed == 1; a pure mtime bump with unchanged
   content yields parsed == 0.
 - R3: Every query command runs the staleness sweep first (skippable with
-  `--no-sync`), so query results always reflect the working tree.
+  `--no-sync`; skipped automatically when a sync already holds the lock,
+  per C6), so query results always reflect the working tree.
 - R4: The index respects ignore rules: the VCS adapter's ignores when
   present (`.gitignore` under git), plus `.ctxignore` in the no-VCS
   baseline; `.context/cache/` is never indexed.
@@ -149,13 +158,21 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   `--file <path>`, or stdin via `--file -`) writes one ULID-named markdown
   file under `.context/notes/` with YAML frontmatter: id, anchor qualified
   path (C1), anchor body hash (C2), optional kind, author and created
-  (C9), status. `ctx notes <symbol>` prints that symbol's notes;
-  `ctx notes list [--kind K] [--stale]` filters.
+  (C9). Freshness (`fresh`/`stale`) is a DERIVED flag computed at sync,
+  stored only in the index, and returned with every note read — never
+  written into the note file. `ctx notes <symbol>` prints that symbol's
+  notes with their freshness; `ctx notes list [--kind K] [--stale]`
+  filters on it.
 - R13: Re-anchoring is deterministic and layered: when an anchored symbol
   no longer resolves, sync re-anchors via qualified-name match, then
-  body-hash match (C2), then tree-diff matching against the changed files'
-  old and new trees; when the anchored body's hash changes, the note's
-  status becomes stale with a pointer to what changed. Notes are never
+  body-hash match (C2), then tree-diff matching — candidates are
+  definitions of the same kind in the changed files' new trees; the score
+  is token overlap between identifier-excised body texts (C2's byte
+  basis, tokenized); the note re-anchors to the highest-scoring candidate
+  above threshold 0.6, ties broken by lowest file:line; with no candidate
+  above threshold the note stays un-re-anchored and stale. When the
+  anchored body's hash changes, the note's derived freshness (R12)
+  becomes stale with a pointer to what changed. Note files are never
   deleted or rewritten by the system; content revalidation is the reading
   agent's job.
 - R14: Notes merge under plain VCS semantics: one file per note, so
@@ -215,8 +232,11 @@ command from R17; fixture layout is the implementer's choice under
       suite passing: `context-tree/tests/fixtures/languages/` contains
       exactly 12 subdirectories named python, typescript, go, rust, java,
       c, cpp, zig, kotlin, ocaml, haskell, bash, each holding at least one
-      source file, and the R1 golden tests iterate over that directory
-      listing (not a hardcoded subset).
+      source file — the `typescript/` dir holding a `.ts`, a `.tsx`, and a
+      `.js` file — and the check command's output emits one
+      `covered: <language>` line per language the R1 suite actually
+      enumerated; the criterion greps that output for all 12 names, so a
+      hardcoded subset fails mechanically.
 - [ ] The documented check command (R17) runs the component's test suite
       green, covering R1 (per-language extraction golden tests incl. a C++
       overload fixture exercising C1's `#<n>` rule and a C2 test proving a
@@ -232,11 +252,15 @@ command from R17; fixture layout is the implementer's choice under
       hashed == 1; a pure mtime bump yields parsed == 0; a query without
       `--no-sync` reflects the edit.
 - [ ] Re-anchoring (R13), all three layers: (a) rename a function in-file
-      → note re-anchors via body hash, status fresh; (b) edit the function
-      body → status stale, pointer present; (c) move a function to a
-      different file, rename it, AND make a small body edit in the same
-      sync → note re-anchors via tree-diff to the new symbol and status is
-      stale. In all cases the note file is never deleted.
+      → note re-anchors via body hash, derived freshness reads fresh;
+      (b) edit the function body → freshness reads stale, pointer present;
+      (c) move a function to a different file, rename it, AND make a small
+      body edit in the same sync → note re-anchors via tree-diff to the
+      new symbol and freshness reads stale. In all cases the note file's
+      bytes are never modified or deleted by the system.
+- [ ] Root guard (C4): in a git fixture with no `.context/`, `ctx map`
+      exits 2 and names `ctx init`; running `ctx init` places `.context/`
+      at the git root and the same query then succeeds.
 - [ ] LSP enrichment (R11): with a language server configured in the test
       environment, `ctx refs` on a fixture symbol returns at least one
       `precise` result; with none, the same query returns `heuristic`
