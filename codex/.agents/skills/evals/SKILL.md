@@ -11,7 +11,7 @@ sessions, so it is invoked deliberately, never as a side effect —
 the agent cannot auto-select it by description match, and the "human-only,
 paid headless sessions" framing above already states that guarantee
 unconditionally. (No separate launch-authorization paragraph is added here:
-unlike drain/build/autopilot, the human-only-paid-sessions framing is
+unlike drain/build, the human-only-paid-sessions framing is
 already an unconditional guarantee, so there is nothing further to gate.)
 
 The runner (`evals/run.sh`) and the fixture scenarios it consumes ship in

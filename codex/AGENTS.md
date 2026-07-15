@@ -11,9 +11,9 @@ antigravity skill tree, so they stay in lockstep with it.
 ## Codex-specific fact
 
 Unlike the antigravity port, this project additionally exposes
-`drain`, `build`, `autopilot`, and `evals` as explicit-invocation-only
+`drain`, `build`, and `evals` as explicit-invocation-only
 skills — never auto-triggered. Invoke them with `$drain`, `$build`,
-`$autopilot`, `$evals`, or through the `/skills` command.
+`$evals`, or through the `/skills` command.
 
 See [`codex/README.md`](README.md) for the experimental-reliability caveat
 on this port.
