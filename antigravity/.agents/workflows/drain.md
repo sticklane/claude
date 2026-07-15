@@ -83,7 +83,7 @@ from the shared checkout on lease-file discipline alone, exactly as before.
 Fallback: where the VCS or hosting environment cannot provide isolated
 checkouts, drain falls back to that same lease-only discipline (advisory-only)
 rather than blocking dispatch. Orchestrator isolation is drain-only;
-build/autopilot orchestrator isolation is out of scope.
+build orchestrator isolation is out of scope.
 
 **Mechanical preflight sweep (gen-1 only, before step 1's spec-scoped work).**
 One mechanical pass scoped to EVERY spec in the launched scope (a no-argument
