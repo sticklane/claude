@@ -1,6 +1,6 @@
 # Task 01: Add Documentation-currency section and cite it from build/SKILL.md's close-out
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 5 turns
@@ -73,16 +73,18 @@ spec's own line references are pre-narrow-autopilot snapshots.
 
 ## Acceptance
 
-- [ ] `grep -c "Documentation currency" .claude/rules/quality-discipline.md`
-      → 1 or more.
-- [ ] `grep -c "Documentation currency" .claude/skills/build/SKILL.md`
-      → 1 or more.
-- [ ] `grep -c "not by /code-review itself" .claude/skills/build/SKILL.md`
-      → 1 or more.
-- [ ] `.claude-plugin/plugin.json`'s version is higher than its value at
+- [x] `grep -c "Documentation currency" .claude/rules/quality-discipline.md`
+      → 1 or more. Evidence: returns 1 (base commit afcd8a8).
+- [x] `grep -c "Documentation currency" .claude/skills/build/SKILL.md`
+      → 1 or more. Evidence: returns 1.
+- [x] `grep -c "not by /code-review itself" .claude/skills/build/SKILL.md`
+      → 1 or more. Evidence: returns 1 (phrase present, no backticks around /code-review).
+- [x] `.claude-plugin/plugin.json`'s version is higher than its value at
       this task's own base commit (`git show <base-commit>:.claude-plugin/plugin.json | grep version`
       compared against the current value, not a hard-coded prior literal).
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0.
+      Evidence: base b5acb52 = 0.9.10, current = 0.9.11 (strictly higher).
+- [x] `bash evals/lint-ultra-gate.sh` exits 0. Evidence: "OK — all ultra
+      mentions gated in 4 files", exit 0.
 - [ ] **Manual-pending** (cannot be verified by an unattended
       worker/verifier — `/build` carries the launch-authorization
       contract, not something an unattended worker holds): a human runs
