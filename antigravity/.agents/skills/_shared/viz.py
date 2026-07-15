@@ -5,8 +5,7 @@ DAGs so /workboard, agent-console, and /fleet render the same way instead of
 each hand-rolling its own. See specs/shared-viz-renderer/SPEC.md.
 
 Distribution: /workboard imports this module; agent-console vendors a
-byte-identical copy (checked by its own conformance gate); /fleet's CSS
-region is regenerated from --emit-fleet-css.
+byte-identical copy (checked by its own conformance gate).
 """
 # viz-sha256: 168aadae500cdb69f410fe06d30f98039cb2b26bb2f08a62c97409c521090dc5
 
@@ -32,8 +31,8 @@ STATUS_HEX: dict[str, str] = {
     "blocked": "#d9b063",
 }
 
-# Every real status term in use across agent-console.py, workboard.py, and
-# fleet/reference.md, mapped to one canonical token.
+# Every real status term in use across agent-console.py and workboard.py,
+# mapped to one canonical token.
 _STATUS_ALIASES: dict[str, str] = {
     "running": "running",
     "in-progress": "running",
@@ -253,12 +252,6 @@ VIZ_CSS = f"""\
 # ---------------------------------------------------------------------------
 
 
-def _emit_fleet_css() -> None:
-    print("/* >>> viz:timeline-css BEGIN */")
-    print(VIZ_CSS, end="")
-    print("/* <<< viz:timeline-css END */")
-
-
 def _self_sha256() -> str:
     """sha256 of the module body below the `# viz-sha256:` header line."""
     src = Path(__file__).read_text()
@@ -270,20 +263,15 @@ def _self_sha256() -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="viz.py")
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "--emit-fleet-css",
+    parser.add_argument(
+        "--self-sha256",
         action="store_true",
-        help="print VIZ_CSS wrapped in fleet sentinels",
-    )
-    group.add_argument(
-        "--self-sha256", action="store_true", help="print sha256 of the module body"
+        required=True,
+        help="print sha256 of the module body",
     )
     args = parser.parse_args(argv)
 
-    if args.emit_fleet_css:
-        _emit_fleet_css()
-    elif args.self_sha256:
+    if args.self_sha256:
         print(_self_sha256())
     return 0
 

@@ -1,6 +1,6 @@
 # Task 04: Mirror the workboard/viz.py static-HTML removal into antigravity
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 15 turns
@@ -66,18 +66,36 @@ edit them).
 
 ## Acceptance
 
-- [ ] `[ ! -d antigravity/.agents/skills/fleet ]`
-- [ ] `grep -n "_emit_fleet_css\|--emit-fleet-css" antigravity/.agents/skills/_shared/viz.py`
-      returns no matches.
-- [ ] `grep -n "render_html\|build_actions_script\|--out\|--actions-out" antigravity/.agents/skills/workboard/workboard.py`
-      returns no matches.
-- [ ] `grep -n "^TEMPLATE = " antigravity/.agents/skills/workboard/workboard.py`
-      returns no match.
-- [ ] Save the reachability script from ../SPEC.md to `/tmp/orphan_check.py`
+- [x] `[ ! -d antigravity/.agents/skills/fleet ]` — PASS, dir absent (verifier).
+- [x] `grep -n "_emit_fleet_css\|--emit-fleet-css" antigravity/.agents/skills/_shared/viz.py`
+      returns no matches. — PASS (verifier).
+- [x] `grep -n "render_html\|build_actions_script\|--out\|--actions-out" antigravity/.agents/skills/workboard/workboard.py`
+      returns no matches. — PASS (verifier).
+- [x] `grep -n "^TEMPLATE = " antigravity/.agents/skills/workboard/workboard.py`
+      returns no match. — PASS (verifier).
+- [x] Save the reachability script from ../SPEC.md to `/tmp/orphan_check.py`
       and run `python3 /tmp/orphan_check.py antigravity/.agents/skills/workboard/workboard.py`
-      — prints `clean` (exit 0).
-- [ ] `grep -n "Fallback (machines without agent-console)" antigravity/.agents/skills/workboard/SKILL.md`
-      returns no match.
-- [ ] `python3 antigravity/.agents/skills/workboard/workboard.py --json` still runs and produces valid JSON.
-- [ ] `python3 -m unittest discover -s antigravity/.agents/skills/workboard` exits 0.
-- [ ] `git grep -rn 'fleet/reference\.md' -- antigravity/` returns no matches.
+      — prints `clean` (exit 0). — PASS, printed `clean` (verifier).
+- [x] `grep -n "Fallback (machines without agent-console)" antigravity/.agents/skills/workboard/SKILL.md`
+      returns no match. — PASS (verifier).
+- [x] `python3 antigravity/.agents/skills/workboard/workboard.py --json` still runs and produces valid JSON. — PASS (verifier).
+- [x] `python3 -m unittest discover -s antigravity/.agents/skills/workboard` exits 0. — PASS, 101 tests OK (verifier).
+- [x] `git grep -rn 'fleet/reference\.md' -- antigravity/` returns no matches. — PASS (verifier).
+
+Evidence: specs/retire-static-dashboards/evidence/04-antigravity-mirror.md
+
+## Decisions
+
+- workboard.py made byte-identical to task 02's completed `.claude` result
+  (it is on the content-parity gate's byte-identical include-list, so it must
+  be a straight copy, not an independent re-deletion) rather than my own
+  from-scratch orphan-driven deletion — the two diverged on task 02's cleanup
+  choices (docstring rewrite, `_TASK_NUM_RE` relocation, kept one-line non-json
+  summary). Reverse: re-run the independent orphan-deletion procedure on the
+  base file. Source: /Users/sjaconette/claude/.claude/worktrees/agent-a2f52e3c3927f9864/.claude/skills/workboard/workboard.py.
+- Removed the dangling `fleet/reference.md` citation from antigravity
+  `_shared/viz.py` (acceptance #9 greps all of antigravity/; viz.py is in
+  Touch), reworded to `# Every real status term in use across agent-console.py
+and workboard.py,\n# mapped to one canonical token.` Task 05 must apply the
+  identical reword to `.claude/skills/_shared/viz.py` to restore viz.py
+  byte-parity. Reverse: restore the original two comment lines.
