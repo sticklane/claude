@@ -75,8 +75,8 @@ stays small.
 
 `.claude/settings.json` allowlist covering exactly the verified commands
 (test/lint/build, plus staging and committing) with a `deny` on publishing
-to the remote (e.g., under git: `git push`) — the autopilot
-skill's reference.md (in-repo at .claude/skills/autopilot/reference.md, or
+to the remote (e.g., under git: `git push`) — the build
+skill's reference.md (in-repo at .claude/skills/build/reference.md, or
 in the agentic plugin's install directory) has the template and
 syntax rules. Merge into any existing settings file rather than overwriting,
 and keep denies that would annoy attended sessions (like WebFetch) out of
@@ -86,6 +86,7 @@ profile.
 ## 5. Offer the next layer
 
 Ask which the user wants now (don't install unasked):
+
 - `/gate` — Stop-hook check gate, auto-format, protected files. It runs the
   toolkit's `bin/install-gates` (hooks generated from `templates/`, merged
   into existing settings, idempotent) rather than hand-writing hooks.

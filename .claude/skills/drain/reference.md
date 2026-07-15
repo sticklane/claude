@@ -155,7 +155,7 @@ Relaunch-with-evidence prompt).
 Default-ON, drain-only structural layer beneath the Owner lease below —
 isolation stops two concurrent drains from interleaving commits in one
 shared tree; the lease is the discipline layer on top. SKILL.md's
-"Orchestrator isolation (default ON)" paragraph points here. Build/autopilot
+"Orchestrator isolation (default ON)" paragraph points here. Build
 orchestrator isolation is out of scope for this behavior.
 
 **Default: isolate the orchestrator's own working tree.** State it
@@ -1004,7 +1004,7 @@ recorded.
 The headless worker gets a SELF-CONTAINED single-agent prompt — no skill
 references, no subagent fan-out (the allowlist below has no Task tool, so
 scout/verifier calls would abort under `dontAsk`; this matches the
-autopilot reference's headless rule). The template below is the
+build reference's headless rule). The template below is the
 active runtime profile's rendering — Claude Code's; other runtimes substitute
 their profile's `## Headless` template, selected per `runtimes/README.md`
 (toolkit repo; absent in plugin installs and eval fixtures, where the

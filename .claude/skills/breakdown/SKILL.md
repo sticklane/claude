@@ -180,9 +180,9 @@ lives in drain's reference — cite it, don't restate it here.
 Tell the user: run `/build specs/<slug>/tasks/01-*.md` in a fresh session per
 task, `/drain specs/<slug>` to work the queue unattended (its rolling window
 keeps a concurrent-writer window continuously topped up; a
-`Parallel-window:`/`Group:` line opts a queue in), or
-`/autopilot specs/<slug>/tasks/NN-*.md` for unattended execution of
-peripheral tasks (once `/gate` is installed). These next stages are all
+`Parallel-window:`/`Group:` line opts a queue in), or a `/goal`-bounded
+`/build specs/<slug>/tasks/NN-*.md` for an unattended single task (once
+`/gate` is installed). These next stages are all
 launch-gated per the self-chain bullet in CLAUDE.md's authoring conventions,
 so /breakdown always ends with this printed pointer, never an invocation.
 
