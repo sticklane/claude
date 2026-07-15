@@ -1,6 +1,6 @@
 # Task 03: Delete tests exercising the removed HTML/CSS output paths
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02
 Priority: P1
 Budget: 7 turns
