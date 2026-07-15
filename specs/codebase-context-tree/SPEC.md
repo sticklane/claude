@@ -74,13 +74,16 @@ invents nothing here.
   trailing components (`Handler` matches `app.Handler`, not
   `app.AuthHandler`). A suffix matching multiple symbols prints the
   candidate list (qualified path + file:line) and exits 3; `ctx notes add`
-  refuses ambiguous anchors the same way.
+  refuses ambiguous anchors the same way. A symbol argument matching
+  nothing exits 1 with a not-found message.
 - C4 — Project root and layout: the root is the nearest ancestor directory
   containing `.context/`. Only `ctx init` falls back to the VCS adapter's
   root (`.git` in v1) — to decide where to scaffold. `ctx init` creates
   `.context/` containing `notes/` (version-tracked), `cache/` (derived
   index + journal, never committed), and a managed `.context/.gitignore`
-  ignoring `cache/`. Every other command exits 2 with a pointer to
+  ignoring `cache/`. `cache/` carries a schema version; a
+  version-mismatched or corrupt cache is rebuilt transparently from
+  source (derived state), never a user-facing error. Every other command exits 2 with a pointer to
   `ctx init` whenever no ancestor `.context/` exists — even inside a VCS
   repo.
 - C5 — Sync journal: every sync appends one JSON line — UTC timestamp,
@@ -125,13 +128,19 @@ Extraction and index:
   containment, body content hash (C2), and the identifier-excised body
   token set (C2's byte basis, tokenized — the R13 tree-diff score input,
   persisted in the index so a vanished anchor remains scorable). Facts for
-  a file derive from that file's content alone.
+  a file derive from that file's content alone. A file that fails to
+  parse cleanly (tree-sitter reports an ERROR at or near the root) yields
+  best-effort facts from recoverable subtrees and is marked parse-failed
+  in the index.
 - R2: `ctx sync` updates the index incrementally: an mtime+size scan (or
   the VCS adapter's change feed) proposes candidates, content hashes
   confirm, and only genuinely changed files re-parse. Files whose mtime
   falls within the filesystem's timestamp granularity of the previous
   sync are always re-hashed (racy-edit guard), so a same-size same-mtime
-  edit cannot be missed. Every sync appends a
+  edit cannot be missed. The baseline scan detects deletions by diffing
+  the scanned file set against the indexed set: a removed file's facts
+  are purged and its notes' freshness re-derives (anchor unresolvable →
+  stale). Every sync appends a
   journal record (C5). `ctx sync --stats` reports files scanned, hashed,
   and parsed; after editing the content of exactly one file in a synced
   fixture, parsed == 1 and hashed == 1; a pure mtime bump with unchanged
@@ -154,7 +163,8 @@ Queries (all: compact plain text by default, `--json` variant, never more
 data than asked; `<symbol>` arguments resolve per C3; `--doc` renders
 docstrings at the depth appropriate to the command — full text on the
 single-symbol `ctx sig`, first line on the multi-symbol tree/map
-surfaces):
+surfaces; a query over an empty or symbol-less scope prints empty output
+and exits 0):
 
 - R6: `ctx tree <path> [--depth N] [--limit N] [--doc]` prints the
   containment outline of the requested subtree only, honoring the depth
@@ -206,7 +216,9 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   updates the body and/or refreshes the anchor hash; that is the only
   path that writes the hash after creation. `ctx notes <symbol>` prints that symbol's
   notes with their freshness; `ctx notes list [--kind K] [--stale]`
-  filters on it.
+  filters on it. A note file with unparseable or incomplete frontmatter
+  is skipped with one diagnostic line (path + reason); it never aborts a
+  query or sync.
 - R13: Re-anchoring is deterministic and layered: when an anchored symbol
   no longer resolves, sync re-anchors via qualified-name match, then
   body-hash match (C2), then tree-diff matching — candidates are
@@ -232,7 +244,10 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   system-written after creation, so a body change stays visible as
   staleness (R12's derivation) until an agent revalidates. When the
   anchored body's hash changes, the note's derived freshness becomes
-  stale with a pointer to what changed. Note bodies are never modified
+  stale with a pointer to what changed. Re-anchoring never fires against
+  the symbols of a parse-failed file (R1): they are unresolved-transient,
+  not vanished — notes anchored there keep their prior state until the
+  file parses again. Note bodies are never modified
   and note files never deleted by the system; content revalidation is the
   reading agent's job.
 - R14: Notes merge under plain VCS semantics: one file per note, so
@@ -292,6 +307,10 @@ Surface and integration:
   redesign, but no shard implementation ships in v1.
 - Sub-file incremental re-parse (tree-sitter edit deltas) — the v1 rework
   unit is the file.
+- Sync-journal rotation/compaction — the journal lives in deletable
+  derived cache; growth management is post-v1.
+- Unicode identifier normalization — C2 and C1 operate on raw source
+  bytes; no NFC/NFKC folding in v1.
 
 ## Acceptance criteria
 
@@ -316,18 +335,21 @@ command from R17; fixture layout is the implementer's choice under
       cannot satisfy the `c` check and a hardcoded subset fails
       mechanically.
 - [ ] The documented check command (R17) runs the component's test suite
-      green, covering R1 (per-language extraction golden tests incl. a C++
-      overload fixture exercising C1's `#<n>` rule and a C2 test proving a
-      pure rename leaves the body hash unchanged; every language fixture
-      contains at least one documented symbol whose extracted docstring
-      the goldens assert — C8's native conventions, incl. the
+      green, covering R1 (per-language extraction tests incl. a C++
+      overload fixture whose two overloads yield DISTINCT C1 paths that
+      each resolve via C3 — asserted as a property, not a self-generated
+      snapshot — and a C2 test proving a pure rename leaves the body hash
+      unchanged; every language fixture contains at least one documented
+      symbol whose docstring embeds a per-fixture sentinel string the
+      assertion matches — C8's native conventions, incl. the
       leading-comment rule for C/Zig/Bash), R4 (ignored file
       excluded from index), R5 (index builds in a fixture directory with
       no `.git`), R6–R10 (query output golden tests incl. depth and
       result caps with truncation-count lines, C7 token budget, `--doc`
-      first-docstring rendering in tree and map, C3
-      ambiguous-suffix exit code 3, C10 note-presence markers, and
-      `heuristic`/`precise` labels), R19 (`ctx at` on a line inside a
+      first-docstring rendering in tree and map, `ctx sig --doc` printing
+      a ≥2-line docstring in full where the default prints only its first
+      line, C3 ambiguous-suffix exit code 3, and `heuristic`/`precise`
+      labels), R19 (`ctx at` on a line inside a
       nested function prints the containment chain; a line outside any
       definition resolves to the module symbol; an ignored or
       unsupported-extension file exits 4 with a reason), R12 (note file
@@ -338,16 +360,60 @@ command from R17; fixture layout is the implementer's choice under
 - [ ] Incrementality (R2/R3): e2e test syncs a fixture, edits the content
       of one file, and asserts `ctx sync --stats` reports parsed == 1 and
       hashed == 1; a pure mtime bump yields parsed == 0; a query without
-      `--no-sync` reflects the edit.
-- [ ] Re-anchoring (R13), all three layers: (a) rename a function in-file
+      `--no-sync` reflects the edit, and the same query with `--no-sync`
+      still shows the pre-edit state.
+- [ ] Ranking is real (R8): on a fixture where symbol A is referenced by
+      ≥3 other symbols, symbol B by none, and lexical order would place B
+      first, `ctx map` ranks A strictly above B — importance provably
+      differs from alphabetical or insertion order.
+- [ ] Markers on every surface (C10): a symbol carrying one fresh and one
+      stale note shows `[notes:2!]` in each of `ctx tree`, `ctx sig`,
+      `ctx map`, and `ctx at` output — four asserted surfaces.
+- [ ] Mid-edit robustness (R1/R13): given a fixture file with a
+      mid-function syntax error, sibling symbols in the same file still
+      list, `ctx at` on the broken span resolves to the module fallback
+      without error, a note anchored to an untouched sibling keeps its
+      freshness, and no re-anchoring fires for the parse-failed file;
+      repairing the error restores full facts on the next sync.
+- [ ] `--json` everywhere: for each of tree/sig/map/deps/refs/at, the
+      `--json` variant pipes through `jq .` with exit 0 and contains an
+      asserted key for that verb's payload.
+- [ ] Suffix semantics (C3): in a fixture defining both `app.Handler` and
+      `app.AuthHandler`, `ctx sig Handler` exits 0 and resolves to
+      `app.Handler` (a substring matcher would exit 3 here), and a
+      no-match argument exits 1.
+- [ ] Note plumbing (R12/C9): `ctx notes add <sym> --file body.md` and
+      `printf ... | ctx notes add <sym> --file -` produce notes whose
+      bodies match their sources; with `CTX_AUTHOR=x` set the frontmatter
+      records `author: x`, and in a no-VCS fixture with it unset,
+      `author: unknown`; a note file with corrupted frontmatter yields
+      one diagnostic line, is skipped, and the query still exits 0.
+- [ ] Concurrency (C6): with the sync advisory lock held by a helper
+      process, a query returns within a bounded time, appends no sync
+      record to the journal, and serves the last-completed snapshot.
+- [ ] Deletion (R2): in a no-VCS fixture, deleting an indexed file that
+      carries a note purges its symbols from `ctx tree` on the next sync
+      and the note's freshness reads stale.
+- [ ] Rebuild equivalence (C4, CUJS.md CUJ11): capture `ctx map`,
+      `ctx tree`, and `ctx sig` outputs, delete `.context/cache/`,
+      re-query — byte-identical; separately, tampering the cache's
+      schema-version field triggers a transparent rebuild (journal
+      records it) and the same query succeeds.
+- [ ] Re-anchoring (R13), all layers: (d) move a function to another file
+      in the same package WITHOUT rename or edit (Go or Java fixture —
+      languages whose C1 module component is the package, not the file)
+      → re-anchors via qualified-name match (layer 1), freshness fresh,
+      file:line updated; (a) rename a function in-file
       → queries show the re-anchored note immediately (index phase),
       derived freshness reads fresh, and the note FILE is unchanged until
       a persistence point; (b) edit the function body → freshness reads
       stale, pointer present, note file unchanged; (c) move a function to
       a different file, rename it, AND make a small body edit in the same
       sync → note re-anchors via tree-diff and freshness reads stale.
-      Then run `ctx sync --write-anchors`: the leg-(a)/(c) anchor paths
-      land in frontmatter. Then delete `.context/cache/` and re-sync
+      After leg (c) and before persistence, the latest journal record
+      shows `pending_reanchors` ≥ 1. Then run `ctx sync --write-anchors`:
+      the leg-(d)/(a)/(c) anchor paths land in frontmatter and a
+      subsequent sync journals `pending_reanchors` == 0. Then delete `.context/cache/` and re-sync
       (rebuild durability), AND clone the fixture to a fresh directory
       and sync there (clone durability): in both, the leg-(c) note
       resolves to the new symbol and reads stale. In a hooks-installed
@@ -367,14 +433,20 @@ command from R17; fixture layout is the implementer's choice under
       manual-pending with the reason stated
       (docs/memory/unattended-worker-tool-limits.md) rather than skipping
       silently.
-- [ ] MCP (R15): a scripted MCP client lists the tools and round-trips one
-      `ctx tree`-equivalent call against a fixture.
+- [ ] MCP (R15): a scripted MCP client lists tools matching the full
+      query + note verb set; a `ctx tree`-equivalent call returns output
+      byte-identical to the CLI for the same args (cross-check against
+      reimplementation); one `ctx notes add`-equivalent write creates the
+      note file on disk.
 - [ ] Hooks (R16): in a throwaway git fixture whose post-checkout hook
       already contains non-ctx content, `ctx hooks install` preserves that
       content and appends the marked block; a checkout then produces a
       `trigger: hook` record in the sync journal (C5) within a bounded
       poll (≤10s); install's output reports the fsmonitor decision
-      (enabled, or skipped with reason); `ctx hooks uninstall` restores
+      (enabled, or skipped with reason); a partial commit that stages a
+      refactor's moved-FROM file but not its moved-TO file leaves the
+      anchor update pending rather than staged (R16's partial-commit
+      rule); `ctx hooks uninstall` restores
       the original hook bytes exactly and reverts only settings it set.
 - [ ] Adoption (R17, CUJS.md CUJ0): `grep -c "ctx-integration-snippet"
 context-tree/README.md` ≥ 2 (the snippet's open/close markers) and
