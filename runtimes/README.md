@@ -13,7 +13,7 @@ command template and orchestration surface — onto one concrete runtime:
 - [gemini-cli.md](gemini-cli.md) — mapping for Google's gemini-cli.
 
 This file is the single home of the selection convention and the
-tier-override format. Other files (the drain and autopilot references,
+tier-override format. Other files (the drain and build references,
 `.claude/agents/scout.md`) cite it; they do not restate it.
 
 ## Selecting a runtime
@@ -86,7 +86,7 @@ session's own model, and do NOT reach the headless fallback path in v1
 ## The `## Headless` section contract
 
 Every profile's `## Headless` section states how the toolkit relaunches a
-non-interactive session on that runtime (the drain/autopilot headless
+non-interactive session on that runtime (the drain/build headless
 fallbacks and the eval runner consume it). The section takes exactly one of
 two shapes:
 

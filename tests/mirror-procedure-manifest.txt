@@ -9,7 +9,6 @@
 # Seeded from the 6 manifest-expressible of this session's 8 fixes (commits
 # e742cb6, 4d1edcc). The other 2 are the rule's named blind spots: build.md's
 # pure reorder (ordering-only) and codex-autopilot's content-swap (mirror-adds).
-.claude/skills/autopilot/SKILL.md|antigravity/.agents/workflows/autopilot.md|bounded goal
 .claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|Environment kill
 .claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|one focused question each
 .claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|self-referential

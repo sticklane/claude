@@ -1,6 +1,6 @@
 ---
 name: fleet
-description: Renders a dashboard of this session's open agents - running, queued, completed, and failed background workers - as a self-contained HTML snapshot with status tiles, a timeline, and per-agent detail. Use when the user asks "what agents are running", "show my agents", "agent status", "fleet status", "visualize the agents", or wants to watch a /drain or /autopilot dispatch.
+description: Renders a dashboard of this session's open agents - running, queued, completed, and failed background workers - as a self-contained HTML snapshot with status tiles, a timeline, and per-agent detail. Use when the user asks "what agents are running", "show my agents", "agent status", "fleet status", "visualize the agents", or wants to watch a /drain or /build dispatch.
 ---
 
 Show the user what their agents are doing right now. This is a read-only
@@ -14,7 +14,7 @@ it must stay cheap: metadata only, never transcripts.
   status, start time, end time if finished, and the output-file path.
 - Enumerate this session's isolated worktrees — e.g., under git: `git worktree
   list --porcelain`. Worktrees named for `task/NN-*` branches are dispatched
-  task workers (a drain queue or group, /build, /autopilot); match them to
+  task workers (a drain queue or group, /build); match them to
   tasks where possible, otherwise list them as their own rows.
 - For each agent, take at most the last 2 lines of its output file
   (`tail -n 2`) as a snippet. Do NOT read transcripts or output files

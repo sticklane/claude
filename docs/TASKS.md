@@ -51,7 +51,7 @@
   "well under 500 lines"; drain is the only breach (next largest is 184).
   Move detail into its (already TOC'd) reference.md. (2026-07-10)
 - **Normalize `Next stage:` closers on the execution skills.**
-  `build`, `drain`, and `autopilot` SKILL.md files have no `Next stage:`
+  `build` and `drain` SKILL.md files have no `Next stage:`
   line at all despite producing artifacts (evals/SKILL.md:56 shows the
   execution-stage form), and `fleet/SKILL.md:52` uses the wrong label
   ("Next pipeline step:"). Either add conforming closers or write the

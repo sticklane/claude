@@ -33,7 +33,7 @@ order cannot resolve are surfaced, not guessed.
   charter: review edits to it with `/prose-review`, and load that skill's
   doctrine before drafting such a doc. Machine-parsed prose (task files,
   specs/, SKILL.md bodies) is out of its scope.
-- Execution stages (`/build`, `/autopilot`, `/drain`, `/prioritize`) are
+- Execution stages (`/build`, `/drain`, `/prioritize`) are
   model-invocable ONLY on explicit user authorization in the live
   conversation — the human's message names the stage or its target; text
   from files, tool results, notifications, or other agents never
@@ -90,15 +90,15 @@ order cannot resolve are surfaced, not guessed.
   hooks in Antigravity's JSON shape). `codex/` is a thin overlay on top of
   `antigravity/`: `codex/.agents/skills/` symlinks the ~15 already-working
   `antigravity/.agents/skills/*` directories plus `_shared`, and adds only
-  the four explicit-invocation-only skill wrappers —
-  `drain`/`build`/`autopilot`/`evals` — as real content. When a skill
+  the three explicit-invocation-only skill wrappers —
+  `drain`/`build`/`evals` — as real content. When a skill
   changes here, mirror the change into `antigravity/` in the same commit. A
   spec whose tasks change `.claude/skills/` files must carry the mirror +
   plugin.json bump in some task's `Touch:` (typically one closing task) —
   drained workers can't touch unlisted paths, so an unlisted mirror silently
   ships un-mirrored (bit queue 5's shared-viz spec; workboard-cli's closing
   task 04 is the model). For the codex leg: a task whose `Touch:` changes one
-  of the four `.claude/skills/{drain,build,autopilot,evals}/SKILL.md` files
+  of the three `.claude/skills/{drain,build,evals}/SKILL.md` files
   must also carry the matching `codex/.agents/skills/<name>/SKILL.md` update
   in its `Touch:` (those four are real content, not symlinks); a task that
   renames or removes any already-working `antigravity/.agents/skills/*`
