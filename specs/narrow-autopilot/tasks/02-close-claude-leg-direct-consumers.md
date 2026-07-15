@@ -1,6 +1,6 @@
 # Task 02: Update onboard/drain/gate/breakdown/human-gates pointers off autopilot
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 5 turns
