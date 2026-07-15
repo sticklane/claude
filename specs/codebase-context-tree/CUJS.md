@@ -103,7 +103,8 @@ Design mapping: R19 (new), C10.
 Journey: `ctx map --tokens 1000` → ranked overview; drill down with
 `ctx tree <path> --depth 2 --limit N` (result-capped with a truncation
 count — depth alone left output unbounded, breaking every token claim on
-big subtrees).
+big subtrees). `--doc` on either adds each symbol's first docstring line
+— the "what does each of these do" pass — still inside the budget.
 Token economics: ≤1.5k tokens vs 10-50k of orientation reads or 2-4 scout
 dispatches. On a repo with a good AGENTS.md map, `ctx map`'s edge is
 currency (never stale) and rank (reference-weighted), not raw size.
