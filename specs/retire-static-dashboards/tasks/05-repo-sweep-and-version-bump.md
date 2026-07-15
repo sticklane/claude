@@ -1,6 +1,6 @@
 # Task 05: Repo-wide fleet reference sweep, dangling-citation cleanup, version bump
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03, 04
 Priority: P1
 Budget: 7 turns
