@@ -106,7 +106,8 @@ invents nothing here.
   (`[notes:2!]`) when any of them is stale. This is the push channel that
   makes notes discoverable without asking; the index already joins
   symbol→note for derived freshness, so the marker costs one lookup and
-  ~5 output tokens.
+  ~5 output tokens. Markers are ordinary output bytes and count toward
+  any C7 budget.
 
 ## Requirements
 
@@ -172,9 +173,13 @@ data than asked; `<symbol>` arguments resolve per C3):
   enclosing symbol and prints the containment chain (module → … →
   innermost) with each symbol's kind, qualified path, signature first
   line, and C10 marker; a position enclosed by no definition resolves to
-  the file's module symbol. This is the stack-trace/test-failure entry
-  point: file:line in, symbol out. (Numbered out of sequence to keep
-  existing requirement references stable.)
+  the file's module symbol. A file the index skips (ignored, unsupported
+  extension) or that does not exist prints one line naming the reason and
+  exits 4 — stack traces routinely point at generated or ignored files,
+  and `ctx at` fails fast rather than guessing. This is the
+  stack-trace/test-failure entry point: file:line in, symbol out.
+  (Numbered out of sequence to keep existing requirement references
+  stable.)
 
 Notes:
 
@@ -203,11 +208,18 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   scoring reads the anchor's persisted token set (R1) from the index;
   re-anchoring happens at the sync that observes the disappearance —
   after a full index rebuild an anchor that vanished while unsynced is no
-  longer re-anchorable and its note stays stale. On a successful
-  re-anchor the system updates the note file's anchor PATH in frontmatter
-  — the only write the system ever makes to a note file — so re-anchors
-  are version-tracked and survive clones and rebuilds; the anchor HASH is
-  never system-written after creation, so a body change stays visible as
+  longer re-anchorable and its note stays stale. Re-anchor persistence is
+  two-phase. Phase 1: every sync records the re-anchor in the index
+  immediately, so queries see the re-anchored state at once. Phase 2: the
+  note file's anchor PATH in frontmatter — the only write the system ever
+  makes to a note file — is updated only at explicit persistence points:
+  the pre-commit hook installed by R16 (which writes pending anchor
+  updates and stages them, so the re-anchor lands in the same commit as
+  the refactor that caused it) or an explicit `ctx sync
+--write-anchors`. Query-triggered and background syncs never modify
+  tracked files. Pending unwritten anchor updates are named in
+  `ctx notes list` output and the journal (C5). The anchor HASH is never
+  system-written after creation, so a body change stays visible as
   staleness (R12's derivation) until an agent revalidates. When the
   anchored body's hash changes, the note's derived freshness becomes
   stale with a pointer to what changed. Note bodies are never modified
@@ -215,17 +227,22 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   reading agent's job.
 - R14: Notes merge under plain VCS semantics: one file per note, so
   concurrent edits to the same note surface as an ordinary merge conflict
-  and nothing else conflicts.
+  and nothing else conflicts. Anchor-path updates ride the same commit as
+  the refactor that caused them (R13 phase 2), so a source refactor may
+  legitimately include note-file changes — an expected, reviewable
+  effect with the same file-level merge semantics.
 
 Surface and integration:
 
 - R15: An MCP server exposes the same query and note verbs as typed tools,
   as a thin wrapper over the CLI core (no second implementation of query
   logic).
-- R16: `ctx hooks install` installs opt-in pre-warm hooks: VCS hooks
+- R16: `ctx hooks install` installs opt-in hooks: pre-warm VCS hooks
   (git's post-checkout/post-merge/post-commit in v1) and a printed snippet
   for a harness PostToolUse hook, each running `ctx sync` in the
-  background (journaled per C5). Hook files are managed as delimited
+  background (journaled per C5), plus a pre-commit hook that writes
+  pending anchor updates (R13 phase 2) for notes anchored in the commit's
+  changed files and stages the touched note files. Hook files are managed as delimited
   blocks: install appends a marked `ctx` block to an existing hook file
   (creating an executable file only if absent), preserving all existing
   content; `ctx hooks uninstall` removes exactly that block and deletes
@@ -238,7 +255,9 @@ Surface and integration:
   runs the component's full test suite — plus the v1 adoption story
   (CUJS.md CUJ0): a copy-paste integration snippet for a consuming repo's
   CLAUDE.md/AGENTS.md routing structure questions to `ctx` before file
-  reads or scout dispatch, and MCP registration instructions.
+  reads or scout dispatch — delimited by the literal marker
+  `ctx-integration-snippet` so installers and the adoption criterion can
+  locate it — and MCP registration instructions.
 - R18: `ctx init` scaffolds the `.context/` layout per C4 and is
   idempotent (re-running on an initialized root changes nothing and exits
   0).
@@ -293,7 +312,9 @@ command from R17; fixture layout is the implementer's choice under
       ambiguous-suffix exit code 3, C10 note-presence markers, and
       `heuristic`/`precise` labels), R19 (`ctx at` on a line inside a
       nested function prints the containment chain; a line outside any
-      definition resolves to the module symbol), R12 (note file format,
+      definition resolves to the module symbol; an ignored or
+      unsupported-extension file exits 4 with a reason), R12 (note file
+      format,
       C9 fields normalized in snapshots), R14 (two divergent copies of
       one note file produce a VCS conflict, nothing else), and R18 (init
       idempotence).
@@ -302,17 +323,22 @@ command from R17; fixture layout is the implementer's choice under
       hashed == 1; a pure mtime bump yields parsed == 0; a query without
       `--no-sync` reflects the edit.
 - [ ] Re-anchoring (R13), all three layers: (a) rename a function in-file
-      → note re-anchors via body hash, anchor path updated in
-      frontmatter, derived freshness reads fresh; (b) edit the function
-      body → freshness reads stale, pointer present, note file unchanged;
-      (c) move a function to a different file, rename it, AND make a
-      small body edit in the same sync → note re-anchors via tree-diff
-      (anchor path updated) and freshness reads stale. Then delete
-      `.context/cache/` and re-sync: the leg-(c) note still resolves to
-      the new symbol and still reads stale (rebuild durability).
-      Throughout, the system's only note-file write is the anchor path on
-      successful re-anchor; bodies are never modified, files never
-      deleted.
+      → queries show the re-anchored note immediately (index phase),
+      derived freshness reads fresh, and the note FILE is unchanged until
+      a persistence point; (b) edit the function body → freshness reads
+      stale, pointer present, note file unchanged; (c) move a function to
+      a different file, rename it, AND make a small body edit in the same
+      sync → note re-anchors via tree-diff and freshness reads stale.
+      Then run `ctx sync --write-anchors`: the leg-(a)/(c) anchor paths
+      land in frontmatter. Then delete `.context/cache/` and re-sync
+      (rebuild durability), AND clone the fixture to a fresh directory
+      and sync there (clone durability): in both, the leg-(c) note
+      resolves to the new symbol and reads stale. In a hooks-installed
+      fixture, committing the refactor triggers the pre-commit write and
+      the note-file update appears staged in the same commit. Throughout,
+      the system's only note-file write is the anchor path at a
+      persistence point; bodies are never modified, files never deleted,
+      and query-triggered/background syncs leave tracked files untouched.
 - [ ] Root guard (C4): in a git fixture with no `.context/`, `ctx map`
       exits 2 and names `ctx init`; running `ctx init` places `.context/`
       at the git root and the same query then succeeds.
@@ -333,11 +359,10 @@ command from R17; fixture layout is the implementer's choice under
       poll (≤10s); install's output reports the fsmonitor decision
       (enabled, or skipped with reason); `ctx hooks uninstall` restores
       the original hook bytes exactly and reverts only settings it set.
-- [ ] Adoption (R17, CUJS.md CUJ0): `context-tree/README.md` contains the
-      consuming-repo integration snippet — a fenced block routing
-      structure questions to `ctx` before file reads or scout dispatch —
-      and MCP registration instructions (file absent today, verified
-      2026-07-15).
+- [ ] Adoption (R17, CUJS.md CUJ0): `grep -c "ctx-integration-snippet"
+  context-tree/README.md` ≥ 2 (the snippet's open/close markers) and
+      the README documents MCP registration (target file absent today,
+      verified 2026-07-15, so the count cannot pass vacuously).
 - [ ] End-to-end as a user would: script drives `ctx init` → `ctx map` →
       `ctx sig` → `ctx notes add` → refactor → stale flag →
       `ctx notes list --stale`, on a fixture repo containing at least 3 of

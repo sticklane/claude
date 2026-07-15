@@ -62,8 +62,12 @@ Design mapping: C10 in R6/R7/R8/R19, R12.
 
 Trigger: a refactor renames/moves/edits a symbol that carries notes.
 Journey: sync re-anchors deterministically (rename via body hash; move+
-rename+edit via tree-diff) and persists the new anchor path into the note
-file — version-tracked, so re-anchors survive clones and index rebuilds.
+rename+edit via tree-diff) — queries see it immediately via the index —
+and the new anchor path is written into the note file at a persistence
+point: the pre-commit hook stages it into the same commit as the refactor
+that caused it (or `ctx sync --write-anchors` for hook-less setups), so
+committed re-anchors survive clones and index rebuilds while read-only
+queries never mutate tracked files.
 A body change flips derived freshness to stale with a diff pointer; the
 NEXT agent that reads the note revalidates it as part of work it was
 already doing. Freshness derives from note file + working tree alone
@@ -83,7 +87,9 @@ it.
 Journey: `ctx at file.py:217` → containment chain (module → class →
 innermost function) with kinds, signatures, and note markers — the
 symbol-world entry point for position-world evidence, and the feeder for
-CUJ2/CUJ3/CUJ5.
+CUJ2/CUJ3/CUJ5. Positions in files the index skips (ignored, generated,
+unsupported extension) fail fast with a one-line reason and exit 4 rather
+than guessing — stack traces routinely point at such files.
 This journey was missing from the draft entirely; the selection pass
 ranked debugging navigation above blast-radius in real frequency, and no
 existing verb accepted file:line. R19 was added to the spec for it.
@@ -163,10 +169,11 @@ file, in a normal PR the team reviews. No new machinery: plain file ops
 
 Trigger: index corruption, schema migration, or plain doubt.
 Journey: delete `.context/cache/` and run any query — the index is
-derived state, rebuilt deterministically from source + notes; re-anchored
-notes survive because anchors live in note frontmatter (R13), and
-freshness re-derives from file + tree (R12). Nothing of value lives only
-in the cache.
+derived state, rebuilt deterministically from source + notes; committed
+re-anchors survive because anchor paths live in note frontmatter once
+persisted (R13 phase 2), and freshness re-derives from file + tree (R12).
+The only loss window is a re-anchor computed but not yet written at a
+persistence point.
 Design mapping: C4 (cache/ is derived), R12/R13 durability, rebuild leg
 of the R13 acceptance criterion.
 
