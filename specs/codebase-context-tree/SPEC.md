@@ -1,5 +1,7 @@
 # Codebase context tree (`ctx`)
 
+Breakdown-ready: true
+
 ## Problem
 
 Agents burn context learning a repo's structure: whole-file reads to find
@@ -82,7 +84,9 @@ invents nothing here.
   `ctx init` whenever no ancestor `.context/` exists — even inside a VCS
   repo.
 - C5 — Sync journal: every sync appends one JSON line — UTC timestamp,
-  trigger (`query` | `cli` | `hook`), files scanned/hashed/parsed — to
+  trigger (`query` | `cli` | `hook`), files scanned/hashed/parsed, and
+  `pending_reanchors` (count of anchor updates computed but not yet
+  written at a persistence point, R13 phase 2) — to
   `.context/cache/sync-journal.jsonl`. This is the synchronization point
   for observing background syncs.
 - C6 — Store concurrency: SQLite in WAL mode with a busy timeout;
@@ -241,8 +245,11 @@ Surface and integration:
   (git's post-checkout/post-merge/post-commit in v1) and a printed snippet
   for a harness PostToolUse hook, each running `ctx sync` in the
   background (journaled per C5), plus a pre-commit hook that writes
-  pending anchor updates (R13 phase 2) for notes anchored in the commit's
-  changed files and stages the touched note files. Hook files are managed as delimited
+  pending anchor updates (R13 phase 2) and stages the touched note files
+  — writing a given update only when the re-anchored NEW path's file is
+  itself in the staged set (a partial commit that leaves the moved-to
+  file unstaged leaves that update pending rather than staging an anchor
+  to an uncommitted symbol). Hook files are managed as delimited
   blocks: install appends a marked `ctx` block to an existing hook file
   (creating an executable file only if absent), preserving all existing
   content; `ctx hooks uninstall` removes exactly that block and deletes
@@ -360,7 +367,7 @@ command from R17; fixture layout is the implementer's choice under
       (enabled, or skipped with reason); `ctx hooks uninstall` restores
       the original hook bytes exactly and reverts only settings it set.
 - [ ] Adoption (R17, CUJS.md CUJ0): `grep -c "ctx-integration-snippet"
-  context-tree/README.md` ≥ 2 (the snippet's open/close markers) and
+context-tree/README.md` ≥ 2 (the snippet's open/close markers) and
       the README documents MCP registration (target file absent today,
       verified 2026-07-15, so the count cannot pass vacuously).
 - [ ] End-to-end as a user would: script drives `ctx init` → `ctx map` →
