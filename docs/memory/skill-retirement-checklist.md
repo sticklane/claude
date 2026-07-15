@@ -15,7 +15,7 @@ semantically complete.
 
 1. **Grep the bare name, case-insensitive** (`grep -ri parallel`), not
    just slash/path forms (`/parallel`, `parallel/SKILL.md`). The miss:
-   antigravity autopilot said "the build prompt from the parallel
+   an antigravity workflow said "the build prompt from the parallel
    workflow" — no slash, no path. Review hits manually; don't pre-filter
    with `grep -v` patterns that can hide phrasing variants.
 2. **Port behaviors, not references.** List the retired skill's distinct

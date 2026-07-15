@@ -49,7 +49,7 @@ auto-escalation (docs/decisions/orchestration.md).
 
 ## Headless
 
-Today's non-interactive contract, as used by the drain and autopilot
+Today's non-interactive contract, as used by the drain and build
 headless fallbacks (`.claude/skills/drain/reference.md` is the
 authoritative copy; this template restates its contract without
 changing it):

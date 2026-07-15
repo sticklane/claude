@@ -15,14 +15,14 @@ built from, with citations, lives in [docs/anthropic-playbook.md](docs/anthropic
  idea ──▶ /idea ──▶ SPEC.md ──▶ /design ──▶ /breakdown ──▶ tasks/NN-*.md
                     (critic-    (only if an                    │
                      reviewed)   approach or                   │
-                                 stack choice     ┌────────────┼────────────────┐
-                                 is open)         ▼            ▼                ▼
-                                               /build      /drain         /autopilot
-                                               (attended,  (queue; ind.   (unattended,
-                                                fresh       groups on     gated, walk
-                                                session)    request)      away)
-                                                  │            │                │
-                                                  └── verified ┴────────────────┘
+                                 stack choice     ┌────────────┤
+                                 is open)         ▼            ▼
+                                               /build      /drain
+                                               (attended,  (queue; ind.
+                                                fresh       groups on
+                                                session)    request)
+                                                  │            │
+                                                  └── verified ┤
                                                   (verifier agent, evidence required)
                                                                │
                                                                ▼
@@ -46,7 +46,6 @@ questions into the task files instead of stopping on them.
 | `/design`                   | Resolves open tech/architecture choices: parallel agents investigate candidates, judged on agent-buildability; decision recorded in the spec and CLAUDE.md                                                                                    |
 | `/breakdown`                | Splits a spec into one-session task files with dependencies and a parallelization map                                                                                                                                                         |
 | `/build`                    | Executes one task: scout-explore → proportional plan → test-first implement → independent verify → simplification pass → commit                                                                                                               |
-| `/autopilot`                | Unattended execution with guardrails: classifies the task (peripheral vs core), scopes permissions, sets a bounded goal, launches background or headless                                                                                      |
 | `/drain`                    | Works the whole task queue unattended: one fresh worker per unblocked task (or an independent group concurrently on request), questions deferred into the task files and batched at the end, resumable from `Status` lines after any `/clear` |
 | `/gate`                     | Installs deterministic quality gates: a Stop hook that blocks "done" until checks pass, auto-format on edit, protected-file denies                                                                                                            |
 | `/evals`                    | Scaffolds and runs stored skill evals (`evals/run.sh`): fresh fixture, headless run of the skill under test, artifact assertions—the repeatable complement to fresh-session testing                                                         |
@@ -82,7 +81,7 @@ questions into the task files instead of stopping on them.
   synchronous supervision for core logic; unattended runs get scoped
   permissions, bounded goals, branch isolation, and a discard-and-relaunch
   recovery rule (the "slot machine"). The execution stages (`/build`,
-  `/drain`, `/autopilot`, `/prioritize`) launch only on explicit user
+  `/drain`, `/prioritize`) launch only on explicit user
   authorization in the live conversation—a launch contract in each
   skill's opening lines replaced the old `disable-model-invocation` flag
   in 2026-07; `/evals` alone stays human-typed. Why the boundary sits
@@ -182,8 +181,8 @@ See [antigravity/README.md](antigravity/README.md) for the concept mapping
 and what degrades (notably: no enforced cheap subagents, softer stop gates).
 
 A third leg, [codex/](codex/README.md), overlays the Antigravity port for
-the Codex runtime: most skills are symlinks into `antigravity/`, plus four
-real-content wrappers (`drain`, `build`, `autopilot`, `evals`) gated by
+the Codex runtime: most skills are symlinks into `antigravity/`, plus three
+real-content wrappers (`drain`, `build`, `evals`) gated by
 Codex's `allow_implicit_invocation: false`. The port chain is `.claude/` →
 `antigravity/` → `codex/`.
 
