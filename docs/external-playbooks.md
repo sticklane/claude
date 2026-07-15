@@ -174,8 +174,8 @@ the verbatim research stays here.
 - OpenAI handoffs / parallel guardrail classifiers — harness-level
   mechanisms, not expressible as skills.
 - AgentOps telemetry (OpenTelemetry spans, production drift monitoring) —
-  production agent-ops, out of scope for a dev toolkit; /fleet covers the
-  live view. Scope narrowed 2026-07: dev-time transcript profiling and
+  production agent-ops, out of scope for a dev toolkit; /fleet's inline
+  table covers the live view. Scope narrowed 2026-07: dev-time transcript profiling and
   dev-spend dashboards (`specs/agentprof-instrumentation/`,
   `specs/workboard-weekly-cost-view/`) are in scope — the rejection binds
   production OTel spans and runtime drift monitoring only.

@@ -1,6 +1,6 @@
 # Task 05: Repo-wide fleet reference sweep, dangling-citation cleanup, version bump
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03, 04
 Priority: P1
 Budget: 7 turns
@@ -60,21 +60,30 @@ did its leg) or any file Tasks 01-03 already own.
 
 ## Acceptance
 
-- [ ] `git grep -n '\bfleet\b' -- .claude/ antigravity/ docs/ AGENTS.md CLAUDE.md .claude-plugin/`
+- [x] `git grep -n '\bfleet\b' -- .claude/ antigravity/ docs/ AGENTS.md CLAUDE.md .claude-plugin/`
       shows only: the new inline-table description, legitimate unrelated
       prose, or `antigravity/README.md:35`'s not-ported row — no stale
       HTML-snapshot description and no dangling `fleet/reference.md`
       citation anywhere else.
-- [ ] `git grep -rn 'fleet/reference\.md' -- .claude/ antigravity/` returns
+      Evidence: 30 hits reviewed; 8 Touch files reworded to inline-table wording (plugin.json/marketplace.json/AGENTS.md/viz.py/drain+workboard SKILL.md/agent-dashboards.md/external-playbooks.md), rest are idioms, fleet's own updated skill, valid status-vocab refs, or antigravity README:35 — verifier PASS.
+- [x] `git grep -rn 'fleet/reference\.md' -- .claude/ antigravity/` returns
       no matches.
-- [ ] `.claude-plugin/plugin.json`'s version is higher than its value at
+      Evidence: exit 1, no output — viz.py:35 reworded to "the fleet skill"; verifier PASS.
+- [x] `.claude-plugin/plugin.json`'s version is higher than its value at
       this task's own base commit (`git show <base-commit>:.claude-plugin/plugin.json | grep version`
       compared against the current value, not a hard-coded prior literal).
-- [ ] `git grep -ln 'fleet\.html\|--out\|--emit-fleet-css' -- evals/`
+      Evidence: base 0b654ac = 0.9.11, current = 0.9.12; verifier PASS.
+- [x] `git grep -ln 'fleet\.html\|--out\|--emit-fleet-css' -- evals/`
       returns no matches.
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0.
+      Evidence: exit 1, no output; verifier PASS.
+- [x] `bash evals/lint-ultra-gate.sh` exits 0.
+      Evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0; verifier PASS.
 - [ ] **Manual-pending**: running `/fleet` in a session with at least one
       background agent prints the markdown table and summary line
       directly, writing no file — recorded as evidence, not an automated
       check (docs/memory/unattended-worker-tool-limits.md); the
       orchestrator or a human runs it post-merge.
+      MANUAL-PENDING (not run): an unattended worker cannot exercise a live
+      harness TaskList with a background agent; left unticked for the
+      orchestrator/human to run `/fleet` post-merge and confirm it prints
+      the markdown table + summary line inline, writing no file.
