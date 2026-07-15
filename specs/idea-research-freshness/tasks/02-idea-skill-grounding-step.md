@@ -1,6 +1,6 @@
 # Task 02: /idea's new grounding-check step 2, and the full renumbering sweep
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 12 turns
