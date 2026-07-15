@@ -1,7 +1,5 @@
 # Codebase context tree (`ctx`)
 
-Breakdown-ready: true
-
 ## Problem
 
 Agents burn context learning a repo's structure: whole-file reads to find
@@ -103,6 +101,12 @@ invents nothing here.
 - C9 — Note provenance fields: `author` is `$CTX_AUTHOR`, else the VCS
   adapter's user identity, else `unknown`; `created` is ISO-8601 UTC.
   Snapshot tests normalize `id`, `created`, and `author`.
+- C10 — Note-presence markers: every query output line that names a
+  symbol carrying notes appends `[notes:<count>]`, with a trailing `!`
+  (`[notes:2!]`) when any of them is stale. This is the push channel that
+  makes notes discoverable without asking; the index already joins
+  symbol→note for derived freshness, so the marker costs one lookup and
+  ~5 output tokens.
 
 ## Requirements
 
@@ -119,7 +123,10 @@ Extraction and index:
   a file derive from that file's content alone.
 - R2: `ctx sync` updates the index incrementally: an mtime+size scan (or
   the VCS adapter's change feed) proposes candidates, content hashes
-  confirm, and only genuinely changed files re-parse. Every sync appends a
+  confirm, and only genuinely changed files re-parse. Files whose mtime
+  falls within the filesystem's timestamp granularity of the previous
+  sync are always re-hashed (racy-edit guard), so a same-size same-mtime
+  edit cannot be missed. Every sync appends a
   journal record (C5). `ctx sync --stats` reports files scanned, hashed,
   and parsed; after editing the content of exactly one file in a synced
   fixture, parsed == 1 and hashed == 1; a pure mtime bump with unchanged
@@ -141,21 +148,33 @@ Extraction and index:
 Queries (all: compact plain text by default, `--json` variant, never more
 data than asked; `<symbol>` arguments resolve per C3):
 
-- R6: `ctx tree <path> [--depth N]` prints the containment outline of the
-  requested subtree only, honoring the depth cap.
-- R7: `ctx sig <symbol>` prints the signature and first docstring line;
-  `--doc` adds the full docstring.
+- R6: `ctx tree <path> [--depth N] [--limit N]` prints the containment
+  outline of the requested subtree only, honoring the depth cap AND a
+  result cap (default 200 symbols); truncation appends one line naming
+  the count omitted and the flag to raise. Symbols carrying notes get the
+  C10 marker.
+- R7: `ctx sig <symbol>` prints the signature, first docstring line, and
+  the C10 marker when notes exist; `--doc` adds the full docstring.
 - R8: `ctx map [--tokens N]` prints a ranked overview: symbols ordered by
   reference-graph importance, truncated to the token budget (default
-  1000, counted per C7).
+  1000, counted per C7), with C10 markers.
 - R9: `ctx deps <path> [--reverse]` prints module-level import edges into
   or out of the requested path.
-- R10: `ctx refs <symbol>` prints definitions and references, each result
-  labeled `heuristic` (global-name match) or `precise` (LSP-resolved).
+- R10: `ctx refs <symbol> [--limit N]` prints definitions and references,
+  each result labeled `heuristic` (global-name match) or `precise`
+  (LSP-resolved), capped at 50 results per direction by default with a
+  truncation count line naming the flag to raise.
 - R11: LSP enrichment is optional and additive: with a configured language
   server available, an enrichment pass stores resolved signatures and
   upgrades `ctx refs` results to `precise`; with none, every query still
   works from syntactic facts alone.
+- R19: `ctx at <file>:<line>` resolves a position to its innermost
+  enclosing symbol and prints the containment chain (module → … →
+  innermost) with each symbol's kind, qualified path, signature first
+  line, and C10 marker; a position enclosed by no definition resolves to
+  the file's module symbol. This is the stack-trace/test-failure entry
+  point: file:line in, symbol out. (Numbered out of sequence to keep
+  existing requirement references stable.)
 
 Notes:
 
@@ -164,9 +183,13 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   `--file <path>`, or stdin via `--file -`) writes one ULID-named markdown
   file under `.context/notes/` with YAML frontmatter: id, anchor qualified
   path (C1), anchor body hash (C2), optional kind, author and created
-  (C9). Freshness (`fresh`/`stale`) is a DERIVED flag computed at sync,
-  stored only in the index, and returned with every note read — never
-  written into the note file. `ctx notes <symbol>` prints that symbol's
+  (C9). Freshness (`fresh`/`stale`) is a DERIVED flag: fresh iff the
+  anchor path resolves AND the frontmatter anchor hash equals the current
+  body hash — computable from the note file plus the working tree alone,
+  so it survives any index rebuild; it is cached in the index and
+  returned with every note read. An agent revalidating a stale note
+  updates the body and/or refreshes the anchor hash; that is the only
+  path that writes the hash after creation. `ctx notes <symbol>` prints that symbol's
   notes with their freshness; `ctx notes list [--kind K] [--stale]`
   filters on it.
 - R13: Re-anchoring is deterministic and layered: when an anchored symbol
@@ -178,13 +201,18 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   above threshold 0.6, ties broken by lowest file:line; with no candidate
   above threshold the note stays un-re-anchored and stale. Tree-diff
   scoring reads the anchor's persisted token set (R1) from the index;
-  re-anchoring happens at the sync that observes the disappearance, so
-  after a full index rebuild an already-vanished anchor is no longer
-  re-anchorable and its note stays stale. When the anchored body's hash
-  changes, the note's derived freshness (R12) becomes stale with a
-  pointer to what changed. Note files are never
-  deleted or rewritten by the system; content revalidation is the reading
-  agent's job.
+  re-anchoring happens at the sync that observes the disappearance —
+  after a full index rebuild an anchor that vanished while unsynced is no
+  longer re-anchorable and its note stays stale. On a successful
+  re-anchor the system updates the note file's anchor PATH in frontmatter
+  — the only write the system ever makes to a note file — so re-anchors
+  are version-tracked and survive clones and rebuilds; the anchor HASH is
+  never system-written after creation, so a body change stays visible as
+  staleness (R12's derivation) until an agent revalidates. When the
+  anchored body's hash changes, the note's derived freshness becomes
+  stale with a pointer to what changed. Note bodies are never modified
+  and note files never deleted by the system; content revalidation is the
+  reading agent's job.
 - R14: Notes merge under plain VCS semantics: one file per note, so
   concurrent edits to the same note surface as an ordinary merge conflict
   and nothing else conflicts.
@@ -201,10 +229,16 @@ Surface and integration:
   blocks: install appends a marked `ctx` block to an existing hook file
   (creating an executable file only if absent), preserving all existing
   content; `ctx hooks uninstall` removes exactly that block and deletes
-  only files `ctx` itself created.
+  only files `ctx` itself created. Under git, install also enables
+  `core.fsmonitor` when the git version supports the builtin monitor —
+  the staleness scan's scaling path at 100k files — reporting
+  enabled/skipped in its output; uninstall reverts only settings it set.
 - R17: A README in `context-tree/` documents install, `ctx init`, the
   query surface, the note format, and the documented check command that
-  runs the component's full test suite.
+  runs the component's full test suite — plus the v1 adoption story
+  (CUJS.md CUJ0): a copy-paste integration snippet for a consuming repo's
+  CLAUDE.md/AGENTS.md routing structure questions to `ctx` before file
+  reads or scout dispatch, and MCP registration instructions.
 - R18: `ctx init` scaffolds the `.context/` layout per C4 and is
   idempotent (re-running on an initialized root changes nothing and exits
   0).
@@ -254,22 +288,31 @@ command from R17; fixture layout is the implementer's choice under
       overload fixture exercising C1's `#<n>` rule and a C2 test proving a
       pure rename leaves the body hash unchanged), R4 (ignored file
       excluded from index), R5 (index builds in a fixture directory with
-      no `.git`), R6–R10 (query output golden tests incl. depth cap, C7
-      token budget, C3 ambiguous-suffix exit code 3, and
-      `heuristic`/`precise` labels), R12 (note file format, C9 fields
-      normalized in snapshots), R14 (two divergent copies of one note file
-      produce a VCS conflict, nothing else), and R18 (init idempotence).
+      no `.git`), R6–R10 (query output golden tests incl. depth and
+      result caps with truncation-count lines, C7 token budget, C3
+      ambiguous-suffix exit code 3, C10 note-presence markers, and
+      `heuristic`/`precise` labels), R19 (`ctx at` on a line inside a
+      nested function prints the containment chain; a line outside any
+      definition resolves to the module symbol), R12 (note file format,
+      C9 fields normalized in snapshots), R14 (two divergent copies of
+      one note file produce a VCS conflict, nothing else), and R18 (init
+      idempotence).
 - [ ] Incrementality (R2/R3): e2e test syncs a fixture, edits the content
       of one file, and asserts `ctx sync --stats` reports parsed == 1 and
       hashed == 1; a pure mtime bump yields parsed == 0; a query without
       `--no-sync` reflects the edit.
 - [ ] Re-anchoring (R13), all three layers: (a) rename a function in-file
-      → note re-anchors via body hash, derived freshness reads fresh;
-      (b) edit the function body → freshness reads stale, pointer present;
-      (c) move a function to a different file, rename it, AND make a small
-      body edit in the same sync → note re-anchors via tree-diff to the
-      new symbol and freshness reads stale. In all cases the note file's
-      bytes are never modified or deleted by the system.
+      → note re-anchors via body hash, anchor path updated in
+      frontmatter, derived freshness reads fresh; (b) edit the function
+      body → freshness reads stale, pointer present, note file unchanged;
+      (c) move a function to a different file, rename it, AND make a
+      small body edit in the same sync → note re-anchors via tree-diff
+      (anchor path updated) and freshness reads stale. Then delete
+      `.context/cache/` and re-sync: the leg-(c) note still resolves to
+      the new symbol and still reads stale (rebuild durability).
+      Throughout, the system's only note-file write is the anchor path on
+      successful re-anchor; bodies are never modified, files never
+      deleted.
 - [ ] Root guard (C4): in a git fixture with no `.context/`, `ctx map`
       exits 2 and names `ctx init`; running `ctx init` places `.context/`
       at the git root and the same query then succeeds.
@@ -287,8 +330,14 @@ command from R17; fixture layout is the implementer's choice under
       already contains non-ctx content, `ctx hooks install` preserves that
       content and appends the marked block; a checkout then produces a
       `trigger: hook` record in the sync journal (C5) within a bounded
-      poll (≤10s); `ctx hooks uninstall` restores the original hook bytes
-      exactly.
+      poll (≤10s); install's output reports the fsmonitor decision
+      (enabled, or skipped with reason); `ctx hooks uninstall` restores
+      the original hook bytes exactly and reverts only settings it set.
+- [ ] Adoption (R17, CUJS.md CUJ0): `context-tree/README.md` contains the
+      consuming-repo integration snippet — a fenced block routing
+      structure questions to `ctx` before file reads or scout dispatch —
+      and MCP registration instructions (file absent today, verified
+      2026-07-15).
 - [ ] End-to-end as a user would: script drives `ctx init` → `ctx map` →
       `ctx sig` → `ctx notes add` → refactor → stale flag →
       `ctx notes list --stale`, on a fixture repo containing at least 3 of
