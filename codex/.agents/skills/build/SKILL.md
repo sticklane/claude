@@ -93,9 +93,9 @@ repay for it.
 **Exit checklist (fixed final message).** At scope exhaustion the run's
 final message is a three-section checklist, one file path per entry: (1)
 defaults taken — the reversible-default decisions logged to the task file's
-`## Decisions` by the close-out step below (the run reads that section
-rather than editing it); (2) the task's blocker, if any, with what unblocks
-it; and (3) the next command. "Nothing needs you" is a valid checklist.
+`## Decisions` by the close-out step below; (2) the task's blocker, if any,
+with what unblocks it; and (3) the next command. "Nothing needs you" is a
+valid checklist.
 
 **Pre-cap baton (long runs).** A step-budget cap terminates the process —
 there is no "after the cap" to hand off from, and a bounded goal evaluator
