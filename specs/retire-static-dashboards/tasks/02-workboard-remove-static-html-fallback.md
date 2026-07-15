@@ -1,6 +1,6 @@
 # Task 02: Remove workboard's static-HTML fallback (code + doc)
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 11 turns
