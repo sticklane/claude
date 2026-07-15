@@ -1,6 +1,6 @@
 # Task 01: check-freshness.sh, its test fixtures, and the R1 dogfood stamps
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 10 turns
