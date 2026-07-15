@@ -1,5 +1,7 @@
 # Codebase context tree (`ctx`)
 
+Breakdown-ready: true
+
 ## Problem
 
 Agents burn context learning a repo's structure: whole-file reads to find
@@ -111,8 +113,10 @@ Extraction and index:
   OCaml, Haskell, and Bash: every definition carries kind (small closed
   enum), name, qualified symbol path (C1), syntactic signature text,
   docstring (C8), full span and identifier span (line:col), parent
-  containment, and body content hash (C2). Facts for a file derive from
-  that file's content alone.
+  containment, body content hash (C2), and the identifier-excised body
+  token set (C2's byte basis, tokenized — the R13 tree-diff score input,
+  persisted in the index so a vanished anchor remains scorable). Facts for
+  a file derive from that file's content alone.
 - R2: `ctx sync` updates the index incrementally: an mtime+size scan (or
   the VCS adapter's change feed) proposes candidates, content hashes
   confirm, and only genuinely changed files re-parse. Every sync appends a
@@ -122,7 +126,9 @@ Extraction and index:
   content yields parsed == 0.
 - R3: Every query command runs the staleness sweep first (skippable with
   `--no-sync`; skipped automatically when a sync already holds the lock,
-  per C6), so query results always reflect the working tree.
+  per C6), so query results reflect the working tree as of the last
+  completed sync. Note-reading commands (`ctx notes`, `ctx notes list`)
+  are query commands for this requirement's purposes.
 - R4: The index respects ignore rules: the VCS adapter's ignores when
   present (`.gitignore` under git), plus `.ctxignore` in the no-VCS
   baseline; `.context/cache/` is never indexed.
@@ -170,9 +176,13 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   is token overlap between identifier-excised body texts (C2's byte
   basis, tokenized); the note re-anchors to the highest-scoring candidate
   above threshold 0.6, ties broken by lowest file:line; with no candidate
-  above threshold the note stays un-re-anchored and stale. When the
-  anchored body's hash changes, the note's derived freshness (R12)
-  becomes stale with a pointer to what changed. Note files are never
+  above threshold the note stays un-re-anchored and stale. Tree-diff
+  scoring reads the anchor's persisted token set (R1) from the index;
+  re-anchoring happens at the sync that observes the disappearance, so
+  after a full index rebuild an already-vanished anchor is no longer
+  re-anchorable and its note stays stale. When the anchored body's hash
+  changes, the note's derived freshness (R12) becomes stale with a
+  pointer to what changed. Note files are never
   deleted or rewritten by the system; content revalidation is the reading
   agent's job.
 - R14: Notes merge under plain VCS semantics: one file per note, so
@@ -235,8 +245,10 @@ command from R17; fixture layout is the implementer's choice under
       source file — the `typescript/` dir holding a `.ts`, a `.tsx`, and a
       `.js` file — and the check command's output emits one
       `covered: <language>` line per language the R1 suite actually
-      enumerated; the criterion greps that output for all 12 names, so a
-      hardcoded subset fails mechanically.
+      enumerated; the criterion checks that output with a whole-line match
+      per language (`grep -Fx "covered: <language>"`), so `covered: cpp`
+      cannot satisfy the `c` check and a hardcoded subset fails
+      mechanically.
 - [ ] The documented check command (R17) runs the component's test suite
       green, covering R1 (per-language extraction golden tests incl. a C++
       overload fixture exercising C1's `#<n>` rule and a C2 test proving a
