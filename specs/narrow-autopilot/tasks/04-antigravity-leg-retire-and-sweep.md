@@ -1,6 +1,6 @@
 # Task 04: Retire antigravity's autopilot workflow, fold into build.md, sweep doctrine mentions
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 6 turns
@@ -51,12 +51,14 @@ tasks own those trees).
 
 ## Acceptance
 
-- [ ] `[ ! -f antigravity/.agents/workflows/autopilot.md ]`
-- [ ] `antigravity/.agents/workflows/build.md` contains the folded-in
+- [x] `[ ! -f antigravity/.agents/workflows/autopilot.md ]` → PASS (file git-rm'd).
+- [x] `antigravity/.agents/workflows/build.md` contains the folded-in
       classification-gate and escalation-trigger content that applies
-      under antigravity's own human-gate model.
-- [ ] `grep -qF 'Two triggers escalate to a human' antigravity/.agents/workflows/build.md`
-      (the literal sentence, confirmed present in the source today, must
-      survive the fold-in verbatim — Task 06's mirror-manifest AC depends
-      on it).
-- [ ] `! grep -rq '/autopilot' antigravity/README.md antigravity/.agents/skills/gate/SKILL.md antigravity/.agents/skills/resume-handoff/SKILL.md antigravity/.agents/workflows/drain.md antigravity/.agents/skills/qa-sweep/SKILL.md`
+      under antigravity's own human-gate model. → PASS: new "## Bounded,
+      walk-away runs" section carries **Classification (go/no-go)** and
+      **Escalation triggers** paragraphs (build.md:11-32), adapted for
+      antigravity (no `/goal`, no reference.md); critic verdict READY on fold.
+- [x] `grep -qF 'Two triggers escalate to a human' antigravity/.agents/workflows/build.md`
+      → PASS (verbatim at build.md:28).
+- [x] `! grep -rq '/autopilot' antigravity/README.md antigravity/.agents/skills/gate/SKILL.md antigravity/.agents/skills/resume-handoff/SKILL.md antigravity/.agents/workflows/drain.md antigravity/.agents/skills/qa-sweep/SKILL.md`
+      → PASS; `grep -rn autopilot antigravity/` returns zero hits tree-wide.
