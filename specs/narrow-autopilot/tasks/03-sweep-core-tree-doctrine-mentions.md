@@ -1,6 +1,6 @@
 # Task 03: Sweep remaining /autopilot mentions across docs/, CLAUDE.md, README.md, and friends
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 13 turns
@@ -93,11 +93,12 @@ enumeration drops `autopilot`, becoming the three-skill set.
 
 ## Acceptance
 
-- [ ] `[ ! -d evals/autopilot ]`
-- [ ] `! grep -q '\.claude/skills/autopilot/SKILL\.md\|\.claude/skills/autopilot/reference\.md' bin/check-token-discipline`
-- [ ] `! grep -q '^\.claude/skills/autopilot/SKILL\.md|' tests/mirror-procedure-manifest.txt`
-- [ ] `grep -c autopilot CLAUDE.md` returns 0, and CLAUDE.md's codex-leg
+- [x] `[ ! -d evals/autopilot ]` — verified: dir absent.
+- [x] `! grep -q '\.claude/skills/autopilot/SKILL\.md\|\.claude/skills/autopilot/reference\.md' bin/check-token-discipline` — verified: no match.
+- [x] `! grep -q '^\.claude/skills/autopilot/SKILL\.md|' tests/mirror-procedure-manifest.txt` — verified: no match.
+- [x] `grep -c autopilot CLAUDE.md` returns 0, and CLAUDE.md's codex-leg
       authoring convention names the three-skill set (`drain`/`build`/`evals`).
-- [ ] `grep -qc '\`/build\`, \`/drain\`, \`/prioritize\`' CLAUDE.md && ! grep -qc '\`/build\`, \`/drain\`, \`/evals\`' CLAUDE.md`
-- [ ] `! grep -q autopilot docs/external-playbooks.md docs/decisions/orchestrator-context.md docs/decisions/orchestration.md docs/memory/unattended-worker-tool-limits.md docs/memory/worktree-base-tracking-ref.md docs/memory/skill-retirement-checklist.md docs/memory/multi-runtime-live-testing.md docs/TASKS.md .claude/skills/fleet/SKILL.md .claude/skills/gate/reference.md .claude/skills/resume-handoff/SKILL.md README.md AGENTS.md agent-console/agent-console.py runtimes/codex.md runtimes/README.md runtimes/claude-code.md`
-- [ ] `grep -c autopilot docs/orchestration-research-2026-07.md .claude/rules/mirror-procedure-discipline.md tests/test_check_token_discipline.sh` — each returns >0 (confirmed still present, per the exemption list; not a regression).
+      — verified: count=0, codex-leg convention names the three-skill set.
+- [x] `grep -qc '\`/build\`, \`/drain\`, \`/prioritize\`' CLAUDE.md && ! grep -qc '\`/build\`, \`/drain\`, \`/evals\`' CLAUDE.md` — verified: both hold.
+- [x] `! grep -q autopilot docs/external-playbooks.md docs/decisions/orchestrator-context.md docs/decisions/orchestration.md docs/memory/unattended-worker-tool-limits.md docs/memory/worktree-base-tracking-ref.md docs/memory/skill-retirement-checklist.md docs/memory/multi-runtime-live-testing.md docs/TASKS.md .claude/skills/fleet/SKILL.md .claude/skills/gate/reference.md .claude/skills/resume-handoff/SKILL.md README.md AGENTS.md agent-console/agent-console.py runtimes/codex.md runtimes/README.md runtimes/claude-code.md` — verified: no match across all 17 files.
+- [x] `grep -c autopilot docs/orchestration-research-2026-07.md .claude/rules/mirror-procedure-discipline.md tests/test_check_token_discipline.sh` — each returns >0 (confirmed still present, per the exemption list; not a regression). — verified: 3, 1, 1 respectively.

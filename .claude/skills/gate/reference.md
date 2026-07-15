@@ -24,7 +24,7 @@ Setup rules that silently break gates when skipped:
 `.claude/hooks/stop-gate.sh` — replace `npm test` with the project's check;
 note the exit status is captured from the check itself, never from a pipe.
 Before exiting 2, the hook checks for a **sanctioned stop**: unattended
-workers (drain/autopilot dispatch, and the verifier) are contractually
+workers (drain/build dispatch, and the verifier) are contractually
 REQUIRED to stop mid-red with a final message beginning with a verdict line
 — `DEFERRED`, `BLOCKED`, or `INCOMPLETE`. Without the bypass the gate would
 trap them in a block loop they can never satisfy. The hook's stdin JSON

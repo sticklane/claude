@@ -78,8 +78,8 @@ codex exec --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>
   exist; skills are reached by natural-language description match (15
   reused skills) or by typing the skill's name — see "What degrades on
   Codex" in [../codex/README.md](../codex/README.md).
-- **Explicit invocation is unreliable.** The four launch-gated skills
-  (`drain`/`build`/`autopilot`/`evals`, `allow_implicit_invocation: false`)
+- **Explicit invocation is unreliable.** The three launch-gated skills
+  (`drain`/`build`/`evals`, `allow_implicit_invocation: false`)
   do not reliably invoke through `$name` in `codex exec` yet (upstream
   [openai/codex #19695](https://github.com/openai/codex/issues/19695),
   [#10585](https://github.com/openai/codex/issues/10585),

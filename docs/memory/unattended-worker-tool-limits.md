@@ -3,17 +3,17 @@
 When to read: authoring a task that will be drained/parallelized, debugging
 a worker that returned DEFERRED/BLOCKED on an acceptance criterion it "couldn't
 run," or smoke-testing a change to a gated skill (`/build`, `/drain`,
-`/autopilot`, `/evals`).
+`/evals`).
 
 ## The gotcha
 
 **Post-2026-07-11 migration, this is two different mechanisms, not one** —
-don't assume `disable-model-invocation` frontmatter explains all four:
+don't assume `disable-model-invocation` frontmatter explains all three:
 
 - `/evals` (and the `Workflow` tool, and `/deep-research`) are still
   genuinely removed from the model's reach — `disable-model-invocation`
   blocks the tool-call layer regardless of who's asking.
-- `/build`, `/autopilot`, `/drain`, `/prioritize` dropped
+- `/build`, `/drain`, `/prioritize` dropped
   `disable-model-invocation` — they're model-invocable, but ONLY when the
   human's live message names the stage (CLAUDE.md's authoring
   conventions). A dispatched worker's prompt is synthesized by the
@@ -52,7 +52,7 @@ instructed by a human-directed request to call `Skill(skill: "drain")` —
 hit a hard `InputValidationError`-style block, not a soft refusal. That
 was `disable-model-invocation` enforced at the tool-call layer.
 
-**Unverified post-migration:** `/drain`/`/build`/`/autopilot`/`/prioritize`
+**Unverified post-migration:** `/drain`/`/build`/`/prioritize`
 no longer carry that flag, so it's an open question whether an
 `Agent`-dispatched worker instructed to call `Skill(skill: "drain")` now
 hits a hard block, a soft model-level refusal (the model reading its own
@@ -65,9 +65,9 @@ holds for these four without testing it directly; `/evals` (still
 
 Consequence either way: an in-session `Agent` dispatch is not a reliable
 way to smoke-test a gated skill's real invocation — it can only hand-walk
-the skill's written procedure step-by-step (validates the *logic*, not
+the skill's written procedure step-by-step (validates the _logic_, not
 that the actual `/command` invocation works end-to-end). To really exercise
-`/build`/`/drain`/`/autopilot`/`/evals`, use headless CLI
+`/build`/`/drain`/`/evals`, use headless CLI
 (`claude -p "/drain ..."`, what `evals/run.sh` already does) or the human
 runs it directly. When reporting a smoke test's results, say plainly which
 kind you ran — the caveat matters for how much the PASS is worth.

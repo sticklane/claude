@@ -2596,7 +2596,7 @@ def execute_push(action: dict) -> dict:
 # Every dispatch runs an agentic `claude` session with write access to the
 # target repo — that is the point of a dispatch button (R5). The elevation is
 # recorded here, deliberate, and kept local-only by the Host check + CSRF token
-# (R2/R2a): the flag set is the headless one the drain/autopilot reference docs
+# (R2/R2a): the flag set is the headless one the drain/build reference docs
 # document — a non-interactive permission mode (`dontAsk` aborts rather than
 # hangs on an unapproved tool), a tool allowlist broad enough to orchestrate a
 # drain / run the verifier / resume a handoff, and a hard `--max-turns` cap.
