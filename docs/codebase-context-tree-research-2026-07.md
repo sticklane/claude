@@ -24,17 +24,18 @@ Primary sources
 
 ## Decisions taken (maintainer interview, 2026-07-15)
 
-| Fork              | Decision                                                                                                                                                                                                                                                    |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Data model        | Universal **symbol tree** (not a universal AST), extracted per-file by tree-sitter with per-language symbol queries; optional LSP (Language Server Protocol) enrichment adds resolved types where a server is available.                                    |
-| Sync trigger      | Hybrid: file-change-driven is primary; a passing build/typecheck additionally stamps nodes validated and refreshes LSP enrichment.                                                                                                                          |
-| Sync architecture | Lazy sync-on-query plus hook pre-warming. No always-on daemon.                                                                                                                                                                                              |
-| Note behavior     | Deterministic re-anchoring; content-hash change flags a note stale; the next agent that reads it revalidates. Maintenance itself never spends tokens.                                                                                                       |
-| Note storage      | In-repo git-tracked files (one file per note); the queryable index is a derived, gitignored cache.                                                                                                                                                          |
-| Query surface     | CLI core returning compact plain text (JSON behind a flag); MCP server as a thin wrapper over the same core.                                                                                                                                                |
-| V1 scope adds     | Import/dependency edges, cross-file def/ref edges, ranked overview (Aider-style, token-budgeted). Semantic/vector search is out.                                                                                                                            |
-| Scale posture     | V1 targets 100k files with headroom to 100M: no sync or query path may assume whole-tree enumeration; change detection and storage must be shardable.                                                                                                       |
-| V1 languages      | Python, TypeScript/JavaScript (incl. TSX), Go, Rust, Java, C, C++, Zig, Kotlin, OCaml, Haskell, Bash. Several of these grammars are community-maintained and lack upstream symbol queries, so authoring per-language query files is part of the build cost. |
+| Fork              | Decision                                                                                                                                                                                                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Data model        | Universal **symbol tree** (not a universal AST), extracted per-file by tree-sitter with per-language symbol queries; optional LSP (Language Server Protocol) enrichment adds resolved types where a server is available.                                                                               |
+| Sync trigger      | Hybrid: file-change-driven is primary; a passing build/typecheck additionally stamps nodes validated and refreshes LSP enrichment.                                                                                                                                                                     |
+| Sync architecture | Lazy sync-on-query plus hook pre-warming. No always-on daemon.                                                                                                                                                                                                                                         |
+| Note behavior     | Deterministic re-anchoring; content-hash change flags a note stale; the next agent that reads it revalidates. Maintenance itself never spends tokens.                                                                                                                                                  |
+| Note storage      | In-repo version-tracked files (one file per note); the queryable index is a derived, ignored cache.                                                                                                                                                                                                    |
+| Query surface     | CLI core returning compact plain text (JSON behind a flag); MCP server as a thin wrapper over the same core.                                                                                                                                                                                           |
+| V1 scope adds     | Import/dependency edges, cross-file def/ref edges, ranked overview (Aider-style, token-budgeted). Semantic/vector search is out.                                                                                                                                                                       |
+| Scale posture     | V1 targets 100k files with headroom to 100M: no sync or query path may assume whole-tree enumeration; change detection and storage must be shardable.                                                                                                                                                  |
+| V1 languages      | Python, TypeScript/JavaScript (incl. TSX), Go, Rust, Java, C, C++, Zig, Kotlin, OCaml, Haskell, Bash. Several of these grammars are community-maintained and lack upstream symbol queries, so authoring per-language query files is part of the build cost.                                            |
+| VCS coupling      | No single version-control system assumed: the baseline staleness sweep is plain filesystem mtime+hash and works with no VCS at all; VCS integrations (change feeds, ignore rules, snapshot identity, hooks) are pluggable accelerator adapters behind one interface. Git is the only adapter v1 ships. |
 
 The rationale for each decision is the research below.
 
@@ -208,8 +209,8 @@ gitignored, rebuildable from scratch) indexes files (path, content hash),
 symbols, and edges. A note store holds git-tracked note files. One CLI
 (working name `ctx`) owns sync and queries; an MCP server wraps the same
 core for harnesses that prefer typed tools; a harness PostToolUse hook and
-git post-checkout/post-merge/post-commit hooks pre-warm sync so interactive
-queries rarely pay it.
+VCS hooks (git's post-checkout/post-merge/post-commit in v1) pre-warm sync
+so interactive queries rarely pay it.
 
 **Node schema (per symbol).** Stable ID (qualified symbol path), kind (small
 closed enum in the LSP SymbolKind spirit, ignore-unknown rule), name,
@@ -218,9 +219,9 @@ demand), file + full span + identifier span (line:col, snapshot-scoped),
 parent/children, language, body content hash, optional LSP enrichment
 (resolved signature, validated-at commit).
 
-**Sync path (lazy).** Every query begins with a staleness sweep: a
-git-status/mtime-size scan proposes candidates, content hashes confirm real
-changes, and only genuinely changed files re-parse (tree-sitter parses at
+**Sync path (lazy).** Every query begins with a staleness sweep: an
+mtime-size scan (or the VCS adapter's change feed, where one is available)
+proposes candidates, content hashes confirm real changes, and only genuinely changed files re-parse (tree-sitter parses at
 milliseconds per file). Cost is bounded by the number of changed files,
 never repo size. Cross-file products (ref resolution, ranking) recompute at
 query time or from caches invalidated by the per-file fact versions they
@@ -229,11 +230,15 @@ hooks exist to pre-warm; between queries the system does nothing at all,
 which is the answer to the watcher-per-keystroke performance trap.
 
 **Scale posture.** V1 targets 100k files; the design keeps headroom for
-100M. Three rules follow. Change detection delegates to git rather than
-bespoke scanning: `git status --porcelain` already respects ignore rules,
-and with `core.fsmonitor` (Watchman-backed) git scales status checks to
-monorepo size — git's object model is itself a Merkle tree, so VCS-native
-change feeds replace custom whole-tree hashing at the top end. Storage
+100M. Three rules follow. Change detection layers over a VCS-agnostic
+baseline: the plain mtime+hash sweep needs no version control at all, and
+VCS adapters accelerate it behind one interface. V1 ships only the git
+adapter — `git status --porcelain` already respects ignore rules, and with
+`core.fsmonitor` (Watchman-backed) git scales status checks to monorepo
+size; git's object model is itself a Merkle tree, so its change feeds
+replace custom whole-tree hashing. The ecosystems that actually operate at
+100M files (Sapling/EdenFS, Perforce) plug in as additional adapters
+rather than forcing a redesign. Storage
 shards: one SQLite file is right at 100k files, but per-file facts (the
 stack-graphs isolation rule) partition naturally, so the store splits by
 directory subtree without a design change. Queries stay subtree-scoped by
