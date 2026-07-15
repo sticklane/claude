@@ -1,6 +1,6 @@
 # Task 03: antigravity /idea mirror gets its own grounding-check step
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 8 turns
