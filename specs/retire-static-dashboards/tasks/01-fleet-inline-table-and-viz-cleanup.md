@@ -1,6 +1,6 @@
 # Task 01: /fleet prints inline, delete reference.md and its viz.py CSS emitter
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 6 turns
@@ -44,11 +44,12 @@ Exactly the three files listed above. Do not touch `workboard.py` or
 
 ## Acceptance
 
-- [ ] `[ ! -f .claude/skills/fleet/reference.md ]`
-- [ ] `grep -c "self-contained HTML snapshot" .claude/skills/fleet/SKILL.md`
-      → 0.
-- [ ] `.claude/skills/fleet/SKILL.md` describes printing a markdown table,
+- [x] `[ ! -f .claude/skills/fleet/reference.md ]` — file deleted (git rm), verifier confirmed absent.
+- [x] `grep -c "self-contained HTML snapshot" .claude/skills/fleet/SKILL.md`
+      → 0 — confirmed 0 (frontmatter description rewritten to inline-table output).
+- [x] `.claude/skills/fleet/SKILL.md` describes printing a markdown table,
       not rendering/writing HTML — spot-check by reading the Render/
-      Present steps after the edit.
-- [ ] `grep -n "_emit_fleet_css\|--emit-fleet-css" .claude/skills/_shared/viz.py`
-      returns no matches.
+      Present steps after the edit — step 3 now "## 3. Print", emits a
+      `Label | Kind | Status | Elapsed | Snippet` table inline; no HTML/file.
+- [x] `grep -n "_emit_fleet_css\|--emit-fleet-css" .claude/skills/_shared/viz.py`
+      returns no matches — confirmed no matches; `--self-sha256` still runs.
