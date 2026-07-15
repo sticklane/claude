@@ -24,7 +24,7 @@ consistent.
 3. **Surface, then resume.** State the resumed task and its recorded
    immediate next step in 1-2 sentences, then continue directly into that
    next step — UNLESS the recorded next step is itself one of the gated
-   execution stages (build/autopilot/drain/prioritize). A handoff file is
+   execution stages (build/drain/prioritize). A handoff file is
    not a live user authorization for those (docs/human-gates.md, cited not
    restated) — name the recommended stage and get the user's explicit
    go-ahead before invoking it.

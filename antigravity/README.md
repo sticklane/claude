@@ -23,21 +23,21 @@ be listed. Type `/idea` in the agent input to test a workflow.
 
 ## What maps to what
 
-| Claude Code version | Antigravity version |
-|---|---|
-| Skills in `.claude/skills/` | Same skills in `.agents/skills/` (auto-trigger by description) |
-| `/idea`, `/build`, etc. slash commands | Workflows in `.agents/workflows/` — same names, same `/command` invocation |
-| `CLAUDE.md` + `rules/token-discipline.md` | `AGENTS.md` (always-on by definition) |
-| `scout`/`critic`/`verifier` subagents | Skills with the same names + discipline; run them in a **fresh Agent Manager conversation** when fresh eyes matter (review, verification) |
-| Hooks in `.claude/settings.json` | `.agents/hooks.json` (different JSON shape — the gate skill's reference has the port) |
-| Permission allowlists in settings.json | Terminal Execution Policy (Settings UI): Off/Auto/Turbo + deny list — not a checked-in file |
-| `/goal`, Stop-hook gates | Artifact review: implementation plan pause + walkthrough evidence, plus PostToolUse hooks |
-| `/fleet` open-agents dashboard | Not ported — Antigravity's Agent Manager is this surface natively |
-| `/workboard` cross-repo work dashboard | Ported as-is — it also reads Antigravity's own `brain/` artifacts, covering what the Agent Manager can't see (other tools, specs, git, Claude Code sessions) |
-| Skill self-chaining (/idea invokes /breakdown via the Skill tool) | Not ported — workflows are human-launched in the Agent Manager, so the port keeps printed pointers between stages |
+| Claude Code version                                                               | Antigravity version                                                                                                                                                                             |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skills in `.claude/skills/`                                                       | Same skills in `.agents/skills/` (auto-trigger by description)                                                                                                                                  |
+| `/idea`, `/build`, etc. slash commands                                            | Workflows in `.agents/workflows/` — same names, same `/command` invocation                                                                                                                      |
+| `CLAUDE.md` + `rules/token-discipline.md`                                         | `AGENTS.md` (always-on by definition)                                                                                                                                                           |
+| `scout`/`critic`/`verifier` subagents                                             | Skills with the same names + discipline; run them in a **fresh Agent Manager conversation** when fresh eyes matter (review, verification)                                                       |
+| Hooks in `.claude/settings.json`                                                  | `.agents/hooks.json` (different JSON shape — the gate skill's reference has the port)                                                                                                           |
+| Permission allowlists in settings.json                                            | Terminal Execution Policy (Settings UI): Off/Auto/Turbo + deny list — not a checked-in file                                                                                                     |
+| `/goal`, Stop-hook gates                                                          | Artifact review: implementation plan pause + walkthrough evidence, plus PostToolUse hooks                                                                                                       |
+| `/fleet` open-agents dashboard                                                    | Not ported — Antigravity's Agent Manager is this surface natively                                                                                                                               |
+| `/workboard` cross-repo work dashboard                                            | Ported as-is — it also reads Antigravity's own `brain/` artifacts, covering what the Agent Manager can't see (other tools, specs, git, Claude Code sessions)                                    |
+| Skill self-chaining (/idea invokes /breakdown via the Skill tool)                 | Not ported — workflows are human-launched in the Agent Manager, so the port keeps printed pointers between stages                                                                               |
 | Tier language (scout/session/deep/frontier-tier) + `.claude/runtime.md` tier pins | Same tier vocabulary in `AGENTS.md`; the tier→model mapping is recorded in `runtimes/antigravity.md` (model choice is a human selection in the Agent Manager model picker, not a pinnable flag) |
-| Ultracode workflow scripts (`.claude/workflows/*.js`) | Human-dispatched launch-list workflows — no scripted fan-out in Antigravity; the port's existing workflows already express the degraded pattern |
-| `workflow-author` skill | Not ported — its entire job is authoring `.claude/workflows/*.js` for the Claude-Code-specific `Workflow` tool, and Antigravity has no scripted fan-out primitive to author against |
+| Ultracode workflow scripts (`.claude/workflows/*.js`)                             | Human-dispatched launch-list workflows — no scripted fan-out in Antigravity; the port's existing workflows already express the degraded pattern                                                 |
+| `workflow-author` skill                                                           | Not ported — its entire job is authoring `.claude/workflows/*.js` for the Claude-Code-specific `Workflow` tool, and Antigravity has no scripted fan-out primitive to author against             |
 
 The human-launch gates and their rationale: the toolkit repo's
 docs/human-gates.md — in Antigravity every workflow is human-launched
@@ -57,7 +57,8 @@ natively, so the gates hold by construction.
   hooks for lint/format.
 - **Permissions aren't in the repo.** Terminal Execution Policy lives in
   the settings UI per machine. For unattended runs, set the deny list
-  (push, deploy, rm) there — the autopilot workflow walks through it.
+  (push, deploy, rm) there — the build workflow's "Bounded, walk-away runs"
+  section walks through it.
 - **Workflow args are free text** (no `$ARGUMENTS` templating) and workflow
   files cap at 12,000 characters.
 
@@ -67,8 +68,8 @@ The Claude Code files (`.claude/`) are the source of truth. When a skill
 changes there, mirror the change here — the bodies are deliberately close
 to identical, with platform-specific bits (subagent spawning, hooks JSON,
 fresh-session mechanics) swapped out. This tree is itself upstream of a
-third leg: `codex/` overlays it with symlinks plus four real-content
-wrappers (drain/build/autopilot/evals) — a change here to a symlinked
-skill flows to Codex automatically, but a change to one of the four
+third leg: `codex/` overlays it with symlinks plus three real-content
+wrappers (drain/build/evals) — a change here to a symlinked
+skill flows to Codex automatically, but a change to one of the three
 wrapper sources needs the matching `codex/.agents/skills/<name>/SKILL.md`
 update (root CLAUDE.md's port-chain bullet).
