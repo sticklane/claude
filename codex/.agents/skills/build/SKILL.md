@@ -20,6 +20,94 @@ Execute the task named in the argument. This skill assumes an agent-ready
 task/spec with runnable acceptance criteria and is designed to run in a
 fresh session.
 
+## Bounded, walk-away runs
+
+`$build`'s default is unbounded and attended. To run it unattended, either
+stay at the keyboard with an explicit stop condition stated up front
+("<criteria> pass, or stop after ~N turns") or launch a background/headless
+run on a worktree using this same procedure. Codex has no `/goal`
+transcript-evaluator and no max-turns flag — a headless `codex exec` run
+carries its own internal step budget instead (see `runtimes/codex.md`'s
+`## Headless` section for the exact template). Either way, scope permissions
+first (Preconditions below), then clear this go/no-go gate. Autonomy is
+earned by verification, not granted by optimism: an unattended agent is only
+as safe as the gates around it.
+
+**Classification (go/no-go).** A peripheral feature, prototype, or migration
+with mechanical, runnable verification fits a bounded run. Core business
+logic or security-sensitive code doesn't disqualify a task — it raises the
+bar it must clear first: tighten acceptance criteria to runnable commands
+and confirm worktree isolation covers every side effect, or stay on
+unbounded attended execution. A task whose "correct" is a judgment call no
+test can settle is an unresolved spec question, not a walk-away run — say
+so, file it as a HUMAN.md `ask`/`decide` entry (or route it back through the
+spec pipeline), and do not launch.
+
+**Preconditions (all mandatory).**
+
+- Clean git state; work on a dedicated branch or worktree, so recovery from
+  a bad run is "discard the branch", never "untangle the tree".
+- Runnable acceptance criteria present in the task file (no criteria → no
+  autonomy).
+- Quality gates installed, or a bounded goal set.
+- Permissions scoped so the run can build/test/commit but NOT push or
+  deploy. Risk-rate each tool by reversibility and blast radius; auto-allow
+  only what discarding the branch fully undoes. Push stays human-escalated —
+  drain's and build's push-on-completion behavior is intentionally not
+  adopted for an unattended run. Be honest about limits: `--sandbox` gates
+  filesystem-write/network posture coarsely, not tool-by-tool (there is no
+  direct allowlist flag), and a worktree isolates the diff, not the machine.
+  Never bypass the sandbox outside a network-isolated container.
+
+**Pick the mechanism.**
+
+- Staying at the keyboard, same session → set a bounded goal
+  ("<criteria> pass, or stop after ~N turns").
+- Fire-and-forget on this machine → a background agent in a worktree,
+  prompted with this `$build` procedure.
+- CI / scripts / scheduled → a headless `codex exec` run (see
+  `runtimes/codex.md`'s `## Headless` section for the exact template):
+  `--sandbox` is the closest analogue to a tool allowlist (coarse
+  filesystem-write/network posture, not a tool-by-tool list), and there is
+  no max-turns flag — Codex has its own internal step budget instead. No
+  interactive prompts either way.
+- Exploratory low-confidence bet → slot machine: commit state, timebox one
+  run, then accept the result or DISCARD and restart fresh with a better
+  task file. Never debug a failed run in place.
+
+**Escalation triggers / the walk-away contract.** Before launching, state:
+what is running, where (branch/worktree), the gate that decides success, and
+the evidence the run must produce (test output, a verifier verdict — claims
+don't count). The run reports back only that verdict plus evidence, never
+its transcript. Two triggers escalate to a human instead of pressing on: the
+same step failing twice (a third attempt in a degraded context won't do
+better), and reaching a high-risk action — push, deploy, data deletion,
+publishing, spending — which the run must never take on its own. On
+completion: PASS → present the evidence and diff for human review (a human
+still approves; the agent does the work); FAIL or gate-capped → report,
+discard or re-scope, and restart clean. Correcting a wandering autonomous
+run in-context is the known losing move. Either way, if the run exposed a
+task-file or gate problem, capture the lesson so the next launch doesn't
+repay for it.
+
+**Exit checklist (fixed final message).** At scope exhaustion the run's
+final message is a three-section checklist, one file path per entry: (1)
+defaults taken — the reversible-default decisions logged to the task file's
+`## Decisions` by the close-out step below; (2) the task's blocker, if any,
+with what unblocks it; and (3) the next command. "Nothing needs you" is a
+valid checklist.
+
+**Pre-cap baton (long runs).** A step-budget cap terminates the process —
+there is no "after the cap" to hand off from, and a bounded goal evaluator
+judges only whether the condition is met, not progress. So a long unattended
+run hands off pre-emptively: at its last safe boundary (a committed task
+verdict) BEFORE ~80% of its step budget, it writes drain's baton artifact
+and relaunches a fresh generation, using the same baton grammar,
+fresh-instance ritual, and generations cap drain uses. It judges its own
+advancement by new commits since launch: no new commits since the previous
+baton means a fresh identical generation would only repeat the stall, so it
+does NOT respawn — it stops for spec repair (the FAIL path above) instead.
+
 ## 0. Load only the task
 
 Emit `<!-- agentprof:stage=load -->` verbatim as this step's opening line
