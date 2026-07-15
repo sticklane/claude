@@ -1,6 +1,6 @@
 # Task 01: /fleet prints inline, delete reference.md and its viz.py CSS emitter
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 6 turns
