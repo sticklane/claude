@@ -32,9 +32,11 @@ open http://127.0.0.1:8899/workboard
 - If the launchd job doesn't exist, start the server directly in the
   background (`~/claude/agent-console/agent-console.py`), re-check `/healthz`,
   then open the URL.
-- **Fallback (machines without agent-console):** run the bundled stdlib-only
-  scanner and open the file instead — write it to a temp dir, never into a
-  repo: `python3 <this skill dir>/workboard.py [ROOTS ...] --out /tmp/workboard.html`
+- If the live server genuinely cannot start, report the startup error and
+  what to check — Python availability, a port conflict on the configured
+  port, and the `SKILLS_DASHBOARD_PORT`/`SKILLS_DASHBOARD_HOST` env vars —
+  rather than degrading to a static file. The inbox relay below
+  (`workboard.py --json`) still works without the server.
 
 ## 2. Relay the inbox
 
