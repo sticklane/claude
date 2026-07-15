@@ -62,3 +62,13 @@ tasks own those trees).
       → PASS (verbatim at build.md:28).
 - [x] `! grep -rq '/autopilot' antigravity/README.md antigravity/.agents/skills/gate/SKILL.md antigravity/.agents/skills/resume-handoff/SKILL.md antigravity/.agents/workflows/drain.md antigravity/.agents/skills/qa-sweep/SKILL.md`
       → PASS; `grep -rn autopilot antigravity/` returns zero hits tree-wide.
+
+## Discovered
+
+- `antigravity/.agents/workflows/build.md` is now 13,372 chars, over the
+  12,000-char antigravity workflow cap stated in `antigravity/README.md` —
+  it was already 12,019 (over) before this task, so the required fold-in
+  (AC2/AC3) cannot coexist with the cap without deleting pre-existing
+  procedure (forbidden by mirror-procedure-discipline). Matters because
+  content past the cap is silently dropped by Antigravity's Agent Manager
+  at load time. See specs/narrow-autopilot/tasks/07-antigravity-build-md-char-cap.md.
