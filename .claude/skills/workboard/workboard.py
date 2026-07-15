@@ -1746,7 +1746,8 @@ def compute_antigravity_spend(antigravity_dir, cascade_ids):
 
 def merge_spend(claude_spend, antigravity_spend):
     """Merge two harness spend structures into one drop-in replacement for what
-    `compute_spend` returns (R4), so `render_spend_section` needs no changes.
+    `compute_spend` returns (R4), so downstream consumers of the --json spend
+    payload (agent-console's spend view) need no changes.
 
     `by_model` is the concatenation of both harnesses' lists, RE-SORTED by
     `(-cost_microusd, model)` (not two separately-sorted blocks). `by_session`

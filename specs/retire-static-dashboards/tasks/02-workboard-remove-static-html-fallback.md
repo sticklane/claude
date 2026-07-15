@@ -1,6 +1,6 @@
 # Task 02: Remove workboard's static-HTML fallback (code + doc)
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 11 turns
@@ -66,17 +66,20 @@ mirror (Task 04).
 
 ## Acceptance
 
-- [ ] `grep -n "render_html\|build_actions_script\|--out\|--actions-out" .claude/skills/workboard/workboard.py`
-      returns no matches.
-- [ ] `grep -n "^TEMPLATE = " .claude/skills/workboard/workboard.py` returns
-      no match.
-- [ ] Save the reachability script from ../SPEC.md to `/tmp/orphan_check.py`
+- [x] `grep -n "render_html\|build_actions_script\|--out\|--actions-out" .claude/skills/workboard/workboard.py`
+      returns no matches. (verifier: no matches, exit 1)
+- [x] `grep -n "^TEMPLATE = " .claude/skills/workboard/workboard.py` returns
+      no match. (verifier: no match)
+- [x] Save the reachability script from ../SPEC.md to `/tmp/orphan_check.py`
       and run `python3 /tmp/orphan_check.py .claude/skills/workboard/workboard.py`
-      — prints `clean` (exit 0).
-- [ ] `grep -n "Fallback (machines without agent-console)" .claude/skills/workboard/SKILL.md`
-      returns no match.
-- [ ] `git grep -c 'fleet/reference\.md' .claude/skills/workboard/workboard.py`
+      — prints `clean` (exit 0). (verifier: printed `clean`, exit 0)
+- [x] `grep -n "Fallback (machines without agent-console)" .claude/skills/workboard/SKILL.md`
+      returns no match. (verifier: no match; bullet replaced with startup-error reporting)
+- [x] `git grep -c 'fleet/reference\.md' .claude/skills/workboard/workboard.py`
       → 0 (the orphaned section-comment citation, not caught by the
-      reachability check since it's a comment, not a node).
-- [ ] `python3 .claude/skills/workboard/workboard.py --json` still runs and
-      produces valid JSON.
+      reachability check since it's a comment, not a node). (verifier: 0)
+- [x] `python3 .claude/skills/workboard/workboard.py --json` still runs and
+      produces valid JSON. (verifier: exit 0, json.load parsed a dict)
+
+Evidence: specs/retire-static-dashboards/evidence/02-workboard-remove-static-html-fallback.md
+(verifier PASS all 6; critic READY, no correctness defects).
