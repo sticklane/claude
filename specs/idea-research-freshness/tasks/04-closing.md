@@ -1,6 +1,6 @@
 # Task 04: version bump, link-checker recheck, manual-pending evidence
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 6 turns
