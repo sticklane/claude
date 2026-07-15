@@ -8,7 +8,7 @@
     {
       "name": "agentic",
       "source": "./",
-      "description": "The full toolkit as one plugin: the spec-driven pipeline skills, the cheap scout/review subagents, and the /fleet open-agents dashboard."
+      "description": "The full toolkit as one plugin: the spec-driven pipeline skills, the cheap scout/review subagents, and the /fleet inline open-agents table."
     }
   ]
 }
