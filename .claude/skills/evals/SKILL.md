@@ -8,8 +8,10 @@ disable-model-invocation: true
 Run (or first scaffold) the stored evalset for the skill named in
 $ARGUMENTS. The runner (`evals/run.sh`) and the fixture scenarios it
 consumes ship in the toolkit repo, not with installs — /evals is not
-usable from plugin installs. v1 grades artifacts only — what a run
-produced, not the trajectory it took (specs/skill-evals/SPEC.md). A
+usable from plugin installs. Grading has two layers: v1 artifact
+assertions (what a run produced) stay primary, and v2 adds opt-in
+trajectory assertions (how the run got there) via `EVAL_TRANSCRIPT`
+(specs/skill-evals/SPEC.md, specs/trajectory-evals/SPEC.md). A
 scenario is a directory
 `evals/<skill>/<NN-name>/` containing exactly:
 
@@ -27,6 +29,18 @@ scenario is a directory
   scenario seeded (scratch tasks, notes). Runs whenever setup.sh was
   attempted, pass or fail; a teardown failure fails the scenario, since
   leaked scratch state must be loud.
+
+For a v2 trajectory assertion, `assert.sh` may also read `EVAL_TRANSCRIPT`
+— an environment variable the runner sets to the absolute path of the
+run's JSONL transcript — to grade _how_ a run behaved, not only the
+artifacts it produced. It is opt-in and purely additive: a scenario that
+ignores it keeps grading artifacts exactly as before, so no existing
+`assert.sh` needs editing. The runner leaves it empty and warns when no
+transcript is locatable, so a trajectory assertion guards for an empty
+value first, then greps the JSONL — e.g.
+`grep -q '"subagent_type":"scout"' "$EVAL_TRANSCRIPT"` to confirm the skill
+delegated to a scout rather than reading the codebase directly. Trajectory
+failure messages respect the same ~10-line budget as artifact ones (below).
 
 ## 1. Scaffold if no evalset exists
 
