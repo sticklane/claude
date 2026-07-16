@@ -12,8 +12,26 @@ implements.
 Stdlib only. Read-only: never mutates anything it scans.
 """
 
+import re
 import sys
 from pathlib import Path
+
+# `Rigor:` — optional single-line header (absent = production), read the same
+# `Key: value`-above-the-first-## way as Status/Priority. Only the two defined
+# tiers match; anything else falls through to the production default (no
+# marker). Parsed locally here rather than in _shared/headers.py — this is the
+# only consumer today, and _shared/ is outside this task's scope.
+RIGOR_RE = re.compile(
+    r"^Rigor:\s*\[?(prototype|production)\]?", re.MULTILINE | re.IGNORECASE
+)
+
+
+def parse_rigor(text):
+    """Return the declared tier ('prototype'/'production') from a spec's text,
+    defaulting to 'production' when the header is absent or unrecognized."""
+    m = RIGOR_RE.search(text or "")
+    return m.group(1).lower() if m else "production"
+
 
 _SCRIPT = Path(__file__).resolve()
 _WORKBOARD_PY = _SCRIPT.parent.parent / "workboard" / "workboard.py"
@@ -248,20 +266,28 @@ def scan_and_classify(repo_root):
         text = read_text(spec_md_path)
         unresolved = open_questions_unresolved(text)
         tasks = [{"file": t["file"], "status": t["status"]} for t in s["tasks"]]
-        rows.append(classify_spec(s["slug"], tasks, unresolved))
+        row = classify_spec(s["slug"], tasks, unresolved)
+        row["rigor"] = parse_rigor(text)
+        rows.append(row)
     rows.sort(key=lambda r: r["slug"])
     return rows
 
 
 def render_table(rows):
-    """R5: one markdown table, columns Spec | Status | Next command."""
+    """R5: one markdown table, columns Spec | Status | Next command.
+
+    A spec declaring `Rigor: prototype` gets a `[prototype]` annotation on
+    its Spec cell; production (or absent, the default) rows are unchanged."""
     lines = [
         "| Spec | Status | Next command |",
         "| --- | --- | --- |",
     ]
     for r in rows:
         next_cmd = f"`{r['next_command']}`" if r["next_command"] else "—"
-        lines.append(f"| {r['slug']} | {r['status']} | {next_cmd} |")
+        spec_cell = r["slug"]
+        if r.get("rigor") == "prototype":
+            spec_cell = f"{r['slug']} [prototype]"
+        lines.append(f"| {spec_cell} | {r['status']} | {next_cmd} |")
     return "\n".join(lines)
 
 

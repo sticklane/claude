@@ -14,6 +14,11 @@ procedure — this rule states the discipline both assume.
   and tests in the same step.
 - Bug fixes start with a failing reproduction; refactors start with a
   safety-net test.
+- **Rigor-scoped.** This TDD mandate binds `Rigor: production` work (absent
+  = production); a `Rigor: prototype` spec substitutes a mechanical
+  acceptance-command run for red-first per the rigor-tier mechanism
+  (specs/rigor-tier — cited, not restated), surfaced in `/list-specs`'s
+  table.
 
 ## Test rules of thumb
 
