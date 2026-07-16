@@ -53,6 +53,16 @@ own.
    conclusions. Read a file in full only when about to edit it. If the
    task has no runnable acceptance criteria, STOP and say it isn't
    agent-ready — don't improvise weaker criteria.
+   **Rigor tier (gate scaling).** Read the task's effective `Rigor:` header
+   (the task's own, else its spec's; absent = `production`). `production` (or
+   absent) is the full procedure below, unchanged. `Rigor: prototype` scales
+   steps 3–4: skip TDD red-first (step 3) and skip this run's own
+   verifier-skill application (step 4), substituting a mechanical run of the
+   task's acceptance commands as the reported signal. Never scaled at any
+   tier: commit hygiene, the task's runnable acceptance criteria, and the
+   untrusted-data rules. State in close-out (step 5) that prototype gates
+   applied. This primary path applies to attended runs AND to the drain
+   workflow's attempt-1/relaunch workers, who run this procedure verbatim.
 
 2. **Plan proportionally.** Open this step by emitting
    `<!-- agentprof:stage=plan -->` verbatim each time you enter it.
@@ -76,8 +86,11 @@ own.
 
 3. **Implement, verification-first.** Open this step by emitting
    `<!-- agentprof:stage=implement -->` verbatim each time you enter it.
-   Where acceptance criteria are
-   test-shaped: write the failing tests FIRST, run them, confirm they fail
+   On `Rigor: prototype` (step 1), skip TDD red-first: implement directly
+   against the acceptance criteria (commit hygiene still holds); the
+   `production` default keeps the test-first rule that follows. Where
+   acceptance criteria are
+   test-shaped (production rigor): write the failing tests FIRST, run them, confirm they fail
    for the right reason, commit the tests, then implement until green —
    without modifying the tests. Match the surrounding code's style; no
    drive-by refactors. Run the narrowest relevant test after each
@@ -85,6 +98,17 @@ own.
 
 4. **Verify with fresh eyes.** Open this step by emitting
    `<!-- agentprof:stage=verify -->` verbatim each time you enter it.
+   **`Rigor: prototype` (gate scaling, step 1).** On a prototype-rigor task,
+   skip the verifier-skill application below: the acceptance-command run is
+   the reported signal — end with DONE when every acceptance command passes
+   and the project gates are green, BLOCKED otherwise, so the drain
+   workflow's verdict-driven routing works unchanged. The acceptance commands
+   and project gates still run mechanically and are never skipped.
+   **Promotion rule:** prototype code never merges into a `Rigor: production`
+   spec's work without re-running the full gates — promoting a prototype
+   means flipping the `Rigor:` header and treating the existing code as
+   untested input to a normal production task, not as done work. `production`
+   (or absent) runs the full verification below.
    Run every acceptance command; fix until all
    pass. Run the project's standard gates: run `scripts/check.sh`, the
    sole required check entrypoint — never a hand-derived list of steps read

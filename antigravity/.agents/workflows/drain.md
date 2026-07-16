@@ -775,6 +775,25 @@ layout` the winner's branch already carries the worker's evidence
      `## Deferred questions`, set `Status: deferred`; otherwise
      `Status: failed` with all three verdicts' evidence. A DONE winner
      drops the other candidates' deferred questions.
+   - **`Rigor: prototype` (orchestrator gate scaling):** for a
+     prototype-rigor task (its effective `Rigor:` header, read at inventory,
+     step 1; absent = `production`), the ONLY orchestrator-owned locus that
+     scales is this tournament's per-candidate verifier dispatch (Filter
+     above): substitute a mechanical acceptance-command run for each
+     per-candidate verifier-skill run and rank candidates on that signal
+     instead. Everything else the workflow owns is unchanged at every tier —
+     the pre-merge append-only whitelist diff and the project gates
+     (`scripts/check.sh`) stay mechanical and run in every case, since they
+     are already mechanical rather than verifier-driven, never skipped. On
+     the primary path (attempt-1 and relaunch workers running the build
+     procedure verbatim) the worker scales its own TDD-red-first and verifier
+     application per the build workflow's Rigor branch and reports
+     DONE/BLOCKED; the workflow's verdict-driven routing reads that verdict
+     unchanged.
+   - **Promotion rule:** prototype code never merges into a `Rigor:
+production` spec's work without re-running the full gates — promoting a
+     prototype means flipping the `Rigor:` header and treating the existing
+     code as untested input to a normal production task, not as done work.
 
 **Critique intake (fires at the exhaustion trigger, immediately before 4a).**
 Open this step by emitting `<!-- agentprof:stage=critique-intake -->`
