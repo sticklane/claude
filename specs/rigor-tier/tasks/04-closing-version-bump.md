@@ -1,6 +1,6 @@
 # Task 04: version bump + ultra-gate closing check
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03
 Priority: P3
 Budget: 4 turns
