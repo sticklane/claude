@@ -1,6 +1,6 @@
 # Task 04: antigravity mirror + version bump (closing)
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 10 turns
@@ -59,16 +59,23 @@ stream-json` does. If yes: add the equivalent `EVAL_TRANSCRIPT`
 
 ## Acceptance
 
-- [ ] `grep -q "EVAL_TRANSCRIPT" antigravity/.agents/workflows/evals.md`
+- [x] `grep -q "EVAL_TRANSCRIPT" antigravity/.agents/workflows/evals.md`
       OR `test -f specs/trajectory-evals/evidence/antigravity-transcript-carveout.md`
       (exactly one of these two must be true — a carve-out with no
       evidence file, or an evidence file with no carve-out rationale
       inside it, both fail this check in spirit even if the grep alone
       can't distinguish; read the evidence file's content if using the
       carve-out path)
-- [ ] `git show HEAD~1:.claude-plugin/plugin.json | grep -o '"version": "[^"]*"'`
+      Evidence: carve-out path taken. grep A = 0 (no literal in
+      antigravity/.agents/workflows/evals.md — pointer phrased without the
+      token so exactly one branch is true); evidence file exists with
+      carve-out rationale (`grep -c carve-out` = 4). Runtime finding:
+      runtimes/antigravity.md Headless L148-151 (no `--json`/`-o` flag).
+- [x] `git show HEAD~1:.claude-plugin/plugin.json | grep -o '"version": "[^"]*"'`
       differs from the current file's `"version"` value, and the current
       value is a one-patch-level increment above it (never a decrease).
       `HEAD~1` is the commit immediately before your own version-bump
       commit.
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0
+      Evidence: HEAD~1 = "0.9.13", current = "0.9.14" (one-patch increment).
+- [x] `bash evals/lint-ultra-gate.sh` exits 0
+      Evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", EXIT=0.
