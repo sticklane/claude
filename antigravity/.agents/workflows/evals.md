@@ -39,6 +39,17 @@ here (no per-tool allowlist flag exists — see the Headless section's
    same commit as the skill change. Never loosen an assertion just to go
    green.
 
+**No v2 trajectory-transcript assertion here.** The Claude Code leg
+documents an opt-in trajectory assertion that greps the run's JSONL
+transcript to grade _how_ a run behaved. Antigravity's headless `agy -p`
+exposes no locatable turn-by-turn transcript file (no `--json`/`-o` flag;
+prose/markdown to stdout) — so that mechanism has no equivalent here and is
+deliberately omitted, not silently skipped. Rationale and the live check
+are recorded in
+`specs/trajectory-evals/evidence/antigravity-transcript-carveout.md`;
+revisit if a future `antigravity-cli` release adds structured per-turn
+output.
+
 Artifacts: scenarios live in `evals/<skill>/<NN-name>/`, committed. If a
 failure exposed a skill-authoring gap, apply the distill skill to capture
 the lesson. Next stage: run the affected evalset before committing any skill

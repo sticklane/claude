@@ -7,6 +7,19 @@ Budget: 10 turns
 Spec: ../SPEC.md (requirement R5)
 Touch: antigravity/.agents/workflows/evals.md, .claude-plugin/plugin.json, specs/trajectory-evals/evidence/
 
+<!-- plan (worker, task 04)
+1. DONE confirm tasks 01-03 Status: done
+2. Investigate Antigravity headless transcript: runtimes/antigravity.md
+   Headless (L148-151) — no --json/-o flag, prose/markdown to stdout, only
+   a brain/<uuid> artifact, NOT a locatable turn-by-turn JSONL transcript.
+   => carve-out path. Write evidence file + non-EVAL_TRANSCRIPT pointer in
+   antigravity/.agents/workflows/evals.md (keep grep A false so exactly one
+   acceptance branch is true).
+3. Re-check LIVE plugin.json version immediately before bump; +1 patch.
+4. bash evals/lint-ultra-gate.sh exits 0.
+Commit incrementally; verifier before close.
+-->
+
 ## Goal
 
 `antigravity/.agents/workflows/evals.md` receives the equivalent
