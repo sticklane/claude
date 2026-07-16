@@ -7,6 +7,23 @@ Budget: 8 turns
 Spec: ../SPEC.md (requirements R5, R7, R8)
 Touch: .claude/skills/list-specs/SKILL.md, .claude/skills/list-specs/list_specs.py, .claude/skills/list-specs/test_list_specs.py, .claude/rules/quality-discipline.md, antigravity/.agents/skills/list-specs/SKILL.md, antigravity/.agents/skills/list-specs/list_specs.py, antigravity/.agents/skills/list-specs/test_list_specs.py
 
+<!-- PLAN (delete at close-out)
+Order: test (RED) -> feat (GREEN) -> antigravity port -> docs.
+- test_list_specs.py: 2 rigor tests via scan_and_classify+render_table;
+  Rigor: prototype spec renders "[prototype]" on Spec cell; no-header spec
+  renders no marker. (RED)
+- list_specs.py: RIGOR_RE local regex; scan_and_classify parses tier from
+  spec text, adds row["rigor"]; render_table annotates Spec cell only for
+  prototype rows (.get so classify_spec-only rows stay safe). (GREEN)
+- Port list_specs.py + tests + SKILL.md to antigravity/.agents/skills/list-specs.
+- SKILL.md prose: mention prototype annotation. quality-discipline.md: 1 line
+  scoping TDD to Rigor: production, citing rigor-tier.
+Choice: prototype rows get "[prototype]" annotation; production/absent
+  unchanged (no marker) — kept consistent per step 1.
+Risk: render_table must use row.get("rigor") since classify_spec unit tests
+  build rows without the key.
+-->
+
 ## Goal
 
 `/list-specs`'s rendered table shows each spec's `Rigor:` tier, not just a
