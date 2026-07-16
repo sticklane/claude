@@ -2,7 +2,7 @@
 
 ## Table of contents
 
-setup.sh · prompt.txt · assert.sh · allowed-tools.txt
+setup.sh · prompt.txt · assert.sh · allowed-tools.txt · EVAL_TRANSCRIPT
 
 The runner is [evals/run.sh](../../../evals/run.sh) — read it there
 rather than duplicating it here. Runner and scenarios ship in the
@@ -119,3 +119,28 @@ Read,Edit,Write,Glob,Grep,Bash(git *),Task
 agents, which the runner provisioned into the fixture's
 `.claude/agents/`. Scenarios for non-fan-out skills omit this file and
 inherit the runner's default allowlist.
+
+## EVAL_TRANSCRIPT (opt-in trajectory assertions)
+
+For a v2 trajectory assertion, the runner exports `EVAL_TRANSCRIPT` — the
+absolute path to the run's JSONL transcript — so an `assert.sh` can grade
+_how_ a run behaved, not only the artifacts it left. It is additive:
+scenarios that ignore it are unchanged. Only the claude-code runner emits a
+locatable transcript today; the runner leaves `EVAL_TRANSCRIPT` empty and
+warns otherwise, so a trajectory assertion guards that case first, then
+greps the JSONL:
+
+```bash
+# Fail loudly when no transcript is available — a trajectory check with
+# nothing to read has proved nothing.
+[ -n "${EVAL_TRANSCRIPT:-}" ] && [ -s "$EVAL_TRANSCRIPT" ] \
+  || fail "EVAL_TRANSCRIPT is empty or missing; cannot check the trajectory"
+
+# Confirm the skill delegated to a scout rather than reading code directly.
+grep -Eq '"subagent_type"[[:space:]]*:[[:space:]]*"scout"' "$EVAL_TRANSCRIPT" \
+  || fail "transcript shows no scout delegation"
+```
+
+The live `evals/breakdown/02-scout-delegation/assert.sh` is the worked
+example; its failure messages keep the same ~10-line budget as the artifact
+checks above.
