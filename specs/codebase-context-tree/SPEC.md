@@ -37,7 +37,10 @@ one CLI — is proven at 4× this scale by difftastic and ast-grep. Stack:
 `tree-sitter` core + 12 grammar crates, `rusqlite` with the `bundled`
 feature (no system SQLite), the official `rmcp` MCP SDK (stdio server),
 `cargo test` + `insta` snapshots for golden-file verification, musl
-targets for static release builds.
+targets for static release builds. Grammar crates are optional Cargo
+dependencies behind a default-on feature flag (ast-grep's proven
+packaging shape), keeping the 12 statically linked by default while
+allowing trimmed builds.
 
 Architecture rules binding all requirements (rationale in the research
 doc): per-file isolation at index time; index and query WORK is never
@@ -183,7 +186,11 @@ and exits 0):
 - R10: `ctx refs <symbol> [--limit N]` prints definitions and references,
   each result labeled `heuristic` (global-name match) or `precise`
   (LSP-resolved), capped at 50 results per direction by default with a
-  truncation count line naming the flag to raise.
+  truncation count line naming the flag to raise. Heuristic matching is
+  scope-aware where the grammar has locals queries: a reference bound to
+  a local definition by `@local.scope`/`@local.definition` analysis
+  (per-file, deterministic) is excluded from cross-file candidates;
+  languages without locals queries fall back to plain name matching.
 - R11: LSP enrichment is optional and additive: with a configured language
   server available, an enrichment pass stores resolved signatures and
   upgrades `ctx refs` results to `precise`; with none, every query still
@@ -215,8 +222,9 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   returned with every note read. An agent revalidating a stale note
   updates the body and/or refreshes the anchor hash; that is the only
   path that writes the hash after creation. `ctx notes <symbol>` prints that symbol's
-  notes with their freshness; `ctx notes list [--kind K] [--stale]`
-  filters on it. A note file with unparseable or incomplete frontmatter
+  notes with their freshness; `ctx notes list [--kind K] [--stale]
+  [--file <path>]` filters on freshness, kind, or the file containing
+  the anchored symbol. A note file with unparseable or incomplete frontmatter
   is skipped with one diagnostic line (path + reason); it never aborts a
   query or sync.
 - R13: Re-anchoring is deterministic and layered: when an anchored symbol
@@ -268,7 +276,11 @@ Surface and integration:
 - R16: `ctx hooks install` installs opt-in hooks: pre-warm VCS hooks
   (git's post-checkout/post-merge/post-commit in v1) and a printed snippet
   for a harness PostToolUse hook, each running `ctx sync` in the
-  background (journaled per C5), plus a pre-commit hook that writes
+  background (journaled per C5) — the PostToolUse snippet additionally
+  runs `ctx notes list --file <edited-file>` and emits any output as
+  hook additional context, pushing note presence to the agent at edit
+  time (the second, edit-time push channel; cf. C10's query-output
+  markers) — plus a pre-commit hook that writes
   pending anchor updates (R13 phase 2) and stages the touched note files
   — writing a given update only when the re-anchored NEW path's file is
   itself in the staged set (a partial commit that leaves the moved-to
@@ -312,6 +324,9 @@ Surface and integration:
   unit is the file.
 - Sync-journal rotation/compaction — the journal lives in deletable
   derived cache; growth management is post-v1.
+- Runtime dylib loading of custom tree-sitter grammars (ast-grep's
+  `sgconfig.yml` registry pattern) — the post-v1 path for language 13+;
+  v1 ships the 12 built-in grammars only.
 - Unicode identifier normalization — C2 and C1 operate on raw source
   bytes; no NFC/NFKC folding in v1.
 
@@ -387,7 +402,13 @@ command from R17; fixture layout is the implementer's choice under
       `app.AuthHandler`, `ctx sig Handler` exits 0 and resolves to
       `app.Handler` (a substring matcher would exit 3 here), and a
       no-match argument exits 1.
-- [ ] Note plumbing (R12/C9): `ctx notes add <sym> --file body.md` and
+- [ ] Scope-aware refs (R10): in a typescript fixture (a grammar with
+      locals queries) where a function-local variable shadows a global
+      function's name, `ctx refs <global>` excludes the shadowed local
+      references and still lists the true cross-file call site.
+- [ ] Note plumbing (R12/C9): `ctx notes list --file <path>` returns
+      exactly the notes anchored to symbols in that file;
+      `ctx notes add <sym> --file body.md` and
       `printf ... | ctx notes add <sym> --file -` produce notes whose
       bodies match their sources; with `CTX_AUTHOR=x` set the frontmatter
       records `author: x`, and in a no-VCS fixture with it unset,
@@ -451,7 +472,9 @@ command from R17; fixture layout is the implementer's choice under
       content and appends the marked block; a checkout then produces a
       `trigger: hook` record in the sync journal (C5) within a bounded
       poll (≤10s); install's output reports the fsmonitor decision
-      (enabled, or skipped with reason); a partial commit that stages a
+      (enabled, or skipped with reason); the printed PostToolUse snippet
+      invokes `ctx notes list --file` (the edit-time note push, R16); a
+      partial commit that stages a
       refactor's moved-FROM file but not its moved-TO file leaves the
       anchor update pending rather than staged (R16's partial-commit
       rule); `ctx hooks uninstall` restores
