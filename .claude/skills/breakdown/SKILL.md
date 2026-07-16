@@ -29,7 +29,7 @@ dispatchers parse it for the over-budget stop and headless `--max-turns`.
 ```markdown
 # Task NN: <title>
 
-<!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
+<!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
@@ -63,6 +63,13 @@ Runnable commands only:
 
 - [ ] `<command>` → <expected result>
 ```
+
+**Propagate the spec's `Rigor:` onto every task.** Read the source spec's
+effective `Rigor:` header (absent = production) and, when it is
+`Rigor: prototype`, write that same single-line header into each generated
+task file's header block (above the first `##`, alongside `Priority:`). A
+production/absent spec gets no `Rigor:` line on its tasks — absent means
+production.
 
 ### The `Unblock:` line (blocked and waiting items)
 

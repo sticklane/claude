@@ -64,7 +64,8 @@ order cannot resolve are surfaced, not guessed.
 - References stay one level deep: SKILL.md → reference file, never
   reference → reference.
 - Fields any skill reads programmatically — Status, Depends on, Priority
-  (optional; absent = P2), Budget, and (post-review-fix-wave) Touch — are
+  (optional; absent = P2), Budget, (post-review-fix-wave) Touch, and Rigor
+  (optional; absent = production) — are
   single-line `Key: value` headers above the file's first `##` heading;
   body sections are for humans and workers, never for orchestrator parsing.
 - Every skill that produces an artifact must say where the file goes and what
