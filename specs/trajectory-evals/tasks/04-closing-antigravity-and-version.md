@@ -1,6 +1,6 @@
 # Task 04: antigravity mirror + version bump (closing)
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 10 turns
