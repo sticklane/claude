@@ -1,6 +1,6 @@
 # Task 01: evals/run.sh sets EVAL_TRANSCRIPT
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -64,6 +64,6 @@ Only `evals/run.sh` changes in this task. Do not touch any file under
       which produces no transcript; docs/memory/unattended-worker-tool-limits.md):
       `./evals/run.sh breakdown` passes with no edits to `evals/breakdown/`,
       and a one-off scenario asserting `[ -n "$EVAL_TRANSCRIPT" ] && [ -s
-    "$EVAL_TRANSCRIPT" ]` passes when run against this changed `run.sh`
+  "$EVAL_TRANSCRIPT" ]` passes when run against this changed `run.sh`
       (the committed trajectory-assertion scenario is task 02's job, not
       this one's — this is just confirming the mechanism itself works).
