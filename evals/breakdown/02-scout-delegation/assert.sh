@@ -38,7 +38,7 @@ fi
 # whose input carries subagent_type "scout". (Assumed JSONL field name;
 # see this task's ## Decisions — a human re-confirms it against a real
 # transcript and adjusts the pattern if the field is nested differently.)
-grep -q '"subagent_type":"scout"' "$EVAL_TRANSCRIPT" \
+grep -Eq '"subagent_type"[[:space:]]*:[[:space:]]*"scout"' "$EVAL_TRANSCRIPT" \
   || fail "transcript shows no scout delegation (no '\"subagent_type\":\"scout\"' in $EVAL_TRANSCRIPT); /breakdown appears to have read the codebase directly instead of asking a scout"
 
 echo "assert: all checks passed (${#tasks[@]} task files, scout delegation present)"
