@@ -1,6 +1,6 @@
 # Task 02: committed trajectory-assertion scenario
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
@@ -44,14 +44,32 @@ owns it) or `.claude/skills/evals/` (task 03).
 
 ## Acceptance
 
-- [ ] `grep -rl "EVAL_TRANSCRIPT" evals/breakdown/*/assert.sh` finds the
+- [x] `grep -rl "EVAL_TRANSCRIPT" evals/breakdown/*/assert.sh` finds the
       new scenario's `assert.sh`
-- [ ] The new scenario's `assert.sh` fails loudly (non-zero, with a
+      — evidence/02-trajectory-scenario.md: returns only
+      `evals/breakdown/02-scout-delegation/assert.sh`.
+- [x] The new scenario's `assert.sh` fails loudly (non-zero, with a
       message naming the transcript as unavailable) when given an empty
       `EVAL_TRANSCRIPT` — test this directly: `EVAL_TRANSCRIPT="" bash
 evals/breakdown/02-*/assert.sh` (from within a fixture dir with the
       expected artifacts already present) exits non-zero and prints a
       message mentioning "transcript"
+      — evidence/02-trajectory-scenario.md: exit 1, message
+      "EVAL_TRANSCRIPT is empty or missing ... transcript unavailable".
 - [ ] **Manual-pending** (paid headless run, human-launched): `./evals/run.sh
-  breakdown` passes including the new scenario —
+breakdown` passes including the new scenario —
       docs/memory/unattended-worker-tool-limits.md
+      — Manual-pending: unattended worker cannot launch a paid non-dry-run
+      `claude -p` session. Plumbing confirmed: `EVAL_DRY_RUN=1 ./evals/run.sh
+  breakdown` discovers `breakdown/02-scout-delegation` (2/2 scenarios).
+
+## Decisions
+
+- JSONL trajectory field unconfirmable without a paid run → defaulted to
+  Claude Code's documented stream-json Task tool_use `subagent_type` input
+  param (task-01 precedent). Grep is whitespace-tolerant
+  (`"subagent_type"[[:space:]]*:[[:space:]]*"scout"`) so it matches both
+  compact and spaced serializations. Reverse/adjust: run `./evals/run.sh
+breakdown` once for real, inspect `session.log`, and if the field is
+  nested/named differently, edit the grep in
+  `evals/breakdown/02-scout-delegation/assert.sh`.
