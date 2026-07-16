@@ -1,6 +1,6 @@
 # Task 03: /list-specs displays the tier; quality-discipline.md scopes TDD to production-rigor
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 8 turns
