@@ -59,3 +59,10 @@ task, which also handles the antigravity carve-out decision).
 - [x] `! grep -q "v1 grades artifacts only" codex/.agents/skills/evals/SKILL.md` — PASS (verifier)
 - [x] `grep -q "never a transcript" codex/.agents/skills/evals/SKILL.md` — PASS; line 41 budget rule unchanged, shifted only by inserted paragraph (verifier)
       (line 41's budget rule is confirmed still present, unchanged)
+
+## Discovered
+
+- [2026-07-16 /drain] codex/.agents/skills/evals/SKILL.md omits the
+  .claude leg's teardown.sh scenario-file bullet entirely (pre-existing
+  procedural divergence, not introduced by this task) — see
+  specs/trajectory-evals/tasks/05-codex-evals-teardown-mirror-gap.md.
