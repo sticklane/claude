@@ -210,9 +210,7 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     # assertion that requires a transcript fails loudly instead of reading a
     # stale or missing path. Skipped under dry-run (no session, no assert.sh).
     if [ -z "${EVAL_DRY_RUN:-}" ]; then
-      if [ -n "$EVAL_TRANSCRIPT" ] && [ -s "$EVAL_TRANSCRIPT" ]; then
-        :
-      else
+      if [ -z "$EVAL_TRANSCRIPT" ] || [ ! -s "$EVAL_TRANSCRIPT" ]; then
         EVAL_TRANSCRIPT=""
         echo "eval: no locatable transcript for '$name'; EVAL_TRANSCRIPT is empty (assertions requiring it must fail loudly)" >&2
       fi
