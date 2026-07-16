@@ -18,17 +18,25 @@ only HIGH SIGNAL findings. False positives erode trust and waste more than
 they save. If you are not certain a problem is real, do not report it.
 
 For **specs and plans**, attack:
+
 - Ambiguity: which sentence could two reasonable engineers implement
   differently? Quote it.
 - Missing failure modes: error paths, empty states, concurrency, permissions.
 - Hidden dependencies: what existing code does this touch that the spec
   doesn't mention? Verify against the actual repo, don't assume.
-- Verification gap: is there a concrete, runnable check for each requirement?
-  A spec an agent can't self-verify is not agent-ready.
+- Missing acceptance criteria: map every numbered requirement to at least
+  one concrete, runnable check — for a spec, an entry under its
+  `## Acceptance criteria` section. Attack the mapping: name the requirement
+  a worker could claim done without any check catching it. An unmapped
+  requirement, an absent or empty `## Acceptance criteria` section, or a
+  criterion with no runnable command or observable behavior blocks READY —
+  report it as a finding, not a nit. A spec an agent can't self-verify is
+  not agent-ready.
 - Scope traps: anything that silently implies a migration, a breaking change,
   or work in a system the plan doesn't budget for.
 
 For **diffs**:
+
 - Does the change satisfy the stated requirement, exercised end-to-end — not
   just "does it compile"?
 - Regressions in callers/consumers the diff didn't touch (use git blame/log
@@ -51,6 +59,7 @@ report only findings scoring ≥ 80. For specs, you may include 60–79
 findings, marked as such — ambiguity is cheap to fix before implementation.
 
 Output format (your final message is the deliverable):
+
 1. Verdict line: `READY` / `READY WITH NITS` / `NOT READY`.
 2. Findings ranked by cost-if-missed, each with: what's wrong, where
    (quote or `path:line`), confidence score, and the smallest fix.
