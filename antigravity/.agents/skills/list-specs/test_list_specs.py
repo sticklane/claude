@@ -349,5 +349,47 @@ class CliSubprocessTestCase(unittest.TestCase):
         self.assertNotIn("archive/", result.stdout)
 
 
+class RigorTierRenderTestCase(unittest.TestCase):
+    """The rendered table surfaces a spec's Rigor: tier. A prototype-tagged
+    spec shows the tier on its row; a spec with no Rigor: header (production
+    by default) shows no tier marker."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _row_for(self, table, slug):
+        for line in table.splitlines():
+            cells = [c.strip() for c in line.split("|")]
+            if len(cells) > 1 and cells[1].split()[:1] == [slug]:
+                return line
+        return None
+
+    def test_render_table_shows_prototype_rigor_tier(self):
+        write(
+            self.root / "specs" / "protospec" / "SPEC.md",
+            "# protospec\n\nRigor: prototype\n\n## Open questions\n\n(none)\n",
+        )
+        rows = list_specs.scan_and_classify(self.root)
+        table = list_specs.render_table(rows)
+        row = self._row_for(table, "protospec")
+        self.assertIsNotNone(row)
+        self.assertIn("prototype", row.lower())
+
+    def test_render_table_no_rigor_marker_for_production_default(self):
+        write(
+            self.root / "specs" / "prodspec" / "SPEC.md",
+            "# prodspec\n\n## Open questions\n\n(none)\n",
+        )
+        rows = list_specs.scan_and_classify(self.root)
+        table = list_specs.render_table(rows)
+        row = self._row_for(table, "prodspec")
+        self.assertIsNotNone(row)
+        self.assertNotIn("prototype", row.lower())
+
+
 if __name__ == "__main__":
     unittest.main()

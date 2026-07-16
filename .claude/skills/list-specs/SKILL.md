@@ -15,8 +15,10 @@ in the table's Next command column — the human decides which to run.
    own directory — invoke it by its path relative to this SKILL.md).
 2. Present the script's stdout — a markdown table with one row per spec
    (`| Spec | Status | Next command |`, alphabetical by slug) — as the
-   response, unaltered. If it prints `no specs/ directory found`, relay
-   that instead.
+   response, unaltered. A spec declaring `Rigor: prototype` carries a
+   `[prototype]` annotation on its Spec cell; production (or absent, the
+   default) specs show no marker. If it prints `no specs/ directory found`,
+   relay that instead.
 3. Do not run, queue, or offer to run any command from the Next command
    column unless the user asks in a follow-up.
 
