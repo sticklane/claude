@@ -1,6 +1,6 @@
 # Task 03: /list-specs displays the tier; quality-discipline.md scopes TDD to production-rigor
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -54,10 +54,23 @@ mirrors — those belong to tasks 01 and 02. Do not touch
 
 ## Acceptance
 
-- [ ] `python3 -m pytest .claude/skills/list-specs/test_list_specs.py -k rigor`
+- [x] `python3 -m pytest .claude/skills/list-specs/test_list_specs.py -k rigor`
       passes (the new fixture test from step 1)
-- [ ] `grep -qi "rigor" .claude/skills/list-specs/list_specs.py`
-- [ ] `grep -qi "rigor" .claude/rules/quality-discipline.md`
-- [ ] `python3 -m pytest antigravity/.agents/skills/list-specs/test_list_specs.py -k rigor`
+      — verifier: 2 passed, 35 deselected (evidence/03-list-specs-quality-discipline.md)
+- [x] `grep -qi "rigor" .claude/skills/list-specs/list_specs.py`
+      — verifier: exit 0
+- [x] `grep -qi "rigor" .claude/rules/quality-discipline.md`
+      — verifier: exit 0 (new "Rigor-scoped." bullet citing specs/rigor-tier)
+- [x] `python3 -m pytest antigravity/.agents/skills/list-specs/test_list_specs.py -k rigor`
       passes
-- [ ] `grep -qi "rigor" antigravity/.agents/skills/list-specs/list_specs.py`
+      — verifier: 2 passed, 35 deselected
+- [x] `grep -qi "rigor" antigravity/.agents/skills/list-specs/list_specs.py`
+      — verifier: exit 0
+
+## Decisions
+
+- Tier display shape (task step 2 left it to the worker: new column vs
+  inline annotation). Default taken: inline `[prototype]` annotation on the
+  Spec cell for prototype rows only; production/absent rows unchanged (no
+  marker). Reverse: switch `render_table` to emit a dedicated Rigor column
+  for all rows.
