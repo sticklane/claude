@@ -1,31 +1,11 @@
 # Task 02: committed trajectory-assertion scenario
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
 Spec: ../SPEC.md (requirement R3)
 Touch: evals/breakdown/
-
-<!-- PLAN (build step 1):
-Create evals/breakdown/02-scout-delegation/ modeled on 01-small-spec:
-  - allowed-tools.txt: same set (Task tool present so scout can be spawned).
-  - setup.sh: fixture git repo with MULTIPLE existing source files whose
-    sourcing interdependencies are non-obvious, and a 2-requirement spec
-    that extends existing code — so breakdown's step-2 file-dependency
-    check is genuinely unclear and delegates to a scout (per breakdown
-    SKILL.md step 2). No open questions.
-  - assert.sh: R2 artifact checks (>=2 task files w/ Status/Depends on/
-    ## Acceptance + backticked cmd; Parallelization section) FIRST, THEN a
-    loud EVAL_TRANSCRIPT guard (empty -> fail with "transcript"), THEN the
-    trajectory grep '"subagent_type":"scout"'.
-Order of build: write assert.sh; test criterion-2 (empty EVAL_TRANSCRIPT
-fails loudly) directly against a hand-built fixture with artifacts present;
-then criterion-1 grep. Criterion-3 (live paid run) stays Manual-pending.
-Risk: exact JSONL field name unconfirmable without a paid run -> reversible
-default = documented Claude Code stream-json Task tool `subagent_type`
-input param; recorded as Decision + Manual-pending (task-01 precedent).
--->
 
 ## Goal
 
@@ -64,14 +44,32 @@ owns it) or `.claude/skills/evals/` (task 03).
 
 ## Acceptance
 
-- [ ] `grep -rl "EVAL_TRANSCRIPT" evals/breakdown/*/assert.sh` finds the
+- [x] `grep -rl "EVAL_TRANSCRIPT" evals/breakdown/*/assert.sh` finds the
       new scenario's `assert.sh`
-- [ ] The new scenario's `assert.sh` fails loudly (non-zero, with a
+      — evidence/02-trajectory-scenario.md: returns only
+      `evals/breakdown/02-scout-delegation/assert.sh`.
+- [x] The new scenario's `assert.sh` fails loudly (non-zero, with a
       message naming the transcript as unavailable) when given an empty
       `EVAL_TRANSCRIPT` — test this directly: `EVAL_TRANSCRIPT="" bash
 evals/breakdown/02-*/assert.sh` (from within a fixture dir with the
       expected artifacts already present) exits non-zero and prints a
       message mentioning "transcript"
+      — evidence/02-trajectory-scenario.md: exit 1, message
+      "EVAL_TRANSCRIPT is empty or missing ... transcript unavailable".
 - [ ] **Manual-pending** (paid headless run, human-launched): `./evals/run.sh
 breakdown` passes including the new scenario —
       docs/memory/unattended-worker-tool-limits.md
+      — Manual-pending: unattended worker cannot launch a paid non-dry-run
+      `claude -p` session. Plumbing confirmed: `EVAL_DRY_RUN=1 ./evals/run.sh
+  breakdown` discovers `breakdown/02-scout-delegation` (2/2 scenarios).
+
+## Decisions
+
+- JSONL trajectory field unconfirmable without a paid run → defaulted to
+  Claude Code's documented stream-json Task tool_use `subagent_type` input
+  param (task-01 precedent). Grep is whitespace-tolerant
+  (`"subagent_type"[[:space:]]*:[[:space:]]*"scout"`) so it matches both
+  compact and spaced serializations. Reverse/adjust: run `./evals/run.sh
+breakdown` once for real, inspect `session.log`, and if the field is
+  nested/named differently, edit the grep in
+  `evals/breakdown/02-scout-delegation/assert.sh`.
