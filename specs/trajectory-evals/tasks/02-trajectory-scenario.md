@@ -1,6 +1,6 @@
 # Task 02: committed trajectory-assertion scenario
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 12 turns
@@ -53,5 +53,5 @@ evals/breakdown/02-*/assert.sh` (from within a fixture dir with the
       expected artifacts already present) exits non-zero and prints a
       message mentioning "transcript"
 - [ ] **Manual-pending** (paid headless run, human-launched): `./evals/run.sh
-    breakdown` passes including the new scenario —
+  breakdown` passes including the new scenario —
       docs/memory/unattended-worker-tool-limits.md
