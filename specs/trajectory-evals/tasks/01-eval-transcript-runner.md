@@ -1,6 +1,6 @@
 # Task 01: evals/run.sh sets EVAL_TRANSCRIPT
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -57,13 +57,23 @@ Only `evals/run.sh` changes in this task. Do not touch any file under
 
 ## Acceptance
 
-- [ ] `grep -q "EVAL_TRANSCRIPT" evals/run.sh && bash -n evals/run.sh`
-- [ ] `grep -q "stream-json" evals/run.sh`
+- [x] `grep -q "EVAL_TRANSCRIPT" evals/run.sh && bash -n evals/run.sh`
+      — exit 0 (verifier evidence/01-eval-transcript-runner.md).
+- [x] `grep -q "stream-json" evals/run.sh` — exit 0 (verifier report).
 - [ ] **Manual-pending** (paid headless run, human-launched — a drained/
       unattended worker cannot launch `claude -p`, only `EVAL_DRY_RUN=1`,
       which produces no transcript; docs/memory/unattended-worker-tool-limits.md):
       `./evals/run.sh breakdown` passes with no edits to `evals/breakdown/`,
       and a one-off scenario asserting `[ -n "$EVAL_TRANSCRIPT" ] && [ -s
-  "$EVAL_TRANSCRIPT" ]` passes when run against this changed `run.sh`
+"$EVAL_TRANSCRIPT" ]` passes when run against this changed `run.sh`
       (the committed trajectory-assertion scenario is task 02's job, not
       this one's — this is just confirming the mechanism itself works).
+
+## Decisions
+
+- The repo's markdown-formatter PostToolUse hook stripped the 2-space
+  indent from the wrapped continuation of the manual-pending acceptance
+  criterion (line 68) on every write; it re-applies on each save, so
+  hand-reverting is futile. Whitespace-only, no criterion meaning or
+  runnability changed. Reverse (if ever needed) by disabling the hook and
+  restoring the leading 2 spaces on that line.
