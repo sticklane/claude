@@ -1,6 +1,6 @@
 # Task 01: /idea writes the Rigor: header, /breakdown propagates it
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -50,11 +50,13 @@ Do not touch `.claude/skills/build/SKILL.md`, `.claude/skills/drain/SKILL.md`,
 
 ## Acceptance
 
-- [ ] `grep -q "Rigor:" .claude/skills/idea/SKILL.md && grep -q "Rigor:" .claude/skills/breakdown/SKILL.md`
-- [ ] `grep -qi "rigor" antigravity/.agents/skills/idea/SKILL.md && grep -qi "rigor" antigravity/.agents/skills/breakdown/SKILL.md`
-- [ ] `grep -qi "rigor" CLAUDE.md`
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0
+- [x] `grep -q "Rigor:" .claude/skills/idea/SKILL.md && grep -q "Rigor:" .claude/skills/breakdown/SKILL.md` — exit 0 (commit 94dde62)
+- [x] `grep -qi "rigor" antigravity/.agents/skills/idea/SKILL.md && grep -qi "rigor" antigravity/.agents/skills/breakdown/SKILL.md` — exit 0
+- [x] `grep -qi "rigor" CLAUDE.md` — exit 0
+- [x] `bash evals/lint-ultra-gate.sh` exits 0 — "OK — all ultra mentions gated in 4 files"
 - [ ] Manual, per CLAUDE.md's testing convention (mark evidence, don't
       block merge on it): fresh-session `/idea` a throwaway-tool pitch,
       answer "prototype" — the produced SPEC.md carries `Rigor: prototype`
-      above its first `##`.
+      above its first `##`. — manual-pending: unattended worker cannot
+      exercise a launch-gated /idea session interactively (AskUserQuestion
+      unavailable to a background worker; unattended-worker-tool-limits doctrine).
