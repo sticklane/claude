@@ -1,8 +1,29 @@
-# Handoff — session over wake budget (269,680 tokens, past 250k threshold)
+# Handoff — session over wake budget (277,976 tokens, past 250k threshold)
 
 Refresh-over-carry per `.claude/rules/token-discipline.md`, "Session refresh".
 This session did NOT re-prime the cache (0 re-primes) but exceeded the
-context-size threshold, so it's refreshing rather than continuing.
+context-size threshold, so it's refreshing rather than continuing. NOTE:
+the wake-budget hook fired TWICE (269,680, then 277,976 tokens) because the
+prior handoff's `/clear` instruction wasn't followed before the next
+message — if you're reading this in yet another non-cleared continuation,
+`/clear` now before doing anything else.
+
+## Update: item 5 below is now in flight, not unstarted
+
+The user asked explicitly for it to run as a single dispatched subagent
+that both researches AND writes the spec file directly (not the
+`deep-research` Workflow pattern used for item 4). Dispatched via the
+`Agent` tool (`general-purpose`, background): researches frontier-lab
+guidance on dynamic/mid-flow prompt injection vs. static doctrine, and
+writes `specs/prompt-tweaking-roi/SPEC.md` itself, following
+`specs/context-blowout-subagent-guards/SPEC.md` and
+`specs/drain-hub-context-discipline/SPEC.md`'s format, then commits and
+pushes it directly. No completion notification was received before this
+handoff — check `git log --oneline -5 -- specs/prompt-tweaking-roi/` on
+resume; if the file exists and is committed, the agent finished
+regardless of this session's fate (its commit is durable even if the
+in-conversation notification never arrived). If it's absent, relaunch the
+same request.
 
 ## Task
 
