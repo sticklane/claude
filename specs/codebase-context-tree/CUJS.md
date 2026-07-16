@@ -52,7 +52,10 @@ Journey: every structure query the agent already runs (`ctx tree`, `ctx
 sig`, `ctx map`, `ctx at`) marks note-carrying symbols with
 `[notes:<count>]`, `!`-flagged when stale (C10) — so note existence
 reaches the agent BEFORE the edit, unprompted, for ~5 tokens; one
-`ctx notes <symbol>` pull retrieves the content.
+`ctx notes <symbol>` pull retrieves the content. A second channel pushes
+at edit time: the harness PostToolUse hook snippet (R16) emits the
+edited file's notes as hook additional context, mirroring how LSP
+diagnostics reach the agent after edits.
 This was the draft's biggest gap: pull-only notes made CUJ4 write-only
 and the whole knowledge loop dead on arrival. Both adversarial passes
 independently ranked it the linchpin; C10 is now spec, not a hope.

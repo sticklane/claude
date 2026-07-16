@@ -20,7 +20,8 @@ Decisions taken · Research: unify at the symbol level, not the AST ·
 Research: what existing agent-facing tools do · Research: incremental sync
 and node identity · Research: notes that survive refactorings ·
 Architecture sketch · How this fits existing doctrine · Open questions ·
-Primary sources
+Follow-up research: tree-sitter query ecosystem, ast-grep, Claude Code
+internals · Primary sources
 
 ## Decisions taken (maintainer interview, 2026-07-15)
 
@@ -294,6 +295,68 @@ spec is specs/codebase-context-tree/SPEC.md).
    changes in `.claude/rules/token-discipline.md`. Post-v1 doctrine
    question — revisit once v1 ships, not spec-blocking.
 
+## Follow-up research: tree-sitter query ecosystem, ast-grep, Claude Code internals
+
+Verified: 2026-07-16
+
+Three post-merge threads, run at the maintainer's request; the spec
+refinements they produced are noted inline.
+
+**tags.scm inventory.** Upstream `queries/tags.scm` exists for Python, Go,
+Rust, Java, C, C++, OCaml, and TypeScript/TSX (shared queries/ at the repo
+root); it is absent for Haskell, Bash, Zig, and Kotlin — and the
+maintained Kotlin grammar (`tree-sitter-kotlin-ng`) ships no queries/ at
+all, while the older fwcd grammar has tags.scm to port. The
+symbol-query authoring bill is therefore exactly four files.
+
+**locals.scm.** Tree-sitter's locals queries capture `@local.scope`,
+`@local.definition`, and `@local.reference` (tree-sitter.github.io,
+syntax-highlighting docs), enough to bind a reference to an enclosing
+local definition and exclude local shadows from cross-file candidate
+matching — file-local only, shipped by 4/12 upstream repos
+(typescript, haskell, ocaml, zig); nvim-treesitter maintains a
+vendorable per-language set. Adopted into the spec as R10's
+scope-aware exclusion.
+
+**stack-graphs is archived.** github/stack-graphs was "archived by the
+owner on Sep 9, 2025" ("no longer supported or updated by GitHub... we
+recommend you fork it"), with published name-binding rules for four
+languages. Its architecture (per-file graphs, tree-sitter DSL,
+query-time stitching) validates this design's shape; as a dependency it
+is dead — which retroactively strengthens the heuristic + LSP refs
+decision.
+
+**ast-grep lessons.** Query UX: pattern-by-example won — queries are
+written as code in the target language with `$VAR` metavariables; node-
+kind naming is the fallback ("Sometimes it is not easy to write a
+pattern... `kind: field_definition`"). Packaging: ~28 grammar crates as
+optional Cargo deps behind a default-on `builtin-parser` feature, plus a
+runtime dylib registry (`sgconfig.yml` `libraryPath`) for custom
+languages — adopted as `ctx`'s build shape, with dylib loading fenced
+post-v1. Reuse: `ast-grep-core` exposes a real matching API but buys
+rewrite machinery an indexer doesn't need; raw tree-sitter stands.
+Scope: ast-grep does "structural search, lint, and rewriting" — no
+symbol tables, signatures, docstrings, or persistence — so `ctx` is
+complementary.
+
+**Claude Code internals.** Anthropic tried RAG and abandoned it for
+agentic search (Boris Cherny, Latent Space: "It outperformed everything.
+By a lot."), with objections specific to stored/drifting/hosted indexes:
+complexity, "the code drifts out of sync," and "security issues because
+this index has to live somewhere." A derived, always-fresh, local,
+disposable index answers all three — and Cherny concedes agentic search
+wins "at the cost of latency and tokens," so `ctx`'s competitive pitch
+is token economics, not recall. Claude Code now ships LSP tools and
+code-intelligence plugins (structural understanding via live
+computation, not stored indexes), but agents default to grep without
+coaching — the consuming-repo CLAUDE.md snippet (R17) is load-bearing,
+not optional. Integration ranking from their own doctrine: CLI via Bash
+("the most context-efficient way"), then PostToolUse hook
+`additionalContext` (adopted into R16: edit-time note-marker push), then
+MCP. Their `/doctor` deletes upfront architecture blobs from CLAUDE.md
+as derivable — `ctx map` is queried just-in-time, never pasted into
+standing memory.
+
 ## Primary sources
 
 tree-sitter docs (tree-sitter.github.io: parser goals, queries, code
@@ -321,4 +384,13 @@ GitHub PR review comments (docs.github.com/en/rest/pulls/comments) ·
 CodeTour (github.com/microsoft/codetour) · Fraco/comment-staleness papers
 (ieeexplore.ieee.org/document/8115624, arxiv.org/abs/2010.01625) · Claude
 Code memory (code.claude.com/docs/en/memory) · Cursor rules
-(cursor.com/docs/context/rules).
+(cursor.com/docs/context/rules) · tree-sitter locals/tags query docs
+(tree-sitter.github.io, 3-syntax-highlighting and 4-code-navigation) ·
+stack-graphs archive notice (github.com/github/stack-graphs) · ast-grep
+docs (ast-grep.github.io: pattern syntax, atomic rules, custom
+languages, tool comparison) · Boris Cherny on Claude Code (latent.space/p/claude-code,
+newsletter.pragmaticengineer.com/p/building-claude-code-with-boris-cherny) ·
+Anthropic context engineering
+(anthropic.com/engineering/effective-context-engineering-for-ai-agents) ·
+Claude Code docs (code.claude.com/docs: best-practices, memory,
+how-claude-code-works, sub-agents, hooks, discover-plugins).
