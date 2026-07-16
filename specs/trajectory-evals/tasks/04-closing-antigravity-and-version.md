@@ -79,3 +79,13 @@ stream-json` does. If yes: add the equivalent `EVAL_TRANSCRIPT`
       Evidence: HEAD~1 = "0.9.13", current = "0.9.14" (one-patch increment).
 - [x] `bash evals/lint-ultra-gate.sh` exits 0
       Evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", EXIT=0.
+
+## Discovered
+
+- [2026-07-16 /drain] Acceptance criterion 2's literal `git show
+HEAD~1:...` phrasing is reference-fragile: it silently degrades to a
+  false negative if any commit lands after the version-bump commit
+  (caught by this task's own verifier). Future closing-task authors
+  should anchor version-diff criteria to the bump commit explicitly (or
+  make the bump the last commit) rather than a bare `HEAD~1` — see
+  specs/trajectory-evals/tasks/06-closing-task-version-diff-criterion-fragility.md.
