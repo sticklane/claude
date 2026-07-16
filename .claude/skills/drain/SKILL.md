@@ -222,6 +222,26 @@ so a per-session emission would misattribute later iterations.
   branches, each prepending `<!-- agentprof:role=worker-tournament-tN -->`. The
   generate/filter/rank procedure and **skip condition** (relaunch BLOCKED over
   budget → route on the two prior verdicts) are in reference.md's "Tournament".
+
+  **`Rigor: prototype` (orchestrator gate scaling).** Read each task's
+  effective `Rigor:` header at inventory (step 1; absent = `production`). The
+  ONLY orchestrator-owned locus that scales for a prototype-rigor task is the
+  tournament's per-candidate verifier dispatch above: drain substitutes a
+  mechanical acceptance-command run for each per-candidate `verifier` run and
+  ranks the candidates on that signal instead. Everything else drain owns is
+  unchanged at every tier — the pre-merge append-only whitelist diff and the
+  project gates (`scripts/check.sh`) stay mechanical and run in every case,
+  because they are already mechanical rather than verifier-driven, never
+  skipped. On the primary path (attempt-1 and relaunch workers running /build
+  verbatim) the WORKER scales its own TDD-red-first and verifier spawn per
+  build/SKILL.md's Rigor branch and reports DONE/BLOCKED; drain's
+  verdict-driven routing (relaunch, merge) reads that verdict unchanged.
+
+  **Promotion rule.** Prototype code never merges into a `Rigor: production`
+  spec's work without re-running the full gates — promoting a prototype means
+  flipping the `Rigor:` header and treating the existing code as untested
+  input to a normal production task, not as done work.
+
 - **DEFERRED** — the verdict carries the question. Drain writes it into the task
   file under `## Deferred questions`, sets `Status: deferred`, commits and
   pushes (path-scoped; guard above), and discards the worker's branch/worktree.
