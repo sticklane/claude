@@ -13,15 +13,22 @@ recommend running this review in a NEW Agent Manager conversation — a model
 won't attack work it just produced.
 
 For **specs and plans**, attack:
+
 - Ambiguity: which sentence could two engineers implement differently? Quote it.
 - Missing failure modes: error paths, empty states, concurrency, permissions.
 - Hidden dependencies: existing code this touches that the spec doesn't
   mention — verify against the actual repo.
-- Verification gap: a concrete runnable check per requirement, or it isn't
-  agent-ready.
+- Missing acceptance criteria: map every numbered requirement to at least
+  one concrete runnable check — for a spec, an entry under its
+  `## Acceptance criteria` section. Name the requirement a worker could
+  claim done without any check catching it. An unmapped requirement, an
+  absent or empty `## Acceptance criteria` section, or a criterion with no
+  runnable command or observable behavior blocks READY — a finding, not a
+  nit. A spec an agent can't self-verify isn't agent-ready.
 - Scope traps: silent migrations, breaking changes, unbudgeted work.
 
 For **diffs**:
+
 - Does the change satisfy the requirement exercised end-to-end?
 - Regressions in untouched callers/consumers (use the VCS's blame/log history
   for context).
