@@ -198,16 +198,14 @@ so a per-session emission would misattribute later iterations.
   slot-machine path below). **MUST NOT (wake economics): at merge/verdict time
   the hub never pulls the worker's code diffs or check/test output into its
   context — the ceiling is a path-scoped diff summary (names + line counts) plus
-  the ≤ 2k-token verdict; needing file contents, it dispatches a scout**
-  (reference.md's "Wake economics").
+  the ≤ 2k-token verdict; needing file contents, it dispatches a scout**.
   Then **merge → run project gates → delete this task's `rescue/NN-<slug>-*`
-  branches → push** — removing each rescue branch's worktree before deleting the
-  branch it was checked out on (mechanics in reference.md's Tournament merge) —
-  the push following the **canonical push guard** (it applies to every drain
-  bookkeeping commit, not only DONE merges; full rule in
-  [reference.md](reference.md)'s "Push guard"). The merged branch carries the
-  task file with `Status: done` and ticked boxes per /build (plus the verifier's
-  `evidence/` file under the `specs/<slug>/` layout, else inline evidence).
+  branches → push** — removing each rescue branch's worktree before deleting
+  the branch it was checked out on — the push following the **canonical push
+  guard** (it applies to every drain bookkeeping commit, not only DONE merges;
+  full rule in [reference.md](reference.md)'s "Push guard"). The merged branch
+  carries the task file with `Status: done` and ticked boxes per /build (plus
+  the verifier's `evidence/` file under `specs/<slug>/`, else inline evidence).
   The **run project gates** step invokes `scripts/check.sh`, drain's sole
   required merge-time check entrypoint — never a hand-derived list read out of
   CLAUDE.md prose (repos without it fall back to their own build/lint/test).
@@ -222,6 +220,13 @@ so a per-session emission would misattribute later iterations.
   branches, each prepending `<!-- agentprof:role=worker-tournament-tN -->`. The
   generate/filter/rank procedure and **skip condition** (relaunch BLOCKED over
   budget → route on the two prior verdicts) are in reference.md's "Tournament".
+  **`Rigor: prototype` (R4/R6).** In a prototype-rigor tournament (read at
+  inventory; absent = `production`), swap a mechanical acceptance-command run
+  for each per-candidate `verifier` dispatch and rank on that; the pre-merge
+  whitelist diff and gates stay mechanical, unchanged. **Promotion rule:**
+  prototype code never merges into a `Rigor: production` spec without
+  re-running the full gates — flip the header, treat the code as untested
+  production input.
 - **DEFERRED** — the verdict carries the question. Drain writes it into the task
   file under `## Deferred questions`, sets `Status: deferred`, commits and
   pushes (path-scoped; guard above), and discards the worker's branch/worktree.
