@@ -1,6 +1,6 @@
 # Task 02: /build and /drain scale gates on Rigor: prototype, state the promotion rule
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -64,8 +64,8 @@ prototype` branch: skip TDD red-first, skip the verifier-agent spawn,
 
 ## Acceptance
 
-- [ ] `grep -q "Rigor:" .claude/skills/build/SKILL.md && grep -q "Rigor:" .claude/skills/drain/SKILL.md`
-- [ ] `grep -qi "re-running the full gates" .claude/skills/build/SKILL.md && grep -qi "re-running the full gates" .claude/skills/drain/SKILL.md`
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0
-- [ ] `grep -qi "rigor" antigravity/.agents/workflows/build.md && grep -qi "rigor" antigravity/.agents/workflows/drain.md`
-- [ ] `grep -qi "rigor" codex/.agents/skills/build/SKILL.md && grep -qi "rigor" codex/.agents/skills/drain/SKILL.md`
+- [x] `grep -q "Rigor:" .claude/skills/build/SKILL.md && grep -q "Rigor:" .claude/skills/drain/SKILL.md` — exit 0 (verifier evidence/02-build-drain-gate-scaling.md)
+- [x] `grep -qi "re-running the full gates" .claude/skills/build/SKILL.md && grep -qi "re-running the full gates" .claude/skills/drain/SKILL.md` — exit 0 (verifier evidence/02-build-drain-gate-scaling.md)
+- [x] `bash evals/lint-ultra-gate.sh` exits 0 — "OK — all ultra mentions gated in 4 files" (verifier evidence)
+- [x] `grep -qi "rigor" antigravity/.agents/workflows/build.md && grep -qi "rigor" antigravity/.agents/workflows/drain.md` — exit 0 (verifier evidence)
+- [x] `grep -qi "rigor" codex/.agents/skills/build/SKILL.md && grep -qi "rigor" codex/.agents/skills/drain/SKILL.md` — exit 0 (verifier evidence)

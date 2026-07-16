@@ -292,6 +292,26 @@ opening line every time you enter it.
   `Status: deferred`) in preference to failed; otherwise `Status: failed` with
   every verdict's evidence recorded. Skip the tournament when the relaunch
   returned BLOCKED over budget.
+
+  **`Rigor: prototype` (orchestrator gate scaling).** Read each task's
+  effective `Rigor:` header at inventory (step 1; absent = `production`). The
+  ONLY orchestrator-owned locus that scales for a prototype-rigor task is the
+  tournament's per-candidate verifier dispatch above: drain substitutes a
+  mechanical acceptance-command run for each per-candidate verifier run and
+  ranks the candidates on that signal instead. Everything else drain owns is
+  unchanged at every tier — the pre-merge append-only whitelist diff and the
+  project gates (`scripts/check.sh`) stay mechanical and run in every case,
+  because they are already mechanical rather than verifier-driven, never
+  skipped. On the primary path (attempt-1 and relaunch workers running /build
+  verbatim) the worker scales its own TDD-red-first and verifier spawn per
+  build/SKILL.md's Rigor branch and reports DONE/BLOCKED; drain's
+  verdict-driven routing (relaunch, merge) reads that verdict unchanged.
+
+  **Promotion rule.** Prototype code never merges into a `Rigor: production`
+  spec's work without re-running the full gates — promoting a prototype means
+  flipping the `Rigor:` header and treating the existing code as untested
+  input to a normal production task, not as done work.
+
 - **DEFERRED** — the verdict message contains the question. Drain writes it
   into the main-checkout task file under `## Deferred questions`, sets
   `Status: deferred`, commits and pushes (path-scoped, guarded), and discards

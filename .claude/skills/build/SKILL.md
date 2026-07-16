@@ -68,6 +68,17 @@ If the task file has no runnable acceptance criteria, stop and say the task
 isn't agent-ready — improvising weaker criteria silently is how "looks done"
 replaces "is done".
 
+**Rigor tier (gate scaling).** Read the task's effective `Rigor:` header (the
+task's own, else its spec's; absent = `production`). `production` (or absent)
+is today's full procedure below, unchanged. `Rigor: prototype` scales the
+gates at steps 2–3: skip TDD red-first (step 2) and skip this run's own
+`verifier` spawn (step 3), substituting a mechanical run of the task's
+acceptance commands as the reported signal. Never scaled at any tier: commit
+hygiene, the task's runnable acceptance criteria, and the untrusted-data
+rules. State in close-out (step 4) that prototype gates applied. This is the
+primary path — it applies to attended /build AND to drain's
+attempt-1/relaunch workers, who run this procedure verbatim.
+
 **Owner warning.** If the task's spec has a `specs/<slug>/DRAIN-OWNER.md`
 showing FRESH liveness (drain reference.md's "Owner liveness" definition,
 cited not restated), warn before editing the task — being attended, ask the
@@ -99,9 +110,12 @@ every time you enter it.
 Emit `<!-- agentprof:stage=implement -->` verbatim as this step's opening
 line every time you enter it.
 
-- Where acceptance criteria are test-shaped: write the failing tests FIRST,
-  run them, confirm they fail for the right reason, commit the tests, then
-  implement until green — without modifying the tests.
+- On `Rigor: prototype` (step 0): skip TDD red-first — implement directly
+  against the acceptance criteria; commit hygiene still holds. The
+  `production` default keeps the test-first rule below.
+- Where acceptance criteria are test-shaped (production rigor): write the
+  failing tests FIRST, run them, confirm they fail for the right reason,
+  commit the tests, then implement until green — without modifying the tests.
 - Match the surrounding code's style and idiom; no drive-by refactors (that's
   scope creep the verifier will flag).
 - Run the narrowest relevant test after each meaningful change, not the whole
@@ -111,6 +125,20 @@ line every time you enter it.
 
 Emit `<!-- agentprof:stage=verify -->` verbatim as this step's opening line
 every time you enter it.
+
+**`Rigor: prototype` (gate scaling, step 0).** On a prototype-rigor task,
+skip sub-step 3's `verifier` spawn entirely: sub-step 1's acceptance-command
+run is the reported signal — report DONE when every acceptance command passes
+and sub-step 2's project gates are green, BLOCKED otherwise, so drain's
+verdict-driven routing (relaunch, merge) works unchanged. Sub-steps 1
+(acceptance commands) and 2 (project gates) still run mechanically and are
+never skipped. `production` (or absent) runs the full step 3 including the
+verifier below.
+
+**Promotion rule.** Prototype code never merges into a `Rigor: production`
+spec's work without re-running the full gates — promoting a prototype means
+flipping the `Rigor:` header and treating the existing code as untested input
+to a normal production task, not as done work.
 
 1. Run every acceptance command yourself; fix until all pass.
 2. Run the project's standard gates. Run `scripts/check.sh`, the
