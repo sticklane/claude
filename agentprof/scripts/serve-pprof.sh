@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Serves the pprof web UI over the profile written by refresh-profile.sh.
-# Intended to run under launchd with KeepAlive so it restarts automatically
-# whenever refresh-profile.sh replaces the profile file out from under it.
+# Runs under launchd with KeepAlive; refresh-profile.sh kickstarts the job
+# after each profile rebuild (pprof loads the profile once at startup and
+# never re-reads it — a file replacement alone does NOT refresh the UI).
 set -euo pipefail
 
 PROFILE="${1:-$HOME/.local/state/agentprof/claude-30d.pb.gz}"
