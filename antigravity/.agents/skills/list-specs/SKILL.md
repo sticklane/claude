@@ -13,7 +13,9 @@ the next step is the human's call.
 1. Execute `python3 <this skill dir>/list_specs.py` from the repo root
    (the scanner ships in this skill's directory).
 2. Relay its stdout verbatim — a markdown table
-   (`| Spec | Status | Next command |`, rows alphabetical by spec slug).
+   (`| Spec | Status | Next command |`, rows alphabetical by spec slug). A
+   spec declaring `Rigor: prototype` carries a `[prototype]` annotation on
+   its Spec cell; production (or absent, the default) specs show no marker.
    If it prints `no specs/ directory found`, relay that message instead.
 3. Stop there: do not invoke, queue, or offer the Next command entries
    unless the user asks in a follow-up turn.
