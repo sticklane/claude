@@ -7,6 +7,26 @@ Budget: 12 turns
 Spec: ../SPEC.md (requirement R3)
 Touch: evals/breakdown/
 
+<!-- PLAN (build step 1):
+Create evals/breakdown/02-scout-delegation/ modeled on 01-small-spec:
+  - allowed-tools.txt: same set (Task tool present so scout can be spawned).
+  - setup.sh: fixture git repo with MULTIPLE existing source files whose
+    sourcing interdependencies are non-obvious, and a 2-requirement spec
+    that extends existing code — so breakdown's step-2 file-dependency
+    check is genuinely unclear and delegates to a scout (per breakdown
+    SKILL.md step 2). No open questions.
+  - assert.sh: R2 artifact checks (>=2 task files w/ Status/Depends on/
+    ## Acceptance + backticked cmd; Parallelization section) FIRST, THEN a
+    loud EVAL_TRANSCRIPT guard (empty -> fail with "transcript"), THEN the
+    trajectory grep '"subagent_type":"scout"'.
+Order of build: write assert.sh; test criterion-2 (empty EVAL_TRANSCRIPT
+fails loudly) directly against a hand-built fixture with artifacts present;
+then criterion-1 grep. Criterion-3 (live paid run) stays Manual-pending.
+Risk: exact JSONL field name unconfirmable without a paid run -> reversible
+default = documented Claude Code stream-json Task tool `subagent_type`
+input param; recorded as Decision + Manual-pending (task-01 precedent).
+-->
+
 ## Goal
 
 At least one committed scenario under `evals/breakdown/` exercises a
@@ -53,5 +73,5 @@ evals/breakdown/02-*/assert.sh` (from within a fixture dir with the
       expected artifacts already present) exits non-zero and prints a
       message mentioning "transcript"
 - [ ] **Manual-pending** (paid headless run, human-launched): `./evals/run.sh
-  breakdown` passes including the new scenario —
+breakdown` passes including the new scenario —
       docs/memory/unattended-worker-tool-limits.md
