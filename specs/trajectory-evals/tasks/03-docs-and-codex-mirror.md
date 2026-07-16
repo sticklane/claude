@@ -1,6 +1,6 @@
 # Task 03: document EVAL_TRANSCRIPT (.claude leg + codex mirror)
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 10 turns
@@ -52,10 +52,10 @@ task, which also handles the antigravity carve-out decision).
 
 ## Acceptance
 
-- [ ] `grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/SKILL.md`
-- [ ] `grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/reference.md`
-- [ ] `! grep -q "v1 grades artifacts only" .claude/skills/evals/SKILL.md`
-- [ ] `grep -q "EVAL_TRANSCRIPT" codex/.agents/skills/evals/SKILL.md`
-- [ ] `! grep -q "v1 grades artifacts only" codex/.agents/skills/evals/SKILL.md`
-- [ ] `grep -q "never a transcript" codex/.agents/skills/evals/SKILL.md`
+- [x] `grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/SKILL.md` — PASS (verifier, evidence/03-docs-and-codex-mirror.md)
+- [x] `grep -q "EVAL_TRANSCRIPT" .claude/skills/evals/reference.md` — PASS (verifier)
+- [x] `! grep -q "v1 grades artifacts only" .claude/skills/evals/SKILL.md` — PASS; sentence reframed to v1/v2, not deleted (verifier)
+- [x] `grep -q "EVAL_TRANSCRIPT" codex/.agents/skills/evals/SKILL.md` — PASS (verifier)
+- [x] `! grep -q "v1 grades artifacts only" codex/.agents/skills/evals/SKILL.md` — PASS (verifier)
+- [x] `grep -q "never a transcript" codex/.agents/skills/evals/SKILL.md` — PASS; line 41 budget rule unchanged, shifted only by inserted paragraph (verifier)
       (line 41's budget rule is confirmed still present, unchanged)
