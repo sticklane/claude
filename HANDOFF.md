@@ -141,13 +141,32 @@ own `/breakdown`/`/drain` conventions to find concrete gaps.
 - Run ID: `wf_b73bd4af-0a9`
 - Transcript dir: `/Users/sjaconette/.claude/projects/-Users-sjaconette-claude/b98d4ebc-910f-4c79-9dcf-f0ce1c032ae5/subagents/workflows/wf_b73bd4af-0a9`
 
-**Status unknown at handoff** — no completion notification was received
-in this session before it ended. First action on resume: check `/workflows`
-or read that transcript dir's `journal.jsonl` before assuming it needs
-relaunching (a completed run's results are cached there).
+**Completed** (109 agents, 923s, 5.57M subagent tokens, 0 errors) — but the
+returned top-level result looks BUGGY, not just large: `summary` and
+`findings` are literal placeholder text (`"summary":"test"`,
+`findings:[{"claim":"test claim","sources":["https://example.com"],...}]`,
+`"caveats":"test caveat"`) instead of a real synthesized report. The
+`refuted` array (16 entries) and `sources` array (15 entries) DO contain
+real substantive research — real arXiv/Anthropic/framework-doc URLs and
+claims about task granularity, dependency-graph modeling, context
+isolation between concurrent agents, etc. — so the fan-out/search/verify
+stages worked; only the final synthesize stage's output looks wrong
+(possibly a template/schema default that never got overwritten with the
+real synthesis). Before trusting or acting on this research: **read
+`/Users/sjaconette/.claude/projects/-Users-sjaconette-claude/b98d4ebc-910f-4c79-9dcf-f0ce1c032ae5/subagents/workflows/wf_b73bd4af-0a9/journal.jsonl`**
+(one `{"type":"result",...}` line per completed agent — the real per-agent
+findings are almost certainly intact there even though the top-level
+rollup is stubbed), or resume the workflow's synthesize stage via
+`Workflow({scriptPath: '/Users/sjaconette/.claude/projects/-Users-sjaconette-claude/b98d4ebc-910f-4c79-9dcf-f0ce1c032ae5/workflows/scripts/deep-research-wf_b73bd4af-0a9.js', resumeFromRunId: 'wf_b73bd4af-0a9'})`
+to re-run just the broken step (earlier stages replay from cache). This
+bug is itself worth a quick note to the user — the `deep-research` skill's
+own workflow script may have a synthesis-stage defect worth its own
+follow-up task.
 
-Its findings should feed into refining `specs/drain-hub-context-discipline/SPEC.md`'s
-requirements before `/critique` runs on it.
+Once a clean synthesis is in hand, its findings should feed into refining
+`specs/drain-hub-context-discipline/SPEC.md`'s requirements before
+`/critique` runs on it — don't critique that spec off the stubbed "test"
+result.
 
 ### 5. Unstarted — the very next user request
 
