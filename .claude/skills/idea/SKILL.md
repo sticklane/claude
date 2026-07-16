@@ -61,6 +61,11 @@ rather than inventing answers). Cover, as relevant:
 - Scope: what is explicitly OUT. Push for at least one exclusion.
 - Verification: how will we know it works — what command, test, or observable
   behavior proves each requirement?
+- Rigor: prototype or production? Offer this as one AskUserQuestion option set —
+  prototype-grade work legitimately skips verification that production-grade
+  work must pay for, and the failure mode is not declaring a point on that
+  spectrum. On "prototype", step 4 writes a `Rigor: prototype` header; on
+  "production" or no answer, write nothing (absent means production).
 
 Keep interviewing until you could defend every design decision; don't pad
 with questions whose answers you can infer or scouts already answered.
@@ -102,6 +107,13 @@ Runnable checks, one per requirement where possible:
 
 Must be EMPTY before implementation starts.
 ```
+
+**Write the `Rigor:` header when prototype was chosen.** If the interview's
+prototype-vs-production question answered prototype, write `Rigor: prototype`
+as a single-line header above the SPEC.md's first `##` heading — the same
+placement convention as `Priority:`. On production or no answer, write nothing:
+absent means production (the only legal values are `prototype` and
+`production`).
 
 **Anchor every grep/count-based acceptance criterion.** Apply the
 anchored-acceptance-criteria check (doctrine in
