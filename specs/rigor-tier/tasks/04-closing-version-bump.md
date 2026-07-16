@@ -1,6 +1,6 @@
 # Task 04: version bump + ultra-gate closing check
 
-Status: pending
+Status: done
 Depends on: 01, 02, 03
 Priority: P3
 Budget: 4 turns
@@ -34,10 +34,12 @@ already be merged before this task starts (see Depends on).
 
 ## Acceptance
 
-- [ ] `git show HEAD~1:.claude-plugin/plugin.json | grep -o '"version": "[^"]*"'`
+- [x] `git show HEAD~1:.claude-plugin/plugin.json | grep -o '"version": "[^"]*"'`
       differs from `.claude-plugin/plugin.json`'s current `"version"`
       value, and the current value is a one-patch-level increment above
       it (never a decrease). `HEAD~1` is the commit immediately before
       your own version-bump commit — always resolvable right after you
       make it, unlike a pre-stated literal pin.
-- [ ] `bash evals/lint-ultra-gate.sh` exits 0
+      Evidence: HEAD~1 = "version": "0.9.14", current = "version": "0.9.15" (one-patch increment).
+- [x] `bash evals/lint-ultra-gate.sh` exits 0
+      Evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0.
