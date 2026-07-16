@@ -71,3 +71,6 @@
 .claude/skills/workboard/SKILL.md|antigravity/.agents/skills/workboard/SKILL.md|human-bounded work only
 .claude/skills/handoff/SKILL.md|antigravity/.agents/skills/handoff/SKILL.md|needs-verification
 .claude/skills/breakdown/SKILL.md|antigravity/.agents/skills/breakdown/SKILL.md|Status vocabulary
+.claude/agents/critic.md|antigravity/.agents/skills/critic/SKILL.md|done without any check catching it
+.claude/agents/critic.md|antigravity/.agents/skills/critic/SKILL.md|observable behavior blocks READY
+# checked: critic missing-acceptance-criteria check — replaced the spec attack list's "Verification gap" bullet in source .claude/agents/critic.md and the antigravity critic mirror (codex critic is a symlink to the antigravity dir, so it rides along) with an explicit adversarial coverage check: map every numbered requirement to a runnable acceptance criterion; an unmapped requirement, an absent/empty `## Acceptance criteria` section, or a non-runnable criterion blocks READY. Seeded the two phrases above so neither leg can silently drop the check.
