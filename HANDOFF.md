@@ -8,22 +8,27 @@ prior handoff's `/clear` instruction wasn't followed before the next
 message — if you're reading this in yet another non-cleared continuation,
 `/clear` now before doing anything else.
 
-## Update: item 5 below is now in flight, not unstarted
+## Update: item 5 is DONE — specs/prompt-tweaking-roi/SPEC.md landed
 
-The user asked explicitly for it to run as a single dispatched subagent
-that both researches AND writes the spec file directly (not the
-`deep-research` Workflow pattern used for item 4). Dispatched via the
-`Agent` tool (`general-purpose`, background): researches frontier-lab
-guidance on dynamic/mid-flow prompt injection vs. static doctrine, and
-writes `specs/prompt-tweaking-roi/SPEC.md` itself, following
-`specs/context-blowout-subagent-guards/SPEC.md` and
-`specs/drain-hub-context-discipline/SPEC.md`'s format, then commits and
-pushes it directly. No completion notification was received before this
-handoff — check `git log --oneline -5 -- specs/prompt-tweaking-roi/` on
-resume; if the file exists and is committed, the agent finished
-regardless of this session's fate (its commit is durable even if the
-in-conversation notification never arrived). If it's absent, relaunch the
-same request.
+Commit `50bec3e`, pushed to `origin/main`. Conclusion: dynamic mid-flow
+prompt injection is worth it only for genuinely time-varying,
+state-dependent content that can't be known at system-prompt-authoring
+time, and only when the hook stays silent unless that state actually
+changed — static always-fires reminders belong in CLAUDE.md/rules
+instead (written once, cached, not re-paid every turn). This repo's own
+three hooks (`hooks/handoff-resume/`, `hooks/plugin-staleness/`,
+`hooks/session-refresh/`) already follow this correctly by convention;
+the gap was that nothing wrote the rule down — exactly the shape the
+now-disabled `prompt-improver` plugin violated. `Priority: P3`, one
+concrete action: a new sourced bullet in
+`.claude/rules/token-discipline.md`'s "Cache economics" section. Sources
+cited in the spec: Anthropic's "Effective context engineering for AI
+agents" (2025), Liu et al. "Lost in the Middle" (arXiv:2307.03172), and
+Claude's prompt-caching + hooks-reference docs.
+
+**Next stage for this spec**: `/critique specs/prompt-tweaking-roi/SPEC.md`
+— can run alongside `/critique specs/drain-hub-context-discipline/SPEC.md`
+(item 2 above), then both through `/breakdown`.
 
 ## Task
 
