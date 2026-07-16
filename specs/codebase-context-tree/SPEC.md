@@ -279,7 +279,8 @@ Surface and integration:
   background (journaled per C5) — the PostToolUse snippet additionally
   runs `ctx notes list --file <edited-file>` and emits any output as
   hook additional context, pushing note presence to the agent at edit
-  time (the second C10 channel) — plus a pre-commit hook that writes
+  time (the second, edit-time push channel; cf. C10's query-output
+  markers) — plus a pre-commit hook that writes
   pending anchor updates (R13 phase 2) and stages the touched note files
   — writing a given update only when the re-anchored NEW path's file is
   itself in the staged set (a partial commit that leaves the moved-to
