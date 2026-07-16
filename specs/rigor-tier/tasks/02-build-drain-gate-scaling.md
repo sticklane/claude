@@ -1,6 +1,6 @@
 # Task 02: /build and /drain scale gates on Rigor: prototype, state the promotion rule
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 12 turns
