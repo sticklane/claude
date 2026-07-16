@@ -1,28 +1,11 @@
 # Task 03: /list-specs displays the tier; quality-discipline.md scopes TDD to production-rigor
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
 Spec: ../SPEC.md (requirements R5, R7, R8)
 Touch: .claude/skills/list-specs/SKILL.md, .claude/skills/list-specs/list_specs.py, .claude/skills/list-specs/test_list_specs.py, .claude/rules/quality-discipline.md, antigravity/.agents/skills/list-specs/SKILL.md, antigravity/.agents/skills/list-specs/list_specs.py, antigravity/.agents/skills/list-specs/test_list_specs.py
-
-<!-- PLAN (delete at close-out)
-Order: test (RED) -> feat (GREEN) -> antigravity port -> docs.
-- test_list_specs.py: 2 rigor tests via scan_and_classify+render_table;
-  Rigor: prototype spec renders "[prototype]" on Spec cell; no-header spec
-  renders no marker. (RED)
-- list_specs.py: RIGOR_RE local regex; scan_and_classify parses tier from
-  spec text, adds row["rigor"]; render_table annotates Spec cell only for
-  prototype rows (.get so classify_spec-only rows stay safe). (GREEN)
-- Port list_specs.py + tests + SKILL.md to antigravity/.agents/skills/list-specs.
-- SKILL.md prose: mention prototype annotation. quality-discipline.md: 1 line
-  scoping TDD to Rigor: production, citing rigor-tier.
-Choice: prototype rows get "[prototype]" annotation; production/absent
-  unchanged (no marker) — kept consistent per step 1.
-Risk: render_table must use row.get("rigor") since classify_spec unit tests
-  build rows without the key.
--->
 
 ## Goal
 
@@ -71,10 +54,23 @@ mirrors — those belong to tasks 01 and 02. Do not touch
 
 ## Acceptance
 
-- [ ] `python3 -m pytest .claude/skills/list-specs/test_list_specs.py -k rigor`
+- [x] `python3 -m pytest .claude/skills/list-specs/test_list_specs.py -k rigor`
       passes (the new fixture test from step 1)
-- [ ] `grep -qi "rigor" .claude/skills/list-specs/list_specs.py`
-- [ ] `grep -qi "rigor" .claude/rules/quality-discipline.md`
-- [ ] `python3 -m pytest antigravity/.agents/skills/list-specs/test_list_specs.py -k rigor`
+      — verifier: 2 passed, 35 deselected (evidence/03-list-specs-quality-discipline.md)
+- [x] `grep -qi "rigor" .claude/skills/list-specs/list_specs.py`
+      — verifier: exit 0
+- [x] `grep -qi "rigor" .claude/rules/quality-discipline.md`
+      — verifier: exit 0 (new "Rigor-scoped." bullet citing specs/rigor-tier)
+- [x] `python3 -m pytest antigravity/.agents/skills/list-specs/test_list_specs.py -k rigor`
       passes
-- [ ] `grep -qi "rigor" antigravity/.agents/skills/list-specs/list_specs.py`
+      — verifier: 2 passed, 35 deselected
+- [x] `grep -qi "rigor" antigravity/.agents/skills/list-specs/list_specs.py`
+      — verifier: exit 0
+
+## Decisions
+
+- Tier display shape (task step 2 left it to the worker: new column vs
+  inline annotation). Default taken: inline `[prototype]` annotation on the
+  Spec cell for prototype rows only; production/absent rows unchanged (no
+  marker). Reverse: switch `render_table` to emit a dedicated Rigor column
+  for all rows.
