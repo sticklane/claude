@@ -136,6 +136,13 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     # the fixture dir, so RUNNER_CMD's first word must be absolute or
     # PATH-resolvable.
     session_rc=0
+    # EVAL_TRANSCRIPT: absolute path to this run's JSONL transcript, exposed
+    # to assert.sh for trajectory assertions. Only the claude-code runner
+    # emits a locatable transcript today (session.log becomes JSONL via
+    # --output-format stream-json); the RUNNER_CMD and other-runtime branches
+    # have no stream-json mechanism, so they leave it empty and warn. Resolved
+    # and exported centrally after the runner branches, below.
+    EVAL_TRANSCRIPT=""
     if [ -n "${RUNNER_CMD:-}" ]; then
       read -r -a runner <<<"$RUNNER_CMD"
       (cd "$EVAL_DIR" && ALLOWED_TOOLS="$allowed" timeout 900 "${runner[@]}" \
@@ -160,11 +167,17 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
 
       if [ "$runtime" = "claude-code" ]; then
         if [ -n "${EVAL_DRY_RUN:-}" ]; then
-          printf 'DRY-RUN [claude-code] runner: claude -p "<prompt>" --permission-mode dontAsk --max-turns %s --allowed-tools %q\n' "$MAX_TURNS" "$allowed"
+          printf 'DRY-RUN [claude-code] runner: claude -p "<prompt>" --output-format stream-json --verbose --permission-mode dontAsk --max-turns %s --allowed-tools %q\n' "$MAX_TURNS" "$allowed"
         else
+          # --output-format stream-json --verbose makes claude emit a JSONL
+          # transcript on stdout; tee captures it as session.log, which then
+          # doubles as EVAL_TRANSCRIPT (a single invocation cannot emit both
+          # plaintext and JSONL, so session.log IS the transcript).
           (cd "$EVAL_DIR" && timeout 900 claude -p "$(cat "$scenario/prompt.txt")" \
+              --output-format stream-json --verbose \
               --permission-mode dontAsk --max-turns "$MAX_TURNS" --allowed-tools "$allowed" 2>&1 \
               | tee "$EVAL_DIR/session.log") || session_rc=$?
+          EVAL_TRANSCRIPT="$EVAL_DIR/session.log"
         fi
       else
         template="$(cd "$ROOT" && python3 runtimes/parse_headless.py "$runtime")"
@@ -190,6 +203,20 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
               | tee "$EVAL_DIR/session.log") || session_rc=$?
         fi
       fi
+    fi
+    # Resolve and export EVAL_TRANSCRIPT for assert.sh. A candidate path is
+    # only set by the claude-code branch above; keep it when the file was
+    # actually produced and is non-empty, otherwise clear it and warn so an
+    # assertion that requires a transcript fails loudly instead of reading a
+    # stale or missing path. Skipped under dry-run (no session, no assert.sh).
+    if [ -z "${EVAL_DRY_RUN:-}" ]; then
+      if [ -n "$EVAL_TRANSCRIPT" ] && [ -s "$EVAL_TRANSCRIPT" ]; then
+        :
+      else
+        EVAL_TRANSCRIPT=""
+        echo "eval: no locatable transcript for '$name'; EVAL_TRANSCRIPT is empty (assertions requiring it must fail loudly)" >&2
+      fi
+      export EVAL_TRANSCRIPT
     fi
     if [ -n "${EVAL_DRY_RUN:-}" ]; then
       verdict="PASS"
