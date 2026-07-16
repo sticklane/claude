@@ -1,6 +1,6 @@
 # Task 03: document EVAL_TRANSCRIPT (.claude leg + codex mirror)
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 10 turns
