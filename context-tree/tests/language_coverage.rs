@@ -16,13 +16,26 @@ fn all_twelve_language_fixture_dirs_present() {
         }
     }
     let expected: BTreeSet<String> = [
-        "bash", "c", "cpp", "go", "haskell", "java", "kotlin", "ocaml", "python", "rust",
-        "typescript", "zig",
+        "bash",
+        "c",
+        "cpp",
+        "go",
+        "haskell",
+        "java",
+        "kotlin",
+        "ocaml",
+        "python",
+        "rust",
+        "typescript",
+        "zig",
     ]
     .iter()
     .map(|s| s.to_string())
     .collect();
-    assert_eq!(dirs, expected, "exact 12-language fixture set must be present");
+    assert_eq!(
+        dirs, expected,
+        "exact 12-language fixture set must be present"
+    );
 }
 
 #[test]
@@ -51,6 +64,9 @@ fn typescript_dir_holds_ts_tsx_and_js() {
         }
     }
     for want in ["ts", "tsx", "js"] {
-        assert!(exts.contains(want), "typescript fixtures must include a .{want} file: {exts:?}");
+        assert!(
+            exts.contains(want),
+            "typescript fixtures must include a .{want} file: {exts:?}"
+        );
     }
 }

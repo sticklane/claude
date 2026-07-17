@@ -31,7 +31,9 @@ fn bash_c1_paths_are_unique_and_resolve_by_suffix() {
 fn bash_module_is_the_repo_relative_file_path() {
     let r = extract_bash("some/dir/other.sh", &std::fs::read(FIXTURE).unwrap());
     assert!(
-        r.symbols.iter().all(|s| s.qpath.starts_with("some.dir.other.")),
+        r.symbols
+            .iter()
+            .all(|s| s.qpath.starts_with("some.dir.other.")),
         "module must be the file path (C1 fallback): {:?}",
         r.symbols.iter().map(|s| &s.qpath).collect::<Vec<_>>()
     );
@@ -45,14 +47,21 @@ fn bash_c2_hash_stable_under_pure_rename_changes_on_body_edit() {
     let h_orig = extract_bash("m.sh", orig).symbols[0].body_hash.clone();
     let h_renamed = extract_bash("m.sh", renamed).symbols[0].body_hash.clone();
     let h_edit = extract_bash("m.sh", body_edit).symbols[0].body_hash.clone();
-    assert_eq!(h_orig, h_renamed, "C2: a pure rename must not change the hash");
+    assert_eq!(
+        h_orig, h_renamed,
+        "C2: a pure rename must not change the hash"
+    );
     assert_ne!(h_orig, h_edit, "C2: a body edit must change the hash");
 }
 
 #[test]
 fn bash_c8_docstring_carries_fixture_sentinel() {
     let r = extract_fixture();
-    let value = r.symbols.iter().find(|s| s.qpath == "sample.value").expect("value symbol");
+    let value = r
+        .symbols
+        .iter()
+        .find(|s| s.qpath == "sample.value")
+        .expect("value symbol");
     assert!(
         value.docstring.contains(SENTINEL),
         "leading `#` comment should embed the sentinel: {:?}",
@@ -86,9 +95,15 @@ fn bash_import_edges_extracted() {
 fn bash_parse_failed_file_yields_best_effort_sibling_facts() {
     let src = b"good_one() {\n    echo 1\n}\n\ngood_two() {\n    echo 2\n}\n\nif then fi\n";
     let r = extract_bash("m.sh", src);
-    assert!(r.parse_failed, "a file with a syntax error must be parse-failed");
+    assert!(
+        r.parse_failed,
+        "a file with a syntax error must be parse-failed"
+    );
     let names: HashSet<&str> = r.symbols.iter().map(|s| s.name.as_str()).collect();
-    assert!(names.contains("good_one"), "sibling before error: {names:?}");
+    assert!(
+        names.contains("good_one"),
+        "sibling before error: {names:?}"
+    );
 }
 
 #[test]

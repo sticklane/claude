@@ -54,24 +54,49 @@ fn ocaml_c2_hash_stable_under_pure_rename_changes_on_body_edit() {
     let body_edit = b"let foo = 2\n";
     let h_orig = extract_ocaml("m.ml", orig).symbols[0].body_hash.clone();
     let h_renamed = extract_ocaml("m.ml", renamed).symbols[0].body_hash.clone();
-    let h_edit = extract_ocaml("m.ml", body_edit).symbols[0].body_hash.clone();
-    assert_eq!(h_orig, h_renamed, "C2: a pure rename must not change the hash");
+    let h_edit = extract_ocaml("m.ml", body_edit).symbols[0]
+        .body_hash
+        .clone();
+    assert_eq!(
+        h_orig, h_renamed,
+        "C2: a pure rename must not change the hash"
+    );
     assert_ne!(h_orig, h_edit, "C2: a body edit must change the hash");
 }
 
 #[test]
 fn ocaml_let_with_parameter_is_a_function() {
     let r = extract_fixture();
-    let render = r.symbols.iter().find(|s| s.name == "render").expect("render symbol");
-    assert_eq!(render.kind, SymbolKind::Function, "a parameterized let is a Function");
-    let value = r.symbols.iter().find(|s| s.name == "value").expect("value symbol");
-    assert_eq!(value.kind, SymbolKind::Constant, "a value let is a Constant");
+    let render = r
+        .symbols
+        .iter()
+        .find(|s| s.name == "render")
+        .expect("render symbol");
+    assert_eq!(
+        render.kind,
+        SymbolKind::Function,
+        "a parameterized let is a Function"
+    );
+    let value = r
+        .symbols
+        .iter()
+        .find(|s| s.name == "value")
+        .expect("value symbol");
+    assert_eq!(
+        value.kind,
+        SymbolKind::Constant,
+        "a value let is a Constant"
+    );
 }
 
 #[test]
 fn ocaml_c8_docstring_carries_fixture_sentinel() {
     let r = extract_fixture();
-    let value = r.symbols.iter().find(|s| s.qpath == "sample.value").expect("value symbol");
+    let value = r
+        .symbols
+        .iter()
+        .find(|s| s.qpath == "sample.value")
+        .expect("value symbol");
     assert!(
         value.docstring.contains(SENTINEL),
         "(** *) doc should embed the sentinel: {:?}",
@@ -119,7 +144,10 @@ fn ocaml_scope_facts_extracted_from_locals_query() {
 fn ocaml_parse_failed_file_yields_best_effort_sibling_facts() {
     let src = b"let good_one = 1\n\nlet middle = )(\n\nlet good_two = 3\n";
     let r = extract_ocaml("m.ml", src);
-    assert!(r.parse_failed, "a file with a syntax error must be parse-failed");
+    assert!(
+        r.parse_failed,
+        "a file with a syntax error must be parse-failed"
+    );
     let names: HashSet<&str> = r.symbols.iter().map(|s| s.name.as_str()).collect();
     assert!(
         names.contains("good_one") || names.contains("good_two"),

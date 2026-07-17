@@ -131,39 +131,43 @@ fn doc_comment(decl: Node, source: &[u8]) -> String {
         .join("\n")
 }
 
-fn push_symbol(
+struct OcamlDef<'a> {
     kind: SymbolKind,
-    name_node: Node,
-    full_node: Node,
+    name_node: Node<'a>,
+    full_node: Node<'a>,
     doc: String,
+}
+
+fn push_symbol(
+    def: OcamlDef,
     module: &str,
     containers: &[String],
     source: &[u8],
     out: &mut Vec<Symbol>,
 ) {
-    let name = text(name_node, source).to_string();
+    let name = text(def.name_node, source).to_string();
     let qpath = path::build_qpath(module, containers, &name);
-    let signature = match full_node.child_by_field_name("body") {
-        Some(b) => String::from_utf8_lossy(&source[full_node.start_byte()..b.start_byte()])
+    let signature = match def.full_node.child_by_field_name("body") {
+        Some(b) => String::from_utf8_lossy(&source[def.full_node.start_byte()..b.start_byte()])
             .trim()
             .to_string(),
-        None => text(full_node, source).trim().to_string(),
+        None => text(def.full_node, source).trim().to_string(),
     };
     let parent = if containers.is_empty() {
         None
     } else {
         Some(path::build_qpath(module, containers, ""))
     };
-    let full = (full_node.start_byte(), full_node.end_byte());
-    let ident = (name_node.start_byte(), name_node.end_byte());
+    let full = (def.full_node.start_byte(), def.full_node.end_byte());
+    let ident = (def.name_node.start_byte(), def.name_node.end_byte());
     out.push(Symbol {
-        kind,
+        kind: def.kind,
         name,
         qpath,
         signature,
-        docstring: doc,
-        full_span: span_of(full_node),
-        ident_span: span_of(name_node),
+        docstring: def.doc,
+        full_span: span_of(def.full_node),
+        ident_span: span_of(def.name_node),
         parent,
         body_hash: hash::body_hash(source, full, ident),
         body_tokens: hash::body_tokens(source, full, ident),
@@ -190,7 +194,10 @@ fn collect_defs(
             "value_definition" => {
                 let doc = doc_comment(child, source);
                 let mut bc = child.walk();
-                for lb in child.children(&mut bc).filter(|c| c.kind() == "let_binding") {
+                for lb in child
+                    .children(&mut bc)
+                    .filter(|c| c.kind() == "let_binding")
+                {
                     let Some(name) = lb.child_by_field_name("pattern") else {
                         continue;
                     };
@@ -202,20 +209,36 @@ fn collect_defs(
                     } else {
                         SymbolKind::Constant
                     };
-                    push_symbol(kind, name, lb, doc.clone(), module, containers, source, out);
+                    push_symbol(
+                        OcamlDef {
+                            kind,
+                            name_node: name,
+                            full_node: lb,
+                            doc: doc.clone(),
+                        },
+                        module,
+                        containers,
+                        source,
+                        out,
+                    );
                 }
             }
             "module_definition" => {
                 let mut mc = child.walk();
-                for mb in child.children(&mut mc).filter(|c| c.kind() == "module_binding") {
+                for mb in child
+                    .children(&mut mc)
+                    .filter(|c| c.kind() == "module_binding")
+                {
                     let Some(name) = first_child_kind(mb, "module_name") else {
                         continue;
                     };
                     push_symbol(
-                        SymbolKind::Module,
-                        name,
-                        mb,
-                        doc_comment(child, source),
+                        OcamlDef {
+                            kind: SymbolKind::Module,
+                            name_node: name,
+                            full_node: mb,
+                            doc: doc_comment(child, source),
+                        },
                         module,
                         containers,
                         source,
