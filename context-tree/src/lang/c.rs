@@ -119,8 +119,11 @@ fn doc_comment(decl: Node, source: &[u8]) -> String {
 fn declarator_identifier(decl: Node) -> Option<Node> {
     match decl.kind() {
         "identifier" => Some(decl),
-        "init_declarator" | "pointer_declarator" | "parenthesized_declarator"
-        | "array_declarator" | "function_declarator" => decl
+        "init_declarator"
+        | "pointer_declarator"
+        | "parenthesized_declarator"
+        | "array_declarator"
+        | "function_declarator" => decl
             .child_by_field_name("declarator")
             .and_then(declarator_identifier),
         _ => None,

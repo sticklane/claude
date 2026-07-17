@@ -127,7 +127,10 @@ fn cpp_parse_failed_file_yields_best_effort_sibling_facts() {
         "a file with a syntax error must be parse-failed"
     );
     let names: HashSet<&str> = r.symbols.iter().map(|s| s.name.as_str()).collect();
-    assert!(names.contains("good_one"), "sibling before error: {names:?}");
+    assert!(
+        names.contains("good_one"),
+        "sibling before error: {names:?}"
+    );
     assert!(names.contains("good_two"), "sibling after error: {names:?}");
 }
 
