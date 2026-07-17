@@ -521,23 +521,34 @@ cleanly.
   instead — a wrong grouping here is exactly the kind of merge conflict
   this section exists to avoid.
 - Tasks 06 and 07 (the two query-command halves: tree/sig/map vs
-  deps/refs/at) both depend only on task 05 and touch fully disjoint
-  `cmd/*.rs` files. The one thing they'd otherwise need to co-design — the
-  C10 note-marker lookup — is already fixed as a stable API by task 05
-  (`note_marker`), so there is no shared open decision left. Concurrent-safe.
+  deps/refs/at) both depend only on task 05, and their `cmd/*.rs` files are
+  disjoint — but both also add subcommands to the same `context-tree/
+src/cli.rs` clap enum (`cmd::tree`/`sig`/`map` wiring vs `cmd::deps`/
+  `refs`/`at` wiring), so they are NOT Touch-disjoint and are not grouped.
+  They run as a dependency chain instead (05 -> 06 -> 07, or 05 -> 07 -> 06
+  — order between them doesn't matter, only that they don't run
+  concurrently): a real merge conflict on `cli.rs` is exactly the kind of
+  collision this section exists to avoid.
 - Tasks 08 (LSP enrichment) and 09 (notes CRUD + freshness) both depend
   only on tasks already merged by the time either starts (08 on 07; 09 on
   06+07) and touch disjoint subsystems (`src/lsp/**` + a `cmd/refs.rs`
-  label upgrade vs `src/notes/**` + `cmd/notes.rs` + the index notes
-  schema) with no shared design question — R11 is explicitly optional and
-  additive, independent of the notes subsystem. Concurrent-safe.
+  label upgrade vs `src/notes/**` + `cmd/notes.rs` + `context-tree/
+src/cli.rs` (09 wires the new `ctx notes`/`ctx notes add`/`ctx notes list`
+  subcommands) + the index notes schema) with no shared design question —
+  R11 is explicitly optional and additive, independent of the notes
+  subsystem. Unlike the 06/07 and 11/12 pairs, only one side of this pair
+  (09) touches `cli.rs` — 08 has no new subcommand, it only hooks into
+  `cmd/refs.rs`'s existing label logic — so the pair stays genuinely
+  Touch-disjoint even after 09 gains `cli.rs`. Concurrent-safe.
 - Tasks 11 (MCP server) and 12 (hooks) both depend on the same completed
   prerequisite set (11 on 07+09; 12 on 05+10, and by the time either task
   is dispatched the whole tree is far enough along that both dependency
-  sets are satisfied together) and touch disjoint files (`src/mcp/**` vs
-  `src/cmd/hooks.rs` + `src/hooks_templates/**`). Neither's design depends
-  on the other's internals — MCP wraps already-frozen CLI commands; hooks
-  shells out to `ctx sync`/`ctx sync --write-anchors`. Concurrent-safe.
+  sets are satisfied together), and while `src/mcp/**` vs `src/cmd/
+hooks.rs` + `src/hooks_templates/**` are disjoint, both also wire a new
+  subcommand (`ctx mcp` vs `ctx hooks install`/`uninstall`) into the same
+  `context-tree/src/cli.rs`, so they are NOT Touch-disjoint and are not
+  grouped. They run as a dependency chain instead (order between them
+  doesn't matter, only that they don't run concurrently).
 - Tasks 01, 05, 10, 13, 14 are not grouped: 01 is the sole root with
   nothing to pair against; 05 depends only on 01 and could in principle
   overlap with the 02-04 chain (disjoint touch, no shared decision) but is
@@ -550,7 +561,5 @@ cleanly.
   (closing integration) depends on 13 and is deliberately last.
 
 ```
-- Group: 06, 07
 - Group: 08, 09
-- Group: 11, 12
 ```

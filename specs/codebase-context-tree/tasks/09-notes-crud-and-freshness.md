@@ -4,8 +4,8 @@ Status: pending
 Depends on: 06, 07
 Priority: P1
 Budget: 45 turns
-Spec: ../SPEC.md (requirements R3, R12, R14; contracts C1, C2, C3, C9, C10)
-Touch: context-tree/src/notes/mod.rs, context-tree/src/notes/anchor.rs, context-tree/src/notes/freshness.rs, context-tree/src/cmd/notes.rs, context-tree/src/index/**, context-tree/Cargo.toml, context-tree/tests/fixtures/notes/**, context-tree/tests/*.rs
+Spec: ../SPEC.md (requirements R2 partial [note-freshness-on-deletion], R3, R12, R14; contracts C1, C2, C3, C9, C10)
+Touch: context-tree/src/notes/mod.rs, context-tree/src/notes/anchor.rs, context-tree/src/notes/freshness.rs, context-tree/src/cmd/notes.rs, context-tree/src/index/**, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/notes/**, context-tree/tests/*.rs
 
 ## Goal
 
@@ -28,7 +28,11 @@ real (querying the now-populated notes join) instead of always returning
 
 ## Touch
 
-Notes storage/CRUD and the index schema addition for the notes join. Do
+Notes storage/CRUD, the index schema addition for the notes join, and the
+`cli.rs` wiring for the new `ctx notes add`/`ctx notes`/`ctx notes list`
+subcommands (this is the only task that adds subcommands to `cli.rs`
+alongside a still-in-flight peer, task 08 — 08 has no new subcommand of its
+own, so there is no shared edit to coordinate). Do
 not modify `cmd/tree.rs`, `cmd/sig.rs`, `cmd/map.rs`, `cmd/deps.rs`,
 `cmd/at.rs`'s command logic itself — those already call `note_marker`;
 only change what that function returns (in `src/index/`), not the callers.
@@ -63,6 +67,12 @@ only change what that function returns (in `src/index/`), not the callers.
    changes — this test exercises the wiring).
 10. `ctx notes` and `ctx notes list` run R3's staleness sweep first, same
     as other query commands.
+11. RED/GREEN: deletion-freshness test (R2, the half task 05 could not
+    cover since notes didn't exist yet at that task) — in a no-VCS
+    fixture, add a note to a symbol in a file, then delete that file;
+    assert the next sync purges the symbol from `ctx tree` (task 05's
+    purge behavior, exercised here now that notes exist) AND the note's
+    derived freshness reads stale (its anchor no longer resolves).
 
 ## Acceptance
 
@@ -80,4 +90,9 @@ only change what that function returns (in `src/index/`), not the callers.
       two divergent note copies conflict, nothing else does)
 - [ ] `cd context-tree && cargo test c10_markers_all_surfaces` → passes
       (`[notes:2!]` on tree/sig/map/at for the same symbol)
+- [ ] `cd context-tree && cargo test notes_deletion_freshness` → passes
+      (R2, no-VCS fixture: deleting an indexed file that carries a note
+      purges its symbols from `ctx tree` on the next sync and the note's
+      freshness reads stale — the half task 05 deferred here since notes
+      didn't exist at that task)
 - [ ] `bash context-tree/scripts/check.sh` → exits 0

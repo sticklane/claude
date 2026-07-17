@@ -10,11 +10,15 @@ Touch: context-tree/src/lsp/**, context-tree/src/cmd/refs.rs, context-tree/Cargo
 ## Goal
 
 With a configured language server available, an enrichment pass stores
-resolved signatures and upgrades `ctx refs` results from `heuristic` to
-`precise`. With none configured, every query still works from syntactic
-facts alone (this is already true after task 07 — this task must not
-regress it). LSP enrichment never blocks or is required for any other
-command.
+resolved signatures in a self-contained enrichment cache under `src/lsp/**`
+(not the shared SQLite index — task 09 owns the only other in-flight
+change to `src/index/**` in this window, and keeping enrichment out of it
+avoids a second task needing to touch that schema) and upgrades `ctx refs`
+results from `heuristic` to `precise` by having `cmd/refs.rs` consult that
+cache through a documented interface. With none configured, every query
+still works from syntactic facts alone (this is already true after task 07
+— this task must not regress it). LSP enrichment never blocks or is
+required for any other command.
 
 ## Touch
 
@@ -27,8 +31,10 @@ concurrently with this task).
 
 1. Design the enrichment interface: a trait for "a configured language
    server available" that, when present, resolves symbol references and
-   feeds `precise` labels + resolved signatures back into the index (as
-   additive facts, not a replacement for syntactic facts).
+   stores `precise` labels + resolved signatures in a self-contained
+   `src/lsp/**` cache (additive, alongside syntactic facts, never a
+   replacement for them) that `cmd/refs.rs` reads through a documented
+   interface — not a write into the shared SQLite index.
 2. Implement a minimal LSP client sufficient to ask "what are the
    references to this symbol" for at least one language server, if one is
    installable in the current environment (check for e.g. `pyright`,
