@@ -1,5 +1,7 @@
 # Kanban board view for the workboard dashboard
 
+Breakdown-ready: true
+
 ## Problem
 
 The live agent-console dashboard's `/workboard` route (`agent-console/agent-console.py`)
