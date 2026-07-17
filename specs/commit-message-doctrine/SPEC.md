@@ -109,29 +109,34 @@ paths in its `Touch:` alongside the skill files they mirror.
       `grep -ci 'body' .claude/rules/quality-discipline.md` ≥ 1 (covers R1;
       both phrases absent today—`hard cap` count 0, `body` count 0—verified
       2026-07-17).
-- [ ] `grep -c 'drain: <spec-slug> task NN in-progress' .claude/rules/quality-discipline.md` ≥ 1
-      and `grep -c 'regex' .claude/rules/quality-discipline.md` ≥ 1 (covers
-      R2; `drain:` absent from the file today, verified 2026-07-17).
+- [ ] `grep -c 'drain: <spec-slug> task NN in-progress' .claude/rules/quality-discipline.md` ≥ 1,
+      `grep -c 'regex' .claude/rules/quality-discipline.md` ≥ 1, and
+      `grep -c 'breakdown:' .claude/rules/quality-discipline.md` ≥ 1 — the
+      prefix list actually landed (covers R2; `drain:` and `breakdown:` both
+      absent from the file today, verified 2026-07-17).
 - [ ] `grep -ci 'Co-Authored' .claude/rules/quality-discipline.md` ≥ 1
       (covers R3; absent today, verified 2026-07-17).
-- [ ] `grep -c 'hard cap 100' antigravity/AGENTS.md` ≥ 1 and
-      `wc -l < antigravity/AGENTS.md` ≤ 200 (covers R4; `hard cap` count 0
-      today, verified 2026-07-17).
+- [ ] `grep -c 'hard cap 100' antigravity/AGENTS.md` ≥ 1,
+      `grep -c 'subject/body' antigravity/AGENTS.md` ≥ 1, and
+      `wc -l < antigravity/AGENTS.md` ≤ 200 (covers R4; `hard cap` and
+      `subject/body` counts both 0 today, verified 2026-07-17).
 - [ ] `grep -c 'merge: <spec' .claude/skills/drain/SKILL.md` ≥ 1 (covers R5;
       absent today, verified 2026-07-17).
-- [ ] `grep -ci 'subject/body' .claude/skills/drain/SKILL.md` ≥ 1 and
+- [ ] `grep -ci 'subject/body' .claude/skills/drain/SKILL.md` ≥ 2 (one hit
+      in R5's merge step, one in R6's §3a baton-pass step—a single hit means
+      one of the two edits was skipped) and
       `grep -ci 'subject/body' .claude/skills/drain/reference.md` ≥ 1
-      (positive check for R6's content; phrase absent from both files today,
-      verified 2026-07-17).
+      (positive check for R5+R6's content; phrase absent from both files
+      today, verified 2026-07-17).
 - [ ] `grep -c 'drain: <spec-slug> task NN in-progress' .claude/skills/drain/SKILL.md` ≥ 1
       and `grep -c 'drain: auto-breakdown specs/<slug>' .claude/skills/drain/reference.md` ≥ 1
       still hold after the edits—both pinned contracts survive verbatim
       (covers R6's guard; both present today: SKILL.md:166,
       reference.md:1570).
-- [ ] `grep -c 'quality-discipline' .claude/skills/build/SKILL.md` ≥ 2, the
-      new hit inside the commit/completion step (covers R7; exactly 1 hit
-      today at line 236 and it concerns Documentation currency, not commits—
-      verified 2026-07-17).
+- [ ] `grep -A3 'Commit code' .claude/skills/build/SKILL.md | grep -c 'quality-discipline'` ≥ 1
+      — the doctrine reference sits inside the commit bullet itself, not
+      elsewhere in the file (covers R7; `Commit code` anchors the bullet at
+      line 247 today and the piped count is 0 today, verified 2026-07-17).
 - [ ] Each of the four mirror files contains the ported guidance:
       `grep -cil 'subject/body' antigravity/.agents/workflows/drain.md antigravity/.agents/workflows/build.md codex/.agents/skills/drain/SKILL.md codex/.agents/skills/build/SKILL.md | wc -l` — all
       four match, i.e. `grep -li` lists 4 files (covers R9; phrase absent
@@ -141,9 +146,20 @@ paths in its `Touch:` alongside the skill files they mirror.
 - [ ] End-to-end: extracting every backtick-quoted example commit message
       whose text matches `^(drain|merge|feat|fix|test|refactor|docs|style|perf|chore|spec|breakdown): `
       from all touched files shows no subject over 100 characters (covers
-      R8), i.e.
-      `grep -rhoE '\`(drain|merge|feat|fix|test|refactor|docs|style|perf|chore|spec|breakdown): [^\`]+\`' .claude/rules/quality-discipline.md antigravity/AGENTS.md .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md .claude/skills/build/SKILL.md antigravity/.agents/workflows/drain.md antigravity/.agents/workflows/build.md codex/.agents/skills/drain/SKILL.md codex/.agents/skills/build/SKILL.md | awk '{ if (length($0) > 102) { print; bad=1 } } END { exit bad }'`
-      exits 0 (the 102 threshold accounts for the two captured backticks).
+      R8). The following command exits 0 (copy-paste runnable from the repo
+      root; the 102 threshold accounts for the two captured backticks):
+
+      ```sh
+      grep -rhoE '`(drain|merge|feat|fix|test|refactor|docs|style|perf|chore|spec|breakdown): [^`]+`' \
+        .claude/rules/quality-discipline.md antigravity/AGENTS.md \
+        .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md \
+        .claude/skills/build/SKILL.md \
+        antigravity/.agents/workflows/drain.md \
+        antigravity/.agents/workflows/build.md \
+        codex/.agents/skills/drain/SKILL.md \
+        codex/.agents/skills/build/SKILL.md \
+        | awk '{ if (length($0) > 102) { print; bad=1 } } END { exit bad }'
+      ```
 
 ## Open questions
 
