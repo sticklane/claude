@@ -1,6 +1,6 @@
 # Task 06: Query commands — tree, sig, map; root guard; rebuild equivalence
 
-Status: in-progress
+Status: done
 Depends on: 05
 Priority: P1
 Budget: 45 turns
@@ -69,21 +69,26 @@ tree`, and `ctx sig` output on a fixture; delete `.context/cache/`;
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test root_guard` → passes (C4: exit 2 +
-      `ctx init` pointer; success after init)
-- [ ] `cd context-tree && cargo test tree_` → passes (depth/result caps,
-      truncation line, `--doc`, C10 marker plumbing)
-- [ ] `cd context-tree && cargo test sig_` → passes (default vs `--doc`
+- [x] `cd context-tree && cargo test root_guard` → passes (C4: exit 2 +
+      `ctx init` pointer; success after init) — 2 passed (query.rs
+      root_guard_exits_2_and_names_ctx_init_without_a_context_root,
+      root_guard_query_succeeds_after_init)
+- [x] `cd context-tree && cargo test tree_` → passes (depth/result caps,
+      truncation line, `--doc`, C10 marker plumbing) — 6 passed
+- [x] `cd context-tree && cargo test sig_` → passes (default vs `--doc`
       docstring depth, C10 marker plumbing, C3 suffix resolution incl.
-      exit 3 ambiguous / exit 1 no-match)
-- [ ] `cd context-tree && cargo test map_ranking` → passes (A ranks above
-      B; not alphabetical/insertion order)
-- [ ] `cd context-tree && cargo test map_` → passes (token budget per C7,
-      `--doc`)
-- [ ] `for v in tree sig map; do ./context-tree/target/release/ctx $v --json ... | jq . ; done` →
+      exit 3 ambiguous / exit 1 no-match) — 5 passed
+- [x] `cd context-tree && cargo test map_ranking` → passes (A ranks above
+      B; not alphabetical/insertion order) — 1 passed
+      (map_ranking_orders_by_reference_count_not_alphabetical)
+- [x] `cd context-tree && cargo test map_` → passes (token budget per C7,
+      `--doc`) — 3 passed
+- [x] `for v in tree sig map; do ./context-tree/target/release/ctx $v --json ... | jq . ; done` →
       each exits 0 with an asserted key (exact invocation per verb defined
-      in the test fixture script)
-- [ ] `cd context-tree && cargo test rebuild_equivalence` → passes
+      in the test fixture script) — `bash context-tree/tests/fixtures/query/json_smoke.sh`
+      passes: tree/map assert `.symbols`, sig asserts `.signature`
+- [x] `cd context-tree && cargo test rebuild_equivalence` → passes
       (byte-identical post-cache-delete; transparent rebuild on tampered
-      schema version)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      schema version) — 2 passed
+- [x] `bash context-tree/scripts/check.sh` → exits 0 (fmt + clippy -D
+      warnings + full test suite green)
