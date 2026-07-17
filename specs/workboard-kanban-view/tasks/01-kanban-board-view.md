@@ -1,6 +1,6 @@
 # Task 01: Kanban board view for the workboard dashboard
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 18 turns
@@ -105,7 +105,7 @@ class="count">12</span>`), never concatenated into one text run.
 - [ ] With the server running locally
       (`python3 agent-console/agent-console.py &`, or the existing
       `com.agent-console` launchd job), `curl -fsS
-    http://127.0.0.1:8899/workboard-kanban -o /tmp/kb.html` → HTTP 200,
+  http://127.0.0.1:8899/workboard-kanban -o /tmp/kb.html` → HTTP 200,
       and `grep -o 'col-head[^>]*>Pending<\|col-head[^>]*>In Progress<\|col-head[^>]*>Needs Verification<\|col-head[^>]*>Blocked<\|col-head[^>]*>Done<\|col-head[^>]*>Deferred<\|col-head[^>]*>Skipped<' /tmp/kb.html`
       emits the seven labels exactly once each, in exactly that order
 - [ ] `grep -c 'data-text=' /tmp/kb.html` → > 0
