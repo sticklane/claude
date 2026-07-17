@@ -251,6 +251,75 @@ class TestAdaptBoard(unittest.TestCase):
         self.assertEqual(len(board["orphans"]), 1)
         self.assertEqual(board["orphans"][0]["prompt"], "orphaned")
 
+    def test_forwards_dag_tasks_and_blocked_tasks_from_spec(self):
+        # Safety net for the single-pass refactor: _adapt_board must forward
+        # both the full dag-task list (num/deps/status/title) and the
+        # blocked_tasks list (path/title/unblock, only tasks with a truthy
+        # unblock) for each spec's `tasks`.
+        assembled = {
+            "repos": [
+                {
+                    "path": "/tmp/nonexistent-repo-xyz",
+                    "name": "r1",
+                    "git": {"branch": "main", "dirty": 0, "ahead": 0, "behind": 0},
+                    "specs": [
+                        {
+                            "kind": "toolkit",
+                            "slug": "s1",
+                            "title": "Spec One",
+                            "path": "specs/s1/SPEC.md",
+                            "tasks_total": 2,
+                            "tasks_done": 0,
+                            "tasks": [
+                                {
+                                    "file": "tasks/01-a.md",
+                                    "abs": "/r/tasks/01-a.md",
+                                    "title": "A",
+                                    "status": "blocked",
+                                    "deps": [],
+                                    "unblock": {"type": "ask", "step": "answer me"},
+                                },
+                                {
+                                    "file": "tasks/02-b.md",
+                                    "abs": "/r/tasks/02-b.md",
+                                    "title": "B",
+                                    "status": "pending",
+                                    "deps": ["01"],
+                                },
+                            ],
+                            "last_touched": 100.0,
+                        }
+                    ],
+                    "handoffs": [],
+                    "sessions": [],
+                }
+            ],
+            "orphan_sessions": [],
+            "inbox": [],
+            "liveness_unknown": False,
+        }
+        with (
+            patch.object(ac, "gh_visibility", return_value={}),
+            patch.object(ac, "_git", return_value=None),
+        ):
+            board = ac._adapt_board(assembled, [], [])
+
+        sp = board["repos"][0]["specs"][0]
+        # Full dag list forwarded (both tasks, viz.dag shape).
+        self.assertEqual([t["num"] for t in sp["tasks"]], [1, 2])
+        self.assertEqual(sp["tasks"][1]["deps"], [1])
+        # Only the task with a truthy unblock appears in blocked_tasks.
+        self.assertEqual(
+            sp["blocked_tasks"],
+            [
+                {
+                    "path": "/r/tasks/01-a.md",
+                    "title": "A",
+                    "unblock": {"type": "ask", "step": "answer me"},
+                }
+            ],
+        )
+
 
 class TestPriority(unittest.TestCase):
     def test_apply_replaces_existing(self):
