@@ -757,6 +757,9 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
             # JSON omits both keys, so tolerate absence (R6, console side).
             "unblock": i.get("unblock"),
             "deferred_questions": i.get("deferred_questions") or [],
+            # Structured missing-unblock flag from the scanner (task 06); older
+            # scan JSON omits it, so default False.
+            "unblock_missing": i.get("unblock_missing", False),
         }
         for i in assembled["inbox"]
     ]
@@ -2034,14 +2037,9 @@ def _is_answer_item(i: dict) -> bool:
 
 def _unblock_missing(i: dict) -> bool:
     """A blocked item with no recorded Unblock: step — flag it so the user
-    knows to add one. The scanner bakes the step into `why` when present, so a
-    genuine absence shows only as its 'no unblock step recorded' note (or as an
-    absent structured unblock)."""
-    return (
-        i.get("state") == "blocked"
-        and not i.get("unblock")
-        and "no unblock step recorded" in (i.get("why") or "")
-    )
+    knows to add one. Driven by the scanner's structured `unblock_missing`
+    flag (task 06); older scan JSON without the key defaults to unflagged."""
+    return bool(i.get("unblock_missing"))
 
 
 # Session-refresh budget arms (spec session-refresh-automation): a live session
