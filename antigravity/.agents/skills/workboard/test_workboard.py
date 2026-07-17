@@ -1,12 +1,13 @@
 """Tests for workboard's Antigravity abandon mechanism.
 
-Run: python3 -m unittest discover -s .agents/skills/workboard
+Run: python3 -m unittest discover -s .claude/skills/workboard
 Stdlib-only, like the scanner. Each test builds a throwaway HOME with a
 fake ~/.gemini/antigravity/brain store — the real one is never touched.
 """
 
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -442,6 +443,12 @@ class TestRuntimeAgnosticBatonParsing(unittest.TestCase):
             self.assertIn("/drain specs/demo", batons[0]["command"])
 
 
+
+
+
+
+
+
 def make_session(toplevel, state="active"):
     """A session record as attention_items reads it: state + git toplevel."""
     return {"state": state, "toplevel": toplevel, "cwd": toplevel}
@@ -628,16 +635,6 @@ class TestBatonNeedsAttentionInbox(unittest.TestCase):
         self.assertIn("baton", inbox[0]["what"].lower())
 
 
-class TestActiveRendering(unittest.TestCase):
-    def _active(self):
-        return {
-            "state": "in-progress",
-            "category": "active",
-            "repo": "demo",
-            "what": "1 uncommitted change(s) — a live session/drain is working here",
-            "why": "owned work-in-progress, not neglected",
-            "age_ts": 1.0,
-        }
 
 
 def write_session(projects_dir, proj="proj1", sid="sess1", records=None):
@@ -702,171 +699,12 @@ class TestSessionStartTs(unittest.TestCase):
             self.assertLessEqual(s["start_ts"], s["end_ts"])
 
 
-class TestSessionTimelineRendering(unittest.TestCase):
-    """R5 (workboard half): the Sessions section renders via viz.timeline()
-    instead of a flat table."""
-
-    def _data(self, repos=None, orphan_sessions=None):
-        return {
-            "totals": {
-                "repos": len(repos or []),
-                "specs_open": 0,
-                "tasks_open": 0,
-                "sessions_active": 0,
-                "attention": 0,
-            },
-            "generated_at": "now",
-            "stale_days": 7,
-            "inbox": [],
-            "ready": {"items": [], "blocked_unresolved": []},
-            "repos": repos or [],
-            "antigravity": [],
-            "todos": [],
-            "orphan_sessions": orphan_sessions or [],
-        }
-
-    def _session(self, state="active", start_ts=1.0, end_ts=100.0):
-        return {
-            "id": "s1",
-            "cwd": "/r/demo",
-            "branch": "main",
-            "prompt": "do the thing",
-            "last_ts": end_ts,
-            "start_ts": start_ts,
-            "end_ts": end_ts,
-            "bytes": 10,
-            "state": state,
-        }
 
 
-class TestSpawnTreeRendering(unittest.TestCase):
-    """R6/R7: a session carrying a non-empty spawn_tree renders a collapsible
-    indented tree — one row per agent, indented by spawnDepth, a fleet-style
-    status chip per node, and distinct styling on failed branches. Sessions
-    without a spawn tree render exactly as before (no regression).
-
-    The fixture below is the deterministic source of truth: it is built in
-    memory here, never scanned from live session data on disk."""
-
-    def _data(self, repos=None, orphan_sessions=None):
-        return {
-            "totals": {
-                "repos": len(repos or []),
-                "specs_open": 0,
-                "tasks_open": 0,
-                "sessions_active": 0,
-                "attention": 0,
-            },
-            "generated_at": "now",
-            "stale_days": 7,
-            "inbox": [],
-            "ready": {"items": [], "blocked_unresolved": []},
-            "repos": repos or [],
-            "antigravity": [],
-            "todos": [],
-            "orphan_sessions": orphan_sessions or [],
-        }
-
-    def _session(self, spawn_tree, state="active"):
-        return {
-            "id": "s1",
-            "cwd": "/r/demo",
-            "branch": "main",
-            "prompt": "do the thing",
-            "last_ts": 100.0,
-            "start_ts": 1.0,
-            "end_ts": 100.0,
-            "bytes": 10,
-            "state": state,
-            "spawn_tree": spawn_tree,
-        }
-
-    def _fixture_tree(self):
-        # root (running) with one failed child at spawnDepth 1
-        return [
-            {
-                "agentId": "aaa",
-                "agentType": "implementation-worker",
-                "description": "build the parser",
-                "status": "running",
-                "spawnDepth": 0,
-                "started_ts": 10.0,
-                "ended_ts": None,
-                "children": [
-                    {
-                        "agentId": "bbb",
-                        "agentType": "verifier",
-                        "description": "verify the parser",
-                        "status": "failed",
-                        "spawnDepth": 1,
-                        "started_ts": 20.0,
-                        "ended_ts": 40.0,
-                        "children": [],
-                    }
-                ],
-            }
-        ]
 
 
-class TestSpecDagRendering(unittest.TestCase):
-    """R5 (workboard half): a spec with deps renders its dependency DAG via
-    viz.dag() (an SVG <path> per in-list edge)."""
-
-    def _spec_with_dep(self, repo_root):
-        tasks_dir = Path(repo_root) / "specs" / "demo" / "tasks"
-        tasks_dir.mkdir(parents=True)
-        (tasks_dir / "01-a.md").write_text("# A\nStatus: done\n", encoding="utf-8")
-        (tasks_dir / "02-b.md").write_text(
-            "# B\nStatus: pending\nDepends on: 01\n", encoding="utf-8"
-        )
-        tasks = [
-            {
-                "file": "specs/demo/tasks/01-a.md",
-                "abs": str(tasks_dir / "01-a.md"),
-                "title": "A",
-                "status": "done",
-                "deps": [],
-            },
-            {
-                "file": "specs/demo/tasks/02-b.md",
-                "abs": str(tasks_dir / "02-b.md"),
-                "title": "B",
-                "status": "pending",
-                "deps": ["01"],
-            },
-        ]
-        return {
-            "kind": "toolkit",
-            "slug": "demo",
-            "title": "Demo",
-            "path": "specs/demo/SPEC.md",
-            "tasks_total": 2,
-            "tasks_done": 1,
-            "tasks_doing": 0,
-            "tasks_blocked": [],
-            "tasks": tasks,
-            "last_touched": 1.0,
-        }
 
 
-class TestSpecDagResolvesDeps(unittest.TestCase):
-    """R3: _spec_dag_tasks resolves `Depends on:` entries through
-    resolve_dep/_glob_task instead of a bare isdigit() filter."""
-
-    def _make_spec(self, repo_root, slug, task_bodies):
-        """Write real task files under <repo_root>/specs/<slug>/tasks/ and
-        return the scanned spec dict for that slug (via scan_toolkit_specs,
-        so `deps` comes from the real `Depends on:` parser)."""
-        spec_dir = Path(repo_root) / "specs" / slug
-        (spec_dir / "tasks").mkdir(parents=True)
-        (spec_dir / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
-        for fname, status, depends in task_bodies:
-            text = f"# {fname}\nStatus: {status}\n"
-            if depends is not None:
-                text += f"Depends on: {depends}\n"
-            (spec_dir / "tasks" / fname).write_text(text, encoding="utf-8")
-        specs = {s["slug"]: s for s in workboard.scan_toolkit_specs(Path(repo_root))}
-        return specs[slug]
 
 
 class TestLiveSessionIdsCliAndFallback(unittest.TestCase):
@@ -1051,43 +889,6 @@ class TestScanToolkitSpecsUnparseableCount(unittest.TestCase):
             self.assertEqual(spec["tasks_unparseable"], 1)
 
 
-class TestSourceHealthMarkers(unittest.TestCase):
-    """R4: sources that are present but yield zero parseable records show a
-    visible "source check"/"liveness unknown" marker instead of rendering
-    silently empty."""
-
-    def _data(self, repos=None, orphan_sessions=None, liveness_unknown=False):
-        return {
-            "totals": {
-                "repos": len(repos or []),
-                "specs_open": 0,
-                "tasks_open": 0,
-                "sessions_active": 0,
-                "attention": 0,
-            },
-            "generated_at": "now",
-            "stale_days": 7,
-            "inbox": [],
-            "ready": {"items": [], "blocked_unresolved": []},
-            "repos": repos or [],
-            "antigravity": [],
-            "todos": [],
-            "orphan_sessions": orphan_sessions or [],
-            "liveness_unknown": liveness_unknown,
-        }
-
-    def _session(self, state="active"):
-        return {
-            "id": "s1",
-            "cwd": "/r/demo",
-            "branch": "main",
-            "prompt": "do the thing",
-            "last_ts": 100.0,
-            "start_ts": 1.0,
-            "end_ts": 100.0,
-            "bytes": 10,
-            "state": state,
-        }
 
 
 def make_agentprof_stub(tmpdir, stdout_payload, argv_out=None, exit_code=0):
@@ -1531,60 +1332,6 @@ class TestMergeSpend(unittest.TestCase):
             tmpdir.cleanup()
 
 
-class TestSpendRendering(unittest.TestCase):
-    """R6/R7/R8-hint/R10: render the spend data — per-session cost badges, the
-    "Spend by model" table, and a hint line when spend is unavailable."""
-
-    def _session(self, sid="s1", state="active"):
-        return {
-            "id": sid,
-            "cwd": "/r/demo",
-            "branch": "main",
-            "prompt": "do the thing",
-            "last_ts": 100.0,
-            "start_ts": 1.0,
-            "end_ts": 100.0,
-            "bytes": 10,
-            "state": state,
-        }
-
-    def _data(self, spend, repos=None, orphan_sessions=None):
-        return {
-            "totals": {
-                "repos": len(repos or []),
-                "specs_open": 0,
-                "tasks_open": 0,
-                "sessions_active": 0,
-                "attention": 0,
-            },
-            "generated_at": "now",
-            "stale_days": 7,
-            "inbox": [],
-            "ready": {"items": [], "blocked_unresolved": []},
-            "repos": repos or [],
-            "antigravity": [],
-            "todos": [],
-            "orphan_sessions": orphan_sessions or [],
-            "spend": spend,
-        }
-
-    def _model_agg(self, cost, priced=True, output=10, inp=0, cr=0, cw=0):
-        return {
-            "input_tokens": inp,
-            "output_tokens": output,
-            "cache_read_tokens": cr,
-            "cache_write_tokens": cw,
-            "cost_microusd": cost,
-            "priced": priced,
-        }
-
-    # -- short model name helper (R6) ------------------------------------
-
-    # -- per-session badge (R6) ------------------------------------------
-
-    # -- Spend by model table (R7) ---------------------------------------
-
-    # -- unavailable hint (R8) -------------------------------------------
 
 
 # ---- Unblock lines + Deferred questions (unblock-next-steps task 01) -------
@@ -1699,28 +1446,6 @@ def _unblock_spec(tasks, status=None, unblock=None):
     return s
 
 
-class TestUnblockWarningChip(unittest.TestCase):
-    def _data(self, spec):
-        repo = make_repo_record(path="/r/demo")
-        repo["specs"] = [spec]
-        return {
-            "totals": {
-                "repos": 1,
-                "specs_open": 1,
-                "tasks_open": 1,
-                "sessions_active": 0,
-                "attention": 1,
-            },
-            "generated_at": "now",
-            "stale_days": 7,
-            "inbox": [],
-            "ready": {"items": [], "blocked_unresolved": []},
-            "repos": [repo],
-            "antigravity": [],
-            "todos": [],
-            "orphan_sessions": [],
-            "spend": None,
-        }
 
 
 class TestNeedsAnswerInbox(unittest.TestCase):
@@ -1811,6 +1536,65 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
         self.assertEqual(len(blocked), 1)
         self.assertIn("no unblock step recorded", blocked[0]["why"])
+
+
+class TestStructuredUnblockForwarded(unittest.TestCase):
+    """attention_items() attaches structured unblock fields to its rows so the
+    console reads them instead of string-matching the `why` prose (task 06)."""
+
+    def _repo(self, spec):
+        repo = make_repo_record(path="/r/demo")
+        repo["specs"] = [spec]
+        return repo
+
+    def _inbox(self, spec):
+        return workboard.attention_items([self._repo(spec)], [], [], stale_days=7)
+
+    def test_ask_task_item_forwards_structured_unblock_dict(self):
+        ub = {"type": "ask", "step": "which creds?"}
+        spec = _unblock_spec([_unblock_task(unblock=ub)])
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertEqual(answer[0].get("unblock"), ub)
+
+    def test_deferred_item_forwards_structured_deferred_questions(self):
+        spec = _unblock_spec([_unblock_task(deferred=["which provider?"])])
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertEqual(answer[0].get("deferred_questions"), ["which provider?"])
+
+    def test_waiting_spec_ask_item_forwards_structured_unblock_dict(self):
+        ub = {"type": "ask", "step": "sign in at URL?"}
+        spec = _unblock_spec([], status="waiting", unblock=ub)
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertEqual(answer[0].get("unblock"), ub)
+
+    def test_waiting_spec_blocked_item_marks_unblock_missing_when_absent(self):
+        spec = _unblock_spec([], status="waiting")
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertIs(blocked[0].get("unblock"), None)
+        self.assertIs(blocked[0].get("unblock_missing"), True)
+
+    def test_blocked_task_item_marks_unblock_missing_when_absent(self):
+        spec = _unblock_spec([_unblock_task()])
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertIs(blocked[0].get("unblock_missing"), True)
+
+    def test_unblock_missing_absent_on_ask_item_which_has_a_step(self):
+        # unblock_missing is True only when no Unblock: line is recorded; an
+        # ask item carries a step, so it must not be flagged missing.
+        spec = _unblock_spec(
+            [_unblock_task(unblock={"type": "ask", "step": "which creds?"})]
+        )
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertNotEqual(answer[0].get("unblock_missing"), True)
+
+    def test_why_text_unchanged_on_blocked_waiting_spec(self):
+        # Display prose stays as-is for backward compatibility.
+        spec = _unblock_spec([], status="waiting")
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertEqual(
+            blocked[0]["why"], "no unblock step recorded — add an Unblock: line"
+        )
+
 
 
 def _agent_tool_use(tool_use_id, subagent_type="scout", desc="do the thing", ts=OLD_TS):
