@@ -1,6 +1,6 @@
 # Task 01: Rust scaffold, CLI shell, project init, Python extraction
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 60 turns
@@ -115,19 +115,62 @@ clippy -- -D warnings && cargo test`, executable.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo build --release` → exits 0, produces
+- [x] `cd context-tree && cargo build --release` → exits 0, produces
       `target/release/ctx`
-- [ ] `./context-tree/target/release/ctx --version` → exits 0, stdout
+      <!-- evidence: `Finished release profile`, exit=0; `target/release/ctx` present (3.4MB) -->
+- [x] `./context-tree/target/release/ctx --version` → exits 0, stdout
       contains a version string
-- [ ] `cd context-tree && cargo test init_` → passes; asserts `.context/`
+      <!-- evidence: stdout `ctx 0.1.0`, exit=0 -->
+- [x] `cd context-tree && cargo test init_` → passes; asserts `.context/`
       layout per C4 and idempotent re-run
-- [ ] `cd context-tree && cargo test python` → passes, covering C1 path
+      <!-- evidence: init.rs — 2 passed (init_scaffolds_context_layout, init_is_idempotent_second_run_changes_nothing) -->
+- [x] `cd context-tree && cargo test python` → passes, covering C1 path
       uniqueness/resolution, C2 rename-hash-stability, C8 docstring
       sentinel, reference extraction (`Reference` facts at known call
       sites), import extraction (`Import` facts for known `import`
       statements), locals-query scope facts (a function-local shadowing
       variable distinguished from the same-named global), and
       parse-failed best-effort facts
-- [ ] `cd context-tree && cargo test 2>&1 | grep -Fx "covered: python"` →
+      <!-- evidence: python.rs — 9 passed (C1 unique+suffix, overload ordinals, C2 rename-stable, C8 sentinel, call ref, import edges, locals shadowing, parse-failed siblings, coverage marker) -->
+- [x] `cd context-tree && cargo test 2>&1 | grep -Fx "covered: python"` →
       line present
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      <!-- evidence: grep matched `covered: python` (emitted via direct stdout write, which survives libtest capture — see Decisions) -->
+- [x] `bash context-tree/scripts/check.sh` → exits 0
+      <!-- evidence: cargo fmt --check + clippy -D warnings + cargo test all green -->
+
+<!-- PLAN (worker task/01-scaffold-and-python-extraction)
+Environment: no Rust toolchain was present; installed rustup stable 1.97.1
+(minimal + rustfmt + clippy) into ~/.cargo. Reversible: `rustup self uninstall`.
+Deps resolved: tree-sitter 0.26, tree-sitter-python 0.25 (builds via
+tree-sitter-language 0.1 shim), clap 4 (derive), sha2 0.11, inventory 0.3;
+dev: insta, tempfile. tree-sitter-python ships NO locals query (only
+highlights/tags) — authoring an embedded Python locals.scm string.
+
+Module layout (src/):
+  main.rs      thin -> context_tree::run()
+  lib.rs       module decls + run()
+  cli.rs       clap Cli/Command enum (future tasks extend)
+  facts.rs     SymbolKind, Symbol, Reference/RefKind, Import, Scope, Span, Point, Location
+  path.rs      C1 qualified-path builder + suffix resolver (C3 raw material)
+  hash.rs      C2 body hash (ident-excised SHA-256) + token set
+  extract.rs   LanguageExtractor trait + ExtractResult + inventory registry
+  project.rs   C4 root discovery + ctx init (idempotent, R18)
+  lang/mod.rs  pub mod python; (single-line registration surface)
+  lang/python.rs  Python extractor
+
+TDD checkpoints (tests are tests/*.rs, flat):
+  1. cli_version.rs  --version exits 0 + version string  [RED->GREEN]
+  2. init.rs         init_ scaffolds .context/{notes,cache}/.gitignore, idempotent [RED->GREEN]
+  3. python.rs       C1 uniqueness/suffix, C2 rename stability, C8 docstring
+                     sentinel, Reference at call site, Import edge, Scope
+                     shadowing, parse-failed best-effort  [RED->GREEN]
+  covered: python printed by python.rs on success.
+  scripts/check.sh: cargo fmt --check && cargo clippy -D warnings && cargo test
+
+Status legend: [x] done  [~] in progress
+  [x] env + crate skeleton + dep/ABI/query de-risk
+  [x] facts/path/hash/extract modules
+  [x] cli + project (init) + --version test green
+  [x] python extractor + fixtures + python tests green
+  [x] check.sh green, committed per TDD step — task DONE
+-->
