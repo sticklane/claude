@@ -1,6 +1,6 @@
 # Task 01: Add browser-delegation and deferred-tool-schema bullets to token-discipline.md
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 6 turns
