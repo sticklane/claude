@@ -2,7 +2,10 @@
 //! pre-command machinery they run: the C4 root guard, the R3 staleness sweep,
 //! the C7 token count, and the C10 note-marker grammar.
 
+pub mod at;
+pub mod deps;
 pub mod map;
+pub mod refs;
 pub mod sig;
 pub mod tree;
 
@@ -17,6 +20,9 @@ pub const EXIT_NO_MATCH: u8 = 1;
 pub const EXIT_NO_ROOT: u8 = 2;
 /// Exit code for an ambiguous query (`ctx sig` matching several symbols).
 pub const EXIT_AMBIGUOUS: u8 = 3;
+/// Exit code for `ctx at` on an unresolvable position: an ignored, unsupported,
+/// or nonexistent file (R19).
+pub const EXIT_BAD_POSITION: u8 = 4;
 
 /// The C10 note marker for a symbol's note tuple: `[notes:<count>]`, or
 /// `[notes:<count>!]` when any note is stale. Empty when the symbol has no

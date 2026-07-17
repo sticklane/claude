@@ -1,11 +1,11 @@
 # Task 07: Query commands — deps, refs, at
 
-Status: in-progress
+Status: done
 Depends on: 05
 Priority: P1
 Budget: 45 turns
 Spec: ../SPEC.md (requirements R3, R9, R10, R19; contracts C3, C10)
-Touch: context-tree/src/cmd/deps.rs, context-tree/src/cmd/refs.rs, context-tree/src/cmd/at.rs, context-tree/src/cli.rs, context-tree/tests/fixtures/query/**, context-tree/tests/*.rs
+Touch: context-tree/src/cmd/deps.rs, context-tree/src/cmd/refs.rs, context-tree/src/cmd/at.rs, context-tree/src/cli.rs, context-tree/src/cmd/mod.rs, context-tree/src/index/mod.rs, context-tree/src/lib.rs, context-tree/tests/fixtures/query/**, context-tree/tests/*.rs
 
 ## Goal
 
@@ -62,16 +62,43 @@ shared design decision to coordinate.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test deps_` → passes (forward and
+- [x] `cd context-tree && cargo test deps_` → passes (forward and
       `--reverse` edges; empty scope exits 0)
-- [ ] `cd context-tree && cargo test refs_scope_aware` → passes (R10:
+      Evidence: 3 passed (deps_forward_and_reverse_edges, deps_empty_scope_exits_0,
+      deps_json_has_edges_key); verifier report evidence/07-query-commands-deps-refs-at.md.
+- [x] `cd context-tree && cargo test refs_scope_aware` → passes (R10:
       shadowed local excluded, true cross-file call site retained)
-- [ ] `cd context-tree && cargo test refs_` → passes (heuristic labeling,
+      Evidence: 1 passed (TS fixture: app.ts cross-file call retained, shadow.ts
+      function-local const excluded); evidence/07-query-commands-deps-refs-at.md.
+- [x] `cd context-tree && cargo test refs_` → passes (heuristic labeling,
       50-result cap + truncation line)
-- [ ] `cd context-tree && cargo test at_containment` → passes (nested-line
+      Evidence: 5 passed (exact 50-cap + "10 more (raise --limit)", --limit 100
+      shows 60, heuristic-only labels, no-match exit 1); evidence file.
+- [x] `cd context-tree && cargo test at_containment` → passes (nested-line
       chain; outside-definition module fallback)
-- [ ] `cd context-tree && cargo test at_exit4` → passes (ignored /
+      Evidence: 2 passed + 2 regression tests (signature-line resolution,
+      nested-module retention); span/line overlap resolution; evidence file.
+- [x] `cd context-tree && cargo test at_exit4` → passes (ignored /
       unsupported-extension / nonexistent file: one-line reason, exit 4)
-- [ ] `for v in deps refs at; do ./context-tree/target/release/ctx $v --json ... | jq . ; done` →
+      Evidence: 3 passed (all three reasons exit 4 with a named reason); evidence file.
+- [x] `for v in deps refs at; do ./context-tree/target/release/ctx $v --json ... | jq . ; done` →
       each exits 0 with an asserted key
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      Evidence: tests/fixtures/query/json_smoke_edges.sh — deps/.edges, refs/.references,
+      at/.chain all exit 0 via `jq -e`; evidence file criterion 6.
+- [x] `bash context-tree/scripts/check.sh` → exits 0
+      Evidence: fmt + clippy -D warnings + full test suite green (exit 0);
+      evidence file criterion 7.
+
+## Decisions
+
+- Out-of-Touch plumbing (reversible): the header `Touch:` lists only
+  `cmd/{deps,refs,at}.rs` + `cli.rs`, but wiring three subcommands and reading
+  their edges required minimal additive edits to `src/cmd/mod.rs` (submodule
+  registration + `EXIT_BAD_POSITION`), `src/lib.rs` (dispatch match arms), and
+  `src/index/mod.rs` (read-only accessors `all_imports`/`all_references`/
+  `all_scopes` over pre-existing tables + a `full_end_byte` field on `SymbolRow`
+  for `ctx at` span resolution). No new tables; no edits to task 06's
+  `cmd/{tree,sig,map}.rs`. The `## Touch` prose ("CLI wiring for these three
+  subcommands") covers the mod.rs/lib.rs edits; index/mod.rs is the structurally
+  required read layer. Reverse by removing the three subcommand variants and the
+  new accessors.
