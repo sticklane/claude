@@ -2024,6 +2024,23 @@ def _dispatch_btn(kind: str, target: str, label: str, confirm: str) -> str:
     )
 
 
+def _unblock_recheck_btns(path: str, unblock: dict | None, label: str, git_root: bool) -> str:
+    """Both dispatch buttons for a waiting-spec header or a blocked task file
+    (unblock-next-steps R7). Gated identically to _add_unblock_recheck() in the
+    action registry — git-repo root, truthy path, truthy unblock, non-`ask` —
+    so every button POSTs a `data-id` the registry actually generated. Empty
+    string when any gate fails."""
+    if not git_root or not path or not unblock or unblock.get("type") == "ask":
+        return ""
+    ub = _dispatch_btn("unblock", path, f"unblock: {label}",
+        f"Unblock {label}? Launches a Claude agent to act on the unblock step "
+        "(agent with write access, costs tokens).")
+    rc = _dispatch_btn("recheck", path, f"recheck: {label}",
+        f"Recheck {label}? Launches a Claude agent to re-verify whether the "
+        "blocker cleared (costs tokens).")
+    return ub + rc
+
+
 def _is_answer_item(i: dict) -> bool:
     """A needs-your-answer inbox item: an ask-typed unblock or a deferred
     question the human must resolve. The scanner marks these `needs-answer`;
@@ -2325,9 +2342,25 @@ def render_workboard(
                             f"Verify specs/{sp['slug']} in {r['name']}? Launches the "
                             "verifier agent (costs tokens).",
                         )
+                # unblock/recheck (R7): the waiting-spec header keys on the
+                # spec path; each non-ask blocked task keys on its own file
+                # path. Not gated on sp["total"] — a waiting spec often has 0.
+                ub = _unblock_recheck_btns(
+                    sp.get("path", ""), sp.get("unblock"), f"spec {sp['slug']}", git_root
+                )
+                bt_lines = []
+                for bt in sp.get("blocked_tasks") or []:
+                    tpath = bt.get("path") or ""
+                    tlabel = bt.get("title") or (os.path.basename(tpath) if tpath else "")
+                    btns = _unblock_recheck_btns(tpath, bt.get("unblock"), tlabel, git_root)
+                    if btns:
+                        bt_lines.append(
+                            f'<div class="line evt"><span class="trunc">{esc(tlabel)}</span>{btns}</div>'
+                        )
+                bt_block = "".join(bt_lines)
                 row = (
                     f"{title_el}"
-                    f'{prog}<span class="meta">{_ago(sp["mtime"])}</span>{disp}'
+                    f'{prog}<span class="meta">{_ago(sp["mtime"])}</span>{disp}{ub}'
                 )
                 prio = _prio_select(sp.get("path", ""), sp.get("priority", ""))
                 if graph:  # expandable to the dependency graph
@@ -2341,10 +2374,10 @@ def render_workboard(
                         f'<details class="spec" data-k="s:{esc(r["name"])}/{esc(sp["slug"])}"'
                         f"{' open' if is_open else ''}>"
                         f'<summary><div class="line">{row}</div>'
-                        f"</summary>{graph}</details>"
+                        f"</summary>{graph}{bt_block}</details>"
                     )
                 else:
-                    item = f'<div class="line plain">{row}</div>'
+                    item = f'<div class="line plain">{row}</div>{bt_block}'
                 lines.append(f'<div class="specrow">{prio}{item}</div>')
             inner.append(f'<div class="sub">Specs</div>{"".join(lines)}')
         if r["tasks"] and r["tasks"]["total"]:
