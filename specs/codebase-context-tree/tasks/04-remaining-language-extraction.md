@@ -3,8 +3,8 @@
 Status: pending
 Depends on: 03
 Priority: P1
-Budget: 40 turns
-Spec: ../SPEC.md (requirements R1 [kotlin, ocaml, haskell, bash]; contracts C1, C2, C8)
+Budget: 50 turns
+Spec: ../SPEC.md (requirements R1 [kotlin, ocaml, haskell, bash], R9, R10 partial; contracts C1, C2, C8)
 Touch: context-tree/Cargo.toml, context-tree/src/lang/mod.rs, context-tree/src/lang/{kotlin,ocaml,haskell,bash}.rs, context-tree/tests/fixtures/languages/{kotlin,ocaml,haskell,bash}/**, context-tree/tests/*.rs
 
 ## Goal
@@ -15,6 +15,12 @@ Haskell (module as C1 module, Haddock per C8), and Bash (file-path
 fallback per C1, leading-comment per C8, same as C/Zig). With this task
 complete, all 12 languages required by R1 have extractors, and the
 mechanical language-coverage acceptance criterion becomes fully checkable.
+Per task 01's `Reference`/`Import`/`Scope` fact types, each extractor also
+produces reference occurrences and module-level import edges (R9: Kotlin
+`import`, OCaml `open`/module access, Haskell `import`, Bash `source`);
+extract `Scope` facts for whichever of the four ship a tree-sitter locals
+query (check each grammar's own query files), falling back to plain name
+matching per R10 for any that don't.
 
 ## Touch
 
@@ -29,14 +35,20 @@ not touch files owned by tasks 01-03.
 2. RED: failing extraction test per language before implementing.
 3. GREEN: implement each extractor — C1 path per language, C8 docstring
    convention per language, spans, parent containment, C2 hash + token
-   set, parse-failed marking.
+   set, parse-failed marking, plus `Reference` and `Import` fact
+   extraction (R9) and, where the grammar ships a locals query, `Scope`
+   fact extraction (R10).
 4. Fixtures: `kotlin/`, `ocaml/`, `haskell/`, `bash/` each contain ≥1
    source file with a documented symbol whose docstring (native
    convention for kotlin/ocaml/haskell; leading-comment for bash) embeds a
-   per-fixture sentinel string.
+   per-fixture sentinel string, plus at least one cross-symbol reference
+   and one import/`open`/`source` edge each.
 5. Emit `covered: kotlin`, `covered: ocaml`, `covered: haskell`, `covered:
 bash` lines on success.
-6. Verify the full language-coverage fixture layout: `context-tree/tests/
+6. Tests per language: reference-extraction (a known reference site
+   produces a `Reference` fact) and import-extraction (a known
+   import/`open`/`source` produces an `Import` fact).
+7. Verify the full language-coverage fixture layout: `context-tree/tests/
 fixtures/languages/` now contains exactly the 12 directories named
    `python, typescript, go, rust, java, c, cpp, zig, kotlin, ocaml,
 haskell, bash`, each holding ≥1 source file, and `typescript/` holds a
@@ -47,10 +59,14 @@ haskell, bash`, each holding ≥1 source file, and `typescript/` holds a
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test kotlin` → passes
-- [ ] `cd context-tree && cargo test ocaml` → passes
-- [ ] `cd context-tree && cargo test haskell` → passes
-- [ ] `cd context-tree && cargo test bash` → passes
+- [ ] `cd context-tree && cargo test kotlin` → passes, incl.
+      reference/import extraction
+- [ ] `cd context-tree && cargo test ocaml` → passes, incl.
+      reference/import extraction
+- [ ] `cd context-tree && cargo test haskell` → passes, incl.
+      reference/import extraction
+- [ ] `cd context-tree && cargo test bash` → passes, incl.
+      reference/import extraction
 - [ ] `ls context-tree/tests/fixtures/languages/ | sort` → exactly
       `bash c cpp go haskell java kotlin ocaml python rust typescript zig`
 - [ ] `ls context-tree/tests/fixtures/languages/typescript/` → contains at
