@@ -39,7 +39,9 @@ fn java_c1_paths_are_unique_and_resolve_by_suffix() {
 fn java_module_is_the_package_not_the_file_path() {
     let r = extract_java("weird/path/Other.java", &std::fs::read(FIXTURE).unwrap());
     assert!(
-        r.symbols.iter().all(|s| s.qpath.starts_with("com.example.")),
+        r.symbols
+            .iter()
+            .all(|s| s.qpath.starts_with("com.example.")),
         "module must be package `com.example`: {:?}",
         r.symbols.iter().map(|s| &s.qpath).collect::<Vec<_>>()
     );
@@ -52,8 +54,13 @@ fn java_c2_hash_stable_under_pure_rename_changes_on_body_edit() {
     let body_edit = b"class Foo {\n    int m() {\n        return 2;\n    }\n}\n";
     let h_orig = extract_java("A.java", orig).symbols[0].body_hash.clone();
     let h_renamed = extract_java("A.java", renamed).symbols[0].body_hash.clone();
-    let h_edit = extract_java("A.java", body_edit).symbols[0].body_hash.clone();
-    assert_eq!(h_orig, h_renamed, "C2: a pure rename must not change the hash");
+    let h_edit = extract_java("A.java", body_edit).symbols[0]
+        .body_hash
+        .clone();
+    assert_eq!(
+        h_orig, h_renamed,
+        "C2: a pure rename must not change the hash"
+    );
     assert_ne!(h_orig, h_edit, "C2: a body edit must change the hash");
 }
 
@@ -98,7 +105,10 @@ fn java_import_edges_extracted() {
 fn java_parse_failed_file_yields_best_effort_sibling_facts() {
     let src = b"class M {\n    int goodOne() {\n        return 1;\n    }\n    int middle() {\n        return = = ;\n    }\n    int goodTwo() {\n        return 3;\n    }\n}\n";
     let r = extract_java("M.java", src);
-    assert!(r.parse_failed, "a file with a syntax error must be parse-failed");
+    assert!(
+        r.parse_failed,
+        "a file with a syntax error must be parse-failed"
+    );
     let names: HashSet<&str> = r.symbols.iter().map(|s| s.name.as_str()).collect();
     assert!(names.contains("goodOne"), "sibling before error: {names:?}");
     assert!(names.contains("goodTwo"), "sibling after error: {names:?}");
