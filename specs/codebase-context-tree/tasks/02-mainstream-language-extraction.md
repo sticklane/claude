@@ -1,6 +1,6 @@
 # Task 02: TypeScript/JavaScript/TSX, Go, Rust, Java extraction
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 50 turns
@@ -72,15 +72,32 @@ java` lines from the respective test modules on success (same pattern
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test typescript` → passes (covers `.ts`,
+- [x] `cd context-tree && cargo test typescript` → passes (covers `.ts`,
       `.tsx`, `.js` fixtures, reference/import extraction, and the
       locals-query `Scope` fact for the shadowing fixture)
-- [ ] `cd context-tree && cargo test go` → passes (incl. reference/import
-      extraction)
-- [ ] `cd context-tree && cargo test rust` → passes (incl. reference/import
-      extraction)
-- [ ] `cd context-tree && cargo test java` → passes (incl. reference/import
-      extraction)
-- [ ] `cd context-tree && cargo test 2>&1 | grep -Fx "covered: typescript"`
+      — verifier: 9/9 passed (evidence/02-mainstream-language-extraction.md)
+- [x] `cd context-tree && cargo test go` → passes (incl. reference/import
+      extraction) — verifier: 8/8 passed
+- [x] `cd context-tree && cargo test rust` → passes (incl. reference/import
+      extraction) — verifier: 7/7 passed
+- [x] `cd context-tree && cargo test java` → passes (incl. reference/import
+      extraction) — verifier: 8/8 passed
+- [x] `cd context-tree && cargo test 2>&1 | grep -Fx "covered: typescript"`
       → line present (same for `go`, `rust`, `java`)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      — verifier: all four `covered:` lines present
+- [x] `bash context-tree/scripts/check.sh` → exits 0
+      — verifier: exit 0 (fmt-check, clippy -D warnings, tests)
+
+## Decisions
+
+- TS/TSX/JS locals query: shipped TS `locals.scm` is parameter-only, so an
+  authored JS-family locals query (scopes + `variable_declarator`) is used
+  for all three grammars so the shadowing `Scope` fact works. Reversible:
+  swap to the grammar's shipped query per-language if preferred.
+- Rust C1 module = file-path-derived module path + nested `mod`/`impl`/trait
+  containers (opaque-string C1 identity; spec pins no exact derivation).
+  Reversible: refine to a crate-relative module path later.
+- Generic AST helpers (`span_of`/`location_of`/`text`/`each_node`) duplicated
+  per lang file to stay within the task `Touch` (no shared `common.rs`, no
+  editing `python.rs`). Reversible: extract a `src/lang/common.rs` in a task
+  whose Touch includes it.
