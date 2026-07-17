@@ -169,9 +169,18 @@ fn collect_defs(root: Node, module: &str, source: &[u8], out: &mut Vec<Symbol>) 
             }
             "variable_declaration" => {
                 if let Some(name) = first_ident_child(child) {
-                    // `const` binding → Constant, `var` binding → Variable.
-                    let head = text(child, source);
-                    let kind = if head.split('=').next().unwrap_or("").contains("const") {
+                    // Classify off the leading mutability keyword (`const`/`var`),
+                    // not a substring scan — a `const` inside the type (e.g.
+                    // `var b: []const u8`) must not flip a `var` to Constant.
+                    let is_const = text(child, source)
+                        .split_whitespace()
+                        .find_map(|t| match t {
+                            "const" => Some(true),
+                            "var" => Some(false),
+                            _ => None,
+                        })
+                        .unwrap_or(false);
+                    let kind = if is_const {
                         SymbolKind::Constant
                     } else {
                         SymbolKind::Variable

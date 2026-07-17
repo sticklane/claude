@@ -1,5 +1,5 @@
 use context_tree::extract::{self, ExtractResult};
-use context_tree::facts::RefKind;
+use context_tree::facts::{RefKind, SymbolKind};
 use context_tree::path;
 use std::collections::HashSet;
 use std::io::Write;
@@ -75,6 +75,24 @@ fn zig_c8_docstring_carries_fixture_sentinel() {
         value.docstring.contains(SENTINEL),
         "leading comment should embed the sentinel: {:?}",
         value.docstring
+    );
+}
+
+#[test]
+fn zig_var_with_const_in_its_type_is_a_variable_not_a_constant() {
+    // The mutability keyword is `var`; the `const` inside the slice type must
+    // not flip the kind to Constant.
+    let src = b"var buf: []const u8 = undefined;\n";
+    let r = extract_zig("m.zig", src);
+    let buf = r
+        .symbols
+        .iter()
+        .find(|s| s.name == "buf")
+        .expect("buf symbol");
+    assert_eq!(
+        buf.kind,
+        SymbolKind::Variable,
+        "a `var` binding is a Variable even when its type text contains `const`"
     );
 }
 
