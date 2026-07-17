@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Prints the installed version of a Claude Code plugin (default:
+# agentic@agentic-toolkit) by reading `claude plugin list --json` — the CLI's
+# stable output contract. The human-readable `claude plugin list` text moved
+# the version onto its own "Version:" line at some point, which silently
+# broke the old same-line grep parse shared by hooks/plugin-staleness and
+# bin/refresh-plugins; this helper is the single shared read they (and
+# hooks/plugin-autorefresh) now use instead.
+#
+# Output: the version on stdout, exit 0. Undeterminable (no CLI, bad JSON,
+# plugin not installed, no version field): empty stdout, exit 1.
+#
+# Usage: bin/plugin-installed-version [plugin@marketplace]
+set -u
+
+plugin_id="${1:-agentic@agentic-toolkit}"
+
+command -v claude >/dev/null 2>&1 || exit 1
+
+claude plugin list --json 2>/dev/null | python3 -c '
+import json, sys
+
+target = sys.argv[1]
+try:
+    plugins = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+if not isinstance(plugins, list):
+    sys.exit(1)
+for p in plugins:
+    if isinstance(p, dict) and p.get("id") == target and p.get("version"):
+        print(p["version"])
+        sys.exit(0)
+sys.exit(1)
+' "$plugin_id"
