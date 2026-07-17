@@ -575,35 +575,46 @@ def _running_pid_for(sid: str):
 _TASK_NUM_RE = re.compile(r"^(\d+)")
 
 
+def _dag_task(t: dict) -> dict | None:
+    """Adapt one workboard task dict ({file, abs, title, status, deps} shape)
+    into viz.dag()'s {num, deps, status, title} schema, or None when the file's
+    name lacks the leading NN- prefix dag() keys on. `num` is that prefix; a dep
+    is kept only when it parses as a bare number — workboard's richer path/glob
+    dep forms aren't resolved here, matching dag()'s own behavior of dropping an
+    edge it can't place."""
+    m = _TASK_NUM_RE.match(Path(t["file"]).name)
+    if not m:
+        return None
+    deps = []
+    for raw in t.get("deps") or []:
+        dm = re.search(r"\d+", raw)
+        if dm:
+            deps.append(int(dm.group(0)))
+    entry = {
+        "num": int(m.group(1)),
+        "deps": deps,
+        "status": t["status"],
+        "title": t["title"],
+    }
+    # Blocker kind for viz.dag()'s badge: blocked/failed tasks are
+    # human-bounded (no unblock step, or an ask-typed one) unless they
+    # record an agent-runnable Unblock: run/agent recheck.
+    if viz.canonical_status(t["status"]) in ("blocked", "failed"):
+        ub = (t.get("unblock") or {}).get("type")
+        entry["blocker"] = "agent" if ub in ("run", "agent") else "human"
+    return entry
+
+
 def _dag_tasks(spec_tasks: list[dict]) -> list[dict]:
     """spec['tasks'] (workboard's {file, abs, title, status, deps} shape) into
-    viz.dag()'s {num, deps, status, title} schema. `num` is the task file's
-    leading NN- prefix; a dep is kept only when it parses as a bare number —
-    workboard's richer path/glob dep forms aren't resolved here, matching
-    dag()'s own behavior of dropping an edge it can't place."""
+    viz.dag()'s {num, deps, status, title} schema, dropping tasks with no NN-
+    prefix. Thin wrapper over `_dag_task` (which the single-pass `_adapt_board`
+    also calls per task)."""
     out = []
     for t in spec_tasks:
-        m = _TASK_NUM_RE.match(Path(t["file"]).name)
-        if not m:
-            continue
-        deps = []
-        for raw in t.get("deps") or []:
-            dm = re.search(r"\d+", raw)
-            if dm:
-                deps.append(int(dm.group(0)))
-        entry = {
-            "num": int(m.group(1)),
-            "deps": deps,
-            "status": t["status"],
-            "title": t["title"],
-        }
-        # Blocker kind for viz.dag()'s badge: blocked/failed tasks are
-        # human-bounded (no unblock step, or an ask-typed one) unless they
-        # record an agent-runnable Unblock: run/agent recheck.
-        if viz.canonical_status(t["status"]) in ("blocked", "failed"):
-            ub = (t.get("unblock") or {}).get("type")
-            entry["blocker"] = "agent" if ub in ("run", "agent") else "human"
-        out.append(entry)
+        entry = _dag_task(t)
+        if entry is not None:
+            out.append(entry)
     return out
 
 
@@ -669,6 +680,27 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
                     }
                 )
             spec_path = sp.get("path", "")
+            # Single pass over the spec's tasks builds both the viz.dag() list
+            # and blocked_tasks (blocked/waiting items' unblock steps, each with
+            # an absolute path) so build_action_registry can generate the
+            # unblock/recheck dispatch kinds (unblock-next-steps R7). The two
+            # filters are independent: a task joins the dag list only with an
+            # NN- prefix (via _dag_task), and blocked_tasks only with a truthy
+            # unblock — matching the prior two-loop behavior.
+            dag_tasks: list[dict] = []
+            blocked_tasks: list[dict] = []
+            for t in sp.get("tasks", []):
+                entry = _dag_task(t)
+                if entry is not None:
+                    dag_tasks.append(entry)
+                if t.get("unblock"):
+                    blocked_tasks.append(
+                        {
+                            "path": t.get("abs") or "",
+                            "title": t.get("title") or "",
+                            "unblock": t.get("unblock"),
+                        }
+                    )
             specs.append(
                 {
                     "id": _entity_id("spec", _spec_dir(r["path"], spec_path))
@@ -681,21 +713,10 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
                     "path": str(Path(r["path"]) / spec_path) if spec_path else "",
                     "done": done,
                     "total": total,
-                    "tasks": _dag_tasks(sp.get("tasks", [])),
-                    # Forward the scanner's waiting-spec header unblock and any
-                    # blocked task files' unblock steps (each task carries an
-                    # absolute path) so build_action_registry can generate the
-                    # unblock/recheck dispatch kinds (unblock-next-steps R7).
+                    "tasks": dag_tasks,
+                    # Forward the scanner's waiting-spec header unblock.
                     "unblock": sp.get("unblock"),
-                    "blocked_tasks": [
-                        {
-                            "path": t.get("abs") or "",
-                            "title": t.get("title") or "",
-                            "unblock": t.get("unblock"),
-                        }
-                        for t in sp.get("tasks", [])
-                        if t.get("unblock")
-                    ],
+                    "blocked_tasks": blocked_tasks,
                     "mtime": sp["last_touched"],
                 }
             )
