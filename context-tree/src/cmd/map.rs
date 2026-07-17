@@ -1,7 +1,7 @@
 //! `ctx map` — a ranked project overview ordered by reference-graph importance
 //! (R8), truncated to a token budget (C7), with `--doc` and C10 markers.
 
-use crate::cmd::{first_doc_line, format_note_marker, load_index, tokens_for_bytes};
+use crate::cmd::{first_doc_line, format_note_marker, load_index, note_value, tokens_for_bytes};
 use crate::index::{IndexStore, SymbolRow};
 use serde_json::json;
 use std::cmp::Reverse;
@@ -84,7 +84,7 @@ pub fn run(args: Args) -> ExitCode {
                     "refs": refs,
                     "signature": sym.signature,
                     "docstring": if args.doc { sym.docstring.clone() } else { String::new() },
-                    "notes": crate::cmd::tree::note_value(&store, sym.id),
+                    "notes": note_value(&store, sym.id),
                 })
             })
             .collect();

@@ -66,6 +66,15 @@ pub fn first_doc_line(docstring: &str) -> Option<&str> {
     docstring.lines().map(str::trim).find(|l| !l.is_empty())
 }
 
+/// A symbol's C10 note tuple as JSON: `null` until task 09 populates notes,
+/// otherwise `{"count":<n>,"stale":<bool>}`.
+pub fn note_value(store: &IndexStore, symbol_id: i64) -> serde_json::Value {
+    match store.note_marker(symbol_id) {
+        Some((count, stale)) => serde_json::json!({ "count": count, "stale": stale }),
+        None => serde_json::Value::Null,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

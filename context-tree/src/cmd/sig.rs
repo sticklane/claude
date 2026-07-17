@@ -2,7 +2,9 @@
 //! suffix matching (R7). Exit 0 on a unique match, 1 on no match, 3 on an
 //! ambiguous match (candidate list printed).
 
-use crate::cmd::{EXIT_AMBIGUOUS, EXIT_NO_MATCH, first_doc_line, format_note_marker, load_index};
+use crate::cmd::{
+    EXIT_AMBIGUOUS, EXIT_NO_MATCH, first_doc_line, format_note_marker, load_index, note_value,
+};
 use crate::index::SymbolRow;
 use crate::path::resolve_suffix;
 use serde_json::json;
@@ -73,7 +75,7 @@ pub fn run(args: Args) -> ExitCode {
                         "signature": sym.signature,
                         "docstring": sym.docstring,
                         "file": sym.path,
-                        "notes": crate::cmd::tree::note_value(&store, sym.id),
+                        "notes": note_value(&store, sym.id),
                     })
                 );
             } else {
