@@ -47,7 +47,12 @@ R1. A new `GET /workboard-kanban` route renders a kanban board via a new
 dispatch table as the existing `/workboard` route
 (agent-console.py:3287-3312). It reuses the same board-data scan
 `render_workboard()` calls today — no second scan invocation, no new
-scanner entry point.
+scanner entry point. Because that data passes through `_dag_tasks()`
+(agent-console.py:578-603), which silently drops any task file whose name
+doesn't start with a numeric `NN-` prefix, the board inherits the same
+filter: a non-`NN-`-prefixed task file will not appear as a card. This
+is existing behavior of the reused data, not a gap introduced by this
+spec, and is not worth a workaround (see Out of scope).
 
 R2. Task statuses are canonicalized into columns as follows:
 
@@ -141,6 +146,9 @@ in `PAGE_JS` (agent-console.py:1849) — no new polling logic.
 - Showing a Blocked card's `unblock` step text — that data lives on the
   spec-level `blocked_tasks` list, not the per-task entries this view
   flattens (R4), and joining the two is deferred to a future spec.
+- Working around `_dag_tasks`'s existing `NN-`-prefix filter (R1) so
+  non-`NN-`-prefixed task files show up as cards — this view inherits
+  whatever `render_workboard()`'s data already includes or excludes.
 
 ## Acceptance criteria
 
@@ -152,10 +160,13 @@ both grep-count 0 today, so the criteria below are not vacuous.
       (route path literal; 0 today, verified 2026-07-16)
 - [ ] `grep -c "render_workboard_kanban" agent-console/agent-console.py` → ≥1
       (new render function defined; 0 today, verified 2026-07-16)
-- [ ] `python3 -c "from agent_console import _kanban_column as k; assert k('open')=='Pending'; assert k('claimed')=='In Progress'; assert k('needs_verification')=='Needs Verification'; assert k('waiting')=='Blocked'; assert k('done')=='Done'; assert k('deferred')=='Deferred'; assert k('skipped')=='Skipped'; print('ok')"`
-      (adjust the import path to however `agent-console.py` is importable in
-      this repo) → prints `ok` (covers R2's status→column mapping directly,
-      independent of HTML rendering)
+- [ ] `agent-console.py` has a hyphenated filename, so it's not `import`-able
+      directly — `agent-console/tests/test_parsers.py:14` and its siblings
+      already load it via `importlib.util.spec_from_file_location`; the
+      check for R2 follows the same pattern:
+      `python3 -c "import importlib.util as u; s=u.spec_from_file_location('ac','agent-console/agent-console.py'); m=u.module_from_spec(s); s.loader.exec_module(m); k=m._kanban_column; assert k('open')=='Pending'; assert k('claimed')=='In Progress'; assert k('needs_verification')=='Needs Verification'; assert k('waiting')=='Blocked'; assert k('done')=='Done'; assert k('deferred')=='Deferred'; assert k('skipped')=='Skipped'; print('ok')"`
+      → prints `ok` (covers R2's status→column mapping directly, independent
+      of HTML rendering)
 - [ ] With the server running locally (`python3 agent-console/agent-console.py &`
       or via the existing launchd job), `curl -fsS http://127.0.0.1:8899/workboard-kanban -o /tmp/kb.html`
       returns HTTP 200 and contains all seven column headers, anchored to
