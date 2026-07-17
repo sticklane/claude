@@ -1,6 +1,6 @@
 # Task 05: Touch-enforcement confirm-don't-fix, mirror sweep, and version bump
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03, 04
 Priority: P1
 Budget: 20 turns
