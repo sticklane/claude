@@ -1406,6 +1406,7 @@ def attention_items(
                             "repo": r["name"],
                             "what": f"Answer needed: {t['title']}",
                             "why": ub["step"],
+                            "unblock": ub,
                             "age_ts": s["last_touched"],
                         }
                     )
@@ -1417,6 +1418,7 @@ def attention_items(
                             "repo": r["name"],
                             "what": f"Deferred question: {t['title']}",
                             "why": q,
+                            "deferred_questions": [q],
                             "age_ts": s["last_touched"],
                         }
                     )
@@ -1433,6 +1435,7 @@ def attention_items(
                             "repo": r["name"],
                             "what": f"Answer needed: spec {s['slug']}",
                             "why": ub["step"],
+                            "unblock": ub,
                             "age_ts": s["last_touched"],
                         }
                     )
@@ -1444,6 +1447,8 @@ def attention_items(
                             "repo": r["name"],
                             "what": f"Spec {s['slug']}: waiting",
                             "why": "no unblock step recorded — add an Unblock: line",
+                            "unblock": None,
+                            "unblock_missing": True,
                             "age_ts": s["last_touched"],
                         }
                     )
@@ -1474,6 +1479,8 @@ def attention_items(
                         "repo": r["name"],
                         "what": f"Spec {s['slug']}: task(s) blocked",
                         "why": why,
+                        "unblock": None,
+                        "unblock_missing": True,
                         "age_ts": s["last_touched"],
                     }
                 )
