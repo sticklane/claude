@@ -42,9 +42,16 @@ fn typescript_c2_hash_stable_under_pure_rename_changes_on_body_edit() {
     let renamed = b"function bar(a) {\n  return a + 1;\n}\n";
     let body_edit = b"function foo(a) {\n  return a + 2;\n}\n";
     let h_orig = extract_ext("ts", "m.ts", orig).symbols[0].body_hash.clone();
-    let h_renamed = extract_ext("ts", "m.ts", renamed).symbols[0].body_hash.clone();
-    let h_edit = extract_ext("ts", "m.ts", body_edit).symbols[0].body_hash.clone();
-    assert_eq!(h_orig, h_renamed, "C2: a pure rename must not change the hash");
+    let h_renamed = extract_ext("ts", "m.ts", renamed).symbols[0]
+        .body_hash
+        .clone();
+    let h_edit = extract_ext("ts", "m.ts", body_edit).symbols[0]
+        .body_hash
+        .clone();
+    assert_eq!(
+        h_orig, h_renamed,
+        "C2: a pure rename must not change the hash"
+    );
     assert_ne!(h_orig, h_edit, "C2: a body edit must change the hash");
 }
 
@@ -145,7 +152,9 @@ fn typescript_tsx_and_js_dispatch_by_extension() {
         ".js references extracted"
     );
     assert!(
-        r_js.imports.iter().any(|i| i.name.as_deref() == Some("value")),
+        r_js.imports
+            .iter()
+            .any(|i| i.name.as_deref() == Some("value")),
         ".js import edges extracted"
     );
 }
@@ -154,9 +163,15 @@ fn typescript_tsx_and_js_dispatch_by_extension() {
 fn typescript_parse_failed_file_yields_best_effort_sibling_facts() {
     let src = b"function good_one() {\n  return 1;\n}\n\nfunction middle() {\n  let x = = =;\n}\n\nfunction good_two() {\n  return 3;\n}\n";
     let r = extract_ext("ts", "m.ts", src);
-    assert!(r.parse_failed, "a file with a syntax error must be parse-failed");
+    assert!(
+        r.parse_failed,
+        "a file with a syntax error must be parse-failed"
+    );
     let names: HashSet<&str> = r.symbols.iter().map(|s| s.name.as_str()).collect();
-    assert!(names.contains("good_one"), "sibling before error: {names:?}");
+    assert!(
+        names.contains("good_one"),
+        "sibling before error: {names:?}"
+    );
     assert!(names.contains("good_two"), "sibling after error: {names:?}");
 }
 
