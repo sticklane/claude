@@ -14,4 +14,10 @@ pub struct Cli {
 pub enum Command {
     /// Scaffold `.context/` at the project (or VCS) root; idempotent.
     Init,
+    /// Incrementally update the index for the current project (R2).
+    Sync {
+        /// Print machine-readable `scanned=.. hashed=.. parsed=..` counts.
+        #[arg(long)]
+        stats: bool,
+    },
 }

@@ -6,9 +6,12 @@ pub mod cli;
 pub mod extract;
 pub mod facts;
 pub mod hash;
+pub mod index;
 pub mod lang;
 pub mod path;
 pub mod project;
+pub mod sync;
+pub mod vcs;
 
 use clap::Parser;
 use std::process::ExitCode;
@@ -32,6 +35,36 @@ pub fn run() -> ExitCode {
                 }
                 Err(e) => {
                     eprintln!("ctx init failed: {e}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
+        Some(cli::Command::Sync { stats }) => {
+            let cwd = match std::env::current_dir() {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!("ctx: cannot read current directory: {e}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let root = project::find_root(&cwd).unwrap_or(cwd);
+            match sync::run_sync(&root, sync::journal::Trigger::Cli) {
+                Ok(s) => {
+                    if stats {
+                        println!(
+                            "scanned={} hashed={} parsed={}",
+                            s.scanned, s.hashed, s.parsed
+                        );
+                    } else {
+                        println!(
+                            "sync: {} scanned, {} hashed, {} parsed",
+                            s.scanned, s.hashed, s.parsed
+                        );
+                    }
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("ctx sync failed: {e}");
                     ExitCode::FAILURE
                 }
             }
