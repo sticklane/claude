@@ -20,4 +20,53 @@ pub enum Command {
         #[arg(long)]
         stats: bool,
     },
+    /// Containment outline for a path subtree (R6).
+    Tree {
+        /// Path (file or directory prefix) to outline.
+        path: String,
+        /// Cap the containment depth shown (top-level is depth 1).
+        #[arg(long)]
+        depth: Option<usize>,
+        /// Cap the number of symbols shown before a truncation line.
+        #[arg(long, default_value_t = 200)]
+        limit: usize,
+        /// Append each symbol's first docstring line.
+        #[arg(long)]
+        doc: bool,
+        /// Emit JSON instead of plain text.
+        #[arg(long)]
+        json: bool,
+        /// Skip the R3 staleness sweep and read the current snapshot.
+        #[arg(long = "no-sync")]
+        no_sync: bool,
+    },
+    /// Signature (and docstring) for a symbol, resolved by C3 suffix (R7).
+    Sig {
+        /// Symbol name or qualified-path suffix.
+        symbol: String,
+        /// Print the full docstring rather than only its first line.
+        #[arg(long)]
+        doc: bool,
+        /// Emit JSON instead of plain text.
+        #[arg(long)]
+        json: bool,
+        /// Skip the R3 staleness sweep and read the current snapshot.
+        #[arg(long = "no-sync")]
+        no_sync: bool,
+    },
+    /// Ranked project overview by reference-graph importance (R8).
+    Map {
+        /// Token budget for the output (C7: ceil(bytes/4)).
+        #[arg(long, default_value_t = 1000)]
+        tokens: usize,
+        /// Append each symbol's first docstring line, counted within the budget.
+        #[arg(long)]
+        doc: bool,
+        /// Emit JSON instead of plain text.
+        #[arg(long)]
+        json: bool,
+        /// Skip the R3 staleness sweep and read the current snapshot.
+        #[arg(long = "no-sync")]
+        no_sync: bool,
+    },
 }
