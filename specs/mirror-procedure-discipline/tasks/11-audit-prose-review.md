@@ -61,7 +61,7 @@ it, never edit the source), or the rule/gate files from task 01.
 
 ## Acceptance
 
-- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (evidence: exit=0, six new prose-review manifest lines all resolve)
-- [x] `grep -c "checked: prose-review" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `prose-review` — evidence either way (evidence: grep → 1; plus six `prose-review/reference.md` pipe lines added)
-- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines (evidence: no FAIL lines)
-- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (evidence: "OK — all ultra mentions gated in 4 files", exit=0)
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (evidence: exit=0, six new prose-review manifest lines all resolve) — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c "checked: prose-review" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `prose-review` — evidence either way (evidence: grep → 1; plus six `prose-review/reference.md` pipe lines added) — verifier PASS (2026-07-16 sweep)
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines (evidence: no FAIL lines) — verifier PASS (2026-07-16 sweep)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (evidence: "OK — all ultra mentions gated in 4 files", exit=0) — verifier PASS (2026-07-16 sweep)

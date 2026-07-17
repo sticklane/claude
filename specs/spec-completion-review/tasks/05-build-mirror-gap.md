@@ -25,14 +25,14 @@ step so the two runtimes read consistently.
 
 - [x] `grep -qi 'spec-completion review' antigravity/.agents/workflows/build.md`
   succeeds (currently 0 hits — the mirror gap this task closes).
-  Evidence: grep exits 0 (spec-completion review sentence added to close-out).
+  Evidence: grep exits 0 (spec-completion review sentence added to close-out). — verifier PASS (2026-07-16 sweep)
 - [x] `grep -qi 'spec-completion review' codex/.agents/skills/build/SKILL.md`
   succeeds (currently 0 hits).
-  Evidence: grep exits 0 (spec-completion review sentence added to close-out).
+  Evidence: grep exits 0 (spec-completion review sentence added to close-out). — verifier PASS (2026-07-16 sweep)
 - [x] `bash evals/lint-ultra-gate.sh` exits 0 (ultra-mention gate stays green;
   the source `.claude/skills/build/SKILL.md` is not edited here).
-  Evidence: `lint-ultra-gate: OK — all ultra mentions gated in 4 files`, exit 0.
+  Evidence: `lint-ultra-gate: OK — all ultra mentions gated in 4 files`, exit 0. — verifier PASS (2026-07-16 sweep)
 - [x] `.claude-plugin/plugin.json` `version` is bumped from its pre-commit
   value within this task's own commit (`git show HEAD -- .claude-plugin/plugin.json`
   shows a `+` on the version line).
-  Evidence: version 0.8.48 → 0.8.49 in this task's commit.
+  Evidence: version 0.8.48 → 0.8.49 in this task's commit. — verifier PASS (2026-07-16 sweep)

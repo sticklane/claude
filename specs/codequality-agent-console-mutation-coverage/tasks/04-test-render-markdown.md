@@ -50,8 +50,8 @@ this spec touches.
 
 ## Acceptance
 
-- [x] `grep -rln "render_markdown" agent-console/tests/` is non-empty — returns `agent-console/tests/test_render_markdown.py`
-- [x] The new heading-level test fails when heading-level parsing is manually stubbed to always emit `<h1>` (demonstrate this red-first, then restore and confirm green — record the evidence in your final message) — RED: stubbing `level = len(heading.group(1))` → `level = 1` produced `FAILED (failures=2)`; GREEN: restoring the real computation passed 6/6 new tests, `git diff main -- agent-console/agent-console.py` empty (no residue)
-- [x] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_render_markdown.py` → at least 1 — returns 3
-- [x] `bash agent-console/scripts/check.sh` → exit 0 — `check: PASS`, 191 tests OK
-- [x] New tests assert on parsed structure (heading levels, list items, code fence content) — not full-string HTML comparison — confirmed, assertions target `<hN>`/`<li>`/`<pre><code>` regions
+- [x] `grep -rln "render_markdown" agent-console/tests/` is non-empty — returns `agent-console/tests/test_render_markdown.py` — verifier PASS (2026-07-16 sweep)
+- [x] The new heading-level test fails when heading-level parsing is manually stubbed to always emit `<h1>` (demonstrate this red-first, then restore and confirm green — record the evidence in your final message) — RED: stubbing `level = len(heading.group(1))` → `level = 1` produced `FAILED (failures=2)`; GREEN: restoring the real computation passed 6/6 new tests, `git diff main -- agent-console/agent-console.py` empty (no residue) — verifier PASS (2026-07-16 sweep)
+- [x] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_render_markdown.py` → at least 1 — returns 3 — verifier PASS (2026-07-16 sweep)
+- [x] `bash agent-console/scripts/check.sh` → exit 0 — `check: PASS`, 191 tests OK — verifier PASS (2026-07-16 sweep)
+- [x] New tests assert on parsed structure (heading levels, list items, code fence content) — not full-string HTML comparison — confirmed, assertions target `<hN>`/`<li>`/`<pre><code>` regions — verifier PASS (2026-07-16 sweep)

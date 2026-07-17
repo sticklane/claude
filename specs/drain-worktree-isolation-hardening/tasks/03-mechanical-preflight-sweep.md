@@ -77,9 +77,9 @@ orchestrator-isolation text (task 01) or R2's owner-lease re-read text
 ## Acceptance
 
 - [x] `grep -c "mechanical preflight sweep" .claude/skills/drain/SKILL.md` → ≥ 1
-      — evidence: returns 1 (SKILL.md gen-1 advisories paragraph).
+      — evidence: returns 1 (SKILL.md gen-1 advisories paragraph). — verifier PASS (2026-07-16 sweep)
 - [x] `grep -c "skip that worktree rather than prune" .claude/skills/drain/reference.md` → ≥ 1 (confirmed absent — baseline 0 — at task start; this is the fail-safe skip rule's specific anchor, distinct from the pre-existing generic "fail-safe/skip" hits already present in this file)
-      — evidence: returns 1 (reference.md preflight-sweep pass (b) fail-safe).
+      — evidence: returns 1 (reference.md preflight-sweep pass (b) fail-safe). — verifier PASS (2026-07-16 sweep)
 - [x] `grep -n "live session" .claude/skills/drain/reference.md` shows YOUR
       new mechanical definition (a session reported by the harness's
       live-session listing whose `cwd` resolves into the worktree's path),
@@ -88,10 +88,10 @@ orchestrator-isolation text (task 01) or R2's owner-lease re-read text
       — evidence: new match at reference.md:109 ("A **live session** is
       defined mechanically … a session reported by the harness's
       live-session listing (e.g. `claude agents --json`) whose `cwd`
-      resolves into that worktree's path"), distinct from line 71.
+      resolves into that worktree's path"), distinct from line 71. — verifier PASS (2026-07-16 sweep)
 - [x] Net new lines added to `.claude/skills/drain/SKILL.md` by this task's
       diff ≤ 6 (`git diff HEAD~1 -- .claude/skills/drain/SKILL.md`)
       — evidence: `git diff a1207c2 --numstat -- .claude/skills/drain/SKILL.md`
-      → 6 additions, 1 deletion (≤ 6).
+      → 6 additions, 1 deletion (≤ 6). — verifier PASS (2026-07-16 sweep)
 - [x] `bash evals/lint-ultra-gate.sh` → exit 0
-      — evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0.
+      — evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0. — verifier PASS (2026-07-16 sweep)

@@ -40,6 +40,6 @@ already be merged before this task starts (see Depends on).
       it (never a decrease). `HEAD~1` is the commit immediately before
       your own version-bump commit — always resolvable right after you
       make it, unlike a pre-stated literal pin.
-      Evidence: HEAD~1 = "version": "0.9.14", current = "version": "0.9.15" (one-patch increment).
+      Evidence: HEAD~1 = "version": "0.9.14", current = "version": "0.9.15" (one-patch increment). — verifier PASS (2026-07-16 sweep)
 - [x] `bash evals/lint-ultra-gate.sh` exits 0
-      Evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0.
+      Evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0. — verifier PASS (2026-07-16 sweep)

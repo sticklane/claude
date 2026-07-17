@@ -56,7 +56,7 @@ rule/gate files from task 01.
 
 ## Acceptance
 
-- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 — evidence: ran, coverage exit=0 (2 seeded workboard phrase lines both present in mirror)
-- [x] `grep -c "checked: workboard" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `workboard` — evidence either way — evidence: grep returns 1 (plus 2 seeded `<source>|<mirror>|<phrase>` workboard lines)
-- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines — evidence: ran full suite, no FAIL lines
-- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit=0
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 — evidence: ran, coverage exit=0 (2 seeded workboard phrase lines both present in mirror) — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c "checked: workboard" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `workboard` — evidence either way — evidence: grep returns 1 (plus 2 seeded `<source>|<mirror>|<phrase>` workboard lines) — verifier PASS (2026-07-16 sweep)
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines — evidence: ran full suite, no FAIL lines — verifier PASS (2026-07-16 sweep)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit=0 — verifier PASS (2026-07-16 sweep)

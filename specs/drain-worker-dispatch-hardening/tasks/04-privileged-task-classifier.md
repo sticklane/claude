@@ -54,9 +54,9 @@ codex edit is needed once the antigravity file is updated.
 
 ## Acceptance
 
-- [x] `grep -c "never drain-completable unattended" .claude/skills/breakdown/SKILL.md` → at least 1
-- [x] `grep -c "never drain-completable unattended" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → 0 (confirms this task, not a sibling, owns the phrase — the spec's acceptance criterion sums across all three files, so this count only needs to be nonzero somewhere; this check just documents which file carries it)
-- [x] `grep -c "never drain-completable unattended" antigravity/.agents/skills/breakdown/SKILL.md` → at least 1
+- [x] `grep -c "never drain-completable unattended" .claude/skills/breakdown/SKILL.md` → at least 1 — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c "never drain-completable unattended" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md` → 0 (confirms this task, not a sibling, owns the phrase — the spec's acceptance criterion sums across all three files, so this count only needs to be nonzero somewhere; this check just documents which file carries it) — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c "never drain-completable unattended" antigravity/.agents/skills/breakdown/SKILL.md` → at least 1 — verifier PASS (2026-07-16 sweep)
 
 ## Evidence
 

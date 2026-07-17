@@ -56,6 +56,6 @@ task 04).
 
 ## Acceptance
 
-- [x] `grep -c "re-read.*DRAIN-OWNER\|DRAIN-OWNER.*re-read" .claude/skills/drain/reference.md` — record the value (informational; the spec's authoring-time baseline was 0 for the initial-claim-only phrasing, this criterion is not the pass/fail gate for R2) — evidence: returns `0` (kept "re-read" and "DRAIN-OWNER" off the same line so the initial-claim-only phrasing is unchanged)
-- [x] `grep -n "before every.*status-flip\|before every subsequent.*commit" .claude/skills/drain/reference.md` → ≥ 1 hit, located in the "Owner lease" section — evidence: 2 hits at reference.md:207,211, both inside the "Owner lease" section (## Owner lease at :146, ## Status field semantics follows)
-- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — evidence: `lint-ultra-gate: OK — all ultra mentions gated in 4 files`, exit 0
+- [x] `grep -c "re-read.*DRAIN-OWNER\|DRAIN-OWNER.*re-read" .claude/skills/drain/reference.md` — record the value (informational; the spec's authoring-time baseline was 0 for the initial-claim-only phrasing, this criterion is not the pass/fail gate for R2) — evidence: returns `0` (kept "re-read" and "DRAIN-OWNER" off the same line so the initial-claim-only phrasing is unchanged) — verifier PASS (2026-07-16 sweep)
+- [x] `grep -n "before every.*status-flip\|before every subsequent.*commit" .claude/skills/drain/reference.md` → ≥ 1 hit, located in the "Owner lease" section — evidence: 2 hits at reference.md:207,211, both inside the "Owner lease" section (## Owner lease at :146, ## Status field semantics follows) — verifier PASS (2026-07-16 sweep)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — evidence: `lint-ultra-gate: OK — all ultra mentions gated in 4 files`, exit 0 — verifier PASS (2026-07-16 sweep)
