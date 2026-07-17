@@ -1,5 +1,7 @@
 # Commit-message doctrine: canonical rules, subject-length discipline
 
+Breakdown-ready: true
+
 ## Problem
 
 A cross-repo audit (2026-07-16, ~300 recent commits each in claude/hub/fooszone
