@@ -1,6 +1,6 @@
 # Task 04: Kotlin, OCaml, Haskell, Bash extraction — full 12-language coverage
 
-Status: in-progress
+Status: done
 Depends on: 03
 Priority: P1
 Budget: 50 turns
@@ -59,20 +59,29 @@ haskell, bash`, each holding ≥1 source file, and `typescript/` holds a
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test kotlin` → passes, incl.
+- [x] `cd context-tree && cargo test kotlin` → passes, incl.
       reference/import extraction
-- [ ] `cd context-tree && cargo test ocaml` → passes, incl.
+      (verifier: 9 passed incl. kotlin_reference_extracted_at_known_call_site,
+      kotlin_import_edges_extracted; evidence/04-remaining-language-extraction.md)
+- [x] `cd context-tree && cargo test ocaml` → passes, incl.
       reference/import extraction
-- [ ] `cd context-tree && cargo test haskell` → passes, incl.
+      (verifier: 11 passed incl. reference/import/scope tests; evidence file)
+- [x] `cd context-tree && cargo test haskell` → passes, incl.
       reference/import extraction
-- [ ] `cd context-tree && cargo test bash` → passes, incl.
+      (verifier: 8 passed incl. reference/import tests; evidence file)
+- [x] `cd context-tree && cargo test bash` → passes, incl.
       reference/import extraction
-- [ ] `ls context-tree/tests/fixtures/languages/ | sort` → exactly
+      (verifier: 8 passed incl. reference/import tests; evidence file)
+- [x] `ls context-tree/tests/fixtures/languages/ | sort` → exactly
       `bash c cpp go haskell java kotlin ocaml python rust typescript zig`
-- [ ] `ls context-tree/tests/fixtures/languages/typescript/` → contains at
+      (verifier confirmed exact 12-name set)
+- [x] `ls context-tree/tests/fixtures/languages/typescript/` → contains at
       least one file each ending `.ts`, `.tsx`, `.js`
-- [ ] `cd context-tree && cargo test 2>&1 | grep -c '^covered: '` → 12 (one
+      (verifier: helper.js sample.ts widget.tsx)
+- [x] `cd context-tree && cargo test 2>&1 | grep -c '^covered: '` → 12 (one
       line per language, exact set matches the 12 names above — a
       hardcoded subset or an extra/misnamed line fails this count or the
       per-language `grep -Fx` checks in tasks 01-03)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      (verifier: grep -c → 12)
+- [x] `bash context-tree/scripts/check.sh` → exits 0
+      (verifier: exit 0, fmt+clippy+test all green)
