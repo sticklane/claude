@@ -1,6 +1,6 @@
 # Task 03: Proactive known-safe shell-pattern guidance
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P2
 Budget: 15 turns
@@ -57,6 +57,6 @@ reference.md, not SKILL.md.
 
 ## Acceptance
 
-- [ ] `grep -c "known-safe shell patterns" .claude/skills/drain/reference.md` → at least 1
-- [ ] `grep -c "retry it ONCE" .claude/skills/drain/reference.md` → at least 1 (the phrase wraps across two lines in the source, so anchor on this single-line-safe substring, not the full sentence — confirms the reactive rule survives)
-- [ ] `grep -c "known-safe shell patterns" antigravity/.agents/workflows/drain.md` → at least 1
+- [x] `grep -c "known-safe shell patterns" .claude/skills/drain/reference.md` → at least 1 — returns 2 (canonical statement in Worker prompt + cross-reference in Headless fallback)
+- [x] `grep -c "retry it ONCE" .claude/skills/drain/reference.md` → at least 1 (the phrase wraps across two lines in the source, so anchor on this single-line-safe substring, not the full sentence — confirms the reactive rule survives) — returns 1, reactive rule intact
+- [x] `grep -c "known-safe shell patterns" antigravity/.agents/workflows/drain.md` → at least 1 — returns 1 (added to the unified worker prompt)
