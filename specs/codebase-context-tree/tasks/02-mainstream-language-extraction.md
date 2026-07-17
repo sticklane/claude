@@ -1,6 +1,6 @@
 # Task 02: TypeScript/JavaScript/TSX, Go, Rust, Java extraction
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 50 turns
