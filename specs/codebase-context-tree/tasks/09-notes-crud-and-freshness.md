@@ -1,6 +1,6 @@
 # Task 09: Notes CRUD, derived freshness, C10 marker wiring
 
-Status: pending
+Status: in-progress
 Depends on: 06, 07
 Priority: P1
 Budget: 45 turns
