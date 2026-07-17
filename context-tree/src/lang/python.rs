@@ -273,14 +273,14 @@ impl LanguageExtractor for PythonExtractor {
         let mut imports = Vec::new();
         each_node(root, &mut |n| match n.kind() {
             "call" => {
-                if let Some(func) = n.child_by_field_name("function") {
-                    if let Some((name, location)) = callee(func, source) {
-                        references.push(Reference {
-                            name,
-                            location,
-                            kind: RefKind::Call,
-                        });
-                    }
+                if let Some(func) = n.child_by_field_name("function")
+                    && let Some((name, location)) = callee(func, source)
+                {
+                    references.push(Reference {
+                        name,
+                        location,
+                        kind: RefKind::Call,
+                    });
                 }
             }
             "identifier" => {
