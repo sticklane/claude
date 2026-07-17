@@ -1,6 +1,6 @@
 # Task 05: Sync engine, SQLite index, ignore rules, VCS adapter
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P0
 Budget: 60 turns
@@ -94,24 +94,32 @@ implementations.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test sync_incremental` → passes
+- [x] `cd context-tree && cargo test sync_incremental` → passes
       (parsed==1/hashed==1 on content edit; parsed==0 on mtime-only bump)
-- [ ] `cd context-tree && cargo test sync_deletion` → passes (no-VCS
+      — verifier PASS, 2 tests (evidence/05-sync-and-index-engine.md)
+- [x] `cd context-tree && cargo test sync_deletion` → passes (no-VCS
       fixture: deleting an indexed file purges its facts/symbols from the
       index; note-freshness-on-deletion is covered separately by task 09,
       since the notes subsystem doesn't exist yet at this task)
-- [ ] `cd context-tree && cargo test sync_journal` → passes (C5 fields
+      — verifier PASS: deletion cascades across symbols/refs/imports/scopes+files
+- [x] `cd context-tree && cargo test sync_journal` → passes (C5 fields
       present per record)
-- [ ] `cd context-tree && cargo test sync_references_imports` → passes
+      — verifier PASS: timestamp(UTC …Z)/trigger/scanned/hashed/parsed/pending_reanchors
+- [x] `cd context-tree && cargo test sync_references_imports` → passes
       (R9 storage: `Reference`/`Import` facts from a fixture extractor are
       queryable from the index after sync; a no-op re-sync doesn't
       duplicate rows)
-- [ ] `cd context-tree && cargo test sync_concurrency` → passes (C6: bounded
+      — verifier PASS: replace_facts deletes-then-inserts per file_id
+- [x] `cd context-tree && cargo test sync_concurrency` → passes (C6: bounded
       query time under a held lock, no extra journal record, last-snapshot
       served)
-- [ ] `cd context-tree && cargo test ignore_rules` → passes (R4:
+      — verifier PASS: query_sweep skips run_sync under held lock, <500ms, no new record
+- [x] `cd context-tree && cargo test ignore_rules` → passes (R4:
       `.gitignore` under git, `.ctxignore` in no-VCS baseline,
       `.context/cache/` never indexed)
-- [ ] `cd context-tree && cargo test no_vcs_baseline` → passes (R5: index
+      — verifier PASS, 2 tests (git + baseline + .context exclusion)
+- [x] `cd context-tree && cargo test no_vcs_baseline` → passes (R5: index
       builds/syncs with no `.git` present)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      — verifier PASS: baseline adapter indexes a plain directory
+- [x] `bash context-tree/scripts/check.sh` → exits 0
+      — verifier PASS: fmt + clippy -D warnings + full cargo test all green
