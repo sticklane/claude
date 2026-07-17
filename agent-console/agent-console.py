@@ -1810,6 +1810,25 @@ footer{color:var(--faint);font-family:var(--mono);font-size:10.5px;
 @media (max-width:640px){.inbox .row{grid-template-columns:80px 1fr;}
   .inbox .repo,.inbox .age{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.kanban-board{display:flex;gap:11px;align-items:flex-start;overflow-x:auto;padding-bottom:8px}
+.kanban-column{flex:1 1 0;min-width:210px;background:var(--panel);border:1px solid var(--rule);
+  border-radius:9px;padding:11px 12px}
+.kanban-column details>summary{list-style:none;cursor:pointer}
+.kanban-column details>summary::-webkit-details-marker{display:none}
+.col-header,.kanban-column summary{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.col-head{font-family:var(--disp);text-transform:uppercase;letter-spacing:.13em;
+  font-size:10.5px;color:var(--dim)}
+.kanban-column .count{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.col-cards{display:flex;flex-direction:column;gap:8px}
+.kanban-card{background:var(--raise);border:1px solid var(--rule);border-radius:7px;
+  padding:9px 11px;transition:border-color .12s}
+.kanban-card:hover{border-color:#37404f}
+.kanban-card .card-title{font-size:12.5px;font-weight:600;margin-bottom:5px}
+.kanban-card .card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.kanban-card .badge{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.kanban-card .prio{font-family:var(--disp);text-transform:uppercase;letter-spacing:.1em;
+  font-size:9.5px;color:var(--signal);background:var(--signal-bg);padding:1px 6px;border-radius:4px}
+.kanban-column .zero{color:var(--faint);font-size:11.5px}
 """
 
 
@@ -1925,7 +1944,7 @@ def page(active: str, readout: str, body: str, with_filter: bool) -> str:
     <div class="wordmark">Agent<span class="dot">·</span>Console</div>
     <div class="readout">{readout}</div>
   </div>
-  <nav class="tabs">{tab("/", "Skills", "skills")}{tab("/workboard", "Workboard", "workboard")}{profile_link}</nav>
+  <nav class="tabs">{tab("/", "Skills", "skills")}{tab("/workboard", "Workboard", "workboard")}{tab("/workboard-kanban", "Board", "board")}{profile_link}</nav>
   {filt}
 </header>
 <main>{body}</main>
@@ -2513,6 +2532,77 @@ def render_workboard(
         f'<span class="rule"></span></div>{"".join(repo_blocks)}{orphan}'
     )
     return page("workboard", readout, body, with_filter=True)
+
+
+# Board (kanban) view: same board scan render_workboard consumes, regrouped
+# into seven fixed status columns instead of a per-repo list (SPEC.md R1-R9).
+# Read-only — no POST/write route, no drag handlers.
+_KANBAN_COLUMNS = (
+    "Pending",
+    "In Progress",
+    "Needs Verification",
+    "Blocked",
+    "Done",
+    "Deferred",
+    "Skipped",
+)
+_KANBAN_COLLAPSED = {"Done", "Deferred", "Skipped"}
+
+
+def render_workboard_kanban(b: dict) -> str:
+    buckets: dict[str, list[str]] = {c: [] for c in _KANBAN_COLUMNS}
+    for r in b["repos"]:
+        repo = r["name"]
+        for sp in r["specs"]:
+            slug = sp["slug"]
+            spec_id = sp.get("id", "")
+            priority = sp.get("priority", "")
+            for t in sp.get("tasks", []):
+                title = t["title"]
+                col = _kanban_column(t["status"])
+                data_text = esc(f"{repo} {slug} {title}".lower())
+                link = (
+                    f'<a href="/spec/{esc(spec_id)}">{esc(title)}</a>'
+                    if spec_id
+                    else esc(title)
+                )
+                prio = f'<span class="prio">{esc(priority)}</span>' if priority else ""
+                buckets[col].append(
+                    f'<div class="kanban-card" data-text="{data_text}">'
+                    f'<div class="card-title">{link}</div>'
+                    f'<div class="card-meta">'
+                    f'<span class="badge">{esc(repo)}:{esc(slug)}</span>{prio}'
+                    f"</div></div>"
+                )
+
+    columns = []
+    for c in _KANBAN_COLUMNS:
+        cards = buckets[c]
+        head = (
+            f'<span class="col-head">{esc(c)}</span>'
+            f'<span class="count">{len(cards)}</span>'
+        )
+        inner = "".join(cards) or '<div class="zero">None.</div>'
+        if c in _KANBAN_COLLAPSED:
+            col = (
+                '<div class="kanban-column"><details>'
+                f"<summary>{head}</summary>"
+                f'<div class="col-cards">{inner}</div></details></div>'
+            )
+        else:
+            col = (
+                '<div class="kanban-column">'
+                f'<div class="col-header">{head}</div>'
+                f'<div class="col-cards">{inner}</div></div>'
+            )
+        columns.append(col)
+
+    body = f'<div class="kanban-board">{"".join(columns)}</div>'
+    readout = (
+        f'<div class="line"><span class="trunc">{b["n_open_specs"]} open specs · '
+        f"{b['n_open_tasks']} open tasks · {b['n_repos']} repos</span></div>"
+    )
+    return page("board", readout, body, with_filter=True)
 
 
 def _repo_has_work(r: dict) -> bool:
@@ -3316,6 +3406,8 @@ class Handler(BaseHTTPRequestHandler):
                         get_board(), _read_cost_summary(), _cost_summary_mtime()
                     ).encode("utf-8")
                 )
+            elif path == "/workboard-kanban":
+                self._send(render_workboard_kanban(get_board()).encode("utf-8"))
             elif path == "/dispatches":
                 self._send(render_dispatches(_load_records()).encode("utf-8"))
             elif path.startswith("/dispatch/") and path.endswith("/log"):
