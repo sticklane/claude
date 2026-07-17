@@ -607,6 +607,30 @@ def _dag_tasks(spec_tasks: list[dict]) -> list[dict]:
     return out
 
 
+# Finer partitions of workboard's OPEN_TASK_STATUSES for the board's three
+# open columns; membership in the open/closed sets themselves is checked
+# against workboard's own constants, never re-listed here.
+_KANBAN_IN_PROGRESS = {"in-progress", "in_progress", "claimed"}
+_KANBAN_NEEDS_VERIFICATION = {"needs-verification", "needs_verification"}
+
+
+def _kanban_column(status: str) -> str:
+    """Canonicalize a raw task `Status:` value into one of the board's seven
+    fixed columns (SPEC.md R2). Reuses workboard's OPEN/CLOSED status sets for
+    the open-vs-closed-vs-other split; any status in neither set is the same
+    catch-all workboard uses, rendered in the single Blocked column."""
+    s = (status or "").strip().lower()
+    if s in workboard.CLOSED_TASK_STATUSES:
+        return s.capitalize()  # done→Done, deferred→Deferred, skipped→Skipped
+    if s not in workboard.OPEN_TASK_STATUSES:
+        return "Blocked"
+    if s in _KANBAN_IN_PROGRESS:
+        return "In Progress"
+    if s in _KANBAN_NEEDS_VERIFICATION:
+        return "Needs Verification"
+    return "Pending"
+
+
 def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) -> dict:
     """Map workboard.assemble()'s result (`{repos, sessions, inbox, ready,
     totals, ...}` — workboard.py is the single source of scan/inbox logic
