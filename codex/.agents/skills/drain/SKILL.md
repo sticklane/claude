@@ -235,7 +235,11 @@ opening line every time you enter it.
 '*/tasks/*.md'`): changes only in the worker's own task file and only in the
   allowed set — Status line, checkbox ticks, evidence lines, the plan block.
   Anything else is a post-verification edit riding in: treat it as a merge
-  failure. **Wake-economics ban: at merge/verdict time the hub never pulls the
+  failure. (The `$(…)` command substitution here is intentional
+  and runs in drain's own orchestrator session at verdict time — never inside a
+  worker's `--permission-mode dontAsk` dispatch, which is why the worker's
+  known-safe shell-pattern ban on command substitution does not reach it; left
+  as-is by design, not rewritten.) **Wake-economics ban: at merge/verdict time the hub never pulls the
   worker's code diffs or its check/test output into its own context — a
   path-scoped `git diff --stat` plus the ≤ 2k-token verdict is the ceiling;
   when file contents are genuinely needed, dispatch a scout, never read them

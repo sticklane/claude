@@ -449,6 +449,11 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    worker's own task file and only in the allowed set — Status line,
    checkbox ticks, evidence lines, the plan block; anything else is a
    post-verification edit riding in — treat it as a merge failure.
+   (The `$(…)` command substitution here is intentional and
+   runs in drain's own orchestrator session at verdict time — never inside a
+   worker's permission-gated ("don't ask mode") dispatch, which is why the
+   worker's known-safe shell-pattern ban on command substitution does not
+   reach it; left as-is by design, not rewritten.)
    **MUST NOT (wake economics): at merge/verdict time the drain session never
    pulls the worker's _code diffs_ or the _worker's own check/test output_
    into its own context — a path-scoped diff summary (file names and line
