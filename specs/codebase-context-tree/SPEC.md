@@ -223,7 +223,7 @@ gotcha|invariant|rationale|todo]` (body from the positional argument, or
   updates the body and/or refreshes the anchor hash; that is the only
   path that writes the hash after creation. `ctx notes <symbol>` prints that symbol's
   notes with their freshness; `ctx notes list [--kind K] [--stale]
-  [--file <path>]` filters on freshness, kind, or the file containing
+[--file <path>]` filters on freshness, kind, or the file containing
   the anchored symbol. A note file with unparseable or incomplete frontmatter
   is skipped with one diagnostic line (path + reason); it never aborts a
   query or sync.
@@ -506,3 +506,51 @@ None.
 - Investigator evidence (binding coverage, ABI status, SDK maturity, with
   source URLs) is recorded in this branch's /design run; the research doc
   carries the surviving citations.
+
+## Parallelization
+
+14 tasks live under `tasks/` (numbered 01-14, no gaps). Grouping applies
+the decision-coupling test — disjoint `Touch:` AND no shared undecided
+design choice — conservatively: a pair is grouped only when both hold
+cleanly.
+
+- Tasks 02, 03, 04 (the remaining 11 language-grammar extractors) are
+  **not** grouped despite looking parallel-shaped: all three edit the
+  shared `src/lang/mod.rs` registration list and append entries to the
+  same `Cargo.toml`, so they run as a dependency chain (02 -> 03 -> 04)
+  instead — a wrong grouping here is exactly the kind of merge conflict
+  this section exists to avoid.
+- Tasks 06 and 07 (the two query-command halves: tree/sig/map vs
+  deps/refs/at) both depend only on task 05 and touch fully disjoint
+  `cmd/*.rs` files. The one thing they'd otherwise need to co-design — the
+  C10 note-marker lookup — is already fixed as a stable API by task 05
+  (`note_marker`), so there is no shared open decision left. Concurrent-safe.
+- Tasks 08 (LSP enrichment) and 09 (notes CRUD + freshness) both depend
+  only on tasks already merged by the time either starts (08 on 07; 09 on
+  06+07) and touch disjoint subsystems (`src/lsp/**` + a `cmd/refs.rs`
+  label upgrade vs `src/notes/**` + `cmd/notes.rs` + the index notes
+  schema) with no shared design question — R11 is explicitly optional and
+  additive, independent of the notes subsystem. Concurrent-safe.
+- Tasks 11 (MCP server) and 12 (hooks) both depend on the same completed
+  prerequisite set (11 on 07+09; 12 on 05+10, and by the time either task
+  is dispatched the whole tree is far enough along that both dependency
+  sets are satisfied together) and touch disjoint files (`src/mcp/**` vs
+  `src/cmd/hooks.rs` + `src/hooks_templates/**`). Neither's design depends
+  on the other's internals — MCP wraps already-frozen CLI commands; hooks
+  shells out to `ctx sync`/`ctx sync --write-anchors`. Concurrent-safe.
+- Tasks 01, 05, 10, 13, 14 are not grouped: 01 is the sole root with
+  nothing to pair against; 05 depends only on 01 and could in principle
+  overlap with the 02-04 chain (disjoint touch, no shared decision) but is
+  left solo here per the conservative default — its dependency graph alone
+  already lets a scheduler start it as soon as 01 lands, so an explicit
+  group adds risk without adding real concurrency; 10 (re-anchoring) is
+  the highest-complexity single subsystem and depends on 09 with no peer
+  at its dependency depth; 13 (README) depends on both 11 and 12 finishing
+  and documents their output, so it cannot start until both are done; 14
+  (closing integration) depends on 13 and is deliberately last.
+
+```
+- Group: 06, 07
+- Group: 08, 09
+- Group: 11, 12
+```
