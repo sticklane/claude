@@ -31,13 +31,12 @@ source_version="$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$manifes
 [ -n "$source_version" ] || exit 0
 
 # --- installed version: env stub wins (tests + explicit overrides), else the
-#     live `claude plugin list` read, mirroring bin/refresh-plugins' parse ---
+#     shared live read (bin/plugin-installed-version, also used by
+#     bin/refresh-plugins and hooks/plugin-autorefresh) ----------------------
 installed_version="${PLUGIN_STALENESS_INSTALLED_VERSION:-}"
 if [ -z "$installed_version" ] && [ "${PLUGIN_STALENESS_SKIP_CLI:-0}" != "1" ] \
-   && command -v claude >/dev/null 2>&1; then
-  installed_version="$(claude plugin list 2>/dev/null \
-    | grep -o 'agentic@agentic-toolkit.*[0-9]\+\.[0-9]\+\.[0-9]\+' \
-    | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+$' | head -1 || true)"
+   && [ -x "$root/bin/plugin-installed-version" ]; then
+  installed_version="$("$root/bin/plugin-installed-version" 2>/dev/null || true)"
 fi
 [ -n "$installed_version" ] || exit 0
 

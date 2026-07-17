@@ -19,10 +19,15 @@ set -euo pipefail
 echo "== Claude Code: agentic@agentic-toolkit =="
 if command -v claude >/dev/null 2>&1; then
   claude plugin marketplace update agentic-toolkit
-  claude plugin install agentic@agentic-toolkit
+  # `install` no-ops on an already-installed plugin ("already installed") —
+  # upgrading an existing install is `update`; `install` stays as the
+  # first-time fallback.
+  claude plugin update agentic@agentic-toolkit \
+    || claude plugin install agentic@agentic-toolkit
 
   cache_root="$HOME/.claude/plugins/cache/agentic-toolkit/agentic"
-  current="$(claude plugin list 2>/dev/null | grep -o 'agentic@agentic-toolkit.*[0-9]\+\.[0-9]\+\.[0-9]\+' | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+$' | head -1 || true)"
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  current="$("$script_dir/plugin-installed-version" 2>/dev/null || true)"
   if [ -n "$current" ] && [ -d "$cache_root" ]; then
     echo "-- pruning stale cached versions (keeping $current) --"
     for dir in "$cache_root"/*/; do
