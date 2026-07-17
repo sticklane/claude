@@ -2597,7 +2597,9 @@ def render_workboard_kanban(b: dict) -> str:
             )
         columns.append(col)
 
-    body = f'<div class="kanban-board">{"".join(columns)}</div>'
+    # One column per line so each closed column's <details> is line-isolated
+    # (the board's HTML is otherwise a single run).
+    body = '<div class="kanban-board">\n' + "\n".join(columns) + "\n</div>"
     readout = (
         f'<div class="line"><span class="trunc">{b["n_open_specs"]} open specs · '
         f"{b['n_open_tasks']} open tasks · {b['n_repos']} repos</span></div>"
