@@ -185,18 +185,22 @@ class BlockedUnblockRow(unittest.TestCase):
         )
 
     def test_blocked_item_without_unblock_shows_warning_chip(self):
+        # The chip is driven by the scanner's structured unblock_missing flag,
+        # not by string-matching the display prose in `why`.
         item = {
             "severity": "serious",
             "state": "blocked",
             "repo": "gamma",
             "what": "Spec widget: waiting",
-            "why": "no unblock step recorded — add an Unblock: line",
+            "why": "waiting on the deploy",
+            "unblock": None,
+            "unblock_missing": True,
             "age_ts": 0,
         }
         html = _render([item])
         self.assertTrue(
             self._warn_chips(html),
-            "a blocked item with no recorded unblock must show a warning chip",
+            "a blocked item flagged unblock_missing must show a warning chip",
         )
 
 
