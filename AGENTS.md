@@ -16,6 +16,7 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 - `bin/`—installer scripts (quality gates, skill sync).
 - `docs/`—research and doctrine (anthropic-playbook, external-playbooks, memory index).
 - `evals/`—skill eval scenarios plus the headless runner.
+- `hooks/`—this repo's own Claude Code hooks, wired in `.claude/settings.json`: plugin-staleness (SessionStart warn), plugin-autorefresh (Stop auto-update after a pushed version bump), handoff-resume, session-refresh.
 - `runtimes/`—per-runtime profiles mapping tier language to concrete models.
 - `specs/`—one directory per spec with `SPEC.md` and `tasks/`; `specs/QUEUE.md` is the combined wave plan.
 - `templates/`—hook and check-script templates the installers copy from.
