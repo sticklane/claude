@@ -1,6 +1,6 @@
 # Task 06: Query commands — tree, sig, map; root guard; rebuild equivalence
 
-Status: pending
+Status: in-progress
 Depends on: 05
 Priority: P1
 Budget: 45 turns
