@@ -1,30 +1,11 @@
 # Task 03: C, C++, Zig extraction
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P1
 Budget: 50 turns
 Spec: ../SPEC.md (requirements R1 [c, cpp, zig], R9, R10 partial; contracts C1, C2, C3, C8)
 Touch: context-tree/Cargo.toml, context-tree/src/lang/mod.rs, context-tree/src/lang/c.rs, context-tree/src/lang/cpp.rs, context-tree/src/lang/zig.rs, context-tree/tests/fixtures/languages/{c,cpp,zig}/**, context-tree/tests/*.rs
-
-<!--
-PLAN (delete at close-out):
-Model on go.rs (file-path fallback, refs/imports) + python.rs (authored LOCALS_QUERY → Scope).
-Order:
-1. cargo add tree-sitter-c/-cpp/-zig; confirm they build vs tree-sitter 0.26.
-2. Inspect each grammar's bundled queries/node-types for locals query + node kinds.
-3. c.rs: file-path module (path::*), function_definition/declaration/struct/enum/typedef,
-   preproc_include → Import, call_expression + identifier → Reference, leading // or /* */
-   comment block → docstring (C8). No namespace. Scope only if grammar ships locals query.
-4. cpp.rs: like C + namespace_definition as container; overloads disambiguated via
-   path::disambiguate (#n). Property test: two overloads → distinct qpaths, each resolves.
-5. zig.rs: file-path module; fn decls (Fn/const fn), @import builtin_call → Import,
-   references, //! or /// or // leading comment docstring.
-6. Fixtures c/cpp/zig each: documented symbol w/ per-fixture sentinel, ≥1 cross-symbol ref,
-   1 include/@import. cpp adds overload fixture.
-7. tests: cargo test c_/cpp/zig each; covered: c/cpp/zig markers.
-RED first per language, then GREEN. Register via inventory::submit!, add pub mod lines.
--->
 
 ## Goal
 
@@ -75,12 +56,34 @@ files owned by task 02 or earlier.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test '\bc_'` (or an equivalently scoped C
+- [x] `cd context-tree && cargo test '\bc_'` (or an equivalently scoped C
       test filter) → passes, incl. reference/import extraction
-- [ ] `cd context-tree && cargo test cpp` → passes, including the overload
+      — evidence: `cargo test c_` → 8 passed (incl. c_reference_extracted_at_known_call_site,
+      c_import_edges_extracted); verifier PASS (evidence/03-c-family-extraction.md).
+- [x] `cd context-tree && cargo test cpp` → passes, including the overload
       distinct-C1-paths property test and reference/import extraction
-- [ ] `cd context-tree && cargo test zig` → passes, incl. reference/import
+      — evidence: `cargo test cpp` → 8 passed incl.
+      cpp_overload_qpaths_are_distinct_and_each_resolves_unambiguously (verifier PASS).
+- [x] `cd context-tree && cargo test zig` → passes, incl. reference/import
       extraction
-- [ ] `cd context-tree && cargo test 2>&1 | grep -Fx "covered: c"` → line
+      — evidence: `cargo test zig` → 9 passed (incl. reference/import + var/const
+      regression test) (verifier PASS).
+- [x] `cd context-tree && cargo test 2>&1 | grep -Fx "covered: c"` → line
       present (same for `cpp`, `zig`)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      — evidence: all three `covered: c|cpp|zig` lines present in `cargo test` output.
+- [x] `bash context-tree/scripts/check.sh` → exits 0
+      — evidence: EXIT=0 (cargo fmt --check, clippy -D warnings, cargo test all green).
+
+## Decisions
+
+- C++ namespace qpath scheme: read Goal ("namespaces are containers, not the module
+  component") together with Step 3 ("file-path fallback only where no enclosing namespace
+  exists") as — a namespaced symbol keys under the namespace container chain with an EMPTY
+  module component (`app.base`), while a file-scope symbol falls back to the file-path
+  module (`sample.free`). Reversible (internal qpath string construction in cpp.rs); to
+  change, adjust `push_symbol`'s container/module branch.
+- Scope facts: none of tree-sitter-c/-cpp/-zig ship a `locals.scm` query (only
+  highlights/tags/folds/injections), so all three emit no `Scope` facts (R10 plain-name
+  fallback), per the task's "where the grammar ships a locals query" condition. Reversible:
+  author a LOCALS_QUERY per language (as python.rs/typescript.rs do) if scope facts are
+  later wanted.
