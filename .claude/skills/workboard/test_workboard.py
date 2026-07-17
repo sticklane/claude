@@ -1538,6 +1538,64 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         self.assertIn("no unblock step recorded", blocked[0]["why"])
 
 
+class TestStructuredUnblockForwarded(unittest.TestCase):
+    """attention_items() attaches structured unblock fields to its rows so the
+    console reads them instead of string-matching the `why` prose (task 06)."""
+
+    def _repo(self, spec):
+        repo = make_repo_record(path="/r/demo")
+        repo["specs"] = [spec]
+        return repo
+
+    def _inbox(self, spec):
+        return workboard.attention_items([self._repo(spec)], [], [], stale_days=7)
+
+    def test_ask_task_item_forwards_structured_unblock_dict(self):
+        ub = {"type": "ask", "step": "which creds?"}
+        spec = _unblock_spec([_unblock_task(unblock=ub)])
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertEqual(answer[0].get("unblock"), ub)
+
+    def test_deferred_item_forwards_structured_deferred_questions(self):
+        spec = _unblock_spec([_unblock_task(deferred=["which provider?"])])
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertEqual(answer[0].get("deferred_questions"), ["which provider?"])
+
+    def test_waiting_spec_ask_item_forwards_structured_unblock_dict(self):
+        ub = {"type": "ask", "step": "sign in at URL?"}
+        spec = _unblock_spec([], status="waiting", unblock=ub)
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertEqual(answer[0].get("unblock"), ub)
+
+    def test_waiting_spec_blocked_item_marks_unblock_missing_when_absent(self):
+        spec = _unblock_spec([], status="waiting")
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertIs(blocked[0].get("unblock"), None)
+        self.assertIs(blocked[0].get("unblock_missing"), True)
+
+    def test_blocked_task_item_marks_unblock_missing_when_absent(self):
+        spec = _unblock_spec([_unblock_task()])
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertIs(blocked[0].get("unblock_missing"), True)
+
+    def test_unblock_missing_absent_on_ask_item_which_has_a_step(self):
+        # unblock_missing is True only when no Unblock: line is recorded; an
+        # ask item carries a step, so it must not be flagged missing.
+        spec = _unblock_spec(
+            [_unblock_task(unblock={"type": "ask", "step": "which creds?"})]
+        )
+        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
+        self.assertNotEqual(answer[0].get("unblock_missing"), True)
+
+    def test_why_text_unchanged_on_blocked_waiting_spec(self):
+        # Display prose stays as-is for backward compatibility.
+        spec = _unblock_spec([], status="waiting")
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertEqual(
+            blocked[0]["why"], "no unblock step recorded — add an Unblock: line"
+        )
+
+
 
 def _agent_tool_use(tool_use_id, subagent_type="scout", desc="do the thing", ts=OLD_TS):
     """An assistant record spawning a sub-agent (real transcript shape:
