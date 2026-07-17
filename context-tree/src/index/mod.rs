@@ -94,6 +94,23 @@ pub struct PrevState {
     pub mtime_ns: i64,
 }
 
+/// A symbol read back from the index for the query commands (tasks 06–07). Carries
+/// the owning file path and the C1 containment link so `ctx tree`/`ctx sig`/`ctx map`
+/// render an outline, resolve a suffix, and rank without re-parsing source.
+#[derive(Debug, Clone)]
+pub struct SymbolRow {
+    pub id: i64,
+    pub kind: String,
+    pub name: String,
+    pub qpath: String,
+    pub signature: String,
+    pub docstring: String,
+    pub parent: Option<String>,
+    pub path: String,
+    pub full_start_byte: usize,
+    pub ident_start_byte: usize,
+}
+
 /// A WAL-mode SQLite connection over the derived index at
 /// `<cache_dir>/index.sqlite`.
 pub struct IndexStore {
@@ -373,6 +390,50 @@ impl IndexStore {
         let mut stmt = self.conn.prepare("SELECT path FROM files ORDER BY path")?;
         let rows = stmt.query_map([], |r| r.get::<_, String>(0))?;
         rows.collect()
+    }
+
+    /// Every indexed symbol, joined to its owning file path, ordered
+    /// deterministically (by path, then source order) so query output is
+    /// rebuild-stable (C4).
+    pub fn all_symbols(&self) -> rusqlite::Result<Vec<SymbolRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT s.id, s.kind, s.name, s.qpath, s.signature, s.docstring, s.parent,
+                    f.path, s.full_start_byte, s.ident_start_byte
+             FROM symbols s JOIN files f ON s.file_id = f.id
+             ORDER BY f.path, s.full_start_byte",
+        )?;
+        let rows = stmt.query_map([], |r| {
+            Ok(SymbolRow {
+                id: r.get(0)?,
+                kind: r.get(1)?,
+                name: r.get(2)?,
+                qpath: r.get(3)?,
+                signature: r.get(4)?,
+                docstring: r.get(5)?,
+                parent: r.get(6)?,
+                path: r.get(7)?,
+                full_start_byte: r.get::<_, i64>(8)? as usize,
+                ident_start_byte: r.get::<_, i64>(9)? as usize,
+            })
+        })?;
+        rows.collect()
+    }
+
+    /// Reference occurrences grouped by referenced name — the reference-graph
+    /// importance weight `ctx map` ranks by (R8).
+    pub fn reference_counts(&self) -> rusqlite::Result<HashMap<String, usize>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT name, COUNT(*) FROM refs GROUP BY name")?;
+        let rows = stmt.query_map([], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)? as usize))
+        })?;
+        let mut map = HashMap::new();
+        for row in rows {
+            let (name, count) = row?;
+            map.insert(name, count);
+        }
+        Ok(map)
     }
 
     /// Note-marker read API (R9): `Some((count, any_stale))` for a symbol's

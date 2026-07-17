@@ -99,7 +99,10 @@ fn tree_outlines_containment_with_indentation() {
     let text = stdout(&out);
     assert!(text.contains("Handler"), "outline names the class: {text}");
     assert!(text.contains("handle"), "outline names the method: {text}");
-    assert!(text.contains("helper"), "outline names the function: {text}");
+    assert!(
+        text.contains("helper"),
+        "outline names the function: {text}"
+    );
     // The method is nested more deeply than its containing class.
     let class_indent = indent_of(&text, "Handler");
     let method_indent = indent_of(&text, "handle");
@@ -432,7 +435,10 @@ fn map_doc_appends_first_docstring_lines() {
     init(root);
 
     let plain = stdout(&ctx(root, &["map"]));
-    assert!(!plain.contains("Doc marker."), "default omits docs: {plain}");
+    assert!(
+        !plain.contains("Doc marker."),
+        "default omits docs: {plain}"
+    );
     let doc = stdout(&ctx(root, &["map", "--doc"]));
     assert!(
         doc.contains("Doc marker."),
@@ -489,7 +495,7 @@ fn cache_dir(root: &Path) -> std::path::PathBuf {
 
 fn journal_last_parsed(root: &Path) -> u64 {
     let text = std::fs::read_to_string(cache_dir(root).join("sync-journal.jsonl")).unwrap();
-    let last = text.lines().filter(|l| !l.trim().is_empty()).next_back().unwrap();
+    let last = text.lines().rfind(|l| !l.trim().is_empty()).unwrap();
     let v: serde_json::Value = serde_json::from_str(last).unwrap();
     v["parsed"].as_u64().unwrap()
 }
@@ -533,7 +539,8 @@ fn rebuild_equivalence_transparent_rebuild_on_tampered_schema_version() {
     // Tamper the persisted schema version so the next open must rebuild (C4).
     {
         let conn = rusqlite::Connection::open(cache_dir(root).join("index.sqlite")).unwrap();
-        conn.execute("UPDATE schema_meta SET version = 999", []).unwrap();
+        conn.execute("UPDATE schema_meta SET version = 999", [])
+            .unwrap();
     }
     sleep(PAST);
 

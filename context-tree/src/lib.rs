@@ -3,6 +3,7 @@
 //! so the MCP wrapper (R15) never reimplements it.
 
 pub mod cli;
+pub mod cmd;
 pub mod extract;
 pub mod facts;
 pub mod hash;
@@ -69,6 +70,43 @@ pub fn run() -> ExitCode {
                 }
             }
         }
+        Some(cli::Command::Tree {
+            path,
+            depth,
+            limit,
+            doc,
+            json,
+            no_sync,
+        }) => cmd::tree::run(cmd::tree::Args {
+            path,
+            depth,
+            limit,
+            doc,
+            json,
+            no_sync,
+        }),
+        Some(cli::Command::Sig {
+            symbol,
+            doc,
+            json,
+            no_sync,
+        }) => cmd::sig::run(cmd::sig::Args {
+            symbol,
+            doc,
+            json,
+            no_sync,
+        }),
+        Some(cli::Command::Map {
+            tokens,
+            doc,
+            json,
+            no_sync,
+        }) => cmd::map::run(cmd::map::Args {
+            tokens,
+            doc,
+            json,
+            no_sync,
+        }),
         None => {
             println!("ctx — run `ctx --help` for usage");
             ExitCode::SUCCESS
