@@ -108,7 +108,43 @@ pub struct SymbolRow {
     pub parent: Option<String>,
     pub path: String,
     pub full_start_byte: usize,
+    pub full_end_byte: usize,
     pub ident_start_byte: usize,
+}
+
+/// A reference occurrence read back for `ctx refs` (R10): the referenced name,
+/// its use kind, and the owning file path + position, so a heuristic global-name
+/// match renders `file:line` without re-parsing source.
+#[derive(Debug, Clone)]
+pub struct RefRow {
+    pub name: String,
+    pub kind: String,
+    pub path: String,
+    pub row: usize,
+    pub byte: usize,
+}
+
+/// A module-level import edge read back for `ctx deps` (R9): the importing file's
+/// module component (`source`), the imported target string (`module`), and the
+/// owning file path + line.
+#[derive(Debug, Clone)]
+pub struct ImportRow {
+    pub source: String,
+    pub module: String,
+    pub path: String,
+    pub row: usize,
+}
+
+/// A locals-query scope binding read back for scope-aware `ctx refs` (R10): a
+/// `name` bound locally within `[scope_start_byte, scope_end_byte)` in a file.
+/// A reference to `name` inside that span is a shadowed local, excluded from the
+/// cross-file candidate set.
+#[derive(Debug, Clone)]
+pub struct ScopeRow {
+    pub name: String,
+    pub path: String,
+    pub scope_start_byte: usize,
+    pub scope_end_byte: usize,
 }
 
 /// A WAL-mode SQLite connection over the derived index at
@@ -398,7 +434,7 @@ impl IndexStore {
     pub fn all_symbols(&self) -> rusqlite::Result<Vec<SymbolRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT s.id, s.kind, s.name, s.qpath, s.signature, s.docstring, s.parent,
-                    f.path, s.full_start_byte, s.ident_start_byte
+                    f.path, s.full_start_byte, s.full_end_byte, s.ident_start_byte
              FROM symbols s JOIN files f ON s.file_id = f.id
              ORDER BY f.path, s.full_start_byte",
         )?;
@@ -413,7 +449,67 @@ impl IndexStore {
                 parent: r.get(6)?,
                 path: r.get(7)?,
                 full_start_byte: r.get::<_, i64>(8)? as usize,
-                ident_start_byte: r.get::<_, i64>(9)? as usize,
+                full_end_byte: r.get::<_, i64>(9)? as usize,
+                ident_start_byte: r.get::<_, i64>(10)? as usize,
+            })
+        })?;
+        rows.collect()
+    }
+
+    /// Every reference occurrence joined to its owning file path, in the index's
+    /// deterministic (path, source) order — the heuristic-match input for
+    /// `ctx refs` (R10).
+    pub fn all_references(&self) -> rusqlite::Result<Vec<RefRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT r.name, r.kind, f.path, r.row, r.byte
+             FROM refs r JOIN files f ON r.file_id = f.id
+             ORDER BY f.path, r.byte",
+        )?;
+        let rows = stmt.query_map([], |r| {
+            Ok(RefRow {
+                name: r.get(0)?,
+                kind: r.get(1)?,
+                path: r.get(2)?,
+                row: r.get::<_, i64>(3)? as usize,
+                byte: r.get::<_, i64>(4)? as usize,
+            })
+        })?;
+        rows.collect()
+    }
+
+    /// Every import edge joined to its owning file path, in deterministic order —
+    /// the raw material for `ctx deps` (R9).
+    pub fn all_imports(&self) -> rusqlite::Result<Vec<ImportRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT i.source, i.module, f.path, i.row
+             FROM imports i JOIN files f ON i.file_id = f.id
+             ORDER BY f.path, i.byte",
+        )?;
+        let rows = stmt.query_map([], |r| {
+            Ok(ImportRow {
+                source: r.get(0)?,
+                module: r.get(1)?,
+                path: r.get(2)?,
+                row: r.get::<_, i64>(3)? as usize,
+            })
+        })?;
+        rows.collect()
+    }
+
+    /// Every locals-query scope binding joined to its owning file path — the
+    /// shadowing input for scope-aware `ctx refs` (R10).
+    pub fn all_scopes(&self) -> rusqlite::Result<Vec<ScopeRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT sc.name, f.path, sc.scope_start_byte, sc.scope_end_byte
+             FROM scopes sc JOIN files f ON sc.file_id = f.id
+             ORDER BY f.path, sc.scope_start_byte",
+        )?;
+        let rows = stmt.query_map([], |r| {
+            Ok(ScopeRow {
+                name: r.get(0)?,
+                path: r.get(1)?,
+                scope_start_byte: r.get::<_, i64>(2)? as usize,
+                scope_end_byte: r.get::<_, i64>(3)? as usize,
             })
         })?;
         rows.collect()
