@@ -194,6 +194,11 @@ so a per-session emission would misattribute later iterations.
   tasks/ dir (`git diff $(git merge-base <default-branch> <branch>)..<branch> --
 '*/tasks/*.md'`): changes only in the worker's own task file and only in the
   allowed set (Status line, checkbox ticks, evidence lines, plan block).
+  (The `$(…)` command substitution here is intentional and
+  runs in drain's own orchestrator session at verdict time — never inside a
+  worker's `claude -p --permission-mode dontAsk` dispatch, which is why the
+  worker prompt's known-safe shell-pattern ban on command substitution does
+  not reach it; left as-is by design, not rewritten.)
   Anything else is a post-verification edit riding in — a merge failure (the
   slot-machine path below). **MUST NOT (wake economics): at merge/verdict time
   the hub never pulls the worker's code diffs or check/test output into its
