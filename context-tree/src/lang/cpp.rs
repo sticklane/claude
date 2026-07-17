@@ -118,8 +118,12 @@ fn doc_comment(decl: Node, source: &[u8]) -> String {
 fn declarator_identifier(decl: Node) -> Option<Node> {
     match decl.kind() {
         "identifier" | "field_identifier" => Some(decl),
-        "init_declarator" | "pointer_declarator" | "parenthesized_declarator"
-        | "array_declarator" | "reference_declarator" | "function_declarator" => decl
+        "init_declarator"
+        | "pointer_declarator"
+        | "parenthesized_declarator"
+        | "array_declarator"
+        | "reference_declarator"
+        | "function_declarator" => decl
             .child_by_field_name("declarator")
             .and_then(declarator_identifier),
         _ => None,
@@ -270,7 +274,7 @@ fn classify_identifier(node: Node) -> Option<RefKind> {
         "function_declarator" | "init_declarator" if is_field("declarator") => None,
         "call_expression" if is_field("function") => None,
         "assignment_expression" if is_field("left") => Some(RefKind::Write),
-        "parameter_declaration" | "namespace_definition" => None,
+        "parameter_declaration" => None,
         _ => Some(RefKind::Read),
     }
 }

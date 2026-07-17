@@ -112,7 +112,8 @@ fn doc_comment(decl: Node, source: &[u8]) -> String {
 
 fn first_ident_child(node: Node) -> Option<Node> {
     let mut cursor = node.walk();
-    node.children(&mut cursor).find(|k| k.kind() == "identifier")
+    node.children(&mut cursor)
+        .find(|k| k.kind() == "identifier")
 }
 
 struct ZigDef<'a> {
