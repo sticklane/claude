@@ -214,3 +214,17 @@ plugin.json whenever skill behavior changes" rule, since R3/R4/R7 change
 ## Open questions
 
 (none)
+
+## Parallelization
+
+4 tasks. Task 01 (`.claude/rules/human-blockers.md`) and task 02
+(`.claude/skills/drain/reference.md`) are Touch-disjoint with no shared
+undecided design (this spec pins the exact grammar and phrases), so both
+are immediately dispatchable and safe to run concurrently. Task 03
+(`HUMAN.md`) depends on task 01's landed grammar but is Touch-disjoint from
+task 02, so once 01 lands it may run alongside 02 if 02 is still in
+flight. Task 04 (`antigravity/` mirror + `plugin.json`) depends on task
+02's landed derivation text and runs alone.
+
+- Group: 01, 02
+- Group: 02, 03
