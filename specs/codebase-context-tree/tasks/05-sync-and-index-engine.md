@@ -1,6 +1,6 @@
 # Task 05: Sync engine, SQLite index, ignore rules, VCS adapter
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P0
 Budget: 60 turns
