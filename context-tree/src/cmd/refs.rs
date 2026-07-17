@@ -6,9 +6,7 @@
 //! is excluded from the cross-file candidate set. Results cap at `--limit`
 //! (default 50) per direction with a truncation line naming the flag.
 
-use crate::cmd::{
-    EXIT_AMBIGUOUS, EXIT_NO_MATCH, format_note_marker, load_index, note_value,
-};
+use crate::cmd::{EXIT_AMBIGUOUS, EXIT_NO_MATCH, format_note_marker, load_index, note_value};
 use crate::index::{IndexStore, RefRow, ScopeRow, SymbolRow};
 use crate::path::resolve_suffix;
 use serde_json::json;

@@ -133,18 +133,24 @@ fn refs_heuristic_labels_definitions_and_references() {
     init(root);
 
     let out = ctx(root, &["refs", "target"]);
-    assert_eq!(out.status.code(), Some(0), "refs on a defined symbol exits 0");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "refs on a defined symbol exits 0"
+    );
     let text = stdout(&out);
     assert!(
         text.contains("heuristic"),
         "every result is labeled heuristic (no LSP pass yet): {text}"
     );
     assert!(
-        text.lines().any(|l| l.starts_with("def") && l.contains("target")),
+        text.lines()
+            .any(|l| l.starts_with("def") && l.contains("target")),
         "the definition is listed: {text}"
     );
     assert!(
-        text.lines().any(|l| l.starts_with("ref") && l.contains("target")),
+        text.lines()
+            .any(|l| l.starts_with("ref") && l.contains("target")),
         "the call site is listed as a reference: {text}"
     );
     assert!(
@@ -194,7 +200,11 @@ fn refs_scope_aware_excludes_shadowed_local_keeps_cross_file() {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path();
     // Global definition of `target`.
-    write(root, "util.ts", "export function target() {\n  return 1;\n}\n");
+    write(
+        root,
+        "util.ts",
+        "export function target() {\n  return 1;\n}\n",
+    );
     // A true cross-file call site (imports and calls the global).
     write(
         root,
@@ -291,9 +301,18 @@ fn at_containment_chain_for_nested_line() {
     let out = ctx(root, &["at", "app.py:3"]);
     assert_eq!(out.status.code(), Some(0), "a resolvable position exits 0");
     let text = stdout(&out);
-    assert!(text.contains("module"), "the chain starts at the module: {text}");
-    assert!(text.contains("outer"), "the chain names the outer function: {text}");
-    assert!(text.contains("nested"), "the chain names the innermost function: {text}");
+    assert!(
+        text.contains("module"),
+        "the chain starts at the module: {text}"
+    );
+    assert!(
+        text.contains("outer"),
+        "the chain names the outer function: {text}"
+    );
+    assert!(
+        text.contains("nested"),
+        "the chain names the innermost function: {text}"
+    );
     // Innermost is indented more deeply than its container.
     let outer_indent = indent_of(&text, "outer");
     let nested_indent = indent_of(&text, "nested");
@@ -313,7 +332,11 @@ fn at_containment_module_fallback_outside_definitions() {
 
     // Line 7 (the module-level comment) is enclosed by no definition.
     let out = ctx(root, &["at", "app.py:7"]);
-    assert_eq!(out.status.code(), Some(0), "the module fallback still exits 0");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "the module fallback still exits 0"
+    );
     let text = stdout(&out);
     assert!(
         text.contains("module"),
@@ -360,10 +383,15 @@ fn at_exit4_unsupported_extension() {
     init(root);
 
     let out = ctx(root, &["at", "notes.txt:1"]);
-    assert_eq!(out.status.code(), Some(4), "an unsupported extension exits 4");
+    assert_eq!(
+        out.status.code(),
+        Some(4),
+        "an unsupported extension exits 4"
+    );
     let reason = format!("{}{}", stdout(&out), stderr(&out));
     assert!(
-        reason.to_lowercase().contains("unsupported") || reason.to_lowercase().contains("extension"),
+        reason.to_lowercase().contains("unsupported")
+            || reason.to_lowercase().contains("extension"),
         "the reason names the unsupported extension: {reason}"
     );
 }
