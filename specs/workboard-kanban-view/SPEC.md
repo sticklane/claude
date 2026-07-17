@@ -62,7 +62,11 @@ R2. Task statuses are canonicalized into columns as follows:
 
 Import/reuse workboard.py's `OPEN_TASK_STATUSES` and
 `CLOSED_TASK_STATUSES` constants for the open/closed membership check
-rather than duplicating the literal string sets.
+rather than duplicating the literal string sets. Implement the mapping as
+a named, independently callable pure function, `_kanban_column(status: str) -> str`,
+taking a raw status string and returning one of the seven column labels
+above — not inlined into the render function — so the mapping itself is
+directly testable without rendering HTML.
 
 R3. Columns render left to right in this fixed pipeline order: Pending,
 In Progress, Needs Verification, Blocked, Done, Deferred, Skipped. All
@@ -76,19 +80,26 @@ parent spec's detail page at `/spec/{id}`, using the spec `id` field
 `_entity_id("spec", ...)`) — not a per-task `/task/{id}` link, since the
 adapted board data this view reuses (`_dag_tasks()`, agent-console.py:578-603)
 does not carry a task's absolute path, only `_adapt_board`'s spec-level
-entries do. Each card also shows a `repo:spec-slug` badge, the parent
-spec's `priority` field if non-empty, and — only for cards in the Blocked
-column — the task's `unblock.step` text when present.
+entries do. Each card also shows a `repo:spec-slug` badge and the parent
+spec's `priority` field if non-empty. Cards do not show the task's
+`unblock` step text — that field is on a separate spec-level
+`blocked_tasks` list (agent-console.py:666-674), not on the per-task
+entries this view flattens, and joining the two is out of scope (see Out
+of scope).
 
-R5. The three closed-status columns (Done, Deferred, Skipped) render
+R5. Every column header renders its label and card count as two distinct
+text nodes — e.g. the label wrapped in an element carrying a `col-head`
+class, with the count in a sibling element — never concatenated into one
+text run (e.g. not `Pending (12)` as a single node). This holds for all
+seven columns, not just the closed ones, because the acceptance checks
+below anchor on the `col-head`-wrapped label text. The three
+closed-status columns (Done, Deferred, Skipped) additionally render
 collapsed by default behind a `<details>` element, using the same
 collapsible pattern already used for repo blocks in `render_workboard()`
-(agent-console.py:2404). The `<summary>` shows the column label and the
-card count as two distinct text nodes (e.g. the label in a `<span>` and
-the count in a sibling `<span>`, not concatenated into one text run) so
-the column-header acceptance check (which greps for `>Done<` etc.) is not
-broken by appending the count. Pending, In Progress, Needs Verification,
-and Blocked columns render expanded by default.
+(agent-console.py:2404) — the `col-head`-wrapped label lives inside that
+`<details>`'s `<summary>`. Pending, In Progress, Needs Verification, and
+Blocked columns render expanded by default, with the `col-head` label in
+a plain heading element (not inside a `<details>`).
 
 R6. Every card carries a `data-text` attribute containing
 `repo + spec-slug + task-title`, lowercased — the same attribute
@@ -127,6 +138,9 @@ in `PAGE_JS` (agent-console.py:1849) — no new polling logic.
   additive tab (R7).
 - Archival, pagination, or expiry of old Done/Deferred/Skipped cards
   beyond the default-collapsed disclosure in R5.
+- Showing a Blocked card's `unblock` step text — that data lives on the
+  spec-level `blocked_tasks` list, not the per-task entries this view
+  flattens (R4), and joining the two is deferred to a future spec.
 
 ## Acceptance criteria
 
@@ -138,15 +152,19 @@ both grep-count 0 today, so the criteria below are not vacuous.
       (route path literal; 0 today, verified 2026-07-16)
 - [ ] `grep -c "render_workboard_kanban" agent-console/agent-console.py` → ≥1
       (new render function defined; 0 today, verified 2026-07-16)
+- [ ] `python3 -c "from agent_console import _kanban_column as k; assert k('open')=='Pending'; assert k('claimed')=='In Progress'; assert k('needs_verification')=='Needs Verification'; assert k('waiting')=='Blocked'; assert k('done')=='Done'; assert k('deferred')=='Deferred'; assert k('skipped')=='Skipped'; print('ok')"`
+      (adjust the import path to however `agent-console.py` is importable in
+      this repo) → prints `ok` (covers R2's status→column mapping directly,
+      independent of HTML rendering)
 - [ ] With the server running locally (`python3 agent-console/agent-console.py &`
       or via the existing launchd job), `curl -fsS http://127.0.0.1:8899/workboard-kanban -o /tmp/kb.html`
-      returns HTTP 200 and contains all seven column headers exactly once
-      each: `grep -o '>Pending<\|>In Progress<\|>Needs Verification<\|>Blocked<\|>Done<\|>Deferred<\|>Skipped<' /tmp/kb.html | wc -l`
-      → 7 (covers R2; the `>label<` shape only holds because R5 keeps the
-      count out of the label's own text node)
-- [ ] Column order is left-to-right per R3: `grep -o '>Pending<\|>In Progress<\|>Needs Verification<\|>Blocked<\|>Done<\|>Deferred<\|>Skipped<' /tmp/kb.html`
-      emits the seven labels in exactly that sequence (covers R3, including
-      that all seven render even if some are empty)
+      returns HTTP 200 and contains all seven column headers, anchored to
+      the `col-head` class so a card titled e.g. "Done" can't produce a
+      false match: `grep -o 'col-head[^>]*>Pending<\|col-head[^>]*>In Progress<\|col-head[^>]*>Needs Verification<\|col-head[^>]*>Blocked<\|col-head[^>]*>Done<\|col-head[^>]*>Deferred<\|col-head[^>]*>Skipped<' /tmp/kb.html | wc -l`
+      → 7 (covers R2's rendering, R5's label/count text-node split)
+- [ ] Column order is left-to-right per R3: the same anchored grep run with
+      `-o` (no `wc -l`) emits the seven labels in exactly that sequence
+      (covers R3, including that all seven render even if some are empty)
 - [ ] `grep -c 'data-text=' /tmp/kb.html` → > 0, given the repo currently
       has 156 open tasks (covers R6)
 - [ ] `grep -c 'href="/spec/' /tmp/kb.html` → > 0 (covers R4's card-to-spec link)
