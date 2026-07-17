@@ -5,7 +5,7 @@ Depends on: 05
 Priority: P1
 Budget: 45 turns
 Spec: ../SPEC.md (requirements R3, R6, R7, R8, R18; contracts C1, C3, C4, C7, C10)
-Touch: context-tree/src/cmd/tree.rs, context-tree/src/cmd/sig.rs, context-tree/src/cmd/map.rs, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/query/**, context-tree/tests/*.rs
+Touch: context-tree/src/cmd/tree.rs, context-tree/src/cmd/sig.rs, context-tree/src/cmd/map.rs, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/src/lib.rs, context-tree/src/index/mod.rs, context-tree/tests/fixtures/query/**, context-tree/tests/*.rs
 
 ## Goal
 
@@ -92,3 +92,17 @@ tree`, and `ctx sig` output on a fixture; delete `.context/cache/`;
       schema version) — 2 passed
 - [x] `bash context-tree/scripts/check.sh` → exits 0 (fmt + clippy -D
       warnings + full test suite green)
+
+## Decisions
+
+- [drain, merge-time] Widened this task's `Touch:` to include
+  `context-tree/src/lib.rs` (`pub mod cmd;` + subcommand dispatch arms,
+  same class as task 05's cli.rs/lib.rs wiring gap) and
+  `context-tree/src/index/mod.rs` (read-only `SymbolRow` + two query
+  methods added because `IndexStore.conn` is private and query commands
+  need read access — no schema change). Both were anticipated and flagged
+  by the worker's Decisions section, narrowly scoped, and not touched by
+  any concurrent task (sequential W=1 dispatch; task 07 — the only sibling
+  that will also touch cli.rs/index — had not started). Reversible: narrow
+  Touch back and extract these as their own follow-up task if a future
+  concurrent-dispatch run needs the isolation.
