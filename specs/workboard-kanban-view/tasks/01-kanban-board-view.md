@@ -117,3 +117,21 @@ class="count">12</span>`), never concatenated into one text run.
       Live browser click-through not exercised — extension lacked
       site-permission for 127.0.0.1:8898 this session (verified via
       HTTP/DOM-source instead).
+
+## Decisions
+
+- Ran the verification server on port 8898 instead of 8899 to avoid
+  colliding with the running launchd job; test-infra only, no code
+  impact, nothing to reverse.
+
+## Discovered
+
+- `_kanban_column` maps closed statuses via `.capitalize()`
+  (agent-console.py ~625), which silently assumes
+  `workboard.CLOSED_TASK_STATUSES ⊆ {done,deferred,skipped}`; a future
+  4th closed status would return a column absent from `_KANBAN_COLUMNS`
+  and raise KeyError in `render_workboard_kanban`. Cannot trigger with
+  current constants; see specs/workboard-kanban-view/tasks/02-kanban-column-closed-status-guard.md.
+- AGENTS.md "State" section enumerates GET routes but omits the new
+  `/workboard-kanban` route; outside this task's Touch, so left unedited.
+  See specs/workboard-kanban-view/tasks/03-agents-md-board-route-doc.md.
