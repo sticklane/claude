@@ -64,12 +64,12 @@ contains what it's meant to work on.
 ## Multi-spec concurrent drain: Touch-disjointness is per-spec, not global
 
 `/breakdown`'s decision-coupling test (disjoint `Touch`, no shared
-undecided design) only ever compares tasks *within the same spec* — it has
-no visibility into what a *different* spec's tasks touch. Running several
+undecided design) only ever compares tasks _within the same spec_ — it has
+no visibility into what a _different_ spec's tasks touch. Running several
 specs' queues concurrently under one orchestrating session (rather than
 `/drain`'s normal one-spec-at-a-time sequential walk) surfaces real
 collisions the breakdown step never checked for. Observed 2026-07-11
-across a single session: three separate pairs of tasks in *different*
+across a single session: three separate pairs of tasks in _different_
 specs both targeted `.claude/skills/workboard/workboard.py`, and two
 different specs' tasks both targeted `.claude/skills/drain/reference.md`.
 None of this showed up in either spec's own `## Parallelization` section.
@@ -108,8 +108,8 @@ after it). A commit message bundling two simultaneous admissions —
 followed by "s" fails the pattern's required space. Observed 2026-07-12: a
 combined-admission commit silently dropped out of the recovery grep; the
 review still ran correctly because an earlier single-task flip commit in the
-same spec satisfied the pattern first (the grep takes the *first* match, not
-every match), but a spec whose *only* flip commits are multi-task-bundled
+same spec satisfied the pattern first (the grep takes the _first_ match, not
+every match), but a spec whose _only_ flip commits are multi-task-bundled
 would SKIP its review with "no pinned flip commit" — a false skip, not a
 crash. When bundling several tasks' `Status: pending -> in-progress` edits
 into one commit (a legitimate way to admit a Group at once), keep the
@@ -256,3 +256,41 @@ that cites a `critique-findings.md`, `grep -n "^Verdict:" <file> | tail -1`
 and cross-check the spec's own `tasks/` status — a resolved concern gets its
 HUMAN.md entry deleted (human-blockers.md's "open items only" rule), not left
 as a stale checkbox.
+
+## Inside an orchestrator-isolation worktree, never diff/compare against the local `main` branch ref — it's stale
+
+When drain's own dispatch loop runs from an isolated worktree (the default,
+per reference.md's "Orchestrator isolation"), the local `main` branch ref in
+that shared repo stays wherever the MAIN checkout last left it — it only
+advances via an explicit checkout/fast-forward on that ref itself, which the
+orchestrator worktree never does (it commits to its own `drain-<slug>-run`
+branch instead). A spec-completion review's diff computation (or any other
+"diff against main" check) that names the branch `main` by name, rather than
+`HEAD`/`origin/main`/an explicit SHA, silently diffs against that stale ref
+and can read as "my merged changes are missing" even though they landed and
+pushed correctly — a false alarm that costs a debugging detour to resolve.
+Confirmed 2026-07-17 (`workboard-kanban-view` drain run): `git diff
+<base> main -- <paths>` came back empty right after a real, pushed merge;
+`git rev-parse HEAD main` showed HEAD several commits ahead of the local
+`main` ref, which was also un-force-updatable from the worktree ("cannot
+force update the branch … used by worktree at …") since the main checkout
+had it checked out elsewhere. Fix: always diff against `origin/main` (after
+a fetch) or an explicit commit SHA from an isolated worktree, never the bare
+`main` branch name.
+
+## A rejected push from a concurrent drain needs fetch+merge+retry, not just "warn and continue"
+
+The push guard's documented behavior ("a rejected, non-fast-forward, or
+offline push warns and continues... never `--force`") is correct for NOT
+failing the task, but taken literally without a retry it leaves the just-made
+commit stranded unpushed on the local branch while the orchestrator's own
+bookkeeping believes the merge landed on shared `main`. With a second live
+drain session active in the same repo (observed 2026-07-17, two concurrent
+`/drain` runs on different specs), every queue-state commit is a live race:
+this run's push was rejected twice in a row as the other session's commits
+landed first. Each time, `git fetch origin main && git merge origin/main
+-m "..." && git push` resolved cleanly (no conflicts — different specs touch
+different files) and the retry succeeded. Treat every drain push rejection
+during an active run as "fetch, merge, retry" — not a terminal warning to
+shrug off — so the commit actually reaches the shared remote before the next
+step assumes it did.
