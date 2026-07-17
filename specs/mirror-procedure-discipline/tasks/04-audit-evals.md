@@ -58,10 +58,10 @@ it, never edit the source), or the rule/gate files from task 01.
 
 ## Acceptance
 
-- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0
-- [x] `grep -c "checked: evals" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `evals` — evidence either way (grep → 1; also seeded a phrase line `.claude/skills/evals/SKILL.md|antigravity/.agents/workflows/evals.md|skill-authoring gap`)
-- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines (all suites green, 0 FAIL lines)
-- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (OK — all ultra mentions gated in 4 files)
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c "checked: evals" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `evals` — evidence either way (grep → 1; also seeded a phrase line `.claude/skills/evals/SKILL.md|antigravity/.agents/workflows/evals.md|skill-authoring gap`) — verifier PASS (2026-07-16 sweep)
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines (all suites green, 0 FAIL lines) — verifier PASS (2026-07-16 sweep)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (OK — all ultra mentions gated in 4 files) — verifier PASS (2026-07-16 sweep)
 
 ## Progress
 

@@ -46,8 +46,8 @@ this spec touches.
 
 ## Acceptance
 
-- [x] `grep -rln "set_priority" agent-console/tests/` is non-empty
-- [x] The new test(s) drive `set_priority` (or its route) directly — not only `apply_priority` or registry-rejection paths (state in your final message which existing tests cover `apply_priority`/rejection, confirming this task adds NEW wrapper-level coverage rather than duplicating them)
-- [x] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_set_priority.py` → at least 1
-- [x] `bash agent-console/scripts/check.sh` → exit 0
-- [x] The new test(s) assert observable state (file content post-edit, `git log` showing a commit) — no bare `assert_called_once()`-style assertion without an accompanying behavioral check
+- [x] `grep -rln "set_priority" agent-console/tests/` is non-empty — verifier PASS (2026-07-16 sweep)
+- [x] The new test(s) drive `set_priority` (or its route) directly — not only `apply_priority` or registry-rejection paths (state in your final message which existing tests cover `apply_priority`/rejection, confirming this task adds NEW wrapper-level coverage rather than duplicating them) — verifier PASS (2026-07-16 sweep)
+- [x] Every new test is a `unittest.TestCase` subclass: `grep -c "unittest.TestCase" agent-console/tests/test_set_priority.py` → at least 1 — verifier PASS (2026-07-16 sweep)
+- [x] `bash agent-console/scripts/check.sh` → exit 0 — verifier PASS (2026-07-16 sweep)
+- [x] The new test(s) assert observable state (file content post-edit, `git log` showing a commit) — no bare `assert_called_once()`-style assertion without an accompanying behavioral check — verifier PASS (2026-07-16 sweep)

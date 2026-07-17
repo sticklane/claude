@@ -39,10 +39,10 @@ and make the minimal edit). Parallel-safe against tasks 01–04
 ## Acceptance
 
 - [x] `cd agentprof && go test ./internal/costsummary/` → pass including
-  the no-`main`-key fixture — `ok github.com/sticklane/agentprof/internal/costsummary`; TestBuildToolDurationSamplesBucketUnderToolsNotMain asserts no `main` key + `(tools)` holds duration_ms=1500
+  the no-`main`-key fixture — `ok github.com/sticklane/agentprof/internal/costsummary`; TestBuildToolDurationSamplesBucketUnderToolsNotMain asserts no `main` key + `(tools)` holds duration_ms=1500 — verifier PASS (2026-07-16 sweep)
 - [x] evidence/05-panel-check.md records the agent-console check result —
-  GENERIC-ITERATION (`_cost_rows` iterates `(dim or {}).items()`); no panel fix needed
-- [x] `bash agentprof/scripts/check.sh` → green — format-check ok / lint ok / tests ok
+  GENERIC-ITERATION (`_cost_rows` iterates `(dim or {}).items()`); no panel fix needed — verifier PASS (2026-07-16 sweep)
+- [x] `bash agentprof/scripts/check.sh` → green — format-check ok / lint ok / tests ok — verifier PASS (2026-07-16 sweep)
 
 ## Decisions
 

@@ -44,7 +44,7 @@ TO it, never edit the source), or the rule/gate files from task 01.
 
 ## Acceptance
 
-- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (evidence: ran, exit 0 clean)
-- [x] `grep -c "checked: onboard" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `onboard` — evidence either way (evidence: grep → 1; also added seed line `.claude/skills/onboard/SKILL.md|antigravity/.agents/skills/onboard/SKILL.md|the repo's check command`)
-- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines (evidence: ran, no FAIL lines)
-- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (evidence: "OK — all ultra mentions gated in 4 files", exit 0)
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (evidence: ran, exit 0 clean) — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c "checked: onboard" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `onboard` — evidence either way (evidence: grep → 1; also added seed line `.claude/skills/onboard/SKILL.md|antigravity/.agents/skills/onboard/SKILL.md|the repo's check command`) — verifier PASS (2026-07-16 sweep)
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines (evidence: ran, no FAIL lines) — verifier PASS (2026-07-16 sweep)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (evidence: "OK — all ultra mentions gated in 4 files", exit 0) — verifier PASS (2026-07-16 sweep)

@@ -68,20 +68,20 @@ truth to mirror from — read it, don't second-guess its wording).
 
 ## Acceptance
 
-- [x] `grep -c "anchored-acceptance-criteria" antigravity/.agents/skills/idea/SKILL.md` → 1 or more. — 2
-- [x] `grep -c "self-referential" antigravity/.agents/skills/idea/SKILL.md` → 1 or more. — 1
-- [x] `grep -Fc '.claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|self-referential' tests/mirror-procedure-manifest.txt` → 1 or more. — 1
+- [x] `grep -c "anchored-acceptance-criteria" antigravity/.agents/skills/idea/SKILL.md` → 1 or more. — 2 — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c "self-referential" antigravity/.agents/skills/idea/SKILL.md` → 1 or more. — 1 — verifier PASS (2026-07-16 sweep)
+- [x] `grep -Fc '.claude/skills/idea/SKILL.md|antigravity/.agents/skills/idea/SKILL.md|self-referential' tests/mirror-procedure-manifest.txt` → 1 or more. — 1 — verifier PASS (2026-07-16 sweep)
 - [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 (with the new
       manifest line in place, this now actually fails if the antigravity
       mirror lacks the phrase — confirm it passes for real, not vacuously,
       by temporarily noting the check depends on both this task's edit AND
-      Task 01's). — exit 0, confirmed non-vacuous
+      Task 01's). — exit 0, confirmed non-vacuous — verifier PASS (2026-07-16 sweep)
 - [x] This task's own commit modifies `.claude-plugin/plugin.json`'s
-      version line: `git show <this-commit> -- .claude-plugin/plugin.json | grep -q '^+.*"version"'` → match. — 0.9.3 → 0.9.4
+      version line: `git show <this-commit> -- .claude-plugin/plugin.json | grep -q '^+.*"version"'` → match. — 0.9.3 → 0.9.4 — verifier PASS (2026-07-16 sweep)
 - [x] Re-read the antigravity step-3 edit once and confirm by inspection it
       states the same three sub-checks (current-state grep,
       self-referential rejection, inline outcome recording) in the same
-      order as the `.claude/` edit from Task 01. — confirmed, same order
+      order as the `.claude/` edit from Task 01. — confirmed, same order — verifier PASS (2026-07-16 sweep)
 
 ## Evidence
 

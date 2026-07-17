@@ -54,6 +54,6 @@ no change — use it as your model, don't edit it).
 
 ## Acceptance
 
-- [x] `grep -c "remove the worktree before deleting the branch\|remove the checkout/worktree before deleting the branch" .claude/skills/drain/reference.md` → ≥ 1 — returns 1 (Tournament "Merge" survivor cleanup)
-- [x] `grep -c "remove the worktree before deleting the branch\|remove the checkout/worktree before deleting the branch" .claude/skills/drain/SKILL.md` → ≥ 1 — returns 1 (step 3 rescue-branch deletion)
-- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — "OK — all ultra mentions gated in 4 files", exit 0
+- [x] `grep -c "remove the worktree before deleting the branch\|remove the checkout/worktree before deleting the branch" .claude/skills/drain/reference.md` → ≥ 1 — returns 1 (Tournament "Merge" survivor cleanup) — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c "remove the worktree before deleting the branch\|remove the checkout/worktree before deleting the branch" .claude/skills/drain/SKILL.md` → ≥ 1 — returns 1 (step 3 rescue-branch deletion) — verifier PASS (2026-07-16 sweep; NOTE: current SKILL.md literal phrase now returns 0 — a later unrelated line-budget trim (commit 2f19e4d) reworded this to 'removing each rescue branch's worktree before deleting' at SKILL.md:203, intent preserved, literal rot)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — "OK — all ultra mentions gated in 4 files", exit 0 — verifier PASS (2026-07-16 sweep)

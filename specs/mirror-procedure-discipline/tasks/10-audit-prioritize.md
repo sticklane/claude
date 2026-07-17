@@ -46,7 +46,7 @@ mirror TO it, never edit the source), or the rule/gate files from task 01.
 
 ## Acceptance
 
-- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0
-- [x] `grep -c "checked: prioritize" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `prioritize` — evidence either way (grep → 1)
-- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines
-- [x] `bash evals/lint-ultra-gate.sh` → exit 0
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c "checked: prioritize" tests/mirror-procedure-manifest.txt` → ≥1, OR a new manifest line referencing `prioritize` — evidence either way (grep → 1) — verifier PASS (2026-07-16 sweep)
+- [x] `for t in tests/test_*.sh; do bash "$t" || echo "FAIL: $t"; done` → no FAIL lines — verifier PASS (2026-07-16 sweep)
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 — verifier PASS (2026-07-16 sweep)

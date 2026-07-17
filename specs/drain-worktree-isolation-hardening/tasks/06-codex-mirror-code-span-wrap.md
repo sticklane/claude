@@ -28,10 +28,10 @@ now opens on one line and continues into "worktree"/"branch" on the next.
 
 - [x] ``grep -c '`git worktree remove <path>` then' codex/.agents/skills/drain/SKILL.md``
       → 2 (both instances now intact, single-line spans; was mid-span-wrapped
-      before this fix)
+      before this fix) — verifier PASS (2026-07-16 sweep)
 - [x] ``rg -U '`git\n(worktree|branch)' codex/.agents/skills/drain/SKILL.md``
       → no match, exit 1 (confirms no code span still opens on one line and
       continues into "worktree"/"branch" on the next — the exact wrap bug
-      this task fixes)
-- [x] `bash evals/lint-skill-size-gate.sh` exits 0 (no regression)
-- [x] `bash tests/test_doc_links.sh` exits 0 (no regression)
+      this task fixes) — verifier PASS (2026-07-16 sweep)
+- [x] `bash evals/lint-skill-size-gate.sh` exits 0 (no regression) — verifier PASS (2026-07-16 sweep)
+- [x] `bash tests/test_doc_links.sh` exits 0 (no regression) — verifier PASS (2026-07-16 sweep)

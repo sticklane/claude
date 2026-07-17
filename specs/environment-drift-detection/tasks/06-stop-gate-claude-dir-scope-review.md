@@ -34,10 +34,10 @@ for this repo's own local Stop hook, or be carved out as product-like.
 ## Acceptance
 
 - [x] `grep -n "claude_is_product" templates/stop-gate.sh` → at least 1 hit
-      (returns 1: the `.claude-plugin/`-detection carve-out)
+      (returns 1: the `.claude-plugin/`-detection carve-out) — verifier PASS (2026-07-16 sweep)
 - [x] `bash tests/test_hook_templates.sh` exits 0, including new cases for
       a `.claude/**`-only diff in a repo WITH a `.claude-plugin/` marker
       (check runs in full) and WITHOUT one (still docs-only, skipped) —
-      91 pass, 0 fail
+      91 pass, 0 fail — verifier PASS (2026-07-16 sweep)
 - [x] `bash tests/test_install_gates.sh` exits 0 (no regression) — 168
-      pass, 0 fail
+      pass, 0 fail — verifier PASS (2026-07-16 sweep)

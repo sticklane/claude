@@ -50,10 +50,10 @@ Do not touch `.claude/skills/build/SKILL.md`, `.claude/skills/drain/SKILL.md`,
 
 ## Acceptance
 
-- [x] `grep -q "Rigor:" .claude/skills/idea/SKILL.md && grep -q "Rigor:" .claude/skills/breakdown/SKILL.md` — exit 0 (commit 94dde62)
-- [x] `grep -qi "rigor" antigravity/.agents/skills/idea/SKILL.md && grep -qi "rigor" antigravity/.agents/skills/breakdown/SKILL.md` — exit 0
-- [x] `grep -qi "rigor" CLAUDE.md` — exit 0
-- [x] `bash evals/lint-ultra-gate.sh` exits 0 — "OK — all ultra mentions gated in 4 files"
+- [x] `grep -q "Rigor:" .claude/skills/idea/SKILL.md && grep -q "Rigor:" .claude/skills/breakdown/SKILL.md` — exit 0 (commit 94dde62) — verifier PASS (2026-07-16 sweep)
+- [x] `grep -qi "rigor" antigravity/.agents/skills/idea/SKILL.md && grep -qi "rigor" antigravity/.agents/skills/breakdown/SKILL.md` — exit 0 — verifier PASS (2026-07-16 sweep)
+- [x] `grep -qi "rigor" CLAUDE.md` — exit 0 — verifier PASS (2026-07-16 sweep)
+- [x] `bash evals/lint-ultra-gate.sh` exits 0 — "OK — all ultra mentions gated in 4 files" — verifier PASS (2026-07-16 sweep)
 - [ ] Manual, per CLAUDE.md's testing convention (mark evidence, don't
       block merge on it): fresh-session `/idea` a throwaway-tool pitch,
       answer "prototype" — the produced SPEC.md carries `Rigor: prototype`

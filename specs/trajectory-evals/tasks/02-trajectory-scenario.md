@@ -47,7 +47,7 @@ owns it) or `.claude/skills/evals/` (task 03).
 - [x] `grep -rl "EVAL_TRANSCRIPT" evals/breakdown/*/assert.sh` finds the
       new scenario's `assert.sh`
       — evidence/02-trajectory-scenario.md: returns only
-      `evals/breakdown/02-scout-delegation/assert.sh`.
+      `evals/breakdown/02-scout-delegation/assert.sh`. — verifier PASS (2026-07-16 sweep)
 - [x] The new scenario's `assert.sh` fails loudly (non-zero, with a
       message naming the transcript as unavailable) when given an empty
       `EVAL_TRANSCRIPT` — test this directly: `EVAL_TRANSCRIPT="" bash
@@ -55,7 +55,7 @@ evals/breakdown/02-*/assert.sh` (from within a fixture dir with the
       expected artifacts already present) exits non-zero and prints a
       message mentioning "transcript"
       — evidence/02-trajectory-scenario.md: exit 1, message
-      "EVAL_TRANSCRIPT is empty or missing ... transcript unavailable".
+      "EVAL_TRANSCRIPT is empty or missing ... transcript unavailable". — verifier PASS (2026-07-16 sweep)
 - [ ] **Manual-pending** (paid headless run, human-launched): `./evals/run.sh
 breakdown` passes including the new scenario —
       docs/memory/unattended-worker-tool-limits.md

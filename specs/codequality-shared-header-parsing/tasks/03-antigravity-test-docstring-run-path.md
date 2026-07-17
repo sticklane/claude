@@ -41,9 +41,9 @@ mirror or `plugin.json` bump obligation applies.
 
 ## Acceptance
 
-- [x] `grep -q '.agents/skills/workboard' antigravity/.agents/skills/workboard/test_workboard.py`
-- [x] `grep -c '.agents/skills/prioritize' antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → 2
-- [x] `diff -q .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py; [ $? -ne 0 ]` (differs only on the Run: line)
-- [x] `diff -q .claude/skills/prioritize/test_prioritize_scan.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py; [ $? -ne 0 ]` (differs only on the Run: lines)
-- [x] `bash tests/test_antigravity_content_parity.sh` → exit 0
-- [x] `bash tests/test_antigravity_parity.sh` → exit 0
+- [x] `grep -q '.agents/skills/workboard' antigravity/.agents/skills/workboard/test_workboard.py` — verifier PASS (2026-07-16 sweep)
+- [x] `grep -c '.agents/skills/prioritize' antigravity/.agents/skills/prioritize/test_prioritize_scan.py` → 2 — verifier PASS (2026-07-16 sweep)
+- [x] `diff -q .claude/skills/workboard/test_workboard.py antigravity/.agents/skills/workboard/test_workboard.py; [ $? -ne 0 ]` (differs only on the Run: line) — verifier PASS (2026-07-16 sweep)
+- [x] `diff -q .claude/skills/prioritize/test_prioritize_scan.py antigravity/.agents/skills/prioritize/test_prioritize_scan.py; [ $? -ne 0 ]` (differs only on the Run: lines) — verifier PASS (2026-07-16 sweep)
+- [x] `bash tests/test_antigravity_content_parity.sh` → exit 0 — verifier PASS (2026-07-16 sweep)
+- [x] `bash tests/test_antigravity_parity.sh` → exit 0 — verifier PASS (2026-07-16 sweep)
