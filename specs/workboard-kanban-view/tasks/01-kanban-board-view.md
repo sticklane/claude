@@ -7,6 +7,24 @@ Budget: 18 turns
 Spec: ../SPEC.md (requirements R1-R9)
 Touch: agent-console/agent-console.py, agent-console/tests/test_kanban_view.py
 
+<!--
+PLAN (delete at close-out):
+1. RED: tests/test_kanban_view.py — importlib-load ac module, assert
+   _kanban_column maps one status per bucket. Confirm fails (no fn yet).
+2. GREEN: add _kanban_column near _dag_tasks (~line 607); reuse
+   workboard.OPEN_TASK_STATUSES / CLOSED_TASK_STATUSES for membership,
+   sub-bucket open→Pending/In Progress/Needs Verification, catch-all→Blocked,
+   closed→capitalize (Done/Deferred/Skipped).
+3. add render_workboard_kanban(b): flatten repos→specs→tasks into cards; 7
+   fixed columns in order; closed 3 in <details>; card = /spec/{id} link +
+   repo:slug badge + priority + data-text.
+4. wire GET /workboard-kanban into dispatch (~3294).
+5. add "Board" tab to page() nav (~1904).
+6. add .kanban-* CSS before CSS closing """ (~1788), reuse --vars.
+7. run scripts/check.sh; run server + curl acceptance greps.
+Risk: task entries lack id/priority — those come from spec level (sp).
+-->
+
 ## Goal
 
 `agent-console/agent-console.py` gains a new read-only `GET /workboard-kanban`
@@ -105,7 +123,7 @@ class="count">12</span>`), never concatenated into one text run.
 - [ ] With the server running locally
       (`python3 agent-console/agent-console.py &`, or the existing
       `com.agent-console` launchd job), `curl -fsS
-  http://127.0.0.1:8899/workboard-kanban -o /tmp/kb.html` → HTTP 200,
+http://127.0.0.1:8899/workboard-kanban -o /tmp/kb.html` → HTTP 200,
       and `grep -o 'col-head[^>]*>Pending<\|col-head[^>]*>In Progress<\|col-head[^>]*>Needs Verification<\|col-head[^>]*>Blocked<\|col-head[^>]*>Done<\|col-head[^>]*>Deferred<\|col-head[^>]*>Skipped<' /tmp/kb.html`
       emits the seven labels exactly once each, in exactly that order
 - [ ] `grep -c 'data-text=' /tmp/kb.html` → > 0
