@@ -7,6 +7,25 @@ Budget: 50 turns
 Spec: ../SPEC.md (requirements R1 [c, cpp, zig], R9, R10 partial; contracts C1, C2, C3, C8)
 Touch: context-tree/Cargo.toml, context-tree/src/lang/mod.rs, context-tree/src/lang/c.rs, context-tree/src/lang/cpp.rs, context-tree/src/lang/zig.rs, context-tree/tests/fixtures/languages/{c,cpp,zig}/**, context-tree/tests/*.rs
 
+<!--
+PLAN (delete at close-out):
+Model on go.rs (file-path fallback, refs/imports) + python.rs (authored LOCALS_QUERY → Scope).
+Order:
+1. cargo add tree-sitter-c/-cpp/-zig; confirm they build vs tree-sitter 0.26.
+2. Inspect each grammar's bundled queries/node-types for locals query + node kinds.
+3. c.rs: file-path module (path::*), function_definition/declaration/struct/enum/typedef,
+   preproc_include → Import, call_expression + identifier → Reference, leading // or /* */
+   comment block → docstring (C8). No namespace. Scope only if grammar ships locals query.
+4. cpp.rs: like C + namespace_definition as container; overloads disambiguated via
+   path::disambiguate (#n). Property test: two overloads → distinct qpaths, each resolves.
+5. zig.rs: file-path module; fn decls (Fn/const fn), @import builtin_call → Import,
+   references, //! or /// or // leading comment docstring.
+6. Fixtures c/cpp/zig each: documented symbol w/ per-fixture sentinel, ≥1 cross-symbol ref,
+   1 include/@import. cpp adds overload fixture.
+7. tests: cargo test c_/cpp/zig each; covered: c/cpp/zig markers.
+RED first per language, then GREEN. Register via inventory::submit!, add pub mod lines.
+-->
+
 ## Goal
 
 Three more `LanguageExtractor` implementations exist: C, C++, and Zig.
