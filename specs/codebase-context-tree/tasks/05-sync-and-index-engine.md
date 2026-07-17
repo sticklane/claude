@@ -5,7 +5,7 @@ Depends on: 01
 Priority: P0
 Budget: 60 turns
 Spec: ../SPEC.md (requirements R2, R4, R5, R9 partial [storage]; contracts C5, C6)
-Touch: context-tree/src/sync/**, context-tree/src/index/**, context-tree/src/vcs/**, context-tree/Cargo.toml, context-tree/tests/fixtures/sync/**, context-tree/tests/*.rs
+Touch: context-tree/src/sync/**, context-tree/src/index/**, context-tree/src/vcs/**, context-tree/Cargo.toml, context-tree/src/cli.rs, context-tree/src/lib.rs, context-tree/tests/fixtures/sync/**, context-tree/tests/*.rs
 
 ## Goal
 
@@ -123,3 +123,18 @@ implementations.
       — verifier PASS: baseline adapter indexes a plain directory
 - [x] `bash context-tree/scripts/check.sh` → exits 0
       — verifier PASS: fmt + clippy -D warnings + full cargo test all green
+
+## Decisions
+
+- [drain, merge-time] Widened this task's `Touch:` to include
+  `context-tree/src/cli.rs` and `context-tree/src/lib.rs`. The worker's
+  branch registered the `ctx sync` subcommand (6 lines in cli.rs: one
+  `Sync { stats }` variant; 33 lines in lib.rs: 3 `pub mod` lines +
+  dispatch arm) — necessary for the task's own Goal and its CLI-driven
+  acceptance criteria, but the breakdown's Touch header omitted these two
+  files (the same authoring-gap class the breakdown's own critic pass
+  already caught once for task 09's Touch). No concurrent task held
+  cli.rs/lib.rs at merge time (sequential W=1 dispatch; tasks 06/07, which
+  later add their own subcommands to the same files, had not started).
+  Reversible: narrow Touch back and move the CLI wiring to a follow-up
+  task if a future concurrent-dispatch run needs the isolation.
