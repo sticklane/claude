@@ -1,6 +1,6 @@
 # Task 01: Rust scaffold, CLI shell, project init, Python extraction
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 60 turns
