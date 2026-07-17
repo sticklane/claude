@@ -658,6 +658,15 @@ carry a readable path, resolved at dispatch:
 > permits, and exit with verdict BLOCKED naming the sweep as the cause. Do
 > not try to recreate the worktree.
 >
+> Prefer **known-safe shell patterns** in permission-gated Bash calls so a
+> denial never happens in the first place: no command substitution
+> (`$(...)`), no `for` loops, and no multi-verb `&&`-chained commands — run
+> one verb per call; write `! cmd | grep -q …` rather than `cmd | ! grep …`
+> (negation belongs on the pipeline, not inside it); and handle `grep -c`'s
+> exit-1-on-zero-matches explicitly (e.g. `grep -c … || true` when zero is
+> an expected outcome) so a legitimate zero-count doesn't read as a failed
+> command. This is proactive; the retry rule below is the reactive backstop.
+>
 > If a Bash call is denied ("don't ask mode"), retry it ONCE as a
 > bare single command (no chaining, no `&&`/pipe/redirection tricks); if it
 > is still denied, stop and report the blocked command in your verdict,
@@ -1066,7 +1075,12 @@ frontmatter to pin against (it's a plain CLI invocation, not a Task-tool
 dispatch), so `--model` must be passed explicitly here — there is no
 structural fallback if it's omitted.
 `dontAsk` makes unapproved tools abort instead of hanging — the CI
-baseline from the playbook's mechanism ladder. `--max-turns` is N from
+baseline from the playbook's mechanism ladder. Under `dontAsk` the same
+shell shapes the Worker prompt flags get denied, so the headless worker
+follows the Worker prompt's **known-safe shell patterns** guidance (no
+command substitution, no `for` loops, no multi-verb `&&` chains; `! cmd |
+grep -q` over `cmd | ! grep`; `grep -c … || true` for expected zero counts)
+rather than restating it here. `--max-turns` is N from
 the task's pinned `Budget: <N> turns` header (integer N, the format
 /breakdown writes) when present, else 80 — the hard cap behind the
 prompt's soft stop. Because no independent

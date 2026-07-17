@@ -318,7 +318,16 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    > Every path you Read/Edit/Write must be under your worktree root — the
    > main-checkout path is given ONLY for copying gitignored files in; never
    > edit a main-checkout path from inside the worktree, since editing it
-   > errors and wastes a turn. If a Bash call is denied ("don't ask mode"),
+   > errors and wastes a turn. Prefer **known-safe shell patterns** in
+   > permission-gated Bash calls so a denial never happens in the first
+   > place: no command substitution (`$(...)`), no `for` loops, and no
+   > multi-verb `&&`-chained commands — run one verb per call; write `! cmd
+| grep -q …` rather than `cmd | ! grep …` (negation belongs on the
+   > pipeline, not inside it); and handle `grep -c`'s exit-1-on-zero-matches
+   > explicitly (e.g. `grep -c … || true` when zero is an expected outcome)
+   > so a legitimate zero-count doesn't read as a failed command. This is
+   > proactive; the retry rule next is the reactive backstop. If a Bash call
+   > is denied ("don't ask mode"),
    > retry it ONCE as a bare single command (no chaining, no pipe/redirection
    > tricks); if it is still denied, stop and report the blocked command in
    > your verdict, never iterate syntax variants. Read a file at most
