@@ -96,6 +96,37 @@ pub fn run() -> ExitCode {
             json,
             no_sync,
         }),
+        Some(cli::Command::Deps {
+            path,
+            reverse,
+            json,
+            no_sync,
+        }) => cmd::deps::run(cmd::deps::Args {
+            path,
+            reverse,
+            json,
+            no_sync,
+        }),
+        Some(cli::Command::Refs {
+            symbol,
+            limit,
+            json,
+            no_sync,
+        }) => cmd::refs::run(cmd::refs::Args {
+            symbol,
+            limit,
+            json,
+            no_sync,
+        }),
+        Some(cli::Command::At {
+            position,
+            json,
+            no_sync,
+        }) => cmd::at::run(cmd::at::Args {
+            position,
+            json,
+            no_sync,
+        }),
         Some(cli::Command::Map {
             tokens,
             doc,
