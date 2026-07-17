@@ -127,10 +127,14 @@ gate-refused stubs", "NOT-READY specs"). This mirrors CLAUDE.md's rule
 that a spec touching `.claude/skills/*` content must carry the
 `antigravity/` mirror update in the same spec (cited, not restated).
 
-R8: `.claude-plugin/plugin.json`'s `"version"` is bumped (currently
-`"0.9.16"`) per CLAUDE.md's "bump version in plugin.json whenever skill
-behavior changes" rule, since R3/R4/R7 change `/drain`'s HUMAN.md-filing
-behavior in both the `.claude/` source and its `antigravity/` mirror.
+R8: `.claude-plugin/plugin.json`'s `"version"` is bumped past its value AT
+IMPLEMENTATION TIME (0.9.17 as of this spec's authoring — re-check the
+current value before implementing, since other concurrent work bumps it
+independently; the requirement is "bumped from whatever it currently is,"
+not "bumped from 0.9.17 specifically") per CLAUDE.md's "bump version in
+plugin.json whenever skill behavior changes" rule, since R3/R4/R7 change
+`/drain`'s HUMAN.md-filing behavior in both the `.claude/` source and its
+`antigravity/` mirror.
 
 ## Out of scope
 
@@ -192,9 +196,14 @@ behavior in both the `.claude/` source and its `antigravity/` mirror.
 - [ ] `grep -c 'promotion of this stub to a dispatchable task' antigravity/.agents/workflows/drain.md`
       → 1, and `grep -c 'breakdown of this spec into dispatchable tasks' antigravity/.agents/workflows/drain.md`
       → 1 (R7's mirrored fixed phrases; both absent today)
-- [ ] `grep -c '"version": "0.9.16"' .claude-plugin/plugin.json` → 0 (R8's
-      version bump; today this returns 1, confirming the string is still
-      unbumped)
+- [ ] R8, version-agnostic: before editing, capture the current value with
+      `grep -n '"version"' .claude-plugin/plugin.json`; after editing,
+      `grep -c '"version"' .claude-plugin/plugin.json` → 1 (still exactly
+      one version line) AND that line's value differs from the captured
+      pre-edit value (confirms an actual bump happened, robust to
+      concurrent version changes from unrelated work landing between spec
+      authoring and implementation — do not hardcode a specific from/to
+      version string in this check).
 - [ ] End-to-end: a human reading `.claude/rules/human-blockers.md`'s
       updated grammar section, with no other context, can state in one
       sentence what a `Blocks:` clause on a hypothetical filed entry would
