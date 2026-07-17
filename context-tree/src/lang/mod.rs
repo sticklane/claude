@@ -3,3 +3,4 @@
 //! that file wires it in, so there is no shared dispatch table to hand-edit.
 
 pub mod python;
+pub mod typescript;
