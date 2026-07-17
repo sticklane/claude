@@ -2,6 +2,7 @@
 //! line here plus the language's own file — the `inventory` registration in
 //! that file wires it in, so there is no shared dispatch table to hand-edit.
 
+pub mod c;
 pub mod go;
 pub mod java;
 pub mod python;
