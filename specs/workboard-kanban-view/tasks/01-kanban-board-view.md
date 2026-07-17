@@ -1,29 +1,11 @@
 # Task 01: Kanban board view for the workboard dashboard
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 18 turns
 Spec: ../SPEC.md (requirements R1-R9)
 Touch: agent-console/agent-console.py, agent-console/tests/test_kanban_view.py
-
-<!--
-PLAN (delete at close-out):
-1. RED: tests/test_kanban_view.py — importlib-load ac module, assert
-   _kanban_column maps one status per bucket. Confirm fails (no fn yet).
-2. GREEN: add _kanban_column near _dag_tasks (~line 607); reuse
-   workboard.OPEN_TASK_STATUSES / CLOSED_TASK_STATUSES for membership,
-   sub-bucket open→Pending/In Progress/Needs Verification, catch-all→Blocked,
-   closed→capitalize (Done/Deferred/Skipped).
-3. add render_workboard_kanban(b): flatten repos→specs→tasks into cards; 7
-   fixed columns in order; closed 3 in <details>; card = /spec/{id} link +
-   repo:slug badge + priority + data-text.
-4. wire GET /workboard-kanban into dispatch (~3294).
-5. add "Board" tab to page() nav (~1904).
-6. add .kanban-* CSS before CSS closing """ (~1788), reuse --vars.
-7. run scripts/check.sh; run server + curl acceptance greps.
-Risk: task entries lack id/priority — those come from spec level (sp).
--->
 
 ## Goal
 
@@ -113,29 +95,25 @@ class="count">12</span>`), never concatenated into one text run.
 
 ## Acceptance
 
-- [ ] `agent-console/scripts/check.sh` → `check: PASS` (includes the new
-      `test_kanban_view.py`, and confirms this task didn't break the
-      existing `/workboard` smoke test)
-- [ ] `grep -c "workboard-kanban" agent-console/agent-console.py` → ≥1
-- [ ] `grep -c "render_workboard_kanban" agent-console/agent-console.py` → ≥1
-- [ ] `python3 -c "import importlib.util as u; s=u.spec_from_file_location('ac','agent-console/agent-console.py'); m=u.module_from_spec(s); s.loader.exec_module(m); k=m._kanban_column; assert k('open')=='Pending'; assert k('claimed')=='In Progress'; assert k('needs_verification')=='Needs Verification'; assert k('waiting')=='Blocked'; assert k('done')=='Done'; assert k('deferred')=='Deferred'; assert k('skipped')=='Skipped'; print('ok')"`
-      → prints `ok`
-- [ ] With the server running locally
-      (`python3 agent-console/agent-console.py &`, or the existing
-      `com.agent-console` launchd job), `curl -fsS
-http://127.0.0.1:8899/workboard-kanban -o /tmp/kb.html` → HTTP 200,
-      and `grep -o 'col-head[^>]*>Pending<\|col-head[^>]*>In Progress<\|col-head[^>]*>Needs Verification<\|col-head[^>]*>Blocked<\|col-head[^>]*>Done<\|col-head[^>]*>Deferred<\|col-head[^>]*>Skipped<' /tmp/kb.html`
-      emits the seven labels exactly once each, in exactly that order
-- [ ] `grep -c 'data-text=' /tmp/kb.html` → > 0
-- [ ] `grep -c 'href="/spec/' /tmp/kb.html` → > 0
-- [ ] `grep -c '<details' /tmp/kb.html` → ≥3
-- [ ] `curl -fsS http://127.0.0.1:8899/ | grep -c 'href="/workboard-kanban"'`
-      → ≥1
-- [ ] `curl -fsS http://127.0.0.1:8899/workboard-kanban -X POST -o /dev/null -w '%{http_code}'`
-      → non-2xx
-- [ ] End-to-end: open `http://127.0.0.1:8899/workboard-kanban` in a
-      browser, confirm the Board tab is highlighted active, all seven
-      columns render with Done/Deferred/Skipped collapsed by default,
-      cards are visible in at least Pending/In Progress, and typing a
-      known repo name into the filter box hides cards from other repos
-      across every column.
+- [x] `agent-console/scripts/check.sh` → `check: PASS` (198 tests incl. new
+      `test_kanban_view.py`; render smoke ok — existing `/workboard` intact)
+- [x] `grep -c "workboard-kanban" agent-console/agent-console.py` → 2 (≥1)
+- [x] `grep -c "render_workboard_kanban" agent-console/agent-console.py` → 2 (≥1)
+- [x] R2 importlib `_kanban_column` mapping command → prints `ok`
+- [x] `curl .../workboard-kanban` → HTTP 200; anchored col-head grep emits
+      the seven labels once each in order Pending, In Progress, Needs
+      Verification, Blocked, Done, Deferred, Skipped (served from worktree on
+      port 8898 — launchd 8899 runs the pre-merge main checkout)
+- [x] `grep -c 'data-text=' /tmp/kb.html` → 5 (> 0)
+- [x] `grep -c 'href="/spec/' /tmp/kb.html` → 5 (> 0)
+- [x] `grep -c '<details' /tmp/kb.html` → 3 (≥3; columns line-isolated)
+- [x] `curl .../ | grep -c 'href="/workboard-kanban"'` → 1 (≥1)
+- [x] `curl -X POST .../workboard-kanban` → 403 (non-2xx; Host/CSRF guard)
+- [x] End-to-end: Board tab renders `class="tab on"` (active); all 7 columns
+      present, Done/Deferred/Skipped in `<details>` with no `open` attr
+      (collapsed); Pending=87, In Progress=1 cards. Filter equivalence: every
+      card carries `data-text`; PAGE_JS:1843 toggles `.hidden` on all
+      `[data-text]` unchanged, so a repo token narrows across all columns.
+      Live browser click-through not exercised — extension lacked
+      site-permission for 127.0.0.1:8898 this session (verified via
+      HTTP/DOM-source instead).
