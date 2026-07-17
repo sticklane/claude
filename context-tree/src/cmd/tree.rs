@@ -1,7 +1,7 @@
 //! `ctx tree <path>` — a containment outline for a path subtree (R6), with a
 //! depth cap, a result cap plus truncation line, `--doc`, and C10 markers.
 
-use crate::cmd::{first_doc_line, format_note_marker, load_index};
+use crate::cmd::{first_doc_line, format_note_marker, load_index, note_value};
 use crate::index::{IndexStore, SymbolRow};
 use serde_json::json;
 use std::collections::HashMap;
@@ -133,12 +133,4 @@ fn render_json<'a>(
     });
     println!("{payload}");
     ExitCode::SUCCESS
-}
-
-/// The C10 note tuple as JSON: `null` until task 09 populates notes.
-pub fn note_value(store: &IndexStore, symbol_id: i64) -> serde_json::Value {
-    match store.note_marker(symbol_id) {
-        Some((count, stale)) => json!({ "count": count, "stale": stale }),
-        None => serde_json::Value::Null,
-    }
 }
