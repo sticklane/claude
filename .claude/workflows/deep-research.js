@@ -179,6 +179,19 @@ const VERIFY_PROMPT = (claim, v) =>
   "**refuted=false** ONLY if: claim is well-supported, current, and source quality matches claim strength.\n" +
   "Default to refuted=true if uncertain.\n\nStructured output only. Evidence MUST be specific."
 
+// A synthesis result is trustworthy only if it actually derives from the
+// claims this run verified — every finding must cite at least one source
+// URL that traces back to a `confirmed` claim. Catches both a literal stub
+// (2026-07-16 incident: a synthesis stage returned {"summary":"test",
+// "findings":[{"claim":"test claim",...}],"caveats":"test caveat"} and the
+// workflow reported it as a completed report) and any other hallucinated/
+// ungrounded synthesis that cites nothing real.
+function looksUngrounded(report, confirmedClaims) {
+  if (!report || !Array.isArray(report.findings) || report.findings.length === 0) return true
+  const realSources = new Set(confirmedClaims.map(c => c.sourceUrl))
+  return !report.findings.some(f => Array.isArray(f.sources) && f.sources.some(s => realSources.has(s)))
+}
+
 // ─── Pipeline: search → dedup → fetch+extract (no barrier) ───
 // Search + Fetch/Extract run on haiku at effort:'low' — mechanical fan-out (token-discipline).
 const searchResults = await pipeline(
@@ -344,7 +357,7 @@ const unverifiedBlock = unverified.length > 0
   : ""
 
 // Synthesize at the session model — judgment (merge/rank), not a mechanical stage.
-const report = await agent(
+const SYNTHESIZE_PROMPT =
   "## Synthesis: research report\n\n" +
   "**Question:** " + QUESTION + "\n\n" +
   confirmed.length + " claims survived " + VOTES_PER_CLAIM + "-vote adversarial verification. Merge semantic duplicates and synthesize.\n\n" +
@@ -353,18 +366,31 @@ const report = await agent(
   "1. Identify claims that say the same thing — merge them, combine their sources.\n" +
   "2. Group related claims into coherent findings. Each finding should directly address the research question.\n" +
   "3. Assign confidence per finding: high (multiple primary sources, unanimous votes), medium (secondary sources or split votes), low (single source or blog-quality).\n" +
-  "4. Write a 3-5 sentence executive summary answering the research question.\n" +
-  "5. Note caveats: what's uncertain, what sources were weak, what time-sensitivity applies.\n" +
-  "6. List 2-4 open questions that emerged but weren't answered.\n\nStructured output only.",
-  { label: "synthesize", schema: REPORT_SCHEMA }
-)
+  "4. Every finding's `sources` array MUST list the actual sourceUrl value(s) from the confirmed claims above that it draws on — never invent, omit, or leave it empty.\n" +
+  "5. Write a 3-5 sentence executive summary answering the research question.\n" +
+  "6. Note caveats: what's uncertain, what sources were weak, what time-sensitivity applies.\n" +
+  "7. List 2-4 open questions that emerged but weren't answered.\n\nStructured output only."
 
-if (!report) {
-  // Synthesis skipped/errored — salvage the verified claims raw rather
-  // than throwing on report.findings and discarding the whole run.
+let report = await agent(SYNTHESIZE_PROMPT, { label: "synthesize", schema: REPORT_SCHEMA })
+
+// Grounding check, bounded to one retry (token-discipline's 2-4-cycle cap for
+// evaluator-optimizer loops) — a synthesis stage that returns a stub or
+// hallucinated report should not silently pass as a completed run.
+if (report && looksUngrounded(report, confirmed)) {
+  log("Synthesis result cites no verified source — retrying once")
+  report = await agent(
+    SYNTHESIZE_PROMPT + "\n\nYour previous attempt cited no real source from the confirmed claims above — every finding's `sources` array must contain actual sourceUrl values from that list.",
+    { label: "synthesize-retry", schema: REPORT_SCHEMA }
+  )
+}
+
+if (!report || looksUngrounded(report, confirmed)) {
+  // Synthesis skipped, errored, or never grounded itself in the verified
+  // claims after a retry — salvage the verified claims raw rather than
+  // reporting an empty/stubbed/hallucinated result as a completed run.
   return {
     question: QUESTION,
-    summary: "Synthesis step was skipped or failed — returning " + confirmed.length + " verified claims unmerged.",
+    summary: "Synthesis step did not produce a report grounded in the verified claims (skipped, failed, or ungrounded after one retry) — returning " + confirmed.length + " verified claims unmerged rather than an untrustworthy summary.",
     findings: [],
     confirmed: confirmed.map(c => ({ claim: c.claim, source: c.sourceUrl, quote: c.quote, vote: (c.verdicts.length - c.refutedVotes) + "-" + c.refutedVotes })),
     refuted: killed.map(toRefuted),
