@@ -1,6 +1,6 @@
 # Task 01: Add browser-delegation and deferred-tool-schema bullets to token-discipline.md
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 6 turns
@@ -71,10 +71,10 @@ step applies here.
 
 ## Acceptance
 
-- [ ] `grep -c "route each page-check through a subagent" .claude/rules/token-discipline.md` → 1
-- [ ] `grep -c "2 direct-context screenshots" .claude/rules/token-discipline.md` → 1
-- [ ] `grep -c "batch-load the tool's schema via" .claude/rules/token-discipline.md` → 1
-- [ ] `grep -n "^## Delegation defaults" .claude/rules/token-discipline.md` → exactly one match
-- [ ] `grep -n "^## Dispatch authoring" .claude/rules/token-discipline.md` → exactly one match
-- [ ] `grep -c "^## " .claude/rules/token-discipline.md` → same count as `git show HEAD:.claude/rules/token-discipline.md | grep -c '^## '` (no new section headers added)
-- [ ] MANUAL: a human or reviewing agent reads both new bullets in context and confirms they cite rather than restate the RETRY evidence and the `scout` tool-grant constraint, per R3.
+- [x] `grep -c "route each page-check through a subagent" .claude/rules/token-discipline.md` → 1 (verified: 1)
+- [x] `grep -c "2 direct-context screenshots" .claude/rules/token-discipline.md` → 1 (verified: 1)
+- [x] `grep -c "batch-load the tool's schema via" .claude/rules/token-discipline.md` → 1 (verified: 1)
+- [x] `grep -n "^## Delegation defaults" .claude/rules/token-discipline.md` → exactly one match (verified: 1)
+- [x] `grep -n "^## Dispatch authoring" .claude/rules/token-discipline.md` → exactly one match (verified: 1)
+- [x] `grep -c "^## " .claude/rules/token-discipline.md` → same count as `git show HEAD:.claude/rules/token-discipline.md | grep -c '^## '` (no new section headers added) (verified: 8 == 8)
+- [x] MANUAL: a human or reviewing agent reads both new bullets in context and confirms they cite rather than restate the RETRY evidence and the `scout` tool-grant constraint, per R3. (verified: both bullets point to specs/context-blowout-subagent-guards' Problem/Research-grounding sections and to `.claude/agents/scout.md`'s frontmatter rather than restating the quotes; scout grant listed per task step 2's explicit requirement, not claimed "Read/Grep/Glob-only")

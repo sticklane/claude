@@ -42,12 +42,29 @@ tokens on decisions; delegate consumption of raw material to subagents.
 - **Large codebase, scout not converging → the orchestrating session (never
   `scout`) may `ToolSearch` for a connected code-search MCP tool.** When
   repeated `scout` dispatches on a fuzzy/semantic query aren't converging on
-  a large repo and such a server *happens to be connected* this session, the
+  a large repo and such a server _happens to be connected_ this session, the
   orchestrating session — `scout` cannot `ToolSearch` — runs a `ToolSearch`
   to discover it and prefers it over further scout rounds. Advisory and
   conditional on a server being connected, never a hard dependency; when
   each choice fits, and how to install `claude-context` or `code-index-mcp`,
   is in docs/guides/large-codebase-context.md.
+- **Multi-page browser walks delegate per page; cap direct screenshots.** A
+  `claude-in-chrome`-driven site walk that screenshots after each navigation
+  blows context — a proven incident died with "Prompt is too long" mid-task,
+  and the same-task RETRY succeeded only by delegating page-by-page scouting
+  to subagents (the RETRY-succeeded-via-delegation evidence in
+  specs/context-blowout-subagent-guards' Problem/Research-grounding sections).
+  So for any multi-page or multi-step browser-automation walk,
+  route each page-check through a subagent that returns a short verdict rather
+  than accumulating raw screenshots in the orchestrating session's context;
+  keep at most 2 direct-context screenshots per turn in the main session, and
+  send anything beyond that cap through a subagent. Pure existence/state-check
+  pages go to `scout` (this section's opening bullet), but `scout` has no MCP
+  tool grant — its `.claude/agents/scout.md` frontmatter grants `Read`,
+  `Grep`, `Glob`, `Bash(git log *)`, `Bash(git show *)`, `Bash(ls *)`, and
+  `Bash(wc *)` — so it cannot drive `mcp__claude-in-chrome__*` tools; reserve
+  `general-purpose` or a purpose-built agent for pages needing an interaction
+  sequence.
 
 ## Model and effort matching
 
@@ -157,7 +174,7 @@ of letting them default silently:
   offers one); never poll them with chained short sleeps — after the
   harness blocks a `sleep`, chaining shorter sleeps is the same
   blocked-sleep antipattern in chunks, and is banned. `run_in_background:
-  false` on the Agent tool is advisory, not guaranteed — the harness may
+false` on the Agent tool is advisory, not guaranteed — the harness may
   still launch a long-running dispatch in the background regardless
   (observed 2026-07-12 on multi-turn `implementation-worker` calls).
   Treat every dispatch as potentially backgrounded: don't treat a
@@ -202,6 +219,18 @@ of letting them default silently:
   fresh subagent rather than let one thread's reasoning grow across many
   turns (docs/subagent-intermediate-output-research-2026-07.md,
   "thinking-token replay cost").
+- **Remind deferred-tool workers to load the schema first.** When a
+  dispatched worker is likely to call a deferred tool — `Monitor` is the
+  evidenced case, and the same holds for the general class of deferred tools
+  the harness lists but does not pre-load — the dispatch prompt must tell it
+  to batch-load the tool's schema via `ToolSearch` before the first call,
+  batched in one call rather than probed one tool at a time. Don't lean on
+  the harness's own per-session system-reminder alone: it already lists the
+  deferred tools, yet a guessed-parameter `Monitor` call still threw
+  `InputValidationError` and burned a round trip (the guessed-parameter
+  evidence in specs/context-blowout-subagent-guards' Problem section), so the
+  explicit in-prompt reminder is the extra layer this repo's guidance can
+  supply on top of it.
 
 ## Session hygiene
 
