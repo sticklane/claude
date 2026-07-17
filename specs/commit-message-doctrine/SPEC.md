@@ -166,3 +166,11 @@ paths in its `Touch:` alongside the skill files they mirror.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Two tasks, strictly serial: task 02 depends on task 01 (the skill edits
+reference the doctrine section task 01 writes, and both use its terms).
+No concurrent-safe groups (format per
+`specs/drain-rolling-window/SPEC.md`'s `## Parallelization` section — no
+`- Group:` lines means every task runs solo).
