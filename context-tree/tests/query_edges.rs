@@ -414,3 +414,57 @@ fn at_exit4_ignored() {
         "the reason names the ignore: {reason}"
     );
 }
+
+#[test]
+fn at_resolves_symbol_on_its_own_signature_line() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "app.py", AT_PY);
+    sleep(PAST);
+    init(root);
+
+    // Line 2 is `nested`'s own signature line (`    def nested():`), indented.
+    // The queried byte at column 0 precedes the def token, so start-byte
+    // containment alone would resolve to the parent; span/line overlap must
+    // still resolve to `nested` itself.
+    let out = ctx(root, &["at", "app.py:2"]);
+    assert_eq!(out.status.code(), Some(0));
+    let text = stdout(&out);
+    let innermost = text
+        .lines()
+        .rev()
+        .find(|l| !l.trim().is_empty())
+        .unwrap_or("");
+    assert!(
+        innermost.contains("nested"),
+        "querying a symbol's own signature line resolves to that symbol: {text}"
+    );
+}
+
+#[test]
+fn at_containment_keeps_nested_module() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    // `helper` lives inside a nested module `tests` — a real container that must
+    // stay in the chain (only the file-level module is deduped).
+    write(
+        root,
+        "lib.rs",
+        "mod tests {\n    fn helper() {\n        let x = 1;\n    }\n}\n",
+    );
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["at", "lib.rs:3"]);
+    assert_eq!(out.status.code(), Some(0));
+    let text = stdout(&out);
+    assert!(
+        text.contains("helper"),
+        "the chain names the enclosing function: {text}"
+    );
+    assert!(
+        text.lines()
+            .any(|l| l.trim_start().starts_with("module") && l.contains("tests")),
+        "the nested module `tests` is retained as a chain entry: {text}"
+    );
+}

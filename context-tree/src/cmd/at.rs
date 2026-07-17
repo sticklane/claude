@@ -90,7 +90,13 @@ pub fn run(args: Args) -> ExitCode {
     }
 
     let src = std::fs::read(&abs).unwrap_or_default();
-    let target = line_start_byte(&src, line);
+    // The queried line's byte range. A definition's `full_start_byte` begins at
+    // its first token (after indentation), so containment is tested as span/line
+    // OVERLAP rather than start-byte containment — otherwise pointing at a
+    // nested symbol's own signature line would resolve to its parent.
+    let line_start = line_start_byte(&src, line);
+    let line_end = line_start_byte(&src, line + 1).max(line_start);
+    let module_qpath = module_component(&rel);
 
     let all = match store.all_symbols() {
         Ok(v) => v,
@@ -103,10 +109,10 @@ pub fn run(args: Args) -> ExitCode {
     let by_qpath: HashMap<&str, &SymbolRow> =
         file_syms.iter().map(|s| (s.qpath.as_str(), *s)).collect();
 
-    // Innermost enclosing symbol: the deepest span containing the target byte.
+    // Innermost enclosing symbol: the deepest span overlapping the queried line.
     let innermost = file_syms
         .iter()
-        .filter(|s| s.full_start_byte <= target && target < s.full_end_byte)
+        .filter(|s| s.full_start_byte < line_end && s.full_end_byte > line_start)
         .max_by_key(|s| s.full_start_byte)
         .copied();
 
@@ -124,11 +130,11 @@ pub fn run(args: Args) -> ExitCode {
         cursor = sym.parent.as_deref().and_then(|p| by_qpath.get(p).copied());
     }
     chain.reverse();
-    // A synthesized module surface always opens the chain; drop any module-kind
-    // symbol the extractor emitted to avoid rendering it twice.
-    chain.retain(|s| s.kind != "module");
-
-    let module_qpath = module_component(&rel);
+    // A synthesized module surface always opens the chain; drop only the
+    // extractor's file-level module symbol (its qpath is the file module) so it
+    // is not rendered twice. Nested modules (Rust `mod`, TS `namespace`) are
+    // real containers and stay in the chain.
+    chain.retain(|s| !(s.kind == "module" && s.qpath == module_qpath));
 
     if args.json {
         let mut entries = vec![json!({
