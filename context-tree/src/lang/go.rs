@@ -122,40 +122,47 @@ fn doc_comment(decl: Node, source: &[u8]) -> String {
     lines.join("\n")
 }
 
-fn push_symbol(
+/// One definition to record: its kind, the identifier node, the full node the
+/// span/hash derive from, and its C8 doc.
+struct GoDef<'a> {
     kind: SymbolKind,
-    name_node: Node,
-    full_node: Node,
-    body_start: Option<usize>,
+    name_node: Node<'a>,
+    full_node: Node<'a>,
     doc: String,
+}
+
+fn push_symbol(
+    def: GoDef,
     package: &str,
     containers: &[String],
     source: &[u8],
     out: &mut Vec<Symbol>,
 ) {
-    let name = text(name_node, source).to_string();
+    let name = text(def.name_node, source).to_string();
     let qpath = path::build_qpath(package, containers, &name);
-    let signature = match body_start {
-        Some(b) => String::from_utf8_lossy(&source[full_node.start_byte()..b])
+    // A declaration with a `body` field (func/method) trims the signature to
+    // its head; a spec (type/const/var) has none, so the whole node is it.
+    let signature = match def.full_node.child_by_field_name("body") {
+        Some(b) => String::from_utf8_lossy(&source[def.full_node.start_byte()..b.start_byte()])
             .trim()
             .to_string(),
-        None => text(full_node, source).trim().to_string(),
+        None => text(def.full_node, source).trim().to_string(),
     };
     let parent = if containers.is_empty() {
         None
     } else {
         Some(path::build_qpath(package, containers, ""))
     };
-    let full = (full_node.start_byte(), full_node.end_byte());
-    let ident = (name_node.start_byte(), name_node.end_byte());
+    let full = (def.full_node.start_byte(), def.full_node.end_byte());
+    let ident = (def.name_node.start_byte(), def.name_node.end_byte());
     out.push(Symbol {
-        kind,
+        kind: def.kind,
         name,
         qpath,
         signature,
-        docstring: doc,
-        full_span: span_of(full_node),
-        ident_span: span_of(name_node),
+        docstring: def.doc,
+        full_span: span_of(def.full_node),
+        ident_span: span_of(def.name_node),
         parent,
         body_hash: hash::body_hash(source, full, ident),
         body_tokens: hash::body_tokens(source, full, ident),
@@ -189,13 +196,13 @@ fn collect_defs(root: Node, package: &str, source: &[u8], out: &mut Vec<Symbol>)
         match child.kind() {
             "function_declaration" => {
                 if let Some(name) = child.child_by_field_name("name") {
-                    let body = child.child_by_field_name("body").map(|b| b.start_byte());
                     push_symbol(
-                        SymbolKind::Function,
-                        name,
-                        child,
-                        body,
-                        doc_comment(child, source),
+                        GoDef {
+                            kind: SymbolKind::Function,
+                            name_node: name,
+                            full_node: child,
+                            doc: doc_comment(child, source),
+                        },
                         package,
                         &[],
                         source,
@@ -205,15 +212,15 @@ fn collect_defs(root: Node, package: &str, source: &[u8], out: &mut Vec<Symbol>)
             }
             "method_declaration" => {
                 if let Some(name) = child.child_by_field_name("name") {
-                    let body = child.child_by_field_name("body").map(|b| b.start_byte());
                     let containers: Vec<String> =
                         receiver_type(child, source).into_iter().collect();
                     push_symbol(
-                        SymbolKind::Method,
-                        name,
-                        child,
-                        body,
-                        doc_comment(child, source),
+                        GoDef {
+                            kind: SymbolKind::Method,
+                            name_node: name,
+                            full_node: child,
+                            doc: doc_comment(child, source),
+                        },
                         package,
                         &containers,
                         source,
@@ -229,11 +236,12 @@ fn collect_defs(root: Node, package: &str, source: &[u8], out: &mut Vec<Symbol>)
                         && let Some(name) = spec.child_by_field_name("name")
                     {
                         push_symbol(
-                            type_spec_kind(spec),
-                            name,
-                            spec,
-                            None,
-                            doc.clone(),
+                            GoDef {
+                                kind: type_spec_kind(spec),
+                                name_node: name,
+                                full_node: spec,
+                                doc: doc.clone(),
+                            },
                             package,
                             &[],
                             source,
@@ -255,11 +263,12 @@ fn collect_defs(root: Node, package: &str, source: &[u8], out: &mut Vec<Symbol>)
                         && let Some(name) = spec.child_by_field_name("name")
                     {
                         push_symbol(
-                            kind,
-                            name,
-                            spec,
-                            None,
-                            doc.clone(),
+                            GoDef {
+                                kind,
+                                name_node: name,
+                                full_node: spec,
+                                doc: doc.clone(),
+                            },
                             package,
                             &[],
                             source,
