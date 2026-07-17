@@ -1,6 +1,6 @@
 # Task 04: Kotlin, OCaml, Haskell, Bash extraction — full 12-language coverage
 
-Status: pending
+Status: in-progress
 Depends on: 03
 Priority: P1
 Budget: 50 turns
