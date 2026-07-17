@@ -18,6 +18,11 @@ stdout — it never returns a non-zero blocking exit, and it never runs
 re-sync and cache prune — the user didn't request this session). It only
 points at the remedy; running it stays the user's call.
 
+The automation half is `hooks/plugin-autorefresh` — a `Stop` hook that runs
+`bin/refresh-plugins` once a bump has actually landed on the marketplace
+source (maintainer-requested, 2026-07-16). That doesn't change this hook's
+stance: at SessionStart it still only warns.
+
 ## What it does
 
 - Silent (empty stdout, exit 0) whenever it cannot make a confident

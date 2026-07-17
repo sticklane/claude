@@ -32,6 +32,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/plugin-autorefresh/autorefresh.sh",
+            "timeout": 180
+          }
+        ]
+      }
     ]
   }
 }
