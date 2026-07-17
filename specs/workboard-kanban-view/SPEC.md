@@ -198,3 +198,10 @@ both grep-count 0 today, so the criteria below are not vacuous.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Single task (all requirements are tightly coupled to one new function and
+its call site — splitting would create artificial cross-task coordination
+on the same HTML/CSS class contract). No concurrent-safe groups; Task 01
+runs solo.
