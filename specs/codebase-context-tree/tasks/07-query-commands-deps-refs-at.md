@@ -1,6 +1,6 @@
 # Task 07: Query commands — deps, refs, at
 
-Status: pending
+Status: in-progress
 Depends on: 05
 Priority: P1
 Budget: 45 turns
