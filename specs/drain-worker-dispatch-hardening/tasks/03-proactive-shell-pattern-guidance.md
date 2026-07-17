@@ -1,6 +1,6 @@
 # Task 03: Proactive known-safe shell-pattern guidance
 
-Status: pending
+Status: in-progress
 Depends on: 02
 Priority: P2
 Budget: 15 turns
