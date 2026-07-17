@@ -1,6 +1,6 @@
 # Task 03: C, C++, Zig extraction
 
-Status: pending
+Status: in-progress
 Depends on: 02
 Priority: P1
 Budget: 50 turns
