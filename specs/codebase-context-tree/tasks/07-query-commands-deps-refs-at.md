@@ -5,7 +5,7 @@ Depends on: 05
 Priority: P1
 Budget: 45 turns
 Spec: ../SPEC.md (requirements R3, R9, R10, R19; contracts C3, C10)
-Touch: context-tree/src/cmd/deps.rs, context-tree/src/cmd/refs.rs, context-tree/src/cmd/at.rs, context-tree/src/cli.rs, context-tree/tests/fixtures/query/**, context-tree/tests/*.rs
+Touch: context-tree/src/cmd/deps.rs, context-tree/src/cmd/refs.rs, context-tree/src/cmd/at.rs, context-tree/src/cli.rs, context-tree/src/cmd/mod.rs, context-tree/src/index/mod.rs, context-tree/src/lib.rs, context-tree/tests/fixtures/query/**, context-tree/tests/*.rs
 
 ## Goal
 
