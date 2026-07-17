@@ -46,7 +46,11 @@ fn file_module_keys(rel: &str) -> Vec<String> {
         None => rel,
     };
     let dotted = no_ext.replace(['/', '\\'], ".");
-    let base = no_ext.rsplit(['/', '\\']).next().unwrap_or(no_ext).to_string();
+    let base = no_ext
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(no_ext)
+        .to_string();
     let mut keys = vec![dotted, no_ext.to_string(), base];
     keys.sort();
     keys.dedup();
