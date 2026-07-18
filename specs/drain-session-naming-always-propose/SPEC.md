@@ -91,15 +91,27 @@ gen-1 startup ONLY (never on baton generations)" — note inline that naming
 has its own precise trigger, not gen-1-restricted, pointing to reference.md
 for detail; the other advisories' gen-1-only framing is unchanged.
 
-R4: `antigravity/.agents/workflows/drain.md`'s mirrored "Name the run (gen
-1, best-effort)" section's closing clause — currently "skip silently where
-none exists, and never re-name on baton generations." — gets the same
-re-scoped trigger as R1, adapted to that file's phrasing (naming surface
-rather than TTY, since Antigravity's mechanism differs): fires once per
-session regardless of the adopted **owner lease's** `Generation:` number
-(same "owner lease's Generation" phrasing as R1, not just "the adopted
-lease's"); skip if already named this run, or if no naming surface exists
-(a headless baton self-relaunch or an awaited subagent spawn has neither).
+R4: `antigravity/.agents/workflows/drain.md`'s mirrored "Name the run"
+section gets the same re-scoped trigger as R1, adapted to that file's
+phrasing (naming surface rather than TTY, since Antigravity's mechanism
+differs) — and, unlike R1, this requires editing the WHOLE section, not
+just its closing clause. Reference.md's naming sub-section carries no
+inline gen-1 phrasing of its own (that framing lives in the shared umbrella
+paragraph R2 handles separately), but antigravity's mirror has no such
+umbrella: each advisory is its own self-contained, gen-1-labeled block.
+Concretely, three parts of the section all currently assert or imply
+gen-1-only and must all change together, or the section ends up
+self-contradictory: (a) the header "**Name the run (gen 1,
+best-effort).**" — drop or requalify the "(gen 1, ...)" tag; (b) the
+opening sentence "At gen-1 startup, if the run/tab has no custom name
+already, name it..." — replace with the re-scoped trigger statement:
+fires once per session, the first time this run reaches step 1, regardless
+of the adopted **owner lease's** `Generation:` number (same "owner lease's
+Generation" phrasing as R1), since a resumed run's own tab has never yet
+been named; (c) the closing clause "skip silently where none exists, and
+never re-name on baton generations." — replace with: skip if already named
+this run, or if no naming surface exists (a headless baton self-relaunch or
+an awaited subagent spawn has neither).
 
 R5: `.claude-plugin/plugin.json`'s `"version"` is bumped past its value at
 implementation time (re-check the current value before implementing;
@@ -132,23 +144,39 @@ plugin.json whenever skill behavior changes" rule.
 
 ## Acceptance criteria
 
-- [ ] `grep -c "regardless of the adopted owner lease's Generation" .claude/skills/drain/reference.md`
-      → ≥ 1 (R1; phrase absent today, verified via `grep -c` returning 0)
+- [ ] `grep -c "regardless of the adopted owner lease's" .claude/skills/drain/reference.md`
+      → ≥ 1 (R1; anchor deliberately stops short of "Generation" since the
+      file's own idiom backticks that word — `` `Generation:` `` — which
+      would otherwise straddle the grep match unpredictably; phrase absent
+      today, verified via `grep -c` returning 0)
 - [ ] `grep -c "states its own more precise trigger" .claude/skills/drain/reference.md`
       → ≥ 1 (R2; absent today)
 - [ ] `grep -c "not gen-1-restricted" .claude/skills/drain/SKILL.md` → ≥ 1
       (R3; absent today)
-- [ ] `grep -c "regardless of the adopted owner lease's Generation" antigravity/.agents/workflows/drain.md`
-      → ≥ 1 (R4; absent today)
+- [ ] `grep -c "regardless of the adopted owner lease's" antigravity/.agents/workflows/drain.md`
+      → ≥ 1 (R4; same shortened anchor as R1's check, absent today)
 - [ ] Negative check (R1, confirms the old unqualified phrasing is actually
       gone, not merely supplemented): `grep -c 'never re-set on baton
-  generations' .claude/skills/drain/reference.md` → 0 (returns 1 today
+generations' .claude/skills/drain/reference.md` → 0 (returns 1 today
       — this exact clause is being replaced, not appended to).
 - [ ] Negative check (R4, same reasoning, antigravity — anchored on a
       single-line substring since the full phrase is line-wrapped in the
       file and would otherwise match 0 both before and after any edit):
       `grep -c 'never re-name' antigravity/.agents/workflows/drain.md` → 0
       (returns 1 today).
+- [ ] R4's section-level fix (not just the closing clause): the mirror
+      bakes its gen-1 gating into the section's own header and opening
+      sentence too — unlike the source, which keeps that framing in a
+      separate shared umbrella paragraph R2 handles. Negative check,
+      section-scoped so it doesn't touch the unrelated "Startup session
+      sweep" advisory right after it: `sed -n '/\*\*Name the run/,/\*\*Startup
+session sweep/p' antigravity/.agents/workflows/drain.md | grep -c
+'gen-1 startup'` → 0 (returns 1 today — the section's own opening
+      "At gen-1 startup" must be removed or requalified, not left
+      contradicting the new closing wording), and `grep -c 'Name the run
+(gen 1, best-effort)' antigravity/.agents/workflows/drain.md` → 0
+      (returns 1 today — the header's "(gen 1, ...)" tag is part of the
+      same contradiction and must be dropped or requalified too).
 - [ ] R5, version-agnostic: before editing, capture the current value with
       `grep -n '"version"' .claude-plugin/plugin.json`; after editing,
       `grep -c '"version"' .claude-plugin/plugin.json` → 1 (still exactly
@@ -168,3 +196,14 @@ plugin.json whenever skill behavior changes" rule.
 ## Open questions
 
 (none)
+
+## Parallelization
+
+3 tasks. Task 01 (`.claude/skills/drain/reference.md`) and task 02
+(`.claude/skills/drain/SKILL.md`) are Touch-disjoint with no shared
+undecided design (this spec pins the exact wording each needs), so both
+are immediately dispatchable and safe to run concurrently. Task 03
+(`antigravity/` mirror + `plugin.json`) depends on task 01's landed
+wording and runs alone.
+
+- Group: 01, 02
