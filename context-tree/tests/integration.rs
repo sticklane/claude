@@ -5,8 +5,9 @@
 
 use context_tree::sync;
 use serde_json::Value;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -188,4 +189,58 @@ fn mid_edit_robustness() {
         ctx(root, &["sig", "middle"]).status.success(),
         "the repaired symbol resolves for full facts again"
     );
+}
+
+/// Pipe `json` through `jq .`; assert jq exits 0 (parses as JSON).
+fn pipe_through_jq(json: &str) {
+    let mut child = Command::new("jq")
+        .arg(".")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("jq must be installed for the --json aggregate test");
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(json.as_bytes())
+        .unwrap();
+    assert!(
+        child.wait().unwrap().success(),
+        "jq rejected the payload: {json}"
+    );
+}
+
+// A fixture exercising every query verb: `solo` carries a docstring and is
+// referenced by `caller`, so tree/sig/map/deps/refs/at all have real payloads.
+const JSON_FIXTURE: &str = "def solo():\n    \"\"\"A solo function.\"\"\"\n    return 1\n\n\ndef caller():\n    return solo()\n";
+
+/// Task 14 Step 2: cross-verb `--json` consistency — each of the six query
+/// verbs pipes through `jq .` with exit 0 and carries its asserted payload key
+/// (tasks 06/07 test this per-command; this is the aggregate consistency check).
+#[test]
+fn json_all_verbs() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    ctx_ok(root, &["init"]);
+    write(root, "app.py", JSON_FIXTURE);
+    sleep(PAST);
+
+    let cases: [(&[&str], &str); 6] = [
+        (&["tree", "app.py", "--json"], "symbols"),
+        (&["sig", "solo", "--json"], "signature"),
+        (&["map", "--json"], "symbols"),
+        (&["deps", "app.py", "--json"], "edges"),
+        (&["refs", "solo", "--json"], "references"),
+        (&["at", "app.py:2", "--json"], "chain"),
+    ];
+    for (args, key) in cases {
+        let out = ctx(root, args);
+        assert!(out.status.success(), "ctx {args:?} exits 0: {out:?}");
+        let text = stdout(&out);
+        pipe_through_jq(&text);
+        let v: Value = serde_json::from_str(&text).unwrap();
+        assert!(v.get(key).is_some(), "ctx {args:?} carries .{key}: {v}");
+    }
 }
