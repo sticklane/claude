@@ -5,6 +5,7 @@
 pub mod at;
 pub mod deps;
 pub mod map;
+pub mod notes;
 pub mod refs;
 pub mod sig;
 pub mod tree;
