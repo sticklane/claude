@@ -256,6 +256,36 @@ class TestSimpleCommandsInInbox(unittest.TestCase):
         self.assertEqual(inbox, [])
 
 
+class TestScannerPromptBuilders(unittest.TestCase):
+    """Contract: the scanner's verify/resume dispatch prompts are importable
+    builders, and the live attention-item cmd is built from the same builder —
+    so agent-console reuses this exact wording instead of a divergent copy. A
+    wording change here breaks these tests, not the dispatch buttons silently."""
+
+    def test_verify_prompt_builder_is_pinned(self):
+        self.assertEqual(
+            workboard.scanner_verify_prompt("demo"),
+            "Use the verifier agent to verify specs/demo against its "
+            "acceptance criteria; if it passes, archive the spec dir",
+        )
+
+    def test_resume_prompt_builder_is_pinned(self):
+        self.assertEqual(
+            workboard.scanner_resume_prompt("docs/HANDOFF.md"),
+            "Resume the parked handoff in docs/HANDOFF.md; "
+            "delete the file once fully resumed",
+        )
+
+    def test_resume_inbox_cmd_embeds_the_builder_output(self):
+        repo = make_repo_record()
+        repo["handoffs"] = [{"path": "docs/HANDOFF.md", "title": "t", "mtime": 1.0}]
+
+        inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        prompt = workboard.scanner_resume_prompt("docs/HANDOFF.md")
+        self.assertIn(prompt, inbox[0]["cmd"])
+
+
 BATON_FIXTURE = """# Drain baton: demo
 
 Generation: 3

@@ -75,6 +75,28 @@ SKIP_DIRS = {
 }
 DEFAULT_ROOT_CANDIDATES = ["code", "src", "projects", "dev", "repos", "work"]
 
+# --------------------------------------------------- scanner dispatch prompts
+
+
+def scanner_verify_prompt(spec_slug):
+    """The detached-`claude` prompt for verifying an all-tasks-done spec.
+    Importable so agent-console's dispatch buttons reuse this exact wording
+    (contract-tested) rather than re-parsing an attention item's text."""
+    return (
+        f"Use the verifier agent to verify specs/{spec_slug} against its "
+        "acceptance criteria; if it passes, archive the spec dir"
+    )
+
+
+def scanner_resume_prompt(handoff_path):
+    """The detached-`claude` prompt for resuming a parked handoff. Shared by
+    the parked-handoff attention item's cmd and agent-console's dispatch."""
+    return (
+        f"Resume the parked handoff in {handoff_path}; "
+        "delete the file once fully resumed"
+    )
+
+
 # ---------------------------------------------------------------- utilities
 
 
@@ -1363,10 +1385,7 @@ def attention_items(
         rp = r["path"]
         covered_by_active = _actively_covered(rp, r, active_toplevels, drain_window)
         for h in r["handoffs"]:
-            resume_prompt = (
-                f"Resume the parked handoff in {h['path']}; "
-                "delete the file once fully resumed"
-            )
+            resume_prompt = scanner_resume_prompt(h["path"])
             items.append(
                 {
                     "severity": "serious",
