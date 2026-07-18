@@ -19,6 +19,10 @@ pub enum Command {
         /// Print machine-readable `scanned=.. hashed=.. parsed=..` counts.
         #[arg(long)]
         stats: bool,
+        /// Persist pending re-anchor path updates into note frontmatter (R13
+        /// phase 2) — the only write the system makes to a note file.
+        #[arg(long = "write-anchors")]
+        write_anchors: bool,
     },
     /// Containment outline for a path subtree (R6).
     Tree {

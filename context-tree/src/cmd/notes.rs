@@ -145,6 +145,7 @@ fn note_json(n: &NoteRow) -> serde_json::Value {
         "anchor": n.anchor_path,
         "kind": n.kind,
         "fresh": n.fresh,
+        "pending": n.pending,
         "file": n.file,
         "author": n.author,
         "created": n.created,
@@ -152,11 +153,13 @@ fn note_json(n: &NoteRow) -> serde_json::Value {
     })
 }
 
-/// One plain-text listing line: `<fresh|stale>\t<kind>\t<anchor>\t<id>`.
+/// One plain-text listing line: `<fresh|stale>\t<kind>\t<anchor>\t<id>`, with a
+/// trailing `pending` column when the note carries an unwritten re-anchor (R13).
 fn note_line(n: &NoteRow) -> String {
     let freshness = if n.fresh { "fresh" } else { "stale" };
     let kind = n.kind.as_deref().unwrap_or("-");
-    format!("{freshness}\t{kind}\t{}\t{}", n.anchor_path, n.id)
+    let pending = if n.pending { "\tpending" } else { "" };
+    format!("{freshness}\t{kind}\t{}\t{}{pending}", n.anchor_path, n.id)
 }
 
 fn list(
