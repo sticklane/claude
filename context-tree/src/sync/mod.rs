@@ -153,6 +153,15 @@ pub fn run_sync(root: &Path, trigger: Trigger) -> io::Result<SyncStats> {
         }
     }
 
+    // Re-derive note freshness against the just-updated symbols (R2/R3/R12),
+    // under the sync lock. A note with unparseable/incomplete frontmatter is
+    // skipped with one diagnostic line; it never aborts the sync.
+    let (notes, diagnostics) = crate::notes::load_all(root);
+    for reason in &diagnostics {
+        eprintln!("ctx: skipping note — {reason}");
+    }
+    store.refresh_notes(&notes).map_err(to_io)?;
+
     store.set_last_sync(now).map_err(to_io)?;
     journal::append(
         &cache,

@@ -9,6 +9,7 @@ pub mod facts;
 pub mod hash;
 pub mod index;
 pub mod lang;
+pub mod notes;
 pub mod path;
 pub mod project;
 pub mod sync;
@@ -138,6 +139,57 @@ pub fn run() -> ExitCode {
             json,
             no_sync,
         }),
+        Some(cli::Command::Notes(notes)) => {
+            let cli::NotesArgs {
+                action,
+                symbol,
+                json,
+                no_sync,
+            } = notes;
+            let args = match action {
+                Some(cli::NotesAction::Add {
+                    symbol,
+                    text,
+                    kind,
+                    file,
+                    json,
+                    no_sync,
+                }) => cmd::notes::Args {
+                    action: cmd::notes::Action::Add {
+                        symbol,
+                        text,
+                        kind: kind.map(|k| k.as_str().to_string()),
+                        file,
+                    },
+                    json,
+                    no_sync,
+                },
+                Some(cli::NotesAction::List {
+                    kind,
+                    stale,
+                    file,
+                    json,
+                    no_sync,
+                }) => cmd::notes::Args {
+                    action: cmd::notes::Action::List {
+                        kind: kind.map(|k| k.as_str().to_string()),
+                        stale,
+                        file,
+                    },
+                    json,
+                    no_sync,
+                },
+                None => cmd::notes::Args {
+                    action: match symbol {
+                        Some(s) => cmd::notes::Action::Show { symbol: s },
+                        None => cmd::notes::Action::Usage,
+                    },
+                    json,
+                    no_sync,
+                },
+            };
+            cmd::notes::run(args)
+        }
         None => {
             println!("ctx — run `ctx --help` for usage");
             ExitCode::SUCCESS
