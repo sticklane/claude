@@ -14,7 +14,6 @@ import importlib.util
 import io
 import json
 import os
-import shlex
 import signal
 import stat
 import tempfile
@@ -79,43 +78,6 @@ def _repo_entry(path, name, specs=(), handoffs=(), ahead=0):
     }
 
 
-def _cmd(repo_path, prompt):
-    return f"cd {shlex.quote(repo_path)} && claude {shlex.quote(prompt)}"
-
-
-def _inbox_verify(repo_name, slug, total, repo_path, prompt=None):
-    if prompt is None:
-        prompt = (
-            f"Use the verifier agent to verify specs/{slug} "
-            "against its acceptance criteria; if it passes, archive the spec dir"
-        )
-    return {
-        "sev": "warning",
-        "state": "needs-review",
-        "item": f"Spec {slug}: all {total} task(s) done",
-        "repo": repo_name,
-        "why": "run the verifier",
-        "age": 0,
-        "cmd": _cmd(repo_path, prompt),
-    }
-
-
-def _inbox_resume(repo_name, title, path, repo_path, prompt=None):
-    if prompt is None:
-        prompt = (
-            f"Resume the parked handoff in {path}; delete the file once fully resumed"
-        )
-    return {
-        "sev": "serious",
-        "state": "blocked",
-        "item": f"Handoff parked: {title}",
-        "repo": repo_name,
-        "why": "resume it",
-        "age": 0,
-        "cmd": _cmd(repo_path, prompt),
-    }
-
-
 def _board(repos, inbox=()):
     return {"repos": list(repos), "inbox": list(inbox)}
 
@@ -155,41 +117,25 @@ class TestDrainGeneration(unittest.TestCase):
 
 class TestVerifyGeneration(unittest.TestCase):
     def test_all_done_spec_yields_verify(self):
+        # Revives the dead button: an all-done spec in a git root yields a
+        # dispatch-verify built from workboard.scanner_verify_prompt — no
+        # attention item required (the scanner no longer emits one).
         repo = _git_root()
         sp = os.path.join(repo, "specs", "widget", "SPEC.md")
         reg = ac.build_action_registry(
             _board(
-                [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 3, 3)])],
-                inbox=[_inbox_verify("alpha", "widget", 3, repo)],
+                [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 3, 3)])]
             )
         )
         verifies = _of_kind(reg, "dispatch-verify")
         self.assertEqual(len(verifies), 1)
         self.assertEqual(verifies[0]["cwd"], repo)
-        # The scanner's verify prompt, reused verbatim from the inbox item.
         self.assertIn("verify specs/widget", verifies[0]["prompt"])
         self.assertIn("acceptance criteria", verifies[0]["prompt"])
 
-    def test_verify_prompt_reused_from_inbox_not_duplicated(self):
-        # A distinctive inbox prompt must flow through to the action prompt —
-        # proving the text comes from the scanner's item, not a local copy.
-        repo = _git_root()
-        sp = os.path.join(repo, "specs", "widget", "SPEC.md")
-        reg = ac.build_action_registry(
-            _board(
-                [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 2, 2)])],
-                inbox=[
-                    _inbox_verify(
-                        "alpha", "widget", 2, repo, prompt="SENTINEL-VERIFY-x"
-                    )
-                ],
-            )
-        )
-        (v,) = _of_kind(reg, "dispatch-verify")
-        self.assertEqual(v["prompt"], "SENTINEL-VERIFY-x")
-
-    def test_all_done_spec_without_inbox_item_yields_no_verify(self):
-        # No scanner prompt to reuse -> no verify action (never fabricated).
+    def test_verify_prompt_comes_from_builder(self):
+        # The action prompt is the workboard builder's output verbatim, proving
+        # the text comes from the scanner's single source, not a local copy.
         repo = _git_root()
         sp = os.path.join(repo, "specs", "widget", "SPEC.md")
         reg = ac.build_action_registry(
@@ -197,7 +143,8 @@ class TestVerifyGeneration(unittest.TestCase):
                 [_repo_entry(repo, "alpha", specs=[_spec_entry("widget", sp, 2, 2)])]
             )
         )
-        self.assertEqual(_of_kind(reg, "dispatch-verify"), [])
+        (v,) = _of_kind(reg, "dispatch-verify")
+        self.assertEqual(v["prompt"], ac.workboard.scanner_verify_prompt("widget"))
 
 
 class TestResumeHandoffGeneration(unittest.TestCase):
@@ -206,8 +153,7 @@ class TestResumeHandoffGeneration(unittest.TestCase):
         hp = os.path.join(repo, "HANDOFF.md")
         reg = ac.build_action_registry(
             _board(
-                [_repo_entry(repo, "alpha", handoffs=[_handoff_entry("Ship it", hp)])],
-                inbox=[_inbox_resume("alpha", "Ship it", hp, repo)],
+                [_repo_entry(repo, "alpha", handoffs=[_handoff_entry("Ship it", hp)])]
             )
         )
         resumes = _of_kind(reg, "dispatch-resume-handoff")
@@ -216,21 +162,16 @@ class TestResumeHandoffGeneration(unittest.TestCase):
         self.assertIn("Resume the parked handoff", resumes[0]["prompt"])
         self.assertIn(hp, resumes[0]["prompt"])
 
-    def test_resume_prompt_reused_from_inbox(self):
+    def test_resume_prompt_comes_from_builder(self):
         repo = _git_root()
         hp = os.path.join(repo, "HANDOFF.md")
         reg = ac.build_action_registry(
             _board(
-                [_repo_entry(repo, "alpha", handoffs=[_handoff_entry("Ship it", hp)])],
-                inbox=[
-                    _inbox_resume(
-                        "alpha", "Ship it", hp, repo, prompt="SENTINEL-RESUME"
-                    )
-                ],
+                [_repo_entry(repo, "alpha", handoffs=[_handoff_entry("Ship it", hp)])]
             )
         )
         (r,) = _of_kind(reg, "dispatch-resume-handoff")
-        self.assertEqual(r["prompt"], "SENTINEL-RESUME")
+        self.assertEqual(r["prompt"], ac.workboard.scanner_resume_prompt(hp))
 
 
 class TestGitRootGate(unittest.TestCase):
@@ -249,11 +190,7 @@ class TestGitRootGate(unittest.TestCase):
                         specs=[_spec_entry("widget", sp, 1, 3)],
                         handoffs=[_handoff_entry("h", hp)],
                     )
-                ],
-                inbox=[
-                    _inbox_verify("specs", "widget", 3, home),
-                    _inbox_resume("specs", "h", hp, home),
-                ],
+                ]
             )
         )
         self.assertEqual(
