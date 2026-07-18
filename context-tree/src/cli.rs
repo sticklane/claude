@@ -23,6 +23,10 @@ pub enum Command {
         /// phase 2) — the only write the system makes to a note file.
         #[arg(long = "write-anchors")]
         write_anchors: bool,
+        /// Internal: journal this sync with `trigger: hook` (set by the
+        /// pre-warm hooks `ctx hooks install` writes).
+        #[arg(long, hide = true)]
+        hook: bool,
     },
     /// Containment outline for a path subtree (R6).
     Tree {
@@ -117,6 +121,27 @@ pub enum Command {
     /// Start the MCP server over stdio, exposing the query and note verbs as
     /// typed tools (R15).
     Mcp,
+    /// Install or remove opt-in pre-warm and pre-commit git hooks (R16).
+    Hooks(HooksArgs),
+}
+
+/// `ctx hooks …` arguments: the install/uninstall action, plus the internal
+/// pre-commit step the installed hook invokes.
+#[derive(Args)]
+pub struct HooksArgs {
+    #[command(subcommand)]
+    pub action: HooksAction,
+}
+
+#[derive(Subcommand)]
+pub enum HooksAction {
+    /// Install pre-warm + pre-commit git hooks and print the PostToolUse snippet.
+    Install,
+    /// Remove the ctx-managed hook blocks and revert only self-set settings.
+    Uninstall,
+    /// Internal: run the pre-commit anchor-write step (invoked by the hook).
+    #[command(hide = true)]
+    PreCommit,
 }
 
 /// `ctx notes …` arguments: a subcommand (`add`/`list`), or the bare
