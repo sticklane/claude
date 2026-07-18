@@ -124,8 +124,14 @@ letting them default:
   slow/external dependencies; every test asserts something ("runs without
   error" is not a test); names describe scenario and expectation.
 - Commits are small, focused, atomic — `<type>: <subject>` (feat, fix,
-  test, refactor, docs, style, perf, chore); never commit debugging
-  prints, commented-out code, broken tests, or mixed unrelated changes.
+  test, refactor, docs, style, perf, chore, plus the orchestration
+  prefixes `drain:`, `merge:`, `spec:`, `breakdown:`); never commit
+  debugging prints, commented-out code, broken tests, or mixed unrelated
+  changes. Subject length targets ≤72 characters with a hard cap 100; on
+  the subject/body split the subject states what changed and everything
+  else (evidence, audit notes, multi-clause context) moves to the body.
+  Machinery-contract subjects like `drain: <spec-slug> task NN in-progress`
+  are regex-pinned — reproduce them verbatim rather than reword to fit.
 - Review is high-signal or it is noise: when reviewing, skip pre-existing
   issues, anything a linter/typechecker will catch, and style preferences
   not required by these rules. If not certain an issue is real, don't
