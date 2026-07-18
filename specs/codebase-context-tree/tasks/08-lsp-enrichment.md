@@ -1,6 +1,6 @@
 # Task 08: LSP enrichment (optional, additive)
 
-Status: pending
+Status: in-progress
 Depends on: 07
 Priority: P2
 Budget: 30 turns
