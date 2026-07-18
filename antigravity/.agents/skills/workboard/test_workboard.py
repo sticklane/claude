@@ -1,6 +1,6 @@
 """Tests for workboard's Antigravity abandon mechanism.
 
-Run: python3 -m unittest discover -s .claude/skills/workboard
+Run (from this file's directory): python3 -m unittest discover
 Stdlib-only, like the scanner. Each test builds a throwaway HOME with a
 fake ~/.gemini/antigravity/brain store — the real one is never touched.
 """
