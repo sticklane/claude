@@ -10,6 +10,7 @@ pub mod hash;
 pub mod index;
 pub mod lang;
 pub mod lsp;
+pub mod mcp;
 pub mod notes;
 pub mod path;
 pub mod project;
@@ -207,6 +208,7 @@ pub fn run() -> ExitCode {
             };
             cmd::notes::run(args)
         }
+        Some(cli::Command::Mcp) => mcp::serve(),
         None => {
             println!("ctx — run `ctx --help` for usage");
             ExitCode::SUCCESS
