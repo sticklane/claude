@@ -213,14 +213,19 @@ fn render_json(
         .take(args.limit)
         .map(|d| {
             let signature = cache.and_then(|c| c.signature(&d.qpath));
-            json!({
+            let mut obj = json!({
                 "qpath": d.qpath,
                 "file": d.path,
                 "line": line_of(root, &d.path, d.ident_start_byte),
                 "label": if signature.is_some() { "precise" } else { "heuristic" },
-                "signature": signature,
                 "notes": note_value(store, d.id),
-            })
+            });
+            // Only add the signature key when the server resolved one — with no
+            // enrichment cache the JSON stays byte-for-byte the task-07 shape.
+            if let Some(sig) = signature {
+                obj["signature"] = json!(sig);
+            }
+            obj
         })
         .collect();
     let references: Vec<_> = refs

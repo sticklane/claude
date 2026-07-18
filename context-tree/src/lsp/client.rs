@@ -63,6 +63,10 @@ impl ReferenceResolver for RustAnalyzerResolver {
                 refs.push(pr);
             }
         }
+        // Signature resolution (textDocument/hover) is not yet wired for the
+        // live server — the enrichment cache stores whatever signature a
+        // resolver returns, and this one returns none. References are the R11
+        // acceptance surface; live signatures are a documented follow-up.
         Ok(Resolved {
             refs,
             signature: None,
@@ -89,6 +93,11 @@ struct LspClient {
     child: Child,
     reader: BufReader<std::process::ChildStdout>,
     next_id: i64,
+    /// Set once rust-analyzer reports its workspace fully loaded
+    /// (`experimental/serverStatus` `quiescent: true`). Before that, an empty
+    /// `references` result means "still loading"; after it, empty is
+    /// authoritative — the symbol genuinely has no references.
+    quiescent: bool,
 }
 
 impl LspClient {
@@ -107,6 +116,7 @@ impl LspClient {
             child,
             reader: BufReader::new(stdout),
             next_id: 1,
+            quiescent: false,
         })
     }
 
@@ -162,6 +172,16 @@ impl LspClient {
             let msg = self.read_message()?;
             if msg.get("id").and_then(Value::as_i64) == Some(id) && msg.get("method").is_none() {
                 return Ok(msg);
+            }
+            // Workspace-loaded signal: rust-analyzer's serverStatus notification.
+            if msg.get("method").and_then(Value::as_str) == Some("experimental/serverStatus")
+                && msg
+                    .get("params")
+                    .and_then(|p| p.get("quiescent"))
+                    .and_then(Value::as_bool)
+                    == Some(true)
+            {
+                self.quiescent = true;
             }
             // Server-to-client request (e.g. workspace/configuration): reply
             // with null so the server does not block waiting on us.
@@ -235,10 +255,16 @@ impl LspClient {
                     "context": { "includeDeclaration": false },
                 }),
             )?;
-            if let Some(arr) = msg.get("result").and_then(Value::as_array)
-                && !arr.is_empty()
-            {
-                return Ok(arr.clone());
+            if let Some(arr) = msg.get("result").and_then(Value::as_array) {
+                if !arr.is_empty() {
+                    return Ok(arr.clone());
+                }
+                // Once the workspace is loaded, an empty result is authoritative
+                // — this symbol genuinely has no references — so stop retrying
+                // rather than blocking the whole deadline per zero-ref symbol.
+                if self.quiescent {
+                    return Ok(Vec::new());
+                }
             }
             if Instant::now() >= deadline {
                 return Ok(Vec::new());
