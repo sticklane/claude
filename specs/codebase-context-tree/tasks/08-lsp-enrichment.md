@@ -5,7 +5,7 @@ Depends on: 07
 Priority: P2
 Budget: 30 turns
 Spec: ../SPEC.md (requirement R11)
-Touch: context-tree/src/lsp/**, context-tree/src/cmd/refs.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/lsp/**, context-tree/tests/*.rs
+Touch: context-tree/src/lsp/**, context-tree/src/cmd/refs.rs, context-tree/src/lib.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/lsp/**, context-tree/tests/*.rs
 
 ## Goal
 
