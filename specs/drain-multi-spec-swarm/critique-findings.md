@@ -51,3 +51,67 @@ Next step: resolve finding 1 (a design decision on cross-spec
 co-admissibility semantics, not mechanical — surfaced to the user rather
 than auto-applied) plus optionally finding 2's wording softening, then
 re-run `/critique` (round 4, still within the 2-4 cycle bound).
+
+## Round 4 (2026-07-18, resumed via /resume-handoff) — still NOT READY
+
+SPEC.md-hash: d766c6584ee3e83cdfcb8aa041b13d448d83c807f4d9434b5a10d4f6a83e3b63
+
+Round-3's fix (Group-line co-admissibility scoped to same-spec; cross-spec
+pairs co-admit on Touch-disjointness alone) verified internally consistent
+against the actual rule at `reference.md:1638-1654`. But it fixed only one
+half of the same clause and left its enforcement sibling untouched, plus
+surfaced further composition gaps:
+
+1. **The round-3 fix left the "runs only alone / window empty" enforcement
+   sentence unaddressed — it still forces solo (ungrouped) tasks to wait for
+   a globally empty window** (confidence 68). `reference.md:1650-1654`, right
+   after the Group-line sentence round-3 scoped, says: "A task on no
+   `Group:` line ... runs only alone (admitted only when the window is
+   empty)... 'Window empty' means zero live in-flight workers." R2's fix
+   scoped the _Group-line_ sentence to same-spec but never reconciles this
+   _next_ sentence. For an ungrouped/solo task — exactly the motivating
+   example (`commit-message-doctrine` et al. are small specs whose
+   dispatchable tasks are very plausibly ungrouped) — the shipped prose now
+   says both "cross-spec Touch-disjoint pairs co-admit" AND "an ungrouped
+   task runs only alone until the window is globally empty," which
+   contradict. Drain is model-executed from this prose, so the
+   "run-alone/global-empty" reading can re-defeat cross-spec concurrency for
+   precisely the tasks the feature targets. Compounding it: the only
+   _behavioral_ acceptance check is a standalone reimplementation of the
+   algorithm, not the shipped `reference.md` prose drain actually executes
+   — so this contradiction has zero acceptance coverage today. Smallest fix:
+   add a clause requiring the "runs only alone (window empty)" statement and
+   its "window empty" definition be re-scoped to _the task's own spec's_
+   in-flight set (or explicitly overridden for cross-spec pairs).
+
+2. **"Rules bind only when W > 1" vs. the W=1 default that no-argument
+   /drain runs** (confidence 65). `reference.md:1640-1642`'s section
+   preamble — the section this spec extends — says the rules "bind only
+   when W > 1 (the default W=1 admits one task alone and merges it before
+   the next)." R4/Solution require no-argument `/drain` (default W=1) to
+   swarm-claim by default. The spec never states whether spec-level lease
+   claiming (R1) is exempt from the W>1 gate; an implementer can faithfully
+   tuck R1 under the "bind only when W>1" preamble, so default /drain never
+   swarms — contradicting R4. Smallest fix: state R1 fires independently of
+   the per-spec W>1 gate, at default W=1.
+
+3. **Per-spec W (≤5) vs. global ≤10 / 3-spec cap composition is
+   unspecified** (confidence 60). With 3 claimed specs each capable of W up
+   to 5, requested workers (15) exceed the global ≤10. The spec never says
+   how the budget is allocated (shared global window? per-spec W still ≤5
+   with a global ceiling? first-come?). Dormant at default W=1 so lower
+   cost, but unresolved for any elevated-W path. Smallest fix: one sentence
+   on how ≤10 composes with per-spec W.
+
+4. **Nit (confidence 60)** — R7's only acceptance check greps for
+   "already-green," which a worker can satisfy by inserting the token
+   without implementing any of R7's real structure (naming attributable
+   lines, citing the sibling's `evidence/spec-review.md` by path,
+   instructing exclusion). Consider anchoring on a phrase requiring
+   co-occurrence with the citation behavior.
+
+Next step: this round surfaced two more genuine design-composition gaps
+(findings 1-2) beyond a straightforward mechanical fix, on top of round 3's
+already-JUDGMENT finding — surfaced to the user rather than auto-applied,
+per token-discipline's 2-4 cycle evaluator-optimizer bound (this is cycle 4,
+the top of that bound).
