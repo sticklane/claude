@@ -14,7 +14,7 @@ use std::time::Duration;
 
 /// Bumped whenever the on-disk schema shape changes; a version-mismatched or
 /// unreadable cache is wiped and rebuilt transparently (C4).
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 
 const SCHEMA_SQL: &str = "
 CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
@@ -82,6 +82,10 @@ CREATE TABLE IF NOT EXISTS notes (
     body        TEXT NOT NULL,
     fresh       INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS pending_reanchors (
+    note_id  TEXT PRIMARY KEY,
+    new_path TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_notes_anchor ON notes(anchor_path);
 CREATE INDEX IF NOT EXISTS idx_symbols_file ON symbols(file_id);
 CREATE INDEX IF NOT EXISTS idx_symbols_qpath ON symbols(qpath);
@@ -96,6 +100,16 @@ CREATE INDEX IF NOT EXISTS idx_scopes_file ON scopes(file_id);
 /// Separator never appears in lexical source tokens, so the round-trip is
 /// lossless.
 const TOKEN_SEP: &str = "\u{1f}";
+
+/// Split a stored `body_tokens` cell back into the token set (R13 input). An
+/// empty cell yields an empty set rather than a single empty token.
+fn split_tokens(joined: &str) -> Vec<String> {
+    if joined.is_empty() {
+        Vec::new()
+    } else {
+        joined.split(TOKEN_SEP).map(str::to_string).collect()
+    }
+}
 
 /// The per-file state the incremental scan compares against (R2).
 #[derive(Debug, Clone)]
@@ -140,6 +154,21 @@ pub struct NoteRow {
     pub body: String,
     pub fresh: bool,
     pub file: Option<String>,
+    /// True when the note carries a pending unwritten re-anchor (R13 phase 1 has
+    /// re-anchored it in the index, but phase 2 has not written the new path to
+    /// the note file yet).
+    pub pending: bool,
+}
+
+/// A symbol's re-anchoring identity, read from the index BEFORE a sync re-parses
+/// the changed files — the old-anchor side of R13's layered match.
+#[derive(Debug, Clone)]
+pub struct SymbolIdentity {
+    pub name: String,
+    pub kind: String,
+    pub body_hash: String,
+    pub body_tokens: Vec<String>,
+    pub file: String,
 }
 
 /// A reference occurrence read back for `ctx refs` (R10): the referenced name,
@@ -224,6 +253,7 @@ impl IndexStore {
              DROP TABLE IF EXISTS imports;
              DROP TABLE IF EXISTS scopes;
              DROP TABLE IF EXISTS notes;
+             DROP TABLE IF EXISTS pending_reanchors;
              DROP TABLE IF EXISTS files;
              DROP TABLE IF EXISTS sync_meta;
              DELETE FROM schema_meta;",
@@ -576,13 +606,77 @@ impl IndexStore {
             .optional()
     }
 
-    /// Rebuild the derived note cache from the note files (R12): each note's
-    /// freshness re-derives against the just-synced symbols, so the cache is a
-    /// pure function of the note files plus the working tree.
-    pub fn refresh_notes(&self, notes: &[crate::notes::Note]) -> rusqlite::Result<()> {
+    /// The full re-anchoring identity of the unique symbol at `qpath`, or `None`
+    /// when no symbol resolves — the old-anchor side of R13's layered match,
+    /// captured before a sync re-parses the changed files.
+    pub fn symbol_identity(&self, qpath: &str) -> rusqlite::Result<Option<SymbolIdentity>> {
+        self.conn
+            .query_row(
+                "SELECT s.name, s.kind, s.body_hash, s.body_tokens, f.path
+                 FROM symbols s JOIN files f ON s.file_id = f.id
+                 WHERE s.qpath = ?1 LIMIT 1",
+                [qpath],
+                |r| {
+                    Ok(SymbolIdentity {
+                        name: r.get(0)?,
+                        kind: r.get(1)?,
+                        body_hash: r.get(2)?,
+                        body_tokens: split_tokens(&r.get::<_, String>(3)?),
+                        file: r.get(4)?,
+                    })
+                },
+            )
+            .optional()
+    }
+
+    /// The pending unwritten re-anchors (R13 phase 1): `note_id → new anchor
+    /// path`. These survive across syncs until a persistence point writes them
+    /// to the note files.
+    pub fn pending_reanchors(&self) -> rusqlite::Result<HashMap<String, String>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT note_id, new_path FROM pending_reanchors")?;
+        let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
+        let mut map = HashMap::new();
+        for row in rows {
+            let (id, path) = row?;
+            map.insert(id, path);
+        }
+        Ok(map)
+    }
+
+    /// Replace the pending-re-anchor set wholesale (R13 phase 1 recompute).
+    pub fn replace_pending_reanchors(
+        &self,
+        pending: &HashMap<String, String>,
+    ) -> rusqlite::Result<()> {
+        self.conn.execute("DELETE FROM pending_reanchors", [])?;
+        for (note_id, new_path) in pending {
+            self.conn.execute(
+                "INSERT INTO pending_reanchors(note_id, new_path) VALUES (?1, ?2)",
+                params![note_id, new_path],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Rebuild the derived note cache from the note files plus the pending
+    /// re-anchor map (R12/R13): each note's EFFECTIVE anchor is its pending
+    /// re-anchored path if one exists, else its frontmatter path, and freshness
+    /// re-derives against that effective anchor. Storing the effective path makes
+    /// queries resolve to the re-anchored symbol at once (phase 1).
+    pub fn refresh_notes(
+        &self,
+        notes: &[crate::notes::Note],
+        pending: &HashMap<String, String>,
+    ) -> rusqlite::Result<()> {
         self.conn.execute("DELETE FROM notes", [])?;
         for n in notes {
-            let current = self.body_hash_for_qpath(&n.anchor_path)?;
+            let effective = pending
+                .get(&n.id)
+                .map(String::as_str)
+                .unwrap_or(n.anchor_path.as_str());
+            let current = self.body_hash_for_qpath(effective)?;
             let fresh = crate::notes::freshness::is_fresh(current.as_deref(), &n.anchor_hash);
             self.conn.execute(
                 "INSERT OR REPLACE INTO notes
@@ -591,7 +685,7 @@ impl IndexStore {
                 params![
                     n.id,
                     n.rel_path,
-                    n.anchor_path,
+                    effective,
                     n.anchor_hash,
                     n.kind,
                     n.author,
@@ -610,10 +704,11 @@ impl IndexStore {
     pub fn all_notes(&self) -> rusqlite::Result<Vec<NoteRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT n.id, n.rel_path, n.anchor_path, n.kind, n.author, n.created, n.body,
-                    n.fresh, f.path
+                    n.fresh, f.path, p.new_path
              FROM notes n
              LEFT JOIN symbols s ON s.qpath = n.anchor_path
              LEFT JOIN files f ON f.id = s.file_id
+             LEFT JOIN pending_reanchors p ON p.note_id = n.id
              GROUP BY n.id
              ORDER BY n.anchor_path, n.id",
         )?;
@@ -628,6 +723,7 @@ impl IndexStore {
                 body: r.get(6)?,
                 fresh: r.get::<_, i64>(7)? != 0,
                 file: r.get(8)?,
+                pending: r.get::<_, Option<String>>(9)?.is_some(),
             })
         })?;
         rows.collect()

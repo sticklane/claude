@@ -119,7 +119,15 @@ mod tree_diff_scorer {
         v
     }
 
-    fn cand(qpath: &str, name: &str, kind: &str, hash: &str, words: &[&str], file: &str, row: usize) -> Candidate {
+    fn cand(
+        qpath: &str,
+        name: &str,
+        kind: &str,
+        hash: &str,
+        words: &[&str],
+        file: &str,
+        row: usize,
+    ) -> Candidate {
         Candidate {
             qpath: qpath.into(),
             name: name.into(),
@@ -133,7 +141,10 @@ mod tree_diff_scorer {
 
     #[test]
     fn token_overlap_identical_sets_is_one() {
-        assert_eq!(token_overlap(&toks(&["a", "b", "c"]), &toks(&["a", "b", "c"])), 1.0);
+        assert_eq!(
+            token_overlap(&toks(&["a", "b", "c"]), &toks(&["a", "b", "c"])),
+            1.0
+        );
     }
 
     #[test]
@@ -155,7 +166,12 @@ mod tree_diff_scorer {
 
     #[test]
     fn layer1_unique_name_and_kind_wins() {
-        let old = OldAnchor { name: "foo".into(), kind: "function".into(), body_hash: "OLD".into(), body_tokens: toks(&["x"]) };
+        let old = OldAnchor {
+            name: "foo".into(),
+            kind: "function".into(),
+            body_hash: "OLD".into(),
+            body_tokens: toks(&["x"]),
+        };
         let cands = vec![
             cand("b.foo", "foo", "function", "NEW", &["y"], "b.c", 1),
             cand("b.bar", "bar", "function", "Z", &["z"], "b.c", 5),
@@ -166,7 +182,12 @@ mod tree_diff_scorer {
     #[test]
     fn layer1_falls_through_when_multiple_name_kind_candidates() {
         // Two candidates share name+kind → layer 1 ambiguous; hash breaks it.
-        let old = OldAnchor { name: "foo".into(), kind: "function".into(), body_hash: "H".into(), body_tokens: toks(&["x"]) };
+        let old = OldAnchor {
+            name: "foo".into(),
+            kind: "function".into(),
+            body_hash: "H".into(),
+            body_tokens: toks(&["x"]),
+        };
         let cands = vec![
             cand("a.foo", "foo", "function", "OTHER", &["p"], "a.c", 1),
             cand("b.foo", "foo", "function", "H", &["x"], "b.c", 1),
@@ -178,14 +199,32 @@ mod tree_diff_scorer {
     #[test]
     fn layer2_body_hash_matches_a_rename() {
         // Rename: name changed, but excised body hash preserved (C2).
-        let old = OldAnchor { name: "foo".into(), kind: "function".into(), body_hash: "SAME".into(), body_tokens: toks(&["x", "y"]) };
-        let cands = vec![cand("m.bar", "bar", "function", "SAME", &["x", "y"], "m.py", 3)];
+        let old = OldAnchor {
+            name: "foo".into(),
+            kind: "function".into(),
+            body_hash: "SAME".into(),
+            body_tokens: toks(&["x", "y"]),
+        };
+        let cands = vec![cand(
+            "m.bar",
+            "bar",
+            "function",
+            "SAME",
+            &["x", "y"],
+            "m.py",
+            3,
+        )];
         assert_eq!(reanchor(&old, &cands), Some("m.bar".into()));
     }
 
     #[test]
     fn layer2_ties_break_by_lowest_file_line() {
-        let old = OldAnchor { name: "foo".into(), kind: "function".into(), body_hash: "SAME".into(), body_tokens: toks(&["x"]) };
+        let old = OldAnchor {
+            name: "foo".into(),
+            kind: "function".into(),
+            body_hash: "SAME".into(),
+            body_tokens: toks(&["x"]),
+        };
         let cands = vec![
             cand("z.bar", "bar", "function", "SAME", &["x"], "z.py", 9),
             cand("a.baz", "baz", "function", "SAME", &["x"], "a.py", 2),
@@ -204,9 +243,25 @@ mod tree_diff_scorer {
         };
         let cands = vec![
             // overlap {alpha,beta,gamma}/{alpha,beta,gamma,delta,eps} = 3/5 = 0.6 → NOT > 0.6
-            cand("m.low", "low", "function", "N1", &["alpha", "beta", "gamma", "eps"], "m.py", 1),
+            cand(
+                "m.low",
+                "low",
+                "function",
+                "N1",
+                &["alpha", "beta", "gamma", "eps"],
+                "m.py",
+                1,
+            ),
             // overlap {alpha,beta,gamma,delta}/{...,zeta} = 4/5 = 0.8 → > 0.6
-            cand("m.high", "high", "function", "N2", &["alpha", "beta", "gamma", "delta", "zeta"], "m.py", 8),
+            cand(
+                "m.high",
+                "high",
+                "function",
+                "N2",
+                &["alpha", "beta", "gamma", "delta", "zeta"],
+                "m.py",
+                8,
+            ),
         ];
         assert_eq!(reanchor(&old, &cands), Some("m.high".into()));
     }
@@ -220,7 +275,15 @@ mod tree_diff_scorer {
             body_hash: "OLD".into(),
             body_tokens: toks(&["alpha", "beta", "gamma", "delta"]),
         };
-        let cands = vec![cand("m.mid", "mid", "function", "N", &["alpha", "beta", "gamma", "eps"], "m.py", 1)];
+        let cands = vec![cand(
+            "m.mid",
+            "mid",
+            "function",
+            "N",
+            &["alpha", "beta", "gamma", "eps"],
+            "m.py",
+            1,
+        )];
         assert_eq!(reanchor(&old, &cands), None);
     }
 
@@ -234,15 +297,36 @@ mod tree_diff_scorer {
         };
         // Both score 0.8 (4/5); lowest (file,line) wins.
         let cands = vec![
-            cand("z.hi", "hi", "function", "N1", &["a", "b", "c", "d", "z"], "z.py", 1),
-            cand("a.hi", "hi", "function", "N2", &["a", "b", "c", "d", "w"], "a.py", 1),
+            cand(
+                "z.hi",
+                "hi",
+                "function",
+                "N1",
+                &["a", "b", "c", "d", "z"],
+                "z.py",
+                1,
+            ),
+            cand(
+                "a.hi",
+                "hi",
+                "function",
+                "N2",
+                &["a", "b", "c", "d", "w"],
+                "a.py",
+                1,
+            ),
         ];
         assert_eq!(reanchor(&old, &cands), Some("a.hi".into()));
     }
 
     #[test]
     fn no_candidate_yields_none() {
-        let old = OldAnchor { name: "foo".into(), kind: "function".into(), body_hash: "H".into(), body_tokens: toks(&["x"]) };
+        let old = OldAnchor {
+            name: "foo".into(),
+            kind: "function".into(),
+            body_hash: "H".into(),
+            body_tokens: toks(&["x"]),
+        };
         assert_eq!(reanchor(&old, &[]), None);
     }
 
@@ -250,8 +334,21 @@ mod tree_diff_scorer {
     fn different_kind_blocks_all_layers() {
         // Same name and even same hash, but a different kind — layer 1 needs
         // kind, layer 3 needs kind; layer 2 is hash-only so it still matches.
-        let old = OldAnchor { name: "foo".into(), kind: "function".into(), body_hash: "OTHER".into(), body_tokens: toks(&["x", "y", "z"]) };
-        let cands = vec![cand("m.foo", "foo", "class", "N", &["x", "y", "z"], "m.py", 1)];
+        let old = OldAnchor {
+            name: "foo".into(),
+            kind: "function".into(),
+            body_hash: "OTHER".into(),
+            body_tokens: toks(&["x", "y", "z"]),
+        };
+        let cands = vec![cand(
+            "m.foo",
+            "foo",
+            "class",
+            "N",
+            &["x", "y", "z"],
+            "m.py",
+            1,
+        )];
         // name matches but kind differs (L1 no), hash differs (L2 no), kind differs (L3 no).
         assert_eq!(reanchor(&old, &cands), None);
     }

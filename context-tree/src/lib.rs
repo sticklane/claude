@@ -42,7 +42,10 @@ pub fn run() -> ExitCode {
                 }
             }
         }
-        Some(cli::Command::Sync { stats }) => {
+        Some(cli::Command::Sync {
+            stats,
+            write_anchors,
+        }) => {
             let cwd = match std::env::current_dir() {
                 Ok(d) => d,
                 Err(e) => {
@@ -51,24 +54,37 @@ pub fn run() -> ExitCode {
                 }
             };
             let root = project::find_root(&cwd).unwrap_or(cwd);
-            match sync::run_sync(&root, sync::journal::Trigger::Cli) {
-                Ok(s) => {
-                    if stats {
-                        println!(
-                            "scanned={} hashed={} parsed={}",
-                            s.scanned, s.hashed, s.parsed
-                        );
-                    } else {
-                        println!(
-                            "sync: {} scanned, {} hashed, {} parsed",
-                            s.scanned, s.hashed, s.parsed
-                        );
+            if write_anchors {
+                match sync::write_anchors(&root, sync::journal::Trigger::Cli) {
+                    Ok(written) => {
+                        println!("wrote {written} anchor update(s)");
+                        ExitCode::SUCCESS
                     }
-                    ExitCode::SUCCESS
+                    Err(e) => {
+                        eprintln!("ctx sync failed: {e}");
+                        ExitCode::FAILURE
+                    }
                 }
-                Err(e) => {
-                    eprintln!("ctx sync failed: {e}");
-                    ExitCode::FAILURE
+            } else {
+                match sync::run_sync(&root, sync::journal::Trigger::Cli) {
+                    Ok(s) => {
+                        if stats {
+                            println!(
+                                "scanned={} hashed={} parsed={}",
+                                s.scanned, s.hashed, s.parsed
+                            );
+                        } else {
+                            println!(
+                                "sync: {} scanned, {} hashed, {} parsed",
+                                s.scanned, s.hashed, s.parsed
+                            );
+                        }
+                        ExitCode::SUCCESS
+                    }
+                    Err(e) => {
+                        eprintln!("ctx sync failed: {e}");
+                        ExitCode::FAILURE
+                    }
                 }
             }
         }

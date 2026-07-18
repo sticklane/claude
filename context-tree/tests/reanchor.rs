@@ -50,7 +50,7 @@ fn only_note(root: &Path) -> Value {
 
 fn latest_journal(root: &Path) -> Value {
     let text = fs::read_to_string(sync::cache_dir(root).join("sync-journal.jsonl")).unwrap();
-    let last = text.lines().filter(|l| !l.trim().is_empty()).next_back().unwrap();
+    let last = text.lines().rfind(|l| !l.trim().is_empty()).unwrap();
     serde_json::from_str(last).unwrap()
 }
 
@@ -121,12 +121,17 @@ fn reanchor_rename_in_file() {
         anchor(&after).ends_with(".bar"),
         "re-anchored to the renamed symbol: {after:?}"
     );
-    assert!(fresh(&after), "rename preserves the body hash → fresh: {after:?}");
+    assert!(
+        fresh(&after),
+        "rename preserves the body hash → fresh: {after:?}"
+    );
     assert_eq!(file_of(&after), "m.py");
     // Phase 2 has not run: the note FILE still names the old anchor.
     let text = only_note_file_text(root);
     assert!(
-        text.contains("anchor_path:") && text.contains("foo") && !text.contains("anchor_path: m.bar"),
+        text.contains("anchor_path:")
+            && text.contains("foo")
+            && !text.contains("anchor_path: m.bar"),
         "note file anchor unchanged until a persistence point: {text}"
     );
 }
@@ -167,8 +172,10 @@ fn reanchor_body_edit() {
 // leg (c): move + rename + small body edit → tree-diff re-anchor, stale,
 // pending_reanchors >= 1 before persistence.
 // ---------------------------------------------------------------------------
-const C_ORIG: &str = "def foo():\n    total = 0\n    for i in range(10):\n        total += i\n    return total\n";
-const C_MOVED: &str = "def bar():\n    total = 0\n    for i in range(11):\n        total += i\n    return total\n";
+const C_ORIG: &str =
+    "def foo():\n    total = 0\n    for i in range(10):\n        total += i\n    return total\n";
+const C_MOVED: &str =
+    "def bar():\n    total = 0\n    for i in range(11):\n        total += i\n    return total\n";
 
 #[test]
 fn reanchor_move_rename_edit() {
@@ -198,7 +205,10 @@ fn reanchor_move_rename_edit() {
         "a pending unwritten re-anchor is journaled before persistence"
     );
     let text = only_note_file_text(root);
-    assert!(text.contains("foo") && !text.contains("anchor_path: b.bar"), "note file unchanged");
+    assert!(
+        text.contains("foo") && !text.contains("anchor_path: b.bar"),
+        "note file unchanged"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -221,9 +231,18 @@ fn reanchor_move_no_edit() {
     write(croot, "a.c", "int other(void) {\n    return 2;\n}\n");
     write(croot, "b.c", "int foo(void) {\n    return 1;\n}\n");
     let c_after = only_note(croot);
-    assert!(anchor(&c_after).ends_with(".foo"), "still names foo: {c_after:?}");
-    assert!(anchor(&c_after).starts_with("b."), "module moved a.->b.: {c_after:?}");
-    assert!(fresh(&c_after), "no edit → fresh after re-anchor: {c_after:?}");
+    assert!(
+        anchor(&c_after).ends_with(".foo"),
+        "still names foo: {c_after:?}"
+    );
+    assert!(
+        anchor(&c_after).starts_with("b."),
+        "module moved a.->b.: {c_after:?}"
+    );
+    assert!(
+        fresh(&c_after),
+        "no edit → fresh after re-anchor: {c_after:?}"
+    );
     assert_eq!(file_of(&c_after), "b.c");
     assert!(
         latest_journal(croot)["pending_reanchors"].as_u64().unwrap() >= 1,
@@ -234,8 +253,16 @@ fn reanchor_move_no_edit() {
     let gdir = tempfile::tempdir().unwrap();
     let groot = gdir.path();
     ctx_ok(groot, &["init"]);
-    write(groot, "a.go", "package pkg\n\nfunc Foo() int {\n\treturn 1\n}\n");
-    write(groot, "keep.go", "package pkg\n\nfunc Keep() int {\n\treturn 0\n}\n");
+    write(
+        groot,
+        "a.go",
+        "package pkg\n\nfunc Foo() int {\n\treturn 1\n}\n",
+    );
+    write(
+        groot,
+        "keep.go",
+        "package pkg\n\nfunc Keep() int {\n\treturn 0\n}\n",
+    );
     sleep(PAST);
     ctx_ok(groot, &["notes", "add", "Foo", "go note"]);
     let g_before = only_note(groot);
@@ -243,12 +270,31 @@ fn reanchor_move_no_edit() {
     let g_anchor = anchor(&g_before);
 
     sleep(PAST);
-    write(groot, "a.go", "package pkg\n\nfunc Other() int {\n\treturn 2\n}\n");
-    write(groot, "b.go", "package pkg\n\nfunc Foo() int {\n\treturn 1\n}\n");
+    write(
+        groot,
+        "a.go",
+        "package pkg\n\nfunc Other() int {\n\treturn 2\n}\n",
+    );
+    write(
+        groot,
+        "b.go",
+        "package pkg\n\nfunc Foo() int {\n\treturn 1\n}\n",
+    );
     let g_after = only_note(groot);
-    assert_eq!(anchor(&g_after), g_anchor, "package identity survives the move");
-    assert!(fresh(&g_after), "identity-stable move stays fresh: {g_after:?}");
-    assert_eq!(file_of(&g_after), "b.go", "only the query-reported file updates");
+    assert_eq!(
+        anchor(&g_after),
+        g_anchor,
+        "package identity survives the move"
+    );
+    assert!(
+        fresh(&g_after),
+        "identity-stable move stays fresh: {g_after:?}"
+    );
+    assert_eq!(
+        file_of(&g_after),
+        "b.go",
+        "only the query-reported file updates"
+    );
     assert_eq!(
         latest_journal(groot)["pending_reanchors"].as_u64(),
         Some(0),
@@ -321,9 +367,15 @@ fn reanchor_durability() {
     fs::remove_dir_all(root.join(".context/cache")).unwrap();
     sleep(PAST);
     let rebuilt = only_note(root);
-    assert!(anchor(&rebuilt).ends_with(".bar"), "resolves to new symbol after rebuild: {rebuilt:?}");
+    assert!(
+        anchor(&rebuilt).ends_with(".bar"),
+        "resolves to new symbol after rebuild: {rebuilt:?}"
+    );
     assert_eq!(file_of(&rebuilt), "b.py");
-    assert!(!fresh(&rebuilt), "still stale after rebuild (hash never system-written)");
+    assert!(
+        !fresh(&rebuilt),
+        "still stale after rebuild (hash never system-written)"
+    );
 
     // (2) fresh-clone durability.
     let clone_dir = tempfile::tempdir().unwrap();
@@ -332,7 +384,10 @@ fn reanchor_durability() {
     fs::remove_dir_all(clone.join(".context/cache")).ok();
     sleep(PAST);
     let cloned = only_note(&clone);
-    assert!(anchor(&cloned).ends_with(".bar"), "clone resolves to new symbol: {cloned:?}");
+    assert!(
+        anchor(&cloned).ends_with(".bar"),
+        "clone resolves to new symbol: {cloned:?}"
+    );
     assert!(!fresh(&cloned), "clone reads stale");
 }
 
@@ -340,10 +395,8 @@ fn reanchor_durability() {
 // Parse-failed exclusion: a symbol in a file with a mid-function syntax error is
 // unresolved-transient — no re-anchor fires, binding untouched, fresh on repair.
 // ---------------------------------------------------------------------------
-const PF_GOOD: &str =
-    "def good_one():\n    return 1\n\ndef middle():\n    x = 5\n    return x\n\ndef good_two():\n    return 3\n";
-const PF_BROKEN: &str =
-    "def good_one():\n    return 1\n\ndef middle():\n    x = = =\n    return 2\n\ndef good_two():\n    return 3\n";
+const PF_GOOD: &str = "def good_one():\n    return 1\n\ndef middle():\n    x = 5\n    return x\n\ndef good_two():\n    return 3\n";
+const PF_BROKEN: &str = "def good_one():\n    return 1\n\ndef middle():\n    x = = =\n    return 2\n\ndef good_two():\n    return 3\n";
 
 #[test]
 fn reanchor_parse_failed_excluded() {
@@ -363,8 +416,14 @@ fn reanchor_parse_failed_excluded() {
     sleep(PAST);
     write(root, "m.py", PF_BROKEN);
     let broken = list_notes(root);
-    let sibling = broken.iter().find(|n| anchor(n).contains("good_one")).unwrap();
-    assert!(fresh(sibling), "the untouched sibling keeps its freshness: {sibling:?}");
+    let sibling = broken
+        .iter()
+        .find(|n| anchor(n).contains("good_one"))
+        .unwrap();
+    assert!(
+        fresh(sibling),
+        "the untouched sibling keeps its freshness: {sibling:?}"
+    );
     // The broken-symbol note reads stale and its binding is untouched (never
     // re-anchored to a sibling).
     let broken_note = broken.iter().find(|n| !fresh(n)).unwrap();
@@ -382,7 +441,10 @@ fn reanchor_parse_failed_excluded() {
     sleep(PAST);
     write(root, "m.py", PF_GOOD);
     let repaired = list_notes(root);
-    assert!(repaired.iter().all(fresh), "freshness re-derives on repair: {repaired:?}");
+    assert!(
+        repaired.iter().all(fresh),
+        "freshness re-derives on repair: {repaired:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -415,7 +477,10 @@ fn reanchor_only_writes_anchor_path() {
     // Only --write-anchors writes, and it changes only the anchor_path line.
     ctx_ok(root, &["sync", "--write-anchors"]);
     let written = only_note_file_text(root);
-    assert_ne!(written, original, "the persistence point wrote the anchor path");
+    assert_ne!(
+        written, original,
+        "the persistence point wrote the anchor path"
+    );
 
     let orig_lines: Vec<&str> = original.lines().collect();
     let new_lines: Vec<&str> = written.lines().collect();
@@ -429,7 +494,9 @@ fn reanchor_only_writes_anchor_path() {
         .collect();
     assert_eq!(changed.len(), 1, "exactly one line changed");
     assert!(
-        new_lines[changed[0]].trim_start().starts_with("anchor_path:"),
+        new_lines[changed[0]]
+            .trim_start()
+            .starts_with("anchor_path:"),
         "the only changed line is the anchor path: {:?}",
         new_lines[changed[0]]
     );
