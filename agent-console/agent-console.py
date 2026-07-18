@@ -24,7 +24,6 @@ import json
 import os
 import re
 import secrets
-import shlex
 import shutil
 import signal
 import subprocess
@@ -1022,40 +1021,26 @@ def _is_git_root(path: str) -> bool:
         return False
 
 
-def _prompt_from_cmd(cmd: str) -> str:
-    """The prompt out of a scanner inbox `cmd` (`cd <repo> && claude <prompt>`).
-    Reusing the scanner's own text keeps a single source for the verify/resume
-    prompts (workboard.py owns them; this server never duplicates them)."""
-    try:
-        parts = shlex.split(cmd)
-    except ValueError:
-        return ""
-    if "claude" in parts:
-        i = parts.index("claude")
-        if i + 1 < len(parts):
-            return parts[i + 1]
-    return ""
-
-
-def _scanner_dispatch_prompts(inbox: list) -> tuple[dict, dict]:
-    """Index the verify/resume prompts workboard.attention_items already built,
-    keyed by (repo-name, spec-slug) and (repo-name, handoff-title), so a
-    dispatch action reuses the scanner's exact prompt rather than a local copy."""
+def _scanner_dispatch_prompts(board: dict) -> tuple[dict, dict]:
+    """Build the verify/resume dispatch prompts from the structured board,
+    keyed by (repo-name, spec-slug) and (repo-name, handoff-title). Each prompt
+    is workboard's own builder output (scanner_verify_prompt /
+    scanner_resume_prompt), so a dispatch reuses the scanner's exact wording
+    rather than re-parsing an attention item's text — one source, contract-
+    tested in workboard.py."""
     verify: dict = {}
     resume: dict = {}
-    for i in inbox:
-        prompt = _prompt_from_cmd(i.get("cmd") or "")
-        if not prompt:
-            continue
-        repo, item = i.get("repo") or "", i.get("item") or ""
-        if (
-            i.get("state") == "needs-review"
-            and item.startswith("Spec ")
-            and ": all " in item
-        ):
-            verify[(repo, item[len("Spec ") : item.index(": all ")])] = prompt
-        elif item.startswith("Handoff parked: "):
-            resume[(repo, item[len("Handoff parked: ") :])] = prompt
+    for repo in board.get("repos", []):
+        name = repo.get("name") or repo.get("path") or ""
+        for sp in repo.get("specs", []):
+            slug = sp.get("slug") or ""
+            done, total = sp.get("done", 0) or 0, sp.get("total", 0) or 0
+            if slug and total and done >= total:
+                verify[(name, slug)] = workboard.scanner_verify_prompt(slug)
+        for h in repo.get("handoffs", []):
+            title, hpath = h.get("title") or "", h.get("path") or ""
+            if title and hpath:
+                resume[(name, title)] = workboard.scanner_resume_prompt(hpath)
     return verify, resume
 
 
@@ -1125,7 +1110,7 @@ def build_action_registry(board: dict) -> dict:
     (_entity_id, kind + canonical path), so it is stable across rescans of
     unchanged state and validates a later POST against the TTL-window board."""
     actions: dict = {}
-    verify_prompts, resume_prompts = _scanner_dispatch_prompts(board.get("inbox", []))
+    verify_prompts, resume_prompts = _scanner_dispatch_prompts(board)
 
     def add_dispatch(kind: str, target: str, cwd: str, prompt: str, label: str) -> None:
         aid = _entity_id(kind, target)
