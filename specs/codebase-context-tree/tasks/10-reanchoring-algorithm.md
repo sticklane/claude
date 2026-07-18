@@ -1,6 +1,6 @@
 # Task 10: Deterministic layered re-anchoring, two-phase persistence
 
-Status: pending
+Status: in-progress
 Depends on: 09
 Priority: P1
 Budget: 55 turns
