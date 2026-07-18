@@ -78,3 +78,6 @@
 .claude/skills/breakdown/SKILL.md|antigravity/.agents/skills/breakdown/SKILL.md|Unblock: run:
 .claude/skills/breakdown/SKILL.md|antigravity/.agents/skills/breakdown/SKILL.md|recording a BLOCKED flip
 .claude/skills/breakdown/SKILL.md|antigravity/.agents/skills/breakdown/SKILL.md|spec-header-only
+# seeded: task 11 (unblock-next-steps) — ported the cross-spec file-collision subsection into the breakdown skills-dir mirror (was absent; the workflows stub already carried it). Anchors the heading + the load-bearing "only mechanical way to stop" guidance so the subsection can't silently re-drop.
+.claude/skills/breakdown/SKILL.md|antigravity/.agents/skills/breakdown/SKILL.md|Cross-spec file collision
+.claude/skills/breakdown/SKILL.md|antigravity/.agents/skills/breakdown/SKILL.md|the only mechanical way to stop
