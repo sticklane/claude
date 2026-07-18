@@ -5,7 +5,7 @@ Depends on: 05, 10
 Priority: P2
 Budget: 40 turns
 Spec: ../SPEC.md (requirement R16; contract C5)
-Touch: context-tree/src/cmd/hooks.rs, context-tree/src/hooks_templates/**, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/hooks/**, context-tree/tests/*.rs
+Touch: context-tree/src/cmd/hooks.rs, context-tree/src/cmd/mod.rs, context-tree/src/hooks_templates/**, context-tree/src/cli.rs, context-tree/src/lib.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/hooks/**, context-tree/tests/*.rs
 
 ## Goal
 
