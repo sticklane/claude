@@ -1,6 +1,6 @@
 # Task 13: README, adoption snippet, MCP registration docs
 
-Status: pending
+Status: in-progress
 Depends on: 11, 12
 Priority: P2
 Budget: 25 turns
