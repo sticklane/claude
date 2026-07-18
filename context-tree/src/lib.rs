@@ -46,6 +46,7 @@ pub fn run() -> ExitCode {
         Some(cli::Command::Sync {
             stats,
             write_anchors,
+            hook,
         }) => {
             let cwd = match std::env::current_dir() {
                 Ok(d) => d,
@@ -55,8 +56,13 @@ pub fn run() -> ExitCode {
                 }
             };
             let root = project::find_root(&cwd).unwrap_or(cwd);
+            let trigger = if hook {
+                sync::journal::Trigger::Hook
+            } else {
+                sync::journal::Trigger::Cli
+            };
             if write_anchors {
-                match sync::write_anchors(&root, sync::journal::Trigger::Cli) {
+                match sync::write_anchors(&root, trigger) {
                     Ok(written) => {
                         println!("wrote {written} anchor update(s)");
                         ExitCode::SUCCESS
@@ -67,7 +73,7 @@ pub fn run() -> ExitCode {
                     }
                 }
             } else {
-                match sync::run_sync(&root, sync::journal::Trigger::Cli) {
+                match sync::run_sync(&root, trigger) {
                     Ok(s) => {
                         if stats {
                             println!(
@@ -209,6 +215,14 @@ pub fn run() -> ExitCode {
             cmd::notes::run(args)
         }
         Some(cli::Command::Mcp) => mcp::serve(),
+        Some(cli::Command::Hooks(h)) => {
+            let action = match h.action {
+                cli::HooksAction::Install => cmd::hooks::Action::Install,
+                cli::HooksAction::Uninstall => cmd::hooks::Action::Uninstall,
+                cli::HooksAction::PreCommit => cmd::hooks::Action::PreCommit,
+            };
+            cmd::hooks::run(cmd::hooks::Args { action })
+        }
         None => {
             println!("ctx — run `ctx --help` for usage");
             ExitCode::SUCCESS

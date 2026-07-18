@@ -4,6 +4,7 @@
 
 pub mod at;
 pub mod deps;
+pub mod hooks;
 pub mod map;
 pub mod notes;
 pub mod refs;
