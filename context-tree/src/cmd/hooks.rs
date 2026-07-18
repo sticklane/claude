@@ -343,13 +343,12 @@ fn pre_commit() -> ExitCode {
         let staged_new = file_of
             .get(new_qpath.as_str())
             .is_some_and(|f| staged.contains(*f));
-        if staged_new {
-            if let Some(rel) = note_path.get(note_id.as_str()) {
-                if notes::rewrite_anchor_path(&root, rel, new_qpath).is_ok() {
-                    let _ = git(&root, &["add", "--", rel]);
-                    continue; // written and staged; drop from pending
-                }
-            }
+        if staged_new
+            && let Some(rel) = note_path.get(note_id.as_str())
+            && notes::rewrite_anchor_path(&root, rel, new_qpath).is_ok()
+        {
+            let _ = git(&root, &["add", "--", rel]);
+            continue; // written and staged; drop from pending
         }
         // Moved-to file not staged (or note missing): leave the update pending.
         remaining.insert(note_id.clone(), new_qpath.clone());

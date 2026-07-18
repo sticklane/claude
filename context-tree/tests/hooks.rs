@@ -56,7 +56,10 @@ fn note_file(root: &Path) -> String {
         .collect();
     names.sort();
     let p = names.first().expect("a note file exists");
-    format!(".context/notes/{}", p.file_name().unwrap().to_string_lossy())
+    format!(
+        ".context/notes/{}",
+        p.file_name().unwrap().to_string_lossy()
+    )
 }
 
 /// The `anchor_path:` frontmatter value of a note file.
@@ -77,7 +80,11 @@ fn hooks_install_preserves_existing() {
     write(root, "a.py", "def foo():\n    return 1\n");
     init(root);
     // A pre-existing, non-ctx post-checkout hook.
-    write(root, ".git/hooks/post-checkout", "#!/bin/sh\necho existing-hook\n");
+    write(
+        root,
+        ".git/hooks/post-checkout",
+        "#!/bin/sh\necho existing-hook\n",
+    );
 
     let out = ctx(root, &["hooks", "install"]);
     assert!(out.status.success(), "install failed: {out:?}");
@@ -107,17 +114,21 @@ fn hooks_checkout_triggers_sync() {
     assert!(ctx(root, &["hooks", "install"]).status.success());
 
     // A branch checkout fires post-checkout, which runs `ctx sync --hook`.
-    assert!(git(root, &["checkout", "-q", "-b", "other"]).status.success());
+    assert!(
+        git(root, &["checkout", "-q", "-b", "other"])
+            .status
+            .success()
+    );
 
     let journal = root.join(".context/cache/sync-journal.jsonl");
     let deadline = Instant::now() + Duration::from_secs(10);
     let mut saw_hook = false;
     while Instant::now() < deadline {
-        if let Ok(text) = std::fs::read_to_string(&journal) {
-            if text.lines().any(|l| l.contains("\"trigger\":\"hook\"")) {
-                saw_hook = true;
-                break;
-            }
+        if let Ok(text) = std::fs::read_to_string(&journal)
+            && text.lines().any(|l| l.contains("\"trigger\":\"hook\""))
+        {
+            saw_hook = true;
+            break;
         }
         std::thread::sleep(Duration::from_millis(100));
     }
@@ -168,7 +179,11 @@ fn setup_moved_symbol(root: &Path) -> (String, String) {
     git_init(root);
     write(root, "a.py", "def foo():\n    return 41 + 1\n");
     init(root);
-    assert!(ctx(root, &["notes", "add", "foo", "watch this symbol"]).status.success());
+    assert!(
+        ctx(root, &["notes", "add", "foo", "watch this symbol"])
+            .status
+            .success()
+    );
     git(root, &["add", "-A"]);
     git(root, &["commit", "-qm", "base"]);
 
@@ -192,7 +207,11 @@ fn hooks_precommit_partial_commit() {
 
     // Stage only the moved-FROM file; b.py (moved-TO) stays unstaged.
     assert!(git(root, &["add", "a.py"]).status.success());
-    assert!(git(root, &["commit", "-qm", "partial refactor"]).status.success());
+    assert!(
+        git(root, &["commit", "-qm", "partial refactor"])
+            .status
+            .success()
+    );
 
     // b.py not staged -> the anchor update stays pending, note file unchanged.
     assert_eq!(
@@ -210,7 +229,11 @@ fn hooks_precommit_full_commit() {
 
     // Stage BOTH files: the moved-TO file b.py is now in the staged set.
     assert!(git(root, &["add", "a.py", "b.py"]).status.success());
-    assert!(git(root, &["commit", "-qm", "full refactor"]).status.success());
+    assert!(
+        git(root, &["commit", "-qm", "full refactor"])
+            .status
+            .success()
+    );
 
     // b.py staged -> the anchor update is written to the note file...
     let updated = anchor_path(root, &note);
