@@ -59,6 +59,27 @@ list --file` (assert the printed snippet contains that invocation).
    reverts only settings (`core.fsmonitor`) it itself set — a
    pre-existing fsmonitor setting from before install is left untouched.
 
+<!-- PLAN (worker, task/12-hooks)
+Design:
+- cli.rs: add `Hooks(HooksArgs)` (Install/Uninstall + hidden PreCommit used by the
+  installed pre-commit hook) and a hidden `--hook` flag on `Sync` (→ Trigger::Hook).
+- lib.rs/cmd/mod.rs (wiring, off-Touch, reversible): dispatch to cmd::hooks::run.
+- src/cmd/hooks.rs: install/uninstall/pre-commit. Marked-block manager (BEGIN/END
+  markers). Appended block byte-exact-removable; ctx-created files carry an in-block
+  sentinel and are deleted on uninstall. fsmonitor via git version parse (>=2.37),
+  only set when unset, tracked by `ctx.hooksFsmonitorSet` config marker so uninstall
+  reverts only self-set. Pre-warm hooks run `<ctxbin> sync --hook &`; pre-commit runs
+  `<ctxbin> hooks pre-commit`. PostToolUse snippet printed (contains `ctx notes list
+  --file`). Hooks dir via `git rev-parse --git-path hooks`; ctxbin via current_exe().
+- pre-commit logic: run_sync(Hook) → read pending_reanchors (note_id→new qpath) →
+  all_symbols map qpath→file → staged set via `git diff --cached --name-only` → write
+  + `git add` only notes whose new qpath's file is staged; leave rest pending
+  (replace_pending_reanchors with remainder). Reuses notes::rewrite_anchor_path;
+  does NOT modify reanchor.rs or sync::write_anchors.
+- Templates under src/hooks_templates/**, include_str! with __CTX_BIN__ placeholder.
+- Tests: tests/hooks.rs (7 named tests matching acceptance).
+-->
+
 ## Acceptance
 
 - [ ] `cd context-tree && cargo test hooks_install_preserves_existing` →

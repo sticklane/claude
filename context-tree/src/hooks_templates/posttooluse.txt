@@ -1,0 +1,7 @@
+PostToolUse snippet (edit-time note push, R16) — add to your agent harness config.
+On each file edit, run these two commands and emit their combined output as the
+hook's additional context so notes anchored in the edited file surface to the
+agent at edit time:
+
+  ctx sync --hook >/dev/null 2>&1
+  ctx notes list --file "<edited-file>"
