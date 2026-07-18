@@ -5,7 +5,7 @@ Depends on: 09
 Priority: P1
 Budget: 55 turns
 Spec: ../SPEC.md (requirement R13; contracts C1, C2, C5)
-Touch: context-tree/src/notes/reanchor.rs, context-tree/src/sync/**, context-tree/src/index/**, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/reanchor/**, context-tree/tests/*.rs
+Touch: context-tree/src/notes/reanchor.rs, context-tree/src/sync/**, context-tree/src/index/**, context-tree/src/cli.rs, context-tree/src/lib.rs, context-tree/src/cmd/notes.rs, context-tree/src/notes/mod.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/reanchor/**, context-tree/tests/*.rs
 
 ## Goal
 
