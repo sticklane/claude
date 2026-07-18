@@ -53,16 +53,25 @@ fn sig_first_line(signature: &str) -> Option<&str> {
     signature.lines().map(str::trim).find(|l| !l.is_empty())
 }
 
-fn fail(json: bool, reason: &str) -> ExitCode {
+fn fail(json: bool, reason: &str) -> (String, ExitCode) {
+    let mut out = String::new();
     if json {
-        println!("{}", json!({ "error": reason }));
+        out.push_str(&format!("{}\n", json!({ "error": reason })));
     } else {
         eprintln!("ctx at: {reason}");
     }
-    ExitCode::from(EXIT_BAD_POSITION)
+    (out, ExitCode::from(EXIT_BAD_POSITION))
 }
 
 pub fn run(args: Args) -> ExitCode {
+    let (out, code) = render(&args);
+    print!("{out}");
+    code
+}
+
+/// The exact stdout `run` would print, paired with the exit code. Shared with
+/// the MCP wrapper (R15); error diagnostics still go to stderr via `eprintln!`.
+pub fn render(args: &Args) -> (String, ExitCode) {
     // Parse `<file>:<line>` from the right so paths may contain no colon.
     let Some((file, line_str)) = args.position.rsplit_once(':') else {
         return fail(args.json, &format!("invalid position '{}'", args.position));
@@ -74,7 +83,7 @@ pub fn run(args: Args) -> ExitCode {
 
     let (root, store) = match load_index(args.no_sync) {
         Ok(v) => v,
-        Err(code) => return code,
+        Err(code) => return (String::new(), code),
     };
 
     let abs = root.join(&rel);
@@ -102,7 +111,7 @@ pub fn run(args: Args) -> ExitCode {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx at: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
     let file_syms: Vec<&SymbolRow> = all.iter().filter(|s| s.path == rel).collect();
@@ -153,8 +162,13 @@ pub fn run(args: Args) -> ExitCode {
                 "notes": note_value(&store, s.id),
             }));
         }
-        println!("{}", json!({ "file": rel, "line": line, "chain": entries }));
-        return ExitCode::SUCCESS;
+        return (
+            format!(
+                "{}\n",
+                json!({ "file": rel, "line": line, "chain": entries })
+            ),
+            ExitCode::SUCCESS,
+        );
     }
 
     let mut out = format!("module {module_qpath}\n");
@@ -177,6 +191,5 @@ pub fn run(args: Args) -> ExitCode {
         out.push_str(&line);
         out.push('\n');
     }
-    print!("{out}");
-    ExitCode::SUCCESS
+    (out, ExitCode::SUCCESS)
 }

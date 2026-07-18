@@ -1,6 +1,6 @@
 # Task 11: MCP server
 
-Status: in-progress
+Status: done
 Depends on: 07, 09
 Priority: P2
 Budget: 35 turns
@@ -38,10 +38,14 @@ functions directly.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test mcp_tool_list` → passes (all
+- [x] `cd context-tree && cargo test mcp_tool_list` → passes (all
       query + note verbs present as typed tools)
-- [ ] `cd context-tree && cargo test mcp_tree_matches_cli` → passes
+      — verifier: `test mcp_tool_list ... ok`; evidence/11-mcp-server.md
+- [x] `cd context-tree && cargo test mcp_tree_matches_cli` → passes
       (byte-identical output vs `ctx tree --json` for the same args)
-- [ ] `cd context-tree && cargo test mcp_notes_add_writes_file` → passes
+      — verifier: `test mcp_tree_matches_cli ... ok`; evidence/11-mcp-server.md
+- [x] `cd context-tree && cargo test mcp_notes_add_writes_file` → passes
       (note file created on disk via the MCP path)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      — verifier: `test mcp_notes_add_writes_file ... ok`; evidence/11-mcp-server.md
+- [x] `bash context-tree/scripts/check.sh` → exits 0
+      — verifier: full suite (fmt --check, clippy -D warnings, all tests) exit 0
