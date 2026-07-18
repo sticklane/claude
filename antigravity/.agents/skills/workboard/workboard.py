@@ -214,12 +214,35 @@ def _worktree_activity(wt_path, branch, repo):
     return newest or None
 
 
+def _config_upstream(repo, branch):
+    """Resolve `branch`'s upstream tip from git config when the remote-tracking
+    ref (@{u}) is absent — an upstream freshly set via
+    branch.<name>.remote/.merge with no fetched refs/remotes ref. Returns a SHA
+    usable as a rev-list endpoint, or None."""
+    if not branch or branch in ("?", "HEAD"):
+        return None
+    remote = run_git(repo, "config", f"branch.{branch}.remote")
+    merge = run_git(repo, "config", f"branch.{branch}.merge")
+    if not remote or not merge:
+        return None
+    ls = run_git(repo, "ls-remote", remote, merge)
+    if not ls:
+        return None
+    return ls.split()[0]
+
+
 def git_info(repo):
     branch = run_git(repo, "rev-parse", "--abbrev-ref", "HEAD") or "?"
     porcelain = run_git(repo, "status", "--porcelain")
     dirty = len(porcelain.splitlines()) if porcelain else 0
     ahead = behind = 0
     lr = run_git(repo, "rev-list", "--left-right", "--count", "@{u}...HEAD")
+    if not (lr and "\t" in lr):
+        upstream = _config_upstream(repo, branch)
+        if upstream:
+            lr = run_git(
+                repo, "rev-list", "--left-right", "--count", f"{upstream}...HEAD"
+            )
     if lr and "\t" in lr:
         b, a = lr.split("\t")
         ahead, behind = int(a), int(b)

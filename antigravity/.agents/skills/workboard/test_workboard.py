@@ -8,6 +8,7 @@ fake ~/.gemini/antigravity/brain store — the real one is never touched.
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -2029,6 +2030,61 @@ class TestHumanBlockersInbox(unittest.TestCase):
                 idx for idx, i in enumerate(inbox) if i["what"].startswith("Spec ")
             )
             self.assertLess(first_human, first_spec)
+
+
+# ---- git_info config-derived upstream fallback (scanner-git-ahead task 06) --
+
+
+def _git(repo, *args):
+    subprocess.run(
+        ["git", "-C", str(repo), *args],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "GIT_CONFIG_GLOBAL": "/dev/null",
+             "GIT_CONFIG_SYSTEM": "/dev/null"},
+    )
+
+
+class GitInfoConfigUpstreamTestCase(unittest.TestCase):
+    def test_git_info_uses_config_upstream_when_symbolic_ref_absent(self):
+        # Upstream is configured via branch.<name>.remote/.merge but no
+        # remote-tracking ref exists, so @{u} does not resolve. git_info must
+        # still report the config-derived ahead count.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "work"
+            bare = Path(tmp) / "remote.git"
+            repo.mkdir()
+            bare.mkdir()
+            _git(bare, "init", "--bare", "-b", "main")
+            _git(repo, "init", "-b", "main")
+            _git(repo, "config", "user.email", "t@example.com")
+            _git(repo, "config", "user.name", "Test")
+            (repo / "a.txt").write_text("1", encoding="utf-8")
+            _git(repo, "add", "a.txt")
+            _git(repo, "commit", "-m", "first")
+            # Publish the first commit to the bare remote WITHOUT a named remote,
+            # so no refs/remotes/origin/main tracking ref is ever created.
+            _git(repo, "push", str(bare), "main:refs/heads/main")
+            (repo / "b.txt").write_text("2", encoding="utf-8")
+            _git(repo, "add", "b.txt")
+            _git(repo, "commit", "-m", "second")
+            # Configure the upstream by hand (url + branch tracking config) but
+            # never fetch, so @{u} stays unresolvable.
+            _git(repo, "remote", "add", "origin", str(bare))
+            _git(repo, "config", "branch.main.remote", "origin")
+            _git(repo, "config", "branch.main.merge", "refs/heads/main")
+
+            # Precondition: @{u} truly does not resolve.
+            self.assertIsNone(
+                workboard.run_git(
+                    repo, "rev-list", "--left-right", "--count", "@{u}...HEAD"
+                )
+            )
+
+            info = workboard.git_info(repo)
+            self.assertEqual(info["ahead"], 1)
+            self.assertEqual(info["behind"], 0)
 
 
 if __name__ == "__main__":
