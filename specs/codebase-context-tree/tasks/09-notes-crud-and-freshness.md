@@ -7,6 +7,23 @@ Budget: 45 turns
 Spec: ../SPEC.md (requirements R2 partial [note-freshness-on-deletion], R3, R12, R14; contracts C1, C2, C3, C9, C10)
 Touch: context-tree/src/notes/mod.rs, context-tree/src/notes/anchor.rs, context-tree/src/notes/freshness.rs, context-tree/src/cmd/notes.rs, context-tree/src/index/**, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/notes/**, context-tree/tests/*.rs
 
+<!--
+PLAN (delete at close-out):
+- New src/notes/{mod.rs (Note struct, frontmatter parse, ULID, ISO-8601, add,
+  load_all), anchor.rs (resolve <symbol> -> qpath+body_hash via C3), freshness.rs
+  (pure is_fresh)}.
+- Index: add `notes` table to SCHEMA_SQL + rebuild drop-list, bump SCHEMA_VERSION;
+  add SymbolRow.body_hash; add refresh_notes(), notes_for_anchor()/list readers;
+  make note_marker() query the table.
+- Sync: run_sync refreshes the notes cache after fact updates (under the lock).
+- cmd/notes.rs: add/list/show, mirrors sig.rs preamble (load_index, resolve_suffix).
+- Wiring (additive, beyond declared Touch — reversible, reported in Decisions):
+  lib.rs (pub mod notes; Notes match arm), cmd/mod.rs (pub mod notes;),
+  sync/mod.rs (notes refresh call), cli.rs (Notes subcommand).
+- Tests: tests/notes.rs, one fn-name-prefix per acceptance criterion.
+- Risk: SCHEMA_VERSION bump / clippy -D warnings / clap nested subcommand shape.
+-->
+
 ## Goal
 
 `ctx notes add <symbol> <text> [--kind gotcha|invariant|rationale|todo]`
