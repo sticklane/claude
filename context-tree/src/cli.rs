@@ -1,7 +1,7 @@
 //! CLI surface (clap). Future tasks extend the [`Command`] enum with query and
 //! note subcommands; task 01 ships `--version` and `ctx init`.
 
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
 #[command(name = "ctx", version, about = "Codebase context tree")]
@@ -108,4 +108,86 @@ pub enum Command {
         #[arg(long = "no-sync")]
         no_sync: bool,
     },
+    /// Add, list, or show a symbol's notes with derived freshness (R12).
+    Notes(NotesArgs),
+}
+
+/// `ctx notes …` arguments: a subcommand (`add`/`list`), or the bare
+/// `ctx notes <symbol>` show form. The subcommand and the bare `<symbol>` are
+/// mutually exclusive.
+#[derive(Args)]
+#[command(args_conflicts_with_subcommands = true)]
+pub struct NotesArgs {
+    #[command(subcommand)]
+    pub action: Option<NotesAction>,
+    /// Bare form `ctx notes <symbol>`: show that symbol's notes (C3 suffix).
+    pub symbol: Option<String>,
+    /// Emit JSON instead of plain text.
+    #[arg(long)]
+    pub json: bool,
+    /// Skip the R3 staleness sweep and read the current snapshot.
+    #[arg(long = "no-sync")]
+    pub no_sync: bool,
+}
+
+#[derive(Subcommand)]
+pub enum NotesAction {
+    /// Anchor a note to a symbol (R12). Body from the positional text,
+    /// `--file <path>`, or stdin via `--file -`.
+    Add {
+        /// Symbol name or qualified-path suffix (C3).
+        symbol: String,
+        /// Note body; omit to read from `--file <path>` or stdin (`--file -`).
+        text: Option<String>,
+        /// Note kind.
+        #[arg(long, value_enum)]
+        kind: Option<NoteKind>,
+        /// Read the body from a file, or from stdin when the path is `-`.
+        #[arg(long)]
+        file: Option<String>,
+        /// Emit JSON instead of plain text.
+        #[arg(long)]
+        json: bool,
+        /// Skip the R3 staleness sweep and read the current snapshot.
+        #[arg(long = "no-sync")]
+        no_sync: bool,
+    },
+    /// List notes, filtered by kind, staleness, or the anchoring file (R12).
+    List {
+        /// Show only notes of this kind.
+        #[arg(long, value_enum)]
+        kind: Option<NoteKind>,
+        /// Show only stale notes.
+        #[arg(long)]
+        stale: bool,
+        /// Show only notes anchored to symbols in this file.
+        #[arg(long)]
+        file: Option<String>,
+        /// Emit JSON instead of plain text.
+        #[arg(long)]
+        json: bool,
+        /// Skip the R3 staleness sweep and read the current snapshot.
+        #[arg(long = "no-sync")]
+        no_sync: bool,
+    },
+}
+
+/// The closed set of note kinds (R12).
+#[derive(Clone, Copy, ValueEnum)]
+pub enum NoteKind {
+    Gotcha,
+    Invariant,
+    Rationale,
+    Todo,
+}
+
+impl NoteKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            NoteKind::Gotcha => "gotcha",
+            NoteKind::Invariant => "invariant",
+            NoteKind::Rationale => "rationale",
+            NoteKind::Todo => "todo",
+        }
+    }
 }
