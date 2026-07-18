@@ -14,7 +14,7 @@ use std::time::Duration;
 
 /// Bumped whenever the on-disk schema shape changes; a version-mismatched or
 /// unreadable cache is wiped and rebuilt transparently (C4).
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 
 const SCHEMA_SQL: &str = "
 CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
@@ -71,6 +71,18 @@ CREATE TABLE IF NOT EXISTS scopes (
     scope_start_byte INTEGER NOT NULL,
     scope_end_byte   INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS notes (
+    id          TEXT PRIMARY KEY,
+    rel_path    TEXT NOT NULL,
+    anchor_path TEXT NOT NULL,
+    anchor_hash TEXT NOT NULL,
+    kind        TEXT,
+    author      TEXT NOT NULL,
+    created     TEXT NOT NULL,
+    body        TEXT NOT NULL,
+    fresh       INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notes_anchor ON notes(anchor_path);
 CREATE INDEX IF NOT EXISTS idx_symbols_file ON symbols(file_id);
 CREATE INDEX IF NOT EXISTS idx_symbols_qpath ON symbols(qpath);
 CREATE INDEX IF NOT EXISTS idx_refs_file ON refs(file_id);
@@ -110,6 +122,24 @@ pub struct SymbolRow {
     pub full_start_byte: usize,
     pub full_end_byte: usize,
     pub ident_start_byte: usize,
+    /// C2 body content hash — the anchor hash `ctx notes add` records (R12).
+    pub body_hash: String,
+}
+
+/// A note read back from the derived cache for `ctx notes`/`ctx notes list`
+/// (R12): the frontmatter fields, the cached derived freshness, and the current
+/// file of the anchored symbol (`None` when the anchor no longer resolves).
+#[derive(Debug, Clone)]
+pub struct NoteRow {
+    pub id: String,
+    pub rel_path: String,
+    pub anchor_path: String,
+    pub kind: Option<String>,
+    pub author: String,
+    pub created: String,
+    pub body: String,
+    pub fresh: bool,
+    pub file: Option<String>,
 }
 
 /// A reference occurrence read back for `ctx refs` (R10): the referenced name,
@@ -193,6 +223,7 @@ impl IndexStore {
              DROP TABLE IF EXISTS refs;
              DROP TABLE IF EXISTS imports;
              DROP TABLE IF EXISTS scopes;
+             DROP TABLE IF EXISTS notes;
              DROP TABLE IF EXISTS files;
              DROP TABLE IF EXISTS sync_meta;
              DELETE FROM schema_meta;",
@@ -434,7 +465,7 @@ impl IndexStore {
     pub fn all_symbols(&self) -> rusqlite::Result<Vec<SymbolRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT s.id, s.kind, s.name, s.qpath, s.signature, s.docstring, s.parent,
-                    f.path, s.full_start_byte, s.full_end_byte, s.ident_start_byte
+                    f.path, s.full_start_byte, s.full_end_byte, s.ident_start_byte, s.body_hash
              FROM symbols s JOIN files f ON s.file_id = f.id
              ORDER BY f.path, s.full_start_byte",
         )?;
@@ -451,6 +482,7 @@ impl IndexStore {
                 full_start_byte: r.get::<_, i64>(8)? as usize,
                 full_end_byte: r.get::<_, i64>(9)? as usize,
                 ident_start_byte: r.get::<_, i64>(10)? as usize,
+                body_hash: r.get(11)?,
             })
         })?;
         rows.collect()
@@ -532,12 +564,103 @@ impl IndexStore {
         Ok(map)
     }
 
-    /// Note-marker read API (R9): `Some((count, any_stale))` for a symbol's
-    /// notes. Always `None` today — the notes subsystem lands in task 09 — but
-    /// the signature is fixed here so query commands (tasks 06–07) can call it
-    /// without inventing the interface.
-    pub fn note_marker(&self, _symbol_id: i64) -> Option<(usize, bool)> {
-        None
+    /// C2 body hash of the unique symbol at `qpath`, or `None` when no symbol
+    /// resolves — the current side of R12's freshness derivation.
+    pub fn body_hash_for_qpath(&self, qpath: &str) -> rusqlite::Result<Option<String>> {
+        self.conn
+            .query_row(
+                "SELECT body_hash FROM symbols WHERE qpath = ?1 LIMIT 1",
+                [qpath],
+                |r| r.get(0),
+            )
+            .optional()
+    }
+
+    /// Rebuild the derived note cache from the note files (R12): each note's
+    /// freshness re-derives against the just-synced symbols, so the cache is a
+    /// pure function of the note files plus the working tree.
+    pub fn refresh_notes(&self, notes: &[crate::notes::Note]) -> rusqlite::Result<()> {
+        self.conn.execute("DELETE FROM notes", [])?;
+        for n in notes {
+            let current = self.body_hash_for_qpath(&n.anchor_path)?;
+            let fresh = crate::notes::freshness::is_fresh(current.as_deref(), &n.anchor_hash);
+            self.conn.execute(
+                "INSERT OR REPLACE INTO notes
+                    (id, rel_path, anchor_path, anchor_hash, kind, author, created, body, fresh)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    n.id,
+                    n.rel_path,
+                    n.anchor_path,
+                    n.anchor_hash,
+                    n.kind,
+                    n.author,
+                    n.created,
+                    n.body,
+                    fresh as i64,
+                ],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Every cached note, joined to the current file of its anchored symbol
+    /// (`NULL` when the anchor no longer resolves), ordered deterministically —
+    /// the raw material for `ctx notes list`/`ctx notes <symbol>` (R12).
+    pub fn all_notes(&self) -> rusqlite::Result<Vec<NoteRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT n.id, n.rel_path, n.anchor_path, n.kind, n.author, n.created, n.body,
+                    n.fresh, f.path
+             FROM notes n
+             LEFT JOIN symbols s ON s.qpath = n.anchor_path
+             LEFT JOIN files f ON f.id = s.file_id
+             GROUP BY n.id
+             ORDER BY n.anchor_path, n.id",
+        )?;
+        let rows = stmt.query_map([], |r| {
+            Ok(NoteRow {
+                id: r.get(0)?,
+                rel_path: r.get(1)?,
+                anchor_path: r.get(2)?,
+                kind: r.get(3)?,
+                author: r.get(4)?,
+                created: r.get(5)?,
+                body: r.get(6)?,
+                fresh: r.get::<_, i64>(7)? != 0,
+                file: r.get(8)?,
+            })
+        })?;
+        rows.collect()
+    }
+
+    /// The C10 note marker for a symbol: `Some((count, any_stale))` when the
+    /// symbol carries notes, `None` otherwise. Counts notes anchored to the
+    /// symbol's qualified path in the derived cache (R12/C10).
+    pub fn note_marker(&self, symbol_id: i64) -> Option<(usize, bool)> {
+        let qpath: String = self
+            .conn
+            .query_row(
+                "SELECT qpath FROM symbols WHERE id = ?1",
+                [symbol_id],
+                |r| r.get(0),
+            )
+            .optional()
+            .ok()
+            .flatten()?;
+        let (count, stale): (i64, i64) = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*), COALESCE(SUM(CASE WHEN fresh = 0 THEN 1 ELSE 0 END), 0)
+                 FROM notes WHERE anchor_path = ?1",
+                [qpath],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .ok()?;
+        if count == 0 {
+            None
+        } else {
+            Some((count as usize, stale > 0))
+        }
     }
 }
 

@@ -1,11 +1,11 @@
 # Task 09: Notes CRUD, derived freshness, C10 marker wiring
 
-Status: in-progress
+Status: done
 Depends on: 06, 07
 Priority: P1
 Budget: 45 turns
 Spec: ../SPEC.md (requirements R2 partial [note-freshness-on-deletion], R3, R12, R14; contracts C1, C2, C3, C9, C10)
-Touch: context-tree/src/notes/mod.rs, context-tree/src/notes/anchor.rs, context-tree/src/notes/freshness.rs, context-tree/src/cmd/notes.rs, context-tree/src/index/**, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/notes/**, context-tree/tests/*.rs
+Touch: context-tree/src/notes/mod.rs, context-tree/src/notes/anchor.rs, context-tree/src/notes/freshness.rs, context-tree/src/cmd/notes.rs, context-tree/src/cmd/mod.rs, context-tree/src/index/**, context-tree/src/cli.rs, context-tree/src/lib.rs, context-tree/src/sync/mod.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/notes/**, context-tree/tests/*.rs
 
 ## Goal
 
@@ -76,23 +76,45 @@ only change what that function returns (in `src/index/`), not the callers.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test notes_add` → passes (frontmatter
+- [x] `cd context-tree && cargo test notes_add` → passes (frontmatter
       fields, C9 author resolution, C3 ambiguous refusal)
-- [ ] `cd context-tree && cargo test notes_body_sources` → passes
-      (positional, `--file`, stdin)
-- [ ] `cd context-tree && cargo test notes_freshness` → passes (fresh/stale
-      derivation on body edit)
-- [ ] `cd context-tree && cargo test notes_list` → passes (`--kind`,
-      `--stale`, `--file` filters)
-- [ ] `cd context-tree && cargo test notes_corrupted_frontmatter` → passes
-      (one diagnostic line, skipped, exit 0)
-- [ ] `cd context-tree && cargo test notes_merge_conflict` → passes (R14:
-      two divergent note copies conflict, nothing else does)
-- [ ] `cd context-tree && cargo test c10_markers_all_surfaces` → passes
-      (`[notes:2!]` on tree/sig/map/at for the same symbol)
-- [ ] `cd context-tree && cargo test notes_deletion_freshness` → passes
+      — 5 passed (verifier evidence/09-notes-crud-and-freshness.md)
+- [x] `cd context-tree && cargo test notes_body_sources` → passes
+      (positional, `--file`, stdin) — 1 passed
+- [x] `cd context-tree && cargo test notes_freshness` → passes (fresh/stale
+      derivation on body edit) — 1 passed
+- [x] `cd context-tree && cargo test notes_list` → passes (`--kind`,
+      `--stale`, `--file` filters) — 1 passed
+- [x] `cd context-tree && cargo test notes_corrupted_frontmatter` → passes
+      (one diagnostic line, skipped, exit 0) — 1 passed
+- [x] `cd context-tree && cargo test notes_merge_conflict` → passes (R14:
+      two divergent note copies conflict, nothing else does) — 1 passed
+- [x] `cd context-tree && cargo test c10_markers_all_surfaces` → passes
+      (`[notes:2!]` on tree/sig/map/at for the same symbol) — 1 passed
+- [x] `cd context-tree && cargo test notes_deletion_freshness` → passes
       (R2, no-VCS fixture: deleting an indexed file that carries a note
       purges its symbols from `ctx tree` on the next sync and the note's
       freshness reads stale — the half task 05 deferred here since notes
-      didn't exist at that task)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      didn't exist at that task) — 1 passed
+- [x] `bash context-tree/scripts/check.sh` → exits 0
+      — exit 0 (fmt --check, clippy -D warnings, full suite green)
+
+## Decisions
+
+- Additive wiring beyond declared `Touch:` (reversible; orchestrator widens
+  Touch at merge). Edited: `context-tree/src/lib.rs` (`pub mod notes;` + the
+  `Command::Notes` dispatch arm — the dispatch match lives in lib.rs, not
+  cli.rs), `context-tree/src/cmd/mod.rs` (`pub mod notes;`),
+  `context-tree/src/sync/mod.rs` (run_sync refreshes the derived note cache
+  after fact updates, under the advisory lock — the correct, contention-free
+  place to re-derive freshness per R2/R3/R12). Reverse: drop these three
+  hunks and the `ctx notes` subcommand no longer builds/dispatches.
+- No new crate for ULID/time: implemented a self-contained ULID (48-bit ms +
+  80 bits from SHA-256 of nanos/counter/pid, existing `sha2`) and an ISO-8601
+  formatter (days-from-civil), rather than adding `ulid`/`chrono`. `Cargo.toml`
+  was in Touch but needed no change. Reverse: swap either for the crate.
+- Frontmatter key names chosen (`id`, `anchor_path`, `anchor_hash`, `kind`,
+  `author`, `created`) — the spec pins the fields, not the YAML keys.
+- Bumped index `SCHEMA_VERSION` 1→2 for the new `notes` table (a
+  version-mismatched cache rebuilds transparently, C4). Added `body_hash` to
+  `SymbolRow` (needed as the anchor hash on add).
