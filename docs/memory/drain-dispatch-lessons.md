@@ -278,6 +278,35 @@ had it checked out elsewhere. Fix: always diff against `origin/main` (after
 a fetch) or an explicit commit SHA from an isolated worktree, never the bare
 `main` branch name.
 
+## A stray `cd <other-worktree> && ...` cleanup one-liner silently redirects every later relative-path command
+
+Post-merge worker-worktree cleanup (`git worktree remove <path> --force
+--force; git branch -D <branch>`) is commonly run from the primary checkout
+by name (`cd /Users/sjaconette/claude && ...`) rather than from inside the
+orchestrator's own isolated worktree. That `cd` persists as the session's
+working directory for every SUBSEQUENT Bash tool call — the harness does not
+reset it — so it silently redirects the orchestrator away from
+`.claude/worktrees/drain-orchestrator` back to the primary checkout (which
+can itself be stale/behind, as in the "local `main` ref" lesson above). This
+went undetected for several calls in one session (2026-07-17) because
+branch-level git commands (`git branch`, `git worktree list`,
+`git merge-base`) are location-independent within a repo — shared refs
+across worktrees mean they keep returning correct results regardless of
+which worktree's directory the shell is actually in — and `Write`/`Edit`
+tool calls used explicit absolute paths, so file edits still landed
+correctly. Only a later bare relative-path `Bash` read (`tail -8
+specs/.../SPEC.md`) surfaced the drift, with "No such file or directory".
+No damage occurred that time (confirmed: intervening `git commit`s could
+only have succeeded on the branch they reported, proving cwd was still
+correct at those points), but a `git add <relative-path>` + `git commit` run
+after the drift would have silently committed the WRONG worktree's
+(unrelated, possibly stale) copy of that path instead of the intended one.
+Fix: after any `cd <other-path> && ...` cleanup command run from an
+isolated orchestrator worktree, either explicitly `cd` back to the
+orchestrator worktree before resuming relative-path work, or prefer a
+subshell (`(cd <other-path> && <command>)`) so the `cd` never escapes that
+one invocation.
+
 ## A rejected push from a concurrent drain needs fetch+merge+retry, not just "warn and continue"
 
 The push guard's documented behavior ("a rejected, non-fast-forward, or
