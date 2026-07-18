@@ -9,6 +9,7 @@ pub mod facts;
 pub mod hash;
 pub mod index;
 pub mod lang;
+pub mod lsp;
 pub mod notes;
 pub mod path;
 pub mod project;

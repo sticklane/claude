@@ -7,6 +7,33 @@ Budget: 30 turns
 Spec: ../SPEC.md (requirement R11)
 Touch: context-tree/src/lsp/**, context-tree/src/cmd/refs.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/lsp/**, context-tree/tests/*.rs
 
+<!-- PLAN (delete at close-out)
+Design: additive LSP enrichment, no new subcommand.
+- src/lsp/mod.rs: `ReferenceResolver` trait (= "a configured language server
+  available"), `ResolveTarget`/`PreciseRef`/`Resolved` types, `enrich(root,
+  &dyn ReferenceResolver)` (reads index symbols/refs, asks resolver which refs
+  are precise, writes a self-contained JSON cache at
+  .context/cache/lsp-enrichment.json — NOT the shared SQLite index), and
+  `EnrichmentCache::load(root)` + `.is_precise(name,path,line)` +
+  `.signature(qpath)` consumed by refs.rs.
+- src/lsp/client.rs: `RustAnalyzerResolver` — minimal JSON-RPC-over-stdio LSP
+  client (initialize/didOpen/references) implementing the trait for a live
+  rust-analyzer.
+- src/cmd/refs.rs: consult EnrichmentCache::load(root); a ref/def present in the
+  cache renders `precise` (+ resolved signature) instead of `heuristic`; absent
+  cache => unchanged heuristic output (never blocks/required).
+- lib.rs: `pub mod lsp;` (additive, beyond declared Touch — reported in Decisions).
+Tests (tests/lsp.rs):
+- refs_no_lsp: no cache => all heuristic, exit 0 (regression guard).
+- refs_lsp_precise: fake ReferenceResolver (a configured-server double) => enrich
+  => ctx refs shows precise. Deterministic, always green.
+- refs_lsp_precise_live: #[ignore] real rust-analyzer end-to-end (run manually,
+  reported as evidence). rust-analyzer is external+slow => mocked in the always-run
+  suite per TDD rules, live path gated behind --ignored so check.sh stays reliable.
+TDD: write tests+lsp module, run refs_lsp_precise RED (refs.rs unmodified still
+prints heuristic), then hook refs.rs => GREEN.
+-->
+
 ## Goal
 
 With a configured language server available, an enrichment pass stores
