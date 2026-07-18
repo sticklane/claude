@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -59,20 +59,20 @@ scope.
 
 ## Acceptance
 
-- [ ] `grep -c 'hard cap 100' .claude/rules/quality-discipline.md` → ≥ 1
-      (count 0 at spec-authoring time, verified 2026-07-17)
-- [ ] `grep -ci 'subject/body' .claude/rules/quality-discipline.md` → ≥ 1
-      (count 0 at spec-authoring time)
-- [ ] `grep -c 'drain: <spec-slug> task NN in-progress' .claude/rules/quality-discipline.md` → ≥ 1
-      (count 0 at spec-authoring time)
-- [ ] `grep -c 'regex' .claude/rules/quality-discipline.md` → ≥ 1
-      (count 0 at spec-authoring time)
-- [ ] `grep -c 'breakdown:' .claude/rules/quality-discipline.md` → ≥ 1
-      (count 0 at spec-authoring time)
-- [ ] `grep -ci 'Co-Authored' .claude/rules/quality-discipline.md` → ≥ 1
-      (count 0 at spec-authoring time)
-- [ ] `grep -c 'hard cap 100' antigravity/AGENTS.md` → ≥ 1
-      (count 0 at spec-authoring time)
-- [ ] `grep -c 'subject/body' antigravity/AGENTS.md` → ≥ 1
-      (count 0 at spec-authoring time)
-- [ ] `wc -l < antigravity/AGENTS.md` → ≤ 200 (185 at spec-authoring time)
+- [x] `grep -c 'hard cap 100' .claude/rules/quality-discipline.md` → ≥ 1
+      (verifier: 2; evidence/01-canonical-doctrine-and-agents-mirror.md)
+- [x] `grep -ci 'subject/body' .claude/rules/quality-discipline.md` → ≥ 1
+      (verifier: 1; evidence/01-canonical-doctrine-and-agents-mirror.md)
+- [x] `grep -c 'drain: <spec-slug> task NN in-progress' .claude/rules/quality-discipline.md` → ≥ 1
+      (verifier: 1; evidence/01-canonical-doctrine-and-agents-mirror.md)
+- [x] `grep -c 'regex' .claude/rules/quality-discipline.md` → ≥ 1
+      (verifier: 1; evidence/01-canonical-doctrine-and-agents-mirror.md)
+- [x] `grep -c 'breakdown:' .claude/rules/quality-discipline.md` → ≥ 1
+      (verifier: 1; evidence/01-canonical-doctrine-and-agents-mirror.md)
+- [x] `grep -ci 'Co-Authored' .claude/rules/quality-discipline.md` → ≥ 1
+      (verifier: 1; evidence/01-canonical-doctrine-and-agents-mirror.md)
+- [x] `grep -c 'hard cap 100' antigravity/AGENTS.md` → ≥ 1
+      (verifier: 1; evidence/01-canonical-doctrine-and-agents-mirror.md)
+- [x] `grep -c 'subject/body' antigravity/AGENTS.md` → ≥ 1
+      (verifier: 1; evidence/01-canonical-doctrine-and-agents-mirror.md)
+- [x] `wc -l < antigravity/AGENTS.md` → ≤ 200 (verifier: 191)
