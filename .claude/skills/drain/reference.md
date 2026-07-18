@@ -1624,7 +1624,13 @@ non-fast-forward, or offline push warns and continues. The merge already landed
 locally, so a failed push never fails the task. This same guard applies to the
 owner claim/release commits (SKILL.md step 1), every flip (step 2), and the
 Deferred/Blocked/discovery commits (step 3). The worker never pushes — only the
-orchestrator session, after each of its own commits.
+orchestrator session, after each of its own commits. Every such bookkeeping
+commit follows the **subject/body** split (quality-discipline.md's
+`## Commits`): a short type-prefixed subject, with verdict, lease, and
+liveness detail in the body rather than a bloated subject line — except the
+regex-pinned machinery subjects (the `drain: <spec-slug> task NN in-progress`
+flip and the `drain: auto-breakdown specs/<slug> (N tasks)` message), which
+are reproduced verbatim.
 
 **Skill-doc size/TOC gate (conditional pre-merge blocker).** Before merging a
 DONE task whose `Touch:` includes any `.claude/skills/*/SKILL.md` or

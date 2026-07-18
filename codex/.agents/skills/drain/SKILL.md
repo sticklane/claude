@@ -245,7 +245,11 @@ opening line every time you enter it.
   when file contents are genuinely needed, dispatch a scout, never read them
   inline.** Then merge the task branch (it carries the task file with
   `Status: done` and ticked boxes, plus the verifier's `evidence/` file for
-  `specs/<slug>/` layouts) and run the project gates — the gate run invokes
+  `specs/<slug>/` layouts) and run the project gates. The merge commit
+  follows the commit doctrine: a **subject/body** split with subject
+  `merge: <spec-slug> task NN — <short what>` (target ≤72 chars, hard cap
+  100), and any ratified riders, audit notes, and acceptance evidence in the
+  body rather than the subject line — the gate run invokes
   `scripts/check.sh`, the sole required check entrypoint for drain's
   merge-time gate, never a hand-derived list of steps read out of
   CLAUDE.md/AGENTS.md prose (repos without it fall back to their own
@@ -259,7 +263,12 @@ opening line every time you enter it.
   if none, skip silently; never `--force`; a rejected, non-fast-forward, or
   offline push warns and continues (the merge already landed locally). This
   guard applies to every drain commit — owner claim/release, flips, and the
-  Deferred/Blocked/discovery commits. The worker never pushes.
+  Deferred/Blocked/discovery commits. The worker never pushes. Every such
+  bookkeeping commit follows the **subject/body** split: a short
+  type-prefixed subject, with verdict, lease, and liveness detail in the body
+  rather than a bloated subject — except the regex-pinned machinery subjects
+  (the `in-progress` flip and the auto-breakdown message), reproduced
+  verbatim.
   **Skill-doc size/TOC gate (conditional pre-merge blocker):** before merging a
   DONE task whose `Touch:` includes any `.claude/skills/*/SKILL.md` or
   `.claude/skills/*/reference.md` path, run `bash evals/lint-skill-size-gate.sh`;
@@ -386,7 +395,10 @@ wider window W batons sooner
 baton `specs/<slug>/DRAIN-BATON.md`, spawn the successor generation (awaited
 where a parent can supervise, else headless), report the pass, and **end your
 turn at once, stating this session will not touch the queue again**
-(one-writer invariant). A **max-generations cap of 10** stops with the baton
+(one-writer invariant). Baton-pass and bookkeeping commits follow the
+**subject/body** split: a short subject, with verdict counts and
+lease/liveness detail in the body rather than the subject line. A
+**max-generations cap of 10** stops with the baton
 written plus a needs-attention note. **Gen 1 is always attended.** Before any
 dispatch the successor runs the fresh-instance ritual: reconcile
 `DRAIN-OWNER.md` against the baton (`Run-token:` + `Generation:`), seed the
