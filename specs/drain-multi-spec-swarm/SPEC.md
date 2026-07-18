@@ -65,6 +65,17 @@ coordination substrate:
   and the total live-worker hard cap raises from ≤5 to **≤10**, still one
   single global merge queue (merges land strictly serially in commit-arrival
   order, across specs, exactly as they already do within one spec today).
+  The existing **co-admissibility** clause (a `Group:` line naming both
+  tasks, else "runs only alone") stays **spec-scoped** — a `Group:` line
+  lives in one spec's Parallelization section and can never name a task in
+  a different spec, so it continues to govern only same-spec pairs exactly
+  as it does today. Cross-spec pairs are governed by Touch-disjointness
+  alone: two tasks in _different_, both-claimed specs co-admit whenever
+  their `Touch:` sets are disjoint, with no `Group:` line required (there
+  is nowhere for one to live). Without this clause the widened
+  Touch-disjointness check is vacuous — every cross-spec pair would still
+  fail the unwidened co-admissibility clause and be forced to run alone,
+  defeating R1's raised spec-lease cap entirely.
 - Two ready specs whose Touch footprints actually intersect are never
   claimed simultaneously — the lower-priority one waits for the
   higher-priority one's lease to release, mirroring the existing
@@ -102,10 +113,16 @@ coordination substrate:
 - R2: The rolling-window admission check (reference.md's "Rolling-window
   admission & merge (R1–R4)") widens its Touch-disjointness comparison set
   from "this spec's in-progress tasks" to "every claimed spec's in-progress
-  tasks," with the total live-worker hard cap raised from ≤5 to ≤10. This
-  IS the mechanized fix for the cross-spec task-collision gap documented in
-  `docs/memory/drain-dispatch-lessons.md:64-80` ("there is no mechanized
-  cross-spec check" today) — no separate detection mechanism is needed.
+  tasks," with the total live-worker hard cap raised from ≤5 to ≤10. The
+  existing `Group:`-line co-admissibility clause stays spec-scoped (a
+  `Group:` line names tasks only within its owning spec's Parallelization
+  section, so it cannot and does not apply across specs); two tasks in
+  different, both-claimed specs are co-admissible whenever their `Touch:`
+  sets are disjoint, full stop — no `Group:` line required for a cross-spec
+  pair. This IS the mechanized fix for the cross-spec task-collision gap
+  documented in `docs/memory/drain-dispatch-lessons.md:64-80` ("there is no
+  mechanized cross-spec check" today) — no separate detection mechanism is
+  needed.
 - R3: `.claude/rules/token-discipline.md`'s "cap the fleet at a 3–5
   concurrent-writer window" rule gains an explicit carve-out sentence
   naming drain's multi-spec swarm mode and citing this spec, so the raised
@@ -114,7 +131,10 @@ coordination substrate:
 - R4: No-argument `/drain` claims spec leases greedily up to the 3-spec cap
   using the existing Priority-then-path tie-break applied at spec
   granularity; a queue with only one claimable non-overlapping spec
-  produces byte-identical dispatch behavior to today's single-spec drain.
+  produces a single claim identical to today's single-spec path (the
+  claim-count/identity property the acceptance simulation actually checks —
+  a live dispatch-behavior comparison needs a real `/drain` run, which is
+  out of reach for an unattended verifier).
 - R5: Two ready specs whose Touch footprints intersect are never
   simultaneously claimed; drain serializes only the overlapping pair
   (lower-priority spec's claim waits) while continuing to run every other
@@ -231,9 +251,17 @@ main)..main`) is unchanged.
       it ships as part of this spec's implementation and is added to the
       merge-time gate list (R9's `evals/lint-*` pattern) or run standalone —
       either way it is orchestrator-resolvable, never gated on launching
-      `/drain` itself.
+      `/drain` itself. The same script's fixture set also asserts the R2
+      co-admissibility scoping directly: two Touch-disjoint tasks that each
+      belong to a _different_ one of the 3 mutually-disjoint specs (neither
+      sharing a `Group:` line — there is none to share, since a `Group:`
+      line cannot name a task outside its own spec) both admit into the
+      window simultaneously. This is the case round-3 critique found
+      missing: without it, nothing catches an implementation that leaves
+      the existing spec-scoped `Group:` co-admissibility check unwidened
+      and forces every cross-spec pair to run alone.
 - [ ] R6's negative constraint: `git diff --name-only <base-commit>..HEAD |
-    grep -c '.claude/skills/breakdown/\|antigravity/.agents/workflows/breakdown\|codex/.agents/skills/breakdown/'`
+grep -c '.claude/skills/breakdown/\|antigravity/.agents/workflows/breakdown\|codex/.agents/skills/breakdown/'`
       → 0 — this spec's implementation touches no `/breakdown` files at all,
       confirming no second cross-spec detection mechanism was added there.
 
