@@ -38,6 +38,26 @@ procedure — this rule states the discipline both assume.
   perf, chore.
 - Never commit: debugging prints, commented-out code, broken tests, or
   mixed unrelated changes (split them).
+- Subject length: target ≤72 characters, hard cap 100. The subject is a
+  scannable one-line summary — when the length rule bites, move detail into
+  the body, never abbreviate to the point of losing meaning.
+- Subject/body split: the subject states _what changed_; everything else —
+  ratification notes, verifier evidence, audit notes, acceptance detail,
+  multi-clause context — belongs in the body, after a blank line. A commit
+  needing more than the subject affords gets a body, not a longer subject.
+- Sanctioned orchestration prefixes: alongside the conventional types
+  above, machinery commits use `drain:`, `merge:`, `spec:`, and
+  `breakdown:` as their `<type>`. These name the pipeline stage that
+  authored the commit rather than a code-change category.
+- Machinery-contract subjects are regex-pinned — do not reword them to
+  satisfy the length rule. `drain: <spec-slug> task NN in-progress`
+  (singular "task") is the canonical case: drain's diff-base recovery greps
+  for that exact shape (`.claude/skills/drain/SKILL.md`), so an agent must
+  reproduce it verbatim even when a longer slug pushes the subject past the
+  ≤72 target — the hard cap 100 and the contract shape both hold, the soft
+  target yields.
+- Agent-authored commits keep the harness-provided `Co-Authored-By` trailer;
+  never strip it.
 
 ## Checks
 
