@@ -147,9 +147,13 @@ impl LspClient {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))
     }
 
-    /// Send a request and return the matching response `result`, draining
-    /// notifications and server-to-client requests in between.
-    fn request(&mut self, method: &str, params: Value) -> io::Result<Value> {
+    /// Send a request and return the whole matching response message (carrying
+    /// either `result` or `error`), draining notifications and server-to-client
+    /// requests in between. Returning the full message — rather than erroring on
+    /// an `error` response — lets callers retry through the transient errors
+    /// rust-analyzer returns while its workspace is still loading (e.g.
+    /// `ContentModified`).
+    fn request_full(&mut self, method: &str, params: Value) -> io::Result<Value> {
         let id = self.next_id;
         self.next_id += 1;
         self.write_message(&json!({
@@ -158,13 +162,7 @@ impl LspClient {
         loop {
             let msg = self.read_message()?;
             if msg.get("id").and_then(Value::as_i64) == Some(id) && msg.get("method").is_none() {
-                if let Some(err) = msg.get("error") {
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        format!("lsp error: {err}"),
-                    ));
-                }
-                return Ok(msg.get("result").cloned().unwrap_or(Value::Null));
+                return Ok(msg);
             }
             // Server-to-client request (e.g. workspace/configuration): reply
             // with null so the server does not block waiting on us.
@@ -176,6 +174,20 @@ impl LspClient {
                 }
             }
         }
+    }
+
+    /// Like [`request_full`](Self::request_full) but returns just `result`,
+    /// mapping an `error` response to an `Err`. For handshake requests where an
+    /// error is genuinely fatal.
+    fn request(&mut self, method: &str, params: Value) -> io::Result<Value> {
+        let msg = self.request_full(method, params)?;
+        if let Some(err) = msg.get("error") {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("lsp error: {err}"),
+            ));
+        }
+        Ok(msg.get("result").cloned().unwrap_or(Value::Null))
     }
 
     fn notify(&mut self, method: &str, params: Value) -> io::Result<()> {
@@ -191,7 +203,7 @@ impl LspClient {
             json!({
                 "processId": std::process::id(),
                 "rootUri": root_uri,
-                "capabilities": {},
+                "capabilities": { "experimental": { "serverStatusNotification": true } },
             }),
         )?;
         self.notify("initialized", json!({}))
@@ -211,13 +223,15 @@ impl LspClient {
         )
     }
 
-    /// Ask for references at `(line0, col0)`, retrying until the server returns
-    /// a non-empty set or a ~30s budget elapses (rust-analyzer resolves nothing
-    /// until its initial workspace load finishes).
+    /// Ask for references at `(line0, col0)`, retrying until the server returns a
+    /// non-empty set or a budget elapses. rust-analyzer resolves nothing until
+    /// its initial workspace load finishes, and until then answers each request
+    /// with an empty array or a transient `error` (e.g. `ContentModified`) — both
+    /// are swallowed and retried rather than treated as fatal.
     fn references(&mut self, file: &Path, line0: usize, col0: usize) -> io::Result<Vec<Value>> {
-        let deadline = Instant::now() + Duration::from_secs(30);
+        let deadline = Instant::now() + Duration::from_secs(60);
         loop {
-            let result = self.request(
+            let msg = self.request_full(
                 "textDocument/references",
                 json!({
                     "textDocument": { "uri": format!("file://{}", file.display()) },
@@ -225,7 +239,7 @@ impl LspClient {
                     "context": { "includeDeclaration": false },
                 }),
             )?;
-            if let Some(arr) = result.as_array() {
+            if let Some(arr) = msg.get("result").and_then(Value::as_array) {
                 if !arr.is_empty() {
                     return Ok(arr.clone());
                 }
