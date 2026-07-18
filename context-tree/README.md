@@ -33,6 +33,7 @@ $ ctx init
 initialized .context/ at /path/to/project
 ```
 
+Without a VCS, `ctx init` scaffolds `.context/` in the current directory.
 `ctx init` is idempotent — running it again on an initialized root changes
 nothing and exits 0. Every query command re-syncs the index from the
 current source before it answers, so you never run a separate "reindex"
@@ -42,7 +43,7 @@ step. Pass `--no-sync` to skip that sync and query the last-built index.
 
 Each query prints plain text by default and structured JSON with `--json`,
 so an agent can parse the result and a human can read it. Symbol arguments
-resolve by C3 suffix: pass the shortest unambiguous tail of a symbol's path
+resolve by suffix: pass the shortest unambiguous tail of a symbol's path
 (`parse_note`, or `notes.mod.parse_note` to disambiguate). An ambiguous
 symbol prints its candidates instead of guessing.
 
