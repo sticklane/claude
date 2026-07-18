@@ -5,7 +5,7 @@ Depends on: 07, 09
 Priority: P2
 Budget: 35 turns
 Spec: ../SPEC.md (requirement R15)
-Touch: context-tree/src/mcp/**, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/tests/*.rs
+Touch: context-tree/src/mcp/**, context-tree/src/cli.rs, context-tree/src/lib.rs, context-tree/src/cmd/**, context-tree/Cargo.toml, context-tree/Cargo.lock, context-tree/tests/*.rs
 
 ## Goal
 
