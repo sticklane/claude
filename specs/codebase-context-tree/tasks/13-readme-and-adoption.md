@@ -1,6 +1,6 @@
 # Task 13: README, adoption snippet, MCP registration docs
 
-Status: in-progress
+Status: done
 Depends on: 11, 12
 Priority: P2
 Budget: 25 turns
@@ -40,10 +40,13 @@ notes list`) and note file format, `ctx hooks install`/`uninstall`,
 
 ## Acceptance
 
-- [ ] `test -f context-tree/README.md` → exists
-- [ ] `grep -c "ctx-integration-snippet" context-tree/README.md` → ≥ 2
-      (open and close markers)
-- [ ] `grep -qi "mcp" context-tree/README.md && grep -qi "registration\|register" context-tree/README.md` →
+- [x] `test -f context-tree/README.md` → exists
+      (evidence: command exits 0, README committed at 36f364e)
+- [x] `grep -c "ctx-integration-snippet" context-tree/README.md` → ≥ 2
+      (open and close markers) (evidence: returns 2 — the `:start`/`:end` marker comments)
+- [x] `grep -qi "mcp" context-tree/README.md && grep -qi "registration\|register" context-tree/README.md` →
       both match (MCP registration instructions present)
-- [ ] `grep -q "context-tree/scripts/check.sh" context-tree/README.md` →
+      (evidence: both greps exit 0 — "## MCP registration" section documents `ctx mcp` + `claude mcp add`/`.mcp.json`)
+- [x] `grep -q "context-tree/scripts/check.sh" context-tree/README.md` →
       matches (documented check command named)
+      (evidence: grep exits 0 — named in "## Running the checks")
