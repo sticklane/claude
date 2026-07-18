@@ -170,10 +170,10 @@ pub fn enrich(root: &Path, resolver: &dyn ReferenceResolver) -> io::Result<Enric
     let store = crate::sync::query_sweep(root)?;
     let symbols = store
         .all_symbols()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     let all_refs = store
         .all_references()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
 
     let mut cache = EnrichmentCache::default();
     for sym in &symbols {
