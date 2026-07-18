@@ -7,6 +7,38 @@ Budget: 55 turns
 Spec: ../SPEC.md (requirement R13; contracts C1, C2, C5)
 Touch: context-tree/src/notes/reanchor.rs, context-tree/src/sync/**, context-tree/src/index/**, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/reanchor/**, context-tree/tests/*.rs
 
+<!-- PLAN (delete at close-out)
+Layers (per SPEC R13/task Goal) each leg naturally falls into:
+ - L1 qualified-name: unique candidate with old terminal name+kind → leg (d) C-move.
+ - L2 body-hash (C2 excises ident, so rename preserves hash) → leg (a) rename-in-file (fresh).
+ - L3 tree-diff: Jaccard token overlap ≥0.6, tie→lowest (file,line) → leg (c) move+rename+edit (stale).
+ - leg (b) body-edit-only: qpath unchanged, anchor still resolves → no re-anchor, just stale.
+ - leg (d) Go: package module keeps qpath → still resolves → no re-anchor, no pending; file:line updates via join.
+Note leg (a): task Step 1 says "qualified-name match" but a rename changes the terminal
+name, so it is really L2 body-hash. Tests assert observable behavior (fresh+immediate+file-unchanged),
+not the internal layer. (Decision, reversible.)
+
+Mechanism:
+ - New module src/notes/reanchor.rs: OldAnchor{name,kind,body_hash,body_tokens}, Candidate{qpath,name,kind,body_hash,body_tokens,file,row}, token_overlap(), reanchor().
+ - Index: SCHEMA_VERSION 2→3, add pending_reanchors(note_id PK, new_path). New methods:
+   symbol_identity(qpath)->Option<(name,kind,body_hash,body_tokens,file)>, pending_reanchors()->map,
+   replace_pending_reanchors(map), clear via replace. refresh_notes gains &pending; stores EFFECTIVE
+   anchor_path (pending else frontmatter) so queries resolve to new symbol immediately (phase 1).
+   all_notes LEFT JOINs pending → NoteRow.pending bool.
+ - Sync: BEFORE reparse capture old_anchor per note (from effective anchor). During parse collect
+   changed candidates + parse_failed file set (exclude parse-failed symbols as candidates). AFTER:
+   for each note whose effective anchor no longer resolves AND resolved before AND old file not now
+   parse-failed → reanchor() among candidates → pending. Persist pending, refresh_notes(&notes,&pending),
+   journal pending_reanchors = pending.len().
+ - CLI: Sync gains --write-anchors. run_sync unchanged; write path = run_sync then notes::rewrite_anchor_path
+   per pending entry (only line touched: anchor_path), then clear pending table.
+ - cmd/notes list: append pending marker for notes with pending unwritten re-anchor.
+
+Tests (new tests/reanchor.rs unless noted): reanchor_rename_in_file, reanchor_body_edit,
+reanchor_move_rename_edit, reanchor_move_no_edit (C+Go), write_anchors, reanchor_durability,
+reanchor_parse_failed_excluded, reanchor_only_writes_anchor_path; tree_diff_scorer unit tests in reanchor.rs.
+-->
+
 ## Goal
 
 When an anchored symbol no longer resolves, sync re-anchors deterministically
