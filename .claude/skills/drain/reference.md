@@ -1630,7 +1630,11 @@ commit follows the **subject/body** split (quality-discipline.md's
 liveness detail in the body rather than a bloated subject line — except the
 regex-pinned machinery subjects (the `drain: <spec-slug> task NN in-progress`
 flip and the `drain: auto-breakdown specs/<slug> (N tasks)` message), which
-are reproduced verbatim.
+are reproduced verbatim. The DONE-merge commit (SKILL.md step 3) uses subject
+`merge: <spec-slug> task NN — <short what>` (target ≤72 chars, hard cap 100)
+with ratified riders, audit notes, and acceptance evidence in the body.
+Baton-pass commits (§3a) use the same split: short subject, verdict counts
+and lease/liveness detail in the body.
 
 **Skill-doc size/TOC gate (conditional pre-merge blocker).** Before merging a
 DONE task whose `Touch:` includes any `.claude/skills/*/SKILL.md` or
