@@ -1440,26 +1440,37 @@ def tail_events(path, n: int = 50, window: int = 65_536):
         size = os.path.getsize(path)
     except OSError:
         return [], 0
-    start = max(0, size - window)
-    try:
-        with open(path, "rb") as f:
-            f.seek(start)
-            chunk = f.read()
-    except OSError:
-        return [], 0
-    lines = chunk.decode("utf-8", errors="replace").splitlines()
-    if start > 0 and lines:
-        lines = lines[1:]  # drop the partial leading line the window cut into
-    events = []
-    for ln in lines:
-        ln = ln.strip()
-        if not ln:
-            continue
+    cur = window
+    while True:
+        start = max(0, size - cur)
         try:
-            events.append(json.loads(ln))
-        except json.JSONDecodeError:
+            with open(path, "rb") as f:
+                f.seek(start)
+                chunk = f.read()
+        except OSError:
+            return [], 0
+        lines = chunk.decode("utf-8", errors="replace").splitlines()
+        if start > 0 and lines:
+            lines = lines[1:]  # drop the partial leading line the window cut into
+        events = []
+        for ln in lines:
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                events.append(json.loads(ln))
+            except json.JSONDecodeError:
+                continue
+        in_window = len(events)
+        # A lone trailing line larger than the window leaves the partial leading
+        # line dropped and zero events parsed. Grow the window (capped at file
+        # size) strictly when nothing parsed from a non-empty file, so at least
+        # one event still renders. Gated on zero-parsed + non-empty so a
+        # normally-parsing file never re-reads (the never-reads-whole-file bound).
+        if in_window == 0 and size > 0 and cur < size:
+            cur = min(size, cur * 2)
             continue
-    in_window = len(events)
+        break
     read_bytes = len(chunk)
     if start == 0 or read_bytes >= size or not read_bytes:
         approx_total = in_window
