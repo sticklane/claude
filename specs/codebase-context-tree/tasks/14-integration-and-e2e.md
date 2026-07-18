@@ -1,6 +1,6 @@
 # Task 14: Cross-subsystem integration and end-to-end acceptance
 
-Status: in-progress
+Status: done
 Depends on: 13
 Priority: P1
 Budget: 45 turns
@@ -56,13 +56,24 @@ notes list --stale` shows it. Implement as one shell or Rust
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test mid_edit_robustness` → passes (all
+- [x] `cd context-tree && cargo test mid_edit_robustness` → passes (all
       six sub-assertions in Steps 1)
-- [ ] `cd context-tree && cargo test json_all_verbs` → passes (six verbs,
+      Evidence: tests/integration.rs::mid_edit_robustness — `cargo test
+    mid_edit_robustness` → `1 passed`; asserts (a)-(f) via parsed JSON,
+      journal pending_reanchors==0, and anchor_hash byte-equality.
+- [x] `cd context-tree && cargo test json_all_verbs` → passes (six verbs,
       each piping through `jq .` with exit 0 and an asserted key)
-- [ ] `cd context-tree && cargo test e2e_user_flow` → passes (init -> map
+      Evidence: tests/integration.rs::json_all_verbs — iterates
+      tree/sig/map/deps/refs/at, each piped through a real `jq .`
+      subprocess + parsed key (symbols/signature/symbols/edges/references/
+      chain); `cargo test json_all_verbs` → `1 passed`.
+- [x] `cd context-tree && cargo test e2e_user_flow` → passes (init -> map
       -> sig -> notes add -> refactor -> stale -> notes list --stale, on a
       ≥3-language fixture)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0 (full suite green,
+      Evidence: tests/e2e/user_flow.rs::e2e_user_flow on a Python/
+      TypeScript/Go fixture; `cargo test e2e_user_flow` → `1 passed`.
+- [x] `bash context-tree/scripts/check.sh` → exits 0 (full suite green,
       the umbrella criterion covering R1/R4/R5/R6-R10/R19/R12/R14/R18
       together with all prior tasks' own coverage)
+      Evidence: `bash context-tree/scripts/check.sh` → exit 0; 28 test
+      binaries ok, 0 failures, fmt --check + clippy -D warnings clean.
