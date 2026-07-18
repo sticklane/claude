@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 16 turns
@@ -99,13 +99,13 @@ commit-format guidance only.
 - [ ] The R8 end-to-end check exits 0 (run verbatim from the repo root):
 
       ```sh
-      grep -rhoE '`(drain|merge|feat|fix|test|refactor|docs|style|perf|chore|spec|breakdown): [^`]+`' \
-        .claude/rules/quality-discipline.md antigravity/AGENTS.md \
-        .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md \
-        .claude/skills/build/SKILL.md \
-        antigravity/.agents/workflows/drain.md \
-        antigravity/.agents/workflows/build.md \
-        codex/.agents/skills/drain/SKILL.md \
-        codex/.agents/skills/build/SKILL.md \
-        | awk '{ if (length($0) > 102) { print; bad=1 } } END { exit bad }'
-      ```
+          grep -rhoE '`(drain|merge|feat|fix|test|refactor|docs|style|perf|chore|spec|breakdown): [^`]+`' \
+            .claude/rules/quality-discipline.md antigravity/AGENTS.md \
+            .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md \
+            .claude/skills/build/SKILL.md \
+            antigravity/.agents/workflows/drain.md \
+            antigravity/.agents/workflows/build.md \
+            codex/.agents/skills/drain/SKILL.md \
+            codex/.agents/skills/build/SKILL.md \
+            | awk '{ if (length($0) > 102) { print; bad=1 } } END { exit bad }'
+          ```
