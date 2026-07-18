@@ -1,6 +1,6 @@
 # Task 12: ctx hooks install/uninstall
 
-Status: in-progress
+Status: done
 Depends on: 05, 10
 Priority: P2
 Budget: 40 turns
@@ -82,20 +82,26 @@ Design:
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test hooks_install_preserves_existing` →
+- [x] `cd context-tree && cargo test hooks_install_preserves_existing` →
       passes (non-ctx content preserved, marked block appended)
-- [ ] `cd context-tree && cargo test hooks_checkout_triggers_sync` →
+      — evidence: `cargo test hooks_ --test hooks` → hooks_install_preserves_existing ok
+- [x] `cd context-tree && cargo test hooks_checkout_triggers_sync` →
       passes (journal `trigger: hook` record within 10s of a checkout)
-- [ ] `cd context-tree && cargo test hooks_fsmonitor_reporting` → passes
+      — evidence: hooks_checkout_triggers_sync ok
+- [x] `cd context-tree && cargo test hooks_fsmonitor_reporting` → passes
       (enabled/skipped reason reported)
-- [ ] `cd context-tree && cargo test hooks_posttooluse_snippet` → passes
+      — evidence: hooks_fsmonitor_reporting ok
+- [x] `cd context-tree && cargo test hooks_posttooluse_snippet` → passes
       (printed snippet invokes `ctx notes list --file`)
-- [ ] `cd context-tree && cargo test hooks_precommit_partial_commit` →
+      — evidence: hooks_posttooluse_snippet ok
+- [x] `cd context-tree && cargo test hooks_precommit_partial_commit` →
       passes (moved-TO file unstaged -> anchor update left pending, not
-      staged)
-- [ ] `cd context-tree && cargo test hooks_precommit_full_commit` →
+      staged) — evidence: hooks_precommit_partial_commit ok
+- [x] `cd context-tree && cargo test hooks_precommit_full_commit` →
       passes (both files staged -> anchor update staged in the same
-      commit)
-- [ ] `cd context-tree && cargo test hooks_uninstall_restores_original` →
+      commit) — evidence: hooks_precommit_full_commit ok
+- [x] `cd context-tree && cargo test hooks_uninstall_restores_original` →
       passes (byte-exact restoration; only self-set settings reverted)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      — evidence: hooks_uninstall_restores_original ok
+- [x] `bash context-tree/scripts/check.sh` → exits 0
+      — evidence: full suite green, EXIT=0
