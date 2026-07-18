@@ -36,15 +36,23 @@ fn line_of(root: &Path, rel: &str, byte: usize) -> usize {
 }
 
 pub fn run(args: Args) -> ExitCode {
+    let (out, code) = render(&args);
+    print!("{out}");
+    code
+}
+
+/// The exact stdout `run` would print, paired with the exit code. Shared with
+/// the MCP wrapper (R15); error diagnostics still go to stderr via `eprintln!`.
+pub fn render(args: &Args) -> (String, ExitCode) {
     let (root, store) = match load_index(args.no_sync) {
         Ok(v) => v,
-        Err(code) => return code,
+        Err(code) => return (String::new(), code),
     };
     let all = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx sig: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
 
@@ -56,19 +64,23 @@ pub fn run(args: Args) -> ExitCode {
         .collect();
     hits.sort_by(|a, b| a.qpath.cmp(&b.qpath));
 
+    let mut out = String::new();
     match hits.as_slice() {
         [] => {
             if args.json {
-                println!("{}", json!({ "error": "no match", "symbol": args.symbol }));
+                out.push_str(&format!(
+                    "{}\n",
+                    json!({ "error": "no match", "symbol": args.symbol })
+                ));
             } else {
                 eprintln!("ctx sig: no symbol matches '{}'", args.symbol);
             }
-            ExitCode::from(EXIT_NO_MATCH)
+            (out, ExitCode::from(EXIT_NO_MATCH))
         }
         [sym] => {
             if args.json {
-                println!(
-                    "{}",
+                out.push_str(&format!(
+                    "{}\n",
                     json!({
                         "qpath": sym.qpath,
                         "kind": sym.kind,
@@ -77,20 +89,20 @@ pub fn run(args: Args) -> ExitCode {
                         "file": sym.path,
                         "notes": note_value(&store, sym.id),
                     })
-                );
+                ));
             } else {
-                print!("{}", sym.signature);
-                print!("{}", format_note_marker(store.note_marker(sym.id)));
-                println!();
+                out.push_str(&sym.signature);
+                out.push_str(&format_note_marker(store.note_marker(sym.id)));
+                out.push('\n');
                 if args.doc {
                     if !sym.docstring.trim().is_empty() {
-                        println!("{}", sym.docstring.trim_end());
+                        out.push_str(&format!("{}\n", sym.docstring.trim_end()));
                     }
                 } else if let Some(line) = first_doc_line(&sym.docstring) {
-                    println!("{line}");
+                    out.push_str(&format!("{line}\n"));
                 }
             }
-            ExitCode::SUCCESS
+            (out, ExitCode::SUCCESS)
         }
         many => {
             if args.json {
@@ -104,22 +116,22 @@ pub fn run(args: Args) -> ExitCode {
                         })
                     })
                     .collect();
-                println!(
-                    "{}",
+                out.push_str(&format!(
+                    "{}\n",
                     json!({ "error": "ambiguous", "symbol": args.symbol, "candidates": candidates })
-                );
+                ));
             } else {
                 eprintln!("ctx sig: '{}' is ambiguous — candidates:", args.symbol);
                 for s in many {
-                    println!(
-                        "{}  {}:{}",
+                    out.push_str(&format!(
+                        "{}  {}:{}\n",
                         s.qpath,
                         s.path,
                         line_of(&root, &s.path, s.ident_start_byte)
-                    );
+                    ));
                 }
             }
-            ExitCode::from(EXIT_AMBIGUOUS)
+            (out, ExitCode::from(EXIT_AMBIGUOUS))
         }
     }
 }

@@ -40,18 +40,36 @@ pub struct Args {
 }
 
 pub fn run(args: Args) -> ExitCode {
-    match args.action {
+    let (out, code) = render(&args);
+    print!("{out}");
+    code
+}
+
+/// The exact stdout `run` would print, paired with the exit code. Shared with
+/// the MCP wrapper (R15), which builds the matching [`Action`] for each note
+/// tool; error diagnostics still go to stderr via `eprintln!`.
+pub fn render(args: &Args) -> (String, ExitCode) {
+    match &args.action {
         Action::Add {
             symbol,
             text,
             kind,
             file,
-        } => add(&symbol, text, kind, file, args.no_sync, args.json),
-        Action::List { kind, stale, file } => list(kind, stale, file, args.no_sync, args.json),
-        Action::Show { symbol } => show(&symbol, args.no_sync, args.json),
+        } => add(
+            symbol,
+            text.clone(),
+            kind.clone(),
+            file.clone(),
+            args.no_sync,
+            args.json,
+        ),
+        Action::List { kind, stale, file } => {
+            list(kind.clone(), *stale, file.clone(), args.no_sync, args.json)
+        }
+        Action::Show { symbol } => show(symbol, args.no_sync, args.json),
         Action::Usage => {
             eprintln!("ctx notes: expected `add`, `list`, or a <symbol>");
-            ExitCode::from(EXIT_NO_MATCH)
+            (String::new(), ExitCode::from(EXIT_NO_MATCH))
         }
     }
 }
@@ -82,37 +100,38 @@ fn add(
     file: Option<String>,
     no_sync: bool,
     json: bool,
-) -> ExitCode {
+) -> (String, ExitCode) {
     let body = match note_body(text, file) {
         Ok(b) => b,
         Err(e) => {
             eprintln!("ctx notes add: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
     let (root, store) = match load_index(no_sync) {
         Ok(v) => v,
-        Err(code) => return code,
+        Err(code) => return (String::new(), code),
     };
     let symbols = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx notes add: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
 
+    let mut out = String::new();
     match anchor::resolve(&symbols, symbol) {
         Resolution::None => {
             eprintln!("ctx notes add: no symbol matches '{symbol}'");
-            ExitCode::from(EXIT_NO_MATCH)
+            (out, ExitCode::from(EXIT_NO_MATCH))
         }
         Resolution::Ambiguous(candidates) => {
             eprintln!("ctx notes add: '{symbol}' is ambiguous — candidates:");
             for s in candidates {
-                println!("{}  {}", s.qpath, s.path);
+                out.push_str(&format!("{}  {}\n", s.qpath, s.path));
             }
-            ExitCode::from(EXIT_AMBIGUOUS)
+            (out, ExitCode::from(EXIT_AMBIGUOUS))
         }
         Resolution::Unique(sym) => {
             let draft = NoteDraft {
@@ -124,15 +143,18 @@ fn add(
             match notes::write_note(&root, &draft) {
                 Ok(rel) => {
                     if json {
-                        println!("{}", json!({ "created": rel, "anchor": sym.qpath }));
+                        out.push_str(&format!(
+                            "{}\n",
+                            json!({ "created": rel, "anchor": sym.qpath })
+                        ));
                     } else {
-                        println!("note added: {rel} -> {}", sym.qpath);
+                        out.push_str(&format!("note added: {rel} -> {}\n", sym.qpath));
                     }
-                    ExitCode::SUCCESS
+                    (out, ExitCode::SUCCESS)
                 }
                 Err(e) => {
                     eprintln!("ctx notes add: {e}");
-                    ExitCode::FAILURE
+                    (String::new(), ExitCode::FAILURE)
                 }
             }
         }
@@ -168,16 +190,16 @@ fn list(
     file: Option<String>,
     no_sync: bool,
     json: bool,
-) -> ExitCode {
+) -> (String, ExitCode) {
     let (_root, store) = match load_index(no_sync) {
         Ok(v) => v,
-        Err(code) => return code,
+        Err(code) => return (String::new(), code),
     };
     let notes = match store.all_notes() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx notes list: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
     let selected: Vec<&NoteRow> = notes
@@ -189,40 +211,42 @@ fn list(
         })
         .collect();
 
+    let mut out = String::new();
     if json {
         let arr: Vec<serde_json::Value> = selected.iter().map(|n| note_json(n)).collect();
-        println!("{}", serde_json::Value::Array(arr));
+        out.push_str(&format!("{}\n", serde_json::Value::Array(arr)));
     } else {
         for n in selected {
-            println!("{}", note_line(n));
+            out.push_str(&format!("{}\n", note_line(n)));
         }
     }
-    ExitCode::SUCCESS
+    (out, ExitCode::SUCCESS)
 }
 
-fn show(symbol: &str, no_sync: bool, json: bool) -> ExitCode {
+fn show(symbol: &str, no_sync: bool, json: bool) -> (String, ExitCode) {
     let (_root, store) = match load_index(no_sync) {
         Ok(v) => v,
-        Err(code) => return code,
+        Err(code) => return (String::new(), code),
     };
     let symbols = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx notes: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
+    let mut out = String::new();
     let qpath = match anchor::resolve(&symbols, symbol) {
         Resolution::None => {
             eprintln!("ctx notes: no symbol matches '{symbol}'");
-            return ExitCode::from(EXIT_NO_MATCH);
+            return (String::new(), ExitCode::from(EXIT_NO_MATCH));
         }
         Resolution::Ambiguous(candidates) => {
             eprintln!("ctx notes: '{symbol}' is ambiguous — candidates:");
             for s in candidates {
-                println!("{}  {}", s.qpath, s.path);
+                out.push_str(&format!("{}  {}\n", s.qpath, s.path));
             }
-            return ExitCode::from(EXIT_AMBIGUOUS);
+            return (out, ExitCode::from(EXIT_AMBIGUOUS));
         }
         Resolution::Unique(sym) => sym.qpath.clone(),
     };
@@ -231,23 +255,23 @@ fn show(symbol: &str, no_sync: bool, json: bool) -> ExitCode {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx notes: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
     let mine: Vec<&NoteRow> = notes.iter().filter(|n| n.anchor_path == qpath).collect();
 
     if json {
         let arr: Vec<serde_json::Value> = mine.iter().map(|n| note_json(n)).collect();
-        println!("{}", serde_json::Value::Array(arr));
+        out.push_str(&format!("{}\n", serde_json::Value::Array(arr)));
     } else {
         for n in mine {
             let freshness = if n.fresh { "fresh" } else { "stale" };
             let kind = n.kind.as_deref().unwrap_or("-");
-            println!("{}  {freshness}  kind={kind}", n.id);
+            out.push_str(&format!("{}  {freshness}  kind={kind}\n", n.id));
             if !n.body.trim().is_empty() {
-                println!("{}", n.body.trim_end());
+                out.push_str(&format!("{}\n", n.body.trim_end()));
             }
         }
     }
-    ExitCode::SUCCESS
+    (out, ExitCode::SUCCESS)
 }

@@ -27,22 +27,30 @@ fn line_for(store: &IndexStore, sym: &SymbolRow, doc: bool) -> String {
 }
 
 pub fn run(args: Args) -> ExitCode {
+    let (out, code) = render(&args);
+    print!("{out}");
+    code
+}
+
+/// The exact stdout `run` would print, paired with the exit code. Shared with
+/// the MCP wrapper (R15); error diagnostics still go to stderr via `eprintln!`.
+pub fn render(args: &Args) -> (String, ExitCode) {
     let (_root, store) = match load_index(args.no_sync) {
         Ok(v) => v,
-        Err(code) => return code,
+        Err(code) => return (String::new(), code),
     };
     let all = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx map: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
     let counts = match store.reference_counts() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx map: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
 
@@ -88,17 +96,19 @@ pub fn run(args: Args) -> ExitCode {
                 })
             })
             .collect();
-        println!(
-            "{}",
-            json!({ "tokens": args.tokens, "truncated": truncated, "symbols": symbols })
-        );
+        (
+            format!(
+                "{}\n",
+                json!({ "tokens": args.tokens, "truncated": truncated, "symbols": symbols })
+            ),
+            ExitCode::SUCCESS,
+        )
     } else {
         let mut out = String::new();
         for (_, _, line) in &included {
             out.push_str(line);
             out.push('\n');
         }
-        print!("{out}");
+        (out, ExitCode::SUCCESS)
     }
-    ExitCode::SUCCESS
 }

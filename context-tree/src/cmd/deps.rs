@@ -58,15 +58,23 @@ fn file_module_keys(rel: &str) -> Vec<String> {
 }
 
 pub fn run(args: Args) -> ExitCode {
+    let (out, code) = render(&args);
+    print!("{out}");
+    code
+}
+
+/// The exact stdout `run` would print, paired with the exit code. Shared with
+/// the MCP wrapper (R15); error diagnostics still go to stderr via `eprintln!`.
+pub fn render(args: &Args) -> (String, ExitCode) {
     let (_root, store) = match load_index(args.no_sync) {
         Ok(v) => v,
-        Err(code) => return code,
+        Err(code) => return (String::new(), code),
     };
     let imports = match store.all_imports() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx deps: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
 
@@ -77,7 +85,7 @@ pub fn run(args: Args) -> ExitCode {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("ctx deps: {e}");
-                return ExitCode::FAILURE;
+                return (String::new(), ExitCode::FAILURE);
             }
         };
         paths
@@ -120,13 +128,12 @@ pub fn run(args: Args) -> ExitCode {
                 "line": e.row + 1,
             })).collect::<Vec<_>>(),
         });
-        println!("{payload}");
+        (format!("{payload}\n"), ExitCode::SUCCESS)
     } else {
         let mut out = String::new();
         for e in &edges {
             out.push_str(&format!("{} -> {}\n", e.source, e.module));
         }
-        print!("{out}");
+        (out, ExitCode::SUCCESS)
     }
-    ExitCode::SUCCESS
 }
