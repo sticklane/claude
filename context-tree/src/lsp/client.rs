@@ -102,7 +102,7 @@ impl LspClient {
         let stdout = child
             .stdout
             .take()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no server stdout"))?;
+            .ok_or_else(|| io::Error::other("no server stdout"))?;
         Ok(LspClient {
             child,
             reader: BufReader::new(stdout),
@@ -116,7 +116,7 @@ impl LspClient {
             .child
             .stdin
             .as_mut()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no server stdin"))?;
+            .ok_or_else(|| io::Error::other("no server stdin"))?;
         write!(stdin, "Content-Length: {}\r\n\r\n", body.len())?;
         stdin.write_all(&body)?;
         stdin.flush()
@@ -139,8 +139,7 @@ impl LspClient {
                 content_length = v.trim().parse().ok();
             }
         }
-        let len = content_length
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no Content-Length"))?;
+        let len = content_length.ok_or_else(|| io::Error::other("no Content-Length"))?;
         let mut body = vec![0u8; len];
         self.reader.read_exact(&mut body)?;
         serde_json::from_slice(&body)
@@ -166,12 +165,12 @@ impl LspClient {
             }
             // Server-to-client request (e.g. workspace/configuration): reply
             // with null so the server does not block waiting on us.
-            if msg.get("method").is_some() {
-                if let Some(req_id) = msg.get("id") {
-                    self.write_message(&json!({
-                        "jsonrpc": "2.0", "id": req_id, "result": Value::Null,
-                    }))?;
-                }
+            if msg.get("method").is_some()
+                && let Some(req_id) = msg.get("id")
+            {
+                self.write_message(&json!({
+                    "jsonrpc": "2.0", "id": req_id, "result": Value::Null,
+                }))?;
             }
         }
     }
@@ -182,10 +181,7 @@ impl LspClient {
     fn request(&mut self, method: &str, params: Value) -> io::Result<Value> {
         let msg = self.request_full(method, params)?;
         if let Some(err) = msg.get("error") {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!("lsp error: {err}"),
-            ));
+            return Err(io::Error::other(format!("lsp error: {err}")));
         }
         Ok(msg.get("result").cloned().unwrap_or(Value::Null))
     }
@@ -239,10 +235,10 @@ impl LspClient {
                     "context": { "includeDeclaration": false },
                 }),
             )?;
-            if let Some(arr) = msg.get("result").and_then(Value::as_array) {
-                if !arr.is_empty() {
-                    return Ok(arr.clone());
-                }
+            if let Some(arr) = msg.get("result").and_then(Value::as_array)
+                && !arr.is_empty()
+            {
+                return Ok(arr.clone());
             }
             if Instant::now() >= deadline {
                 return Ok(Vec::new());
