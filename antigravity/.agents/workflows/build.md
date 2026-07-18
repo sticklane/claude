@@ -202,7 +202,10 @@ own.
    `done`, ticked boxes, one line of evidence each rather than
    duplicating output — citing the `evidence/` file when an evidence
    path was passed in step 4; delete the plan comment block from
-   step 2). Commit code + task file referencing the task — plus the
+   step 2). Commit code + task file referencing the task, following
+   AGENTS.md's commit-hygiene rules — a type-prefixed subject (≤72 target,
+   hard cap 100) with a **subject/body** split putting detail in the body —
+   plus the
    `evidence/` file when an evidence path was passed; otherwise note
    that evidence was not persisted and keep the one-line evidence
    inline in the task file as the artifact. Then **publish the default

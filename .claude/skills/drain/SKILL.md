@@ -211,6 +211,11 @@ so a per-session emission would misattribute later iterations.
   full rule in [reference.md](reference.md)'s "Push guard"). The merged branch
   carries the task file with `Status: done` and ticked boxes per /build (plus
   the verifier's `evidence/` file under `specs/<slug>/`, else inline evidence).
+  The merge commit follows the new commit doctrine
+  (quality-discipline.md's `## Commits`): a **subject/body** split with
+  subject `merge: <spec-slug> task NN — <short what>` (target ≤72 chars, hard
+  cap 100), and any ratified riders, audit notes, and acceptance evidence in
+  the body — never crammed into the subject.
   The **run project gates** step invokes `scripts/check.sh`, drain's sole
   required merge-time check entrypoint — never a hand-derived list read out of
   CLAUDE.md prose (repos without it fall back to their own build/lint/test).
@@ -306,7 +311,10 @@ W=3→3, W=5→2); full derivation in [reference.md](reference.md)'s "Baton pass
 `specs/<slug>/DRAIN-BATON.md` (grammar + relaunch command in
 reference.md), spawn the successor generation (awaited where a parent can
 supervise; else headless), report the pass, and **end your turn at once,
-stating this session will not touch the queue again** (one-writer invariant). A
+stating this session will not touch the queue again** (one-writer invariant).
+Baton-pass and bookkeeping commits follow the **subject/body** split
+(quality-discipline.md's `## Commits`): a short subject, with verdict counts
+and lease/liveness detail in the body rather than the subject line. A
 **max-generations cap of 10** stops with the baton written + a needs-attention
 note instead of respawning; that cap generation still runs step 4, so its
 terminal distill fires on the cap path too — ordinary baton passes never distill
