@@ -107,6 +107,10 @@ pub fn run_sync(root: &Path, trigger: Trigger) -> io::Result<SyncStats> {
         eprintln!("ctx: skipping note — {reason}");
     }
     let mut pending = store.pending_reanchors().map_err(to_io)?;
+    // Prune pending entries whose note file no longer exists, so a deleted note
+    // never leaves its phase-1 re-anchor counted (and leaking a row) forever.
+    let note_ids: HashSet<&str> = notes.iter().map(|n| n.id.as_str()).collect();
+    pending.retain(|id, _| note_ids.contains(id.as_str()));
     let mut old_anchor: HashMap<String, OldAnchor> = HashMap::new();
     let mut old_anchor_file: HashMap<String, String> = HashMap::new();
     for n in &notes {

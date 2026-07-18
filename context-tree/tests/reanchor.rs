@@ -448,6 +448,39 @@ fn reanchor_parse_failed_excluded() {
 }
 
 // ---------------------------------------------------------------------------
+// Deleting a note with an outstanding phase-1 re-anchor prunes its pending
+// entry, so the journaled pending_reanchors count does not drift up forever.
+// ---------------------------------------------------------------------------
+#[test]
+fn reanchor_deleted_note_prunes_pending() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    ctx_ok(root, &["init"]);
+    write(root, "m.py", "def foo():\n    return 41 + 1\n");
+    sleep(PAST);
+    ctx_ok(root, &["notes", "add", "foo", "doomed note"]);
+
+    // Rename → a pending phase-1 re-anchor.
+    sleep(PAST);
+    write(root, "m.py", "def bar():\n    return 41 + 1\n");
+    ctx_ok(root, &["notes", "list"]);
+    assert!(latest_journal(root)["pending_reanchors"].as_u64().unwrap() >= 1);
+
+    // Delete the note file, then sync: its pending entry must be pruned.
+    for f in note_files(root) {
+        fs::remove_file(f).unwrap();
+    }
+    sleep(PAST);
+    ctx_ok(root, &["notes", "list"]);
+    assert_eq!(
+        latest_journal(root)["pending_reanchors"].as_u64(),
+        Some(0),
+        "a deleted note's pending re-anchor is pruned, not carried forever"
+    );
+    assert!(list_notes(root).is_empty(), "the note is gone");
+}
+
+// ---------------------------------------------------------------------------
 // Invariant: the system's only note-file write is the anchor path at a
 // persistence point; query/background syncs leave tracked note files byte-identical.
 // ---------------------------------------------------------------------------
