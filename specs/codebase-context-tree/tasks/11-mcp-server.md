@@ -1,6 +1,6 @@
 # Task 11: MCP server
 
-Status: pending
+Status: in-progress
 Depends on: 07, 09
 Priority: P2
 Budget: 35 turns
