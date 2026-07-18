@@ -5,7 +5,7 @@ Depends on: 06, 07
 Priority: P1
 Budget: 45 turns
 Spec: ../SPEC.md (requirements R2 partial [note-freshness-on-deletion], R3, R12, R14; contracts C1, C2, C3, C9, C10)
-Touch: context-tree/src/notes/mod.rs, context-tree/src/notes/anchor.rs, context-tree/src/notes/freshness.rs, context-tree/src/cmd/notes.rs, context-tree/src/index/**, context-tree/src/cli.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/notes/**, context-tree/tests/*.rs
+Touch: context-tree/src/notes/mod.rs, context-tree/src/notes/anchor.rs, context-tree/src/notes/freshness.rs, context-tree/src/cmd/notes.rs, context-tree/src/cmd/mod.rs, context-tree/src/index/**, context-tree/src/cli.rs, context-tree/src/lib.rs, context-tree/src/sync/mod.rs, context-tree/Cargo.toml, context-tree/tests/fixtures/notes/**, context-tree/tests/*.rs
 
 ## Goal
 
