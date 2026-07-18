@@ -114,6 +114,9 @@ pub enum Command {
     },
     /// Add, list, or show a symbol's notes with derived freshness (R12).
     Notes(NotesArgs),
+    /// Start the MCP server over stdio, exposing the query and note verbs as
+    /// typed tools (R15).
+    Mcp,
 }
 
 /// `ctx notes …` arguments: a subcommand (`add`/`list`), or the bare
