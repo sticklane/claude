@@ -1,0 +1,245 @@
+Priority: P2
+Rigor: production
+
+# Drain multi-spec swarm: concurrent drain across non-overlapping specs
+
+## Problem
+
+`/drain` holds **at most one spec-level dispatch lease at a time**
+(`.claude/skills/drain/SKILL.md:33`) — a no-argument launch works the whole
+`specs/` queue, but strictly **one spec at a time in a sequential walk**
+(SKILL.md's exhaustion contract). Its per-spec rolling window (`W`, default
+1, hard-capped at 5) already parallelizes _tasks within one claimed spec_
+via a Touch-disjointness admission check (reference.md's "Rolling-window
+admission & merge (R1–R4)"), but that check is scoped to one spec's claim
+set only — a scout dispatch this session confirmed **no cross-spec
+Touch-disjointness check exists anywhere in drain today**, and no mechanism
+lets two specs' leases coexist even when their `Touch:` sets are provably
+disjoint.
+
+This wastes throughput: on a queue with several independent, non-competing
+specs ready to dispatch (confirmed present right now — e.g.
+`commit-message-doctrine`, `drain-session-naming-always-propose`, and
+`human-blocker-impact-clarity` all have pending, non-overlapping-Touch work
+simultaneously), drain works them one full spec at a time instead of
+running them in parallel.
+
+Prior art confirms the right _mechanism_, not just the _want_: a
+cross-vendor research pass this session (Anthropic's own Claude Code/Agent
+SDK docs, OpenAI Codex, GitHub Copilot coding agent, Cursor Background
+Agents, Cognition's Devin, Google Jules, and Steve Yegge's `beads`) found a
+unanimous pattern — every one of these isolates concurrent agents at the
+worktree/branch/container level and avoids conflicts via **declared
+non-overlapping file/task ownership**, never via runtime conflict
+detection or automated merge resolution. That is exactly drain's existing
+`Touch:`-disjointness admission model, already proven at the intra-spec
+task level — this spec widens its scope from "within one spec" to "across
+the whole queue," it does not invent a new coordination primitive.
+
+Two concrete hazards from real (unplanned) concurrent-drain incidents are
+already documented in `docs/memory/drain-dispatch-lessons.md` and are
+folded into this spec's requirements below (R2/R6, R7) rather than deferred:
+cross-spec Touch collisions that `/breakdown`'s decision-coupling test
+cannot see (lines 64–80) — closed by R2's widened task-admission check, with
+R6 confirming no second, redundant mechanism is also built — and
+spec-completion review's diff-base recovery double-counting a sibling spec's
+changes on a shared file when two specs' merges interleave (lines 134–151),
+closed by R7.
+
+## Solution
+
+Widen drain's existing owner-lease and Touch-disjointness admission model
+from spec-scoped to queue-scoped, reusing the same git-CAS lease mechanism
+(`DRAIN-OWNER.md` per spec, unchanged format) rather than introducing a new
+coordination substrate:
+
+- At inventory (SKILL.md step 1), before claiming any lease, drain computes
+  each ready spec's Touch footprint (the union of its dispatchable tasks'
+  `Touch:` headers) and greedily claims up to **3 simultaneously-held
+  spec leases** whose footprints are pairwise disjoint from each other and
+  from every already-claimed spec's footprint, using the existing
+  Priority-then-path tie-break, applied spec-by-spec.
+- The rolling-window admission check (reference.md R1–R4) widens from
+  "Touch disjoint from every in-progress task in THIS spec's claim set" to
+  "Touch disjoint from every in-progress task across ALL claimed specs,"
+  and the total live-worker hard cap raises from ≤5 to **≤10**, still one
+  single global merge queue (merges land strictly serially in commit-arrival
+  order, across specs, exactly as they already do within one spec today).
+- Two ready specs whose Touch footprints actually intersect are never
+  claimed simultaneously — the lower-priority one waits for the
+  higher-priority one's lease to release, mirroring the existing
+  within-spec admission rule at spec granularity (R1–R4's own logic,
+  reused, not reinvented).
+- No-argument `/drain` defaults to this behavior — swarm claiming is not a
+  separate flag; a queue with only one claimable spec, or with every ready
+  spec's Touch footprint overlapping every other, degrades to today's
+  exact single-spec behavior with zero visible change.
+- `.claude/rules/token-discipline.md`'s existing "cap the fleet at a 3–5
+  concurrent-writer window" rule gets an explicit swarm-mode carve-out
+  citing this spec, rather than being silently violated.
+- `.claude/skills/drain/SKILL.md` is already over its 500-line budget (505
+  lines, pre-existing, unrelated to this spec) — this spec's new
+  step-1/step-2 prose goes into `reference.md` (extending the existing
+  "Rolling-window admission & merge (R1–R4)" section), with only a short
+  pointer added to SKILL.md, and existing SKILL.md body content is
+  relocated to reference.md as needed to bring SKILL.md back to ≤500 lines
+  as part of this spec's own work — not left for a later spec to hit the
+  same size-gate merge-blocker `commit-message-doctrine` task 02 just
+  flagged.
+
+## Requirements
+
+- R1: Drain's step-1 owner-lease claim procedure claims up to 3
+  simultaneously-held spec leases (not 1). A candidate spec is eligible only
+  when its dispatchable-task Touch footprint is pairwise disjoint from every
+  OTHER CURRENTLY-CLAIMED spec's footprint — the greedy runtime claim
+  decision, evaluated against the claimed set as it is built up (mirroring
+  how task-level admission already compares against the current in-progress
+  set, never the whole queue). The exact phrase "At most one dispatch lease
+  is held at a time" is removed from SKILL.md and replaced with a one-line
+  pointer to the widened rule's full statement in reference.md — never the
+  full rule inline in SKILL.md (R9 governs the line budget).
+- R2: The rolling-window admission check (reference.md's "Rolling-window
+  admission & merge (R1–R4)") widens its Touch-disjointness comparison set
+  from "this spec's in-progress tasks" to "every claimed spec's in-progress
+  tasks," with the total live-worker hard cap raised from ≤5 to ≤10. This
+  IS the mechanized fix for the cross-spec task-collision gap documented in
+  `docs/memory/drain-dispatch-lessons.md:64-80` ("there is no mechanized
+  cross-spec check" today) — no separate detection mechanism is needed.
+- R3: `.claude/rules/token-discipline.md`'s "cap the fleet at a 3–5
+  concurrent-writer window" rule gains an explicit carve-out sentence
+  naming drain's multi-spec swarm mode and citing this spec, so the raised
+  ≤10 cap is a documented exception rather than a silent doctrine
+  violation.
+- R4: No-argument `/drain` claims spec leases greedily up to the 3-spec cap
+  using the existing Priority-then-path tie-break applied at spec
+  granularity; a queue with only one claimable non-overlapping spec
+  produces byte-identical dispatch behavior to today's single-spec drain.
+- R5: Two ready specs whose Touch footprints intersect are never
+  simultaneously claimed; drain serializes only the overlapping pair
+  (lower-priority spec's claim waits) while continuing to run every other
+  non-overlapping ready spec concurrently.
+- R6: R1 (spec-claim eligibility) and R2 (task-admission eligibility)
+  together are the complete, sole mechanism for cross-spec Touch collision
+  detection — an implementation of this spec must NOT introduce a third,
+  separate cross-spec check (e.g. inside `/breakdown`'s own
+  decision-coupling test) beyond R1+R2; that would duplicate the same
+  algorithm a second way and risk the two diverging.
+- R7: When dispatching the spec-completion-review worker (reference.md's
+  "Spec-completion review worker") for a spec whose cumulative diff range
+  overlaps a path another concurrently-claimed spec has already covered in
+  its own committed `evidence/spec-review.md` this run, drain's dispatch
+  prompt explicitly names which lines/sections are attributable to THIS
+  spec, cites the sibling's `evidence/spec-review.md` by path, and instructs
+  the worker to exclude anything that file already covers — never handing
+  the full ref-range diff and trusting the worker to guess spec boundaries
+  on shared files. This is the exact fix prescribed in
+  `docs/memory/drain-dispatch-lessons.md:134-151`, adopted verbatim; the
+  diff-base recovery mechanism itself (`merge-base(<pinned flip commit>,
+main)..main`) is unchanged.
+- R8: Merges across different claimed specs land through one single global
+  serial merge queue in commit-arrival order — two specs' DONE verdicts
+  arriving near-simultaneously never race on the push, using the same
+  "merges stay serial in landing order" guarantee already documented for
+  intra-spec merges today.
+- R9: `.claude/skills/drain/SKILL.md` ends this spec's implementation at
+  ≤500 lines; the new admission-rule prose lives in reference.md's
+  "Rolling-window admission & merge (R1–R4)" section (renamed or extended
+  to cover R5+ for the cross-spec rules), with SKILL.md carrying only a
+  short pointer — never the full widened rule stated inline in SKILL.md.
+- R10: The change mirrors per this repo's mirror-procedure-discipline —
+  `antigravity/.agents/workflows/drain.md` and
+  `codex/.agents/skills/drain/SKILL.md` reflect the same widened
+  procedure (load-bearing runtime differences excepted), and
+  `.claude-plugin/plugin.json`'s version is bumped.
+
+## Out of scope
+
+- Building the SQLite atomic-claim coordination layer researched in
+  `docs/task-tracking-design-research-2026-07.md` / the not-yet-written
+  `specs/task-tracking-hardening` spec. This spec keeps today's git-CAS
+  lease mechanism (re-read-before-flip, exact-match edit, commit,
+  push, re-confirm at HEAD) and only widens its claim count — it does not
+  adopt a new coordination substrate. A future spec may build the SQLite
+  layer as a throughput optimization on top of this one; not a
+  prerequisite.
+- Runtime/automated conflict detection or merge-conflict resolution between
+  concurrently-running agents. Per this session's cross-vendor research,
+  no reviewed product (Anthropic, OpenAI Codex, Copilot, Cursor, Devin,
+  Jules, beads) does this — the avoidance-via-declared-ownership model
+  (Touch: disjointness) is the industry-wide answer, and is what this spec
+  extends, not replaces.
+- `beads`-style DAG/epic fan-out (`bd swarm`) as a new dependency-modeling
+  primitive. This repo's `Depends on:` header plus the existing
+  dispatchability check already model task dependencies; this spec extends
+  concurrency at the spec-claiming layer, not the dependency-graph model.
+- Raising the cap beyond ≤10 total workers / 3 simultaneous specs, or
+  making the cap budget-governed (`Workflow`-tool-style
+  `budget.remaining()`) instead of a fixed number. A fixed, modest cap is
+  the deliberate first step; a follow-up spec can revisit if the ≤10/3
+  ceiling proves too conservative in practice.
+- Any change to the per-spec `DRAIN-OWNER.md` file format itself (R1's
+  fields are unchanged) — the cross-spec footprint is recomputed by
+  scanning all currently-present `DRAIN-OWNER.md` files and their specs'
+  task Touch headers at each admission decision, not persisted in a new
+  file.
+
+## Acceptance criteria
+
+- [ ] `grep -c "At most one dispatch lease is held at a time" .claude/skills/drain/SKILL.md`
+      → 0 (currently 1, verified absent-after per R1)
+- [ ] `grep -ci "swarm" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md`
+      → combined count ≥ 3 (currently 0 in both, per R1/R2/R4)
+- [ ] `grep -c "up to 3 simultaneously-held spec leases" .claude/skills/drain/reference.md`
+      → ≥ 1 (the pinned phrase from this spec's own R1/Solution wording,
+      currently 0 — no discretion on phrasing)
+- [ ] `grep -c "≤10\|<= 10\|10 total" .claude/skills/drain/reference.md`
+      → ≥ 1 (the raised worker cap is stated explicitly)
+- [ ] `grep -c "swarm" .claude/rules/token-discipline.md` → ≥ 1 (currently
+      0 — the carve-out sentence per R3 exists)
+- [ ] `wc -l < .claude/skills/drain/SKILL.md` → ≤ 500 (currently 505, per R9)
+- [ ] `grep -li "swarm\|cross-spec\|multi-spec" antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md`
+      → both files listed (R10 mirror check)
+- [ ] plugin.json version is greater than its value at this spec's base
+      commit (R10)
+- [ ] `grep -ci "already-green" .claude/skills/drain/reference.md`
+      → ≥ 1 (currently 0 — R7's new sibling-citation instruction in the
+      review-fix worker's dispatch-prompt template, adopted verbatim from
+      `docs/memory/drain-dispatch-lessons.md:134-151`'s "already-green
+      `evidence/spec-review.md`" phrasing)
+- [ ] `grep -ci "single global serial merge queue\|one single global" .claude/skills/drain/reference.md`
+      → ≥ 1 (R8's explicit statement)
+- [ ] Every project gate this repo runs at merge time
+      (`specs/status.sh`, `claude plugin validate .`, every
+      `tests/test_*.sh`, `./bin/check-agent-model-pins`,
+      `evals/lint-ultra-gate.sh`, `evals/lint-skill-size-gate.sh`) exits 0
+      after the change lands.
+- [ ] **Orchestrator-resolvable simulation (replaces a `/drain`-gated
+      end-to-end check per CLAUDE.md's authoring conventions — unattended
+      workers cannot launch an execution-stage skill).** A new standalone
+      script (e.g. `tests/test_drain_swarm_admission.sh` or `.py`)
+      implements the greedy footprint-disjointness algorithm from R1/R2/R5
+      as plain logic — no `/drain` invocation — against a fixture of Touch
+      footprints for 4 specs: 3 mutually disjoint plus a 4th overlapping one
+      of them. Running the script asserts: (a) all 3 disjoint specs are
+      admitted simultaneously up to the cap (R1/R4), and (b) the 4th,
+      overlapping spec is excluded from concurrent admission — only one of
+      the colliding pair is ever admitted at a time (R5). The same script
+      also carries a degenerate-case fixture per R4: a 1-spec queue yields
+      exactly 1 claim with no behavioral perturbation versus today's
+      single-spec path. The script's own exit code is the runnable check;
+      it ships as part of this spec's implementation and is added to the
+      merge-time gate list (R9's `evals/lint-*` pattern) or run standalone —
+      either way it is orchestrator-resolvable, never gated on launching
+      `/drain` itself.
+- [ ] R6's negative constraint: `git diff --name-only <base-commit>..HEAD |
+    grep -c '.claude/skills/breakdown/\|antigravity/.agents/workflows/breakdown\|codex/.agents/skills/breakdown/'`
+      → 0 — this spec's implementation touches no `/breakdown` files at all,
+      confirming no second cross-spec detection mechanism was added there.
+
+## Open questions
+
+(none — resolved via interview: architecture = extend /drain directly;
+overlap handling = serialize only the colliding pair; scope = fold in
+drain-dispatch-lessons hazards; rigor = production; cap = ≤10 workers / ≤3
+specs, doctrine carve-out required)
