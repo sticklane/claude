@@ -1,6 +1,6 @@
 # Task 12: ctx hooks install/uninstall
 
-Status: pending
+Status: in-progress
 Depends on: 05, 10
 Priority: P2
 Budget: 40 turns
