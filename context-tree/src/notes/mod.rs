@@ -7,6 +7,7 @@
 
 pub mod anchor;
 pub mod freshness;
+pub mod reanchor;
 
 use crate::project::CONTEXT_DIR;
 use sha2::{Digest, Sha256};
