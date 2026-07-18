@@ -1,6 +1,6 @@
 # Task 14: Cross-subsystem integration and end-to-end acceptance
 
-Status: pending
+Status: in-progress
 Depends on: 13
 Priority: P1
 Budget: 45 turns
