@@ -63,9 +63,17 @@ fn ref_label(cache: Option<&EnrichmentCache>, name: &str, path: &str, line: usiz
 }
 
 pub fn run(args: Args) -> ExitCode {
+    let (out, code) = render(&args);
+    print!("{out}");
+    code
+}
+
+/// The exact stdout `run` would print, paired with the exit code. Shared with
+/// the MCP wrapper (R15); error diagnostics still go to stderr via `eprintln!`.
+pub fn render(args: &Args) -> (String, ExitCode) {
     let (root, store) = match load_index(args.no_sync) {
         Ok(v) => v,
-        Err(code) => return code,
+        Err(code) => return (String::new(), code),
     };
     // Optional LSP enrichment (R11): absent cache => every result stays heuristic.
     let cache = EnrichmentCache::load(&root);
@@ -73,7 +81,7 @@ pub fn run(args: Args) -> ExitCode {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx refs: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
 
@@ -87,31 +95,35 @@ pub fn run(args: Args) -> ExitCode {
     defs.sort_by(|a, b| a.qpath.cmp(&b.qpath));
 
     let names: HashSet<&str> = defs.iter().map(|d| d.name.as_str()).collect();
+    let mut out = String::new();
     match names.len() {
         0 => {
             if args.json {
-                println!("{}", json!({ "error": "no match", "symbol": args.symbol }));
+                out.push_str(&format!(
+                    "{}\n",
+                    json!({ "error": "no match", "symbol": args.symbol })
+                ));
             } else {
                 eprintln!("ctx refs: no symbol matches '{}'", args.symbol);
             }
-            return ExitCode::from(EXIT_NO_MATCH);
+            return (out, ExitCode::from(EXIT_NO_MATCH));
         }
         1 => {}
         _ => {
             // C3: a suffix spanning several distinct symbols is ambiguous.
             if args.json {
                 let candidates: Vec<_> = defs.iter().map(|d| json!(d.qpath)).collect();
-                println!(
-                    "{}",
+                out.push_str(&format!(
+                    "{}\n",
                     json!({ "error": "ambiguous", "symbol": args.symbol, "candidates": candidates })
-                );
+                ));
             } else {
                 eprintln!("ctx refs: '{}' is ambiguous — candidates:", args.symbol);
                 for d in &defs {
-                    println!("{}", d.qpath);
+                    out.push_str(&format!("{}\n", d.qpath));
                 }
             }
-            return ExitCode::from(EXIT_AMBIGUOUS);
+            return (out, ExitCode::from(EXIT_AMBIGUOUS));
         }
     }
     let target_name = *names.iter().next().unwrap();
@@ -120,14 +132,14 @@ pub fn run(args: Args) -> ExitCode {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx refs: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
     let scopes = match store.all_scopes() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx refs: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
     let refs: Vec<&RefRow> = all_refs
@@ -141,19 +153,21 @@ pub fn run(args: Args) -> ExitCode {
     let ref_omitted = refs.len() - ref_shown;
 
     if args.json {
-        return render_json(
-            &args,
-            &store,
-            &root,
-            &defs,
-            &refs,
-            def_omitted,
-            ref_omitted,
-            cache.as_ref(),
+        return (
+            render_json(
+                args,
+                &store,
+                &root,
+                &defs,
+                &refs,
+                def_omitted,
+                ref_omitted,
+                cache.as_ref(),
+            ),
+            ExitCode::SUCCESS,
         );
     }
 
-    let mut out = String::new();
     for d in defs.iter().take(def_shown) {
         let marker = format_note_marker(store.note_marker(d.id));
         let signature = cache.as_ref().and_then(|c| c.signature(&d.qpath));
@@ -193,8 +207,7 @@ pub fn run(args: Args) -> ExitCode {
             "... {ref_omitted} more references (raise --limit)\n"
         ));
     }
-    print!("{out}");
-    ExitCode::SUCCESS
+    (out, ExitCode::SUCCESS)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -207,7 +220,7 @@ fn render_json(
     def_omitted: usize,
     ref_omitted: usize,
     cache: Option<&EnrichmentCache>,
-) -> ExitCode {
+) -> String {
     let definitions: Vec<_> = defs
         .iter()
         .take(args.limit)
@@ -241,14 +254,13 @@ fn render_json(
             })
         })
         .collect();
-    println!(
-        "{}",
+    format!(
+        "{}\n",
         json!({
             "symbol": args.symbol,
             "definitions": definitions,
             "references": references,
             "truncated": { "definitions": def_omitted, "references": ref_omitted },
         })
-    );
-    ExitCode::SUCCESS
+    )
 }

@@ -49,15 +49,25 @@ fn depth_of(sym: &SymbolRow, by_qpath: &HashMap<&str, &SymbolRow>) -> usize {
 }
 
 pub fn run(args: Args) -> ExitCode {
+    let (out, code) = render(&args);
+    print!("{out}");
+    code
+}
+
+/// The exact stdout `run` would print, paired with the exit code. The MCP
+/// wrapper (R15) calls this so it never reimplements the query and never writes
+/// to the server's JSON-RPC stdout channel; error diagnostics still go to
+/// stderr via `eprintln!`.
+pub fn render(args: &Args) -> (String, ExitCode) {
     let (_root, store) = match load_index(args.no_sync) {
         Ok(v) => v,
-        Err(code) => return code,
+        Err(code) => return (String::new(), code),
     };
     let all = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx tree: {e}");
-            return ExitCode::FAILURE;
+            return (String::new(), ExitCode::FAILURE);
         }
     };
     let by_qpath: HashMap<&str, &SymbolRow> = all.iter().map(|s| (s.qpath.as_str(), s)).collect();
@@ -75,7 +85,7 @@ pub fn run(args: Args) -> ExitCode {
     let omitted = selected.len().saturating_sub(args.limit);
 
     if args.json {
-        return render_json(&args, &store, shown, omitted);
+        return (render_json(args, &store, shown, omitted), ExitCode::SUCCESS);
     }
 
     let mut out = String::new();
@@ -102,8 +112,7 @@ pub fn run(args: Args) -> ExitCode {
     if omitted > 0 {
         out.push_str(&format!("... {omitted} more (raise --limit)\n"));
     }
-    print!("{out}");
-    ExitCode::SUCCESS
+    (out, ExitCode::SUCCESS)
 }
 
 fn render_json<'a>(
@@ -111,7 +120,7 @@ fn render_json<'a>(
     store: &IndexStore,
     shown: impl Iterator<Item = &'a (&'a SymbolRow, usize)>,
     omitted: usize,
-) -> ExitCode {
+) -> String {
     let symbols: Vec<serde_json::Value> = shown
         .map(|(sym, depth)| {
             json!({
@@ -131,6 +140,5 @@ fn render_json<'a>(
         "truncated": omitted,
         "symbols": symbols,
     });
-    println!("{payload}");
-    ExitCode::SUCCESS
+    format!("{payload}\n")
 }
