@@ -1,13 +1,17 @@
 //! `ctx refs <symbol> [--limit N]` — definitions and references for a symbol
-//! resolved by C3 suffix (R10). Each result is labeled `heuristic` (this task
-//! ships no LSP pass, so `precise` is never emitted — R11/task 08 upgrades
-//! matches). Heuristic matching is scope-aware where the grammar has locals
+//! resolved by C3 suffix (R10). Results are labeled `heuristic` by default; when
+//! the optional LSP enrichment cache is present (R11/task 08), a reference the
+//! language server confirmed is upgraded to `precise` and a definition with a
+//! resolved signature is shown as `precise` with that signature appended. With
+//! no enrichment cache, every result stays `heuristic` and the command is
+//! unchanged. Heuristic matching is scope-aware where the grammar has locals
 //! queries: a reference bound to a function-local definition of the same name
 //! is excluded from the cross-file candidate set. Results cap at `--limit`
 //! (default 50) per direction with a truncation line naming the flag.
 
 use crate::cmd::{EXIT_AMBIGUOUS, EXIT_NO_MATCH, format_note_marker, load_index, note_value};
 use crate::index::{IndexStore, RefRow, ScopeRow, SymbolRow};
+use crate::lsp::EnrichmentCache;
 use crate::path::resolve_suffix;
 use serde_json::json;
 use std::collections::HashSet;
@@ -49,11 +53,22 @@ fn is_shadowed(rf: &RefRow, scopes: &[ScopeRow]) -> bool {
     })
 }
 
+/// `precise` when the enrichment cache confirms the reference `name` at
+/// `path:line` (1-based), `heuristic` otherwise (including no cache).
+fn ref_label(cache: Option<&EnrichmentCache>, name: &str, path: &str, line: usize) -> &'static str {
+    match cache {
+        Some(c) if c.is_precise(name, path, line) => "precise",
+        _ => "heuristic",
+    }
+}
+
 pub fn run(args: Args) -> ExitCode {
     let (root, store) = match load_index(args.no_sync) {
         Ok(v) => v,
         Err(code) => return code,
     };
+    // Optional LSP enrichment (R11): absent cache => every result stays heuristic.
+    let cache = EnrichmentCache::load(&root);
     let all = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
@@ -126,17 +141,35 @@ pub fn run(args: Args) -> ExitCode {
     let ref_omitted = refs.len() - ref_shown;
 
     if args.json {
-        return render_json(&args, &store, &root, &defs, &refs, def_omitted, ref_omitted);
+        return render_json(
+            &args,
+            &store,
+            &root,
+            &defs,
+            &refs,
+            def_omitted,
+            ref_omitted,
+            cache.as_ref(),
+        );
     }
 
     let mut out = String::new();
     for d in defs.iter().take(def_shown) {
         let marker = format_note_marker(store.note_marker(d.id));
+        let signature = cache.as_ref().and_then(|c| c.signature(&d.qpath));
+        let label = if signature.is_some() {
+            "precise"
+        } else {
+            "heuristic"
+        };
+        let sig_suffix = signature.map(|s| format!(" {s}")).unwrap_or_default();
         out.push_str(&format!(
-            "def {} {}:{} heuristic{}\n",
+            "def {} {}:{} {}{}{}\n",
             d.qpath,
             d.path,
             line_of(&root, &d.path, d.ident_start_byte),
+            label,
+            sig_suffix,
             marker,
         ));
     }
@@ -146,11 +179,13 @@ pub fn run(args: Args) -> ExitCode {
         ));
     }
     for r in refs.iter().take(ref_shown) {
+        let label = ref_label(cache.as_ref(), &r.name, &r.path, r.row + 1);
         out.push_str(&format!(
-            "ref {} {}:{} heuristic\n",
+            "ref {} {}:{} {}\n",
             r.name,
             r.path,
             r.row + 1,
+            label
         ));
     }
     if ref_omitted > 0 {
@@ -171,16 +206,19 @@ fn render_json(
     refs: &[&RefRow],
     def_omitted: usize,
     ref_omitted: usize,
+    cache: Option<&EnrichmentCache>,
 ) -> ExitCode {
     let definitions: Vec<_> = defs
         .iter()
         .take(args.limit)
         .map(|d| {
+            let signature = cache.and_then(|c| c.signature(&d.qpath));
             json!({
                 "qpath": d.qpath,
                 "file": d.path,
                 "line": line_of(root, &d.path, d.ident_start_byte),
-                "label": "heuristic",
+                "label": if signature.is_some() { "precise" } else { "heuristic" },
+                "signature": signature,
                 "notes": note_value(store, d.id),
             })
         })
@@ -194,7 +232,7 @@ fn render_json(
                 "file": r.path,
                 "line": r.row + 1,
                 "kind": r.kind,
-                "label": "heuristic",
+                "label": ref_label(cache, &r.name, &r.path, r.row + 1),
             })
         })
         .collect();
