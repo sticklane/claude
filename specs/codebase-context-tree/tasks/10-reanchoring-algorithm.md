@@ -1,6 +1,6 @@
 # Task 10: Deterministic layered re-anchoring, two-phase persistence
 
-Status: in-progress
+Status: done
 Depends on: 09
 Priority: P1
 Budget: 55 turns
@@ -84,21 +84,27 @@ existing CRUD/derivation behavior must not change.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test reanchor_rename_in_file` → passes (leg a)
-- [ ] `cd context-tree && cargo test reanchor_body_edit` → passes (leg b)
-- [ ] `cd context-tree && cargo test reanchor_move_rename_edit` → passes
-      (leg c, `pending_reanchors >= 1` before persistence)
-- [ ] `cd context-tree && cargo test reanchor_move_no_edit` → passes (leg
+- [x] `cd context-tree && cargo test reanchor_rename_in_file` → passes (leg a)
+      — verifier: 1 test ran, PASS (rename fresh + note file unchanged).
+- [x] `cd context-tree && cargo test reanchor_body_edit` → passes (leg b)
+      — verifier: 1 test ran, PASS (stale, anchor unchanged, pending 0).
+- [x] `cd context-tree && cargo test reanchor_move_rename_edit` → passes
+      (leg c, `pending_reanchors >= 1` before persistence) — verifier: 1 test, PASS.
+- [x] `cd context-tree && cargo test reanchor_move_no_edit` → passes (leg
       d, C-fixture re-anchors / Go-fixture identity-stable contrast)
-- [ ] `cd context-tree && cargo test write_anchors` → passes
+      — verifier: 1 test, PASS (C re-anchors; Go `pending==0`).
+- [x] `cd context-tree && cargo test write_anchors` → passes
       (`--write-anchors` persists; subsequent `pending_reanchors == 0`)
-- [ ] `cd context-tree && cargo test reanchor_durability` → passes (cache
-      rebuild and fresh-clone durability for leg c)
-- [ ] `cd context-tree && cargo test reanchor_parse_failed_excluded` →
+      — verifier: 1 test, PASS.
+- [x] `cd context-tree && cargo test reanchor_durability` → passes (cache
+      rebuild and fresh-clone durability for leg c) — verifier: 1 test, PASS.
+- [x] `cd context-tree && cargo test reanchor_parse_failed_excluded` →
       passes (no re-anchor attempt against a parse-failed file's symbols;
-      fresh on repair)
-- [ ] `cd context-tree && cargo test tree_diff_scorer` → passes (threshold
-      0.6, lowest-file:line tie-break, unit-level)
-- [ ] `cd context-tree && cargo test reanchor_only_writes_anchor_path` →
+      fresh on repair) — verifier: 1 test, PASS.
+- [x] `cd context-tree && cargo test tree_diff_scorer` → passes (threshold
+      0.6, lowest-file:line tie-break, unit-level) — verifier: 13 unit tests, PASS.
+- [x] `cd context-tree && cargo test reanchor_only_writes_anchor_path` →
       passes (bodies/files untouched; query/background syncs don't write)
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+      — verifier: 1 test, PASS (line-by-line: only anchor_path changed).
+- [x] `bash context-tree/scripts/check.sh` → exits 0 — verified exit 0
+      (fmt + clippy -D warnings + full suite green).

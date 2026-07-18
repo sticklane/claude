@@ -10,11 +10,12 @@ pub mod journal;
 pub mod lock;
 
 use crate::index::IndexStore;
+use crate::notes::reanchor::{self, Candidate, OldAnchor};
 use crate::{extract, vcs};
 use journal::{JournalRecord, Trigger};
 use lock::AdvisoryLock;
 use sha2::{Digest, Sha256};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -97,9 +98,47 @@ pub fn run_sync(root: &Path, trigger: Trigger) -> io::Result<SyncStats> {
     let last_sync = store.last_sync().map_err(to_io)?;
     let now = now_ns();
 
+    // Load notes and the carried pending re-anchors, then capture each note's
+    // OLD anchor identity from the pre-reparse index — the driver of R13's
+    // layered match. A note whose anchor does not resolve now (e.g. after a full
+    // rebuild) captures no old identity, so it is not re-anchorable this sync.
+    let (notes, diagnostics) = crate::notes::load_all(root);
+    for reason in &diagnostics {
+        eprintln!("ctx: skipping note — {reason}");
+    }
+    let mut pending = store.pending_reanchors().map_err(to_io)?;
+    // Prune pending entries whose note file no longer exists, so a deleted note
+    // never leaves its phase-1 re-anchor counted (and leaking a row) forever.
+    let note_ids: HashSet<&str> = notes.iter().map(|n| n.id.as_str()).collect();
+    pending.retain(|id, _| note_ids.contains(id.as_str()));
+    let mut old_anchor: HashMap<String, OldAnchor> = HashMap::new();
+    let mut old_anchor_file: HashMap<String, String> = HashMap::new();
+    for n in &notes {
+        let eff = pending
+            .get(&n.id)
+            .cloned()
+            .unwrap_or_else(|| n.anchor_path.clone());
+        if let Some(idy) = store.symbol_identity(&eff).map_err(to_io)? {
+            old_anchor.insert(
+                n.id.clone(),
+                OldAnchor {
+                    name: idy.name,
+                    kind: idy.kind,
+                    body_hash: idy.body_hash,
+                    body_tokens: idy.body_tokens,
+                },
+            );
+            old_anchor_file.insert(n.id.clone(), idy.file);
+        }
+    }
+
     let mut hashed = 0usize;
     let mut parsed = 0usize;
     let mut present: HashSet<&str> = HashSet::new();
+    // Candidates for re-anchoring are the changed files' new symbols; a
+    // parse-failed file contributes none (R13: unresolved-transient, not vanished).
+    let mut changed_syms: Vec<Candidate> = Vec::new();
+    let mut parse_failed_files: HashSet<String> = HashSet::new();
 
     for rel in &files {
         present.insert(rel.as_str());
@@ -141,6 +180,21 @@ pub fn run_sync(root: &Path, trigger: Trigger) -> io::Result<SyncStats> {
         // not re-hashed forever) but produces no facts.
         if let Some(extractor) = extract::for_extension(ext) {
             let result = extractor.extract(rel, &content);
+            if result.parse_failed {
+                parse_failed_files.insert(rel.clone());
+            } else {
+                for s in &result.symbols {
+                    changed_syms.push(Candidate {
+                        qpath: s.qpath.clone(),
+                        name: s.name.clone(),
+                        kind: s.kind.as_str().to_string(),
+                        body_hash: s.body_hash.clone(),
+                        body_tokens: s.body_tokens.clone(),
+                        file: rel.clone(),
+                        row: s.full_span.start.row + 1,
+                    });
+                }
+            }
             store.replace_facts(file_id, &result).map_err(to_io)?;
             parsed += 1;
         }
@@ -153,14 +207,34 @@ pub fn run_sync(root: &Path, trigger: Trigger) -> io::Result<SyncStats> {
         }
     }
 
-    // Re-derive note freshness against the just-updated symbols (R2/R3/R12),
-    // under the sync lock. A note with unparseable/incomplete frontmatter is
-    // skipped with one diagnostic line; it never aborts the sync.
-    let (notes, diagnostics) = crate::notes::load_all(root);
-    for reason in &diagnostics {
-        eprintln!("ctx: skipping note — {reason}");
+    // R13 re-anchoring: for each note whose effective anchor no longer resolves
+    // AND resolved before this sync (old identity captured) AND whose old file
+    // did not just become parse-failed (transient, not vanished), apply the
+    // layered algorithm over the changed files' new symbols. A resolved new
+    // anchor is recorded as a pending phase-1 re-anchor.
+    for n in &notes {
+        let eff = pending
+            .get(&n.id)
+            .cloned()
+            .unwrap_or_else(|| n.anchor_path.clone());
+        if store.symbol_identity(&eff).map_err(to_io)?.is_some() {
+            continue; // still resolves — nothing to re-anchor
+        }
+        let Some(old) = old_anchor.get(&n.id) else {
+            continue; // never resolved before this sync — not re-anchorable now
+        };
+        if let Some(f) = old_anchor_file.get(&n.id)
+            && parse_failed_files.contains(f)
+        {
+            continue; // parse-failed transient: leave the binding untouched
+        }
+        if let Some(new_path) = reanchor::reanchor(old, &changed_syms) {
+            pending.insert(n.id.clone(), new_path);
+        }
     }
-    store.refresh_notes(&notes).map_err(to_io)?;
+
+    store.replace_pending_reanchors(&pending).map_err(to_io)?;
+    store.refresh_notes(&notes, &pending).map_err(to_io)?;
 
     store.set_last_sync(now).map_err(to_io)?;
     journal::append(
@@ -170,7 +244,7 @@ pub fn run_sync(root: &Path, trigger: Trigger) -> io::Result<SyncStats> {
             scanned,
             hashed,
             parsed,
-            pending_reanchors: 0,
+            pending_reanchors: pending.len(),
         },
     )?;
     Ok(SyncStats {
@@ -178,6 +252,38 @@ pub fn run_sync(root: &Path, trigger: Trigger) -> io::Result<SyncStats> {
         hashed,
         parsed,
     })
+}
+
+/// R13 phase 2 persistence point (`ctx sync --write-anchors`): run a normal sync
+/// to compute the current pending re-anchors, then write each into its note
+/// file's frontmatter (the only write the system makes to a note file) and clear
+/// the pending set. Returns the number of anchors written.
+pub fn write_anchors(root: &Path, trigger: Trigger) -> io::Result<usize> {
+    run_sync(root, trigger)?;
+    let cache = cache_dir(root);
+    let _lock = AdvisoryLock::acquire(&cache)?;
+    let store = IndexStore::open(&cache).map_err(to_io)?;
+    let pending = store.pending_reanchors().map_err(to_io)?;
+    if pending.is_empty() {
+        return Ok(0);
+    }
+    // Map note id → its file, from the note files on disk.
+    let (notes, _diagnostics) = crate::notes::load_all(root);
+    let by_id: HashMap<&str, &str> = notes
+        .iter()
+        .map(|n| (n.id.as_str(), n.rel_path.as_str()))
+        .collect();
+    let mut written = 0usize;
+    for (note_id, new_path) in &pending {
+        if let Some(rel) = by_id.get(note_id.as_str()) {
+            crate::notes::rewrite_anchor_path(root, rel, new_path)?;
+            written += 1;
+        }
+    }
+    store
+        .replace_pending_reanchors(&HashMap::new())
+        .map_err(to_io)?;
+    Ok(written)
 }
 
 /// A query's staleness sweep (C6): when a sync already holds the advisory lock,

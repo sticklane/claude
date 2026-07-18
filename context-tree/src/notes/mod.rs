@@ -7,6 +7,7 @@
 
 pub mod anchor;
 pub mod freshness;
+pub mod reanchor;
 
 use crate::project::CONTEXT_DIR;
 use sha2::{Digest, Sha256};
@@ -142,6 +143,29 @@ pub fn write_note(root: &Path, draft: &NoteDraft) -> io::Result<String> {
     let rel = format!("{CONTEXT_DIR}/notes/{id}.md");
     fs::write(root.join(&rel), content)?;
     Ok(rel)
+}
+
+/// R13 phase 2: rewrite a note file's `anchor_path` frontmatter line to
+/// `new_path` — the only write the system ever makes to a note file after
+/// creation. Every other byte (id, hash, kind, author, created, and the body)
+/// is preserved; only the single `anchor_path:` line changes.
+pub fn rewrite_anchor_path(root: &Path, rel_path: &str, new_path: &str) -> io::Result<()> {
+    let abs = root.join(rel_path);
+    let text = fs::read_to_string(&abs)?;
+    let mut out = String::with_capacity(text.len() + new_path.len());
+    let mut replaced = false;
+    for line in text.split_inclusive('\n') {
+        if !replaced && line.trim_start().starts_with("anchor_path:") {
+            let newline = if line.ends_with('\n') { "\n" } else { "" };
+            out.push_str("anchor_path: ");
+            out.push_str(new_path);
+            out.push_str(newline);
+            replaced = true;
+        } else {
+            out.push_str(line);
+        }
+    }
+    fs::write(&abs, out)
 }
 
 /// C9 author resolution: `$CTX_AUTHOR`, else the VCS adapter's user identity,
