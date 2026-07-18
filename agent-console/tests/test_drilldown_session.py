@@ -127,6 +127,26 @@ class TailEventsTest(unittest.TestCase):
         self.assertEqual(len(events), 5)
         self.assertEqual(total, 5)
 
+    def test_grows_window_when_single_line_exceeds_window(self):
+        """A lone trailing JSONL line larger than the 64K window must still
+        render: with zero events parsed from a non-empty file the window grows
+        (capped at file size) instead of showing 'no events'."""
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "s.jsonl"
+            ev = {
+                "type": "user",
+                "message": {
+                    "role": "user",
+                    "content": [{"type": "text", "text": "x" * 80_000}],
+                },
+                "idx": 0,
+            }
+            p.write_text(json.dumps(ev) + "\n", encoding="utf-8")
+            self.assertGreater(p.stat().st_size, 65_536)
+            events, total = ac.tail_events(str(p))
+        self.assertGreaterEqual(len(events), 1)
+        self.assertEqual(events[0]["idx"], 0)
+
 
 class ElisionTest(unittest.TestCase):
     def _events(self):
