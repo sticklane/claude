@@ -37,3 +37,10 @@ shared design decision.
 ## Acceptance
 
 - [ ] `grep -c "not gen-1-restricted" .claude/skills/drain/SKILL.md` → ≥ 1
+      (0 today, verified 2026-07-19). Depth ceiling: L0 grep on a
+      one-line prose summary — the honest ceiling for this artifact.
+      Behavioral complement, a named verifier judgment: confirm the note
+      sits inline with **name the terminal tab** in the "Gen-1 startup
+      advisories" paragraph while the other two advisories keep their
+      gen-1-only framing, and that it points to reference.md rather than
+      restating the trigger.
