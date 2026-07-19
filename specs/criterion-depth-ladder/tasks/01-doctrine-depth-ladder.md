@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -35,10 +35,14 @@ task in this spec cites this text rather than restating it.
 
 ## Acceptance
 
-- [ ] `grep -ci 'depth ladder' docs/memory/anchored-acceptance-criteria.md`
+- [x] `grep -ci 'depth ladder' docs/memory/anchored-acceptance-criteria.md`
       → ≥ 1 (0 today, verified 2026-07-19)
-- [ ] `grep -ci 'trivially satisfiable'
-  docs/memory/anchored-acceptance-criteria.md` → ≥ 1 (0 today,
+      Evidence: verifier PASS → count `1` (≥ 1); see
+      ../evidence/01-doctrine-depth-ladder.md
+- [x] `grep -ci 'trivially satisfiable'
+docs/memory/anchored-acceptance-criteria.md` → ≥ 1 (0 today,
       verified 2026-07-19). Depth ceiling: doctrine prose — behavioral
       complement is task 05's eval scenario plus tasks 02–04's
       procedure edits, which operationalize this text.
+      Evidence: verifier PASS → count `2` (≥ 1); see
+      ../evidence/01-doctrine-depth-ladder.md
