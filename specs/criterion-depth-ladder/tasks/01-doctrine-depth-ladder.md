@@ -46,3 +46,7 @@ docs/memory/anchored-acceptance-criteria.md` → ≥ 1 (0 today,
       procedure edits, which operationalize this text.
       Evidence: verifier PASS → count `2` (≥ 1); see
       ../evidence/01-doctrine-depth-ladder.md
+
+## Discovered
+
+- docs/memory.md index line for anchored-acceptance-criteria (line 16) still summarizes only the three original traps and omits the fourth pattern + depth ladder — one-line index refresh keeps the summary current.
