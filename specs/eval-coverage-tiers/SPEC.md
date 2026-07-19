@@ -1,6 +1,7 @@
 # Eval coverage tiers: a policy and lint for which skills need evalsets
 
 Status: open
+Breakdown-ready: true
 
 ## Problem
 
@@ -143,7 +144,7 @@ the deliverable):
       exercises the lint's own failure behavior).
 - [ ] `grep -c 'COVERAGE.md' .claude/skills/harness-audit/SKILL.md` ≥ 1
       and `grep -c 'COVERAGE'
-  antigravity/.agents/skills/harness-audit/SKILL.md` ≥ 1 (R5 + its
+antigravity/.agents/skills/harness-audit/SKILL.md` ≥ 1 (R5 + its
       CLAUDE.md same-commit mirror; both literals absent from both
       files today, verified 2026-07-19). Depth ceiling:
       prose checklist edit — the scenario-count/adversarial structure
@@ -156,8 +157,8 @@ the deliverable):
       and `grep -c 'COVERAGE' antigravity/.agents/workflows/evals.md`
       ≥ 1 (R6; all three literals absent today, verified 2026-07-19);
       closing commit modifies the plugin version line: `git show
-    <closing-commit> -- .claude-plugin/plugin.json | grep -q
-    '^+.*"version"'` (R6).
+<closing-commit> -- .claude-plugin/plugin.json | grep -q
+'^+.*"version"'` (R6).
 
 ## Open questions
 
@@ -170,9 +171,13 @@ to COVERAGE.md, not blockers.)
 
 ## Parallelization
 
-R1+R2+R3 are one unit (the lint, TDD via its self-test). R4's five new
-evalsets and four backfill scenarios are nine independent tasks
-(disjoint dirs) — /breakdown may batch the backfills. R5 and R6 depend
-on R1 only. R6 closes with mirrors + version bump.
+R1+R2+R3 are one unit (the lint, TDD via its self-test). R4 is ten
+independent tasks (disjoint dirs): five new evalsets, four backfill
+scenarios (/breakdown may batch the backfills), plus one
+existence-conditional task for `evals/critique/` per R4 — without it
+the critique row never meets the Tier A bar when
+`specs/criterion-depth-ladder` has not landed first, and acceptance
+criterion 1 stalls. R5 and R6 depend on R1 only. R6 closes with
+mirrors + version bump.
 
-- Group: R4 evalsets and backfills, R5
+- Group: R4 evalsets, backfills, and the critique conditional; R5
