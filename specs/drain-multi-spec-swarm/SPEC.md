@@ -59,23 +59,36 @@ coordination substrate:
   spec leases** whose footprints are pairwise disjoint from each other and
   from every already-claimed spec's footprint, using the existing
   Priority-then-path tie-break, applied spec-by-spec.
-- The rolling-window admission check (reference.md R1–R4) widens from
-  "Touch disjoint from every in-progress task in THIS spec's claim set" to
-  "Touch disjoint from every in-progress task across ALL claimed specs,"
-  and the total live-worker hard cap raises from ≤5 to **≤10**, still one
-  single global merge queue (merges land strictly serially in commit-arrival
-  order, across specs, exactly as they already do within one spec today).
-  The existing **co-admissibility** clause (a `Group:` line naming both
-  tasks, else "runs only alone") stays **spec-scoped** — a `Group:` line
-  lives in one spec's Parallelization section and can never name a task in
-  a different spec, so it continues to govern only same-spec pairs exactly
-  as it does today. Cross-spec pairs are governed by Touch-disjointness
-  alone: two tasks in _different_, both-claimed specs co-admit whenever
-  their `Touch:` sets are disjoint, with no `Group:` line required (there
-  is nowhere for one to live). Without this clause the widened
-  Touch-disjointness check is vacuous — every cross-spec pair would still
-  fail the unwidened co-admissibility clause and be forced to run alone,
-  defeating R1's raised spec-lease cap entirely.
+- The rolling-window admission check (reference.md R1–R4) keeps its
+  **same-spec** semantics completely unchanged — Touch-disjointness,
+  `Group:`-line co-admissibility, and "runs only alone (window empty)" for
+  an ungrouped task all continue to govern exactly as today whether two
+  tasks from the SAME claimed spec may run together, with "window empty"
+  now defined explicitly as zero OTHER in-flight tasks **from that task's
+  own spec** (never the global in-flight set — see R2). A NEW, separate
+  cross-spec layer governs tasks from DIFFERENT claimed specs: two tasks in
+  different, both-claimed specs co-admit whenever their `Touch:` sets are
+  disjoint, full stop — no `Group:` line and no window-empty check apply
+  across specs (there is no cross-spec `Group:` line to satisfy, and
+  "window empty" is a same-spec concept that is never checked against a
+  different spec's in-flight tasks). Without this cross-spec layer the
+  widened Touch-disjointness check is vacuous — every cross-spec pair would
+  still fail the unwidened, globally-scoped co-admissibility clause and be
+  forced to run alone, defeating R1's raised spec-lease cap entirely (the
+  gap round-3 and round-4 critique both found). The old ≤5 per-spec
+  worker sub-cap is dropped: all claimed specs' dispatchable tasks compete
+  for **one shared global window capped at ≤10 total live workers**,
+  admitted via the existing Priority-then-path tie-break across the whole
+  pool once it is full.
+- Spec-level lease claiming (R1) is a mechanism independent of the
+  per-spec task rolling-window's "these rules bind only when W > 1"
+  preamble (reference.md's admission-rule section opening) — R1 claims up
+  to 3 non-overlapping specs and each newly-claimed spec dispatches its
+  first eligible task immediately, even when drain runs at its default
+  W=1. `W` continues to govern only how many tasks run concurrently
+  WITHIN one already-claimed spec; it never gates whether multiple specs
+  can be claimed and worked simultaneously — this is why no-argument
+  `/drain` (default W=1) still swarms across specs by default (R4).
 - Two ready specs whose Touch footprints actually intersect are never
   claimed simultaneously — the lower-priority one waits for the
   higher-priority one's lease to release, mirroring the existing
@@ -111,18 +124,27 @@ coordination substrate:
   pointer to the widened rule's full statement in reference.md — never the
   full rule inline in SKILL.md (R9 governs the line budget).
 - R2: The rolling-window admission check (reference.md's "Rolling-window
-  admission & merge (R1–R4)") widens its Touch-disjointness comparison set
-  from "this spec's in-progress tasks" to "every claimed spec's in-progress
-  tasks," with the total live-worker hard cap raised from ≤5 to ≤10. The
-  existing `Group:`-line co-admissibility clause stays spec-scoped (a
-  `Group:` line names tasks only within its owning spec's Parallelization
-  section, so it cannot and does not apply across specs); two tasks in
-  different, both-claimed specs are co-admissible whenever their `Touch:`
-  sets are disjoint, full stop — no `Group:` line required for a cross-spec
-  pair. This IS the mechanized fix for the cross-spec task-collision gap
-  documented in `docs/memory/drain-dispatch-lessons.md:64-80` ("there is no
-  mechanized cross-spec check" today) — no separate detection mechanism is
-  needed.
+  admission & merge (R1–R4)") keeps its same-spec semantics — Touch-
+  disjointness, `Group:`-line co-admissibility, and "runs only alone
+  (window empty)" — fully unchanged for a pair of tasks from the SAME
+  claimed spec, with "window empty" now defined as zero OTHER in-flight
+  tasks from that task's OWN spec specifically (never the global in-flight
+  set across all claimed specs — this is the explicit fix for the
+  round-4 finding that an unscoped "window empty" would still force every
+  ungrouped task to wait for a global empty window). It gains a NEW
+  cross-spec layer: two tasks in DIFFERENT, both-claimed specs are
+  co-admissible whenever their `Touch:` sets are disjoint, full stop — no
+  `Group:` line and no window-empty check apply across specs (a `Group:`
+  line names tasks only within its owning spec's Parallelization section,
+  so it cannot apply across specs, and "window empty" per the above is
+  never evaluated against a different spec's in-flight set). The old ≤5
+  per-spec worker sub-cap is dropped; all claimed specs' dispatchable
+  tasks compete for one shared global window capped at ≤10 total live
+  workers, admitted via the existing Priority-then-path tie-break across
+  the whole pool once it is full. This IS the mechanized fix for the
+  cross-spec task-collision gap documented in
+  `docs/memory/drain-dispatch-lessons.md:64-80` ("there is no mechanized
+  cross-spec check" today) — no separate detection mechanism is needed.
 - R3: `.claude/rules/token-discipline.md`'s "cap the fleet at a 3–5
   concurrent-writer window" rule gains an explicit carve-out sentence
   naming drain's multi-spec swarm mode and citing this spec, so the raised
@@ -172,6 +194,16 @@ main)..main`) is unchanged.
   `codex/.agents/skills/drain/SKILL.md` reflect the same widened
   procedure (load-bearing runtime differences excepted), and
   `.claude-plugin/plugin.json`'s version is bumped.
+- R11: Spec-level lease claiming (R1) operates independent of the per-spec
+  task rolling-window's "these rules bind only when W > 1" preamble
+  (reference.md's admission-rule section opening) — R1 claims up to 3
+  non-overlapping specs and each newly-claimed spec dispatches its first
+  eligible task immediately, even when drain runs at its default W=1. `W`
+  continues to govern only how many tasks run concurrently WITHIN one
+  already-claimed spec; it never gates whether multiple specs can be
+  claimed and worked simultaneously — without this, an implementer could
+  faithfully nest R1 inside the "bind only when W > 1" preamble and ship a
+  version where default (W=1) `/drain` never swarms, contradicting R4.
 
 ## Out of scope
 
@@ -222,11 +254,30 @@ main)..main`) is unchanged.
       → both files listed (R10 mirror check)
 - [ ] plugin.json version is greater than its value at this spec's base
       commit (R10)
-- [ ] `grep -ci "already-green" .claude/skills/drain/reference.md`
-      → ≥ 1 (currently 0 — R7's new sibling-citation instruction in the
-      review-fix worker's dispatch-prompt template, adopted verbatim from
+- [ ] `grep -A5 -i "already-green" .claude/skills/drain/reference.md | grep -ci "spec-review.md"`
+      → ≥ 1 (currently 0 — tightens the R7 check beyond a bare
+      "already-green" token match: the sibling-citation instruction in the
+      review-fix worker's dispatch-prompt template must co-occur with a
+      reference to citing `evidence/spec-review.md` by path, per
       `docs/memory/drain-dispatch-lessons.md:134-151`'s "already-green
-      `evidence/spec-review.md`" phrasing)
+      `evidence/spec-review.md`" phrasing — round-4 nit, a bare token match
+      was gameable without implementing R7's actual structure)
+- [ ] `grep -ci "own spec\|that task's own spec\|OWN spec" .claude/skills/drain/reference.md`
+      → ≥ 1 (R2's window-empty re-scoping: "window empty" for an ungrouped
+      task must be stated as scoped to that task's own spec's in-flight
+      set, never the global set — currently 0, per round-4's finding that
+      an unscoped definition would still defeat cross-spec concurrency for
+      ungrouped tasks)
+- [ ] `grep -ci "independent of.*W > 1\|regardless of W\|independent of the.*W>1" .claude/skills/drain/reference.md`
+      → ≥ 1 (R11: spec-level lease claiming is stated explicitly as firing
+      independent of the per-spec task rolling-window's W>1 gate — currently
+      0, per round-4's finding that nesting R1 under that gate would leave
+      default (W=1) `/drain` never swarming, contradicting R4)
+- [ ] `grep -ci "shared global window\|one shared global\|shared pool" .claude/skills/drain/reference.md`
+      → ≥ 1 (the ≤10 cap is stated as one shared pool across all claimed
+      specs, replacing the old per-spec ≤5 sub-cap, rather than each spec
+      separately capped at 5 — currently 0, per round-4's cap-composition
+      finding)
 - [ ] `grep -ci "single global serial merge queue\|one single global" .claude/skills/drain/reference.md`
       → ≥ 1 (R8's explicit statement)
 - [ ] Every project gate this repo runs at merge time
@@ -259,7 +310,17 @@ main)..main`) is unchanged.
       window simultaneously. This is the case round-3 critique found
       missing: without it, nothing catches an implementation that leaves
       the existing spec-scoped `Group:` co-admissibility check unwidened
-      and forces every cross-spec pair to run alone.
+      and forces every cross-spec pair to run alone. The fixture set
+      additionally covers the round-4 window-empty finding: (c) two
+      ungrouped tasks from the SAME spec, with no in-flight tasks in ANY
+      other claimed spec, still do NOT co-admit (same-spec "window empty"
+      semantics are unchanged — an ungrouped task still runs alone relative
+      to its own spec's other tasks), and (d) an ungrouped task in spec A
+      DOES admit while a task from spec B is in flight (cross-spec
+      in-flight state never blocks it) — together these prove "window
+      empty" is scoped per-spec, not global, closing the gap where an
+      unscoped definition would force every ungrouped task to wait for a
+      globally empty window.
 - [ ] R6's negative constraint: `git diff --name-only <base-commit>..HEAD |
 grep -c '.claude/skills/breakdown/\|antigravity/.agents/workflows/breakdown\|codex/.agents/skills/breakdown/'`
       → 0 — this spec's implementation touches no `/breakdown` files at all,
