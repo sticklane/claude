@@ -316,6 +316,15 @@ main)..main`) is unchanged.
       needed." It must be edited to state the per-spec W≤5 (unchanged,
       governs concurrency within one already-claimed spec) plus the new
       shared global ≤10 pool across all claimed specs)
+- [ ] `grep -c "on TOTAL" .claude/skills/drain/reference.md`
+      → 0 (currently 0, verified — round-7 nit: R12's relocation branch
+      (the line moving verbatim into reference.md per R9 rather than being
+      edited in place) had no acceptance coverage; AC13 alone only checks
+      SKILL.md, so a relocated-but-unreconciled "on TOTAL" statement could
+      land in reference.md uncaught. This is a same-value guard: 0 today,
+      and it must stay 0 after the change too, since the reconciled
+      statement's own wording — per-spec `W≤5` plus a separate shared
+      global `≤10` pool — never needs the phrase "on TOTAL")
 - [ ] `grep -ci "shared global window\|one shared global\|shared pool" .claude/skills/drain/reference.md`
       → ≥ 1 (the ≤10 cap is stated as one shared pool across all claimed
       specs, replacing the old per-spec ≤5 sub-cap, rather than each spec
