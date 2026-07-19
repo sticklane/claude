@@ -3,6 +3,8 @@ Rigor: production
 
 # Drain multi-spec swarm: concurrent drain across non-overlapping specs
 
+Breakdown-ready: true
+
 ## Problem
 
 `/drain` holds **at most one spec-level dispatch lease at a time**
@@ -401,7 +403,16 @@ main)..main`) is unchanged.
       in-flight state never blocks it) — together these prove "window
       empty" is scoped per-spec, not global, closing the gap where an
       unscoped definition would force every ungrouped task to wait for a
-      globally empty window.
+      globally empty window. The fixture set finally covers the round-8
+      two-level cap directly (round-9 nit): (e) a fixture of 3
+      mutually-disjoint specs each offering 5 pairwise-disjoint-with-
+      each-other dispatchable tasks (15 total candidates) asserts exactly
+      10 are admitted, none exceeding its own spec's `W` (≤5), proving the
+      shared ≤10 pool actually throttles the cross-spec sum below the
+      naive per-spec total rather than either (i) a flat ≤10 window with no
+      surviving per-spec ceiling, or (ii) per-spec ceilings with no
+      effective global throttle — the two failure modes AC16's prose-only
+      check cannot distinguish on its own.
 - [ ] R6's negative constraint: `git diff --name-only <base-commit>..HEAD |
 grep -c '.claude/skills/breakdown/\|antigravity/.agents/workflows/breakdown\|codex/.agents/skills/breakdown/'`
       → 0 — this spec's implementation touches no `/breakdown` files at all,
