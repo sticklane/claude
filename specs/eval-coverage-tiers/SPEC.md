@@ -48,9 +48,11 @@ the deliverable):
   hook installs require live user confirmation) — its interactive
   confirm step is graded by what the run must NOT produce.
 - **Tier B — model-free tests instead** (deterministic-core reporting
-  skills, no paid run needed): list-specs (`test_list_specs.py`),
-  workboard (`test_workboard.py`) — each row names the existing test
-  file(s); the lint verifies they exist.
+  skills, no paid run needed): list-specs
+  (`.claude/skills/list-specs/test_list_specs.py`), workboard
+  (`.claude/skills/workboard/test_workboard.py`) — each row names the
+  existing test file(s) as a repo-relative path; the lint verifies
+  they exist.
 - **Tier C — waived, reason recorded**: fleet (session-runtime state),
   qa-sweep and factcheck (non-hermetic network), harness-audit (a
   prose checklist with no deterministic core module today — promotion
@@ -72,8 +74,9 @@ the deliverable):
   has no COVERAGE.md row; a Tier A skill lacks ≥2 scenario dirs each
   containing `setup.sh`+`prompt.txt`+`assert.sh`, or lacks an
   `NN-adv-*` scenario; a Tier B row names a test file that does not
-  exist; a Tier C row has an empty reason. Exits 0 on a conforming
-  tree.
+  exist (rows carry repo-relative paths; the lint checks `[ -f
+<path> ]` from the repo root, no reconstruction); a Tier C row has
+  an empty reason. Exits 0 on a conforming tree.
 - R3: `tests/test_eval_coverage_lint.sh` exercises the lint itself
   against fixtures: one conforming tree → exit 0, plus one fixture per
   violation class → non-zero with the violation named (same
@@ -92,10 +95,13 @@ the deliverable):
   (b) one `NN-adv-*` backfill scenario each for the four existing sets
   that lack it — breakdown, build, drain, evals — bringing build,
   drain, and evals to the ≥2 bar at the same time. The critique row's
-  adversarial scenario is owned by `specs/criterion-depth-ladder` R6
-  (`evals/critique/02-adv-gameable-criterion/` — its `NN-adv-*` name
-  satisfies this lint) and is NOT duplicated here; if that spec is
-  declined, that scenario moves into this one. Cost realism: this
+  adversarial scenario is `evals/critique/02-adv-gameable-criterion/`
+  (content contract in `specs/criterion-depth-ladder` R6; its
+  `NN-adv-*` name satisfies this lint), guarded by an agent-resolvable
+  existence check so ordering between the two specs never matters: the
+  R4 worker creates it per that contract iff the directory does not
+  already exist at execution time, and otherwise verifies it matches
+  `NN-adv-*` and moves on. Cost realism: this
   totals 14 new committed scenario dirs; committed files are cheap,
   and every paid `./evals/run.sh` execution is manual-pending
   (human-launched, per docs/memory/unattended-worker-tool-limits.md) —
@@ -136,7 +142,10 @@ the deliverable):
       a failing-fixture case per R2 violation class (R3 — L2:
       exercises the lint's own failure behavior).
 - [ ] `grep -c 'COVERAGE.md' .claude/skills/harness-audit/SKILL.md` ≥ 1
-      (R5; literal absent today, verified 2026-07-19). Depth ceiling:
+      and `grep -c 'COVERAGE'
+  antigravity/.agents/skills/harness-audit/SKILL.md` ≥ 1 (R5 + its
+      CLAUDE.md same-commit mirror; both literals absent from both
+      files today, verified 2026-07-19). Depth ceiling:
       prose checklist edit — the scenario-count/adversarial structure
       itself is enforced behaviorally by criterion 1's lint run, which
       is why no separate `ls` criterion exists; behavioral complement
@@ -144,9 +153,11 @@ the deliverable):
       review.
 - [ ] `grep -c 'COVERAGE.md' .claude/skills/evals/SKILL.md` ≥ 1 and
       `grep -c 'COVERAGE.md' codex/.agents/skills/evals/SKILL.md` ≥ 1
-      and the antigravity mirror equivalents ≥ 1 (R6); closing commit
-      modifies the plugin version line: `git show <closing-commit> --
-.claude-plugin/plugin.json | grep -q '^+.*"version"'` (R6).
+      and `grep -c 'COVERAGE' antigravity/.agents/workflows/evals.md`
+      ≥ 1 (R6; all three literals absent today, verified 2026-07-19);
+      closing commit modifies the plugin version line: `git show
+    <closing-commit> -- .claude-plugin/plugin.json | grep -q
+    '^+.*"version"'` (R6).
 
 ## Open questions
 
