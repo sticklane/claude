@@ -15,10 +15,11 @@ on a grep-manifest, and live examples of the self-referential trap exist
 (`docs/memory/anchored-acceptance-criteria.md`) eliminates criteria that
 pass with NO work, but not criteria that pass with TRIVIAL work: an
 anchored new phrase still only proves the phrase was typed. The two agents
-positioned to catch this fire wrong: the critic has no acceptance-criteria
-attack instruction at all (`.claude/agents/critic.md` blocks READY only on
-unmapped/missing criteria; `.claude/skills/critique/SKILL.md` triages only
-"non-deterministic or under-scoped" commands as MECHANICAL), and the
+positioned to catch this fire wrong: the critic attacks criteria
+_presence_ but not depth — `.claude/agents/critic.md` blocks READY on
+unmapped/missing criteria yet has no gameability/depth instruction, and
+`.claude/skills/critique/SKILL.md` triages only "non-deterministic or
+under-scoped" commands as MECHANICAL — and the
 verifier's strong anti-gaming rules (`.claude/agents/verifier.md`:
 exercise every criterion, overfitting = FAIL) fire after implementation,
 when a shallow criterion has already shaped the work.
@@ -66,21 +67,32 @@ behavioral verification.
   check per behavioral requirement? A gameable criterion with no depth
   ceiling annotation blocks READY with the same force as an unmapped
   requirement. `.claude/skills/critique/SKILL.md`'s triage list names
-  the gameable-criterion finding as JUDGMENT-class (a rewrite decision,
-  not a mechanical patch).
+  the gameable-criterion finding as JUDGMENT-class — even when the
+  rewrite looks obvious, swapping what a criterion checks changes what
+  the spec verifies, which is a spec-meaning change, never a mechanical
+  patch. (Decided here; not an open question.)
 - R5: `.claude/agents/verifier.md`'s verdict format gains a mandatory
   criteria-adequacy line: for each requirement, state whether the
   criteria that passed actually entail the requirement, and flag any
   behavioral requirement whose only green evidence is L0. A behavioral
   requirement evidenced solely by text-presence is INCOMPLETE, not PASS
   (prose requirements under a recorded depth ceiling annotation are
-  exempt — that is the annotation's purpose).
+  exempt — that is the annotation's purpose). The rule binds specs
+  authored after this lands; when re-checking a task from an older spec
+  (e.g. on a drain relaunch) the verifier reports ladder levels
+  informationally without flipping the verdict — the same grandfathering
+  as Out of scope bullet 1. (Decided here; not an open question.)
 - R6: one committed adversarial eval scenario for `/critique`:
-  `evals/critique/02-gameable-criterion/` seeds a fixture spec whose one
-  grep criterion is anchored (phrase absent from the fixture) but
-  trivially satisfiable by its own requirement's literal; `assert.sh`
-  asserts the critique run does NOT set `Breakdown-ready: true` and that
-  its findings identify that criterion. The paid `./evals/run.sh
+  `evals/critique/02-adv-gameable-criterion/` (the `NN-adv-*` naming
+  matches the adversarial-scenario convention proposed in
+  `specs/eval-coverage-tiers`, so the two specs compose) seeds a fixture
+  spec whose one grep criterion is anchored (phrase absent from the
+  fixture) but trivially satisfiable by its own requirement's literal;
+  `assert.sh` asserts BOTH halves: the critique run does NOT set
+  `Breakdown-ready: true`, AND the persisted findings artifact
+  (`critique-findings.md`, written on NOT READY per
+  `.claude/skills/critique/SKILL.md`) identifies the seeded criterion.
+  The paid `./evals/run.sh
 critique` run is manual-pending (human-launched — a drained worker
   cannot launch it, per docs/memory/unattended-worker-tool-limits.md);
   the committed scenario files are the drain-completable half.
@@ -105,42 +117,55 @@ critique` run is manual-pending (human-launched — a drained worker
 
 - [ ] `grep -ci 'depth ladder' docs/memory/anchored-acceptance-criteria.md`
       ≥ 1 and `grep -ci 'trivially satisfiable'
-    docs/memory/anchored-acceptance-criteria.md` ≥ 1 (R1; both phrases
+docs/memory/anchored-acceptance-criteria.md` ≥ 1 (R1; both phrases
       absent today across all target files, verified 2026-07-19). Depth
       ceiling: doctrine prose — behavioral complement is R6's eval
       scenario plus the critic/verifier procedure greps below.
 - [ ] `grep -c 'depth ceiling' .claude/skills/idea/SKILL.md` ≥ 1 and
       `grep -c 'depth ceiling' .claude/skills/breakdown/SKILL.md` ≥ 1,
       each within the file's acceptance-criteria authoring section and
-      citing the memory doc rather than restating the ladder — cite-check
-      by eyeball at review, grep is the anchor (R2, R3; phrase absent
-      today, verified 2026-07-19).
+      citing the memory doc rather than restating the ladder (R2, R3;
+      phrase absent today, verified 2026-07-19). Depth ceiling: prose
+      authoring instruction — behavioral complement is the idea-evalset
+      adversarial scenario proposed in `specs/eval-coverage-tiers` (a
+      freshly authored SPEC must contain no unanchored/gameable
+      criterion), plus a manual-pending human read of the edited
+      sections at review.
 - [ ] `grep -ci 'gameable' .claude/agents/critic.md` ≥ 1 and
       `grep -ci 'gameable' .claude/skills/critique/SKILL.md` ≥ 1 (R4;
-      absent today, verified 2026-07-19).
+      absent today, verified 2026-07-19). Depth ceiling: prose charter —
+      behavioral complement is R6's eval scenario, which exercises the
+      critic actually flagging a seeded gameable criterion.
 - [ ] `grep -c 'criteria-adequacy' .claude/agents/verifier.md` ≥ 1 (R5;
-      absent today, verified 2026-07-19).
-- [ ] `[ -d evals/critique/02-gameable-criterion ] && grep -q
-    'Breakdown-ready' evals/critique/02-gameable-criterion/assert.sh`
-      (R6 — committed-scenario half; the passing run is manual-pending,
-      paid headless, human-launched).
-- [ ] The closing task's own commit modifies the plugin version line:
+      absent today, verified 2026-07-19). Depth ceiling: prose charter —
+      behavioral complement is a manual-pending human read of the first
+      post-change verifier verdict, confirming the criteria-adequacy
+      line appears per requirement and is non-vacuous.
+- [ ] `[ -d evals/critique/02-adv-gameable-criterion ] && grep -q
+    'Breakdown-ready' evals/critique/02-adv-gameable-criterion/assert.sh
+    && grep -q 'critique-findings'
+    evals/critique/02-adv-gameable-criterion/assert.sh` — the assert
+      must check both the header outcome and that the persisted findings
+      identify the seeded criterion (R6 — committed-scenario half; the
+      passing run is manual-pending, paid headless, human-launched).
+- [ ] Per-file mirror anchors (single-phrase-across-files lets a partial
+      port pass, per the memory doc's multi-file rule):
+      `grep -c 'depth ceiling' antigravity/.agents/skills/idea/SKILL.md`
+      ≥ 1; `grep -c 'depth ceiling'
+    antigravity/.agents/skills/breakdown/SKILL.md` ≥ 1;
+      `grep -ci 'gameable' antigravity/.agents/skills/critic/SKILL.md`
+      ≥ 1; `grep -ci 'gameable' antigravity/.agents/workflows/critique.md`
+      ≥ 1; `grep -c 'criteria-adequacy'
+    antigravity/.agents/skills/verifier/SKILL.md` ≥ 1 (R7; all five
+      phrases absent from these ports today, verified 2026-07-19). The
+      closing task's own commit modifies the plugin version line:
       `git show <closing-commit> -- .claude-plugin/plugin.json | grep -q
-    '^+.*"version"'` (R7, per the memory doc's version-bump pattern);
-      antigravity mirror greps for 'depth ceiling' and 'gameable' in the
-      ported files ≥ 1 each (R7).
+    '^+.*"version"'` (R7, per the memory doc's version-bump pattern).
 
 ## Open questions
 
-- Should R5's INCOMPLETE-on-L0-only rule bind retroactively when a
-  verifier re-checks an old task after a relaunch, or only for specs
-  authored after this lands? (Proposal: only new specs — same
-  grandfathering as Out of scope bullet 1.)
-- Is JUDGMENT the right class for R4's gameable-criterion finding, or
-  should a criterion whose fix is obvious (swap doctrine-word grep for
-  the procedure's decision-condition phrase) be MECHANICAL? (Proposal:
-  JUDGMENT — the fix changes what the spec verifies, which is a
-  spec-meaning change.)
+(none — the grandfathering and finding-class decisions are folded into
+R4/R5.)
 
 ## Parallelization
 
