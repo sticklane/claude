@@ -2,6 +2,8 @@
 
 Status: open
 Breakdown-ready: true
+Parallel-window: 3
+Relaunch-every: 8
 
 ## Problem
 
