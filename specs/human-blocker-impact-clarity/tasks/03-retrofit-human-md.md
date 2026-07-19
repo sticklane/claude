@@ -46,4 +46,10 @@ landed by task 01 — read it, don't edit it), `.claude/skills/drain/reference.m
       exists in `HUMAN.md`: `grep 'trajectory-evals/critique-findings.md' HUMAN.md | grep -c 'Blocks:'`
       → 1. If no such entry exists, this check is skipped, not failed —
       record which case applied (present-and-retrofitted, or
-      already-resolved-and-absent) in your final evidence.
+      already-resolved-and-absent) in your final evidence. (Entry present
+      today at HUMAN.md:5 with no `Blocks:` clause — piped count 0,
+      verified 2026-07-19 — so the check cannot pass vacuously.) Depth
+      ceiling: L0 on a one-line prose entry — behavioral complement is a
+      manual-pending human read: the HUMAN.md owner confirms the
+      retrofitted line names both the ask and its impact and is
+      actionable without opening the source file.
