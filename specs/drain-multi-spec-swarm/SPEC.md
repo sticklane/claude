@@ -424,3 +424,16 @@ grep -c '.claude/skills/breakdown/\|antigravity/.agents/workflows/breakdown\|cod
 overlap handling = serialize only the colliding pair; scope = fold in
 drain-dispatch-lessons hazards; rigor = production; cap = ≤10 workers / ≤3
 specs, doctrine carve-out required)
+
+## Parallelization
+
+Task 01 (the core admission-model rewrite in `.claude/skills/drain/{SKILL.md,reference.md}`)
+is Touch-disjoint from task 02 (`.claude/rules/token-discipline.md`) and
+task 04 (a new `tests/` file) — none share undecided design, since the
+algorithm is fully pinned by this spec after 9 critique rounds. Task 03
+(mirrors + version bump) depends on task 01 landing first (it ports task
+01's actual prose) but is itself Touch-disjoint from tasks 02 and 04, so it
+may run concurrently with either once it becomes eligible.
+
+- Group: 01, 02, 04
+- Group: 02, 03, 04
