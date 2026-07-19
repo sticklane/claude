@@ -1,6 +1,6 @@
 # Task 01: Cross-spec admission model in drain's SKILL.md and reference.md
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 20 turns
