@@ -115,3 +115,37 @@ Next step: this round surfaced two more genuine design-composition gaps
 already-JUDGMENT finding — surfaced to the user rather than auto-applied,
 per token-discipline's 2-4 cycle evaluator-optimizer bound (this is cycle 4,
 the top of that bound).
+
+## Rounds 5-9 (2026-07-18/19, resumed via /resume-handoff) — settled READY WITH NITS
+
+SPEC.md-hash: 9898f4591de80b7ff54d535d47a7083eba5a5ae15e444c86715c64fa714d57df
+
+User answered round 4's three design questions (window-empty scoped
+same-spec; R1 fires independent of the W>1 gate; one shared global ≤10
+window replacing independent per-spec summing, not the per-spec `W≤5`
+ceiling itself). Rounds 5-6 were pure acceptance-criterion-anchoring
+corrections (two vacuous greps matching unrelated pre-existing substrings,
+one line-wrapped phrase never matching) — all mechanical, applied
+unconditionally per the MECHANICAL-finding rule. Round 7 found one missing
+acceptance branch (R12's reference.md-relocation case uncovered) — mechanical,
+fixed. Round 8 found R2 and R12 used identical "per-spec ≤5" language to
+imply contradictory models — clarified as a two-level cap (per-spec `W≤5`
+unchanged; only independent cross-spec summing is dropped, replaced by a
+shared ≤10 pool) and added a criterion guarding the per-spec ceiling's
+survival. Round 9 (final): **READY WITH NITS**, two minor findings —
+
+1. (confidence 62, applied) The two-level cap's central throttle behavior
+   had no runnable simulation fixture, only prose greps. Fixed: added
+   fixture case (e) — 3 specs × 5 disjoint tasks each (15 candidates)
+   asserts exactly 10 admitted, none exceeding its own spec's `W`.
+2. (confidence 55, left as-is — below the critic's own report threshold)
+   R2/Solution's phrasing "a single claimed spec's own `W`" reads as
+   per-spec-configurable when `W` is actually set once per drain run. Noted
+   as a future wording clarity improvement, not applied — harmless since
+   the only load-bearing value (≤5) is identical across specs regardless
+   of phrasing, and re-triggering a 10th critique round for pure wording
+   polish was judged not worth the token cost after 9 rounds.
+
+`Breakdown-ready: true` written; this spec self-chains into `/breakdown`
+next per the idea skill's own conventions (not a gated stage, no additional
+user authorization needed for this specific step).
