@@ -171,13 +171,18 @@ to COVERAGE.md, not blockers.)
 
 ## Parallelization
 
-R1+R2+R3 are one unit (the lint, TDD via its self-test). R4 is ten
-independent tasks (disjoint dirs): five new evalsets, four backfill
-scenarios (/breakdown may batch the backfills), plus one
-existence-conditional task for `evals/critique/` per R4 — without it
-the critique row never meets the Tier A bar when
-`specs/criterion-depth-ladder` has not landed first, and acceptance
-criterion 1 stalls. R5 and R6 depend on R1 only. R6 closes with
-mirrors + version bump.
+Task 01 (COVERAGE.md + lint + self-test, TDD) is the foundation. Tasks
+02–06 (one new evalset each: prioritize, idea, distill, gate, onboard)
+and 07 (the four backfills batched, plus the existence-conditional
+critique scenario — batching per this section's earlier note; without
+the conditional the critique row never meets the Tier A bar when
+`specs/criterion-depth-ladder` has not landed first, and the headline
+lint criterion stalls) are disjoint in Touch (each owns only NEW
+scenario dirs) and share no undecided design — the `NN-adv-*` marker
+and per-skill content contracts are pinned in R4 — so all six run
+concurrently. Task 08 (tier-aware harness-audit, evals docs, mirrors,
+version bump, and the lint-green headline check) closes, depending on
+all of 01–07. Group grammar per specs/drain-rolling-window/SPEC.md's
+Parallelization section.
 
-- Group: R4 evalsets, backfills, and the critique conditional; R5
+- Group: 02, 03, 04, 05, 06, 07
