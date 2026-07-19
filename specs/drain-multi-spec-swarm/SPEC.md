@@ -277,13 +277,18 @@ main)..main`) is unchanged.
       scoped to that task's own spec's in-flight set, never the global set
       — per round-4's finding that an unscoped definition would still
       defeat cross-spec concurrency for ungrouped tasks)
-- [ ] `grep -c '"Window empty" means zero live in-flight workers' .claude/skills/drain/reference.md`
-      → 0 (currently 1, verified — the existing globally-scoped "Window
-      empty" sentence must itself be edited to the re-scoped wording above,
-      not left standing unqualified alongside new same-spec-scoped prose
-      added elsewhere; round-5 finding — an unedited original sentence
-      would contradict the new cross-spec layer exactly as round-3/round-4
-      found for the `Group:` clause)
+- [ ] `grep -c '"Window empty" means zero live' .claude/skills/drain/reference.md`
+      → 0 (currently 1, verified — round-6 fix: round-5's anchor included
+      "in-flight workers" on the same grep line, but the phrase wraps
+      across a line break in the file (`reference.md:1652-1653`), so the
+      full-phrase pattern never matched any single line and returned 0
+      before any edit — silently vacuous. This single-line substring is
+      confirmed present exactly once today. The existing globally-scoped
+      "Window empty" sentence must itself be edited to the re-scoped
+      wording above, not left standing unqualified alongside new
+      same-spec-scoped prose added elsewhere; round-5 finding — an
+      unedited original sentence would contradict the new cross-spec layer
+      exactly as round-3/round-4 found for the `Group:` clause)
 - [ ] `grep -c "with every in-flight task — two tasks may run together" .claude/skills/drain/reference.md`
       → 0 (currently 1, verified — the existing globally-scoped
       co-admissibility sentence must itself be edited to state the
@@ -301,7 +306,7 @@ main)..main`) is unchanged.
       that gate would leave default (W=1) `/drain` never swarming,
       contradicting R4)
 - [ ] `grep -c "Hard cap: W ≤ 5.*on TOTAL" .claude/skills/drain/SKILL.md`
-      → 0 (currently 1, verified present at SKILL.md:143 — R12: SKILL.md's
+      → 0 (currently 1, verified present at SKILL.md:144 — R12: SKILL.md's
       existing authoritative "Hard cap: W ≤ 5 on TOTAL live workers"
       statement is the current single source of truth for the total-worker
       ceiling and directly contradicts the new ≤10 shared-pool cap;
