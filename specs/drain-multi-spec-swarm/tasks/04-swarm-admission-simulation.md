@@ -63,5 +63,5 @@ files (task 03's scope).
 ## Acceptance
 
 - [ ] `bash tests/test_drain_swarm_admission.sh` → exits 0
-- [ ] The script contains distinct, separately-asserted fixture cases (a)–(e) as described above — not a single combined assertion that could pass with only some cases actually implemented
+- [ ] The script contains distinct, separately-asserted fixture cases (a)–(e) as described above — not a single combined assertion that could pass with only some cases actually implemented. Runnable form (added 2026-07-19): on success the script's stdout names each case it asserted — `bash tests/test_drain_swarm_admission.sh | grep -o 'case ([a-e])' | sort -u | wc -l` → 5 (the script does not exist today, verified 2026-07-19, so this cannot pass vacuously)
 - [ ] `test -f tests/test_drain_swarm_admission.sh` → file exists

@@ -48,7 +48,23 @@ themselves (task 01's scope, already merged by the time this task starts).
 
 ## Acceptance
 
-- [ ] `grep -li "swarm\|cross-spec\|multi-spec" antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md` → both files listed
+- [ ] Per-item, per-file content anchors (rewritten 2026-07-19: the
+      original single `grep -li "swarm\|cross-spec\|multi-spec"` check let
+      a partial port pass — one incidental mention per file green-checked
+      all four ported items, against the memory doc's multi-file rule).
+      For EACH of `antigravity/.agents/workflows/drain.md` and
+      `codex/.agents/skills/drain/SKILL.md`:
+      `grep -ci "cross-spec" <file>` → ≥ 1 (admission layer),
+      `grep -ci "up to 3" <file>` → ≥ 1 (spec-lease claim),
+      `grep -c "≤10\|<= 10" <file>` → ≥ 1 (two-level cap), and
+      `grep -ci "already-green" <file>` → ≥ 1 (R7 sibling-citation
+      instruction — the memory-doc phrasing task 01 adopts verbatim).
+      All four phrases absent from both files today, verified 2026-07-19.
+      Depth ceiling: L0 anchors on a paraphrased port — behavioral
+      complement is the closure-triggered cross-reference sweep
+      (`.claude/rules/mirror-verification.md`) plus a verifier
+      procedural-equivalence read of the ported sections against task 01's
+      landed diff (`.claude/rules/mirror-procedure-discipline.md`).
 - [ ] plugin.json version is greater than its value at this task's own base commit (compare via `git show <base-commit>:.claude-plugin/plugin.json`, never a hard-coded literal)
 - [ ] `claude plugin validate .` → exits 0
 - [ ] Every project gate this repo runs at merge time (`specs/status.sh`, every `tests/test_*.sh`, `./bin/check-agent-model-pins`, `evals/lint-ultra-gate.sh`, `evals/lint-skill-size-gate.sh`) exits 0
