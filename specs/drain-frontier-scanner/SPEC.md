@@ -229,8 +229,12 @@ stay per-spec, both folded into R1 and Out of scope.)
 
 ## Parallelization
 
-R1+R2 are one unit (TDD over the scanner). R3 (SKILL.md consumption)
-and R4 (eval assertion) depend on R1 landing but not on each other.
-R5 closes.
+Task 01 (scanner + tests + fixture, TDD) is the foundation. Tasks 02
+(drain SKILL/reference consumption) and 03 (eval trajectory assertion)
+are disjoint in Touch and share no undecided design — the script name,
+JSON fields, and assertion token are all pinned above — so they run
+concurrently. Task 04 (mirrors + manifest + version bump) closes.
+Group grammar per specs/drain-rolling-window/SPEC.md's Parallelization
+section.
 
-- Group: R3, R4
+- Group: 02, 03
