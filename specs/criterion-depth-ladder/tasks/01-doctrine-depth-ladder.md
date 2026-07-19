@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -38,7 +38,7 @@ task in this spec cites this text rather than restating it.
 - [ ] `grep -ci 'depth ladder' docs/memory/anchored-acceptance-criteria.md`
       → ≥ 1 (0 today, verified 2026-07-19)
 - [ ] `grep -ci 'trivially satisfiable'
-    docs/memory/anchored-acceptance-criteria.md` → ≥ 1 (0 today,
+  docs/memory/anchored-acceptance-criteria.md` → ≥ 1 (0 today,
       verified 2026-07-19). Depth ceiling: doctrine prose — behavioral
       complement is task 05's eval scenario plus tasks 02–04's
       procedure edits, which operationalize this text.
