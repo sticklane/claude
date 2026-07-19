@@ -1,6 +1,7 @@
 # Criterion depth ladder: anti-gaming gates for acceptance criteria
 
 Status: open
+Breakdown-ready: true
 
 ## Problem
 
@@ -83,7 +84,8 @@ behavioral verification.
   (prose requirements under a recorded depth ceiling annotation are
   exempt — that is the annotation's purpose). Binding scope is
   self-detecting, needing no external list: the rule binds any
-  NOT-done spec whose acceptance sections carry ladder-era annotations
+  NOT-done spec whose acceptance sections carry the markers the ladder
+  keys on
   (a `Depth ceiling:` line or a "verified <date>" anchor note) — which
   covers all specs authored after this lands and the specs the
   already-landed 2026-07-19 maintainer-directed sweep annotated (four
