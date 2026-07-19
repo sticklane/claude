@@ -1,6 +1,7 @@
 # Drain frontier scanner: deterministic dispatch frontier from task headers
 
 Status: open
+Breakdown-ready: true
 
 ## Problem
 
@@ -71,7 +72,12 @@ so it adds no new launch surface and needs no gating
     suspected zombie (claim retained, slot released, per
     reference.md's zombie rule). An R2 test pins this: with a
     non-empty `--claimed`, `admissible` still has length
-    `min(N, candidates)` — never `N - len(claimed)`.
+    `min(N, candidates)` — never `N - len(claimed)`. Likewise for
+    structure, not just count: the scanner computes the
+    ungrouped-runs-alone / co-admissibility shape from an EMPTY-WINDOW
+    assumption; drain applies the actual live-window gate — emptiness
+    and co-admissibility with live in-flight workers — exactly as it
+    owns the admit count, since only drain knows which claims are live.
   - `admissible` implements drain's existing admission contract with
     the authority's own structure (`.claude/skills/drain/reference.md`,
     Rolling-window admission — the authority; restated here only to
