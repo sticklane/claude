@@ -142,11 +142,30 @@ content) in the same task — the same three-file shape
 - A fresh session's worker-dispatch `Agent` calls are short (task-specific
   substitutions only) and point at reference.md's Worker prompt section by
   path rather than reproducing its body text.
-- `bash evals/lint-ultra-gate.sh` and `bash evals/lint-skill-size-gate.sh`
-  still exit 0 after the edits (drain is both an ultra-path and
-  size-gated skill).
-- `tests/test_mirror_procedure_coverage.sh` still passes (R4's port is
-  coverage-checked the same way rigor-tier's task 02 was).
+- `bash evals/lint-ultra-gate.sh` still exits 0 after the edits (passes
+  today, verified 2026-07-19; drain is an ultra-path skill).
+- `bash evals/lint-skill-size-gate.sh` reports no NEW failure beyond the
+  pre-existing 505-line `.claude/skills/drain/SKILL.md` overage (the
+  gate already FAILs on that one line today — "exceeds 500-line SKILL.md
+  budget", verified 2026-07-19 — so "still exit 0" was unsatisfiable as
+  written), and `wc -l < .claude/skills/drain/SKILL.md` stays ≤ 505 — the
+  edits must not grow the file; clearing the pre-existing overage is a
+  separate remediation task per
+  docs/memory/anchored-acceptance-criteria.md.
+- `tests/mirror-procedure-manifest.txt` gains new
+  `<source>|<mirror>|<phrase>` entries seeding R1's section-bounded-read
+  procedure and R2's Worker-prompt delivery contract into BOTH mirrors
+  (`antigravity/.agents/workflows/drain.md` and
+  `codex/.agents/skills/drain/SKILL.md` — one line per mirror, per the
+  memory doc's multi-file rule), each seeded phrase also confirmed present
+  in its `.claude/skills/drain/` source file (`grep -c` ≥ 1 — the test's
+  skip rule silently passes a phrase the source lacks); then
+  `tests/test_mirror_procedure_coverage.sh` still exits 0. The bare
+  "still passes" check was vacuous — it exits 0 today with zero new work,
+  verified 2026-07-19; the new manifest lines are what make it bite.
+  Candidate anchors "Grep-then-offset" and "path-pointer" verified absent
+  from all four drain files (0 matches each) 2026-07-19 — adjust during
+  breakdown if wording changes, keeping the anchors in sync.
 
 Next stage: /critique specs/drain-hub-context-discipline/SPEC.md
 (human-launched, or self-chain if the live request explicitly asks for it).
