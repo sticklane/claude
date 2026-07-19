@@ -204,6 +204,14 @@ main)..main`) is unchanged.
   claimed and worked simultaneously — without this, an implementer could
   faithfully nest R1 inside the "bind only when W > 1" preamble and ship a
   version where default (W=1) `/drain` never swarms, contradicting R4.
+- R12: `.claude/skills/drain/SKILL.md`'s existing "**Hard cap: W ≤ 5** on
+  TOTAL live workers" statement (its current single source of truth for
+  the total-worker ceiling) is edited to state the per-spec `W ≤ 5`
+  ceiling (unchanged, still governs concurrency within one already-claimed
+  spec) plus the new shared global `≤10` pool across all claimed specs —
+  whether this statement stays in SKILL.md or is relocated into
+  reference.md per R9's "relocated as needed," it must not ship
+  unreconciled with R2's ≤10 shared-pool cap in either location.
 
 ## Out of scope
 
@@ -247,8 +255,6 @@ main)..main`) is unchanged.
       currently 0 — no discretion on phrasing)
 - [ ] `grep -c "≤10\|<= 10\|10 total" .claude/skills/drain/reference.md`
       → ≥ 1 (the raised worker cap is stated explicitly)
-- [ ] `grep -c "swarm" .claude/rules/token-discipline.md` → ≥ 1 (currently
-      0 — the carve-out sentence per R3 exists)
 - [ ] `wc -l < .claude/skills/drain/SKILL.md` → ≤ 500 (currently 505, per R9)
 - [ ] `grep -li "swarm\|cross-spec\|multi-spec" antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md`
       → both files listed (R10 mirror check)
@@ -262,22 +268,59 @@ main)..main`) is unchanged.
       `docs/memory/drain-dispatch-lessons.md:134-151`'s "already-green
       `evidence/spec-review.md`" phrasing — round-4 nit, a bare token match
       was gameable without implementing R7's actual structure)
-- [ ] `grep -ci "own spec\|that task's own spec\|OWN spec" .claude/skills/drain/reference.md`
-      → ≥ 1 (R2's window-empty re-scoping: "window empty" for an ungrouped
-      task must be stated as scoped to that task's own spec's in-flight
-      set, never the global set — currently 0, per round-4's finding that
-      an unscoped definition would still defeat cross-spec concurrency for
-      ungrouped tasks)
-- [ ] `grep -ci "independent of.*W > 1\|regardless of W\|independent of the.*W>1" .claude/skills/drain/reference.md`
-      → ≥ 1 (R11: spec-level lease claiming is stated explicitly as firing
-      independent of the per-spec task rolling-window's W>1 gate — currently
-      0, per round-4's finding that nesting R1 under that gate would leave
-      default (W=1) `/drain` never swarming, contradicting R4)
+- [ ] `grep -c "in-flight tasks from that task's OWN spec" .claude/skills/drain/reference.md`
+      → ≥ 1 (currently 0, verified — round-5 fix: round-4's original
+      pattern `"own spec\|OWN spec"` was vacuous, matching the pre-existing
+      unrelated substring "auto-breakd**own spec**s" at reference.md:1570;
+      this anchors on a distinctive new literal instead. R2's window-empty
+      re-scoping: "window empty" for an ungrouped task must be stated as
+      scoped to that task's own spec's in-flight set, never the global set
+      — per round-4's finding that an unscoped definition would still
+      defeat cross-spec concurrency for ungrouped tasks)
+- [ ] `grep -c '"Window empty" means zero live in-flight workers' .claude/skills/drain/reference.md`
+      → 0 (currently 1, verified — the existing globally-scoped "Window
+      empty" sentence must itself be edited to the re-scoped wording above,
+      not left standing unqualified alongside new same-spec-scoped prose
+      added elsewhere; round-5 finding — an unedited original sentence
+      would contradict the new cross-spec layer exactly as round-3/round-4
+      found for the `Group:` clause)
+- [ ] `grep -c "with every in-flight task — two tasks may run together" .claude/skills/drain/reference.md`
+      → 0 (currently 1, verified — the existing globally-scoped
+      co-admissibility sentence must itself be edited to state the
+      `Group:` clause is spec-scoped, not left standing unqualified;
+      round-5 finding, same rationale as the window-empty subtractive
+      check above)
+- [ ] `grep -c "fires independent of the per-spec" .claude/skills/drain/reference.md`
+      → ≥ 1 (currently 0, verified — round-5 fix: round-4's original
+      pattern's `regardless of W` alternative was vacuous, matching
+      pre-existing unrelated tournament-sizing and baton-counter text at
+      reference.md:927 and :1132; this anchors on a distinctive new
+      literal instead. R11: spec-level lease claiming is stated explicitly
+      as firing independent of the per-spec task rolling-window's "bind
+      only when W > 1" gate — per round-4's finding that nesting R1 under
+      that gate would leave default (W=1) `/drain` never swarming,
+      contradicting R4)
+- [ ] `grep -c "Hard cap: W ≤ 5.*on TOTAL" .claude/skills/drain/SKILL.md`
+      → 0 (currently 1, verified present at SKILL.md:143 — R12: SKILL.md's
+      existing authoritative "Hard cap: W ≤ 5 on TOTAL live workers"
+      statement is the current single source of truth for the total-worker
+      ceiling and directly contradicts the new ≤10 shared-pool cap;
+      round-5 finding — reference.md alone stating ≤10 is not enough while
+      SKILL.md still asserts ≤5 on TOTAL, whether that statement stays put
+      or is relocated verbatim into reference.md per R9's "relocated as
+      needed." It must be edited to state the per-spec W≤5 (unchanged,
+      governs concurrency within one already-claimed spec) plus the new
+      shared global ≤10 pool across all claimed specs)
 - [ ] `grep -ci "shared global window\|one shared global\|shared pool" .claude/skills/drain/reference.md`
       → ≥ 1 (the ≤10 cap is stated as one shared pool across all claimed
       specs, replacing the old per-spec ≤5 sub-cap, rather than each spec
       separately capped at 5 — currently 0, per round-4's cap-composition
       finding)
+- [ ] `grep -ci "swarm.*10\|10.*swarm\|drain-multi-spec-swarm" .claude/rules/token-discipline.md`
+      → ≥ 1 (currently 0, verified — round-5 nit: R3's carve-out must
+      co-occur with either the raised cap figure or this spec's slug, not
+      merely contain the bare word "swarm" with no reference to the cap it
+      authorizes or the spec that authorizes it)
 - [ ] `grep -ci "single global serial merge queue\|one single global" .claude/skills/drain/reference.md`
       → ≥ 1 (R8's explicit statement)
 - [ ] Every project gate this repo runs at merge time
