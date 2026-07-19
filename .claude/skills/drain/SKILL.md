@@ -24,16 +24,17 @@ unattended").
 **Exhaustion contract (R1).** So long as dispatchable work remains in the
 launched scope, the session never ends. The scope is drain's launch argument,
 unchanged; a **no-argument launch means the whole `specs/` queue**, consumed
-one spec at a time in a sequential walk. Claim a spec's `DRAIN-OWNER.md` when
+via multi-spec swarm claiming (reference.md's cross-spec admission). Claim a spec's `DRAIN-OWNER.md` when
 its dispatch begins (step 1) and release it (delete, committed) the moment
 that spec has **nothing left to dispatch** — every task done, deferred,
 blocked, failed, or draft. Deferred questions live in committed task files, so
 nothing needs the lease held while the session works elsewhere; if step 4's
 interview turns a deferred task back to `pending`, drain **re-claims that
-lease before re-dispatching**. At most one dispatch lease is held at a time;
-the short-lived second lease 3b and critique intake take while acting on
-another spec (claim → act → release) may transiently overlap. The per-spec
-concurrent-drain refusal and per-run generations cap are unchanged.
+lease before re-dispatching**. Drain claims **up to 3 Touch-disjoint spec
+leases** at once (multi-spec swarm; full rule in reference.md's "Cross-spec
+admission & merge (R1–R12)"); the short-lived second lease 3b and critique
+intake take while acting on another spec (claim → act → release) may transiently
+overlap. The per-spec concurrent-drain refusal and per-run generations cap are unchanged.
 
 First, the **drain-readiness gate**: every task drains, unattended — core
 business logic, auth, payments, migrations raise the scrutiny bar (tighter
@@ -138,23 +139,17 @@ the default (`opus`) tier or below. Full derivation in
 **Window size W (a rolling window, topped up on each verdict — not a wave
 barrier).** Default **1** (sequential: one worker, merged before the next). A
 `Parallel-window: N` header sets W=N, an explicit /drain request overrides (a
-number sets W; a bare throughput request sets W=3). **Hard cap: W ≤ 5** on TOTAL
-live workers; the sole exception is a tournament's three workers in an
-otherwise-empty window (reference.md, "Tournament", R8a).
+number sets W; a bare throughput request sets W=3). **Per-spec cap: W ≤ 5**
+bounds a single claimed spec's own live workers (unchanged); in swarm mode all
+claimed specs share **one global pool capped at ≤10 total** live workers
+(reference.md, cross-spec admission). The sole exception is a tournament's three
+workers in an otherwise-empty window (reference.md, "Tournament", R8a).
 
-**Rolling-window admission & merge (R1–R4).** Binds only when W > 1 (the
-default W=1 admits one task alone and merges it before the next); full rules in
-[reference.md](reference.md)'s "Rolling-window admission & merge (R1–R4)" —
-load only the named section. In brief: a task is **admitted** only when
-`Status: pending` with deps `done`, its `Touch:` disjoint from the claim set
-(every committed-`in-progress` task's `Touch:`), and **co-admissible** with each
-in-flight task (one `Group:` line names both; ungrouped tasks run alone in an
-empty window, a suspected zombie not counting, R9.2); the window **tops up on
-each verdict**, not at a wave barrier, each admission its own committed
-`in-progress` flip; **merges stay serial** in landing order, a sibling-conflict
-branch getting one scratch-worktree rebase onto `main`; and **runtime Touch
-enforcement** at merge fails any branch whose changed paths escape the task's
-`Touch:` + its own file + the spec's `evidence/` dir.
+**Cross-spec admission & merge (R1–R12).** Per-spec rolling-window admission
+binds only when W > 1; cross-spec swarm admission binds regardless of W. Full
+rules — spec-lease claiming (up to 3 disjoint specs), same-spec vs cross-spec
+co-admissibility, the two-level ≤10 shared-pool cap, per-verdict top-up, one
+global serial merge, runtime Touch enforcement — in [reference.md](reference.md)'s "Cross-spec admission & merge (R1–R12)".
 
 **The flip is compare-and-swap.** Re-read the task file immediately before
 flipping — an exact-match edit of the literal `Status: pending` line (a file
