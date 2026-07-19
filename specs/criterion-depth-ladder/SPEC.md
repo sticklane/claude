@@ -82,16 +82,19 @@ behavioral verification.
   requirement evidenced solely by text-presence is INCOMPLETE, not PASS
   (prose requirements under a recorded depth ceiling annotation are
   exempt — that is the annotation's purpose). Binding scope is
-  self-detecting, needing no external list: the rule binds any spec
-  whose acceptance sections carry ladder-era annotations (a `Depth
-ceiling:` line or a "verified <date>" anchor note) — which covers
-  all specs authored after this lands and the specs the already-landed
-  2026-07-19 maintainer-directed sweep annotated (five `spec:` sweep
-  commits on this same PR branch; the sweep is COMPLETED WORK this
-  spec depends on, not a deliverable of any task here). Un-annotated
-  done/archived work gets ladder levels reported informationally
-  without flipping the verdict — the narrowed grandfathering of Out of
-  scope bullet 1. (Decided; maintainer override 2026-07-19.)
+  self-detecting, needing no external list: the rule binds any
+  NOT-done spec whose acceptance sections carry ladder-era annotations
+  (a `Depth ceiling:` line or a "verified <date>" anchor note) — which
+  covers all specs authored after this lands and the specs the
+  already-landed 2026-07-19 maintainer-directed sweep annotated (four
+  remediation sweep commits on this same PR branch, plus the separate
+  grandfathering-narrowing commit; the sweep is COMPLETED WORK this
+  spec depends on, not a deliverable of any task here). Done/archived
+  work is exempt unconditionally — pre-ladder anchoring notes
+  ("verified <date>" predates the ladder) must not re-bind it — and
+  gets ladder levels reported informationally without flipping the
+  verdict, matching Out of scope bullet 1. (Decided; maintainer
+  override 2026-07-19.)
 - R6: one committed adversarial eval scenario for `/critique`:
   `evals/critique/02-adv-gameable-criterion/` (the `NN-adv-*` naming
   matches the adversarial-scenario convention proposed in
@@ -121,9 +124,10 @@ critique` run is manual-pending (human-launched — a drained worker
   work is graded on the doctrine in force when authored. (Narrowed by
   maintainer override, 2026-07-19: unimplemented specs — pending,
   draft, or not yet broken down — were ALREADY remediated in a
-  one-time sweep, landed as the five `spec:`-prefixed sweep commits on
-  this PR branch before this spec's critique settled; the sweep is not
-  a task of this spec, and only completed work is grandfathered.)
+  one-time sweep, landed as four remediation sweep commits (plus the
+  separate grandfathering-narrowing commit) on this PR branch before
+  this spec's critique settled; the sweep is not a task of this spec,
+  and only completed work is grandfathered.)
 - Automated (hook/lint) detection of gameable criteria — gameability is
   a judgment call; this spec places it with the critic, not a grep.
 - The eval-coverage tier policy and additional evalsets —
@@ -164,16 +168,17 @@ docs/memory/anchored-acceptance-criteria.md` ≥ 1 (R1; both phrases
       post-change verifier verdict, confirming the criteria-adequacy
       line appears per requirement and is non-vacuous.
 - [ ] `bash -n evals/critique/02-adv-gameable-criterion/assert.sh &&
-  grep -q 'Breakdown-ready'
-  evals/critique/02-adv-gameable-criterion/assert.sh && grep -q
-  'critique-findings'
-  evals/critique/02-adv-gameable-criterion/assert.sh && grep -Eq
-  'exit 1|fail' evals/critique/02-adv-gameable-criterion/assert.sh`
-      — syntax-valid, checks both halves (header outcome + persisted
-      findings identify the seeded criterion), and has a real failure
-      path so a hollow comment-only assert cannot pass (R6 —
-      committed-scenario half; behavioral proof remains the paid run,
-      manual-pending, human-launched).
+grep -q 'Breakdown-ready'
+evals/critique/02-adv-gameable-criterion/assert.sh && grep -q
+'critique-findings'
+evals/critique/02-adv-gameable-criterion/assert.sh && grep -Eq
+'exit 1|fail' evals/critique/02-adv-gameable-criterion/assert.sh`
+      — committed-scenario SHAPE check, honestly L1: syntax-valid and
+      the expected content/failure constructs present, though a
+      comment-only stub could still satisfy the greps. The functional
+      assert is proven only by the paid run (manual-pending,
+      human-launched) — that run, not this shape check, is R6's
+      behavioral half.
 - [ ] Per-file mirror anchors (single-phrase-across-files lets a partial
       port pass, per the memory doc's multi-file rule):
       `grep -c 'depth ceiling' antigravity/.agents/skills/idea/SKILL.md`

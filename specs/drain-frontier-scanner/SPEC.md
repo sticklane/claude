@@ -62,7 +62,16 @@ so it adds no new launch surface and needs no gating
     `admissible` only — `dispatchable` is never truncated. A
     dispatchable task kept out of `admissible` by a Touch collision
     with `--claimed` stays in `dispatchable` (it is not `blocked`,
-    which remains deps/`Unblock:`-based).
+    which remains deps/`Unblock:`-based). The scanner does NO
+    live-slot arithmetic: `--claimed` filters Touch collisions only,
+    never subtracts window slots, and `--window N` caps the returned
+    candidate-list length for reporting — drain alone owns the final
+    admit count against live slots, because only drain's window
+    membership distinguishes a live worker (occupies a slot) from a
+    suspected zombie (claim retained, slot released, per
+    reference.md's zombie rule). An R2 test pins this: with a
+    non-empty `--claimed`, `admissible` still has length
+    `min(N, candidates)` — never `N - len(claimed)`.
   - `admissible` implements drain's existing admission contract with
     the authority's own structure (`.claude/skills/drain/reference.md`,
     Rolling-window admission — the authority; restated here only to
@@ -141,7 +150,16 @@ so it adds no new launch surface and needs no gating
   `tests/mirror-procedure-manifest.txt` gains a seeded phrase for the
   new procedure step targeting the CODEX mirror line only
   (`.claude/skills/drain/SKILL.md` |
-  `codex/.agents/skills/drain/SKILL.md` | phrase) — never the
+  `codex/.agents/skills/drain/SKILL.md` | phrase), with the phrase
+  pinned to the runtime-neutral bare token `drain_frontier` — never a
+  path-bearing phrase, since codex legitimately re-roots paths and a
+  path phrase would fail the gate on correct divergence. The codex
+  wrapper carries the same invoke-with-fallback procedure text; whether
+  the codex runtime actually resolves and runs the source-tree script
+  is classified load-bearing-vs-incidental by the implementing task
+  exactly as for antigravity, via `.claude/rules/mirror-verification.md`'s
+  live cross-reference check (fallback-to-header-reading keeps a
+  non-invoking codex correct either way). The seed never targets the
   antigravity workflow, whose divergence may be load-bearing per the
   classification above; seeding a source-present phrase against a
   legitimately divergent mirror would fail the coverage gate on
@@ -174,11 +192,11 @@ so it adds no new launch surface and needs no gating
       the `test_list_specs.py` convention.
 - [ ] `grep -c 'drain_frontier' .claude/skills/drain/SKILL.md` ≥ 2 —
       the invocation and the fallback — and `grep -c 'tie-break is
-  computed by drain_frontier' .claude/skills/drain/SKILL.md` ≥ 1 —
+computed by drain_frontier' .claude/skills/drain/SKILL.md` ≥ 1 —
       the mandated verbatim sentence in step 2's tie-break paragraph,
       so the count cannot be satisfied while step 2 still instructs
       model-side ordering — and `grep -c 'drain_frontier'
-  .claude/skills/drain/reference.md` ≥ 1 — the Rolling-window
+.claude/skills/drain/reference.md` ≥ 1 — the Rolling-window
       admission section deferring to the scanner (R3; all anchors 0
       today, verified 2026-07-19). Depth
       ceiling on these greps: procedure prose — the behavioral
@@ -189,13 +207,13 @@ so it adds no new launch surface and needs no gating
       human-launched, per docs/memory/unattended-worker-tool-limits.md).
 - [ ] `grep -c 'drain_frontier' codex/.agents/skills/drain/SKILL.md` ≥ 1
       and `grep -c 'codex/.agents/skills/drain/SKILL.md.*drain_frontier'
-    tests/mirror-procedure-manifest.txt` ≥ 1 and `bash
-    tests/test_mirror_procedure_coverage.sh` exits 0 — the seeded
+tests/mirror-procedure-manifest.txt` ≥ 1 and `bash
+tests/test_mirror_procedure_coverage.sh` exits 0 — the seeded
       codex manifest line is present and the coverage gate stays green
       (R5); the antigravity port's divergence classification recorded
       in the task's evidence; closing commit modifies the plugin
       version line: `git show <closing-commit> --
-    .claude-plugin/plugin.json | grep -q '^+.*"version"'` (R5).
+.claude-plugin/plugin.json | grep -q '^+.*"version"'` (R5).
 
 ## Open questions
 
