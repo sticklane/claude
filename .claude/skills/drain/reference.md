@@ -9,8 +9,8 @@ Stale-lock liveness check · Worker prompt · Spec-completion review worker ·
 Deferred question format · Relaunch-with-evidence prompt · Tournament ·
 Headless fallback · Baton pass (self-relaunch) · Done / next · Anomalies ·
 Critique intake · Stub intake (assess → gate → act) · Auto-breakdown
-(lowest priority) · Push guard (canonical) · Rolling-window admission & merge
-(R1–R4) · Exit checklist (seven sections) · HUMAN.md filing (R2)
+(lowest priority) · Push guard (canonical) · Cross-spec admission & merge
+(R1–R12) · Exit checklist (seven sections) · HUMAN.md filing (R2)
 
 Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt (workers return only a **verdict + evidence**), the
@@ -818,6 +818,16 @@ commit it (path-scoped, pushed), and release the lease. Otherwise dispatch the
 review-fix worker below. Whether reviewed or skipped, the outcome is written to
 `specs/<slug>/evidence/spec-review.md` and committed (path-scoped, pushed)
 BEFORE releasing the lease; the exit checklist gains one line per spec.
+
+**Cross-spec shared-path overlap (R7).** When this spec's cumulative diff range
+overlaps a path another concurrently-claimed spec has already covered in its own
+committed `evidence/spec-review.md` this run, drain's dispatch prompt explicitly
+names which lines/sections are attributable to THIS spec, cites the sibling's
+already-green `evidence/spec-review.md` by path, and tells the worker to exclude
+anything it covers — never blindly handing the full ref-range diff and trusting
+the worker to guess spec boundaries on shared files. The diff-base recovery
+mechanism itself (`merge-base(<pinned flip commit>, main)..main`) is unchanged
+(docs/memory/drain-dispatch-lessons.md:134-151).
 
 These are the worker differences:
 
@@ -1635,23 +1645,72 @@ skill docs' size/TOC limits that `evals/lint-ultra-gate.sh` plays for the
 ultra-path skills — but fires **conditionally** on the skill-doc `Touch:`
 condition above, since most drain tasks touch no skill docs at all.
 
-## Rolling-window admission & merge (R1–R4)
+## Cross-spec admission & merge (R1–R12)
 
-The full rules SKILL.md step 2's "Rolling-window admission & merge (R1–R4)"
-summarizes; they bind only when W > 1 (the default W=1 admits one task alone
-and merges it before the next).
+The full rules SKILL.md step 2's "Cross-spec admission & merge (R1–R12)"
+summarizes. This section has two layers: the **per-spec rolling window** (task
+admission, top-up, and merge below) binds only when W > 1 (the default W=1
+admits one task alone and merges it before the next); the **cross-spec swarm
+layer** (spec-lease claiming and cross-spec co-admissibility) binds regardless
+of W.
 
-**Admission (R1).** A pending task enters the window only when all hold:
-`Status: pending` with every `Depends on:` dependency `done`; its `Touch:`
-list pairwise-disjoint from the **claim set** (the `Touch:` of every task whose
-committed `Status:` is `in-progress`, live slot or suspected zombie, so the
-claim set is computable from committed headers alone); and **co-admissible**
-with every in-flight task — two tasks may run together iff one `Group:` line in
-the owning spec's Parallelization section names both. A task on no `Group:`
-line, or in a spec with no Parallelization section, runs only **alone**
-(admitted only when the window is empty). **"Window empty" means zero live
-in-flight workers** — a suspected zombie does not count against emptiness
+**Spec-lease claiming (R1, R4, R5, R6, R11).** At inventory (SKILL.md step 1),
+before claiming any lease, drain computes each ready spec's Touch footprint
+(the union of its dispatchable tasks' `Touch:` headers) and greedily claims
+**up to 3 simultaneously-held spec leases** whose footprints are pairwise
+disjoint from each other and from every already-claimed spec's footprint, using
+the existing Priority-then-path tie-break applied spec-by-spec against the
+claimed set as it is built up (mirroring how task-level admission compares
+against the current in-progress set, never the whole queue). Two ready specs
+whose footprints intersect are never claimed simultaneously — the
+lower-priority one waits for the higher-priority one's lease to release, while
+every other non-overlapping ready spec keeps running concurrently (R5). This
+spec-level claiming **fires independent of the per-spec** rolling window's
+"bind only when W > 1" gate: each newly-claimed spec dispatches its first
+eligible task immediately, even at drain's default W=1 (R11). `W` governs only
+how many tasks run concurrently WITHIN one already-claimed spec — never whether
+multiple specs can be claimed and worked at once — which is why no-argument
+`/drain` (default W=1) swarms across specs by default, and why a queue with
+only one claimable non-overlapping spec produces a single claim identical to
+today's single-spec path (R4). R1 (spec-claim eligibility) and R2 (task
+admission, below) together are the **complete, sole mechanism** for cross-spec
+Touch collision detection — no third, separate check is added anywhere,
+including `/breakdown`'s decision-coupling test (R6).
+
+**Task admission (R2, R12).** A pending task enters the window only when all
+hold: `Status: pending` with every `Depends on:` dependency `done`; its
+`Touch:` list pairwise-disjoint from the **claim set** (the `Touch:` of every
+task whose committed `Status:` is `in-progress`, live slot or suspected zombie,
+so the claim set is computable from committed headers alone); and
+**co-admissible** with each in-flight task per the two-layer rule below.
+
+_Same-spec co-admissibility (unchanged)._ For a pair of tasks from the **same**
+claimed spec, two tasks may run together iff one `Group:` line in the owning
+spec's Parallelization section names both. A task on no `Group:` line, or in a
+spec with no Parallelization section, runs only **alone** — admitted only when
+that spec's own window is empty, where "window empty" means zero OTHER
+**in-flight tasks from that task's OWN spec** (never the global in-flight set
+across all claimed specs); a suspected zombie does not count against emptiness
 (Stale-lock liveness check, R9.2).
+
+_Cross-spec co-admissibility (new layer)._ For two tasks in **different**,
+both-claimed specs, they co-admit whenever their `Touch:` sets are disjoint,
+full stop — no `Group:` line and no window-empty check apply across specs (a
+`Group:` line names tasks only within its owning spec, and "window empty" is a
+same-spec concept never evaluated against a different spec's in-flight set).
+Without this layer the widened Touch-disjointness check would be vacuous —
+every cross-spec pair would fail the old globally-scoped co-admissibility
+clause and be forced to run alone, defeating R1's raised spec-lease cap.
+
+_Two-level cap (R12)._ A single claimed spec's own `W ≤ 5` (unchanged) still
+bounds how many of THAT spec's own tasks run at once. What is dropped is
+treating each claimed spec's budget as independently summable (3 specs would
+otherwise sum to up to 15 workers); instead all claimed specs' dispatchable
+tasks compete for **one shared global** window capped at **≤10 total** live
+workers across every claimed spec combined, admitted via the existing
+Priority-then-path tie-break across the whole shared pool once it is full — a
+single spec can never exceed its own `W`, but the cross-spec sum is throttled
+to ≤10 rather than the naive per-spec sum.
 
 **`Group:` grammar.** The Parallelization section pins co-admissible groups one
 line per group, format `- Group: NN, NN[, NN...]` — pinned in
@@ -1659,22 +1718,26 @@ specs/drain-rolling-window/SPEC.md and emitted by /breakdown, parsed, never
 re-derived from prose (the decision-coupling test governs what may share a
 line).
 
-**Top-up on verdict, not on wave (R2).** After each verdict is collected and
+**Top-up on verdict, not on wave.** After each verdict is collected and
 (for DONE) merged + pushed, drain **re-computes admission and refills the
 window** to W — no wave boundary, no all-members-one-commit flip: each
 admission is one committed `Status: in-progress` flip, so CAS/push hygiene
 composes unchanged. Size the fleet by the task map; parallelism buys wall-clock
 time, not efficiency.
 
-**Serial merge queue with mechanical rebase recovery (R3).** Merges stay
-strictly serial, in verdict-landing order. A branch that conflicts because a
+**Serial merge queue with mechanical rebase recovery (R8).** Merges across all
+concurrently-claimed specs land through **one single global serial merge
+queue** in verdict-landing (commit-arrival) order — two specs' DONE verdicts
+arriving near-simultaneously never race on the push (R8 extends today's
+intra-spec "merges stay serial in landing order" guarantee to span
+concurrently-claimed specs). A branch that conflicts because a
 sibling merged after its base was cut gets one rebase onto `main` in a
 **scratch worktree** (throwaway) — never checks out a task branch in the shared
 checkout (merges on the default branch, workers in worktrees). A clean rebase
 proceeds to DONE bookkeeping; one that still conflicts stops the remaining
 merges and reports which landed cleanly, never slot-machine.
 
-**Runtime Touch enforcement at merge (R4).** Extend the merge-time whitelist
+**Runtime Touch enforcement at merge.** Extend the merge-time whitelist
 diff (SKILL.md step 3): changed paths must be a **subset of the task's**
 `Touch:` list plus the task's own file plus the spec's `evidence/` dir. Any
 path outside that set is a **merge failure** (the slot-machine path), closing
