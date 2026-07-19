@@ -78,10 +78,12 @@ behavioral verification.
   requirement evidenced solely by text-presence is INCOMPLETE, not PASS
   (prose requirements under a recorded depth ceiling annotation are
   exempt — that is the annotation's purpose). The rule binds specs
-  authored after this lands; when re-checking a task from an older spec
-  (e.g. on a drain relaunch) the verifier reports ladder levels
-  informationally without flipping the verdict — the same grandfathering
-  as Out of scope bullet 1. (Decided here; not an open question.)
+  authored after this lands AND the unimplemented specs remediated by
+  the maintainer-directed 2026-07-19 criteria sweep (same PR); only
+  when re-checking already-done or archived work does the verifier
+  report ladder levels informationally without flipping the verdict —
+  the narrowed grandfathering of Out of scope bullet 1. (Decided;
+  maintainer override 2026-07-19.)
 - R6: one committed adversarial eval scenario for `/critique`:
   `evals/critique/02-adv-gameable-criterion/` (the `NN-adv-*` naming
   matches the adversarial-scenario convention proposed in
@@ -105,9 +107,12 @@ critique` run is manual-pending (human-launched — a drained worker
 
 ## Out of scope
 
-- Rewriting existing specs' criteria to the ladder — they are graded on
-  the doctrine in force when authored; the ladder applies to new specs
-  and to specs revised for other reasons.
+- Rewriting DONE or archived specs' criteria to the ladder — completed
+  work is graded on the doctrine in force when authored. (Narrowed by
+  maintainer override, 2026-07-19: unimplemented specs — pending,
+  draft, or not yet broken down — were remediated to the ladder in a
+  one-time sweep in this same PR, so only completed work is
+  grandfathered.)
 - Automated (hook/lint) detection of gameable criteria — gameability is
   a judgment call; this spec places it with the critic, not a grep.
 - The eval-coverage tier policy and additional evalsets —
@@ -142,9 +147,9 @@ docs/memory/anchored-acceptance-criteria.md` ≥ 1 (R1; both phrases
       post-change verifier verdict, confirming the criteria-adequacy
       line appears per requirement and is non-vacuous.
 - [ ] `[ -d evals/critique/02-adv-gameable-criterion ] && grep -q
-    'Breakdown-ready' evals/critique/02-adv-gameable-criterion/assert.sh
-    && grep -q 'critique-findings'
-    evals/critique/02-adv-gameable-criterion/assert.sh` — the assert
+'Breakdown-ready' evals/critique/02-adv-gameable-criterion/assert.sh
+&& grep -q 'critique-findings'
+evals/critique/02-adv-gameable-criterion/assert.sh` — the assert
       must check both the header outcome and that the persisted findings
       identify the seeded criterion (R6 — committed-scenario half; the
       passing run is manual-pending, paid headless, human-launched).
@@ -152,15 +157,15 @@ docs/memory/anchored-acceptance-criteria.md` ≥ 1 (R1; both phrases
       port pass, per the memory doc's multi-file rule):
       `grep -c 'depth ceiling' antigravity/.agents/skills/idea/SKILL.md`
       ≥ 1; `grep -c 'depth ceiling'
-    antigravity/.agents/skills/breakdown/SKILL.md` ≥ 1;
+antigravity/.agents/skills/breakdown/SKILL.md` ≥ 1;
       `grep -ci 'gameable' antigravity/.agents/skills/critic/SKILL.md`
       ≥ 1; `grep -ci 'gameable' antigravity/.agents/workflows/critique.md`
       ≥ 1; `grep -c 'criteria-adequacy'
-    antigravity/.agents/skills/verifier/SKILL.md` ≥ 1 (R7; all five
+antigravity/.agents/skills/verifier/SKILL.md` ≥ 1 (R7; all five
       phrases absent from these ports today, verified 2026-07-19). The
       closing task's own commit modifies the plugin version line:
       `git show <closing-commit> -- .claude-plugin/plugin.json | grep -q
-    '^+.*"version"'` (R7, per the memory doc's version-bump pattern).
+'^+.*"version"'` (R7, per the memory doc's version-bump pattern).
 
 ## Open questions
 
