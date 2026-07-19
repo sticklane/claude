@@ -199,17 +199,27 @@ mirror-obligation note does not apply.
 ## Acceptance signals
 
 - `grep -c "genuinely time-sensitive\|genuinely time-varying" .claude/rules/token-discipline.md`
-  → ≥ 1 (currently 0 for both phrasings; confirms R1 landed with this or
-  an equivalent literal anchor — adjust the exact phrase during breakdown
-  if wording changes, keeping the anchor check in sync).
+  → ≥ 1 (currently 0 for both phrasings, re-verified 2026-07-19; confirms
+  R1 landed with this or an equivalent literal anchor — adjust the exact
+  phrase during breakdown if wording changes, keeping the anchor check in
+  sync). Depth ceiling: doctrine prose for future hook authors — deeper
+  is infeasible in scope (Non-goals reject a mechanical staticness lint);
+  behavioral complement is the MANUAL reviewer read below.
 - `grep -c "silent when nothing changed\|silent when that state hasn't changed" .claude/rules/token-discipline.md`
-  → ≥ 1 (currently 0; confirms the silence requirement landed, not just
-  the general "dynamic is OK" framing).
-- `grep -c "handoff-resume" .claude/rules/token-discipline.md` → ≥ 1 and
-  `grep -c "plugin-staleness" .claude/rules/token-discipline.md` → ≥ 1 and
-  `grep -c "session-refresh" .claude/rules/token-discipline.md` → ≥ 1
-  (confirms the bullet names this repo's own compliant hooks as the
-  worked examples, not just an abstract rule).
+  → ≥ 1 (currently 0, re-verified 2026-07-19; confirms the silence
+  requirement landed, not just the general "dynamic is OK" framing).
+  Depth ceiling: same as above — behavioral complement is the MANUAL
+  reviewer read below.
+- `grep -c "hooks/handoff-resume" .claude/rules/token-discipline.md` → ≥ 1
+  and `grep -c "hooks/plugin-staleness" .claude/rules/token-discipline.md`
+  → ≥ 1 and `grep -c "hooks/session-refresh" .claude/rules/token-discipline.md`
+  → ≥ 1 (confirms the bullet names this repo's own compliant hooks as the
+  worked examples, not just an abstract rule; anchors are the `hooks/...`
+  path forms R1 mandates because the original bare `session-refresh` grep
+  was vacuous — the file's "## Session refresh" section already matches
+  it twice today; all three path forms verified absent, 0 matches each,
+  2026-07-19). Depth ceiling: same as above — behavioral complement is
+  the MANUAL reviewer read below.
 - `grep -n "^## Cache economics" .claude/rules/token-discipline.md`
   returns exactly one match (section not duplicated or renamed).
 - `grep -c "^## " .claude/rules/token-discipline.md` → 8 (R3's count
