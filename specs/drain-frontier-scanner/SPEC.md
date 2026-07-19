@@ -55,15 +55,29 @@ so it adds no new launch surface and needs no gating
   ordering; takes spec-dir paths, `--window N`, and `--claimed
 <task-path>...` (the in-flight tasks whose `Touch:` lists form the
   current claim set) as arguments.
-  - `admissible` implements drain's existing admission contract
-    verbatim (`.claude/skills/drain/reference.md`, Rolling-window
-    admission — the authority; restated here only to bind the JSON
-    field): two tasks are co-admissible iff a single `- Group:` line
-    names both AND their `Touch:` lists are disjoint; a task on no
-    `- Group:` line runs alone, admitted only when the window is
-    empty; every admitted task's `Touch:` must also be disjoint from
-    the `--claimed` set. Windows are per-spec, never interleaved
-    across specs (today's behavior; interleaving is a future spec).
+  - Field semantics, pinned: `dispatchable` is the FULL ordered set of
+    tasks with `Status: pending` and every dependency `done`,
+    regardless of Touch collisions; `admissible` is its windowed
+    subset (`dispatchable ⊇ admissible`), and `--window N` truncates
+    `admissible` only — `dispatchable` is never truncated. A
+    dispatchable task kept out of `admissible` by a Touch collision
+    with `--claimed` stays in `dispatchable` (it is not `blocked`,
+    which remains deps/`Unblock:`-based).
+  - `admissible` implements drain's existing admission contract with
+    the authority's own structure (`.claude/skills/drain/reference.md`,
+    Rolling-window admission — the authority; restated here only to
+    bind the JSON field): co-admissibility is the `- Group:` predicate
+    alone — two tasks are co-admissible iff a single `- Group:` line
+    names both, and a task on no `- Group:` line runs alone, admitted
+    only when the window is empty; SEPARATELY, every admitted task's
+    `Touch:` must be disjoint from the in-flight claim set
+    (`--claimed` plus tasks already admitted this pass). Windows are
+    per-spec, never interleaved across specs (today's behavior;
+    interleaving is a future spec).
+  - Invocation scope: drain invokes the scanner once per spec dir,
+    matching its sequential walk — so a malformed header's non-zero
+    exit disables the frontier for that spec only, and the multi-dir
+    argument form exists for reporting callers, not drain.
   - Touch-disjointness predicate for glob entries: normalize each
     entry to its literal prefix up to the first glob metacharacter;
     two entries conflict when either prefix is a prefix of the other;
@@ -82,7 +96,11 @@ so it adds no new launch surface and needs no gating
     defect named on stderr, since a wrong frontier is worse than no
     frontier.
 - R2: `test_drain_frontier.py` beside it (same `python3 <file>` unittest
-  convention as `test_list_specs.py`), with fixture-driven cases
+  convention as `test_list_specs.py`: unit-test fixtures are built in
+  temp dirs; the ONE committed golden fixture lives at
+  `.claude/skills/drain/fixtures/` — NEVER under real `specs/`, where
+  drain's no-arg queue walk and list-specs would treat its pending
+  tasks as live work), with fixture-driven cases
   encoding the pinned ordering triple and the logged incident classes:
   dependency gating on non-`done` deps; Priority then unblocking-power
   then lexicographic tie-break; Touch-disjointness enforced per-spec,
@@ -147,15 +165,22 @@ so it adds no new launch surface and needs no gating
       with at least one test per R2 incident class (R1, R2 — L2:
       exercises the scanner's behavior on fixtures).
 - [ ] `python3 .claude/skills/drain/drain_frontier.py
-specs/<committed-fixture> --window 2` over a committed test
-      fixture emits JSON whose `admissible` set matches the fixture's
-      documented expectation (R1 — golden-output check; fixture lives
-      under the test file's fixture dir).
+.claude/skills/drain/fixtures/basic-window --window 2` emits JSON
+      whose `admissible` set matches the fixture's documented
+      expectation (R1 — golden-output check). The committed fixture
+      lives under `.claude/skills/drain/fixtures/` ONLY — never under
+      real `specs/`, whose queue walks would treat fixture tasks as
+      live work; unit tests otherwise build fixtures in temp dirs per
+      the `test_list_specs.py` convention.
 - [ ] `grep -c 'drain_frontier' .claude/skills/drain/SKILL.md` ≥ 2 —
-      the invocation and the fallback — and `grep -c 'drain_frontier'
+      the invocation and the fallback — and `grep -c 'tie-break is
+  computed by drain_frontier' .claude/skills/drain/SKILL.md` ≥ 1 —
+      the mandated verbatim sentence in step 2's tie-break paragraph,
+      so the count cannot be satisfied while step 2 still instructs
+      model-side ordering — and `grep -c 'drain_frontier'
   .claude/skills/drain/reference.md` ≥ 1 — the Rolling-window
-      admission section deferring to the scanner (R3; phrase absent
-      today across all target files, verified 2026-07-19). Depth
+      admission section deferring to the scanner (R3; all anchors 0
+      today, verified 2026-07-19). Depth
       ceiling on these greps: procedure prose — the behavioral
       complement is R4's trajectory assertion (the scanner actually
       runs during a drain eval) plus R2's unit tests.
@@ -163,10 +188,14 @@ specs/<committed-fixture> --window 2` over a committed test
       (R4 — committed half; the passing paid run is manual-pending,
       human-launched, per docs/memory/unattended-worker-tool-limits.md).
 - [ ] `grep -c 'drain_frontier' codex/.agents/skills/drain/SKILL.md` ≥ 1
-      and the antigravity port's divergence classification recorded in
-      the task's evidence; closing commit modifies the plugin version
-      line: `git show <closing-commit> -- .claude-plugin/plugin.json |
-grep -q '^+.*"version"'` (R5).
+      and `grep -c 'codex/.agents/skills/drain/SKILL.md.*drain_frontier'
+    tests/mirror-procedure-manifest.txt` ≥ 1 and `bash
+    tests/test_mirror_procedure_coverage.sh` exits 0 — the seeded
+      codex manifest line is present and the coverage gate stays green
+      (R5); the antigravity port's divergence classification recorded
+      in the task's evidence; closing commit modifies the plugin
+      version line: `git show <closing-commit> --
+    .claude-plugin/plugin.json | grep -q '^+.*"version"'` (R5).
 
 ## Open questions
 
