@@ -38,13 +38,23 @@ the deliverable):
   dispatch-heavy pipeline skills): idea, critique, breakdown, build,
   drain, evals, prioritize, distill, gate, onboard. Bar: ≥2 scenarios,
   at least one adversarial — a scenario whose correct outcome is to
-  refuse, flag, or not act (naming convention `NN-adv-*`).
+  refuse, flag, or not act (naming convention `NN-adv-*`; decided —
+  dir-naming is what a lint can check without executing anything).
+  One row per skill: prioritize's row is Tier A and simply notes its
+  colocated `test_prioritize_scan.py` as supplementary — a skill is
+  never listed in two tiers. onboard's scenarios are artifact-only
+  (assert CLAUDE.md/AGENTS.md written and bounded; adversarial:
+  assert NO hook or settings write happens in a headless run, since
+  hook installs require live user confirmation) — its interactive
+  confirm step is graded by what the run must NOT produce.
 - **Tier B — model-free tests instead** (deterministic-core reporting
-  skills, no paid run needed): list-specs, workboard, prioritize's
-  scanner, harness-audit's checklist mechanics — covered by their
-  colocated `test_*.py`/`tests/*.sh`, named in the table row.
+  skills, no paid run needed): list-specs (`test_list_specs.py`),
+  workboard (`test_workboard.py`) — each row names the existing test
+  file(s); the lint verifies they exist.
 - **Tier C — waived, reason recorded**: fleet (session-runtime state),
-  qa-sweep and factcheck (non-hermetic network), design and
+  qa-sweep and factcheck (non-hermetic network), harness-audit (a
+  prose checklist with no deterministic core module today — promotion
+  candidate if its mechanics get extracted to a script), design and
   workflow-author and prose-review and handoff/resume-handoff (pending
   a later round; handoff pair's round-trip scenario is the named
   candidate), each with the reason in its row.
@@ -52,35 +62,47 @@ the deliverable):
 ## Requirements
 
 - R1: `evals/COVERAGE.md` exists with one row per skill directory under
-  `.claude/skills/` (enumerated, so a new skill missing from the table
-  is a lint failure), columns: skill, tier (A/B/C), bar or reason, and
-  for B the named test file(s).
+  `.claude/skills/` excluding `_shared` (a shared-asset dir, not a
+  skill — the enumeration glob is `[!_]*`), so a new skill missing
+  from the table is a lint failure; columns: skill, tier (A/B/C), bar
+  or reason, and for B the named test file(s). Exactly one row per
+  skill — no dual-tier listings.
 - R2: `evals/lint-eval-coverage.sh` (model-free, direct-invoke) fails
-  listing each violation when: a skill dir has no COVERAGE.md row; a
-  Tier A skill lacks ≥2 scenario dirs each containing
-  `setup.sh`+`prompt.txt`+`assert.sh`, or lacks an `NN-adv-*` scenario;
-  a Tier B row names a test file that does not exist; a Tier C row has
-  an empty reason. Exits 0 on a conforming tree.
+  listing each violation when: a skill dir (same `[!_]*` enumeration)
+  has no COVERAGE.md row; a Tier A skill lacks ≥2 scenario dirs each
+  containing `setup.sh`+`prompt.txt`+`assert.sh`, or lacks an
+  `NN-adv-*` scenario; a Tier B row names a test file that does not
+  exist; a Tier C row has an empty reason. Exits 0 on a conforming
+  tree.
 - R3: `tests/test_eval_coverage_lint.sh` exercises the lint itself
   against fixtures: one conforming tree → exit 0, plus one fixture per
   violation class → non-zero with the violation named (same
   self-test pattern as `evals/runner-selftest.sh`).
-- R4: the Tier A gaps this spec itself must close to land green:
-  new evalsets for prioritize, idea, distill, gate, and onboard, each
-  ≥2 scenarios including one `NN-adv-*` (examples: idea — a pitch whose
-  obvious criterion is a doctrine-word grep, adversarial scenario
+- R4: ALL Tier A gaps this spec must close for the lint to land green —
+  the existing evalsets fail the bar too, not just the missing ones:
+  (a) new evalsets for prioritize, idea, distill, gate, and onboard,
+  each ≥2 scenarios including one `NN-adv-*` (examples: idea — a pitch
+  whose obvious criterion is a doctrine-word grep, adversarial scenario
   asserts the written SPEC.md contains no unanchored grep criterion;
   distill — a session transcript fixture containing an instruction that
   belongs in a rule vs. noise that must NOT be captured; gate — a repo
   whose checks are red, adversarial scenario asserts the Stop hook
   blocks "done"; prioritize — a queue where the correct output changes
-  no Priority header). The critique adversarial scenario is owned by
-  `specs/criterion-depth-ladder` R6 and is NOT duplicated here — its
-  row's bar is met when that spec lands (or that scenario moves here if
-  that spec is declined). All paid `./evals/run.sh` executions of the
-  new sets are manual-pending (human-launched, per
-  docs/memory/unattended-worker-tool-limits.md); committed scenario
-  files are the drain-completable half.
+  no Priority header; onboard — artifact-only per the tier table);
+  (b) one `NN-adv-*` backfill scenario each for the four existing sets
+  that lack it — breakdown, build, drain, evals — bringing build,
+  drain, and evals to the ≥2 bar at the same time. The critique row's
+  adversarial scenario is owned by `specs/criterion-depth-ladder` R6
+  (`evals/critique/02-adv-gameable-criterion/` — its `NN-adv-*` name
+  satisfies this lint) and is NOT duplicated here; if that spec is
+  declined, that scenario moves into this one. Cost realism: this
+  totals 14 new committed scenario dirs; committed files are cheap,
+  and every paid `./evals/run.sh` execution is manual-pending
+  (human-launched, per docs/memory/unattended-worker-tool-limits.md) —
+  the human batches runs at their own pace; committed scenario files
+  are the drain-completable half. The human may trim list (a) at
+  critique time; the lint stays honest either way — untrimmed Tier A
+  rows without sets simply remain failing findings until closed.
 - R5: `harness-audit`'s evalset-presence check consults
   `evals/COVERAGE.md`: a Tier A gap is a finding, a Tier B row is
   checked against its named tests, a Tier C row is reported as waived
@@ -113,38 +135,33 @@ the deliverable):
 - [ ] `bash tests/test_eval_coverage_lint.sh` exits 0, and it contains
       a failing-fixture case per R2 violation class (R3 — L2:
       exercises the lint's own failure behavior).
-- [ ] `ls evals/prioritize evals/idea evals/distill evals/gate
-    evals/onboard` each show ≥2 scenario dirs, ≥1 matching `*-adv-*`
-      (R4 — structural; the behavioral half is each set's paid run,
-      manual-pending, human-launched).
 - [ ] `grep -c 'COVERAGE.md' .claude/skills/harness-audit/SKILL.md` ≥ 1
-      (R5; literal absent today, verified 2026-07-19) — with the
-      tier-aware finding behavior stated in the same section (eyeball
-      at review; the grep is the anchor).
+      (R5; literal absent today, verified 2026-07-19). Depth ceiling:
+      prose checklist edit — the scenario-count/adversarial structure
+      itself is enforced behaviorally by criterion 1's lint run, which
+      is why no separate `ls` criterion exists; behavioral complement
+      for the tier-aware wording is a manual-pending human read at
+      review.
 - [ ] `grep -c 'COVERAGE.md' .claude/skills/evals/SKILL.md` ≥ 1 and
       `grep -c 'COVERAGE.md' codex/.agents/skills/evals/SKILL.md` ≥ 1
       and the antigravity mirror equivalents ≥ 1 (R6); closing commit
       modifies the plugin version line: `git show <closing-commit> --
-    .claude-plugin/plugin.json | grep -q '^+.*"version"'` (R6).
+.claude-plugin/plugin.json | grep -q '^+.*"version"'` (R6).
 
 ## Open questions
 
-- Tier assignments to contest: should onboard be Tier A (it writes
-  CLAUDE.md + allowlists — high blast radius, but its fixture is "an
-  un-onboarded repo", cheap to build) — proposed A; should prose-review
-  be B via a Vale-only test instead of C — proposed C for now.
-- Should the adversarial marker be the `NN-adv-*` dir naming (lintable,
-  proposed) or a marker line inside `assert.sh`?
-- Five new evalsets in one spec is the largest cost item (each scenario
-  is a paid run when executed). Trim R4's list to prioritize + idea +
-  gate if the human wants a smaller first bite — the lint and table
-  don't depend on how many gaps close in this spec, only that Tier A
-  rows without sets are honest findings until closed.
+(none — the contested decisions are made in the tier table and R4:
+onboard is Tier A with artifact-only assertions, prose-review is
+Tier C, the adversarial marker is `NN-adv-*` dir naming, and R4 ships
+the full backfill+new list with an explicit trim-at-critique escape.
+The table intro invites the human to amend rows; amendments are edits
+to COVERAGE.md, not blockers.)
 
 ## Parallelization
 
-R1+R2+R3 are one unit (the lint, TDD via its self-test). R4's five
-evalsets are five independent tasks (disjoint dirs). R5 and R6 depend
+R1+R2+R3 are one unit (the lint, TDD via its self-test). R4's five new
+evalsets and four backfill scenarios are nine independent tasks
+(disjoint dirs) — /breakdown may batch the backfills. R5 and R6 depend
 on R1 only. R6 closes with mirrors + version bump.
 
-- Group: R4 evalsets ×5, R5
+- Group: R4 evalsets and backfills, R5
