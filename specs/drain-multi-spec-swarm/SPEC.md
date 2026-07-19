@@ -75,11 +75,18 @@ coordination substrate:
   widened Touch-disjointness check is vacuous — every cross-spec pair would
   still fail the unwidened, globally-scoped co-admissibility clause and be
   forced to run alone, defeating R1's raised spec-lease cap entirely (the
-  gap round-3 and round-4 critique both found). The old ≤5 per-spec
-  worker sub-cap is dropped: all claimed specs' dispatchable tasks compete
-  for **one shared global window capped at ≤10 total live workers**,
-  admitted via the existing Priority-then-path tie-break across the whole
-  pool once it is full.
+  gap round-3 and round-4 critique both found). **Two-level cap, stated
+  precisely (round-8 fix):** a single claimed spec's own concurrency ceiling
+  stays exactly what it is today — its own `W` (hard-capped at ≤5,
+  unchanged) bounds how many of THAT spec's own tasks may run at once. What
+  is dropped is treating each claimed spec's budget as independently
+  summable (3 claimed specs would otherwise sum to up to 15 workers); instead
+  all claimed specs' dispatchable tasks compete for **one shared global
+  window capped at ≤10 total live workers across every claimed spec
+  combined**, admitted via the existing Priority-then-path tie-break across
+  the whole pool once it is full — so a single spec can still never exceed
+  its own `W`, but the sum across specs can be, and often will be, throttled
+  below the naive per-spec sum by the shared ≤10 ceiling.
 - Spec-level lease claiming (R1) is a mechanism independent of the
   per-spec task rolling-window's "these rules bind only when W > 1"
   preamble (reference.md's admission-rule section opening) — R1 claims up
@@ -137,12 +144,18 @@ coordination substrate:
   `Group:` line and no window-empty check apply across specs (a `Group:`
   line names tasks only within its owning spec's Parallelization section,
   so it cannot apply across specs, and "window empty" per the above is
-  never evaluated against a different spec's in-flight set). The old ≤5
-  per-spec worker sub-cap is dropped; all claimed specs' dispatchable
-  tasks compete for one shared global window capped at ≤10 total live
-  workers, admitted via the existing Priority-then-path tie-break across
-  the whole pool once it is full. This IS the mechanized fix for the
-  cross-spec task-collision gap documented in
+  never evaluated against a different spec's in-flight set). **Two-level
+  cap (round-8 precision fix):** a single claimed spec's own `W` (hard-capped
+  at ≤5, unchanged) still bounds how many of THAT spec's own tasks may run
+  concurrently — this is not dropped. What IS dropped is treating each
+  claimed spec's budget as independently summable across specs; instead all
+  claimed specs' dispatchable tasks compete for one shared global window
+  capped at ≤10 total live workers across every claimed spec combined,
+  admitted via the existing Priority-then-path tie-break across the whole
+  pool once it is full — a single spec can never exceed its own `W`, but
+  the cross-spec sum is throttled to ≤10 rather than the naive per-spec
+  sum. This IS the mechanized fix for the cross-spec task-collision gap
+  documented in
   `docs/memory/drain-dispatch-lessons.md:64-80` ("there is no mechanized
   cross-spec check" today) — no separate detection mechanism is needed.
 - R3: `.claude/rules/token-discipline.md`'s "cap the fleet at a 3–5
@@ -327,9 +340,20 @@ main)..main`) is unchanged.
       global `≤10` pool — never needs the phrase "on TOTAL")
 - [ ] `grep -ci "shared global window\|one shared global\|shared pool" .claude/skills/drain/reference.md`
       → ≥ 1 (the ≤10 cap is stated as one shared pool across all claimed
-      specs, replacing the old per-spec ≤5 sub-cap, rather than each spec
-      separately capped at 5 — currently 0, per round-4's cap-composition
-      finding)
+      specs, replacing the assumption that each claimed spec's budget sums
+      independently — currently 0, per round-4's cap-composition finding)
+- [ ] `grep -c "W ≤ 5" .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md`
+      → combined count ≥ 1 (currently 1, all from SKILL.md:144, verified —
+      round-8 fix: the reconciled cap statement must still assert a single
+      claimed spec's own `W ≤ 5` ceiling SOMEWHERE, whether it stays in
+      SKILL.md or is relocated into reference.md per R9; R2's "two-level
+      cap" wording is only correctly implemented if a spec's own
+      concurrency limit survives the ≤10 shared-pool change rather than
+      being silently dropped — a worker that ships a flat ≤10 window with
+      no surviving per-spec ceiling would otherwise pass every other
+      criterion in this section, since AC13/AC-on-TOTAL only check that the
+      OLD combined "on TOTAL" phrasing is gone, never that a per-spec
+      ceiling replaces it)
 - [ ] `grep -ci "swarm.*10\|10.*swarm\|drain-multi-spec-swarm" .claude/rules/token-discipline.md`
       → ≥ 1 (currently 0, verified — round-5 nit: R3's carve-out must
       co-occur with either the raised cap figure or this spec's slug, not
