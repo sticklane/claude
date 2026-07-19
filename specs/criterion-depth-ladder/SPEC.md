@@ -202,8 +202,13 @@ R4/R5.)
 
 ## Parallelization
 
-R1 is the foundation (the doctrine text the other edits cite). R2+R3
-(authoring skills), R4 (critic + critique), R5 (verifier), R6 (eval
-scenario) are then disjoint in Touch and can run concurrently. R7 closes.
+Task 01 (doctrine) is the foundation the others cite. Tasks 02
+(idea+breakdown), 03 (critic+critique), 04 (verifier), and 05 (eval
+scenario) are disjoint in Touch and share no undecided design — the
+ladder, the verbatim sentences, and the scenario name are all pinned
+above — so they run concurrently once 01 lands (05 depends on nothing
+and may start immediately). Task 06 (mirrors + version bump) closes.
+Group grammar per specs/drain-rolling-window/SPEC.md's Parallelization
+section.
 
-- Group: R2+R3, R4, R5, R6
+- Group: 02, 03, 04, 05
