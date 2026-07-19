@@ -41,9 +41,18 @@ no shared design decision (this spec pins the exact grammar and wording).
 ## Acceptance
 
 - [ ] `grep -c 'Blocks: <impact>' .claude/rules/human-blockers.md` → 1
+      (phrase absent today, count 0, verified 2026-07-19). Depth ceiling:
+      L0 on a prose rules doc — behavioral complement is this task's
+      end-to-end readability check below, which exercises what the grammar
+      means rather than that its text exists.
 - [ ] `grep -n 'readable and actionable' .claude/rules/human-blockers.md` →
-      at least one match
+      at least one match (phrase absent today, count 0, verified
+      2026-07-19; R2's behavioral check is the end-to-end criterion below)
 - [ ] `grep -c 'Blocks: unclear' .claude/rules/human-blockers.md` → ≥ 1
+      (phrase absent today, count 0, verified 2026-07-19). Depth ceiling:
+      L0 on a prose rules doc — behavioral complement is task 03's
+      retrofit, the first real HUMAN.md entry re-filed under the new
+      grammar, plus the end-to-end read below.
 - [ ] End-to-end (R2's readability bar): as the implementing/verifying
       agent, with no other context beyond this file, read only
       `.claude/rules/human-blockers.md`'s updated grammar + Rules sections
