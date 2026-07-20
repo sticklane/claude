@@ -1,11 +1,33 @@
 # Task 04: admission.py — lease-claim CAS + two-level cross-spec cap module
 
-Status: pending
+Status: in-progress
 Depends on: specs/drain-frontier-scanner/tasks/01-scanner-and-tests.md
 Priority: P1
 Budget: 14 turns
 Spec: ../SPEC.md (requirements R1, R2, R4, R5, R6, R12, R13, R14, R17)
 Touch: .claude/skills/drain/admission.py, .claude/skills/_shared/touch_disjoint.py
+
+<!-- PLAN (build step 1; deleted at close-out)
+Order:
+1. touch_disjoint.py TDD: port drain_frontier.py's EXACT predicate
+   (literal_prefix up to first [*?[], pair_conflicts = either prefix-of-other,
+   entries_disjoint, ambiguity->conflict). Add parse_touch (reads Touch: from
+   task file text) + footprint(paths) reading files from disk. Failing tests
+   first incl. ambiguous-prefix fixture (glob prefix-of concrete -> NOT disjoint)
+   and a reads-from-disk assertion (R14 boundary).
+2. admission.py TDD: claim_specs (greedy footprint-disjoint <=3, Priority-then-
+   path) [cases a,b]; admit_tasks (two-level cap: per-spec W<=5 + global<=10,
+   per-spec window scoping) [cases c,d,e]; load_frontier (schema-validate the
+   drain_frontier JSON, non-zero exit on absent/malformed -> R14 negative);
+   lease-claim CAS as callable fns matching reference.md (absent->claim,
+   FRESH->refuse unless baton lineage, ALL STALE->reclaim; read-check-write-
+   commit-push-reread-confirm) with pure claim_decision() split from git I/O.
+3. test files are SELF-RUNNING scripts (print 'case a'..'case e'; exit 0/1) —
+   acceptance greps stdout; no central pytest runner in this repo.
+Risks: cross-spec task disjointness is guaranteed by claim-level footprint
+disjointness (don't re-check). docs/TASKS.md tech-debt entry already present
+(2026-07-19) — pre-satisfied, out of Touch, do NOT edit.
+-->
 
 ## Goal
 
