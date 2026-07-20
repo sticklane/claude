@@ -1,0 +1,1 @@
+Read,Grep,Glob,Edit,Write,Bash(git *),Bash(ctx *),Bash(./context-tree/target/release/ctx *),Bash(context-tree/target/release/ctx *)
