@@ -52,7 +52,7 @@ ONLY, drain runs three non-blocking advisories — **name the terminal tab**,
 **sweep foreign live sessions**, and print **hub-economics** relaunch
 recommendations — none gating dispatch (procedures in
 [reference.md](reference.md)'s "Gen-1 startup advisories" — load only the
-named section). It also pins the **mechanical preflight sweep**: a gen-1
+named section, Grep-then-offset). It also pins the **mechanical preflight sweep**: a gen-1
 pass, before step 1, across EVERY spec in scope that reclaims dead leases and
 prunes orphaned worktrees, reporting a one-line summary.
 
@@ -74,7 +74,7 @@ marker.
 local `main` against `<remote>/main` first — skip if no remote, warn on a fetch
 failure, fast-forward if only the remote moved, halt-and-report if both
 diverged — so the reads below see current shared state (reference.md's "Owner
-lease", Remote divergence check — load only the named section).
+lease", Remote divergence check — load only the named section, Grep-then-offset).
 
 Read only the header fields of each task file (`Status`, `Depends on`,
 `Priority`, `Budget`, `Touch`) — not the bodies; workers read their own task.
@@ -122,7 +122,7 @@ first dispatch, ensure `.claude/worktrees/` is gitignored; the worker prompt
 force-syncs its worktree base against drain's committed flips, and on a
 never-pushed local run drain resyncs the tracking ref after each merge
 (reference.md's Worker prompt and Status field semantics — load only the named
-section).
+section, Grep-then-offset).
 
 When several tasks are dispatchable at once, apply the deterministic tie-break:
 lowest `Priority` (absent = P2), then greatest unblocking-power (count of
@@ -164,8 +164,10 @@ owner-lease re-confirm runs before every subsequent status-flip commit in the
 spec's cycle, not just this claim — see reference.md's "Owner lease" (R2). Launch ONE
 `implementation-worker` agent — an **awaited child, never detached**
 (`.claude/agents/implementation-worker.md` pins the tier) — with
-`isolation: worktree` using the **Worker prompt** in
-[reference.md](reference.md) (the /build procedure plus the defer contract:
+`isolation: worktree`, delivering the **Worker prompt** section in
+[reference.md](reference.md) by **path-pointer** — resolve it to a concrete
+reference.md path the worker reads and follows verbatim, never pasting its
+body into the dispatch call (the /build procedure plus the defer contract:
 **the worker never asks the human and never edits queue state; on ambiguity it
 stops DEFERRED with the exact question**). Prepend
 `<!-- agentprof:role=worker-attempt1 -->` as its first line — single-worker and
@@ -295,7 +297,7 @@ queue position, repeated failed corrections, or a compaction event.
 `Stub-intake-failed:` below; specs/drain-wake-cost/EVIDENCE.md).
 The `max(2, 6 − W)` count is size-adaptive — a wider W batons sooner (W=1→5,
 W=3→3, W=5→2); full derivation in [reference.md](reference.md)'s "Baton pass"
-(load only the named section). On fire: write the baton
+(load only the named section, Grep-then-offset). On fire: write the baton
 `specs/<slug>/DRAIN-BATON.md` (grammar + relaunch command in
 reference.md), spawn the successor generation (awaited where a parent can
 supervise; else headless), report the pass, and **end your turn at once,
@@ -349,7 +351,7 @@ pass").
 
 **Contract** (full rules, grammar, lifecycle: [reference.md](reference.md)'s
 "Stub intake (assess → gate → act)" and "Draft status" — load only the named
-section). For each in-scope `Status: draft` stub, drain runs a
+section, Grep-then-offset). For each in-scope `Status: draft` stub, drain runs a
 **deterministic screen → assess → gate → act** pipeline:
 `.claude/skills/drain/screen-stub.sh` refuses instruction-shaped stubs
 (imperatives, "ignore … instructions", tool directives, absolute paths
@@ -401,7 +403,7 @@ evidence file.
 **Procedure** — full detail (diff-base recovery, build's skip gate, the
 review-fix worker prompt, the coupling-nulled merge) in
 [reference.md](reference.md)'s "Spec-completion review worker"; load only the
-named section. In brief: drain recovers the cumulative product diff from the
+named section (Grep-then-offset). In brief: drain recovers the cumulative product diff from the
 pinned flip-commit message (union of the spec's tasks' `Touch:`) and applies
 build's skip gate (skip, writing `spec review skipped: <reason>`, when no
 product paths remain or product lines < 25), else launches ONE awaited
@@ -452,7 +454,8 @@ session, gated on `Status: deferred`, above) and the final message are fused;
 the final message is a fixed **seven-section checklist** for the human, **each
 entry naming a file path** — the seven sections (§1 deferred questions … §7 next
 commands) and their per-section content are in [reference.md](reference.md)'s
-"Exit checklist (seven sections)" — load only the named section.
+"Exit checklist (seven sections)" — load only the named section
+(Grep-then-offset).
 
 One interview and one checklist per session; "Nothing needs you" is a valid
 checklist.
