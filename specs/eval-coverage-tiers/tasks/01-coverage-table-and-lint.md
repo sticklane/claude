@@ -49,3 +49,18 @@ evals/COVERAGE.md` → ≥ 1 (file exists and names its lint; phrase
       08's closing criterion)
       → PASS: lint reports 17 Tier A gap violations and exits 1, so
       `test $? -ne 0` → exit 0.
+
+## Discovered
+
+- critique already satisfies the Tier A bar (2 scenarios incl.
+  `evals/critique/02-adv-gameable-criterion`), so it is absent from the 17
+  gap findings — guidance for task 07's R4 existence-conditional (no stub;
+  dedupes against task 07's scope).
+- The 17 real-tree gaps span breakdown (no adv), build/drain/evals
+  (1 scenario + no adv), and distill/gate/idea/onboard/prioritize
+  (0 scenarios) — the exact set tasks 02–07 must close for task 08's
+  lint-green criterion (no stub; dedupes against tasks 02–08).
+- lint-eval-coverage.sh passes vacuously when `.claude/skills` is missing
+  or empty under `$ROOT`/`LINT_ROOT` (nullglob empty loop → "OK", exit 0)
+  — late code-review finding on this task's dispatch; stub
+  `09-lint-vacuous-pass-missing-skills-dir.md`.
