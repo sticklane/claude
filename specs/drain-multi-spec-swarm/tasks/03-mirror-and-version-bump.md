@@ -7,6 +7,26 @@ Budget: 10 turns
 Spec: ../SPEC.md (requirements R10, R15)
 Touch: antigravity/.agents/workflows/drain.md, codex/.agents/skills/drain/SKILL.md, .claude-plugin/plugin.json
 
+## Progress
+
+- 2026-07-20: Attempt 1 returned BLOCKED, claiming tasks 04/06 hadn't
+  landed on `main` (admission.py absent, zero `admission.py` mentions in
+  source SKILL.md/reference.md). This is a false observation, not a real
+  blocker: the worker's worktree was cut from the shared repo's stale
+  local `refs/heads/main` (stuck at `15a55a9` because this run's
+  orchestrator isolation works from a detached-HEAD worktree that pushes
+  straight to `origin/main` without ever advancing local `main` in the
+  primary checkout — expected and harmless per orchestrator-isolation
+  doctrine, but it misled this worker's own "reset to `<default-branch>`
+  tip" step). Both tasks 04 (`aaa1638`) and 06 (`7567f25`) are actually
+  merged and pushed to `origin/main`; `admission.py` exists and
+  SKILL.md/reference.md both reference it. Status left `in-progress`
+  (not `blocked`) since this isn't a genuine attempt-1 failure — a fresh
+  worker retry just needs an explicit instruction to sync against
+  `origin/main`, not local `main`. Does not count toward slot-machine
+  escalation. Branch `task/03-mirror-and-version-bump` from this attempt
+  had no commits and was deleted.
+
 ## Goal
 
 `antigravity/.agents/workflows/drain.md` and
