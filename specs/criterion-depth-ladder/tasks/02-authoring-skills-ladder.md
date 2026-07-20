@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 8 turns
@@ -39,7 +39,7 @@ path (task 06).
 
 ## Acceptance
 
-- [ ] `grep -c 'depth ceiling' .claude/skills/idea/SKILL.md` → ≥ 1 and
+- [x] `grep -c 'depth ceiling' .claude/skills/idea/SKILL.md` → ≥ 1 and
       `grep -c 'depth ceiling' .claude/skills/breakdown/SKILL.md` → ≥ 1
       and `grep -c 'ladder level' .claude/skills/idea/SKILL.md` → ≥ 1 and
       `grep -c 'ladder level' .claude/skills/breakdown/SKILL.md` → ≥ 1
@@ -47,7 +47,10 @@ path (task 06).
       authoring instruction — behavioral complement is the idea-evalset
       adversarial scenario owned by specs/eval-coverage-tiers, plus a
       manual-pending human read of the edited sections.
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+      Verified: all four → 1 (verifier, evidence/02-authoring-skills-ladder.md).
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0
+      Verified: exit 0, "all ultra mentions gated in 4 files"
+      (evidence/02-authoring-skills-ladder.md).
 
 ## Progress
 
