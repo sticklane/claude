@@ -41,7 +41,7 @@
   git timeout (`:364`) — should be named constants (env-configurable only
   where there's a real reason, matching the existing stop-grace model).
   (2026-07-10)
-- **agentprof: collapse cmd_* flag/positional boilerplate.** The
+- _*agentprof: collapse cmd_* flag/positional boilerplate._* The
   FlagSet-setup → `parsePositionals` → "expected exactly one … file"
   head block is near-identical across `cmd_gcp.go:14-26`,
   `cmd_vertex.go:13-24`, `cmd_otel.go:31-41`, and the `-o` flag string is
@@ -102,7 +102,7 @@
   insert-after-H1 branch is untested. (2026-07-10)
 - **workboard: live server hangs on /workboard.** The agent-console
   workboard server (port 8899, launchd) hangs — `curl
-  http://127.0.0.1:8899/workboard` timed out 3x (60-85s, 0 bytes) on
+http://127.0.0.1:8899/workboard` timed out 3x (60-85s, 0 bytes) on
   2026-07-13 while the process idled (~8s CPU over minutes); suspected
   slow/disconnected filesystem mount in its scan path. Investigate and
   fix; do NOT restart the service as part of filing this — the hung
@@ -113,3 +113,13 @@
   one-liner pushed it back up. Trim/relocate prose (the d51ce4b9
   reference.md pattern) without content loss. (2026-07-13, verification
   sweep)
+- **Two independent Touch-disjointness predicate implementations.**
+  `drain-multi-spec-swarm` task 04 adds `.claude/skills/_shared/touch_disjoint.py`
+  (consumed by `admission.py`), implementing the same glob-prefix
+  disjointness algorithm `specs/drain-frontier-scanner`'s `drain_frontier.py`
+  independently implements internally (both pinned to the identical
+  prefix-normalize/ambiguity-resolves-conservative rule from
+  `drain-frontier-scanner/SPEC.md` R1, but as two separate code paths that
+  could drift). A follow-up spec should converge `drain_frontier.py` onto
+  the shared `_shared/touch_disjoint.py` helper so only one implementation
+  exists. (2026-07-19, drain-multi-spec-swarm round-10 critique)

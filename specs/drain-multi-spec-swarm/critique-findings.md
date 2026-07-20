@@ -1,3 +1,69 @@
+# Critique findings — READY WITH NITS (2026-07-19, round 10)
+
+SPEC.md-hash: 4f9bd6a0a00bceca75bcbed07117dce2a01a49f15adc5b186288ee0b7884626d
+
+Round-10 revision added R13-R17 (extracting the lease-claim CAS protocol and
+cross-spec two-level cap into a live-invoked Python module, `admission.py`,
+composing with sibling spec `drain-frontier-scanner`'s `drain_frontier.py`,
+plus a real-multiprocessing concurrency test replacing task 04's original
+bash-simulation plan) — the "real test of the swarm, without an attended
+run" the user asked to spec out. Two critique passes:
+
+**Pass 1 verdict: NOT READY.** Findings, most damaging first:
+
+1. (confidence 76) R16 originally required proving the shared ≤10 global
+   worker cap via `multiprocessing`, but that cap is single-orchestrator
+   in-memory bookkeeping with no persisted shared state to race against
+   (Out of scope forbids inventing one) — unimplementable as specified.
+   Fixed: moved to task 04's existing deterministic fixture case (e); the
+   concurrency test now covers only the 3 scenarios genuinely subject to
+   multi-process races (same-spec lease contention, cross-spec
+   simultaneous claims, stale-lease reclaim).
+2. (confidence 78) R14 claimed `admission.py` sources cross-spec Touch
+   footprints from `drain_frontier.py`'s JSON output, but that scanner's
+   schema (per its own R1) carries no per-task `Touch:` data — infeasible.
+   Fixed: `admission.py` reads `Touch:` headers directly via a new shared
+   helper, `.claude/skills/_shared/touch_disjoint.py`; it still consumes
+   `drain_frontier.py`'s JSON for the dispatchable/admissible/blocked lists
+   that scanner actually emits.
+3. (confidence 60) The stale-lease reclaim scenario paired a passive,
+   non-racing lease holder against one reclaimer — races against nothing.
+   Fixed: respecified as two processes simultaneously racing to reclaim the
+   same stale lease.
+4. (confidence 58) SKILL.md's ≤500-line budget depends on reconciling
+   growth from both this spec (task 06) and sibling `drain-frontier-scanner`
+   (task 02), with no explicit backstop noted. Fixed: R17 states task 06's
+   `wc -l ≤ 500` check is the reconciling gate for both specs' growth.
+
+**Pass 2 verdict: READY WITH NITS.** All 4 pass-1 findings confirmed
+genuinely resolved (not reworded). New findings:
+
+1. (confidence 70) `touch_disjoint.py` (new, admission-side) and
+   `drain_frontier.py` (sibling spec, internal) are two independent
+   implementations of the same glob-prefix disjointness algorithm with no
+   acceptance criterion pinning them to identical behavior — a divergence
+   in the conservative-ambiguity direction would let `admission.py`
+   co-claim specs `drain_frontier.py` would treat as colliding. Fixed:
+   task 04 now pins `touch_disjoint.py` to the verbatim algorithm from
+   `drain-frontier-scanner/SPEC.md` R1 (prefix-normalize, ambiguity → not
+   disjoint), with a dedicated fixture/acceptance criterion for the
+   ambiguous-prefix case, plus a `docs/TASKS.md` tech-debt entry
+   recommending a future spec converge the two onto one shared
+   implementation.
+2. (confidence 85, cosmetic) The Parallelization section called task 01
+   "done" while its `Status:` header is actually `pending` on `main` (its
+   implementation landed on the separate `drain-orchestrator-run` branch,
+   not yet merged back). Fixed: reworded to note the design is fully
+   pinned but the branch-merge status is separate and unresolved (a
+   pre-existing gap, not something this revision introduces or resolves).
+3. (confidence 40, watch-item, not a blocker) No task creates antigravity/
+   codex `.py` copies of `admission.py`/`touch_disjoint.py` — only prose
+   mirrors. Confirmed consistent with `drain-frontier-scanner`'s own mirror
+   task for `drain_frontier.py` (same pattern, not a new gap). Left as-is;
+   the closure-triggered mirror-verification sweep is the standing catch.
+
+---
+
 # Critique findings — NOT READY (2026-07-18, round 3, resumed via /resume-handoff)
 
 SPEC.md-hash: b05100e8a8c30756c5faea4906aa1d53c11281482da302e423ea944c8811a06d
