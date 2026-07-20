@@ -46,3 +46,13 @@ spec owns that overage); do not restructure unrelated sections.
       prose — behavioral complement is task 03's trajectory assertion
       plus task 01's unit tests.
 - [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+
+## Progress
+
+- [2026-07-20 /drain] Attempt 1 (opus): implementation DONE, verifier PASS
+  on all acceptance criteria and mirror-coverage gate, but the merge failed
+  drain's own project gate: `bash evals/lint-skill-size-gate.sh` →
+  ".claude/skills/drain/SKILL.md:515: exceeds 500-line SKILL.md budget"
+  (515 lines, 15 over the 500-line cap; the task added 27 net lines to
+  SKILL.md). Branch task/02-drain-consumes-scanner discarded (merge reset,
+  never pushed). Relaunching one tier up per the slot machine.
