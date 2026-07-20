@@ -16,6 +16,14 @@ Loaded on demand. Contains the classification checklist, status semantics,
 the exact worker prompt (workers return only a **verdict + evidence**), the
 tournament procedure (at most one per task), and the headless fallback.
 
+**Grep-then-offset reads (do this before every reference.md read).** This
+file is long; never a bare sequential `Read` of the whole thing. First
+`Grep -n '^## '` reference.md to list its section headers, locate the target
+section's start line and the next header's line, then `Read` with
+`offset`/`limit` bounded to that range — the Grep-then-offset procedure.
+SKILL.md's "load only the named section" pointers each name a section here
+and invoke exactly this procedure; they cite it rather than restating it.
+
 ## Drain-readiness gate
 
 Every task in the queue drains — there is no "attended" task category that
@@ -613,6 +621,16 @@ uncommitted writes into the rescue branch, so the accepted risk is losing
 the RUN, not the work.
 
 ## Worker prompt (verbatim, fill the <>)
+
+**Delivery: by path-pointer, never pasted.** The hub delivers this section
+the same way it delivers `<build-skill-path>` (resolved just below) — as a
+path-pointer, not an inlined body. At dispatch it resolves this "Worker
+prompt" section to a concrete reference.md path and tells the worker to read
+and follow it verbatim, substituting only the task-specific pieces (task file
+path, branch name, budget, any task-specific `## Answers` notes) directly in
+the `Agent` dispatch call. Never paste this section's ~700-word body into the
+prompt: the path-pointer keeps every dispatch call small and single-sources
+the contract to this one section.
 
 For worker agents dispatched as awaited children with `isolation: worktree`. The worktree SHOULD be cut
 from the commit drain just made; because some harnesses instead pin it to a
