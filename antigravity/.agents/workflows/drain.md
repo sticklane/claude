@@ -479,7 +479,11 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    `specs/<slug>/ layout` it also carries the verifier's `evidence/`
    file — for other layouts the task file's inline evidence is the
    artifact) and run
-   the project gates — the gate run invokes `scripts/check.sh`, drain's
+   the project gates. The merge commit follows AGENTS.md's commit-hygiene
+   rules: a **subject/body** split with subject
+   `merge: <spec-slug> task NN — <short what>` (target ≤72 chars, hard cap
+   100), and any ratified riders, audit notes, and acceptance evidence in the
+   body rather than the subject line — the gate run invokes `scripts/check.sh`, drain's
    sole required check entrypoint for its merge-time gate, never a
    hand-derived list of steps read out of AGENTS.md prose (repos without it
    fall back to their own build/lint/test commands); once gates pass, delete
@@ -501,7 +505,12 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    2), and the Deferred/Blocked/discovery commits below — push after
    each, not only after a DONE merge. The worker never
    pushes (its "do not push" clause is unchanged) — only the orchestrator,
-   after each of its own commits.
+   after each of its own commits. Every such bookkeeping commit follows the
+   **subject/body** split (AGENTS.md's commit-hygiene rules): a short
+   type-prefixed subject, with verdict, lease, and liveness detail in the
+   body rather than a bloated subject — except the regex-pinned machinery
+   subjects (the `in-progress` flip and the auto-breakdown message), which
+   are reproduced verbatim.
    **Skill-doc size/TOC gate (conditional pre-merge blocker):** before merging
    a DONE task whose `Touch:` includes any `.claude/skills/*/SKILL.md` or
    `.claude/skills/*/reference.md` path, run `bash evals/lint-skill-size-gate.sh`;
@@ -687,6 +696,9 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    pointing at the baton (write the baton's `Run-token:` line as the
    owner lease's `Run-token` — the sole lineage proof; a fresh process
    otherwise has no way to prove it's the legitimate heir).
+   Baton-pass and bookkeeping commits follow the **subject/body** split
+   (AGENTS.md's commit-hygiene rules): a short subject, with verdict counts
+   and lease/liveness detail in the body rather than the subject line.
    **Orchestrator-allowlist pre-flight (before self-relaunching):** the
    `.claude` runtime self-relaunches at this point, so before it does — and, in
    Antigravity, before writing the baton for the human re-launch, since the same
