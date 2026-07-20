@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -38,8 +38,8 @@ one committed golden fixture lives at
 - [ ] `python3 .claude/skills/drain/test_drain_frontier.py` → exit 0,
       with at least one test per R2 incident class
 - [ ] `python3 .claude/skills/drain/drain_frontier.py
-    .claude/skills/drain/fixtures/basic-window --window 2` → JSON
+  .claude/skills/drain/fixtures/basic-window --window 2` → JSON
       whose `admissible` matches the fixture's documented expectation
 - [ ] `[ ! -d specs/basic-window ] && ! ls .claude/skills/drain/fixtures/
-    | grep -qv basic-window` → exit 0 (fixture landed in the skill
+  | grep -qv basic-window` → exit 0 (fixture landed in the skill
       dir only; nothing stray)
