@@ -43,3 +43,17 @@ Priority header, asserted by diffing headers before/after.
           test), scanner rc=0 on both fixtures; graders red-first (01 fails on
           untouched, passes on P0/P3+commit; 02-adv passes on no-op, fails on a
           P5 edit). Awaits a human-launched paid model run. -->
+
+## Discovered
+
+- `evals/run.sh` provisions only the single skill dir under test, so any
+  evalset whose skill runs a script importing `_shared`/`workboard`/
+  `runtimes/` must self-provision those in its `setup.sh` (as this task
+  does). A general fix — run.sh provisioning shared deps for all
+  scenarios — would remove the per-scenario boilerplate. Stub
+  `10-run-sh-shared-dep-provisioning.md`.
+- `bash evals/lint-eval-coverage.sh` FAILs with 15 violations across 8
+  sibling Tier A skills (breakdown: no adversarial; build/distill/drain/
+  evals/gate/idea/onboard: under-bar and/or no adversarial) — the exact
+  remaining scope of tasks 03–07 toward task 08's lint-green criterion
+  (no stub; dedupes against tasks 03–08).
