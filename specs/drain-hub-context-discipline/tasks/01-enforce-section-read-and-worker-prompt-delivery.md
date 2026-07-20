@@ -105,3 +105,11 @@ the equivalent tightening there. Do not touch
   hook re-applies it on any edit, so it is repo-enforced formatting rather
   than a substantive change to read-only criterion text. Reversible: none
   needed; re-indenting would just be re-stripped by the hook.
+
+## Discovered
+
+- [2026-07-20 /drain] plugin.json version bump for this drain skill
+  behavior change — CLAUDE.md says to bump `.claude-plugin/plugin.json`
+  `version` whenever skill behavior changes; it is outside this task's
+  Touch. Scaffolded as
+  specs/drain-hub-context-discipline/tasks/04-plugin-json-version-bump.md.
