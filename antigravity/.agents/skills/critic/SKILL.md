@@ -1,6 +1,6 @@
 ---
 name: critic
-description: Adversarial review discipline for specs, plans, and diffs. Use before implementation starts (spec gaps are cheap to fix early) and before committing nontrivial changes, or when asked to "poke holes" or check if something is ready.
+description: Adversarial review discipline for specs, plans, and diffs. Use before implementation starts (spec gaps are cheap to fix early) and before committing nontrivial changes, or when asked to "critic", "critique", "poke holes", or check if something is ready — "critic" and "critique" both name this skill, whichever word is used.
 ---
 
 Find the problems that will be expensive to discover later. You are not a

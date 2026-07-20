@@ -1,6 +1,6 @@
 ---
 name: critique
-description: Runs an adversarial review of a spec, plan, or diff via the critic agent and relays ranked findings. Use before implementing a spec or plan, before committing a nontrivial change, or when the user asks "review this", "poke holes", or "is this ready?". Not the tool for working-diff bug hunts (/code-review), GitHub pull requests (/review), or exercising runtime behavior (the verifier agent).
+description: Runs an adversarial review of a spec, plan, or diff via the critic agent and relays ranked findings. Use before implementing a spec or plan, before committing a nontrivial change, or when the user says "critic", "critique", "run the critic", "run a critique", "review this", "poke holes", or "is this ready?" — "critic" and "critique" both name this skill, whichever word the user reaches for. Not the tool for working-diff bug hunts (/code-review), GitHub pull requests (/review), or exercising runtime behavior (the verifier agent).
 argument-hint: "[path/to/artifact | 'diff']"
 ---
 
