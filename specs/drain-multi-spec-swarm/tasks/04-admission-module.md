@@ -1,33 +1,11 @@
 # Task 04: admission.py — lease-claim CAS + two-level cross-spec cap module
 
-Status: in-progress
+Status: done
 Depends on: specs/drain-frontier-scanner/tasks/01-scanner-and-tests.md
 Priority: P1
 Budget: 14 turns
 Spec: ../SPEC.md (requirements R1, R2, R4, R5, R6, R12, R13, R14, R17)
 Touch: .claude/skills/drain/admission.py, .claude/skills/_shared/touch_disjoint.py
-
-<!-- PLAN (build step 1; deleted at close-out)
-Order:
-1. touch_disjoint.py TDD: port drain_frontier.py's EXACT predicate
-   (literal_prefix up to first [*?[], pair_conflicts = either prefix-of-other,
-   entries_disjoint, ambiguity->conflict). Add parse_touch (reads Touch: from
-   task file text) + footprint(paths) reading files from disk. Failing tests
-   first incl. ambiguous-prefix fixture (glob prefix-of concrete -> NOT disjoint)
-   and a reads-from-disk assertion (R14 boundary).
-2. admission.py TDD: claim_specs (greedy footprint-disjoint <=3, Priority-then-
-   path) [cases a,b]; admit_tasks (two-level cap: per-spec W<=5 + global<=10,
-   per-spec window scoping) [cases c,d,e]; load_frontier (schema-validate the
-   drain_frontier JSON, non-zero exit on absent/malformed -> R14 negative);
-   lease-claim CAS as callable fns matching reference.md (absent->claim,
-   FRESH->refuse unless baton lineage, ALL STALE->reclaim; read-check-write-
-   commit-push-reread-confirm) with pure claim_decision() split from git I/O.
-3. test files are SELF-RUNNING scripts (print 'case a'..'case e'; exit 0/1) —
-   acceptance greps stdout; no central pytest runner in this repo.
-Risks: cross-spec task disjointness is guaranteed by claim-level footprint
-disjointness (don't re-check). docs/TASKS.md tech-debt entry already present
-(2026-07-19) — pre-satisfied, out of Touch, do NOT edit.
--->
 
 ## Goal
 
@@ -161,28 +139,28 @@ the mirror/plugin files (task 03's scope), or `drain_frontier.py` itself
 
 ## Acceptance
 
-- [ ] `test -f .claude/skills/drain/admission.py` and `test -f
+- [x] `test -f .claude/skills/drain/admission.py` and `test -f
 .claude/skills/_shared/touch_disjoint.py` → both exist (absent today,
       verified 2026-07-19)
-- [ ] `python3 .claude/skills/_shared/test_touch_disjoint.py` → exits 0
-- [ ] `python3 .claude/skills/drain/test_admission.py` → exits 0
-- [ ] The `test_admission.py` file contains distinct, separately-asserted
+- [x] `python3 .claude/skills/_shared/test_touch_disjoint.py` → exits 0
+- [x] `python3 .claude/skills/drain/test_admission.py` → exits 0
+- [x] The `test_admission.py` file contains distinct, separately-asserted
       fixture cases (a)–(e) as described in Steps 7–10 — not a single
       combined assertion that could pass with only some cases actually
       implemented. Runnable form: on success the test's stdout names each
       case it asserted (`python3 .claude/skills/drain/test_admission.py |
 grep -co 'case [a-e]'` → 5; the file does not exist today, so this
       cannot pass vacuously)
-- [ ] A unit test asserts `admission.py` errors (non-zero exit) when given
+- [x] A unit test asserts `admission.py` errors (non-zero exit) when given
       fixture `dispatchable`/`admissible` input that doesn't match
       `drain_frontier.py`'s documented JSON schema, rather than silently
       re-deriving its own per-spec window logic (R14's negative constraint)
-- [ ] A unit test in `touch_disjoint.py`'s own test file asserts its
+- [x] A unit test in `touch_disjoint.py`'s own test file asserts its
       disjointness predicate reads `Touch:` headers directly from fixture
       task files (not from any `drain_frontier.py` JSON field), confirming
       the corrected R14 composition boundary is actually implemented as
       specified, not silently reverted to the original (infeasible) design
-- [ ] A dedicated unit test in `touch_disjoint.py`'s own test file exercises
+- [x] A dedicated unit test in `touch_disjoint.py`'s own test file exercises
       the ambiguous-prefix case (step 2's pinned fixture) and asserts it
       resolves to "not disjoint" — round-10 critique fix (confidence 70):
       pins `touch_disjoint.py` to the exact algorithm
@@ -190,9 +168,15 @@ grep -co 'case [a-e]'` → 5; the file does not exist today, so this
       `drain_frontier.py`'s own internal check, so the two scripts cannot
       silently diverge on the conservative-ambiguity direction and
       co-admit a real cross-spec Touch collision
-- [ ] A tech-debt entry is added to `docs/TASKS.md` noting that
+- [x] A tech-debt entry is added to `docs/TASKS.md` noting that
       `drain_frontier.py` and `touch_disjoint.py` are two independent
       implementations of the same pinned algorithm (not sharing code by
       this task's design, per R14) and recommending a follow-up spec
       converge `drain_frontier.py` onto the shared `_shared/touch_disjoint.py`
       helper
+
+Evidence: verifier PASS on all criteria — `evidence/04-admission-module.md`.
+Both self-running suites exit 0; `test_admission.py | grep -co 'case [a-e]'`
+→ 5; tech-debt entry pre-existing at `docs/TASKS.md` (2026-07-19, untouched).
+A post-implementation critic pass found and fixed two lease-CAS correctness
+defects (relative-dir liveness pathspec; lost-push resync target).
