@@ -127,6 +127,16 @@ revision against its current value (e.g., under git: `git show <base-commit>:<pa
 never a hard-coded exact pre-task literal — a sibling task landing first can bump the same file, so
 a pinned literal false-fails once the on-disk value has already moved past it.
 
+Classify each `## Acceptance` criterion's ladder level (L0–L3) using the
+depth ladder in `docs/memory/anchored-acceptance-criteria.md` (cited, not
+restated), and apply the deepest-feasible rule: keep the deepest level
+actually feasible for the target artifact rather than defaulting to an L0
+grep. A requirement whose criteria all bottom out at L0/L1 carries an
+explicit depth ceiling annotation in the memory file's annotation grammar (a
+`Depth ceiling:` line stating why deeper is infeasible and naming the
+behavioral complement — an eval scenario, a manual-pending human read, or a
+named verifier judgment instruction).
+
 While authoring a task's acceptance commands, classify each for privileged/
 OS-level access: a task whose acceptance commands require `launchctl`, a
 system installer/package-manager install step, or interactive OAuth is
