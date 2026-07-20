@@ -24,21 +24,21 @@ unattended").
 **Exhaustion contract (R1).** So long as dispatchable work remains in the
 launched scope, the session never ends. The scope is drain's launch argument,
 unchanged; a **no-argument launch means the whole `specs/` queue**, consumed
-one spec at a time in a sequential walk. Claim a spec's `DRAIN-OWNER.md` when
+via multi-spec swarm claiming (reference.md's cross-spec admission). Claim a spec's `DRAIN-OWNER.md` when
 its dispatch begins (step 1) and release it (delete, committed) the moment
 that spec has **nothing left to dispatch** — every task done, deferred,
 blocked, failed, or draft. Deferred questions live in committed task files, so
 nothing needs the lease held while the session works elsewhere; if step 4's
 interview turns a deferred task back to `pending`, drain **re-claims that
-lease before re-dispatching**. At most one dispatch lease is held at a time;
-the short-lived second lease 3b and critique intake take while acting on
-another spec (claim → act → release) may transiently overlap. The per-spec
-concurrent-drain refusal and per-run generations cap are unchanged.
+lease before re-dispatching**. Drain claims **up to 3 Touch-disjoint spec
+leases** at once (multi-spec swarm; full rule in reference.md's "Cross-spec
+admission & merge (R1–R12)"); the short-lived second lease 3b and critique
+intake take while acting on another spec (claim → act → release) may transiently
+overlap. The per-spec concurrent-drain refusal and per-run generations cap are unchanged.
 
 First, the **drain-readiness gate**: every task drains, unattended — core
-business logic, auth, payments, and migrations raise the scrutiny bar (tighter
-acceptance criteria, full worktree isolation) rather than routing to a
-human-watched lane (checklist in reference.md).
+business logic, auth, payments, migrations raise the scrutiny bar (tighter
+criteria, full worktree isolation), not a human-watched lane (reference.md).
 
 **Path-scoped commits, always.** Every queue-state commit drain makes — owner
 claim/release, status flips, Progress/Deferred/Decisions entries, draft stubs,
@@ -48,15 +48,13 @@ concurrent session's staged or working-tree changes must never ride along —
 every path-scoped commit below follows this without restating it.
 
 **Gen-1 startup advisories (best-effort, never blocking).** At gen-1 startup
-ONLY (never on baton generations), drain runs three non-blocking advisories —
-**name the terminal tab**, **sweep foreign live sessions**, and print the
-**hub-economics** relaunch recommendations (frontier-hub / heavy-hub) — none
-gating dispatch (correctness comes from the owner-lease claim below). Exact
-procedures are in [reference.md](reference.md)'s "Gen-1 startup advisories" —
-load only the named section. It also pins the **mechanical preflight sweep** — a
-gen-1 pass, before step 1's spec-scoped work, across EVERY spec in the launched
-scope (not only the one about to be claimed) that reclaims dead leases and prunes
-orphaned worktrees, reporting a one-line summary (leases reclaimed, worktrees pruned).
+ONLY, drain runs three non-blocking advisories — **name the terminal tab**,
+**sweep foreign live sessions**, and print **hub-economics** relaunch
+recommendations — none gating dispatch (procedures in
+[reference.md](reference.md)'s "Gen-1 startup advisories" — load only the
+named section). It also pins the **mechanical preflight sweep**: a gen-1
+pass, before step 1, across EVERY spec in scope that reclaims dead leases and
+prunes orphaned worktrees, reporting a one-line summary.
 
 **Orchestrator isolation (default ON).** Before any bookkeeping, drain runs
 its own dispatch loop inside a VCS-level isolated checkout of the target repo —
@@ -141,23 +139,17 @@ the default (`opus`) tier or below. Full derivation in
 **Window size W (a rolling window, topped up on each verdict — not a wave
 barrier).** Default **1** (sequential: one worker, merged before the next). A
 `Parallel-window: N` header sets W=N, an explicit /drain request overrides (a
-number sets W; a bare throughput request sets W=3). **Hard cap: W ≤ 5** on TOTAL
-live workers; the sole exception is a tournament's three workers in an
-otherwise-empty window (reference.md, "Tournament", R8a).
+number sets W; a bare throughput request sets W=3). **Per-spec cap: W ≤ 5**
+bounds a single claimed spec's own live workers (unchanged); in swarm mode all
+claimed specs share **one global pool capped at ≤10 total** live workers
+(reference.md, cross-spec admission). The sole exception is a tournament's three
+workers in an otherwise-empty window (reference.md, "Tournament", R8a).
 
-**Rolling-window admission & merge (R1–R4).** Binds only when W > 1 (the
-default W=1 admits one task alone and merges it before the next); full rules in
-[reference.md](reference.md)'s "Rolling-window admission & merge (R1–R4)" —
-load only the named section. In brief: a task is **admitted** only when
-`Status: pending` with deps `done`, its `Touch:` disjoint from the claim set
-(every committed-`in-progress` task's `Touch:`), and **co-admissible** with each
-in-flight task (one `Group:` line names both; ungrouped tasks run alone in an
-empty window, a suspected zombie not counting, R9.2); the window **tops up on
-each verdict**, not at a wave barrier, each admission its own committed
-`in-progress` flip; **merges stay serial** in landing order, a sibling-conflict
-branch getting one scratch-worktree rebase onto `main`; and **runtime Touch
-enforcement** at merge fails any branch whose changed paths escape the task's
-`Touch:` + its own file + the spec's `evidence/` dir.
+**Cross-spec admission & merge (R1–R12).** Per-spec rolling-window admission
+binds only when W > 1; cross-spec swarm admission binds regardless of W. Full
+rules — spec-lease claiming (up to 3 disjoint specs), same-spec vs cross-spec
+co-admissibility, the two-level ≤10 shared-pool cap, per-verdict top-up, one
+global serial merge, runtime Touch enforcement — in [reference.md](reference.md)'s "Cross-spec admission & merge (R1–R12)".
 
 **The flip is compare-and-swap.** Re-read the task file immediately before
 flipping — an exact-match edit of the literal `Status: pending` line (a file
@@ -211,6 +203,8 @@ so a per-session emission would misattribute later iterations.
   full rule in [reference.md](reference.md)'s "Push guard"). The merged branch
   carries the task file with `Status: done` and ticked boxes per /build (plus
   the verifier's `evidence/` file under `specs/<slug>/`, else inline evidence).
+  The merge commit follows the **subject/body** commit doctrine (format in
+  reference.md's "Push guard").
   The **run project gates** step invokes `scripts/check.sh`, drain's sole
   required merge-time check entrypoint — never a hand-derived list read out of
   CLAUDE.md prose (repos without it fall back to their own build/lint/test).
@@ -225,13 +219,12 @@ so a per-session emission would misattribute later iterations.
   branches, each prepending `<!-- agentprof:role=worker-tournament-tN -->`. The
   generate/filter/rank procedure and **skip condition** (relaunch BLOCKED over
   budget → route on the two prior verdicts) are in reference.md's "Tournament".
-  **`Rigor: prototype` (R4/R6).** In a prototype-rigor tournament (read at
-  inventory; absent = `production`), swap a mechanical acceptance-command run
-  for each per-candidate `verifier` dispatch and rank on that; the pre-merge
-  whitelist diff and gates stay mechanical, unchanged. **Promotion rule:**
-  prototype code never merges into a `Rigor: production` spec without
-  re-running the full gates — flip the header, treat the code as untested
-  production input.
+  **`Rigor: prototype` (R4/R6).** In a prototype-rigor tournament (absent =
+  `production`), swap a mechanical acceptance-command run for each candidate
+  `verifier` dispatch and rank on that; whitelist diff and gates stay
+  mechanical. **Promotion rule:** prototype code never merges into a
+  `Rigor: production` spec without re-running full gates — flip the header,
+  treat the code as untested production input.
 - **DEFERRED** — the verdict carries the question. Drain writes it into the task
   file under `## Deferred questions`, sets `Status: deferred`, commits and
   pushes (path-scoped; guard above), and discards the worker's branch/worktree.
@@ -306,7 +299,9 @@ W=3→3, W=5→2); full derivation in [reference.md](reference.md)'s "Baton pass
 `specs/<slug>/DRAIN-BATON.md` (grammar + relaunch command in
 reference.md), spawn the successor generation (awaited where a parent can
 supervise; else headless), report the pass, and **end your turn at once,
-stating this session will not touch the queue again** (one-writer invariant). A
+stating this session will not touch the queue again** (one-writer invariant).
+Baton-pass and bookkeeping commits follow the same **subject/body** split
+(detail in reference.md's "Push guard"). A
 **max-generations cap of 10** stops with the baton written + a needs-attention
 note instead of respawning; that cap generation still runs step 4, so its
 terminal distill fires on the cap path too — ordinary baton passes never distill
@@ -352,26 +347,24 @@ attempted **at most once per stub per run, spanning every baton generation**,
 tracked by a `Stub-intake-failed:` baton line (grammar in reference.md's "Baton
 pass").
 
-**Contract** (full rules, grammar, and lifecycle:
-[reference.md](reference.md)'s "Stub intake (assess → gate → act)" and "Draft
-status" — load only the named section). For each in-scope `Status: draft` stub
-drain runs a **deterministic screen → assess → gate → act** pipeline:
+**Contract** (full rules, grammar, lifecycle: [reference.md](reference.md)'s
+"Stub intake (assess → gate → act)" and "Draft status" — load only the named
+section). For each in-scope `Status: draft` stub, drain runs a
+**deterministic screen → assess → gate → act** pipeline:
 `.claude/skills/drain/screen-stub.sh` refuses instruction-shaped stubs
-(imperatives to an agent, "ignore … instructions", tool directives, absolute
-paths outside the repo) **before any model reads them** — promotion of
-injectable text never rests on model judgment (docs/human-gates.md reason 4). A
-scout-tier assessor classifies the stub OBSOLETE / DECISION-SHAPED / ACTIONABLE
-(ACTIONABLE ⇒ authored runnable criteria + `Touch:` + `Budget:`, the original
-kept as quoted data under `## Original report`); a single-call rubric critic
-gates the authored promotion; drain — the sole queue writer — acts. On PASS drain
-flips `Status: pending` (dispatchable this run, tagging `Promotion-ready:` +
-`Promoted-by-run:`, stripping `## Original report`); OBSOLETE writes
-`Status: obsolete` + a `Closed:` line; **every non-promotion (R1)** leaves the
-stub `draft` with a greppable `Intake-refused: <screen|assess|gate> — <reason>
-(<ISO date>)` line (step 4 §6 quotes it). Step 1 converts any legacy
-`Promotion-ready: true` draft to `pending` after the remote-divergence check and
-lease claim. Every promotion, closure, and refusal is audited in step 4's
-checklist; a human may demote any auto-promoted task via a `Demoted:` line.
+(imperatives, "ignore … instructions", tool directives, absolute paths
+outside the repo) **before any model reads them** (docs/human-gates.md
+reason 4). A scout-tier assessor classifies OBSOLETE / DECISION-SHAPED /
+ACTIONABLE (ACTIONABLE ⇒ authored runnable criteria + `Touch:` + `Budget:`,
+original kept under `## Original report`); a rubric critic gates the
+promotion; drain — the sole queue writer — acts. PASS flips `Status: pending`
+(tagging `Promotion-ready:` + `Promoted-by-run:`, stripping the original
+report); OBSOLETE writes `Status: obsolete` + `Closed:`; **every
+non-promotion (R1)** leaves the stub `draft` with a greppable
+`Intake-refused: <screen|assess|gate> — <reason> (<ISO date>)` line (step 4
+§6 quotes it). Step 1 converts legacy `Promotion-ready: true` drafts to
+`pending`. Every promotion/closure/refusal is audited in step 4's checklist;
+a human may demote via a `Demoted:` line.
 
 ## 3b. Auto-breakdown (lowest priority)
 
@@ -403,24 +396,21 @@ review** before releasing the lease, in **pinned** order: run the review → com
 the evidence line → release the lease. The committed
 `specs/<slug>/evidence/spec-review.md` (`spec review:` or `spec review skipped:`)
 is the **idempotency token** — a later generation that finds it committed SKIPS
-the review, holding "once per spec per run" across generations without a new
-baton line. A spec with no DONE task this run releases with no review or evidence
-file.
-**Procedure** — full detail (diff-base recovery, build's skip gate + its
-NON-product path list, the review-fix worker prompt, the coupling-nulled merge)
-in [reference.md](reference.md)'s "Spec-completion review worker"; load only the
+the review. A spec with no DONE task this run releases with no review or
+evidence file.
+**Procedure** — full detail (diff-base recovery, build's skip gate, the
+review-fix worker prompt, the coupling-nulled merge) in
+[reference.md](reference.md)'s "Spec-completion review worker"; load only the
 named section. In brief: drain recovers the cumulative product diff from the
 pinned flip-commit message (union of the spec's tasks' `Touch:`) and applies
-build's skip gate (skip, writing `spec review skipped: <reason>`, when no product
-paths remain or product lines < 25), else launches ONE awaited
-`implementation-worker` (`isolation: worktree`, tier pin) that keeps only
-high-confidence correctness findings, fixes them inside the union Touch, re-runs
-the per-task gates, commits to `task/<slug>-spec-review`, and merges through step
-3's serial machinery with task-file coupling nulled (uncertain/out-of-scope
-findings → draft stubs; a failed merge reports and releases anyway). Whether
-reviewed or skipped, write the outcome to `specs/<slug>/evidence/spec-review.md`
-and commit it (path-scoped, pushed) BEFORE releasing the lease; the exit
-checklist gains one line per spec.
+build's skip gate (skip, writing `spec review skipped: <reason>`, when no
+product paths remain or product lines < 25), else launches ONE awaited
+`implementation-worker` (`isolation: worktree`, tier pin) that fixes
+high-confidence findings inside the union Touch, re-runs the per-task gates,
+and merges through step 3's serial machinery with task-file coupling nulled
+(uncertain findings → draft stubs). Whether reviewed or skipped, write the
+outcome to `specs/<slug>/evidence/spec-review.md` and commit it BEFORE
+releasing the lease; the exit checklist gains one line per spec.
 
 ## 4. The batch interview
 

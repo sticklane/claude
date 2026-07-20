@@ -291,7 +291,9 @@ every time you enter it.
   evidence each (from the verifier's report, not your own claim) — citing the
   `evidence/` file when an evidence path was passed in step 3; delete the plan
   comment block from step 1.
-- Commit code + task file with a message referencing the task — plus the
+- Commit code + task file with a message referencing the task, following the
+  commit doctrine — a type-prefixed subject (≤72 target, hard cap 100) with a
+  **subject/body** split putting detail in the body — plus the
   verifier's `evidence/` file when an evidence path was passed; otherwise note
   that evidence was not persisted and keep the one-line evidence inline in the
   task file as the artifact. Then **publish the default branch on completion**

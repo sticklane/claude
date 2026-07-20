@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers. -->
 
-Status: pending
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 16 turns
@@ -73,62 +73,76 @@ commit-format guidance only.
 
 ## Acceptance
 
-- [ ] `grep -c 'merge: <spec' .claude/skills/drain/SKILL.md` → ≥ 1
+- [x] `grep -c 'merge: <spec' .claude/skills/drain/SKILL.md` → ≥ 1
       (count 0 at spec-authoring time, verified 2026-07-17; still 0,
-      re-verified 2026-07-19). Depth ceiling: L0 on skill prose — the
+      re-verified 2026-07-19 on `main` before the `drain-orchestrator-run`
+      merge). Depth ceiling: L0 on skill prose — the
       skill's behavior is a live drain session's commits, not testable
       unattended; behavioral complement is a manual-pending human read of
       the first post-change drain merge commit, confirming its subject
       matches `merge: <spec-slug> task NN — <short what>` with detail in
       the body.
-- [ ] `grep -ci 'subject/body' .claude/skills/drain/SKILL.md` → ≥ 2 — one
+      Evidence: returns 1 (merge-commit format added to step-3 merge instruction).
+- [x] `grep -ci 'subject/body' .claude/skills/drain/SKILL.md` → ≥ 2 — one
       hit in the step-3 merge instruction, one in §3a; a single hit means
       one edit was skipped (count 0 at spec-authoring time; still 0,
-      re-verified 2026-07-19). Depth ceiling: same complement as the
-      merge-format check above (the post-change drain commit read covers
-      the baton-pass/bookkeeping subjects too).
-- [ ] `grep -ci 'subject/body' .claude/skills/drain/reference.md` → ≥ 1
-      (count 0 at spec-authoring time; still 0, re-verified 2026-07-19)
-- [ ] `grep -c 'drain: <spec-slug> task NN in-progress' .claude/skills/drain/SKILL.md` → ≥ 1 —
+      re-verified 2026-07-19 on `main` before the merge). Depth ceiling:
+      same complement as the merge-format check above (the post-change
+      drain commit read covers the baton-pass/bookkeeping subjects too).
+      Evidence: returns 2 (step-3 merge instruction + §3a baton-pass).
+- [x] `grep -ci 'subject/body' .claude/skills/drain/reference.md` → ≥ 1
+      (count 0 at spec-authoring time; still 0, re-verified 2026-07-19 on
+      `main` before the merge)
+      Evidence: returns 1 (subject/body split added to Push-guard bookkeeping guidance).
+- [x] `grep -c 'drain: <spec-slug> task NN in-progress' .claude/skills/drain/SKILL.md` → ≥ 1 —
       the pinned flip contract survives verbatim (count 1 today at
       SKILL.md:166)
-- [ ] `grep -c 'drain: auto-breakdown specs/<slug>' .claude/skills/drain/reference.md` → ≥ 1 —
+      Evidence: returns 1 (flip contract untouched at SKILL.md:166).
+- [x] `grep -c 'drain: auto-breakdown specs/<slug>' .claude/skills/drain/reference.md` → ≥ 1 —
       the auto-breakdown message survives verbatim (count 1 today at
       reference.md:1570)
-- [ ] `grep -A3 'Commit code' .claude/skills/build/SKILL.md | grep -c 'quality-discipline'` → ≥ 1
+      Evidence: returns 2 (verbatim message at :1570 preserved; one added reference to it in the Push-guard note).
+- [x] `grep -A3 'Commit code' .claude/skills/build/SKILL.md | grep -c 'quality-discipline'` → ≥ 1
       (piped count 0 at spec-authoring time; still 0, re-verified
-      2026-07-19). Depth ceiling: L0/L1 (position-scoped presence) on
-      skill prose — behavioral complement is a manual-pending human read
-      of the first post-change /build commit, confirming a type-prefixed
-      ≤72-char subject with detail in the body.
-- [ ] `grep -li 'subject/body' antigravity/.agents/workflows/drain.md antigravity/.agents/workflows/build.md codex/.agents/skills/drain/SKILL.md codex/.agents/skills/build/SKILL.md | wc -l` → 4
+      2026-07-19 on `main` before the merge). Depth ceiling: L0/L1
+      (position-scoped presence) on skill prose — behavioral complement is
+      a manual-pending human read of the first post-change /build commit,
+      confirming a type-prefixed ≤72-char subject with detail in the body.
+      Evidence: returns 1 (doctrine reference added within the "Commit code" bullet).
+- [x] `grep -li 'subject/body' antigravity/.agents/workflows/drain.md antigravity/.agents/workflows/build.md codex/.agents/skills/drain/SKILL.md codex/.agents/skills/build/SKILL.md | wc -l` → 4
       (phrase absent from all four at spec-authoring time; still 0 of 4,
-      re-verified 2026-07-19). Depth ceiling: L0 per-file mirror anchors —
-      behavioral complement is the closure-triggered cross-reference sweep
-      of `.claude/rules/mirror-verification.md` plus a
-      procedural-equivalence read of the four ports per
-      `.claude/rules/mirror-procedure-discipline.md`.
-- [ ] `grep -o '"version": "[^"]*"' .claude-plugin/plugin.json` → a version
+      re-verified 2026-07-19 on `main` before the merge). Depth ceiling:
+      L0 per-file mirror anchors — behavioral complement is the
+      closure-triggered cross-reference sweep of
+      `.claude/rules/mirror-verification.md` plus a procedural-equivalence
+      read of the four ports per `.claude/rules/mirror-procedure-discipline.md`.
+      Evidence: returns 4 (all four mirrors carry the ported subject/body guidance).
+- [x] `grep -o '"version": "[^"]*"' .claude-plugin/plugin.json` → a version
       different from the value at this task's own base commit
       (`git show <base-commit>:.claude-plugin/plugin.json | grep '"version"'`
       — record the base commit hash in the evidence line). The original
       "strictly greater than 0.9.16" half is already satisfied by sibling
-      bumps (current value 0.9.19, verified 2026-07-19) and so proves
-      nothing about this task; the changed-from-base comparison is the
-      sole operative check, per the memory doc's version-bump pattern.
-- [ ] The R8 end-to-end check exits 0 (run verbatim from the repo root;
+      bumps and so proves nothing about this task; the changed-from-base
+      comparison is the sole operative check, per the memory doc's
+      version-bump pattern.
+      Evidence: base commit 21d6554 had "version": "0.9.19" (still 0.9.19
+      on `main` at merge time, unbumped by any sibling task in the
+      interim); post-merge value is "0.9.20" — different from base (also >0.9.16).
+- [x] The R8 end-to-end check exits 0 (run verbatim from the repo root;
       verified runnable and exit 0 on the current tree 2026-07-19 — it is
       a guard over the templates this task adds, not a proof-of-work
       check, so passing today is expected):
 
       ```sh
-      grep -rhoE '`(drain|merge|feat|fix|test|refactor|docs|style|perf|chore|spec|breakdown): [^`]+`' \
-        .claude/rules/quality-discipline.md antigravity/AGENTS.md \
-        .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md \
-        .claude/skills/build/SKILL.md \
-        antigravity/.agents/workflows/drain.md \
-        antigravity/.agents/workflows/build.md \
-        codex/.agents/skills/drain/SKILL.md \
-        codex/.agents/skills/build/SKILL.md \
-        | awk '{ if (length($0) > 102) { print; bad=1 } } END { exit bad }'
-      ```
+              grep -rhoE '`(drain|merge|feat|fix|test|refactor|docs|style|perf|chore|spec|breakdown): [^`]+`' \
+                .claude/rules/quality-discipline.md antigravity/AGENTS.md \
+                .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md \
+                .claude/skills/build/SKILL.md \
+                antigravity/.agents/workflows/drain.md \
+                antigravity/.agents/workflows/build.md \
+                codex/.agents/skills/drain/SKILL.md \
+                codex/.agents/skills/build/SKILL.md \
+                | awk '{ if (length($0) > 102) { print; bad=1 } } END { exit bad }'
+              ```
+
+          Evidence: check exits 0 - no pinned commit-message example exceeds 102 chars across all nine files.
