@@ -193,9 +193,10 @@ which is why the verdict cap, the merge-time re-read ban, and the baton all
 exist. Run the drain hub on the default tier or below; a frontier hub model
 roughly doubles wake cost for no quality gain. Same lever when the hub must
 consult the longer shared drain doctrine (docs/human-gates.md, the
-antigravity reference this Codex leg overlays): load only the named section —
-locate its heading with a `grep -n` and read that slice, not the whole
-file.
+antigravity reference this Codex leg overlays): load only the named section
+via a **Grep-then-offset** read — `grep -n` its heading to find the section's
+start line and the next header, then read that bounded slice at an `offset`,
+never a bare sequential read of the whole file.
 
 **The flip is compare-and-swap.** Re-read the task file immediately before
 flipping — an exact-match edit of the literal `Status: pending` line (a file
@@ -207,7 +208,12 @@ and any `## Answers`. Launch ONE worker agent — an awaited child, never
 detached — with worktree isolation, running the /build procedure plus the
 defer contract: **the worker never asks the human and never edits queue state;
 on ambiguity it stops with verdict DEFERRED and puts the exact question in its
-final message.** The worker sets `Contradicts-premise: true` alongside that
+final message.** Deliver that /build procedure by **path-pointer**, never
+pasted — resolve it to a concrete build-skill path the worker reads and
+follows verbatim, substituting only the task-specific pieces (task file path,
+branch, budget, any `## Answers`) into the dispatch, rather than inlining the
+build procedure's body; the path-pointer keeps each dispatch small and
+single-sources the contract to that one file. The worker sets `Contradicts-premise: true` alongside that
 question only when its finding empirically refutes the SPEC's or task's stated
 root cause (naming the artifact and quoting the exact contradicted clause
 verbatim), not for an ordinary open gap. Await it and collect its verdict —
