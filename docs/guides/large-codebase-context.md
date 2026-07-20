@@ -2,7 +2,7 @@
 
 How the toolkit retrieves context from large codebases — and when to reach
 for an external code-search MCP server instead of building indexing tooling
-here. The guiding decision is *document, don't build*: the mature prior art
+here. The guiding decision is _document, don't build_: the mature prior art
 already lives in public repos, so the win is integrating with the best fit,
 not reinventing it.
 
@@ -42,6 +42,17 @@ The official Model Context Protocol reference-servers repository ships
 to adopt for this. Any integration is therefore with a third-party,
 user-installed server.
 [github.com/modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers)
+
+## The in-repo structural option: `ctx`
+
+Since 2026-07, this toolkit ships its own **structural** index:
+`context-tree/` (CLI `ctx`, plus `ctx mcp` for tool-based harnesses). It
+answers where-is-X-defined / who-calls-X / what-does-this-import questions
+from a tree-sitter symbol index and carries refactor-surviving notes — the
+`/ctx` skill teaches agents when to reach for it. It complements rather
+than replaces the servers below: `ctx` is exact and structural; they are
+semantic/fuzzy content search. For a structure question, try `ctx` first —
+it needs no external service.
 
 ## The two mature third-party MCP servers
 
@@ -104,11 +115,11 @@ the exact binary/launch details and indexing flags.
 
 ## Decision table: which one, if any
 
-| Your situation | Reach for | Why |
-| --- | --- | --- |
+| Your situation                                                                                                                        | Reach for        | Why                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------- |
 | Need **semantic / fuzzy** search across a **large, frequently-changing** repo (meaning-based "where do we do X", tolerant of renames) | `claude-context` | Hybrid BM25 + dense-vector + AST chunking; Merkle-tree incremental reindex keeps a moving repo current cheaply. |
-| Need **fast literal / regex** search across a large tree, **no semantic layer** needed | `code-index-mcp` | Zoekt trigram index gives fast substring/regex hits without the cost of embeddings. |
-| Repo is **small / medium**, and `scout`'s grep/glob is already enough | **neither** | JIT grep/glob converges fine; an external index adds setup and drift for no gain. Start here. |
+| Need **fast literal / regex** search across a large tree, **no semantic layer** needed                                                | `code-index-mcp` | Zoekt trigram index gives fast substring/regex hits without the cost of embeddings.                             |
+| Repo is **small / medium**, and `scout`'s grep/glob is already enough                                                                 | **neither**      | JIT grep/glob converges fine; an external index adds setup and drift for no gain. Start here.                   |
 
 Default to the last row. Only climb to a server when repeated `scout`
 rounds on a fuzzy or semantic query genuinely stop converging.
@@ -130,7 +141,7 @@ Choosing a server is the **orchestrating session's** call, one layer above
 `scout` — `scout` itself cannot `ToolSearch` and its tool grant is
 deliberately narrow (Read, Grep, Glob, a little `git`). When repeated scout
 dispatches on a fuzzy/semantic query aren't converging and such a server
-*happens to be connected* this session, the session runs a `ToolSearch` to
+_happens to be connected_ this session, the session runs a `ToolSearch` to
 discover it and prefers it over further scout rounds. That preference is
 recorded as one advisory bullet in
 [../../.claude/rules/token-discipline.md](../../.claude/rules/token-discipline.md)'s
