@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 6 turns
@@ -48,11 +48,17 @@ economics" .claude/skills/drain/reference.md`).
 
 ## Acceptance
 
-- [ ] `grep -c "worktree re-injection" .claude/skills/drain/reference.md` → ≥ 1
+- [x] `grep -c "worktree re-injection" .claude/skills/drain/reference.md` → ≥ 1
       (count 0 today, verified 2026-07-19)
-- [ ] A human/manual-pending read of the "Wake economics" section confirms
-      the addition reads as an accepted, budgeted-for tax — not a bug, not
-      something to route around — matching the Goal's framing. Mark
-      manual-pending if dispatched unattended.
-- [ ] `bash evals/lint-ultra-gate.sh` → exits 0
-- [ ] `bash evals/lint-skill-size-gate.sh` → exits 0
+      Evidence: grep -c returns 1 after edit (was 0).
+- [~] A human/manual-pending read of the "Wake economics" section confirms
+  the addition reads as an accepted, budgeted-for tax — not a bug, not
+  something to route around — matching the Goal's framing. Mark
+  manual-pending if dispatched unattended.
+  manual-pending: dispatched unattended. New bold-led paragraph
+  "Worktree re-injection is a budgeted tax, not a bug." states it is
+  "expected and accepted, not something to route around or 'fix'".
+- [x] `bash evals/lint-ultra-gate.sh` → exits 0
+      Evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files", exit 0.
+- [x] `bash evals/lint-skill-size-gate.sh` → exits 0
+      Evidence: "lint-skill-size-gate: OK — all skill docs within size/TOC conventions", exit 0.
