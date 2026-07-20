@@ -26,11 +26,14 @@ any time and re-run `$drain` to pick up from the committed `Status:` lines.
 
 **Exhaustion contract.** So long as dispatchable work remains in the launched
 scope, the session never ends. The scope is drain's launch argument; a
-**no-argument launch means the whole `specs/` queue**, consumed one spec at a
-time in a sequential walk. Claim a spec's `DRAIN-OWNER.md` when its dispatch
+**no-argument launch means the whole `specs/` queue**, consumed via
+multi-spec swarm claiming (step 2's spec-lease claiming). Claim a spec's
+`DRAIN-OWNER.md` when its dispatch
 begins (step 1) and release it (delete, committed) the moment that spec has
 **nothing left to dispatch** — every task done, deferred, blocked, failed, or
-draft. At most one dispatch lease is held at a time; the short-lived second
+draft. Drain claims **up to 3 Touch-disjoint spec leases** at once
+(multi-spec swarm; full rules in step 2's spec-lease claiming and two-layer
+admission); the short-lived second
 leases stub intake, critique intake, and auto-breakdown take on another spec
 (claim → act → release) may transiently overlap. The session ends only when
 no spec in scope has dispatchable work.
@@ -134,6 +137,23 @@ FRESH, refuse and report unless this generation's baton token matches. If all
 liveness signals are stale, reclaim it. Release (delete, path-scoped,
 committed, pushed) at step 4's report.
 
+**Admission command (`admission.py`).** `python3
+.agents/skills/drain/admission.py --frontier <frontier-report JSON path, or
+
+- for stdin>`computes the two cross-spec checks it owns alongside the lease
+claim above: spec-lease claim eligibility (up to 3 Touch-disjoint specs,
+step 2) and the two-level`W ≤ 5`per-spec / **≤10 total** global cap (step
+2); it CONSUMES the frontier report's JSON, never re-deriving it. Optional`--spec-cap N`(default 3),`--window N`(default 5, hard-capped at 5), and`--global-cap N`(default 10) override the caps. On success it exits 0 and
+writes a JSON object to stdout with two keys:`claimed_specs`(the up-to-3
+Touch-disjoint spec dirs to hold, in claim order) and`admitted_tasks`(the
+task paths admitted under the two-level cap). A malformed or unreadable
+frontier exits **2** with an`admission: malformed frontier: …`line on
+stderr; treat ANY non-zero exit — including a missing script — as a **claim
+failure**, falling back to the by-hand rules above and in step 2 (quote
+stderr in the log line recording the fallback), never a crash to route
+around. The script owns ONLY spec-claim eligibility and the two-level cap;
+same-spec`Group:`/Touch rolling-window logic stays prose-driven (step 2).
+
 **Lease re-confirm before every subsequent status-flip commit.** The claim-time
 `Run-token:` confirmation is not a one-time gate: re-read `DRAIN-OWNER.md` at
 HEAD and confirm your `Run-token:` immediately before EVERY subsequent
@@ -174,17 +194,61 @@ tops the window up on every verdict rather than at a wave barrier. Default
 **W=1** (sequential: one worker, merged before the next). A
 `Parallel-window: N` header in the drained SPEC.md sets W=N; an explicit
 `$drain` throughput request overrides it (a number sets W to it, a bare
-throughput request sets W=3). **Hard cap W ≤ 5** on total live workers; the
-sole exception is a tournament's three workers in an otherwise-empty window.
+throughput request sets W=3). **Per-spec cap W ≤ 5** bounds a single claimed
+spec's own live workers (unchanged); in swarm mode all claimed specs share
+**one global pool capped at ≤10 total** live workers (the two-level cap,
+below). The sole exception is a tournament's three workers in an
+otherwise-empty window.
 
-**Admission.** A pending task enters the window only when all hold:
-`Status: pending` with every `Depends on:` dependency `done`; its `Touch:`
-list pairwise-disjoint from the claim set (the `Touch:` of every
-`in-progress` task); and **co-admissible** with every in-flight task — two
-tasks may run together iff one `Group:` line in the owning spec's
-Parallelization section names both. A task on no `Group:` line, or in a spec
-with no Parallelization section, runs only alone (admitted only when the
-window is empty; a suspected zombie does not count against emptiness).
+**Spec-lease claiming (cross-spec swarm).** At inventory (step 1), before
+claiming any lease, drain computes each ready spec's Touch footprint (the
+union of its dispatchable tasks' `Touch:` headers) and greedily claims **up
+to 3 simultaneously-held spec leases** whose footprints are pairwise
+disjoint from each other and from every already-claimed spec's footprint,
+using the existing Priority-then-path tie-break applied spec-by-spec against
+the claimed set as it is built up (mirroring how task-level admission
+compares against the current in-progress set, never the whole queue). Two
+ready specs whose footprints intersect are never claimed simultaneously —
+the lower-priority one waits for the higher-priority one's lease to release,
+while every other non-overlapping ready spec keeps running concurrently.
+This spec-level claiming fires independent of the per-spec rolling window's
+width: each newly-claimed spec dispatches its first eligible task
+immediately, even at the default W=1. `W` governs only how many tasks run
+concurrently WITHIN one already-claimed spec — never whether multiple specs
+can be claimed and worked at once — which is why a no-argument `$drain`
+(default W=1) swarms across specs by default, and why a queue with only one
+claimable non-overlapping spec produces a single claim identical to the old
+single-spec walk. Spec-claim eligibility (here, computed by step 1's
+`admission.py`) and task admission (below) together are the **complete, sole
+mechanism** for cross-spec Touch collision detection — no third, separate
+check is added anywhere, including `$breakdown`'s decision-coupling test.
+
+**Admission (two layers).** A pending task enters the window only when all
+hold: `Status: pending` with every `Depends on:` dependency `done`; its
+`Touch:` list pairwise-disjoint from the claim set (the `Touch:` of every
+`in-progress` task); and **co-admissible** with each in-flight task.
+_Same-spec (unchanged):_ two tasks from the SAME claimed spec may run
+together iff one `Group:` line in the owning spec's Parallelization section
+names both; a task on no `Group:` line, or in a spec with no Parallelization
+section, runs only alone — admitted only when its own spec's window is empty
+("window empty" means zero OTHER in-flight tasks from that task's OWN spec,
+never the global in-flight set across all claimed specs; a suspected zombie
+does not count against emptiness). _Cross-spec (swarm layer):_ two tasks in
+DIFFERENT, both-claimed specs co-admit whenever their `Touch:` sets are
+disjoint, full stop — no `Group:` line and no window-empty check apply
+across specs (a `Group:` line names tasks only within its owning spec, and
+"window empty" is a same-spec concept never evaluated against a different
+spec's in-flight set). Without this layer the widened Touch-disjointness
+check would be vacuous — every cross-spec pair would fail a globally-scoped
+co-admissibility clause and be forced to run alone, defeating the raised
+spec-lease cap. _Two-level cap:_ a single claimed spec's own `W ≤ 5`
+(unchanged) still bounds how many of THAT spec's own tasks run at once; all
+claimed specs' dispatchable tasks compete for one shared global window
+capped at **≤10 total** live workers across every claimed spec combined,
+admitted via the existing Priority-then-path tie-break across the whole
+shared pool once it is full — a single spec can never exceed its own `W`,
+but the cross-spec sum is throttled to ≤10 rather than the naive per-spec
+sum.
 
 **Keep the hub context small (wake economics).** Awaited workers run minutes,
 longer than the prompt-cache TTL, so every verdict wake re-caches the whole
@@ -249,7 +313,10 @@ opening line every time you enter it.
   worker's code diffs or its check/test output into its own context — a
   path-scoped `git diff --stat` plus the ≤ 2k-token verdict is the ceiling;
   when file contents are genuinely needed, dispatch a scout, never read them
-  inline.** Then merge the task branch (it carries the task file with
+  inline.** Merges land through **one single global serial merge queue**
+  spanning every concurrently-claimed spec, in verdict-landing
+  (commit-arrival) order — two specs' DONE verdicts arriving
+  near-simultaneously never race on the push. Then merge the task branch (it carries the task file with
   `Status: done` and ticked boxes, plus the verifier's `evidence/` file for
   `specs/<slug>/` layouts) and run the project gates. The merge commit
   follows the commit doctrine: a **subject/body** split with subject
@@ -498,6 +565,16 @@ skipped:` line) is the idempotency token — a later generation or resumed run
 finding it committed SKIPS the review, holding "once per spec per run" across
 baton generations without a new baton line. A spec with no DONE task this run
 releases with no review.
+
+**Cross-spec shared-path overlap.** When this spec's cumulative diff range
+overlaps a path another concurrently-claimed spec has already covered in its
+own committed `evidence/spec-review.md` this run, the dispatch prompt
+explicitly names which lines/sections are attributable to THIS spec, cites
+the sibling's already-green `evidence/spec-review.md` by path, and tells the
+worker to exclude anything it covers — never blindly handing the full
+ref-range diff and trusting the worker to guess spec boundaries on shared
+files. The diff-base recovery mechanism itself (below) is unchanged
+(docs/memory/drain-dispatch-lessons.md:134-151).
 
 Diff base: the pinned status-flip commit `drain: <slug> task NN in-progress`
 (step 2), recovered via `git log --reverse --format=%H --grep='^drain: <slug>

@@ -1,4 +1,4 @@
-Run-token: ab7b3e973279b470
+Run-token: 6da9bf9a672dfa74
 Generation: 2
 Spec: specs/drain-multi-spec-swarm
 Breakdown-failed:
@@ -7,83 +7,58 @@ Stub-intake-failed:
 
 ## Done / next
 
-- Task 01 (cross-spec-admission-model): done, landed before this run.
-- Task 04 (admission.py + touch_disjoint.py): done and merged this run
-  (`aaa1638`). Independent verifier PASS on all 9 criteria. A critic
-  pass found and fixed two real correctness defects in the lease-CAS
-  layer (stale pathspec on owner-liveness commit lookup; wrong resync
-  target on a lost push), both within Touch — see commit `62e79ed` on
-  the merged history.
-- Task 06 (skill-invokes-admission): done and merged this run
-  (`7567f25`). `.claude/skills/drain/SKILL.md` step 1 now invokes
-  `admission.py` for R1 spec-lease claim eligibility and R2's two-level
-  cross-spec cap; same-spec `Group:`/Touch rolling-window logic stays
-  prose-driven. SKILL.md holds at 499 lines.
-- Task 03 (mirror-and-version-bump): attempt 1 returned a **false
-  BLOCKED** — the worker's worktree read stale local `refs/heads/main`
-  (`15a55a9`) instead of `origin/main` (current tip at attempt time:
-  `1c7f30f`), so it wrongly concluded tasks 04/06 hadn't landed. They
-  have. Left `Status: in-progress` (not `blocked`) with a `## Progress`
-  entry explaining this; does NOT count toward slot-machine escalation.
-  **Next: re-dispatch task 03 with an explicit instruction to fetch and
-  sync against `origin/main`, not local `main`** — the primary
-  checkout's local `main` ref lags under orchestrator isolation
-  (expected/harmless for the orchestrator itself, but misleads a fresh
-  worker's own "reset to default-branch tip" step if not told which
-  ref to target). Task 03 is otherwise dispatchable now (deps 01, 06
-  both done).
-- Task 02 (token-discipline-carveout): `Status: pending`, `Depends on:
-none`, P2. Dispatchable now, lower priority than 03/05.
-- Task 05 (admission-concurrency-test): `Status: pending`, `Depends on:
-04` (done). Dispatchable now, P1, ties with 03 on priority — 03 wins
-  the lexicographic tie-break (already re-dispatching it next per
-  above).
-- Spec-completion review has NOT run yet (only runs at lease-release
-  once nothing is left to dispatch AND a task completed DONE this
-  generation — true here, so the successor generation runs it once
-  02/03/05 land and the spec is ready to release).
+Generation 1 (host vm, remote container, branch claude/drain-p0wwvg)
+recorded 5 verdicts, landed 4 tasks, then hit the baton threshold
+(max(2, 6−W) with 3 concurrent workers → 3) and drained down:
+
+- drain-multi-spec-swarm/03 (mirrors + version bump): DONE via attempt-2
+  relaunch at frontier tier — attempt 1 failed independent verification
+  (dropped the R6 complete-sole-mechanism clause from both mirrors;
+  recorded in the task's ## Progress). Verifier PASS; plugin 0.9.22.
+- eval-coverage-tiers/01 (COVERAGE.md + lint + self-test): DONE, verifier
+  PASS. Late code-review finding materialized as draft stub 09.
+- eval-coverage-tiers/02 (prioritize evalset): DONE. AC3 (paid
+  `./evals/run.sh prioritize`) is manual-pending, human-launched. New
+  draft stub 10 (run.sh shared-dep provisioning).
+- drain-session-naming-always-propose/01 (drop Generation-keyed naming
+  gate): DONE, verifier PASS. Unblocks its task 03.
+
+Next dispatchable, by claimed spec (all three leases held, gen 2):
+- drain-multi-spec-swarm: 05 (P1, deps done), 02 (P2). Then spec-completion
+  review at release (tasks completed DONE this run — review still owed).
+- drain-session-naming-always-propose: 02 (P2), 03 (P2, now unblocked).
+- eval-coverage-tiers: 03–07 (P2, independent), then 08 (needs 01–07).
+Waiting unclaimed (Touch overlaps, re-run inventory as leases release):
+human-blocker-impact-clarity (01/02 P1), drain-frontier-scanner (03/04
+P2 — swarm/03's mirror files landed, 04 may now be claimable),
+prompt-tweaking-roi (01 P3, overlaps swarm/02's token-discipline.md).
+Intake queues untouched this generation: critique intake —
+drain-plugin-path-resolution (draft spec); 3b auto-breakdown —
+drain-read-once-discipline (Breakdown-ready: true); stub intake — 11
+drafts (codebase-context-tree/15, drain-frontier-scanner/05,
+narrow-autopilot/07, trajectory-evals/05–07, workboard-kanban-view/02–03,
+eval-coverage-tiers/09–10, drain-multi-spec-swarm/07).
 
 ## Anomalies
 
-- **Session-refresh hook fired mid-run** (3 re-primes, 230k p90
-  context) — this is why generation 1 ends here rather than continuing
-  to task 03's redispatch. Per token-discipline.md's Session refresh
-  doctrine, refresh-over-carry: a fresh generation avoids re-paying the
-  accumulated context.
-- **This run reclaimed and then released a stale `drain-frontier-scanner`
-  lease** (Run-token `afeb2e0118315ce0`, gen 2, dead ~8h) before
-  claiming `drain-multi-spec-swarm` instead — `drain-frontier-scanner`
-  has 2 pending tasks (03, 04) and 1 draft stub (05) still unclaimed;
-  the successor generation should re-claim it once
-  `drain-multi-spec-swarm`'s lease releases (their Touch footprints
-  overlap: `.claude-plugin/plugin.json`, `antigravity/.agents/workflows/
-drain.md`, `codex/.agents/skills/drain/SKILL.md`).
-- **Local `main` in the primary checkout (`/Users/sjaconette/claude`) is
-  stale and expected to stay that way** under orchestrator isolation —
-  this run's isolated worktree (`.claude/worktrees/drain-orchestrator`,
-  detached HEAD, currently at `5d7afb3`) pushes straight to
-  `origin/main`. Do not try to force-update local `main` from the
-  orchestrator worktree; a human running `git pull` in the primary
-  checkout resyncs it. **Any dispatched worker must be told explicitly
-  to sync against `origin/main`, not local `main`** — task 03's false
-  BLOCKED and (less severely) task 04's stale merge-base both trace to
-  this ambiguity; task 06's worker self-corrected but the other two
-  didn't. Worth folding into the standard dispatch prompt for future
-  generations of this run.
-- This generation found the `codebase-context-tree` spec (a different,
-  unrelated prior drain run) fully done (14/14 tasks) with one new
-  `Status: draft` stub (task 15, file-size-cast-overflow) — not this
-  run's concern, left for stub intake at the appropriate priority.
-- Unrelated uncommitted WIP sits in the PRIMARY checkout (not this
-  worktree): `docs/architecture.md`, `docs/task-tracking-design-
-research-2026-07.md`, a stale `.claude/HANDOFF.md.stale-pathspec-
-commit-hardening`, and a deleted root `HANDOFF.md` — none touched by
-  this run, not drain's concern, left exactly as found.
-- The whole-queue inventory (before this spec was claimed) found ~6
-  other dispatchable specs (`drain-session-naming-always-propose`,
-  `eval-coverage-tiers`, `human-blocker-impact-clarity`,
-  `prompt-tweaking-roi`, plus `drain-frontier-scanner` above) — all
-  overlap `drain-multi-spec-swarm`'s Touch footprint (SKILL.md,
-  reference.md, plugin.json, antigravity mirror, or
-  token-discipline.md) and so could not be claimed alongside it this
-  generation. Re-run inventory fresh once this spec's lease releases.
+- ENVIRONMENT: this run executes in a remote container whose shared
+  branch is `claude/drain-p0wwvg` (never local/origin `main`); queue
+  state and merges are pushed there, with a draft PR to main. A successor
+  must either continue on this branch or run after the PR merges to
+  main — and MUST tell workers to sync worktrees to
+  `origin/claude/drain-p0wwvg` while on it (this structurally fixed the
+  prior run's stale-local-main false-BLOCKED on swarm/03).
+- The predecessor Mac-mini run (Run-token ab7b3e973279b470) died at its
+  gen-2 baton; this run stale-reclaimed its swarm lease, swept task 03 to
+  pending, and consumed its baton + root HANDOFF.md.
+- drain_frontier.py exits 2 on any spec dir containing Status: draft or
+  Status: obsolete task files ("malformed Status value") — 10 specs fell
+  back to verbatim header reads this run. Sanctioned statuses per
+  reference.md's Draft-status section; likely a scanner gap worth a spec.
+- Manual-pending (human): (a) `./evals/run.sh prioritize` paid run
+  (eval-coverage-tiers/02 AC3); (b) antigravity `agy -p` live
+  cross-reference sweep post swarm/03 merge — `agy` not installed in this
+  container (recorded in swarm task 03's ## Discovered).
+- Two mid-flight worker stalls (detached verifier/review children) were
+  recovered by orchestrator nudge messages; the late-arriving verifier
+  FAIL on swarm/03 attempt-1 is what routed it to the slot machine.
