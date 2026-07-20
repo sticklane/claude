@@ -1732,6 +1732,26 @@ or exiting non-zero): apply this section's rules to a by-hand header read —
 the pre-scanner procedure verbatim, including the tie-break triple above —
 and quote the scanner's stderr in the drain log line recording the fallback.
 
+**Admission command (`admission.py`).** The claim-and-cap decision this
+section's R1/R2 rules describe is computed by `python3
+.claude/skills/drain/admission.py --frontier <path>` (SKILL.md step 1), which
+CONSUMES the drain_frontier.py JSON above and never re-derives it (R14).
+`--frontier` takes a drain_frontier.py report path, or `-` to read it from
+stdin; optional `--spec-cap N` (default 3, the R1 lease cap), `--window N`
+(default 5, the per-spec `W`, hard-capped at 5), and `--global-cap N` (default
+10, the R2 shared pool) override the caps. On success it exits 0 and writes a
+JSON object to stdout with two keys: `claimed_specs` (the R1 up-to-3
+Touch-disjoint spec dirs to hold, in claim order) and `admitted_tasks` (the R2
+task paths admitted under the two-level cap). A malformed or unreadable frontier
+exits **2** with an `admission: malformed frontier: …` line on stderr; drain
+treats ANY non-zero exit as a **claim failure** — falling back to this section's
+by-hand rules (quoting stderr in the fallback log line, as with a missing
+scanner), never working around it as a crash. The module owns ONLY R1
+spec-claim eligibility and the R2 two-level cap; the same-spec `Group:`
+co-admissibility and per-task Touch-disjointness within one claimed spec (below)
+stay prose-driven and are computed from drain_frontier.py's `admissible` field,
+not by admission.py.
+
 **Spec-lease claiming (R1, R4, R5, R6, R11).** At inventory (SKILL.md step 1),
 before claiming any lease, drain computes each ready spec's Touch footprint
 (the union of its dispatchable tasks' `Touch:` headers) and greedily claims

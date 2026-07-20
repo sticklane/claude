@@ -89,15 +89,16 @@ directly — **stub intake** (below) screens and gates actionable ones, flipping
 gate-PASSED stubs `draft` → `pending` in the same run; a human audits every
 promotion via the exit checklist and may demote.
 
-**Claim the owner lease, before reporting the plan below.** Full procedure
-(DRAIN-OWNER.md format, CAS re-read confirming YOUR `Run-token:` at HEAD,
-FRESH-vs-stale liveness, stale-lock reclaim, baton-lineage exception, terminal
-release) in reference.md's "Owner lease". In short: absent → write + commit
-path-scoped (push, guard step 3) and CAS-confirm your token; **FRESH** → REFUSE
-and report unless this generation's baton `Run-token:` matches; **ALL signals
-stale** → reclaim (sweep only when a task's signals are stale AND no worktree is
-on its `task/NN-<slug>` branch). Release (delete, path-scoped, committed, pushed)
-at step 4's report.
+**Claim the owner lease, before reporting the plan below.** `python3
+.claude/skills/drain/admission.py --frontier <drain_frontier.py JSON>` executes
+the DRAIN-OWNER.md git-CAS lease claim (full procedure — format, CAS re-read of
+YOUR `Run-token:`, FRESH-vs-stale liveness, stale-lock reclaim, baton lineage,
+terminal release — in reference.md's "Owner lease") AND the two cross-spec
+checks it owns: R1 spec-lease claim eligibility (up-to-3 Touch-disjoint specs)
+and R2 the two-level `W ≤ 5` per-spec / `≤ 10` global cap. A non-zero exit is a
+claim failure, not a crash to route around; CLI contract in reference.md's
+"Cross-spec admission & merge (R1–R12)". Same-spec `Group:`/Touch rolling-window
+logic stays prose-driven (step 2); release the lease at step 4's report.
 
 Report the plan in one block: dispatch order, what's done, what's
 deferred/blocked and why. An `in-progress` task is a dead worker's lock only
@@ -148,10 +149,8 @@ claimed specs share **one global pool capped at ≤10 total** live workers
 workers in an otherwise-empty window (reference.md, "Tournament", R8a).
 
 **Cross-spec admission & merge (R1–R12).** Per-spec rolling-window admission
-binds only when W > 1; cross-spec swarm admission binds regardless of W. Full
-rules — spec-lease claiming (up to 3 disjoint specs), same-spec vs cross-spec
-co-admissibility, the two-level ≤10 shared-pool cap, per-verdict top-up, one
-global serial merge, runtime Touch enforcement — in [reference.md](reference.md)'s "Cross-spec admission & merge (R1–R12)".
+binds only when W > 1; cross-spec swarm binds regardless of W. Claimed specs +
+admitted tasks come from step 1's `admission.py`; full rules in [reference.md](reference.md)'s "Cross-spec admission & merge (R1–R12)".
 
 **The flip is compare-and-swap.** Re-read the task file immediately before
 flipping — an exact-match edit of the literal `Status: pending` line (a file
