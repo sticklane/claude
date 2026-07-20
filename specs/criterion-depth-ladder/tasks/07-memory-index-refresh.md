@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Discovered-from: specs/criterion-depth-ladder/tasks/01-doctrine-depth-ladder.md
 Spec: ../SPEC.md
 Priority: P3
@@ -13,18 +13,21 @@ docs/memory.md index line for this doc (line 16) still summarizes only the three
 
 ## Acceptance
 
-- [ ] `grep -c "depth ladder" docs/memory.md` returns non-zero (confirmed 0
+- [x] `grep -c "depth ladder" docs/memory.md` returns non-zero (confirmed 0
       today, 2026-07-20) — the index line names the new "Criterion depth
       ladder" section (L0-L3 levels + deepest-feasible rule) added to
       `docs/memory/anchored-acceptance-criteria.md` this run.
-- [ ] `grep -c "deepest-feasible" docs/memory.md` returns non-zero
+      Evidence: grep -c returns 1 on merged main (commit ec22dfd).
+- [x] `grep -c "deepest-feasible" docs/memory.md` returns non-zero
       (confirmed 0 today) — the deepest-feasible rule is named, not just
       the phrase "depth ladder" in isolation.
-- [ ] The edit stays a single-line change to line 16 (`git diff --numstat
-    docs/memory.md` shows exactly 1 file, 1 line changed) — the existing
-      summary (vacuous-grep / unsatisfiable-bound / sibling-bump) is
+      Evidence: grep -c returns 1 on merged main.
+- [x] The edit stays a single-line change to line 16 (`git diff --numstat
+docs/memory.md` shows exactly 1 file, 1 line changed) — the existing
+      summary (vacuous-grep / unsatisfiable-bump / sibling-bump) is
       extended, not replaced (line 420 chars today; growing it by one
       clause is expected and fine, no upper bound).
+      Evidence: worker's commit ec22dfd numstat — `1 1 docs/memory.md`.
 
 ## Original report
 
