@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 12 turns
@@ -33,12 +33,19 @@ behavior fixture-by-fixture, `runner-selftest.sh`-style.
 
 ## Acceptance
 
-- [ ] `bash tests/test_eval_coverage_lint.sh` → exit 0, with a
+- [x] `bash tests/test_eval_coverage_lint.sh` → exit 0, with a
       failing-fixture case per R2 violation class
-- [ ] `test -f evals/COVERAGE.md && grep -c 'lint-eval-coverage'
-  evals/COVERAGE.md` → ≥ 1 (file exists and names its lint; phrase
+      → PASS (exit 0): one fixture per class — no-coverage-row,
+      tier-a-too-few-scenarios, tier-a-no-adversarial, tier-b-missing-test,
+      tier-c-empty-reason — plus a conforming tree. Evidence:
+      specs/eval-coverage-tiers/evidence/01-coverage-table-and-lint.md
+- [x] `test -f evals/COVERAGE.md && grep -c 'lint-eval-coverage'
+evals/COVERAGE.md` → ≥ 1 (file exists and names its lint; phrase
       0 today, verified 2026-07-19)
-- [ ] `bash evals/lint-eval-coverage.sh; test $? -ne 0` → exit 0 at
+      → PASS: grep -c = 2 (≥ 1).
+- [x] `bash evals/lint-eval-coverage.sh; test $? -ne 0` → exit 0 at
       THIS task's close (the real tree still has known Tier A gaps —
       the lint must report them, not pass; spec-level green is task
       08's closing criterion)
+      → PASS: lint reports 17 Tier A gap violations and exits 1, so
+      `test $? -ne 0` → exit 0.
