@@ -1,6 +1,6 @@
 # Task 03: Mirror the widened procedure and bump plugin version
 
-Status: pending
+Status: in-progress
 Depends on: 01, 06
 Priority: P1
 Budget: 10 turns
