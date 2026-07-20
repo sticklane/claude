@@ -24,9 +24,10 @@ the full pipeline including drain ("do it all", 2026-07-19).
   02/03/04 — one Group line, `Parallel-window: 3`), then
   `/drain specs/drain-frontier-scanner`, then
   `/drain specs/eval-coverage-tiers`.
-- After the drains: refresh PR #19's stale body (still says
-  "pre-critique"); all paid `./evals/run.sh` executions are
-  manual-pending, human-launched.
+- PR #19: MERGED (2026-07-20) — everything above is on main. The
+  resuming session works from fresh main; any new work gets a new
+  branch/PR. Remaining human items: paid `./evals/run.sh` executions
+  (manual-pending) and the HUMAN.md blockers.
 - Earlier this session (already landed, pushed): criteria remediation
   sweep over all unimplemented specs (4 sweep commits + grandfathering
   commit), HUMAN.md blocker filed re: `Status: obsolete` vocabulary.
