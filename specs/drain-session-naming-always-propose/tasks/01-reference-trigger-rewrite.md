@@ -1,6 +1,6 @@
 # Task 01: reference.md — drop the Generation:-keyed naming gate
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -47,14 +47,14 @@ shared design decision (this spec pins the exact wording each file needs).
 
 ## Acceptance
 
-- [ ] `grep -c "regardless of the adopted owner lease's" .claude/skills/drain/reference.md` → ≥ 1
+- [x] `grep -c "regardless of the adopted owner lease's" .claude/skills/drain/reference.md` → ≥ 1
       (anchor deliberately stops short of "Generation" since the file's
       own idiom backticks that word, which would otherwise straddle the
       grep match unpredictably)
-- [ ] `grep -c "states its own more precise trigger" .claude/skills/drain/reference.md` → ≥ 1
-- [ ] `grep -c 'never re-set on baton generations' .claude/skills/drain/reference.md` → 0
+- [x] `grep -c "states its own more precise trigger" .claude/skills/drain/reference.md` → ≥ 1
+- [x] `grep -c 'never re-set on baton generations' .claude/skills/drain/reference.md` → 0
       (the old unqualified clause must be replaced, not merely supplemented)
-- [ ] End-to-end (semantic, not just phrase-presence — a fresh reader with
+- [x] End-to-end (semantic, not just phrase-presence — a fresh reader with
       no other context than the updated "Gen-1 startup advisories" /
       "Name the shell" sections can correctly classify): (a) "a human opens
       a new terminal and starts a `/drain` session that adopts an
@@ -63,3 +63,8 @@ shared design decision (this spec pins the exact wording each file needs).
       own baton mechanism self-relaunches a successor generation headlessly
       via `nohup`" → does not propose (no TTY). Record both classifications
       as evidence.
+
+Evidence: verifier PASS on all four criteria — greps returned 1 / 1 / 0
+respectively; semantic check classified (a) proposes and (b) does-not-propose
+(no TTY), both matching expected. Full report:
+specs/drain-session-naming-always-propose/evidence/01-reference-trigger-rewrite.md
