@@ -76,11 +76,14 @@ failure, fast-forward if only the remote moved, halt-and-report if both
 diverged — so the reads below see current shared state (reference.md's "Owner
 lease", Remote divergence check — load only the named section, Grep-then-offset).
 
-Read only the header fields of each task file (`Status`, `Depends on`,
-`Priority`, `Budget`, `Touch`) — not the bodies; workers read their own task.
-`Budget` feeds the worker's over-budget stop and the headless `--max-turns`
-cap; `Priority` is an optional tie-break (absent = P2). A task is
-**dispatchable** when `Status: pending` and every dependency is `done`.
+Invoke `python3 .claude/skills/drain/drain_frontier.py <spec-dir>` per spec
+dir and treat its output as authoritative for the dispatchable set and
+ordering. Missing script or non-zero exit → today's header read verbatim
+(`Status`, `Depends on`, `Priority`, `Budget`, `Touch` — never the bodies;
+workers read their own task), quoting the scanner's stderr in the fallback
+log line. `Budget` feeds the worker's over-budget stop and the headless
+`--max-turns` cap; `Priority` absent = P2; a task is **dispatchable** when
+`Status: pending` and every dependency is `done`.
 `Status: draft` stubs (discovered work, step 3) are never dispatchable
 directly — **stub intake** (below) screens and gates actionable ones, flipping
 gate-PASSED stubs `draft` → `pending` in the same run; a human audits every
@@ -124,11 +127,10 @@ never-pushed local run drain resyncs the tracking ref after each merge
 (reference.md's Worker prompt and Status field semantics — load only the named
 section, Grep-then-offset).
 
-When several tasks are dispatchable at once, apply the deterministic tie-break:
-lowest `Priority` (absent = P2), then greatest unblocking-power (count of
-still-`pending` tasks whose `Depends on:` names this task, resolved as the
-dispatchability check does), then lexicographic task-file path. Drain computes
-the order; the model never reorders the queue mid-run.
+When several tasks are dispatchable at once, dispatch in the scanner's
+emitted order — the tie-break is computed by drain_frontier; a fallback read
+applies the same Priority → unblocking-power → lexicographic-path triple by
+hand. Drain computes the order; the model never reorders the queue mid-run.
 
 **Wake economics — keep the hub context small.** The hub's context _size_, not
 the number of verdict wakes, is the cost lever; hence the verdict cap above, the
