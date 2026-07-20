@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: pending
+Status: in-progress
 Depends on: 02, 03, 04
 Priority: P2
 Budget: 10 turns
@@ -35,16 +35,16 @@ real-content wrappers are touched.
 
 - [ ] `grep -c 'depth ceiling' antigravity/.agents/skills/idea/SKILL.md`
       → ≥ 1; `grep -c 'depth ceiling'
-    antigravity/.agents/skills/breakdown/SKILL.md` → ≥ 1;
+  antigravity/.agents/skills/breakdown/SKILL.md` → ≥ 1;
       `grep -ci 'gameable' antigravity/.agents/skills/critic/SKILL.md`
       → ≥ 1; `grep -ci 'gameable'
-    antigravity/.agents/workflows/critique.md` → ≥ 1;
+  antigravity/.agents/workflows/critique.md` → ≥ 1;
       `grep -c 'criteria-adequacy'
-    antigravity/.agents/skills/verifier/SKILL.md` → ≥ 1 (per-file
+  antigravity/.agents/skills/verifier/SKILL.md` → ≥ 1 (per-file
       anchors — a partial port cannot pass; all five 0 today, verified
       2026-07-19). Depth ceiling: paraphrased-port prose — behavioral
       complement is the mirror-verification live sweep in step 4,
       evidence-recorded.
 - [ ] `git show <this task's own commit> -- .claude-plugin/plugin.json |
-    grep -q '^+.*"version"'` → exit 0 (own-commit version bump, per
+  grep -q '^+.*"version"'` → exit 0 (own-commit version bump, per
       docs/memory/anchored-acceptance-criteria.md)
