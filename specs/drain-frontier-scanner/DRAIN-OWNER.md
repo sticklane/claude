@@ -1,5 +1,5 @@
-Run-token: afeb2e0118315ce0
+Run-token: 33b32f59e1fdce32
 Host: stevens.mac.mini.lan
-Started: 2026-07-20T04:40:00Z
-Generation: 2
+Started: 2026-07-20T13:32:48Z
+Generation: 1
 Spec: specs/drain-frontier-scanner
