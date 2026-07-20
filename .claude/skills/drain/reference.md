@@ -1712,6 +1712,26 @@ admits one task alone and merges it before the next); the **cross-spec swarm
 layer** (spec-lease claiming and cross-spec co-admissibility) binds regardless
 of W.
 
+**Frontier input (scanner-computed).** The structure this section's rules
+consume is computed by `python3 .claude/skills/drain/drain_frontier.py
+<spec-dir> [--window N] [--claimed <task-path>...]` (SKILL.md step 1's
+invocation, once per spec dir) and taken as authoritative, never re-derived
+in context: the ordered `dispatchable` set (tie-break triple: lowest
+`Priority`, absent = P2; then greatest unblocking-power — the count of
+still-`pending` tasks whose `Depends on:` names this task, resolved as the
+dispatchability check does; then lexicographic task-file path), its windowed
+`admissible` subset with Touch collisions against `--claimed` filtered out,
+and the `- Group:` co-admissibility / ungrouped-runs-alone shape, which the
+scanner computes from an EMPTY-WINDOW assumption. Drain alone keeps the
+live-window gate and the final admit count: only drain's window membership
+distinguishes a live worker (occupies a slot) from a suspected zombie (claim
+retained, slot released, R9.2), so drain evaluates window emptiness and
+co-admissibility against live in-flight workers and admits against live
+slots — the scanner does no live-slot arithmetic. Fallback (script missing
+or exiting non-zero): apply this section's rules to a by-hand header read —
+the pre-scanner procedure verbatim, including the tie-break triple above —
+and quote the scanner's stderr in the drain log line recording the fallback.
+
 **Spec-lease claiming (R1, R4, R5, R6, R11).** At inventory (SKILL.md step 1),
 before claiming any lease, drain computes each ready spec's Touch footprint
 (the union of its dispatchable tasks' `Touch:` headers) and greedily claims
