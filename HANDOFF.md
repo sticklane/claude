@@ -4,119 +4,145 @@
 
 Continuing an unattended `/drain` run over the whole `specs/` queue (no
 argument = whole-queue scope, per drain's exhaustion contract). This
-session (gen 1, attended) hit the session-refresh wake budget
-(273k-token p90 context, over the 250k threshold) after 5 recorded
-verdicts and wrote a baton mid-run rather than continuing in a bloated
-context. **A fresh session should just run `/drain` again** — it reads
-the baton below and resumes automatically; this file exists only because
-the session-refresh hook fires independently of drain's own baton
-mechanism.
+session (gen 1, attended) hit the session-refresh wake budget (3
+re-primes, 230k-token p90 context) after 2 recorded verdicts and wrote a
+baton mid-run rather than continuing in a bloated context. **A fresh
+session should just run `/drain` again** — it reads the baton below and
+resumes automatically; this file exists only because the session-refresh
+hook fires independently of drain's own baton mechanism.
 
-**Primary resume artifact:** `specs/codebase-context-tree/DRAIN-BATON.md`
-(generation 2, `Run-token: 11896f4100a365e6`) — this is the authoritative
+**Primary resume artifact:** `specs/drain-multi-spec-swarm/DRAIN-BATON.md`
+(generation 2, `Run-token: ab7b3e973279b470`) — this is the authoritative
 state, more detailed than this file. Read it first.
 
 **Orchestrator isolation:** this run works from an isolated worktree at
-`.claude/worktrees/drain-orchestrator` on branch `drain-orchestrator-run`
-(default-ON orchestrator isolation), NOT the primary checkout at
-`/Users/sjaconette/claude`. A fresh `/drain` invocation should re-establish
-or reuse this isolated worktree per its own "Orchestrator isolation"
-procedure — don't work directly in the primary checkout.
+`.claude/worktrees/drain-orchestrator` (detached HEAD, currently at
+`4f6d643`), NOT the primary checkout at `/Users/sjaconette/claude`. A
+fresh `/drain` invocation should re-establish or reuse this isolated
+worktree per its own "Orchestrator isolation" procedure — don't work
+directly in the primary checkout. Since `main` is already checked out in
+the primary checkout, the isolated worktree cannot check out `main` by
+name (git one-worktree-per-branch) — use `git worktree add --detach
+<path> main` (or `origin/main`) instead, matching what this generation
+did.
 
 ## State
 
-**Fully drained this run (lease released, spec review recorded):**
+**Currently claimed:** `specs/drain-multi-spec-swarm` only
+(`Run-token: ab7b3e973279b470`, gen 2 per the baton). No other spec lease
+is held.
 
-- `specs/drain-worker-dispatch-hardening` — 5/5 tasks done, spec review
-  skipped (docs-only), lease released.
-- `specs/context-blowout-subagent-guards` — 1/1 task done, spec review
-  skipped (docs-only), lease released.
+**Landed this generation:**
 
-**In progress, lease held:**
+- Task 01: done (landed before this run).
+- Task 04 (admission.py + touch_disjoint.py): done, merged (`aaa1638`).
+- Task 06 (skill-invokes-admission): done, merged (`7567f25`). Live
+  `/drain`'s SKILL.md step 1 now invokes `admission.py` for R1/R2.
 
-- `specs/codebase-context-tree` — was a draft spec (no `tasks/`),
-  auto-broken-down (3b) into 14 tasks this run (commit `0aef7f3`, critic
-  fixes in `30ab01f`). Task 01 (Rust crate scaffold, CLI, `ctx init`,
-  Python extractor) is DONE (commit `2c47bf0`, all gates green). **13
-  tasks remain (02-14).** Lease `Run-token: 11896f4100a365e6` still held
-  — do not re-claim, just continue dispatching under it.
+**Needs redispatch (not a real blocker — see Gotchas):**
 
-**Deferred to later (never reached — dispatchable work always took
-priority, per 3b's "never preempt" rule):**
+- Task 03 (mirror-and-version-bump): attempt 1 returned a **false
+  BLOCKED**. Left `Status: in-progress` with a `## Progress` note
+  explaining why; does not count toward slot-machine escalation.
+  Redispatch with an explicit instruction to sync the worker's worktree
+  against `origin/main`, not local `main`.
 
-- 3b auto-breakdown: `specs/drain-hub-context-discipline` (P2),
-  `specs/prompt-tweaking-roi` (P3) — both `Breakdown-ready: true`, no
-  `tasks/` yet.
-- Stub intake: 6 draft stubs — `narrow-autopilot/tasks/07`,
-  `shared-viz-renderer/tasks/{05,06}`,
-  `trajectory-evals/tasks/{05,06,07}`.
+**Still pending, dispatchable now:**
 
-Next dispatchable task: `specs/codebase-context-tree/tasks/02-*.md` (P1,
-dep 01 done). Re-read the current `Depends on:`/`Touch:`/`## Parallelization`
-state fresh rather than trusting any prior summary — the Parallelization
-section was rewritten mid-run during the critic-fix pass.
+- Task 02 (token-discipline-carveout): `Depends on: none`, P2.
+- Task 05 (admission-concurrency-test): `Depends on: 04` (done), P1.
 
-## Files touched (paths only, see baton for full detail)
+Next dispatchable by priority/tie-break: task 03 (redispatch) or task 05
+(both P1, tied unblocking-power — 03 wins lexicographic tie-break, so
+finish its redispatch first), then task 05, then task 02 (P2).
+Spec-completion review has not run yet — runs once nothing is left to
+dispatch for this spec.
 
-- `specs/drain-worker-dispatch-hardening/tasks/{03,05}-*.md`,
-  `evidence/spec-review.md` — landed.
-- `specs/context-blowout-subagent-guards/tasks/01-*.md`,
-  `.claude/rules/token-discipline.md`, `evidence/spec-review.md` — landed
-  (two new bullets in token-discipline.md: browser-delegation subagent
-  routing, deferred-tool-schema ToolSearch reminder).
-- `specs/codebase-context-tree/` — `SPEC.md` (+Parallelization section),
-  `tasks/01-14-*.md`, `DRAIN-BATON.md`.
-- `context-tree/` — new Rust crate (task 01's output): `Cargo.toml`,
-  `src/{main,lib,cli,facts,path,hash,extract,project}.rs`,
-  `src/lang/{mod,python}.rs`, `tests/*.rs`,
-  `tests/fixtures/languages/python/sample.py`, `scripts/check.sh`.
+**Deferred to later (never reached this generation):**
 
-## Gotchas
+- `specs/drain-frontier-scanner` — lease was reclaimed (was stale) then
+  released again in favor of `drain-multi-spec-swarm` (higher priority,
+  overlapping Touch footprint, per R5). Has 2 pending tasks (03, 04) and
+  1 draft stub (05). Re-claim once `drain-multi-spec-swarm` releases.
+- Whole-queue inventory (before claiming this spec) found ~5 more
+  dispatchable specs — `drain-session-naming-always-propose`,
+  `eval-coverage-tiers`, `human-blocker-impact-clarity`,
+  `prompt-tweaking-roi` — all overlap `drain-multi-spec-swarm`'s Touch
+  footprint (SKILL.md, reference.md, plugin.json, antigravity mirror, or
+  token-discipline.md) and could not be claimed alongside it. Re-run
+  inventory fresh once this spec's lease releases.
+- `specs/codebase-context-tree` (unrelated prior drain run): fully done
+  (14/14), one new `Status: draft` stub (task 15) for stub intake at
+  the appropriate priority — not touched this generation.
 
-- **Rust toolchain**: this machine had none before task 01. `rustup`
-  stable 1.97.1 (minimal + rustfmt + clippy) is now installed at
-  `~/.cargo`, but **not on every shell's default `$PATH`** — export
-  `PATH="$HOME/.cargo/bin:$PATH"` before running
-  `context-tree/scripts/check.sh` at merge time, every time.
-- **Local `refs/heads/main` goes stale and can't be force-moved**: the
-  primary checkout at `/Users/sjaconette/claude` has its own live,
-  uncommitted/unpushed work (a human session working on an unrelated
-  `workboard-kanban-view` spec) — `git branch -f main origin/main` fails
-  because git refuses to move a checked-out branch with a dirty tree.
-  **Always target `origin/main` directly** (fetch + reset --hard
-  origin/main) when syncing worker dispatch worktrees — never local
-  `main`, which several early dispatches this session cut from
-  incorrectly (harmless so far since Touch paths never overlapped, but
-  don't repeat it).
-- **Primary checkout has unrelated concurrent human work** — before every
-  push, `git fetch && git log origin/main` and check for new commits; if
-  disjoint from `specs/codebase-context-tree/` and this run's other
-  touched paths, `git rebase origin/main` and push again. This happened
-  repeatedly this session with no real collision.
-- A worker (context-blowout-subagent-guards task 01) delivered a fully
-  evidenced DONE verdict but its own build procedure forgot to flip
-  `Status: done` on its task file — drain corrected it directly before
-  merging. Worth a glance if it recurs.
+## Files touched this session
+
+- `specs/drain-frontier-scanner/DRAIN-OWNER.md` — reclaimed then removed
+  (lease released back).
+- `specs/drain-multi-spec-swarm/DRAIN-OWNER.md` — claimed.
+- `specs/drain-multi-spec-swarm/tasks/{03,04,06}-*.md` — status flips +
+  Progress entry (03).
+- `.claude/skills/drain/{SKILL.md,reference.md}`,
+  `.claude/skills/drain/admission.py`,
+  `.claude/skills/_shared/touch_disjoint.py`, plus their tests —
+  landed via tasks 04/06.
+- `specs/drain-multi-spec-swarm/evidence/{04,06}-*.md` — verifier
+  reports.
+- `specs/drain-multi-spec-swarm/DRAIN-BATON.md` — new, generation 2.
+- Two prior-session handoffs consumed: `.claude/HANDOFF.md`
+  (transcript-antipattern specs) and this file's predecessor (a mid-run
+  drain handoff from an earlier generation, now superseded by this one).
+- Nothing else in the repo was edited by drain this session.
+
+## Gotchas / things learned this session (don't re-derive)
+
+- **Local `main` in the primary checkout goes stale under orchestrator
+  isolation and stays that way** — the isolated worktree pushes straight
+  to `origin/main`; local `refs/heads/main` in the primary checkout only
+  advances when a human runs `git pull` there. This is expected and
+  harmless for the orchestrator itself, but **a dispatched worker's own
+  "reset your worktree to `<default-branch>` tip" step can resolve to the
+  stale local ref instead of `origin/main`** if not told explicitly which
+  to target. This caused two real problems this generation: task 03's
+  worker returned a false BLOCKED (concluded already-merged work hadn't
+  landed); task 04's worker branched from a stale base (merged cleanly
+  anyway, but only by luck — no real conflict existed). Task 06's worker
+  independently caught and self-corrected this. **Fix for future
+  dispatches: add an explicit line to the worker prompt naming
+  `origin/main` (not bare `main`) as the sync target whenever the
+  orchestrator is running from an isolated worktree.** Worth a permanent
+  fix to the Worker prompt contract in reference.md — a good `/idea` or
+  small spec, not done this session (discovered, not actioned).
+- **Reclaiming a stale lease and then immediately re-releasing it is
+  correct, not wasted motion**: this generation reclaimed
+  `drain-frontier-scanner`'s dead lease (mechanical preflight sweep, 8+
+  hours stale) before discovering `drain-multi-spec-swarm` was
+  higher-priority and Touch-overlapping, so it released
+  `drain-frontier-scanner` again and claimed the other. Both are
+  legitimate, separately-committed steps per R1/R5 — don't try to
+  collapse them into one commit or skip the reclaim just because it gets
+  immediately superseded.
+- **Almost every ready spec in this queue overlaps `drain-multi-spec-
+swarm`'s Touch footprint** (it patches the shared drain-skill
+  infrastructure itself: SKILL.md, reference.md, plugin.json, the
+  antigravity/codex mirrors, token-discipline.md) — expect a single-spec
+  claim to be normal here, not a bug, until this spec's tail (02, 03, 05)
+  fully lands.
+- A real local/remote divergence (local ahead 3, behind 28) at session
+  start turned out to be two things: (a) a genuinely different prior
+  drain generation's already-pushed work (clean rebase, no conflicts),
+  and (b) unrelated uncommitted WIP in the primary checkout
+  (`docs/architecture.md`, a task-tracking research doc, a stale
+  pathspec-hardening handoff, a deleted root HANDOFF.md) that predates
+  this session and was stashed/restored intact, never committed — still
+  sitting there, not drain's concern.
 
 ## Verification
 
-Work landed this session was verified via drain's own mechanical merge
-gates each time (not a separate post-hoc verifier pass, to conserve the
-budget that triggered this handoff — each DONE verdict already ran an
-independent verifier and/or full acceptance-command re-run before I
-recorded it):
-
-- `drain-worker-dispatch-hardening` tasks 03/05: `specs/status.sh`,
-  `claude plugin validate .`, all `tests/test_*.sh`,
-  `./bin/check-agent-model-pins`, `evals/lint-ultra-gate.sh` — all green,
-  re-run by me at merge time (not just self-reported by the worker).
-- `context-blowout-subagent-guards` task 01: same gate set, green;
-  in-dispatch independent verifier also PASSed.
-- `codebase-context-tree` task 01: same repo-wide gate set green, PLUS
-  `context-tree/scripts/check.sh` (cargo fmt/clippy/test) independently
-  re-run by me at merge time — green (11 tests passed). The worker's own
-  dispatch also ran an independent verifier sub-pass.
-
-Nothing landed this session is unverified. The 13 remaining
-codebase-context-tree tasks are still `Status: pending` — no verification
-owed on those.
+- Task 04: independent verifier PASS on all 9 criteria (in-dispatch);
+  I additionally re-ran all project gates before merging — green.
+- Task 06: independent verifier PASS on all 4 criteria (in-dispatch); I
+  additionally re-ran all project gates before merging — green.
+- Task 03: no verification owed — attempt 1 made no changes (false
+  BLOCKED, no commits on its branch).
+- Nothing landed this session is unverified.
