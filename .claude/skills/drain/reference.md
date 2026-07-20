@@ -52,7 +52,12 @@ below, rather than routing the task to a different execution mode.
 Four best-effort, never-blocking actions drain runs at gen-1 startup ONLY
 (never on baton generations — they inherit gen 1's) — none gates dispatch;
 correctness comes from the owner-lease claim, not these. SKILL.md's "Gen-1
-startup advisories" names them and points here.
+startup advisories" names them and points here. The other three advisories
+(sweep foreign live sessions, hub-economics, mechanical preflight sweep)
+keep this paragraph's gen-1-only gate unchanged; **Name the shell** below
+states its own more precise trigger, independent of this paragraph's
+`Generation:`-based gate — read its closing sentence, not this one, for
+when it fires.
 
 **Name the shell (best-effort).** If the terminal tab has no custom name
 already (none set by the user this session), set it to the repo name plus a
@@ -73,8 +78,14 @@ other runtimes may genuinely honor the OSC escape for their terminal tab
 (harness-dependent, unverified here) — use
 `printf '\033]0;%s · drain: %s\007' "$(basename "$(git rev-parse
 --show-toplevel)")" "<sorted, comma-joined, 40-char-capped spec slugs>"`
-there. Once, never re-set on baton generations (they inherit it), skip
-silently with no TTY.
+there. Fires once per session — the first time THIS conversation reaches
+step 1, regardless of the adopted owner lease's `Generation:` number (a
+session-refreshed drain that adopts a mid-flight lease at `Generation: 3`
+still proposes on its first pass). Skip only if this conversation's tab
+already carries a custom name (none set by the user this session), or if
+there is no TTY — a detached headless baton self-relaunch (`nohup`) or an
+awaited subagent spawn has neither, so the no-TTY check alone already
+excludes every relaunch path without needing the `Generation:` gate.
 
 **Startup session sweep (advisory).** Before inventory, list other live
 sessions whose cwd resolves into this repo (`claude agents --json`, else
