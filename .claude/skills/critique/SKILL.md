@@ -45,7 +45,11 @@ it always re-runs). This skip is `SPEC.md`-only: a plan or diff target has no
    stale path/line reference, a non-deterministic or under-scoped acceptance
    command, a missing runnable check, a format/header contract violation — or
    JUDGMENT — an ambiguity, a scope question, a missing design decision, a
-   contested tradeoff. MECHANICAL findings are applied _unconditionally_,
+   contested tradeoff, or a gameability finding: gameable criteria are JUDGMENT-class, never MECHANICAL —
+   swapping what a criterion checks changes what the spec verifies (a
+   spec-meaning change), so a trivially-satisfiable/gameable criterion is
+   never the MECHANICAL bullet's "under-scoped acceptance command" and is
+   routed to JUDGMENT. MECHANICAL findings are applied _unconditionally_,
    without the user-ask/pipeline gate that governs the rest of this step:
    edit the target file directly, commit (`fix: apply mechanical critique
 findings` or similar), and re-run the critic — this apply→recheck loop is
