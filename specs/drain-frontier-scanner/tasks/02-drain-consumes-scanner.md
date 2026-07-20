@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 10 turns
@@ -38,14 +38,18 @@ spec owns that overage); do not restructure unrelated sections.
 
 ## Acceptance
 
-- [ ] `grep -c 'drain_frontier' .claude/skills/drain/SKILL.md` → ≥ 2
+- [x] `grep -c 'drain_frontier' .claude/skills/drain/SKILL.md` → ≥ 2
       and `grep -c 'tie-break is computed by drain_frontier'
     .claude/skills/drain/SKILL.md` → ≥ 1 and `grep -c
     'drain_frontier' .claude/skills/drain/reference.md` → ≥ 1 (all
       anchors 0 today, verified 2026-07-19). Depth ceiling: procedure
       prose — behavioral complement is task 03's trajectory assertion
       plus task 01's unit tests.
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+      Evidence: counts 2 / 1 / 1 observed; verifier PASS
+      (evidence/02-drain-consumes-scanner.md).
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0
+      Evidence: exit 0, "all ultra mentions gated in 4 files"; size gate
+      also green at exactly 500 lines (evidence/02-drain-consumes-scanner.md).
 
 ## Progress
 
