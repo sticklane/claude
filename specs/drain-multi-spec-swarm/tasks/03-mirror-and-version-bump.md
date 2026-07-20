@@ -27,6 +27,20 @@ Touch: antigravity/.agents/workflows/drain.md, codex/.agents/skills/drain/SKILL.
   escalation. Branch `task/03-mirror-and-version-bump` from this attempt
   had no commits and was deleted.
 
+- 2026-07-20 (attempt-2 routing): The redispatch (this run, host vm)
+  returned DONE but FAILED independent verification: the ported
+  cross-spec admission section dropped task 01's design-boundary clause
+  — "R1 (spec-claim eligibility) and R2 (task admission, below) together
+  are the complete, sole mechanism for cross-spec Touch collision
+  detection — no third, separate check is added anywhere, including
+  /breakdown's decision-coupling test (R6)" — from BOTH mirrors
+  (`grep -c 'sole mechanism'` = 0 in each; every mechanical check and
+  gate was otherwise green). Branch discarded per the slot-machine path.
+  Done vs remaining: the discarded attempt achieved all mechanical
+  criteria (per-file anchors, 0.9.21→0.9.22 bump, plugin validate,
+  gates) and those must be reproduced; the remaining gap is porting the
+  dropped clause into both mirrors' spec-lease-claiming subsection.
+
 ## Goal
 
 `antigravity/.agents/workflows/drain.md` and
