@@ -32,3 +32,9 @@ Only `.claude/rules/token-discipline.md`. Do not touch
 ## Acceptance
 
 - [ ] `grep -ci "swarm.*10\|10.*swarm\|drain-multi-spec-swarm" .claude/rules/token-discipline.md` → ≥ 1
+      (0 today, verified 2026-07-19). Depth ceiling: L0 grep on doctrine
+      prose — the honest ceiling for a one-sentence rule edit. Behavioral
+      complement, a named verifier judgment: confirm the carve-out
+      sentence sits adjacent to the existing "3–5 concurrent-writer
+      window" rule and cites `specs/drain-multi-spec-swarm` by slug — not
+      merely that the pattern matches somewhere in the file.

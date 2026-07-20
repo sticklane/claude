@@ -50,8 +50,19 @@ dispatchable tasks`.
 ## Acceptance
 
 - [ ] `grep -c 'promotion of this stub to a dispatchable task' .claude/skills/drain/reference.md` → 1
+      (phrase absent today, count 0, verified 2026-07-19)
 - [ ] `grep -c 'breakdown of this spec into dispatchable tasks' .claude/skills/drain/reference.md` → 1
+      (phrase absent today, count 0, verified 2026-07-19)
 - [ ] `sed -n '/^## HUMAN.md filing (R2)/,/^## /p' .claude/skills/drain/reference.md | grep -c 'unblocking-power'` → ≥ 1
       (the dependency-bearing rows cite the computation by name, within
       this section specifically — not merely present elsewhere in the
-      file)
+      file; section heading exists at reference.md:1718 and the
+      section-scoped count is 0 today, verified 2026-07-19)
+- Depth ceiling (covers the three checks above): L0/L1 on skill-reference
+  prose — the two fixed phrases are themselves pinned verbatim by the
+  spec, so text-presence is most of the requirement. Behavioral
+  complement: a named verifier judgment instruction — the verifier picks
+  one real `Unblock: ask:`- or `Unblock: run:`-blocked task in this
+  repo's `specs/`, applies the documented derivation, and confirms the
+  derived `Blocks:` task-name set matches the tasks whose `Depends on:`
+  actually name it (or "no other pending task" when none do).
