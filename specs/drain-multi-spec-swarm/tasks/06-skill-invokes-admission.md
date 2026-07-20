@@ -1,6 +1,6 @@
 # Task 06: Rewire live /drain to invoke admission.py
 
-Status: pending
+Status: in-progress
 Depends on: 01, 04, specs/drain-frontier-scanner/tasks/02-drain-consumes-scanner.md
 Priority: P1
 Budget: 10 turns
@@ -63,7 +63,7 @@ Do not touch `admission.py` itself (task 04's scope, already merged) or
 ## Acceptance
 
 - [ ] `grep -c "admission.py" .claude/skills/drain/SKILL.md
-    .claude/skills/drain/reference.md` → combined count ≥ 2 (currently 0
+  .claude/skills/drain/reference.md` → combined count ≥ 2 (currently 0
       in both, verified 2026-07-19)
 - [ ] `wc -l < .claude/skills/drain/SKILL.md` → ≤ 500
 - [ ] A verifier reads SKILL.md's step-1 prose and confirms it instructs the
