@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: in-progress
+Status: pending
 Depends on: 01
 Priority: P2
 Budget: 8 turns
@@ -48,3 +48,7 @@ or antigravity paths (task 06).
       scenario, which exercises the critic flagging a seeded gameable
       criterion.
 - [ ] `bash evals/lint-ultra-gate.sh` → exit 0
+
+## Progress
+
+- 2026-07-19: session wind-down at maintainer wrap-up request; worker died in a harness reconnect before any commit or verdict (branch at dispatch base, nothing to rescue). Not a failed attempt. Reset to pending for the next /drain run.
