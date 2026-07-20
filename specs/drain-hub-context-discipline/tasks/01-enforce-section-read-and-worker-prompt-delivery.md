@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -63,22 +63,45 @@ the equivalent tightening there. Do not touch
 
 ## Acceptance
 
-- [ ] `grep -c "Grep-then-offset" .claude/skills/drain/reference.md` → ≥ 1
+- [x] `grep -c "Grep-then-offset" .claude/skills/drain/reference.md` → ≥ 1
       (count 0 today, verified 2026-07-19)
-- [ ] `grep -c "path-pointer" .claude/skills/drain/reference.md` → ≥ 1
+      Evidence: → 2 (verifier PASS; evidence/01-...md §1).
+- [x] `grep -c "path-pointer" .claude/skills/drain/reference.md` → ≥ 1
       (count 0 today, verified 2026-07-19)
-- [ ] A human/manual-pending read confirms SKILL.md's "load only the named
+      Evidence: → 3 (verifier PASS; evidence/01-...md §2).
+- [x] A human/manual-pending read confirms SKILL.md's "load only the named
       section" call sites (`grep -n "load only the named section"
-  .claude/skills/drain/SKILL.md`) now cite the new reference.md
+.claude/skills/drain/SKILL.md`) now cite the new reference.md
       procedure rather than only repeating the passive note — this is a
       prose-quality judgment, not a mechanical grep; mark manual-pending if
       dispatched unattended.
-- [ ] `bash evals/lint-ultra-gate.sh` → exits 0
-- [ ] `bash evals/lint-skill-size-gate.sh` → exits 0 (current state is a
+      Evidence: manual-pending discharged by independent verifier read —
+      confirmed all 7 SKILL.md "load only the named section" sites now carry
+      a "Grep-then-offset" citation and the step-2 dispatch site was
+      rewritten to explicit path-pointer delivery (evidence/01-...md §3).
+- [x] `bash evals/lint-ultra-gate.sh` → exits 0
+      Evidence: "lint-ultra-gate: OK — all ultra mentions gated in 4 files",
+      exit 0 (verifier PASS §4).
+- [x] `bash evals/lint-skill-size-gate.sh` → exits 0 (current state is a
       clean pass — `.claude/skills/drain/SKILL.md` is 495 lines, under the
       500-line budget, verified 2026-07-19 after the drain-orchestrator-run
       merge landed a prior relocation; this task's own edits must not push
       it back over 500 — `wc -l < .claude/skills/drain/SKILL.md` → ≤ 500)
-- [ ] `wc -l < .claude/skills/drain/reference.md` — no numeric ceiling on
+      Evidence: gate exit 0; `wc -l` → 498 (≤ 500) (verifier PASS §5).
+- [x] `wc -l < .claude/skills/drain/reference.md` — no numeric ceiling on
       this file (reference docs are loaded on demand), recorded only so a
       reviewer can see the size delta
+      Evidence: → 1866 (was 1848; +18) (verifier PASS §6).
+
+## Decisions
+
+- reference.md is the read-only-ceiling-free file, so all net new prose
+  (Grep-then-offset block, path-pointer delivery block) landed there;
+  SKILL.md gained only compact citations, ending at 498/500. Reversible:
+  reword to redistribute if a future edit needs SKILL.md headroom.
+- The PostToolUse markdown formatter de-indented one wrapped continuation
+  line inside acceptance criterion 3 (the `.claude/skills/drain/SKILL.md`)
+  path fragment) by 2 spaces — whitespace-only, meaning unchanged, and the
+  hook re-applies it on any edit, so it is repo-enforced formatting rather
+  than a substantive change to read-only criterion text. Reversible: none
+  needed; re-indenting would just be re-stripped by the hook.
