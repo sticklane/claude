@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# human-followups [--yes] [--skip-eval] [--skip-agy] [--skip-pull]
+#
+# Runs the human-only follow-ups left open by the 2026-07-20 whole-queue
+# drain run (PR #21) — the steps unattended workers are barred from
+# launching (docs/memory/unattended-worker-tool-limits.md,
+# .claude/rules/mirror-verification.md's manual-pending escape):
+#
+#   1. git pull --ff-only          — resync this checkout with the remote
+#                                    (a drain orchestrator pushes straight
+#                                    to the remote; local main goes stale).
+#   2. bash evals/run.sh prioritize — the PAID model run gating
+#                                    eval-coverage-tiers task 02's third
+#                                    acceptance box (asks first; --yes
+#                                    skips the prompt).
+#   3. agy -p mirror sweep         — antigravity live cross-reference check
+#                                    of the drain workflow sections task 03
+#                                    of drain-multi-spec-swarm ported
+#                                    (skipped with a message when
+#                                    antigravity-cli is not installed).
+#
+# Each step is independently skippable and a failed step never blocks the
+# later ones; the script exits non-zero if any attempted step failed.
+set -u
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+YES=0 SKIP_EVAL=0 SKIP_AGY=0 SKIP_PULL=0
+for a in "$@"; do
+  case "$a" in
+    --yes) YES=1 ;;
+    --skip-eval) SKIP_EVAL=1 ;;
+    --skip-agy) SKIP_AGY=1 ;;
+    --skip-pull) SKIP_PULL=1 ;;
+    *) echo "unknown flag: $a" >&2; exit 2 ;;
+  esac
+done
+fails=0
+
+echo "== 1/3 resync checkout (git pull --ff-only)"
+if [ "$SKIP_PULL" = 1 ]; then
+  echo "   skipped (--skip-pull)"
+elif git -C "$ROOT" pull --ff-only; then
+  echo "   OK"
+else
+  echo "   FAILED — resolve by hand (diverged local commits?)"; fails=$((fails+1))
+fi
+
+echo "== 2/3 paid eval run: evals/run.sh prioritize"
+if [ "$SKIP_EVAL" = 1 ]; then
+  echo "   skipped (--skip-eval)"
+else
+  run_eval=1
+  if [ "$YES" != 1 ]; then
+    printf "   This launches PAID headless model sessions. Run it? [y/N] "
+    read -r reply
+    case "$reply" in y|Y|yes|YES) ;; *) run_eval=0; echo "   declined" ;; esac
+  fi
+  if [ "$run_eval" = 1 ]; then
+    if bash "$ROOT/evals/run.sh" prioritize; then
+      echo "   PASS — now tick the third acceptance box (AC3, the"
+      echo "   manual-pending evals/run.sh criterion) in"
+      echo "   specs/eval-coverage-tiers/tasks/02-prioritize-evalset.md"
+      echo "   and commit."
+    else
+      echo "   FAILED — grader output above names the broken scenario."
+      fails=$((fails+1))
+    fi
+  fi
+fi
+
+echo "== 3/3 antigravity live cross-reference sweep (agy -p)"
+if [ "$SKIP_AGY" = 1 ]; then
+  echo "   skipped (--skip-agy)"
+else
+  # Resolve the REAL antigravity-cli binary. A bare `agy` can shadow-resolve
+  # to the Antigravity app bundle's Electron launcher, which no-ops in ~2s
+  # (runtimes/antigravity.md, "the absolute path is load-bearing").
+  AGY=""
+  if command -v brew >/dev/null 2>&1; then
+    p="$(brew --prefix 2>/dev/null)/bin/agy"
+    [ -x "$p" ] && AGY="$p"
+  fi
+  [ -z "$AGY" ] && command -v agy >/dev/null 2>&1 && AGY="$(command -v agy)"
+  if [ -z "$AGY" ]; then
+    echo "   skipped — antigravity-cli (agy) not installed on this machine"
+  elif ! "$AGY" --version 2>/dev/null | head -1 | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+    echo "   skipped — '$AGY' does not answer --version like antigravity-cli"
+    echo "   (PATH-shadow impostor? see runtimes/antigravity.md, Headless)"
+  else
+    prompt="Read antigravity/.agents/workflows/drain.md. Verify its cross-references resolve under THIS runtime: (a) the admission.py shell-out path it names exists relative to the workflow's stated script-bundle convention, or the workflow's own by-hand fallback clause covers its absence; (b) every file/skill/workflow path the cross-spec admission section cites exists in this repo; (c) the prioritize.md workflow's script shell-out still resolves (regression check). Reply with one line per reference: RESOLVES or BROKEN <path> <why>."
+    if "$AGY" -p "$prompt" --new-project --mode accept-edits --sandbox; then
+      echo "   sweep ran — eyeball the RESOLVES/BROKEN lines above; a BROKEN"
+      echo "   line means a mirror fix task (record it in"
+      echo "   specs/drain-multi-spec-swarm/tasks/03-mirror-and-version-bump.md's"
+      echo "   ## Discovered or file a stub)."
+    else
+      echo "   FAILED — agy exited non-zero"; fails=$((fails+1))
+    fi
+  fi
+fi
+
+echo
+if [ "$fails" -gt 0 ]; then
+  echo "human-followups: $fails step(s) failed"
+  exit 1
+fi
+echo "human-followups: done"
