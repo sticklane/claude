@@ -263,8 +263,20 @@ def git_cas_claim(spec_dir, owner_text, run_token, remote="origin"):
     if _has_remote(spec_dir, remote):
         pushed = _git_ok(spec_dir, "push", "-q", remote, "HEAD")
         if not pushed:
-            _git_ok(spec_dir, "fetch", "-q", remote)
-            _git_ok(spec_dir, "reset", "-q", "--hard", f"{remote}/HEAD")
+            # A competitor committed first. Resync to the ACTUAL pushed branch
+            # (never `{remote}/HEAD` — that is the remote's default-branch
+            # symref, frequently unset in worktrees/CI and wrong on any
+            # non-default branch). A failed fetch/reset means we cannot confirm
+            # the winner's state, so we report a lost claim rather than
+            # swallowing the failure and stranding HEAD on our own commit (which
+            # would carry our token and read as a false win).
+            branch = _current_branch(spec_dir)
+            if branch is None:
+                return False
+            if not _git_ok(spec_dir, "fetch", "-q", remote, branch):
+                return False
+            if not _git_ok(spec_dir, "reset", "-q", "--hard", "FETCH_HEAD"):
+                return False
     present = read_owner(spec_dir)
     return present is not None and parse_owner(present).get("run_token") == run_token
 
@@ -287,10 +299,25 @@ def _has_remote(spec_dir, remote):
     return _git_ok(spec_dir, "remote", "get-url", remote)
 
 
+def _current_branch(spec_dir):
+    """The current branch name, or None if detached — `git push <remote> HEAD`
+    publishes to the remote branch of this name, so it is the resync target."""
+    res = subprocess.run(
+        ["git", "-C", str(spec_dir), "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    branch = res.stdout.strip()
+    return branch if res.returncode == 0 and branch and branch != "HEAD" else None
+
+
 def _last_commit_epoch(spec_dir):
     spec_dir = Path(spec_dir)
+    # `-C spec_dir` makes the spec dir the cwd, so the pathspec is "." — never a
+    # repeat of spec_dir (a relative spec dir would double-nest to
+    # `specs/foo/specs/foo`, match nothing, and read as ALL_STALE always).
     res = subprocess.run(
-        ["git", "-C", str(spec_dir), "log", "-1", "--format=%ct", "--", str(spec_dir)],
+        ["git", "-C", str(spec_dir), "log", "-1", "--format=%ct", "--", "."],
         capture_output=True,
         text=True,
     )
