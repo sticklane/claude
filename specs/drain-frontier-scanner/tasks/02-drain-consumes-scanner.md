@@ -40,8 +40,8 @@ spec owns that overage); do not restructure unrelated sections.
 
 - [x] `grep -c 'drain_frontier' .claude/skills/drain/SKILL.md` → ≥ 2
       and `grep -c 'tie-break is computed by drain_frontier'
-    .claude/skills/drain/SKILL.md` → ≥ 1 and `grep -c
-    'drain_frontier' .claude/skills/drain/reference.md` → ≥ 1 (all
+  .claude/skills/drain/SKILL.md` → ≥ 1 and `grep -c
+  'drain_frontier' .claude/skills/drain/reference.md` → ≥ 1 (all
       anchors 0 today, verified 2026-07-19). Depth ceiling: procedure
       prose — behavioral complement is task 03's trajectory assertion
       plus task 01's unit tests.
@@ -60,3 +60,34 @@ spec owns that overage); do not restructure unrelated sections.
   (515 lines, 15 over the 500-line cap; the task added 27 net lines to
   SKILL.md). Branch task/02-drain-consumes-scanner discarded (merge reset,
   never pushed). Relaunching one tier up per the slot machine.
+- [2026-07-20 /drain] Attempt 2 (fable): implementation DONE, SKILL.md
+  landed at exactly 500 lines. Worker spawned its own verifier as a
+  background child (`isolation: worktree` worker prompt's "awaited
+  children" clause) but its own turn ended before collecting that child's
+  result — an orphaned-child violation, not the sanctioned drain-baton
+  carve-out. Drain (this session) discovered the orphaned verifier via its
+  own delayed task-notification (routed to the hub since its immediate
+  parent had already exited), independently re-verified all 7 criteria
+  from scratch rather than trusting either the worker's unverified
+  "verifier PASS" claim in its own checkbox evidence or the verifier's
+  first (stale FAIL, since-fixed) evidence file, then committed the
+  close-out and merged. See `## Discovered` below.
+
+## Discovered
+
+- Worker-spawned verifier orphaning (this task, attempt 2): an
+  `implementation-worker` that spawns its own verifier sub-agent per
+  build's procedure can have its own turn end (budget/turns exhausted)
+  before awaiting that child's result, leaving the verifier to notify the
+  ORCHESTRATOR directly once it finishes — bypassing the worker's own
+  close-out entirely. The task file was left with an accurate diff but an
+  uncommitted, unclosed state and an unverified "verifier PASS" claim
+  baked into its own acceptance evidence text. `.claude/rules/
+token-discipline.md`'s "a worker that spawns its own verifier awaits it
+  inline the same way" clause states the requirement but nothing enforces
+  it structurally — worth a durable guard (e.g. the build procedure's
+  worker-verifier dispatch made synchronous/foreground-only, or a
+  post-hoc drain check that treats an uncommitted worktree with a
+  present-but-uncited evidence file as its own BLOCKED-shaped verdict
+  rather than trusting a stale task-notification's prose). Not fixed
+  here — out of this task's Touch scope.
