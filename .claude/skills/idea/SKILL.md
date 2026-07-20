@@ -135,6 +135,16 @@ that criterion is written into the SPEC.md above, never deferred to
 3. Record the check's outcome inline next to the criterion in the SPEC.md
    draft, matching the memory file's convention — e.g. "phrase absent today,
    verified <date>".
+4. Classify each criterion's ladder level (L0–L3, the depth ladder in the
+   same memory doc) and apply the deepest-feasible rule: keep the deepest
+   level actually feasible for the target artifact rather than defaulting to
+   an L0 grep. A requirement whose criteria all bottom out at L0/L1 carries an
+   explicit depth ceiling annotation in the memory file's annotation grammar
+   (a `Depth ceiling:` line stating why deeper is infeasible and naming the
+   behavioral complement — an eval scenario, a manual-pending human read, or a
+   named verifier judgment instruction). Prose skills (most of this toolkit)
+   legitimately bottom out at L0/L1; the annotation legalizes that ceiling
+   instead of letting a grep pose as behavioral proof.
 
 ## 5. Resolve open technology/architecture choices
 
