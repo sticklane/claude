@@ -119,6 +119,38 @@ coordination substrate:
   as part of this spec's own work — not left for a later spec to hit the
   same size-gate merge-blocker `commit-message-doctrine` task 02 just
   flagged.
+- Task 04's original plan (a single-threaded bash re-implementation of the
+  algorithm, `tests/test_drain_swarm_admission.sh`) is superseded before
+  implementation begins, per round-10 scope revision: the algorithm it
+  would have re-derived in bash is instead extracted as an authoritative,
+  live-invoked Python module, `.claude/skills/drain/admission.py`,
+  following the existing live-invocation pattern this repo already proves
+  works — `.claude/skills/prioritize/SKILL.md:35` instructs the agent to
+  `run python3 <this skill dir>/prioritize_scan.py` directly, and
+  `specs/drain-frontier-scanner` (a sibling, not-yet-landed spec) is
+  wiring the same pattern for `.claude/skills/drain/drain_frontier.py`.
+  `admission.py` composes with `drain_frontier.py` rather than duplicating
+  it — `drain_frontier.py` computes each spec's own per-spec
+  dispatchable/admissible/blocked sets (read-only, no lease writes, no
+  cross-spec cap — explicitly out of scope for that spec); `admission.py`
+  consumes that JSON as input and layers R1's cross-spec Touch-disjoint
+  spec-claim eligibility and R2's two-level cap on top, plus implements the
+  DRAIN-OWNER.md git-CAS lease-claim protocol (reference.md's existing
+  claim algorithm, mechanically unchanged) as callable code instead of
+  hand-executed prose. Because `admission.py` depends on
+  `drain_frontier.py`'s interface, this spec's admission-module work is
+  blocked on `specs/drain-frontier-scanner` task 01 landing first (R17).
+  Live `/drain` execution on Claude Code is rewired to invoke `admission.py`
+  for the two checks it now owns (R15); the same-spec rolling-window
+  mechanics (`Group:` lines, per-task Touch-disjointness within one
+  already-claimed spec) are unchanged and stay prose-driven. A new test,
+  `.claude/skills/drain/test_admission_concurrency.py`, replaces task 04's
+  single-threaded simulation with real concurrent Python processes
+  (`multiprocessing`) racing against shared fixture git repos — proving the
+  lease-claim CAS and two-level cap hold under genuine OS-level race
+  conditions, not just correct sequential logic (R16). None of this
+  requires launching `/drain` itself or a human present, per CLAUDE.md's
+  authoring conventions on unattended-worker tool limits.
 
 ## Requirements
 
@@ -208,7 +240,12 @@ main)..main`) is unchanged.
   `antigravity/.agents/workflows/drain.md` and
   `codex/.agents/skills/drain/SKILL.md` reflect the same widened
   procedure (load-bearing runtime differences excepted), and
-  `.claude-plugin/plugin.json`'s version is bumped.
+  `.claude-plugin/plugin.json`'s version is bumped. This mirror scope
+  covers both the original R1–R12 prose AND, once R15 lands, `admission.py`'s
+  live invocation — antigravity's workflow shell-out and codex's real
+  SKILL.md invoke `admission.py` the same way they already/will invoke
+  `drain_frontier.py` (task 03 ports both waves, sequenced by its own
+  `Depends on:`, not a second mirror task).
 - R11: Spec-level lease claiming (R1) operates independent of the per-spec
   task rolling-window's "these rules bind only when W > 1" preamble
   (reference.md's admission-rule section opening) — R1 claims up to 3
@@ -227,6 +264,106 @@ main)..main`) is unchanged.
   whether this statement stays in SKILL.md or is relocated into
   reference.md per R9's "relocated as needed," it must not ship
   unreconciled with R2's ≤10 shared-pool cap in either location.
+- R13: Task 04's originally-specified single-threaded bash simulation
+  (`tests/test_drain_swarm_admission.sh`) is retired without being written —
+  the algorithm it would have re-implemented is instead extracted as the
+  authoritative, live-invoked Python module `.claude/skills/drain/admission.py`,
+  exposing R1's spec-claim eligibility check, R2's two-level cross-spec
+  admission cap, and the DRAIN-OWNER.md git-CAS lease-claim protocol
+  (reference.md's existing claim algorithm, mechanically unchanged) as
+  callable code rather than prose an agent hand-executes.
+- R14 (round-10 critique fix): `admission.py` consumes `drain_frontier.py`'s
+  JSON output for what that scanner actually emits — the per-spec
+  `dispatchable`/`admissible`/`blocked` task lists and their
+  Priority/unblocking-power/lexicographic tie-break ordering — so
+  `admission.py` never re-derives dependency resolution or per-spec window
+  arithmetic. It does NOT source R1's cross-spec Touch-footprint data from
+  that JSON: `drain_frontier.py`'s schema (per `specs/drain-frontier-scanner`'s
+  own R1) carries only path/priority/tie-break rationale, no per-task
+  `Touch:` sets, so footprint computation cannot be sourced from it (round-10
+  critique finding — the original wording claimed otherwise and was
+  infeasible). Instead, `admission.py` reads each candidate spec's
+  dispatchable-task `Touch:` headers directly — the same on-disk source
+  `drain_frontier.py` itself reads — and computes the per-spec footprint
+  union and pairwise cross-spec disjointness check via a Touch-disjointness
+  predicate factored into a new shared helper,
+  `.claude/skills/_shared/touch_disjoint.py` (this repo's existing
+  `_shared/` convention for cross-skill Python helpers, alongside
+  `headers.py`/`viz.py`/`spec_readiness.py`), so this spec's implementation
+  does not carry a second, independently-maintained copy of glob-prefix
+  Touch-disjointness logic that could silently diverge from
+  `drain_frontier.py`'s own internal comparison. `drain_frontier.py` itself
+  is not required to adopt this shared helper by this spec (that scanner's
+  own spec is already READY and out of this spec's Touch); the shared
+  module exists so a future change can converge the two without this spec
+  blocking on `specs/drain-frontier-scanner` accepting a new requirement.
+- R15: Live `/drain` execution on Claude Code invokes `admission.py` for
+  spec-lease claim decisions (R1) and the cross-spec/two-level cap decision
+  (R2) — replacing the hand-executed version of those two checks
+  specifically. The same-spec rolling-window mechanics (`Group:` lines,
+  per-task Touch-disjointness within one already-claimed spec) are
+  unchanged and stay prose-driven, exactly as today. SKILL.md's step-1
+  prose is rewired to instruct the agent to run `admission.py` by path,
+  mirroring `.claude/skills/prioritize/SKILL.md:35`'s proven
+  `prioritize_scan.py` invocation pattern; the invocation's supporting
+  detail lives in reference.md, with only a short pointer added to
+  SKILL.md, so R9's ≤500-line budget is not reopened.
+- R16 (round-10 critique fix — scope narrowed to what genuine OS
+  concurrency can actually test): A new test,
+  `.claude/skills/drain/test_admission_concurrency.py`, uses real OS-level
+  concurrency (Python's `multiprocessing`, not simulated sequencing) to spawn
+  multiple actual concurrent processes racing against shared fixture git
+  repos exercising `admission.py`'s lease-claim CAS protocol — the one part
+  of this spec's mechanism that is genuinely subject to multi-process races
+  (the hazard this guards against is real: two independent `/drain`
+  invocations, or a hung session plus a fresh relaunch, racing against the
+  same `DRAIN-OWNER.md` files — the exact scenario
+  `docs/memory/concurrent-session-collision.md` documents). It asserts
+  under genuine race conditions: (a) two processes racing to claim the SAME
+  spec's `DRAIN-OWNER.md` lease — exactly one wins, the loser detects the
+  winner's committed claim via the existing re-read-at-HEAD CAS check and
+  backs off cleanly (never both proceeding as if they'd won); (b) multiple
+  processes racing to claim DIFFERENT specs simultaneously — every
+  pairwise-Touch-disjoint spec is admitted up to the 3-spec cap even when
+  claims race concurrently, while a colliding pair still serializes (R5)
+  under the race, not just in sequential simulation; (c) two processes both
+  racing to reclaim the SAME stale lease simultaneously — exactly one
+  reclaim commits, matching reference.md's "ALL STALE" reclaim rule (round-10
+  fix: the original wording paired a passive, non-racing "holder" against a
+  reclaimer, which races against nothing — a genuine reclaim race is two
+  simultaneous reclaimers of one stale lease).
+  **The shared ≤10 global cap is explicitly NOT part of this multi-process
+  test** (round-10 critique finding): unlike the per-spec lease, the ≤10 pool
+  is single-orchestrator in-memory bookkeeping — Out of scope already
+  forbids persisting it in a new file, and there is only ever one drain
+  orchestrator process making admission decisions within one run, so there
+  is no second process to race against and no shared, lockable state to CAS
+  a count through. That property is proven deterministically instead, by
+  task 04's own fixture case (e) (a single-process, sequential assertion
+  that the cap throttles correctly) — asserting it via `multiprocessing`
+  would either be vacuous (nothing to race) or force `admission.py` to
+  invent a persisted counter this spec's Out of scope explicitly rejects.
+  This test supersedes task 04's original "Orchestrator-resolvable
+  simulation" acceptance criterion (retired below) for the lease-claim CAS
+  properties specifically, since it proves them under genuine concurrency
+  rather than single-threaded simulated sequencing, while still requiring
+  no `/drain` invocation and no human presence.
+- R17: This spec's `admission.py`/rewiring work (R13–R16) carries an
+  explicit cross-spec dependency on `specs/drain-frontier-scanner`'s task 01
+  (`specs/drain-frontier-scanner/tasks/01-scanner-and-tests.md`, the
+  `drain_frontier.py` scanner) landing first — the corresponding task files
+  below name this dependency in their own `Depends on:` headers using the
+  cross-spec path form drain's dependency parsing already supports. If
+  `drain-frontier-scanner` is not yet merged when these tasks would
+  otherwise be dispatchable, they stay blocked rather than reimplementing
+  or guessing at `drain_frontier.py`'s interface. `drain-frontier-scanner`
+  task 02 also grows `.claude/skills/drain/SKILL.md` (its own scanner
+  invocation, landing before this spec's task 06 per task 06's own
+  `Depends on:`) with no `wc -l` acceptance check of its own — round-10
+  critique finding: R9's ≤500-line budget is the reconciling backstop for
+  BOTH specs' growth, not just this one's, and task 06's `wc -l ≤ 500`
+  acceptance check (below) is the one place that bound is actually
+  verified after both waves have landed.
 
 ## Out of scope
 
@@ -368,51 +505,53 @@ main)..main`) is unchanged.
       `tests/test_*.sh`, `./bin/check-agent-model-pins`,
       `evals/lint-ultra-gate.sh`, `evals/lint-skill-size-gate.sh`) exits 0
       after the change lands.
-- [ ] **Orchestrator-resolvable simulation (replaces a `/drain`-gated
-      end-to-end check per CLAUDE.md's authoring conventions — unattended
-      workers cannot launch an execution-stage skill).** A new standalone
-      script (e.g. `tests/test_drain_swarm_admission.sh` or `.py`)
-      implements the greedy footprint-disjointness algorithm from R1/R2/R5
-      as plain logic — no `/drain` invocation — against a fixture of Touch
-      footprints for 4 specs: 3 mutually disjoint plus a 4th overlapping one
-      of them. Running the script asserts: (a) all 3 disjoint specs are
-      admitted simultaneously up to the cap (R1/R4), and (b) the 4th,
-      overlapping spec is excluded from concurrent admission — only one of
-      the colliding pair is ever admitted at a time (R5). The same script
-      also carries a degenerate-case fixture per R4: a 1-spec queue yields
-      exactly 1 claim with no behavioral perturbation versus today's
-      single-spec path. The script's own exit code is the runnable check;
-      it ships as part of this spec's implementation and is added to the
-      merge-time gate list (R9's `evals/lint-*` pattern) or run standalone —
-      either way it is orchestrator-resolvable, never gated on launching
-      `/drain` itself. The same script's fixture set also asserts the R2
-      co-admissibility scoping directly: two Touch-disjoint tasks that each
-      belong to a _different_ one of the 3 mutually-disjoint specs (neither
-      sharing a `Group:` line — there is none to share, since a `Group:`
-      line cannot name a task outside its own spec) both admit into the
-      window simultaneously. This is the case round-3 critique found
-      missing: without it, nothing catches an implementation that leaves
-      the existing spec-scoped `Group:` co-admissibility check unwidened
-      and forces every cross-spec pair to run alone. The fixture set
-      additionally covers the round-4 window-empty finding: (c) two
-      ungrouped tasks from the SAME spec, with no in-flight tasks in ANY
-      other claimed spec, still do NOT co-admit (same-spec "window empty"
-      semantics are unchanged — an ungrouped task still runs alone relative
-      to its own spec's other tasks), and (d) an ungrouped task in spec A
-      DOES admit while a task from spec B is in flight (cross-spec
-      in-flight state never blocks it) — together these prove "window
-      empty" is scoped per-spec, not global, closing the gap where an
-      unscoped definition would force every ungrouped task to wait for a
-      globally empty window. The fixture set finally covers the round-8
-      two-level cap directly (round-9 nit): (e) a fixture of 3
-      mutually-disjoint specs each offering 5 pairwise-disjoint-with-
-      each-other dispatchable tasks (15 total candidates) asserts exactly
-      10 are admitted, none exceeding its own spec's `W` (≤5), proving the
-      shared ≤10 pool actually throttles the cross-spec sum below the
-      naive per-spec total rather than either (i) a flat ≤10 window with no
-      surviving per-spec ceiling, or (ii) per-spec ceilings with no
-      effective global throttle — the two failure modes AC16's prose-only
-      check cannot distinguish on its own.
+- [ ] **Real-concurrency test, not a `/drain`-gated end-to-end check
+      (R13–R16; unattended workers cannot launch an execution-stage skill,
+      per CLAUDE.md's authoring conventions).** `test -f
+.claude/skills/drain/admission.py` and `test -f
+.claude/skills/drain/test_admission_concurrency.py` → both exist
+      (neither exists today, verified 2026-07-19). `python3
+.claude/skills/drain/test_admission_concurrency.py` → exits 0, and its
+      stdout separately names each of the THREE lease-claim race scenarios
+      it asserted (round-10 fix: narrowed from four to three — the global
+      cap moved to task 04's deterministic test, see below)
+      (`grep -co 'scenario:'` or equivalent per-case marker → 3), mirroring
+      task 04's original "no case passes vacuously" runnable-form
+      convention.
+- [ ] Same-spec lease contention (R16a): the test spawns two real concurrent
+      processes (Python `multiprocessing`, not sequential calls) racing to
+      claim the SAME spec's `DRAIN-OWNER.md` lease against a shared fixture
+      git repo; the script asserts exactly one process's claim is ever
+      committed and the loser's own return value reports the CAS rejection
+      (never both processes reporting success).
+- [ ] Cross-spec simultaneous claims (R16b): the test spawns processes
+      racing to claim 3 mutually Touch-disjoint fixture specs plus a 4th
+      overlapping one, concurrently; asserts all 3 disjoint specs admit
+      (R1/R4) and the colliding pair still serializes (R5) even though the
+      claims raced rather than running in sequence.
+- [ ] Stale-lease reclaim race (R16c, round-10 respecification): the test
+      spawns TWO processes simultaneously racing to reclaim the SAME stale
+      fixture lease (not a passive holder against one reclaimer — that pair
+      races against nothing); asserts exactly one reclaim commits, matching
+      reference.md's "ALL STALE" reclaim rule.
+- [ ] The global ≤10 worker cap (task 04's fixture case (e), NOT part of
+      `test_admission_concurrency.py` — round-10 finding: this bound is
+      single-orchestrator in-memory bookkeeping with no persisted shared
+      state to race against, and Out of scope forbids inventing one) stays
+      covered by task 04's own deterministic acceptance criteria (unchanged
+      from the original task-04 fixture case (e)).
+- [ ] `admission.py` consumes `drain_frontier.py`'s JSON output rather than
+      recomputing per-spec dispatchable/admissible sets itself (R14) — a
+      unit test (in `admission.py`'s own test file or
+      `test_admission_concurrency.py`) asserts `admission.py` is invoked
+      with (or itself invokes) `drain_frontier.py` and fails loudly if
+      `drain_frontier.py` is absent, rather than silently falling back to a
+      duplicate per-spec computation.
+- [ ] `grep -c "admission.py" .claude/skills/drain/SKILL.md
+.claude/skills/drain/reference.md` → combined count ≥ 2 (currently 0
+      in both, verified 2026-07-19 — R15's live-invocation rewiring)
+- [ ] `wc -l < .claude/skills/drain/SKILL.md` → ≤ 500 after R15 lands (R9's
+      budget is not reopened by the admission.py pointer)
 - [ ] R6's negative constraint: `git diff --name-only <base-commit>..HEAD |
 grep -c '.claude/skills/breakdown/\|antigravity/.agents/workflows/breakdown\|codex/.agents/skills/breakdown/'`
       → 0 — this spec's implementation touches no `/breakdown` files at all,
@@ -427,13 +566,35 @@ specs, doctrine carve-out required)
 
 ## Parallelization
 
-Task 01 (the core admission-model rewrite in `.claude/skills/drain/{SKILL.md,reference.md}`)
-is Touch-disjoint from task 02 (`.claude/rules/token-discipline.md`) and
-task 04 (a new `tests/` file) — none share undecided design, since the
-algorithm is fully pinned by this spec after 9 critique rounds. Task 03
-(mirrors + version bump) depends on task 01 landing first (it ports task
-01's actual prose) but is itself Touch-disjoint from tasks 02 and 04, so it
-may run concurrently with either once it becomes eligible.
+Task 01 (the core admission-model rewrite in `.claude/skills/drain/{SKILL.md,reference.md}`,
+design fully pinned — round-10 nit: its `Status:` header is `pending` on
+`main` as of this revision, since its implementation landed on the separate
+`drain-orchestrator-run` branch and has not yet merged back; tasks 03/06
+below correctly stay blocked on it until that merge happens) is
+Touch-disjoint from task 02 (`.claude/rules/token-discipline.md`) —
+neither shares undecided design, since the algorithm is fully pinned by this
+spec after 9 critique rounds. Round-10 revision (R13–R17) reshapes the rest
+of the queue:
 
-- Group: 01, 02, 04
-- Group: 02, 03, 04
+- Task 04 (revised: `.claude/skills/drain/admission.py`) carries a
+  cross-spec `Depends on:` against `specs/drain-frontier-scanner`'s task 01
+  (R17) — it cannot start until `drain_frontier.py` exists, since
+  `admission.py` consumes its JSON output (R14). It is otherwise
+  Touch-disjoint from task 02.
+- Task 05 (new: `test_admission_concurrency.py`) depends on task 04 — the
+  concurrency test exercises `admission.py`, so it cannot be written first.
+  Touch-disjoint from task 02.
+- Task 06 (new: SKILL.md/reference.md invoke `admission.py`) depends on
+  task 01, task 04, and carries a cross-spec `Depends on:` against
+  `specs/drain-frontier-scanner`'s task 02 — both tasks touch the same
+  step-1 prose in `.claude/skills/drain/{SKILL.md,reference.md}`, so they
+  must sequence rather than land as conflicting concurrent edits.
+- Task 03 (mirrors + version bump) now depends on task 01 AND task 06 — it
+  ports both the original R1–R12 prose and, once task 06 lands,
+  `admission.py`'s invocation. Still Touch-disjoint from task 02 and task 05.
+
+- Group: 01, 02
+- Group: 02, 04
+- Group: 02, 05 (after 04 lands)
+- Group: 02 alone once 04/05/06/03 are serialized behind their own
+  cross-spec and same-file dependencies
