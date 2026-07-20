@@ -31,6 +31,7 @@ to a met bar, or a Tier C waiver to a Tier B test, is how coverage grows.
 | breakdown       | A    | ≥2 scenarios, ≥1 adversarial (NN-adv-\*)                                                                                           |                                              |
 | build           | A    | ≥2 scenarios, ≥1 adversarial (NN-adv-\*)                                                                                           |                                              |
 | critique        | A    | ≥2 scenarios, ≥1 adversarial (NN-adv-\*)                                                                                           |                                              |
+| ctx             | A    | ≥2 scenarios, ≥1 adversarial (NN-adv-\*); scenarios precondition a prebuilt context-tree/target/release/ctx (setup fails loud)     |                                              |
 | distill         | A    | ≥2 scenarios, ≥1 adversarial (NN-adv-\*)                                                                                           |                                              |
 | drain           | A    | ≥2 scenarios, ≥1 adversarial (NN-adv-\*)                                                                                           |                                              |
 | evals           | A    | ≥2 scenarios, ≥1 adversarial (NN-adv-\*)                                                                                           |                                              |
