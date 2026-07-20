@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns
@@ -37,17 +37,17 @@ specs/eval-coverage-tiers' lint keys on it; do not rename.
 
 ## Acceptance
 
-- [ ] `bash -n evals/critique/02-adv-gameable-criterion/assert.sh &&
-  grep -q 'Breakdown-ready'
-  evals/critique/02-adv-gameable-criterion/assert.sh && grep -q
-  'critique-findings'
-  evals/critique/02-adv-gameable-criterion/assert.sh && grep -Eq
-  'exit 1|fail' evals/critique/02-adv-gameable-criterion/assert.sh`
+- [x] `bash -n evals/critique/02-adv-gameable-criterion/assert.sh &&
+grep -q 'Breakdown-ready'
+evals/critique/02-adv-gameable-criterion/assert.sh && grep -q
+'critique-findings'
+evals/critique/02-adv-gameable-criterion/assert.sh && grep -Eq
+'exit 1|fail' evals/critique/02-adv-gameable-criterion/assert.sh`
       → exit 0 — committed-scenario SHAPE check, honestly L1 per the
-      spec.
-- [ ] `test -f evals/critique/02-adv-gameable-criterion/setup.sh &&
-  test -f evals/critique/02-adv-gameable-criterion/prompt.txt` →
-      exit 0
+      spec. Evidence: verifier PASS, evidence/05-adv-critique-eval-scenario.md.
+- [x] `test -f evals/critique/02-adv-gameable-criterion/setup.sh &&
+test -f evals/critique/02-adv-gameable-criterion/prompt.txt` →
+      exit 0 — verifier PASS, evidence/05-adv-critique-eval-scenario.md.
 - [ ] `./evals/run.sh critique` passes — manual-pending (paid headless
       run, human-launched; a drained worker cannot launch it, per
       docs/memory/unattended-worker-tool-limits.md). This run is R6's
