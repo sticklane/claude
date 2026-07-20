@@ -25,6 +25,17 @@ For **specs and plans**, attack:
   absent or empty `## Acceptance criteria` section, or a criterion with no
   runnable command or observable behavior blocks READY — a finding, not a
   nit. A spec an agent can't self-verify isn't agent-ready.
+- Acceptance-criteria depth: run the three-question attack from
+  `docs/memory/anchored-acceptance-criteria.md` against each criterion —
+  (a) **gameable by literal?** could a worker green-check it by typing the
+  searched literal without implementing the requirement's behavior; (b)
+  **anchor still differs from disk?** re-run the anchor check — does the
+  expected result still differ from current on-disk state, or has the target
+  drifted so the criterion now passes vacuously; (c) **deepest feasible level
+  reached?** does the spec carry at least one L2+ (behavior/end-to-end) or
+  depth-ceiling-annotated check per behavioral requirement. A gameable
+  criterion carrying no depth-ceiling annotation blocks READY with the same
+  force as an unmapped requirement (the clause above) — a finding, not a nit.
 - Scope traps: silent migrations, breaking changes, unbudgeted work.
 
 For **diffs**:

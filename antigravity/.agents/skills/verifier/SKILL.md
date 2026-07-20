@@ -9,6 +9,7 @@ task file. Best run in a FRESH Agent Manager conversation so there's no
 memory of the implementation to rationalize shortcuts.
 
 Process:
+
 1. Read the acceptance criteria. If one isn't concretely checkable, report
    that as a finding — don't improvise a weaker substitute silently.
 2. For each criterion, EXERCISE it: run the command, run the tests, hit the
@@ -32,7 +33,7 @@ Process:
    every command passes.
 6. Append-only task-file check (mechanical): diff every spec's tasks/ dir
    against the base with the VCS (e.g., under git: `git diff <base> --
-   '*/tasks/*.md'`) — path-scoped so edits to OTHER tasks' files are visible.
+'*/tasks/*.md'`) — path-scoped so edits to OTHER tasks' files are visible.
    The base is defined, not guessed: the base commit the caller passed, or in
    a drain/tournament worktree the worktree's merge-base with the default
    branch. Changes must
@@ -40,6 +41,22 @@ Process:
    the Status line, checkbox ticks, evidence-citation lines, the plan
    comment block. Anything else — criterion text, another task's file, a
    worker-written `## Progress` section — is an automatic FAIL finding.
+7. Criteria-adequacy (per requirement): emit a mandatory criteria-adequacy
+   line for each requirement — beyond whether each command passed, judge
+   whether the criteria that passed actually ENTAIL the requirement. Rank each
+   passing criterion's evidence on the depth ladder
+   (`docs/memory/anchored-acceptance-criteria.md`): L0 text-presence, L1
+   artifact-structure, L2 behavior, L3 end-to-end. A behavioral requirement
+   whose only green evidence is L0 (text-presence) is INCOMPLETE, not PASS.
+   Two carve-outs, applied exactly:
+   - Prose requirements under a recorded depth-ceiling annotation are exempt —
+     declaring L0 sufficient is that annotation's purpose.
+   - Done/archived work is exempt unconditionally; a pre-ladder
+     "verified <date>" note predates the ladder and must not re-bind it.
+     Binding scope is self-detecting, needing no external list: the rule binds
+     only a NOT-done spec whose acceptance sections carry the ladder markers
+     (a `Depth ceiling:` line or a "verified <date>" anchor note). Everywhere
+     else, report ladder levels informationally without flipping the verdict.
 
 Hard tool-call ceiling: ~20, EXEMPTING the acceptance commands themselves from
 the count — you must exercise every criterion regardless. If you hit the
@@ -55,10 +72,15 @@ stale PASS evidence must not survive a FAIL. When no path is provided,
 write nothing — never derive a path yourself.
 
 Output, under a page (the budget applies to this message, not the file):
+
 - Verdict line: `PASS` / `FAIL` / `INCOMPLETE`.
 - Per criterion: ✓/✗, the exact command run, one line of evidence (test
   count, observed output). Failures include the actual output.
+- The mandatory criteria-adequacy line (one per requirement): whether the
+  passing criteria entail the requirement, with the requirement's evidence
+  ladder level (L0–L3). A behavioral requirement evidenced solely at L0 is
+  flagged INCOMPLETE per step 7, subject to its two carve-outs.
 - Scope-creep or gate failures as separate findings.
 - If an evidence file was written, end with a pointer to its path.
-Attach the evidence in the walkthrough artifact too — it complements the
-committed file, it doesn't replace it.
+  Attach the evidence in the walkthrough artifact too — it complements the
+  committed file, it doesn't replace it.
