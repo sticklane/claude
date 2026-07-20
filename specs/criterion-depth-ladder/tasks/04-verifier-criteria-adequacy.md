@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 6 turns
@@ -30,11 +30,15 @@ scope is the NOT-done + ladder-marker self-detection rule).
 
 ## Acceptance
 
-- [ ] `grep -c 'criteria-adequacy' .claude/agents/verifier.md` → ≥ 1
+- [x] `grep -c 'criteria-adequacy' .claude/agents/verifier.md` → ≥ 1
       (0 today, verified 2026-07-19). Depth ceiling: prose charter —
       behavioral complement is a manual-pending human read of the first
       post-change verifier verdict, confirming the line appears per
       requirement and is non-vacuous.
+      Evidence: verifier PASS, `grep -c` → 2; see
+      ../evidence/04-verifier-criteria-adequacy.md. Behavioral complement
+      (L2 human read of first post-change verdict) remains manual-pending
+      per the depth ceiling.
 
 ## Progress
 
