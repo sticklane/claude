@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 8 turns
@@ -42,7 +42,7 @@ or antigravity paths (task 06).
 
 - [ ] `grep -ci 'gameable' .claude/agents/critic.md` → ≥ 1 and
       `grep -c 'JUDGMENT-class, never MECHANICAL'
-    .claude/skills/critique/SKILL.md` → ≥ 1 — the verbatim sentence
+  .claude/skills/critique/SKILL.md` → ≥ 1 — the verbatim sentence
       encodes placement (both 0 today, verified 2026-07-19). Depth
       ceiling: prose charter — behavioral complement is task 05's eval
       scenario, which exercises the critic flagging a seeded gameable
