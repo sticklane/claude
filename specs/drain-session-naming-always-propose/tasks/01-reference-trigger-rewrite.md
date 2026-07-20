@@ -1,6 +1,6 @@
 # Task 01: reference.md — drop the Generation:-keyed naming gate
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 16 turns
