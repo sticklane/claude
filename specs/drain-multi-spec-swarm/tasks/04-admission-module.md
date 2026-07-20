@@ -1,6 +1,6 @@
 # Task 04: admission.py — lease-claim CAS + two-level cross-spec cap module
 
-Status: pending
+Status: in-progress
 Depends on: specs/drain-frontier-scanner/tasks/01-scanner-and-tests.md
 Priority: P1
 Budget: 14 turns
