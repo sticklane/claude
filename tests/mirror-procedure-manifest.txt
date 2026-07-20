@@ -81,3 +81,8 @@
 # seeded: task 11 (unblock-next-steps) — ported the cross-spec file-collision subsection into the breakdown skills-dir mirror (was absent; the workflows stub already carried it). Anchors the heading + the load-bearing "only mechanical way to stop" guidance so the subsection can't silently re-drop.
 .claude/skills/breakdown/SKILL.md|antigravity/.agents/skills/breakdown/SKILL.md|Cross-spec file collision
 .claude/skills/breakdown/SKILL.md|antigravity/.agents/skills/breakdown/SKILL.md|the only mechanical way to stop
+# seeded: task 02 (drain-hub-context-discipline) — ported task 01's two procedural tightenings into the drain mirrors: the Grep-then-offset section-read discipline and the by-path-pointer worker-prompt delivery contract. Anchors both literal tokens in each mirror so neither can silently re-drop.
+.claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|Grep-then-offset
+.claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|path-pointer
+.claude/skills/drain/reference.md|codex/.agents/skills/drain/SKILL.md|Grep-then-offset
+.claude/skills/drain/reference.md|codex/.agents/skills/drain/SKILL.md|path-pointer
