@@ -3,7 +3,7 @@
 <!-- Machine-read fields; body sections never parsed by orchestrators. -->
 <!-- Append-only for workers: flip own Status:, tick checkboxes, add evidence lines, maintain plan block. -->
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -32,7 +32,7 @@ Priority header, asserted by diffing headers before/after.
       `evals/prioritize/02-adv-*` (dir absent today, verified
       2026-07-19)
 - [ ] `for f in evals/prioritize/*/assert.sh; do bash -n "$f" || exit
-    1; done` → exit 0
+  1; done` → exit 0
 - [ ] `./evals/run.sh prioritize` passes — manual-pending (paid
       headless run, human-launched, per
       docs/memory/unattended-worker-tool-limits.md)
