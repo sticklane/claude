@@ -1,6 +1,6 @@
 # Task 03: Mirror the widened procedure and bump plugin version
 
-Status: in-progress
+Status: done
 Depends on: 01, 06
 Priority: P1
 Budget: 10 turns
@@ -26,6 +26,20 @@ Touch: antigravity/.agents/workflows/drain.md, codex/.agents/skills/drain/SKILL.
   `origin/main`, not local `main`. Does not count toward slot-machine
   escalation. Branch `task/03-mirror-and-version-bump` from this attempt
   had no commits and was deleted.
+
+- 2026-07-20 (attempt-2 routing): The redispatch (this run, host vm)
+  returned DONE but FAILED independent verification: the ported
+  cross-spec admission section dropped task 01's design-boundary clause
+  — "R1 (spec-claim eligibility) and R2 (task admission, below) together
+  are the complete, sole mechanism for cross-spec Touch collision
+  detection — no third, separate check is added anywhere, including
+  /breakdown's decision-coupling test (R6)" — from BOTH mirrors
+  (`grep -c 'sole mechanism'` = 0 in each; every mechanical check and
+  gate was otherwise green). Branch discarded per the slot-machine path.
+  Done vs remaining: the discarded attempt achieved all mechanical
+  criteria (per-file anchors, 0.9.21→0.9.22 bump, plugin validate,
+  gates) and those must be reproduced; the remaining gap is porting the
+  dropped clause into both mirrors' spec-lease-claiming subsection.
 
 ## Goal
 
@@ -83,7 +97,7 @@ completing first — it mirrors both their landed prose, so it must not start
 
 ## Acceptance
 
-- [ ] Per-item, per-file content anchors (rewritten 2026-07-19: the
+- [x] Per-item, per-file content anchors (rewritten 2026-07-19: the
       original single `grep -li "swarm\|cross-spec\|multi-spec"` check let
       a partial port pass — one incidental mention per file green-checked
       all four ported items, against the memory doc's multi-file rule).
@@ -103,6 +117,28 @@ completing first — it mirrors both their landed prose, so it must not start
       (`.claude/rules/mirror-verification.md`) plus a verifier
       procedural-equivalence read of the ported sections against task 01's
       landed diff (`.claude/rules/mirror-procedure-discipline.md`).
-- [ ] plugin.json version is greater than its value at this task's own base commit (compare via `git show <base-commit>:.claude-plugin/plugin.json`, never a hard-coded literal)
-- [ ] `claude plugin validate .` → exits 0
-- [ ] Every project gate this repo runs at merge time (`specs/status.sh`, every `tests/test_*.sh`, `./bin/check-agent-model-pins`, `evals/lint-ultra-gate.sh`, `evals/lint-skill-size-gate.sh`) exits 0
+      Evidence: verifier PASS — all five anchors ≥ 1 in BOTH files, and the
+      procedural-equivalence spot-check confirmed the R1+R2 sole-mechanism
+      clause, two-level cap, window-empty rescope, cross-spec layer, global
+      serial merge queue, R7 already-green citation, and admission.py
+      fallback (specs/drain-multi-spec-swarm/evidence/03-mirror-and-version-bump.md).
+- [x] plugin.json version is greater than its value at this task's own base commit (compare via `git show <base-commit>:.claude-plugin/plugin.json`, never a hard-coded literal)
+      Evidence: verifier PASS — 0.9.21 at base 5d649bd → 0.9.22 (evidence file above).
+- [x] `claude plugin validate .` → exits 0
+      Evidence: verifier PASS — exit 0, "Validation passed" (evidence file above).
+- [x] Every project gate this repo runs at merge time (`specs/status.sh`, every `tests/test_*.sh`, `./bin/check-agent-model-pins`, `evals/lint-ultra-gate.sh`, `evals/lint-skill-size-gate.sh`) exits 0
+      Evidence: verifier PASS — all listed gates and tests exit 0 (evidence file above).
+
+## Discovered
+
+- Neither `antigravity/.agents/skills/drain/` (script bundle) nor
+  `codex/.agents/skills/drain/` carries an `admission.py` or
+  `drain_frontier.py` copy, so the mirrored shell-out/prose invocation
+  takes the documented by-hand fallback in those runtimes until copies
+  ship — out of this task's `Touch:`. Stub
+  `07-mirror-script-bundle-admission-copies.md`.
+- Mirror-verification's closure-triggered live cross-reference sweep for
+  the antigravity runtime (`agy -p` headless check of the edited
+  sections) is manual-pending per that rule's unattended-worker escape —
+  `agy` is not installed in this run's container; filed for a human at
+  the exit checklist (no stub; a process step, not task work).

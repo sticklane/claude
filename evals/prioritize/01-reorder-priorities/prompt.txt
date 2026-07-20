@@ -1,0 +1,6 @@
+/prioritize
+
+Reprioritize this repo's open work. Apply my instruction directly — do not
+stop to ask me anything first; this is my complete reply to your one
+question: make alpha/01-parser.md P0, and make beta/01-loader.md P3. Leave
+every other task's priority unchanged.
