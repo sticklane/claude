@@ -1,4 +1,4 @@
-Status: in-progress
+Status: done
 Discovered-from: 01-enforce-section-read-and-worker-prompt-delivery.md
 Spec: ../SPEC.md
 Priority: P3
@@ -19,11 +19,11 @@ behavior changes. Confirmed 2026-07-20 via `git log --oneline --all --
 
 ## Acceptance
 
-- [ ] `grep -q '"version": "0.9.21"' .claude-plugin/plugin.json` exits 0
+- [x] `grep -q '"version": "0.9.21"' .claude-plugin/plugin.json` exits 0
       (current version is 0.9.20, confirmed absent "0.9.21" as of
-      2026-07-20)
-- [ ] `jq . .claude-plugin/plugin.json >/dev/null` exits 0 (JSON stays
-      valid)
+      2026-07-20) — verified: exit=0 on branch task/04-plugin-json-version-bump
+- [x] `jq . .claude-plugin/plugin.json >/dev/null` exits 0 (JSON stays
+      valid) — verified: exit=0
 
 ## Original report
 
