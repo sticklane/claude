@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 12 turns
@@ -36,7 +36,7 @@ behavior fixture-by-fixture, `runner-selftest.sh`-style.
 - [ ] `bash tests/test_eval_coverage_lint.sh` → exit 0, with a
       failing-fixture case per R2 violation class
 - [ ] `test -f evals/COVERAGE.md && grep -c 'lint-eval-coverage'
-    evals/COVERAGE.md` → ≥ 1 (file exists and names its lint; phrase
+  evals/COVERAGE.md` → ≥ 1 (file exists and names its lint; phrase
       0 today, verified 2026-07-19)
 - [ ] `bash evals/lint-eval-coverage.sh; test $? -ne 0` → exit 0 at
       THIS task's close (the real tree still has known Tier A gaps —
