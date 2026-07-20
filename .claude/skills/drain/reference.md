@@ -179,6 +179,24 @@ falls back to today's lease-only discipline — advisory-only, matching the
 "Enforcement on interactive/ad-hoc sessions" carve-out — rather than
 blocking dispatch.
 
+**Landing the orchestrator's own tree back to the shared branch.** The
+orchestrator's isolated checkout/worktree exists to give its dispatch loop
+a private working directory, not to become a second long-lived line of
+history — resolved 2026-07-19 after `drain-orchestrator-run` accumulated
+12 commits (including a fully done, verified task) that never made it back
+to `main`, silently blocking every downstream-dependent task until an
+unplanned reconciliation merge. The isolated worktree checks out the
+shared branch itself (e.g. `git worktree add <path> main` under git, not a
+new separately named branch); each merge the orchestrator performs (R3's
+serial merge queue) lands and pushes to the shared branch immediately, the
+same promptness R3 already requires of dispatched task-branch merges. A
+repo variant that does isolate onto a separately named branch must land it
+back to the shared branch at the same cadence — never let it accumulate
+past one merge — and a branch found already diverged this way is landed by
+a direct merge (verified via `git merge-tree <merge-base> <shared>
+<branch>` first; a rebase can conflict even when the direct merge is
+clean, so don't treat a rebase conflict as proof the merge itself will).
+
 ## Owner lease
 
 Same-queue exclusion so two drains never dispatch against one spec at
