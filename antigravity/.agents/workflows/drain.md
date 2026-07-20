@@ -288,7 +288,13 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    on that worktree
    with this prompt (fill the <>; resolve the build workflow to a
    concrete path, resolved at dispatch — `.agents/workflows/build.md` in
-   the repo — and substitute it for <build-workflow-path>). Prepend
+   the repo — and substitute it for <build-workflow-path>). **Deliver the
+   build procedure by path-pointer, never pasted:** the launch hands the
+   worker the `<build-workflow-path>` and tells it to read and follow that
+   file verbatim, rather than inlining the build workflow's body into the
+   launch — the path-pointer keeps each launch small and single-sources the
+   procedure to its one file, exactly as the worker prompt below is authored
+   once here and filled per dispatch rather than re-drafted each time. Prepend
    `<!-- agentprof:role=worker-attempt1 -->` as the first line of that
    prompt — both the solo launch and any concurrent group-throughput launch
    are attempt-1 and share this role value; agentprof reads it from the
@@ -408,7 +414,14 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
    committed task files and the pinned worker tiers, not in the drain
    session's own model, run the drain-bookkeeping session itself on the
    default (Pro-class) tier or below — a frontier model for this session
-   roughly doubles wake cost for no quality gain.
+   roughly doubles wake cost for no quality gain. The same size lever governs
+   how this session reads the longer shared drain doctrine it overlays
+   (`docs/human-gates.md` and the referenced procedures): never a bare
+   sequential read of a whole long file — do a **Grep-then-offset** read
+   instead, `grep -n` its `^## ` headers to locate the target section's start
+   line and the next header, then read only that bounded slice with an
+   `offset`/`limit`, so a single needed section never pulls the whole file
+   into this session's context.
 
    **Window admission.** A task enters the window only when it is
    dispatchable (step 1) AND co-admissible with everything already in

@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
@@ -74,20 +74,28 @@ satisfies only with the literal tokens.
 
 ## Acceptance
 
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` → exits 0
-- [ ] `grep -c '^\.claude/skills/drain/reference\.md|antigravity' tests/mirror-procedure-manifest.txt` → ≥ 2
-      (the two new lines for the antigravity mirror)
-- [ ] `grep -c '^\.claude/skills/drain/reference\.md|codex' tests/mirror-procedure-manifest.txt` → ≥ 2
-      (the two new lines for the codex mirror)
-- [ ] `grep -c "Grep-then-offset" antigravity/.agents/workflows/drain.md` → ≥ 1
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exits 0
+      (verifier: exit 0; observed red with 4 gaps before mirror edits, green after)
+- [x] `grep -c '^\.claude/skills/drain/reference\.md|antigravity' tests/mirror-procedure-manifest.txt` → ≥ 2
+      (the two new lines for the antigravity mirror) — verifier: 4
+- [x] `grep -c '^\.claude/skills/drain/reference\.md|codex' tests/mirror-procedure-manifest.txt` → ≥ 2
+      (the two new lines for the codex mirror) — verifier: 8
+- [x] `grep -c "Grep-then-offset" antigravity/.agents/workflows/drain.md` → ≥ 1
       and `grep -c "path-pointer" antigravity/.agents/workflows/drain.md` → ≥ 1
-- [ ] `grep -c "Grep-then-offset" codex/.agents/skills/drain/SKILL.md` → ≥ 1
+      (verifier: 1 and 2)
+- [x] `grep -c "Grep-then-offset" codex/.agents/skills/drain/SKILL.md` → ≥ 1
       and `grep -c "path-pointer" codex/.agents/skills/drain/SKILL.md` → ≥ 1
-- [ ] A human/manual-pending read confirms both mirror edits carry the same
-      procedure task 01 added (Grep-then-offset section reads, by-path
-      Worker prompt delivery) in each runtime's own voice —
-      `.claude/rules/mirror-procedure-discipline.md`'s classify-every-
-      divergence discipline, not a mechanical check; mark manual-pending if
-      dispatched unattended.
-- [ ] `bash evals/lint-ultra-gate.sh` → exits 0
-- [ ] `bash evals/lint-skill-size-gate.sh` → exits 0
+      (verifier: 1 and 2)
+- [~] A human/manual-pending read confirms both mirror edits carry the same
+  procedure task 01 added (Grep-then-offset section reads, by-path
+  Worker prompt delivery) in each runtime's own voice —
+  `.claude/rules/mirror-procedure-discipline.md`'s classify-every-
+  divergence discipline, not a mechanical check; mark manual-pending if
+  dispatched unattended.
+  MANUAL-PENDING (dispatched unattended): the independent verifier
+  performed the procedural-equivalence read and found both mirrors carry
+  (a) grep-headers→bounded-offset-read and (b) resolve-to-path/never-paste-
+  full-body in each runtime's own voice, no dilution; a human may re-confirm
+  post-merge per the classify-every-divergence discipline.
+- [x] `bash evals/lint-ultra-gate.sh` → exits 0 (verifier: OK, 4 files gated)
+- [x] `bash evals/lint-skill-size-gate.sh` → exits 0 (verifier: OK, all within size/TOC)
