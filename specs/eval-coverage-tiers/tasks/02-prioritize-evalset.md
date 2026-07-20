@@ -3,7 +3,7 @@
 <!-- Machine-read fields; body sections never parsed by orchestrators. -->
 <!-- Append-only for workers: flip own Status:, tick checkboxes, add evidence lines, maintain plan block. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -28,11 +28,18 @@ Priority header, asserted by diffing headers before/after.
 
 ## Acceptance
 
-- [ ] `ls -d evals/prioritize/0* | wc -l` → 2, one matching
+- [x] `ls -d evals/prioritize/0* | wc -l` → 2, one matching
       `evals/prioritize/02-adv-*` (dir absent today, verified
       2026-07-19)
-- [ ] `for f in evals/prioritize/*/assert.sh; do bash -n "$f" || exit
-  1; done` → exit 0
+      <!-- evidence: count=2; 01-reorder-priorities + 02-adv-out-of-scope -->
+- [x] `for f in evals/prioritize/*/assert.sh; do bash -n "$f" || exit
+1; done` → exit 0
+      <!-- evidence: both assert.sh parse (rc=0) -->
 - [ ] `./evals/run.sh prioritize` passes — manual-pending (paid
       headless run, human-launched, per
       docs/memory/unattended-worker-tool-limits.md)
+      <!-- runnability pre-verified: setup.sh provisions the scanner's
+          _shared/workboard/runtimes deps (run.sh copies only the skill under
+          test), scanner rc=0 on both fixtures; graders red-first (01 fails on
+          untouched, passes on P0/P3+commit; 02-adv passes on no-op, fails on a
+          P5 edit). Awaits a human-launched paid model run. -->

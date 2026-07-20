@@ -1,0 +1,6 @@
+/prioritize
+
+Reprioritize this repo's open work. Apply my instruction directly — do not
+stop to ask me anything first; this is my complete reply to your one
+question: make gamma/01-done-task.md P0, and set gamma/02-open-task.md to P5.
+Those are my only changes.
