@@ -12,8 +12,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LINT="$ROOT/evals/lint-eval-coverage.sh"
 
 TMPS=()
-trap 'for t in "${TMPS[@]}"; do rm -rf "$t"; done' EXIT
-newtree() { local t; t="$(mktemp -d)"; TMPS+=("$t"); printf '%s\n' "$t"; }
+cleanup() { if [ "${#TMPS[@]}" -gt 0 ]; then rm -rf "${TMPS[@]}"; fi; }
+trap cleanup EXIT
+# Sets $T to a fresh tmp tree and registers it for cleanup. Not called via
+# command substitution — the append must land in the parent shell's TMPS.
+newtree() { T="$(mktemp -d)"; TMPS+=("$T"); }
 
 fail() {
   echo "SELFTEST FAIL: $1" >&2
@@ -69,12 +72,12 @@ ROWS
 }
 
 # --- case 0: conforming tree exits 0 ---------------------------------------
-T="$(newtree)"; build_conforming "$T"
+newtree; build_conforming "$T"
 run_lint "$T"
 [ "$RC" -eq 0 ] || fail "conforming tree should exit 0 (got $RC)" "$OUT"
 
 # --- case 1: skill dir with no COVERAGE.md row -----------------------------
-T="$(newtree)"; build_conforming "$T"; make_skill "$T" dd
+newtree; build_conforming "$T"; make_skill "$T" dd
 run_lint "$T"
 [ "$RC" -ne 0 ] || fail "missing-row should exit non-zero" "$OUT"
 printf '%s\n' "$OUT" | grep -q 'no-coverage-row: dd' \
@@ -82,7 +85,7 @@ printf '%s\n' "$OUT" | grep -q 'no-coverage-row: dd' \
 
 # --- case 2: Tier A skill with < 2 conforming scenarios --------------------
 # aa has one conforming scenario (adversarial, so only the count check trips).
-T="$(newtree)"
+newtree
 make_skill "$T" aa; make_skill "$T" bb; make_skill "$T" cc
 make_scenario "$T" aa 01-adv-lonely
 make_scenario_incomplete "$T" aa 02-broken
@@ -98,7 +101,7 @@ printf '%s\n' "$OUT" | grep -q 'tier-a-too-few-scenarios: aa' \
   || fail "too-few-scenarios violation not named for aa" "$OUT"
 
 # --- case 3: Tier A skill with 2 scenarios but none adversarial ------------
-T="$(newtree)"
+newtree
 make_skill "$T" aa; make_skill "$T" bb; make_skill "$T" cc
 make_scenario "$T" aa 01-basic
 make_scenario "$T" aa 02-more
@@ -114,14 +117,14 @@ printf '%s\n' "$OUT" | grep -q 'tier-a-no-adversarial: aa' \
   || fail "no-adversarial violation not named for aa" "$OUT"
 
 # --- case 4: Tier B row names a test file that does not exist ---------------
-T="$(newtree)"; build_conforming "$T"; rm "$T/bb-test.sh"
+newtree; build_conforming "$T"; rm "$T/bb-test.sh"
 run_lint "$T"
 [ "$RC" -ne 0 ] || fail "missing-test-file should exit non-zero" "$OUT"
 printf '%s\n' "$OUT" | grep -q 'tier-b-missing-test: bb' \
   || fail "missing-test-file violation not named for bb" "$OUT"
 
 # --- case 5: Tier C row with an empty reason -------------------------------
-T="$(newtree)"
+newtree
 make_skill "$T" aa; make_skill "$T" bb; make_skill "$T" cc
 make_scenario "$T" aa 01-basic
 make_scenario "$T" aa 02-adv-refuse
