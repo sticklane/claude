@@ -128,3 +128,17 @@ completing first — it mirrors both their landed prose, so it must not start
       Evidence: verifier PASS — exit 0, "Validation passed" (evidence file above).
 - [x] Every project gate this repo runs at merge time (`specs/status.sh`, every `tests/test_*.sh`, `./bin/check-agent-model-pins`, `evals/lint-ultra-gate.sh`, `evals/lint-skill-size-gate.sh`) exits 0
       Evidence: verifier PASS — all listed gates and tests exit 0 (evidence file above).
+
+## Discovered
+
+- Neither `antigravity/.agents/skills/drain/` (script bundle) nor
+  `codex/.agents/skills/drain/` carries an `admission.py` or
+  `drain_frontier.py` copy, so the mirrored shell-out/prose invocation
+  takes the documented by-hand fallback in those runtimes until copies
+  ship — out of this task's `Touch:`. Stub
+  `07-mirror-script-bundle-admission-copies.md`.
+- Mirror-verification's closure-triggered live cross-reference sweep for
+  the antigravity runtime (`agy -p` headless check of the edited
+  sections) is manual-pending per that rule's unattended-worker escape —
+  `agy` is not installed in this run's container; filed for a human at
+  the exit checklist (no stub; a process step, not task work).
