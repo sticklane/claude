@@ -12,6 +12,7 @@ specs/drain-multi-spec-swarm/tasks/04-admission-module.md (Steps 7-11) and
 ../SPEC.md (R1, R2, R4, R5, R6, R14).
 """
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -25,6 +26,7 @@ from admission import (
     format_owner,
     git_cas_claim,
     load_frontier,
+    owner_liveness,
     parse_owner,
     read_owner,
     spec_of,
@@ -216,6 +218,91 @@ def support_git_cas_claim_happy_path():
         assert back["run_token"] == "win123"
 
 
+def _git_init(root, email, name):
+    for args in (
+        ["init", "-q"],
+        ["config", "user.email", email],
+        ["config", "user.name", name],
+    ):
+        subprocess.run(["git", "-C", str(root), *args], check=True)
+
+
+def support_owner_liveness_fresh_after_recent_commit():
+    # A commit touching the spec dir moments ago must read as FRESH within a
+    # generous window (regression: a double-nested `-C dir` + relative-dir
+    # pathspec logged nothing, so liveness fell through to ALL_STALE always,
+    # defeating FRESH-lease protection).
+    with tempfile.TemporaryDirectory() as d:
+        spec_dir = Path(d) / "specs" / "alpha"
+        spec_dir.mkdir(parents=True)
+        _git_init(d, "t@t", "t")
+        (spec_dir / "SPEC.md").write_text("# a\n", encoding="utf-8")
+        subprocess.run(["git", "-C", d, "add", "-A"], check=True)
+        subprocess.run(["git", "-C", d, "commit", "-qm", "seed"], check=True)
+        # Production calls owner_liveness with a RELATIVE spec dir (spec_of
+        # returns specs/<slug>); exercise that path — a double-nested pathspec
+        # regression only bites relative dirs, so an absolute-path fixture would
+        # mask it.
+        prev = os.getcwd()
+        try:
+            os.chdir(d)
+            assert owner_liveness("specs/alpha", window_seconds=3600) == "FRESH"
+            assert owner_liveness("specs/alpha", window_seconds=0) == "ALL_STALE"
+        finally:
+            os.chdir(prev)
+
+
+def support_git_cas_claim_loser_reports_false():
+    # Behavioral guard: a racer whose push is rejected must resync to the
+    # pushed branch, re-read at the new HEAD, and report False (never a
+    # double-win) — and end up seeing the winner's token. The resync targets
+    # the actual pushed branch via FETCH_HEAD rather than the frequently-unset
+    # `origin/HEAD` symref. NOTE: this is not a discriminating regression test
+    # for that symref bug specifically — on a default-branch fixture `git fetch`
+    # can restore `origin/HEAD`, masking it; the genuine multi-process /
+    # non-default-branch race is task 05's (test_admission_concurrency.py). It
+    # still asserts the correct lost-race behavior end to end.
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        bare = td / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+        c1 = td / "c1"
+        subprocess.run(["git", "clone", "-q", str(bare), str(c1)], check=True)
+        for args in (["config", "user.email", "a@a"], ["config", "user.name", "a"]):
+            subprocess.run(["git", "-C", str(c1), *args], check=True)
+        (c1 / "specs" / "alpha").mkdir(parents=True)
+        (c1 / "seed").write_text("x", encoding="utf-8")
+        subprocess.run(["git", "-C", str(c1), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(c1), "commit", "-qm", "seed"], check=True)
+        subprocess.run(
+            ["git", "-C", str(c1), "push", "-q", "origin", "HEAD"], check=True
+        )
+        # Loser clones the seed base, then unsets origin/HEAD so the resync
+        # cannot lean on that symref.
+        c2 = td / "c2"
+        subprocess.run(["git", "clone", "-q", str(bare), str(c2)], check=True)
+        for args in (["config", "user.email", "b@b"], ["config", "user.name", "b"]):
+            subprocess.run(["git", "-C", str(c2), *args], check=True)
+        subprocess.run(["git", "-C", str(c2), "remote", "set-head", "origin", "-d"])
+        # confirm origin/HEAD is unset at this point — the fixed resync fetches
+        # the pushed branch and resets to FETCH_HEAD, so it must not depend on
+        # origin/HEAD to reach the winner's tip.
+        assert (
+            subprocess.run(
+                ["git", "-C", str(c2), "rev-parse", "--verify", "-q", "origin/HEAD"],
+                capture_output=True,
+            ).returncode
+            != 0
+        )
+        (c2 / "specs" / "alpha").mkdir(parents=True)
+        spec1, spec2 = c1 / "specs" / "alpha", c2 / "specs" / "alpha"
+        win = format_owner("winner", "a", "t", 1, str(spec1))
+        assert git_cas_claim(str(spec1), win, "winner") is True
+        lose = format_owner("loser", "b", "t", 1, str(spec2))
+        assert git_cas_claim(str(spec2), lose, "loser") is False
+        assert parse_owner(read_owner(str(spec2)))["run_token"] == "winner"
+
+
 _CASES = [
     (
         "case a: 3 mutually-disjoint specs all claim (R1/R4)",
@@ -251,6 +338,14 @@ _CASES = [
     ),
     ("DRAIN-OWNER.md parse/format round-trip", support_owner_roundtrip),
     ("git-CAS lease claim happy path", support_git_cas_claim_happy_path),
+    (
+        "owner liveness reads FRESH after a recent spec-dir commit",
+        support_owner_liveness_fresh_after_recent_commit,
+    ),
+    (
+        "git-CAS lease loser reports False, never a double-win",
+        support_git_cas_claim_loser_reports_false,
+    ),
 ]
 
 
