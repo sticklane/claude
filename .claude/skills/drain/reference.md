@@ -158,6 +158,18 @@ re-reads of `Status:` header lines (step 2), `## Progress` / `## Deferred` /
 (its pass/fail plus the bounded output tail specified for relaunch evidence,
 Relaunch-with-evidence prompt).
 
+**Worktree re-injection is a budgeted tax, not a bug.** Dispatching a worker
+with `isolation: worktree` cuts it a fresh `git worktree`; the first time that
+worker `Read`s or `Edit`s any file under it, the harness reprints the full
+`CLAUDE.md` + `.claude/rules/*.md` stack into that worker's context —
+byte-identical to what the hub already carries for the main checkout. This
+worktree re-injection is expected and accepted, not something to route around
+or "fix": it is the price of the fresh-context subagent boundary that makes
+each worker a blank slate, and it is already covered by the dispatch budget.
+A hub session sizing its own context growth should not treat a worker's
+re-injected rules stack as unexpected duplication — it is the same static
+prefix appearing once per isolated worker, by design.
+
 ## Orchestrator isolation
 
 Default-ON, drain-only structural layer beneath the Owner lease below —
