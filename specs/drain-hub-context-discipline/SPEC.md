@@ -144,14 +144,12 @@ content) in the same task — the same three-file shape
   path rather than reproducing its body text.
 - `bash evals/lint-ultra-gate.sh` still exits 0 after the edits (passes
   today, verified 2026-07-19; drain is an ultra-path skill).
-- `bash evals/lint-skill-size-gate.sh` reports no NEW failure beyond the
-  pre-existing 505-line `.claude/skills/drain/SKILL.md` overage (the
-  gate already FAILs on that one line today — "exceeds 500-line SKILL.md
-  budget", verified 2026-07-19 — so "still exit 0" was unsatisfiable as
-  written), and `wc -l < .claude/skills/drain/SKILL.md` stays ≤ 505 — the
-  edits must not grow the file; clearing the pre-existing overage is a
-  separate remediation task per
-  docs/memory/anchored-acceptance-criteria.md.
+- `bash evals/lint-skill-size-gate.sh` exits 0 (the earlier pre-existing
+  505-line `.claude/skills/drain/SKILL.md` overage this section originally
+  cited was cleared by the `drain-orchestrator-run` merge landing
+  2026-07-19 — the gate is a clean pass today at 495 lines; superseded
+  note kept only as history). `wc -l < .claude/skills/drain/SKILL.md`
+  stays ≤ 500 — this spec's edits must not grow the file back over budget.
 - `tests/mirror-procedure-manifest.txt` gains new
   `<source>|<mirror>|<phrase>` entries seeding R1's section-bounded-read
   procedure and R2's Worker-prompt delivery contract into BOTH mirrors
@@ -166,6 +164,17 @@ content) in the same task — the same three-file shape
   Candidate anchors "Grep-then-offset" and "path-pointer" verified absent
   from all four drain files (0 matches each) 2026-07-19 — adjust during
   breakdown if wording changes, keeping the anchors in sync.
+
+## Parallelization
+
+Task 01 (R1+R2 core changes to reference.md/SKILL.md) lands first — tasks
+02 and 03 both depend on it to avoid same-file edit collisions (02 reads
+its landed diff to port; 03 shares reference.md as an edit target). Tasks
+02 and 03 are disjoint in `Touch` (mirrors + manifest vs. reference.md's
+Wake economics section) and free of shared undecided design, so they run
+concurrently once 01 is done.
+
+- Group: 02, 03
 
 Next stage: /critique specs/drain-hub-context-discipline/SPEC.md
 (human-launched, or self-chain if the live request explicitly asks for it).

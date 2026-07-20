@@ -229,5 +229,13 @@ mirror-obligation note does not apply.
   cites at least one named, URL-backed source (R2) and does not duplicate
   the section's existing three bullets (R4).
 
+## Parallelization
+
+This spec decomposes into a single task (01) for R1–R4 — the whole change
+is one bullet in one section of one file (`Touch:
+.claude/rules/token-discipline.md`), so there is nothing to split into
+concurrent-safe groups per the decision-coupling test; no `- Group:` line
+applies.
+
 Next stage: /critique specs/prompt-tweaking-roi/SPEC.md (human-launched,
 or self-chain if the live request explicitly asks for it).
