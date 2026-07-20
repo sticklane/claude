@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 12 turns
@@ -69,7 +69,7 @@ the equivalent tightening there. Do not touch
       (count 0 today, verified 2026-07-19)
 - [ ] A human/manual-pending read confirms SKILL.md's "load only the named
       section" call sites (`grep -n "load only the named section"
-    .claude/skills/drain/SKILL.md`) now cite the new reference.md
+  .claude/skills/drain/SKILL.md`) now cite the new reference.md
       procedure rather than only repeating the passive note — this is a
       prose-quality judgment, not a mechanical grep; mark manual-pending if
       dispatched unattended.
