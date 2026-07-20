@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: 01-enforce-section-read-and-worker-prompt-delivery.md
 Spec: ../SPEC.md
 Priority: P3
