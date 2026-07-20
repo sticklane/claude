@@ -3,29 +3,12 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
 Spec: ../SPEC.md (requirements R1, R2)
 Touch: .claude/skills/drain/drain_frontier.py, .claude/skills/drain/test_drain_frontier.py, .claude/skills/drain/fixtures/
-
-<!-- PLAN (worker, task 01)
-Files, in order:
-  1. test_drain_frontier.py (RED first) — unittest, python3 <file>, temp-dir fixtures per test_list_specs.py convention. One test per R2 incident class:
-     dep gating on non-done deps; ordering triple (Priority > unblocking-power > lexicographic); Touch-disjoint per-spec not global;
-     Group co-admissibility + ungrouped-runs-alone; --claimed collision; glob prefix predicate (overlap/no-overlap/ambiguous-conservative);
-     unresolved cross-spec dep -> blocked; defaulted missing headers exit 0 w/ diagnostics vs malformed Status exit non-zero;
-     window truncation at W; blocked/deferred/needs-verification excluded from dispatchable; min(N,candidates) with non-empty --claimed.
-  2. drain_frontier.py (GREEN) — stdlib-only, read-only, deterministic. Bootstrap _shared/headers.py the list_specs.py way
-     (sys.path.insert + import headers -> STATUS_RE/DEPENDS_RE/PRIORITY_RE). CLI: spec-dir... --window N --claimed path...
-     JSON: dispatchable (full ordered set, all deps done, Status pending), admissible (per-spec empty-window co-admissible +
-     Touch-disjoint from claim set, then truncate to N), blocked (unmet-deps | Unblock line | unresolved-external-dep), diagnostics.
-     No live-slot arithmetic: --claimed filters Touch only; admissible length = min(N, candidates).
-  3. fixtures/basic-window/ (golden) — SPEC.md w/ ## Parallelization "- Group: 02,03,04"; tasks 01(done),02/03/04(pending P1 dep 01,
-     disjoint Touch),05(pending dep 02 -> blocked). --window 2 expected admissible = [02-alpha, 03-beta] documented in basic-window/EXPECTED.md.
-Risks: prefix-conflict predicate is literal string prefix (conservative, per spec); malformed Status/Depends -> stderr + non-zero, no JSON.
--->
 
 ## Goal
 
@@ -52,11 +35,21 @@ one committed golden fixture lives at
 
 ## Acceptance
 
-- [ ] `python3 .claude/skills/drain/test_drain_frontier.py` → exit 0,
+- [x] `python3 .claude/skills/drain/test_drain_frontier.py` → exit 0,
       with at least one test per R2 incident class
-- [ ] `python3 .claude/skills/drain/drain_frontier.py
-.claude/skills/drain/fixtures/basic-window --window 2` → JSON
+      Evidence: 22 tests pass, exit 0; one TestCase per R2 incident class (evidence/01-scanner-and-tests.md).
+- [x] `python3 .claude/skills/drain/drain_frontier.py
+  .claude/skills/drain/fixtures/basic-window --window 2` → JSON
       whose `admissible` matches the fixture's documented expectation
-- [ ] `[ ! -d specs/basic-window ] && ! ls .claude/skills/drain/fixtures/
-| grep -qv basic-window` → exit 0 (fixture landed in the skill
+      Evidence: exit 0, admissible = [02-alpha.md, 03-beta.md], matches fixtures/basic-window/EXPECTED.md (evidence/01-scanner-and-tests.md).
+- [x] `[ ! -d specs/basic-window ] && ! ls .claude/skills/drain/fixtures/
+  | grep -qv basic-window` → exit 0 (fixture landed in the skill
       dir only; nothing stray)
+      Evidence: command exits 0; fixtures/ contains only basic-window/ (evidence/01-scanner-and-tests.md).
+
+## Decisions
+
+- JSON `blocked` entries use reason tags `unmet-deps` / `unresolved-external-dep` / `unblock`; reversible — rename in drain_frontier.py if drain (task 02) prefers other keys.
+- Malformed Status/Depends exits code 2 (any non-zero satisfies the spec); reversible — change the `return 2` in main().
+- Golden fixture documents its expectation in fixtures/basic-window/EXPECTED.md (kept inside basic-window/ so `ls fixtures/` stays clean); reversible — move the doc.
+- Rejected review finding: a scout suggested making all Touch-disjoint tasks co-admissible when a spec defines no `- Group:` lines. Not applied — it contradicts R1's pinned "a task on no `- Group:` line runs alone, admitted only when the window is empty", which the ungrouped-runs-alone tests assert.
