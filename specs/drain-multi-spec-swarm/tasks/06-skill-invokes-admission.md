@@ -1,6 +1,6 @@
 # Task 06: Rewire live /drain to invoke admission.py
 
-Status: in-progress
+Status: done
 Depends on: 01, 04, specs/drain-frontier-scanner/tasks/02-drain-consumes-scanner.md
 Priority: P1
 Budget: 10 turns
@@ -62,17 +62,23 @@ Do not touch `admission.py` itself (task 04's scope, already merged) or
 
 ## Acceptance
 
-- [ ] `grep -c "admission.py" .claude/skills/drain/SKILL.md
-  .claude/skills/drain/reference.md` → combined count ≥ 2 (currently 0
+- [x] `grep -c "admission.py" .claude/skills/drain/SKILL.md
+.claude/skills/drain/reference.md` → combined count ≥ 2 (currently 0
       in both, verified 2026-07-19)
-- [ ] `wc -l < .claude/skills/drain/SKILL.md` → ≤ 500
-- [ ] A verifier reads SKILL.md's step-1 prose and confirms it instructs the
+- [x] `wc -l < .claude/skills/drain/SKILL.md` → ≤ 500
+- [x] A verifier reads SKILL.md's step-1 prose and confirms it instructs the
       agent to invoke `admission.py` for spec-lease claim and cross-spec cap
       decisions specifically (not the same-spec `Group:`/Touch-disjointness
       rolling-window logic, which stays prose-driven) — an L0 grep for the
       filename cannot distinguish "mentioned" from "correctly scoped to the
       right two checks."
-- [ ] Every project gate this repo runs at merge time (`specs/status.sh`,
+- [x] Every project gate this repo runs at merge time (`specs/status.sh`,
       `claude plugin validate .`, every `tests/test_*.sh`,
       `./bin/check-agent-model-pins`, `evals/lint-ultra-gate.sh`,
       `evals/lint-skill-size-gate.sh`) exits 0 after the change lands.
+
+Evidence (verifier PASS, all four criteria): grep combined 5 (SKILL.md 2,
+reference.md 3); `wc -l` SKILL.md 499; step-1 "Claim the owner lease" block
+scopes admission.py to R1/R2 with same-spec Group:/Touch left prose-driven,
+reference.md documents the full CLI contract; all gates exit 0. Full report:
+specs/drain-multi-spec-swarm/evidence/06-skill-invokes-admission.md.
