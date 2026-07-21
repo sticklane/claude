@@ -24,15 +24,27 @@ they'd read `agentprof`'s existing cost report.
 Add `agentprof/cmd_skillcheck.go` (+ `cmd_skillcheck_test.go`), registered in
 `agentprof/main.go`'s subcommand switch (`agentprof/main.go:26-36` pattern)
 alongside the existing `claude`/`gcp`/`vertex`/`otel`/`antigravity`/`build`
-cases, as `case "skillcheck":`. It reuses `agentprof`'s existing Claude Code
-transcript parsing and subagent-linking machinery — the per-line
-`transcriptLine` struct, the `agent-*.meta.json`-based subagent linkage, and
-the `attributionSkill`/skill-frame normalization already built for the
-`claude` subcommand (per scout report: skill invocations already surface as
-`attributionSkill` on response lines, normalized to `skill:<name>` frames) —
-rather than re-parsing JSONL independently. It is a read-only reporting tool:
-it never mutates a transcript, a `SKILL.md`, or any repo file other than
-writing its own report output.
+cases, as `case "skillcheck":`. **It does NOT reuse `internal/claude`'s
+unexported parsing internals as-is** — `transcriptLine`, `turnRec`,
+`commandSkillFrame`, and friends are unexported to `internal/claude`, and
+`cmd_skillcheck.go` lives in `package main`, so none of that struct surface
+is reachable from it. That package's only exported entrypoint today
+(`Collect*(...) → ([]schema.Sample, []Turn, Stats)`) is cost/attribution-
+shaped and carries none of what classification needs: the raw `Skill`
+`tool_use` block (`input.skill`/`input.args`) paired with its `tool_result`,
+per-turn user↔assistant adjacency (needed for self-chain detection), or the
+per-turn `<command-name>` tag (needed for slash-command detection). This
+spec therefore REQUIRES adding new exported accessors to `internal/claude`
+— a `SkillInvocations(...)` (or similarly-named) function returning, per
+invocation: the skill name/args, its paired result, the preceding
+`<command-name>` tag if any, and whether an intervening user turn preceded
+it — and `cmd_skillcheck.go` consumes that new exported API. This is
+real, budgeted implementation work (part of R2 below), not free reuse of
+existing internals; only the JSONL-file-walking/subagent-linking underneath
+that new accessor is genuinely shared with the `claude` subcommand's
+existing code path. It is a read-only reporting tool: it never mutates a
+transcript, a `SKILL.md`, or any repo file other than writing its own
+report output.
 
 For each transcript session (main + linked subagent files), `skillcheck`:
 
@@ -149,14 +161,18 @@ evaluation practice — synthesized fresh for this spec, no prior in-repo
   implementation satisfies this interface for the deterministic unit tests
   in the Acceptance criteria (see below); production code uses the real
   CLI-backed implementation.
-- **Judge model tier: session-tier by default, configurable, with a pinned
+- **Judge model tier: scout-tier by default, configurable, with a pinned
   tier→model map.** `--judge-tier` accepts the same tier vocabulary as
   `.claude/rules/token-discipline.md` (`scout`, `session`, `deep`,
   `frontier`); `skillcheck` resolves each tier to a concrete `--model` value
   via the same mapping table `runtimes/claude-code.md` already pins for
   this toolkit's tier language (cited, not restated — `skillcheck` reads or
   mirrors that table rather than inventing its own tier-to-model constants).
-  Default tier: `session`.
+  Default tier: `scout` — a fresh `claude -p` judge subprocess has nothing
+  to inherit, so `session-tier`'s `inherit` mapping is not a usable
+  `--model` value here; `internal/naming/cli.go` hits the same constraint
+  and hardcodes a concrete cheap model rather than "inherit", which this
+  spec follows.
 
 ### Report shape
 
@@ -195,9 +211,14 @@ section already states for this repo's own review/verification practice
 - R1: `agentprof skillcheck` is a registered subcommand in `agentprof/main.go`'s
   switch, following the existing `claude`/`gcp`/`vertex`/`otel`/`antigravity`/
   `build` pattern.
-- R2: Reuses `agentprof`'s existing transcript-parsing and subagent-linking
-  code (the `claude` subcommand's parser) rather than a second independent
-  JSONL parser.
+- R2: Adds a new exported accessor to `agentprof/internal/claude` (e.g.
+  `SkillInvocations`) that returns, per invocation, the skill name/args, its
+  paired `tool_result`, the preceding `<command-name>` tag if any, and
+  whether an intervening user turn preceded it — built on top of that
+  package's existing JSONL-file-walking and subagent-linking machinery
+  (genuinely shared, not re-implemented) rather than a second independent
+  parser. `cmd_skillcheck.go` consumes only this new exported surface, never
+  the package's unexported internals directly.
 - R3: Classifies every model-decided auto-trigger `Skill` tool_use found in
   the scanned transcripts (excluding explicit slash-command invocations and
   skill self-chains, per the Solution's population definition) as
@@ -223,9 +244,13 @@ section already states for this repo's own review/verification practice
   to require concrete in-transcript evidence.
 - R8: Every judge call is scoped to a single rubric dimension and may return
   `unknown`.
-- R9: `--judge-tier` overrides the default `session` judge tier; each tier
-  resolves to a concrete model via the mapping `runtimes/claude-code.md`
-  already pins for this toolkit (cited, not restated).
+- R9: `--judge-tier` overrides the default `scout` judge tier (matching
+  `internal/naming/cli.go`'s own precedent of hardcoding a concrete cheap
+  model rather than "inherit" for a subprocess judge call — `session-tier`
+  maps to `inherit` in `runtimes/claude-code.md`'s tier table, which is not
+  a usable `--model` value for a fresh `claude -p` subprocess with nothing
+  to inherit from); each tier resolves to a concrete model via the same
+  mapping table (cited, not restated).
 - R10: Report output includes a per-skill aggregate (counts per
   trigger/outcome/population category — `correct`, `misfired`,
   `unresolvable`, `explicit_invocation`, `self_chained`, `possible_misses`,
@@ -289,6 +314,19 @@ section already states for this repo's own review/verification practice
       TDD red-first per this spec's Production rigor.
 - [ ] `agentprof skillcheck --help` documents `--days`, `--since`, `--skill`,
       `--judge-tier`, `-o`, `--format`.
+- [ ] A command-construction test (no subprocess executed — mirroring
+      `internal/naming/cli_test.go`'s pattern of asserting on the built
+      `*exec.Cmd` without running it) asserts the real CLI-backed judge
+      implementation's built command carries `CLAUDE_CONFIG_DIR=<scratch>`
+      in its environment, proving the self-pollution guard R12 requires is
+      actually wired into the production path, not just the fake used by
+      the other unit tests.
+- [ ] `agentprof skillcheck --format table` over a fixture with known
+      trigger/outcome counts emits output that a small parser (e.g. split
+      on whitespace/columns) confirms contains R10's category counts —
+      parse-then-assert, not a substring/exact-string match — proving R13's
+      `table` format actually renders the aggregate rather than merely being
+      an accepted flag value.
 - [ ] MANUAL-PENDING (requires a live `claude -p` judge call and real
       accumulated history — not runnable by an unattended worker; a human
       or an attended session runs this and records the result): run
