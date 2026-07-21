@@ -1453,7 +1453,7 @@ def tail_events(path, n: int = 50, window: int = 65_536):
         # one event still renders. Gated on zero-parsed + non-empty so a
         # normally-parsing file never re-reads (the never-reads-whole-file bound).
         if in_window == 0 and size > 0 and cur < size:
-            cur = min(size, cur * 2)
+            cur = min(size, max(1, cur * 2))
             continue
         break
     read_bytes = len(chunk)
