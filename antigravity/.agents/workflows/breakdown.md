@@ -4,6 +4,19 @@ description: Split a SPEC.md into one-conversation task files with dependencies 
 
 Use the breakdown skill (.agents/skills/breakdown/SKILL.md) and follow it exactly, applying it to whatever arguments follow the command. If no arguments were given and the skill needs a target, ask for it.
 
+## Structure gathering (ctx before scouts)
+
+Gather the structure task files need — signatures, callers, module outlines
+— before any scout dispatch or file read. When `.context/` exists at the
+repo root (an indexed repo), the `ctx` index is the cheapest source: run
+`ctx tree <path>` per module or file for its symbol outline, then `ctx sig
+<symbol>` / `ctx refs <symbol>` per symbol a task will touch, and author the
+task files from those outputs (the 2026-07-21 budget_analysis pairing wrote
+three task files from two `ctx tree` outlines with zero source reads). Fall
+back to scout agents only when the repo is unindexed or the question is
+content-shaped (bodies, literals, patterns the index does not carry) — and
+even then, don't read the codebase into this session.
+
 ## The `Unblock:` line (blocked and waiting items)
 
 An item that stops carries its own move as a machine-readable `Unblock:` line,
