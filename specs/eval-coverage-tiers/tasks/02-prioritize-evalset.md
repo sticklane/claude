@@ -35,14 +35,15 @@ Priority header, asserted by diffing headers before/after.
 - [x] `for f in evals/prioritize/*/assert.sh; do bash -n "$f" || exit
 1; done` → exit 0
       <!-- evidence: both assert.sh parse (rc=0) -->
-- [ ] `./evals/run.sh prioritize` passes — manual-pending (paid
-      headless run, human-launched, per
-      docs/memory/unattended-worker-tool-limits.md)
+- [x] `./evals/run.sh prioritize` passes — human-launched paid headless
+      run, 2026-07-20 via `bin/human-followups`: `PASS
+    prioritize/01-reorder-priorities`, `PASS
+    prioritize/02-adv-out-of-scope`, exit 0.
       <!-- runnability pre-verified: setup.sh provisions the scanner's
-          _shared/workboard/runtimes deps (run.sh copies only the skill under
-          test), scanner rc=0 on both fixtures; graders red-first (01 fails on
-          untouched, passes on P0/P3+commit; 02-adv passes on no-op, fails on a
-          P5 edit). Awaits a human-launched paid model run. -->
+              _shared/workboard/runtimes deps (run.sh copies only the skill under
+              test), scanner rc=0 on both fixtures; graders red-first (01 fails on
+              untouched, passes on P0/P3+commit; 02-adv passes on no-op, fails on a
+              P5 edit). -->
 
 ## Discovered
 
