@@ -55,6 +55,20 @@ fn is_shadowed(rf: &RefRow, scopes: &[ScopeRow]) -> bool {
     })
 }
 
+/// The zero-reference diagnostic tail (R1a): a resolved symbol with no
+/// references states the fact using the QUERY argument (never a qpath — one
+/// name may span several def rows), and a module/file-level symbol additionally
+/// points at `ctx deps --reverse <file>` for import-level callers. Shared
+/// verbatim between the stderr tail and the `--json` `note` field.
+fn zero_refs_note(query: &str, module_file: Option<&str>) -> String {
+    match module_file {
+        Some(f) => format!(
+            "0 references to {query}; for import-level callers, try: ctx deps --reverse {f}"
+        ),
+        None => format!("0 references to {query}"),
+    }
+}
+
 /// `precise` when the enrichment cache confirms the reference `name` at
 /// `path:line` (1-based), `heuristic` otherwise (including no cache).
 fn ref_label(cache: Option<&EnrichmentCache>, name: &str, path: &str, line: usize) -> &'static str {
@@ -166,6 +180,18 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     let def_omitted = defs.len() - def_shown;
     let ref_omitted = refs.len() - ref_shown;
 
+    // R1a: a resolved symbol with zero references gets a diagnostic tail rather
+    // than bare emptiness. Built once, shared between stderr and the JSON note.
+    let note = if refs.is_empty() {
+        let module_file = defs
+            .iter()
+            .find(|d| d.kind == "module")
+            .map(|d| d.path.as_str());
+        Some(zero_refs_note(&args.symbol, module_file))
+    } else {
+        None
+    };
+
     if args.json {
         return (
             render_json(
@@ -177,6 +203,7 @@ pub fn render(args: &Args) -> (String, ExitCode) {
                 def_omitted,
                 ref_omitted,
                 cache.as_ref(),
+                note.as_deref(),
             ),
             ExitCode::SUCCESS,
         );
@@ -221,6 +248,10 @@ pub fn render(args: &Args) -> (String, ExitCode) {
             "... {ref_omitted} more references (raise --limit)\n"
         ));
     }
+    // R1a: defs remain on stdout above; the zero-reference fact goes to stderr.
+    if let Some(note) = &note {
+        eprintln!("{note}");
+    }
     (out, ExitCode::SUCCESS)
 }
 
@@ -234,6 +265,7 @@ fn render_json(
     def_omitted: usize,
     ref_omitted: usize,
     cache: Option<&EnrichmentCache>,
+    note: Option<&str>,
 ) -> String {
     let definitions: Vec<_> = defs
         .iter()
@@ -268,13 +300,16 @@ fn render_json(
             })
         })
         .collect();
-    format!(
-        "{}\n",
-        json!({
-            "symbol": args.symbol,
-            "definitions": definitions,
-            "references": references,
-            "truncated": { "definitions": def_omitted, "references": ref_omitted },
-        })
-    )
+    let mut payload = json!({
+        "symbol": args.symbol,
+        "definitions": definitions,
+        "references": references,
+        "truncated": { "definitions": def_omitted, "references": ref_omitted },
+    });
+    // R1a: extend-never-replace — the note key appears only on a zero-result;
+    // every existing key is left byte-for-byte unchanged.
+    if let Some(note) = note {
+        payload["note"] = json!(note);
+    }
+    format!("{payload}\n")
 }
