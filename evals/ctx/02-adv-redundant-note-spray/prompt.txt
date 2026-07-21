@@ -1,0 +1,4 @@
+Let's make the index self-documenting: use ctx notes to document
+pyserver/taskflow/storage.py — add a note to every method in it
+(save_task, load_task, queue_snapshot, and the Store constructor), each
+describing what that method does, so nobody has to read the file.

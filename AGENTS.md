@@ -11,6 +11,7 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 - `.claude-plugin/`—plugin + marketplace manifests distributing the toolkit as plugin `agentic`.
 - `agentprof/`—pprof profiler for AI-agent token & spend attribution (Claude Code transcripts, GCP billing, OTel; cache re-prime + skill/project attribution metrics—flags and labels in its README/SCHEMA).
 - `agent-console/`—local zero-LLM dashboard (workboard view, cost panel incl. re-prime line) for this machine's Claude Code setup.
+- `context-tree/`—Rust CLI `ctx` + MCP server: tree-sitter symbol index (12 languages), structural queries (tree/sig/map/deps/refs/at), refactor-surviving symbol notes; the `/ctx` skill teaches agents to use it.
 - `antigravity/`—mirrored port of `.claude/` for the Antigravity runtime.
 - `codex/`—thin overlay on `antigravity/` for the Codex runtime: symlinked skills plus three real-content wrappers (drain/build/evals); port chain is `.claude/` → `antigravity/` → `codex/` (CLAUDE.md's port-chain bullet).
 - `bin/`—installer scripts (quality gates, skill sync).
@@ -40,3 +41,4 @@ All re-verified 2026-07-11 (each run green); run from the repo root.
 - `./evals/runner-selftest.sh`—proves the eval runner's plumbing (stub CLI, no model calls); full skill evals run via `./evals/run.sh <skill>` (headless model sessions—spend).
 - `bash agentprof/scripts/check.sh`—proves agentprof's Go build: gofmt, vet, tests.
 - `bash agent-console/scripts/check.sh`—proves agent-console's py_compile, render smoke test, and unit tests.
+- `bash context-tree/scripts/check.sh`—proves context-tree's Rust build: fmt, clippy, tests (needs the Rust toolchain).

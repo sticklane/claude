@@ -1,0 +1,8 @@
+Two things about this repo:
+
+1. Where is claim_next defined, and which other files reference it?
+
+2. I keep tripping over the retry accounting: attempts increments when a
+task is CLAIMED (in claim_next), not when it completes — moving that line
+into complete() double-counts retries. Record that as an invariant note
+anchored to the claim_next method, so future sessions working here see it.
