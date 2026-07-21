@@ -346,7 +346,11 @@ malformed frontier: …` line on stderr; treat ANY non-zero exit —
    on that worktree
    with this prompt (fill the <>; resolve the build workflow to a
    concrete path, resolved at dispatch — `.agents/workflows/build.md` in
-   the repo — and substitute it for <build-workflow-path>). **Deliver the
+   the repo — and substitute it for <build-workflow-path>). Antigravity has
+   no plugin-cache install mode, so the pointer is the in-repo file directly
+   with no version-stamped cache directory to disambiguate; even so,
+   resolve once per session, never reuse a version number seen elsewhere in context.
+   **Deliver the
    build procedure by path-pointer, never pasted:** the launch hands the
    worker the `<build-workflow-path>` and tells it to read and follow that
    file verbatim, rather than inlining the build workflow's body into the
