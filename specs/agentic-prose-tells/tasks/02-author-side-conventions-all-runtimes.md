@@ -1,6 +1,6 @@
 # Task 02: author-side principle in every runtime's conventions doc
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 8 turns
