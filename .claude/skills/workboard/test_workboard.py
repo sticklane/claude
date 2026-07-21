@@ -2086,6 +2086,52 @@ class GitInfoConfigUpstreamTestCase(unittest.TestCase):
             self.assertEqual(info["ahead"], 1)
             self.assertEqual(info["behind"], 0)
 
+    def test_git_info_behind_unknown_when_remote_sha_absent_locally(self):
+        # Upstream is configured (remote/.merge) and ls-remote resolves a SHA,
+        # but that SHA was never fetched, so it is absent from the local object
+        # store: `rev-list SHA...HEAD` errors. git_info must report behind as
+        # None (honest unknown) rather than a silently-wrong 0 — a stale local
+        # main must not hide a real gap behind the remote.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "work"
+            other = Path(tmp) / "other"
+            bare = Path(tmp) / "remote.git"
+            repo.mkdir()
+            bare.mkdir()
+            _git(bare, "init", "--bare", "-b", "main")
+            _git(repo, "init", "-b", "main")
+            _git(repo, "config", "user.email", "t@example.com")
+            _git(repo, "config", "user.name", "Test")
+            (repo / "a.txt").write_text("1", encoding="utf-8")
+            _git(repo, "add", "a.txt")
+            _git(repo, "commit", "-m", "first")
+            _git(repo, "push", str(bare), "main:refs/heads/main")
+
+            # A second clone advances the bare remote's main to a commit the
+            # work repo has never seen and never fetches.
+            _git(Path(tmp), "clone", str(bare), "other")
+            _git(other, "config", "user.email", "o@example.com")
+            _git(other, "config", "user.name", "Other")
+            (other / "c.txt").write_text("3", encoding="utf-8")
+            _git(other, "add", "c.txt")
+            _git(other, "commit", "-m", "remote-only")
+            _git(other, "push", "origin", "main")
+
+            # Configure the upstream by hand but never fetch: @{u} stays
+            # unresolvable and the ls-remote SHA is absent from work's objects.
+            _git(repo, "remote", "add", "origin", str(bare))
+            _git(repo, "config", "branch.main.remote", "origin")
+            _git(repo, "config", "branch.main.merge", "refs/heads/main")
+
+            self.assertIsNone(
+                workboard.run_git(
+                    repo, "rev-list", "--left-right", "--count", "@{u}...HEAD"
+                )
+            )
+
+            info = workboard.git_info(repo)
+            self.assertIsNone(info["behind"])
+
 
 if __name__ == "__main__":
     unittest.main()
