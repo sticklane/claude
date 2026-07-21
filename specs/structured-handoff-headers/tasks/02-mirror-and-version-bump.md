@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 15 turns
@@ -59,17 +59,17 @@ Exactly the files listed above. Do not touch
 
 ## Acceptance
 
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` passes.
-- [ ] `grep -n "Resume with:\|Blocking on:" antigravity/.agents/skills/handoff/SKILL.md`
+- [x] `bash tests/test_mirror_procedure_coverage.sh` passes.
+- [x] `grep -n "Resume with:\|Blocking on:" antigravity/.agents/skills/handoff/SKILL.md`
       returns matches (content-coverage check for the paraphrased port,
       per `docs/memory/workboard-mirror-verbatim.md`'s distinction between
       byte-identical `.py` mirrors and paraphrased prose mirrors — this is
       the latter).
-- [ ] `grep -n "compact header\|head -n" antigravity/.agents/skills/resume-handoff/SKILL.md`
+- [x] `grep -n "compact header\|head -n" antigravity/.agents/skills/resume-handoff/SKILL.md`
       returns a match.
-- [ ] `test -L codex/.agents/skills/handoff && test -L
+- [x] `test -L codex/.agents/skills/handoff && test -L
       codex/.agents/skills/resume-handoff` — both still symlinks.
-- [ ] The commit modifying `.claude-plugin/plugin.json` shows the version
+- [x] The commit modifying `.claude-plugin/plugin.json` shows the version
       line changed in its own diff (`git show <this-commit> --
       .claude-plugin/plugin.json | grep -q '^+.*"version"'`) — not a
       pinned before/after literal.
@@ -81,3 +81,7 @@ Exactly the files listed above. Do not touch
       presents an `AskUserQuestion` whose option text shows each
       candidate's `Task:`/`Status:` — not bare paths — without having
       read either candidate's full body first.
+
+## Progress
+
+- 2026-07-21: DONE. 4 of 5 acceptance criteria verified against merged main (merge commit 8c38f757, worker commits 03007fbb/f86b1367). The 5th is the task's own MANUAL-PENDING criterion (attended-only `/handoff`+`/resume-handoff` fixture check) — filed to repo-root HUMAN.md per `.claude/rules/human-blockers.md`. Worker deliberately did not port the Claude-Code-specific `AskUserQuestion` tool name into antigravity (0 existing references there); expressed as plain "ask the user" instead, matching antigravity's existing idiom — a load-bearing runtime divergence, not a gap.
