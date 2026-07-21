@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 12 turns
@@ -42,10 +42,20 @@ spec's Solution step 3.
 
 ## Acceptance
 
-- [ ] `grep -rn "resolved at dispatch\|plugin cache path" .claude/skills/*/SKILL.md .claude/skills/*/reference.md`
+- [x] `grep -rn "resolved at dispatch\|plugin cache path" .claude/skills/*/SKILL.md .claude/skills/*/reference.md`
       — read every hit after the fix: each is either inside the canonical
       recipe section itself, or is a citation of it. Depth ceiling: a
       grep-and-manually-classify check is the correctness-checkable floor
       for a sweep whose exact hit count can't be pinned before breakdown
       names every location; task 01's script test is the behavioral
       complement for the primary evidenced call site.
+
+Evidence: post-fix grep returns exactly two hits, both in
+`.claude/skills/drain/reference.md` (Worker prompt section, outside the
+canonical recipe subsection at lines 668-721), now reworded as citations of
+the canonical skill-path resolution recipe: line 726 "resolved at dispatch
+via the canonical skill-path resolution recipe above" and line 730 "(resolved
+at dispatch per the canonical skill-path resolution recipe above)". No hit
+independently describes plugin-cache resolution (step 3 confirmed). Gates
+green: `evals/lint-ultra-gate.sh` OK, `tests/test_mirror_procedure_coverage.sh`
+exit 0, `specs/status.sh` exit 0.

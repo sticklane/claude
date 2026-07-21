@@ -723,10 +723,12 @@ fi
 Workers cannot invoke
 launch-gated execution skills (their context carries no live-user
 authorization — CLAUDE.md's execution-stage bullet), so the prompt must
-carry a readable path, resolved at dispatch:
+carry a readable path, resolved at dispatch via the canonical skill-path
+resolution recipe above:
 
 > Execute the task in <task-file> following the build skill's procedure
-> exactly, as written in <build-skill-path> (resolved at dispatch):
+> exactly, as written in <build-skill-path> (resolved at dispatch per the
+> canonical skill-path resolution recipe above):
 > delegate mechanical scouting to Haiku (`effort: low`) scouts for
 > exploration, tests first where criteria are test-shaped,
 > run every acceptance command, standard gates, then commit to a branch
