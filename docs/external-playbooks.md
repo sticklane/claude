@@ -270,6 +270,35 @@ research stays here.
 - **OpenAI's chaining model**: Agents SDK handoffs transfer control
   between agents mid-conversation, model-decided at runtime.
   [A Practical Guide to Building Agents](https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf)
+- **The invariant, confirmed against a live bug (2026-07-21):** critique's
+  SKILL.md documented a hand-off marker only as "the token another stage
+  reads to auto-invoke itself," with no explicit self-chain imperative of
+  its own; a live session read the ambiguity and invented a permission
+  gate that doesn't exist in this repo's doctrine, stalling a pipeline
+  that should have auto-continued (specs/critique-breakdown-self-chain-gap;
+  mining this repo's own session logs found one further, generalizable
+  instance of the same failure — specs/deterministic-skill-chaining).
+  Cross-framework research converges on one answer: LangGraph's routing
+  is always code — "Edges... are functions that determine which Node to
+  execute next," and even LLM-decided hand-offs go through a `Command`
+  object ("`return Command(goto="sales_agent", ...)`") selecting among a
+  closed, code-declared destination set, never free text a model must
+  parse ([LangGraph graph API](https://docs.langchain.com/oss/python/langgraph/graph-api),
+  [multi-agent handoffs](https://docs.langchain.com/oss/python/langchain/multi-agent/handoffs)).
+  CrewAI's `Process` is a typed enum and task dependencies are an explicit
+  `context` attribute, not natural language
+  ([processes](https://docs.crewai.com/en/concepts/processes),
+  [tasks](https://docs.crewai.com/en/concepts/tasks)). Anthropic's own
+  criterion is explicit: "workflows offer predictability and consistency
+  for well-defined tasks, whereas agents are the better option when
+  flexibility and model-driven decision-making are needed at scale... where
+  you can't hardcode a fixed path"
+  ([Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)).
+  A skill-to-skill hand-off gated on a mechanical predicate over committed
+  file state (a `Status:` value, a completion marker) is exactly the
+  "well-defined, hardcode it" case — the toolkit's prose self-chain bullet
+  applies that judgment-call escape hatch to decisions that aren't
+  judgment calls at all.
 
 ## Antipatterns
 
