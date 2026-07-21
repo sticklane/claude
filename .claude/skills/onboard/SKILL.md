@@ -83,6 +83,11 @@ and keep denies that would annoy attended sessions (like WebFetch) out of
 the shared file — those belong in a personal settings.local.json autonomy
 profile.
 
+When the target repo is indexed (a `.context/` directory at its root, or
+`ctx` resolving on PATH), also recommend `Bash(ctx *)` in the allowlist so
+agents can run the code-structure index (`ctx tree`/`sig`/`refs`/`deps`)
+index-first instead of grepping for structure.
+
 ## 5. Offer the next layer
 
 Ask which the user wants now (don't install unasked):
