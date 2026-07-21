@@ -1281,7 +1281,22 @@ findings, M fixed, K stubbed` or `spec review skipped: <reason>`, read from
    → `ask` (§1); `Unblock: ask:` blocked tasks → `ask` (§3); `Unblock: run:`
    blocked tasks → `run` (§3); decision-shaped or gate-refused stubs →
    `decide` (§2/§5/§6); NOT-READY specs from critique intake → `decide`
-   (§4). `Unblock: agent:` blocked tasks are NOT filed — an agent, not a
+   (§4). Each filed entry carries a `Blocks:` clause naming what stays stuck
+   while it sits unresolved (`.claude/rules/human-blockers.md`, cited not
+   restated); how it is derived splits the rows in two. The three
+   dependency-bearing rows (deferred questions still unanswered; `Unblock:
+ask:` blocked tasks; `Unblock: run:` blocked tasks) are each filed from a
+   `deferred`/`blocked` task file that other `pending` tasks may name as a
+   `Depends on:` target, so derive the blocked-task-name set from the SAME
+   **unblocking-power** lookup the step-2 dispatch tie-break above already
+   computes, then render `Blocks:` from those task names (or `Blocks: no
+other pending task` when the set is empty). The two decision-shaped rows
+   are not `Depends on:` targets other tasks point at, so each takes a
+   literal per-row string. Decision-shaped or gate-refused stubs get:
+   `Blocks: promotion of this stub to a dispatchable task`.
+   NOT-READY specs from critique intake get:
+   `Blocks: breakdown of this spec into dispatchable tasks`.
+   `Unblock: agent:` blocked tasks are NOT filed — an agent, not a
    human, clears them; the informational summary sections (promoted this
    run, next commands) are not blockers and are not filed. When the batch
    interview answers a deferred question, the commit that writes that task's
