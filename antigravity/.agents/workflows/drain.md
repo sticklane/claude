@@ -150,8 +150,12 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
        `AGENTS.md`'s "Concurrent sessions" section, leaving the human to choose
        take-theirs / merge-both / manual reconcile. An attended session MAY
        ask instead, at its own discretion — not required here.
-       Read only each task file's header lines (`Status`,
-       `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies. `Budget`
+       Invoke `python3 .agents/skills/drain/drain_frontier.py <spec-dir>`
+       per spec dir and treat its output as authoritative for the
+       dispatchable set and ordering. Missing script or non-zero exit →
+       today's header read verbatim (`Status`, `Depends on`, `Priority`,
+       `Budget`, `Touch`) — not the bodies, quoting the scanner's stderr in
+       the fallback log line. `Budget`
        feeds the worker's over-budget stop; `Priority` is an optional
        tie-break (absent = P2). Dispatchable = `pending` with all
        dependencies `done`.
@@ -289,7 +293,9 @@ malformed frontier: …` line on stderr; treat ANY non-zero exit —
    `<!-- agentprof:stage=dispatch -->` verbatim each time you enter it,
    including each time step 3's loop sends you back here — not once per
    session. When several tasks are dispatchable
-   at once, apply the deterministic tie-break: dispatch lowest `Priority`
+   at once, dispatch in the scanner's emitted order — the tie-break is
+   computed by drain_frontier; a fallback read applies the same triple by
+   hand: lowest `Priority`
    value first (absent = P2), then greatest unblocking-power — the count
    of still-`pending` tasks whose `Depends on:` names this task, counted
    over the task files inventoried this run and resolving `Depends on:`

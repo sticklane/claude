@@ -86,3 +86,5 @@
 .claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|path-pointer
 .claude/skills/drain/reference.md|codex/.agents/skills/drain/SKILL.md|Grep-then-offset
 .claude/skills/drain/reference.md|codex/.agents/skills/drain/SKILL.md|path-pointer
+# seeded: task 04 (drain-frontier-scanner) — ported task 02's drain_frontier.py invoke-with-fallback procedure into the codex wrapper (inventory + tie-break). Anchors the runtime-neutral bare token so the codex leg can't silently drop the scanner invocation. Antigravity carries the same port (incidental divergence, path-only) but is not manifest-seeded per the task (never an antigravity drain_frontier line); its coverage rides the closure-triggered live cross-reference check recorded in specs/drain-frontier-scanner/evidence/.
+.claude/skills/drain/SKILL.md|codex/.agents/skills/drain/SKILL.md|drain_frontier
