@@ -1,6 +1,6 @@
 # Task 01: `.ctxignore` overlay adapter in `detect()` + full test suite
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 24 turns
