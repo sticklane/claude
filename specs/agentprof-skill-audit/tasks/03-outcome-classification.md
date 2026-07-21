@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 22 turns
@@ -66,12 +66,43 @@ handle input already known to be `correctly-triggered`).
 
 ## Acceptance
 
-- [ ] `cd agentprof && go build ./...` succeeds.
-- [ ] `cd agentprof && go test ./... -run TestClassifyOutcome` passes
+- [x] `cd agentprof && go build ./...` succeeds. Verified via
+      `agentprof/scripts/check.sh` (merge commit
+      "merge: agentprof-skill-audit task 03").
+- [x] `cd agentprof && go test ./... -run TestClassifyOutcome` passes
       (red-first), covering: `outcome-rubric:` present vs absent routing,
       the custom rubric as a single fake-judge call over its full text, the
       generic rubric as three separate fake-judge calls, the
       anti-closing-message instruction present in every outcome-judge
       prompt (asserted on the fake's recorded prompt strings), and the
       3-call aggregation rule (success/failure/unknown) with a case for
-      each outcome.
+      each outcome. 7 test cases, all passing. Independently re-run via
+      `agentprof/scripts/check.sh` at merge time (format-check ok, lint ok,
+      tests ok) — also independently verified by the dispatched worker's
+      own verifier sub-pass (build/tests re-run, no-dependency-on-task-02
+      check via moving `cmd_skillcheck_trigger*.go` aside and re-testing
+      green).
+
+## Decisions
+
+- 3-call generic aggregation rule: any-failure-dominates, then
+  unknown-over-success (documented in `aggregateGeneric`'s code comment).
+  Reversible: change that function/comment.
+- `ClassifyOutcome(inv, skillPath, j, tier)` signature — caller supplies
+  the resolved judge tier (R9); `""` falls back to
+  `defaultOutcomeJudgeTier = "scout"`. Reversible: task 04 chooses how it
+  passes the tier.
+- Return type `(OutcomeClass, error)` (minimal, not a struct). Reversible:
+  widen to a result struct if task 04 needs per-dimension detail.
+- Judge evidence = the invocation's Name/Args/Result (the fields task 01's
+  `SkillInvocation` carries). Reversible: enrich once broader transcript
+  context is available.
+
+## Discovered
+
+- The shared `internal/judge.Fake` supports only a single fixed `Reply`,
+  so per-call-sequenced replies (needed for the 3-call aggregation test
+  cases) required a local scripted judge in this task's own test file.
+  Task 04 will likely need the same capability; consider adding a
+  `Replies []string` mode to `judge.Fake` (out of this task's Touch
+  scope). See specs/agentprof-skill-audit/tasks/05-judge-fake-replies-mode.md.
