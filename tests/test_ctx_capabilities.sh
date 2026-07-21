@@ -6,29 +6,34 @@
 # (context-tree/tests/fixtures/demo-codebase/). Guards the ctx binary's
 # behavior contract as the /ctx skill and the crate evolve.
 #
-# Needs a ctx binary: target/{release,debug}/ctx if already built, else a
-# one-time `cargo build` when the Rust toolchain is present. With neither,
-# SKIPs (exit 0) so toolchain-less CI stays green — the Rust CI leg and
-# context-tree/scripts/check.sh cover the build itself.
+# Needs a prebuilt ctx binary (target/{release,debug}/ctx) and python3;
+# without either it SKIPs (exit 0) so the fast model-free shell gate never
+# compiles Rust — context-tree/scripts/check.sh owns the build. Opt in to
+# an inline debug build with CTX_BUILD=1 (dev boxes with the toolchain).
 set -u
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$here/.." && pwd)"
 crate="$repo_root/context-tree"
 
+command -v python3 >/dev/null 2>&1 || {
+  echo "test_ctx_capabilities: SKIP — python3 unavailable"
+  exit 0
+}
+
 CTX=""
 for cand in "$crate/target/release/ctx" "$crate/target/debug/ctx"; do
   [ -x "$cand" ] && CTX="$cand" && break
 done
 if [ -z "$CTX" ]; then
-  if command -v cargo >/dev/null 2>&1; then
+  if [ "${CTX_BUILD:-0}" = "1" ] && command -v cargo >/dev/null 2>&1; then
     (cd "$crate" && cargo build -q 2>/dev/null) || {
-      echo "test_ctx_capabilities: FAIL — cargo present but build failed" >&2
+      echo "test_ctx_capabilities: FAIL — CTX_BUILD=1 but cargo build failed" >&2
       exit 1
     }
     CTX="$crate/target/debug/ctx"
   else
-    echo "test_ctx_capabilities: SKIP — no prebuilt ctx and no Rust toolchain"
+    echo "test_ctx_capabilities: SKIP — no prebuilt ctx (CTX_BUILD=1 + Rust toolchain to build inline)"
     exit 0
   fi
 fi

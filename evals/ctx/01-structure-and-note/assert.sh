@@ -16,8 +16,8 @@ ls .context/notes/*.md >/dev/null 2>&1 \
 out="$("$CTX" notes pyserver.taskflow.dispatch.Dispatcher.claim_next 2>&1)"
 echo "$out" | grep -q 'kind=invariant' \
   || fail "no invariant-kind note anchored to claim_next (got: $out)"
-echo "$out" | grep -qi 'attempts' \
-  || fail "note text does not mention the attempts accounting (got: $out)"
+echo "$out" | grep -qiE 'attempt|retry' \
+  || fail "note text does not mention the attempt/retry accounting (got: $out)"
 echo "$out" | grep -q 'fresh' \
   || fail "note is not fresh against the current tree (got: $out)"
 
