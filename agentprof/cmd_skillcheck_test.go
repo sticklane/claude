@@ -404,7 +404,21 @@ func TestSkillcheckWiresScratchIsolatedCLIJudge(t *testing.T) {
 	if j.ScratchRoot != scratch {
 		t.Fatalf("skillcheck judge ScratchRoot = %q, want the scratch dir %q", j.ScratchRoot, scratch)
 	}
-	if j.ScratchRoot == "" {
-		t.Fatal("skillcheck judge has an empty ScratchRoot; grading would pollute the profiled ~/.claude tree")
+
+	// The actual invocation path (cmdSkillcheck) feeds newSkillcheckJudge the
+	// default scratch root, which must be a real scratch location outside the
+	// profiled ~/.claude tree — since CLIJudge derives CLAUDE_CONFIG_DIR as
+	// <ScratchRoot>/judge-*, a scratch ScratchRoot guarantees the grading
+	// subprocess's CLAUDE_CONFIG_DIR lands under scratch (env proof:
+	// internal/judge/cli_test.go).
+	def := defaultJudgeScratchRoot()
+	if def == "" {
+		t.Fatal("skillcheck's default judge ScratchRoot is empty; grading would pollute the profiled ~/.claude tree")
+	}
+	if !strings.HasPrefix(def, os.TempDir()) {
+		t.Errorf("default judge ScratchRoot %q is not under the OS temp dir %q", def, os.TempDir())
+	}
+	if strings.Contains(def, filepath.Join(".claude", "projects")) {
+		t.Errorf("default judge ScratchRoot %q is inside the profiled ~/.claude/projects tree", def)
 	}
 }
