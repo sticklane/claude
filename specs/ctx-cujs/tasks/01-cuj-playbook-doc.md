@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 18 turns
@@ -47,13 +47,13 @@ spec's SPEC.md — those are tasks 02 and 03.
 
 ## Acceptance
 
-- [ ] `grep -c '^## ' docs/guides/ctx-cujs.md` → 9.
-- [ ] `grep '^## ' docs/guides/ctx-cujs.md | tail -1` → `## Gap table`.
-- [ ] `wc -l < docs/guides/ctx-cujs.md` → ≤180.
-- [ ] For every spec path cited in the file (extract with
+- [x] `grep -c '^## ' docs/guides/ctx-cujs.md` → 9.
+- [x] `grep '^## ' docs/guides/ctx-cujs.md | tail -1` → `## Gap table`.
+- [x] `wc -l < docs/guides/ctx-cujs.md` → ≤180.
+- [x] For every spec path cited in the file (extract with
       `grep -oE 'specs/[a-z0-9-]+' docs/guides/ctx-cujs.md | sort -u`),
       `ls specs/<slug>/` succeeds — every citation resolves to a real spec
       directory.
-- [ ] Every "shipped" row in the Gap table has a code-path citation, and
+- [x] Every "shipped" row in the Gap table has a code-path citation, and
       every "specced" row has a spec-path citation (read the table and
       confirm — no status-without-citation row).

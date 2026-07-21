@@ -12,6 +12,29 @@ files (Codebase-Memory, arXiv 2603.27277). A journey "fails" when it forces
 a fallback to whole-file reads, so each failure-mode list names what pushes
 it there.
 
+```mermaid
+flowchart TD
+    Q["What do you need?"]
+    Q -->|"shape of an unfamiliar repo/dir"| ORIENT["1. ORIENT<br/>map + tree"]
+    Q -->|"where is X / who calls X"| LOCATE["2. LOCATE<br/>refs / sig"]
+    Q -->|"what's inside a found symbol"| DIGIN["3. DIG IN<br/>show (Read fallback)"]
+    Q -->|"confirm X is fully gone"| ABSENCE["4. VERIFY ABSENCE<br/>refs no-match + boundary check"]
+    Q -->|"blast radius of a change"| IMPACT["5. IMPACT<br/>refs + deps --reverse"]
+    Q -->|"deep repo understanding"| SURVEY["6. SURVEY<br/>batched recipe, scout-delegated"]
+    Q -->|"duplicated / dead-zone code"| DEDUP["7. DEDUP / DEAD CODE<br/>zone-tagged refs + clone detect"]
+    Q -->|"durable notes on a symbol"| KNOWLEDGE["8. KNOWLEDGE<br/>notes add / notes show"]
+
+    LOCATE -.->|"found it, need the body"| DIGIN
+    DIGIN -.->|"still ambiguous, too large"| Read["Read (last resort,<br/>sliced by offset/limit)"]
+    ORIENT -.->|"index polluted or noisy"| Read
+    ABSENCE -.->|"no-match alone is never proof"| Read
+```
+
+Every CUJ that still routes to a raw `Read` fallback in the diagram is a
+signal the index coverage or output shape hasn't shipped yet (see the Gap
+table) — the goal is for `Read` to appear only for "about to edit," never
+as a stand-in for a query ctx should answer directly.
+
 ## 1. ORIENT — "what is this codebase/module?"
 
 - **Trigger:** first contact with an unfamiliar repo or top-level dir; you
