@@ -1,5 +1,7 @@
 # agentprof skillcheck — skill trigger + outcome audit
 
+Breakdown-ready: true
+
 ## Problem
 
 Skill authors in this repo iterate on a `SKILL.md`'s `description` (trigger
@@ -232,13 +234,20 @@ section already states for this repo's own review/verification practice
   counted as `explicit_invocation`, never scored for trigger-correctness.
 - R5: Separately flags `possible-miss` candidates for user turns with no
   matching `Skill` call, via a deterministic keyword/phrase match (no LLM
-  call) against every currently-installed skill's declared trigger phrases
-  — clearly distinguished from confirmed misfires in the report.
+  call) against every currently-installed skill's declared trigger phrases,
+  where "currently-installed" is enumerated from `.claude/skills/*/SKILL.md`
+  under `skillcheck`'s own invocation cwd, plus the plugin-cache layout
+  step 3's resolution order already names — clearly distinguished from
+  confirmed misfires in the report.
 - R6: For each `correctly-triggered` invocation, scores outcome as
   `success` / `failure` / `unknown`, using a skill's own `outcome-rubric:`
   frontmatter value when present (replacing, never supplementing, the
   generic rubric) and the generic rubric otherwise. `misfired` and
-  `unresolvable` invocations are never outcome-scored.
+  `unresolvable` invocations are never outcome-scored. A custom
+  `outcome-rubric:` is judged as ONE dimension (one judge call over its full
+  text); the generic rubric's three questions (terminal state,
+  error/blocked/deferred signal, user correction/redo) are three separate
+  calls, each scoped per R8.
 - R7: The outcome judge prompt explicitly instructs the judge not to trust
   the invocation's own closing-message framing as evidence of success, and
   to require concrete in-transcript evidence.
@@ -250,7 +259,11 @@ section already states for this repo's own review/verification practice
   maps to `inherit` in `runtimes/claude-code.md`'s tier table, which is not
   a usable `--model` value for a fresh `claude -p` subprocess with nothing
   to inherit from); each tier resolves to a concrete model via the same
-  mapping table (cited, not restated).
+  mapping table (cited, not restated). An explicitly-passed `--judge-tier
+session` is rejected with an error at flag-parse time (no usable `--model`
+  exists for a fresh subprocess) rather than silently falling back to
+  `scout` — `deep`/`frontier` resolve normally (concrete models in the same
+  table).
 - R10: Report output includes a per-skill aggregate (counts per
   trigger/outcome/population category — `correct`, `misfired`,
   `unresolvable`, `explicit_invocation`, `self_chained`, `possible_misses`,
