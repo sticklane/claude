@@ -123,3 +123,13 @@ http://127.0.0.1:8899/workboard` timed out 3x (60-85s, 0 bytes) on
   could drift). A follow-up spec should converge `drain_frontier.py` onto
   the shared `_shared/touch_disjoint.py` helper so only one implementation
   exists. (2026-07-19, drain-multi-spec-swarm round-10 critique)
+- **drain: disambiguate attended gen-1 baton semantics.** An attended gen-1
+  drain hit the verdict threshold and spawned its successor as a detached
+  `nohup claude -p` process instead of offering the baton to the human at
+  the keyboard — SKILL.md's "Gen 1 is always attended; passing `attended`
+  makes every trigger OFFER…" reads as an explicit-argument gate, and the
+  only concretely-specified relaunch mechanism is the headless template, so
+  the ambiguity systematically resolves to detached. Either make gen 1
+  unconditionally OFFER, or spec the awaited-successor path as concretely
+  as the nohup template. Incident + scrubbed transcript:
+  docs/incidents/2026-07-21-drain-detached-relaunch.md (2026-07-21)
