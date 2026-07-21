@@ -17,12 +17,13 @@ in several committed spec/evidence files still present in the repo (e.g.
 A session that had recently read one of those files plausibly reused that
 number instead of checking the actually-installed version.
 
-Root cause, located precisely: `reference.md:641-642` says a path-pointer
-resolves to `.claude/skills/build/SKILL.md` "when the toolkit is in-repo,
-otherwise the plugin cache path found at dispatch" — naming no concrete
-resolution procedure for the "otherwise" branch. Every session has had to
-invent its own method, and at least twice that meant reusing a version
-number already sitting in context rather than checking the real one.
+Root cause, located precisely: `reference.md:664` (inside the `## Worker
+prompt` section starting at line 646) says a path-pointer resolves to
+`.claude/skills/build/SKILL.md` "when the toolkit is in-repo, otherwise the
+plugin cache path found at dispatch" — naming no concrete resolution
+procedure for the "otherwise" branch. Every session has had to invent its
+own method, and at least twice that meant reusing a version number already
+sitting in context rather than checking the real one.
 
 The repo already ships an authoritative, tested primitive for exactly the
 "what version is actually installed" half of this: `bin/plugin-installed-version`
@@ -54,8 +55,10 @@ explicit direction: prefer code over prose text here), referenced everywhere
 a path-pointer needs plugin-cache resolution — never re-derived ad hoc:
 
 1. **Add the canonical recipe to `reference.md`**, near its existing
-   path-pointer convention (the "Worker prompt" section, `reference.md:623-642`
-   is the evidenced call site) — a fenced, literally-runnable two-step Bash
+   path-pointer convention (the "Worker prompt" section starts at
+   `reference.md:646`; the vague phrase itself is at line 664, with
+   restatements at lines 668 and 671 — all three are the same call site,
+   not separate locations) — a fenced, literally-runnable two-step Bash
    block, not a prose description of steps:
    - Step 1 (cheapest, tried first, no CLI call): does
      `.claude/skills/<skill>/<file>` exist relative to the current repo root?
@@ -87,7 +90,7 @@ a path-pointer needs plugin-cache resolution — never re-derived ad hoc:
    shortcut for the same steps — never claims it's reachable from a
    non-toolkit repo pre-bootstrap.
 
-3. **Sweep for other vague plugin-cache-path phrasings.** `reference.md:645,648`
+3. **Sweep for other vague plugin-cache-path phrasings.** `reference.md:668,671`
    ("resolved at dispatch") are the same call site's restatements, not new
    locations. Grep `.claude/skills/*/SKILL.md` and `.claude/skills/*/reference.md`
    for `"resolved at dispatch"` and `"plugin cache path"` and point every hit
@@ -98,25 +101,41 @@ a path-pointer needs plugin-cache resolution — never re-derived ad hoc:
    the same procedure in every runtime, modulo its own path convention, and
    is _incidental_ divergence per `.claude/rules/mirror-procedure-discipline.md`
    — port it. Step 2 (the `$HOME/.claude/plugins/cache/agentic-toolkit/...`
-   construction) is Claude-Code-specific: `antigravity/.agents/workflows/drain.md:290`
-   has no plugin-cache branch at all today, and `codex/.agents/skills/drain/SKILL.md:212`
-   uses a different install layout entirely — this is _load-bearing_
-   divergence (a capability/primitive difference), not incidental, so it
-   must NOT be copied verbatim into either mirror. Each mirror instead gets
-   only the runtime-neutral procedural line — "resolve once per session,
-   never reuse a version number seen elsewhere in context" — worded to fit
-   whatever resolution mechanism that runtime actually has (or its own
-   documented absence of one). Manifest entry, plugin.json bump — same
-   pattern as `drain-read-once-discipline`'s R6.
+   construction) is Claude-Code-specific and must NOT be copied verbatim
+   into either mirror — this is _load-bearing_ divergence (a
+   capability/primitive difference), not incidental. Concrete attach
+   points, verified against current content (not the two-branch structure
+   reference.md has — neither mirror's existing text splits into an
+   in-repo/otherwise branch, so this is an ADDITION to existing prose, not
+   a new-branch insertion):
+   - `antigravity/.agents/workflows/drain.md:347-349`, inside the worker-launch
+     instructions ("resolve the build workflow to a concrete path, resolved
+     at dispatch — `.agents/workflows/build.md` in the repo") — add the
+     runtime-neutral procedural line immediately after this existing
+     resolution mention. Antigravity has no documented plugin-cache install
+     mode today, so its version is simply: resolve once per session and
+     reuse it, worded to note that absence rather than describing a
+     mechanism that doesn't exist.
+   - `codex/.agents/skills/drain/SKILL.md:279-282`, inside the /build
+     dispatch instructions ("resolve it to a concrete build-skill path the
+     worker reads and follows verbatim") — add the same procedural line
+     here, worded to fit codex's own (different) install layout rather than
+     Claude Code's plugin-cache path shape.
+     Each mirror gets only the runtime-neutral procedural line — "resolve
+     once per session, never reuse a version number seen elsewhere in
+     context" — worded to fit whatever resolution mechanism that runtime
+     actually has (or its own documented absence of one). Manifest entry,
+     plugin.json bump — same pattern as `drain-read-once-discipline`'s R6.
 
 ## Requirements
 
 - R1: `reference.md`'s path-pointer convention (the "Worker prompt" section)
   states the two-step recipe as a fenced, runnable Bash block — not prose
   paraphrase — replacing the vague "the plugin cache path found at dispatch"
-  phrasing at `reference.md:641-642`. Removing the old phrase is necessary
+  phrasing at `reference.md:664`. Removing the old phrase is necessary
   but not sufficient: the acceptance check below separately confirms the
-  recipe's own content was actually added, not just that the old vague
+  recipe's own content was actually added AND lives inside an actual fenced
+  Bash block (not merely mentioned in prose), not just that the old vague
   phrase was deleted or reworded into something equally vague.
 - R2: `bin/resolve-skill-path` exists, implements the two-step recipe,
   exits 0 with the resolved path on stdout on success, exits 1 with a
@@ -132,11 +151,16 @@ a path-pointer needs plugin-cache resolution — never re-derived ad hoc:
 - R4: Every other `"resolved at dispatch"` / `"plugin cache path"` phrasing
   found by the Solution's step-3 sweep is repointed at the same canonical
   recipe (cite it by section name, don't restate the steps).
-- R5: Only Step 1 (the in-repo check) is ported to
-  `antigravity/.agents/workflows/drain.md` and
-  `codex/.agents/skills/drain/SKILL.md` in the same commit, classified
-  _incidental_ per `.claude/rules/mirror-procedure-discipline.md`. Step 2
-  (the `$HOME/.claude/plugins/cache/agentic-toolkit/...` construction) is
+- R5: Only Step 1 (the in-repo check) is ported — as an addition to existing
+  prose, not a new branch structure (neither mirror's current text splits
+  into an in-repo/otherwise branch) — to
+  `antigravity/.agents/workflows/drain.md:347-349` (the worker-launch
+  instructions' existing "resolved at dispatch" mention) and
+  `codex/.agents/skills/drain/SKILL.md:279-282` (the /build dispatch
+  instructions' existing "resolve it to a concrete build-skill path"
+  mention) in the same commit, classified _incidental_ per
+  `.claude/rules/mirror-procedure-discipline.md`. Step 2 (the
+  `$HOME/.claude/plugins/cache/agentic-toolkit/...` construction) is
   classified _load-bearing_ (a Claude-Code-specific primitive neither mirror
   runtime has) and must NOT be copied verbatim into either mirror file —
   each gets only the runtime-neutral procedural line per Solution point 4.
@@ -173,11 +197,17 @@ a path-pointer needs plugin-cache resolution — never re-derived ad hoc:
       → 1 today (verified 2026-07-20), 0 after the fix — R1, the vague
       phrase is gone.
 - [ ] `grep -q "plugins/cache/agentic-toolkit/agentic" .claude/skills/drain/reference.md`
-      → no match today (verified 2026-07-20; confirms the recipe literal
+      → no match today (verified 2026-07-21; confirms the recipe literal
       isn't already present by coincidence), matches after the fix — R1's
       positive check: the recipe's own content was actually added, not just
       that the old vague phrase was deleted or reworded into something
       equally vague. Both criteria must hold together for R1.
+- [ ] `awk '/^```bash/,/^```$/' .claude/skills/drain/reference.md | grep -q "plugins/cache/agentic-toolkit/agentic"`
+      → no match today (nothing to match yet), matches after the fix — R1's
+      fenced-block check: the recipe literal must live INSIDE an actual
+      fenced Bash block, not merely be mentioned in prose (a bare-prose
+      mention would satisfy the criterion above without satisfying R1's
+      "fenced, runnable Bash block, not prose paraphrase" requirement).
 - [ ] `[ -x bin/resolve-skill-path ]` — R2, script exists and is executable.
 - [ ] `bash tests/test_resolve_skill_path.sh` passes — R3, the deterministic
       shim-based behavioral check (does not require a real installed
@@ -197,8 +227,17 @@ a path-pointer needs plugin-cache resolution — never re-derived ad hoc:
       shows 0 in both — R5/R6: the triple-file phrase grep is the
       non-vacuous positive check, the zero-count grep confirms the
       load-bearing Step 2 literal was correctly excluded from both mirrors.
-- [ ] `grep -n '"version"' .claude-plugin/plugin.json` shows a value greater
-      than `0.9.20` (today's dev-checkout value, verified 2026-07-20) — R7.
+- [ ] R7: the `version` value in `.claude-plugin/plugin.json` at HEAD
+      differs from its value at this task's own base commit — compare
+      against the base, never a hard-coded literal (the on-disk version
+      drifts independently of this spec — it was `0.9.20` at this spec's
+      authoring and had already moved to `0.9.29` by breakdown time with
+      zero relation to this task, so a fixed-literal check is satisfied
+      vacuously the moment ANY other work bumps the version first):
+      `git show <task-base-commit>:.claude-plugin/plugin.json | grep '"version"'`
+      vs. the current file's `"version"` line must differ, AND the current
+      value must be a real semver bump (not a revert/typo) — parse both as
+      dotted integers and confirm the current one is greater.
 
 ## Open questions
 
