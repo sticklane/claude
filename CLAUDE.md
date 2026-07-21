@@ -150,3 +150,9 @@ mention stays within ±3 lines of the literal "active runtime profile" marker,
 so gate-closed installs (plugin caches, eval fixtures with no `runtimes/`)
 read as today's skills. It is invoked directly, never wired into
 `evals/run.sh` (which runs model sessions).
+
+## Code navigation (ctx)
+
+- `.context/` holds a persistent `ctx` code-structure index (`/ctx` skill).
+  Prefer `ctx tree|sig|refs|deps|map|at` over reading files for structure;
+  leave durable symbol notes via `ctx notes add` (committed; DB gitignored).
