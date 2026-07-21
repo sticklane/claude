@@ -112,6 +112,11 @@ pub fn render(args: &Args) -> (String, ExitCode) {
                 ));
             } else {
                 eprintln!("ctx refs: no symbol matches '{}'", args.symbol);
+                let candidates =
+                    no_match::did_you_mean(&args.symbol, all.iter().map(|s| s.name.as_str()));
+                if !candidates.is_empty() {
+                    eprintln!("did you mean: {}", candidates.join(", "));
+                }
                 eprintln!("note: {}", no_match::BOUNDARY_NOTE);
                 eprintln!("  {}", no_match::suggested_check(&args.symbol));
             }

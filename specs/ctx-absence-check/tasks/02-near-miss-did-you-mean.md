@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 16 turns
@@ -46,10 +46,18 @@ shape first).
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test -- did_you_mean` (or equivalent, in
+- [x] `cd context-tree && cargo test -- did_you_mean` (or equivalent, in
       `tests/integration.rs`/`tests/query.rs`) passes: a case-variant
       fixture emits up to 5 "did you mean" candidates before the boundary
       note; a fixture with zero candidates emits output identical to task
       01's baseline (parse-then-assert, not substring match).
-- [ ] `cd context-tree && cargo fmt --check && cargo clippy -- -D warnings`
+      Evidence: `cargo test -- did_you_mean` → 5 passed (2 unit in
+      no_match.rs + 3 integration in tests/integration.rs:
+      sig_no_match_lists_did_you_mean_before_boundary_note,
+      refs_no_match_lists_did_you_mean_candidates,
+      no_match_without_near_miss_omits_did_you_mean); full `cargo test`
+      green (0 failures across all binaries; integration.rs 6 passed).
+- [x] `cd context-tree && cargo fmt --check && cargo clippy -- -D warnings`
       clean.
+      Evidence: `cargo fmt --check` → exit 0; `cargo clippy --all-targets
+      -- -D warnings` → Finished, no warnings.

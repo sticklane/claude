@@ -59,6 +59,34 @@ pub fn suggested_check(symbol: &str) -> String {
     )
 }
 
+/// Maximum "did you mean" candidates listed before the boundary note (R4).
+const MAX_DID_YOU_MEAN: usize = 5;
+
+/// Up to `MAX_DID_YOU_MEAN` near-miss candidates for `query`, drawn from the
+/// symbol names in `names`: a name qualifies when, case-folded, it contains the
+/// query or the query contains it — so a case variant (`figureBboxes` for a
+/// `FigureBboxes` query) or a near-substring is caught. Deduped and sorted for a
+/// stable, deterministic list; empty when nothing is close. Symbol-table lookup
+/// only — no tree work.
+pub fn did_you_mean<'a>(query: &str, names: impl IntoIterator<Item = &'a str>) -> Vec<String> {
+    let q = query.to_lowercase();
+    if q.is_empty() {
+        return Vec::new();
+    }
+    let mut cands: Vec<String> = names
+        .into_iter()
+        .filter(|name| {
+            let n = name.to_lowercase();
+            !n.is_empty() && (n.contains(&q) || q.contains(&n))
+        })
+        .map(str::to_string)
+        .collect();
+    cands.sort_unstable();
+    cands.dedup();
+    cands.truncate(MAX_DID_YOU_MEAN);
+    cands
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -103,5 +131,30 @@ mod tests {
         );
         // A plain symbol is simply single-quoted.
         assert!(suggested_check("plain").contains("'plain'"));
+    }
+
+    #[test]
+    fn did_you_mean_catches_case_variants_and_ignores_the_unrelated() {
+        let names = ["figureBboxes", "unrelated"];
+        assert_eq!(
+            did_you_mean("FigureBboxes", names.iter().copied()),
+            vec!["figureBboxes".to_string()],
+            "a case variant is offered as a candidate"
+        );
+        assert!(
+            did_you_mean("zzz_nothing_close", names.iter().copied()).is_empty(),
+            "nothing close yields no candidates"
+        );
+    }
+
+    #[test]
+    fn did_you_mean_caps_at_five_in_sorted_order() {
+        let names = ["conf_f", "conf_a", "conf_c", "conf_e", "conf_b", "conf_d"];
+        let got = did_you_mean("conf", names.iter().copied());
+        assert_eq!(
+            got,
+            ["conf_a", "conf_b", "conf_c", "conf_d", "conf_e"],
+            "capped at five in a stable sorted order: {got:?}"
+        );
     }
 }
