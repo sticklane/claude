@@ -182,6 +182,25 @@ func TestClassifyTriggerMisfiredFromJudge(t *testing.T) {
 	}
 }
 
+func TestClassifyTriggerCorrectFromFramedAffirmativeReply(t *testing.T) {
+	cwd := t.TempDir()
+	writeSkillMD(t, localSkillsDir(cwd), "critique", skillMD("Runs an adversarial review of a spec.", false))
+	// A judge reply that affirms but does not start with "correct" must still
+	// classify as correctly-triggered, not fall through to misfired.
+	fake := &judge.Fake{Reply: "Yes, correctly-triggered — a good fit."}
+	inputs := []TriggerInput{{
+		Invocation: claude.SkillInvocation{Name: "critique", PrecededByUserTurn: true},
+		UserTurn:   "poke holes in this spec",
+	}}
+	got, err := ClassifyTriggers(inputs, Resolver{Cwd: cwd, PluginCacheRoot: t.TempDir()}, fake)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].Class != ClassCorrectlyTriggered {
+		t.Fatalf("class = %v, want correctly-triggered for a framed affirmative reply", got[0].Class)
+	}
+}
+
 func TestClassifyTriggerJudgePromptContainsSkillDescription(t *testing.T) {
 	cwd := t.TempDir()
 	desc := "Decomposes a SPEC.md into independent task files sized for one clean session."

@@ -5,31 +5,12 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 22 turns
 Spec: ../SPEC.md (requirements R3, R3a, R4, R5)
 Touch: agentprof/cmd_skillcheck_trigger.go, agentprof/cmd_skillcheck_trigger_test.go
-
-<!--
-PLAN (delete at close-out):
-- New package-main file cmd_skillcheck_trigger.go exposing:
-  - ClassifyTriggers([]TriggerInput, Resolver, judge.Judge) ([]TriggerResult, error)
-    population split: CommandTag!="" → explicit_invocation; !PrecededByUserTurn →
-    self_chained; else resolve SKILL.md → unresolvable / (DisableModelInvocation →
-    explicit_invocation) / judge → correctly-triggered|misfired.
-  - Resolver{Cwd, PluginCacheRoot}: resolve(name) tries cwd/.claude/skills/<name>/SKILL.md
-    then <root>/*/*/skills/<name>/SKILL.md (marketplace/plugin globs); installedSkillPaths()
-    enumerates both layouts for possible-miss.
-  - DetectPossibleMisses([]string userTurns, Resolver) ([]PossibleMiss, error): deterministic
-    quoted-phrase extraction from each installed skill's description (via claude.SkillFrontmatter),
-    case-insensitive substring match, no judge call.
-- TriggerInput pairs a claude.SkillInvocation with its preceding user-turn text (task 01's
-  SkillInvocation carries no user-turn text; the judge prompt needs it — see Decisions).
-- Tests all named Test ClassifyTrigger* so `-run TestClassifyTrigger` exercises the possible-miss
-  cases too. Order: stub+tests (red) → impl (green).
--->
 
 ## Goal
 
@@ -80,14 +61,34 @@ may land concurrently), `agentprof/main.go`, or `agentprof/cmd_skillcheck.go`
 
 ## Acceptance
 
-- [ ] `cd agentprof && go build ./...` succeeds.
-- [ ] `cd agentprof && go test ./... -run TestClassifyTrigger` passes
+- [x] `cd agentprof && go build ./...` succeeds. — verified: build exits 0
+      (evidence/02-trigger-classification.md).
+- [x] `cd agentprof && go test ./... -run TestClassifyTrigger` passes
       (red-first), covering: explicit_invocation via command-tag,
       self_chained via no-preceding-user-turn, disable-model-invocation
       exemption, all three SKILL.md resolution paths (including
       `unresolvable`), correctly-triggered vs misfired via the fake judge,
       and possible-miss keyword matching (both a hit and a clean miss).
-- [ ] The fake judge in at least one test asserts the trigger-judge prompt
+      — verified: 12 tests pass, every listed case present
+      (evidence/02-trigger-classification.md).
+- [x] The fake judge in at least one test asserts the trigger-judge prompt
       it received contains the invoked skill's actual description text
       (proving the classification is grounded in the real description, not
-      a hardcoded stand-in).
+      a hardcoded stand-in). — verified:
+      TestClassifyTriggerJudgePromptContainsSkillDescription asserts the
+      prompt contains the fixture SKILL.md's description
+      (evidence/02-trigger-classification.md).
+
+## Decisions
+
+- ClassifyTriggers input is `[]TriggerInput` (a SkillInvocation paired with its
+  preceding user-turn text) rather than bare `[]claude.SkillInvocation`. Task
+  01's SkillInvocation carries no user-turn text, but the trigger-correctness
+  judge (Step 3) must compare the description against the preceding user turn;
+  Touch forbids editing task 01. Reversible: the caller (task 04 wiring) builds
+  TriggerInput from the transcript; to revert, change the parameter type and
+  drop the UserTurn field.
+- Declared trigger phrases (Step 4 possible-miss) are extracted as the
+  double-quoted spans in a skill's `description` — the deterministic proxy, since
+  descriptions have no separate structured trigger-phrase field. Reversible:
+  swap `quotedPhrases` for another extraction rule without touching callers.

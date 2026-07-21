@@ -143,7 +143,7 @@ func judgedCorrect(reply string) bool {
 	if strings.Contains(r, "misfire") {
 		return false
 	}
-	return strings.HasPrefix(r, "correct") || r == "yes"
+	return strings.Contains(r, "correct") || strings.HasPrefix(r, "yes")
 }
 
 // PossibleMiss is one user turn whose text matched an installed skill's declared
