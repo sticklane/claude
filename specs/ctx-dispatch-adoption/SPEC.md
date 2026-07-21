@@ -76,7 +76,16 @@ parallel work on the same files (concurrent-sessions collision rule).
   .claude/skills/drain/` returns ≥1 file AND `grep -rl 'Structure
   lookups (ctx)' .claude/skills/build/` returns ≥1 file (phrase
   confirmed absent from the repo today, grep -c = 0) — both directories
-  independently, so the criterion cannot green on drain alone; the
+  independently, so the criterion cannot green on drain alone; the same
+  literal greps succeed against the antigravity mirrors
+  (`antigravity/.agents/workflows/drain.md` and `build.md` — verified
+  to exist) and the codex legs (`codex/.agents/skills/drain/SKILL.md`
+  and `codex/.agents/skills/build/SKILL.md` — real content, not
+  symlinks), all confirmed absent today; and a
+  `<source>|<mirror>|Structure lookups (ctx)` line is added to
+  `tests/test_mirror_procedure_coverage.sh`'s manifest for each
+  source→mirror pair so a future re-drop is caught (CLAUDE.md's
+  "unlisted mirror silently ships un-mirrored" failure mode); the
   stanza is inside the dispatch-prompt
   template text, not a surrounding narrative section; mirror legs
   (antigravity + codex for drain/build) and plugin.json bump per
@@ -94,12 +103,16 @@ parallel work on the same files (concurrent-sessions collision rule).
 
 - R3 — Grants and allowlists. (a) The critic agent
   (`.claude/agents/critic.md`) gains `Bash(ctx *)` in its tools
-  frontmatter plus one prompt line to prefer ctx for structure questions
-  when the repo is indexed — a critic verifying a spec's symbol claims
-  is exactly a refs/sig consumer. The antigravity critic mirror
-  (agents→skills port under `antigravity/.agents/skills/`) carries the
-  same change in the same commit, with the plugin.json bump per
-  conventions. (b) The /onboard skill's permission-allowlist step —
+  frontmatter plus one prompt line containing the exact phrase
+  "index-first: prefer ctx" directing it to run ctx queries for
+  structure questions when the repo is indexed — a critic verifying a
+  spec's symbol claims is exactly a refs/sig consumer, and the prompt
+  line is the behavioral half (the grant alone changes nothing). The
+  antigravity critic mirror (`antigravity/.agents/skills/critic/SKILL.md`)
+  carries ONLY the prompt line in the same commit — antigravity skill
+  mirrors have no `tools:` mechanism, so the grant is a load-bearing
+  divergence per `.claude/rules/mirror-procedure-discipline.md`, never
+  faked as prose — with the plugin.json bump per conventions. (b) The /onboard skill's permission-allowlist step —
   `.claude/skills/onboard/SKILL.md` §4 "Permissions" specifically, NOT
   the gate skill (gate owns hooks/deny rules, not the allowlist) — adds
   `Bash(ctx *)` to the recommended allowlist when the repo is indexed.
@@ -107,9 +120,13 @@ parallel work on the same files (concurrent-sessions collision rule).
   the repos are outside this repo's Touch scope) adds `Bash(ctx *)` to
   the 8 indexed repos' `.claude/settings.json` allowlists, with the
   exact per-repo command written in the task. Acceptance: (a)
-  `grep -q 'Bash(ctx' .claude/agents/critic.md` succeeds AND the same
-  grep succeeds against the antigravity critic mirror (both confirmed
-  absent today); (b) `grep -q 'Bash(ctx' .claude/skills/onboard/SKILL.md`
+  `grep -q 'Bash(ctx' .claude/agents/critic.md` AND
+  `grep -q 'index-first: prefer ctx' .claude/agents/critic.md` AND
+  `grep -q 'index-first: prefer ctx'
+  antigravity/.agents/skills/critic/SKILL.md` all succeed (all three
+  literals confirmed absent from their targets today; the antigravity
+  check is the prompt phrase, never `Bash(ctx` — see the requirement);
+  (b) `grep -q 'Bash(ctx' .claude/skills/onboard/SKILL.md`
   succeeds (confirmed absent today — the file has zero ctx mentions);
   (c) checklist task exists with runnable commands and its Status
   reflects the attended-rollout path

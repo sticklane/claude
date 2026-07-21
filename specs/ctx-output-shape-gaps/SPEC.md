@@ -47,9 +47,11 @@ must keep emitting absence-check's boundary output, never R1's tail.
   (a) `refs` with a resolved symbol and zero references: the `def`
   line(s) REMAIN on stdout exactly as today (suppressing them would
   regress the def-location answer); the stderr tail states "0
-  references to <qpath>" and, when the symbol is a module/file-level
-  symbol, suggests `ctx deps --reverse <its file>` for import-level
-  callers.
+  references to <name>" using the QUERY argument, not a qpath — a
+  resolved name may still carry multiple def rows across files, so a
+  singular qpath would be ambiguous — and, when the symbol is a
+  module/file-level symbol, suggests `ctx deps --reverse <its file>`
+  for import-level callers.
   (b) `deps` (either direction) on an INDEXED path with zero edges:
   stdout stays empty; stderr tail states the fact, e.g. "no indexed
   importers of <path>" for `--reverse`.
@@ -85,11 +87,16 @@ must keep emitting absence-check's boundary output, never R1's tail.
   editor registry in specs/ctx-skill-token-doctrine: (a) insert this
   spec's R3 slot immediately before the terminal ctx-cujs slot, which
   stays last; (b) increment the registry's opening "SEVEN specs" count
-  to match the new total; (c) amend specs/ctx-cujs/tasks/02's
-  landed-gate marker list to include this slot's marker and correct
-  that task's frozen slot-number/line citations — cujs task 02's gate
-  greps exactly the predecessor markers, so without (c) "cujs lands
-  last" is unenforced against this slot. R3's task lands serialized per
+  to match the new total; (c) amend specs/ctx-cujs/tasks/02 to stay
+  internally consistent: its landed-gate marker list gains this slot's
+  marker, and EVERY count reference in that file increments — the
+  "7-spec ... chain" length, the "SIX OTHER specs" enumerated list
+  (adding this spec), the "ANY of the 6 markers" gate count, the
+  "all 6 slots landed" echo, the frozen "SLOT 7" number, and the
+  registry line citations — cujs task 02's gate greps exactly the
+  predecessor markers, so without (c) "cujs lands last" is unenforced
+  against this slot; check specs/ctx-cujs/DRAIN-OWNER.md for a live
+  lease before amending (concurrent-sessions rule). R3's task lands serialized per
   the registry, after this spec's R1/R2 so the documented behavior
   exists. Acceptance: `grep -q '\-\-files' .claude/skills/ctx/SKILL.md`
   (confirmed absent today); mirror parity diff empty; plugin.json bump
