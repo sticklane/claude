@@ -59,3 +59,26 @@ it proves the spec's riskiest assumption (tokenizer over real doc prose).
 - [x] Stale-waiver warning path has a passing test (assert warning emitted, exit still 0) — `stale_waiver_warns_without_failing` passes (asserts drift empty AND WARNING text present)
 - [x] `grep -c 'map --limit' context-tree/tests/doc_conformance.rs` → ≥1 (seeded waiver present until task 03 retires it) — grep -c → 4
 - [x] `cd context-tree && cargo clippy --tests -- -D warnings` → exit 0 — verifier: clean, exit 0 (also `context-tree/scripts/check.sh` green)
+
+## Decisions
+
+- 2026-07-21: Seeded a second waiver (`show`, flag: `None`) beyond the
+  spec's single `map --limit` entry. `docs/guides/ctx-cujs.md:70`
+  documents `ctx show <symbol>` as a live "Sequence" step for a subcommand
+  the same guide says (line 75) is not yet shipped — genuine
+  documented-but-absent drift the tokenizer catches, which would keep the
+  gate RED against acceptance criterion 1. Waiving is the spec's own
+  designed escape hatch for known drift. Reversible: delete the
+  `Waiver { subcommand: "show", flag: None }` entry to un-waive; doing so
+  re-reds the gate on the `show` row until `show` ships or the guide is
+  corrected.
+
+## Discovered
+
+- Reverse-coverage report (R3, non-gating) lists universal clap built-ins
+  `--help`/`--version` as "undocumented" on every subcommand — cosmetic
+  noise diluting the real under-claimed capabilities (e.g. `tree --depth`,
+  `refs --limit`, `map --doc`, `--no-sync`). See task 04.
+- `docs/guides/ctx-cujs.md` documents an unshipped `ctx show` command as a
+  live "Sequence" step (line 70), not just a future note — a latent
+  adoption trap the drift gate now waives rather than fixes. See task 05.
