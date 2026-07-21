@@ -93,3 +93,15 @@ specs/ctx-static-analysis-augmentation/SPEC.md` lists all three
 
 - Changing any query behavior (the feature specs own that).
 - A public/user-facing tutorial — this is agent doctrine.
+
+## Parallelization
+
+- Group: 01, 03
+
+Task 01 (the CUJ doc) and task 03 (sibling-spec annotations) are
+Touch-disjoint and share no undecided design — the CUJ-to-spec mapping
+task 03 needs is already fixed in this SPEC's own Solution section, not
+something task 01 invents. Task 02 (skill link + typo fix) depends on 01
+(it links to the doc task 01 creates) and is additionally gated by
+specs/ctx-skill-token-doctrine's registry ordering (SLOT 7, always last)
+— sequential, not parallel with either.
