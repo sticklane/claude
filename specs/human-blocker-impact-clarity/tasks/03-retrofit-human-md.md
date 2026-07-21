@@ -1,6 +1,6 @@
 # Task 03: Retrofit the repo's current HUMAN.md entry to the new grammar
 
-Status: pending
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 10 turns
@@ -42,7 +42,7 @@ landed by task 01 — read it, don't edit it), `.claude/skills/drain/reference.m
 
 ## Acceptance
 
-- [ ] If an entry with source path `specs/trajectory-evals/critique-findings.md`
+- [x] If an entry with source path `specs/trajectory-evals/critique-findings.md`
       exists in `HUMAN.md`: `grep 'trajectory-evals/critique-findings.md' HUMAN.md | grep -c 'Blocks:'`
       → 1. If no such entry exists, this check is skipped, not failed —
       record which case applied (present-and-retrofitted, or
@@ -53,3 +53,7 @@ landed by task 01 — read it, don't edit it), `.claude/skills/drain/reference.m
       manual-pending human read: the HUMAN.md owner confirms the
       retrofitted line names both the ask and its impact and is
       actionable without opening the source file.
+      Evidence: present-and-retrofitted — grep piped count → 1 (verifier
+      PASS 2026-07-20); appended `— Blocks: breakdown of this spec into
+    dispatchable tasks` to HUMAN.md:5. Behavioral complement (L0
+      manual-pending human read) left for the HUMAN.md owner.
