@@ -154,8 +154,11 @@ Extraction and index:
   completed sync. Note-reading commands (`ctx notes`, `ctx notes list`)
   are query commands for this requirement's purposes.
 - R4: The index respects ignore rules: the VCS adapter's ignores when
-  present (`.gitignore` under git), plus `.ctxignore` in the no-VCS
-  baseline; `.context/cache/` is never indexed.
+  present (`.gitignore` under git), plus `.ctxignore` as an exclusion
+  overlay honored in both modes (under a VCS and in the no-VCS baseline
+  alike); `.context/cache/` is never indexed. (`.ctxignore` was originally
+  no-VCS-baseline only; `specs/ctxignore-git-overlay` promoted it to a
+  VCS-independent overlay and supersedes that split.)
 - R5: The VCS adapter interface isolates change feeds, ignore rules,
   snapshot identity, user identity, and hook points. v1 ships the git
   adapter and the no-VCS baseline; the baseline path (root discovery per
@@ -361,7 +364,9 @@ command from R17; fixture layout is the implementer's choice under
       symbol whose docstring embeds a per-fixture sentinel string the
       assertion matches — C8's native conventions, incl. the
       leading-comment rule for C/Zig/Bash), R4 (ignored file
-      excluded from index), R5 (index builds in a fixture directory with
+      excluded from index — VCS ignores plus the `.ctxignore` overlay
+      honored in both modes per `specs/ctxignore-git-overlay`), R5 (index
+      builds in a fixture directory with
       no `.git`), R6–R10 (query output golden tests incl. depth and
       result caps with truncation-count lines, C7 token budget, `--doc`
       first-docstring rendering in tree and map, `ctx sig --doc` printing

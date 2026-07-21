@@ -39,6 +39,31 @@ nothing and exits 0. Every query command re-syncs the index from the
 current source before it answers, so you never run a separate "reindex"
 step. Pass `--no-sync` to skip that sync and query the last-built index.
 
+### Excluding paths with `.ctxignore`
+
+Under version control, `ctx` already honors the VCS's own ignore rules
+(`.gitignore` under git), so ignored build output never reaches the index.
+But a path that is _committed_ yet structurally uninteresting — checked-in
+build output, vendored code, generated artifacts — cannot be excluded that
+way. A `dist/` directory committed for distribution, for example, would
+otherwise duplicate every `src/` symbol in `ctx map`, `refs`, and `deps`.
+
+Put a `.ctxignore` file at the repo root to subtract such paths. It is an
+**exclusion overlay** honored in both modes — under a VCS and in the no-VCS
+baseline alike — applied on top of whatever the VCS already ignores. Its
+grammar is minimal and subtractive only: blank and `#` comment lines are
+dropped; a trailing `/` matches a directory prefix; a pattern with no `/`
+matches the basename; otherwise it matches the whole path; `*` and `?`
+wildcards are supported. It is **not** full gitignore syntax — there is no
+`!` negation and no `**`, so a `.ctxignore` entry can only remove paths,
+never re-include something the VCS already ignores. Edits take effect on the
+next query's staleness sweep, with no manual reindex step.
+
+```
+# .ctxignore — exclude committed build output from the index
+dist/
+```
+
 ## Query commands
 
 Each query prints plain text by default and structured JSON with `--json`,

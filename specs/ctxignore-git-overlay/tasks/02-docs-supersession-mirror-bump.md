@@ -1,6 +1,6 @@
 # Task 02: docs, parent-spec supersession, mirror + plugin bump
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 8 turns
@@ -45,14 +45,17 @@ Depth ceiling: L0 greps — every artifact here is prose/metadata; the
 behavioral complement is task 01's cargo suite, plus a human read of the
 README paragraph at review.
 
-- [ ] `grep -c 'ctxignore' context-tree/README.md` → ≥ 2
-- [ ] `grep -ci 'ctxignore' .claude/skills/ctx/SKILL.md` → ≥ 1
-- [ ] `grep -ci 'ctxignore' antigravity/.agents/skills/ctx/SKILL.md` → ≥ 1
-- [ ] `grep -c 'ctxignore-git-overlay' specs/codebase-context-tree/SPEC.md`
-      → ≥ 1, and its R4 no longer reads "in the no-VCS baseline" as the
-      only `.ctxignore` mode
-- [ ] `git show <task-base-commit>:.claude-plugin/plugin.json | grep '"version"'`
-      differs from `grep '"version"' .claude-plugin/plugin.json` — the
-      version moved from this task's own base commit (base-relative, NOT
-      the spec's authoring-time `0.9.23` literal: sibling specs also bump
-      this file, so a pinned literal can pass vacuously)
+- [x] `grep -c 'ctxignore' context-tree/README.md` → ≥ 2 — got 4 (new
+      "Excluding paths with `.ctxignore`" subsection).
+- [x] `grep -ci 'ctxignore' .claude/skills/ctx/SKILL.md` → ≥ 1 — got 1
+      (Optional wiring bullet naming `.ctxignore` for committed-but-derived
+      paths).
+- [x] `grep -ci 'ctxignore' antigravity/.agents/skills/ctx/SKILL.md` → ≥ 1
+      — got 1 (mirror bullet, same concept in the mirror's voice).
+- [x] `grep -c 'ctxignore-git-overlay' specs/codebase-context-tree/SPEC.md`
+      → ≥ 1 — got 2; R4 now reads "`.ctxignore` as an exclusion overlay
+      honored in both modes" with a supersession pointer, no longer
+      no-VCS-baseline-only.
+- [x] `git show <task-base-commit>:.claude-plugin/plugin.json | grep '"version"'`
+      differs from current — base 7800c94 `0.9.28` → `0.9.29`.
+      (Evidence: specs/ctxignore-git-overlay/evidence/02-docs-supersession-mirror-bump.md)
