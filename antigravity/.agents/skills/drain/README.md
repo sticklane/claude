@@ -9,8 +9,13 @@ explicit live-user authorization only; it replaced the old
 it ports to a workflow (`.agents/workflows/drain.md`), where every
 workflow is human-launched by the runtime anyway.
 
-The one file here, `screen-stub.sh`, is a verbatim mirror of
-`.claude/skills/drain/screen-stub.sh` — the deterministic prompt-injection
-screen the drain workflow's stub-intake step invokes. It lives here (rather
-than the `.claude/`-only path) so the mirrored workflow can reference a real,
-runnable script inside the Antigravity tree.
+`screen-stub.sh` is a verbatim mirror of `.claude/skills/drain/screen-stub.sh`
+— the deterministic prompt-injection screen the drain workflow's stub-intake
+step invokes. `admission.py` and `drain_frontier.py` are verbatim mirrors of
+their `.claude/skills/drain/` counterparts — the spec-lease-claim/cross-spec
+admission decision and the per-spec frontier report the workflow's step 1
+and step 2 shell out to. All three live here (rather than the `.claude/`-only
+path) so the mirrored workflow can reference real, runnable scripts inside
+the Antigravity tree; `admission.py` depends on
+`../_shared/touch_disjoint.py` and `drain_frontier.py` depends on
+`../_shared/headers.py`, both already mirrored under `_shared/`.
