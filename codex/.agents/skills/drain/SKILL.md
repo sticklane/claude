@@ -125,7 +125,11 @@ sides diverged — so the reads below see current shared state.
 
 Invoke `python3 .agents/skills/drain/drain_frontier.py <spec-dir>` per spec
 dir and treat its output as authoritative for the dispatchable set and
-ordering. Missing script or non-zero exit → today's header read verbatim
+ordering. **Header-only checks stay cheap** (doctrine home: AGENTS.md's
+"Delegation defaults"): any check of a task's header fields alone — anywhere
+in this procedure or added later — uses `drain_frontier.py`'s own JSON,
+`specs/status.sh`, or `grep '^Status:'` / `grep '^Depends on:'`, never an
+unbounded read of the task file. Missing script or non-zero exit → today's header read verbatim
 (`Status`, `Depends on`, `Priority`, `Budget`, `Touch` — not the bodies;
 workers read their own task), quoting the scanner's stderr in the fallback
 log line. A task is **dispatchable** when `Status: pending` and every

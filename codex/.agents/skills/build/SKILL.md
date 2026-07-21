@@ -314,8 +314,10 @@ every time you enter it.
 - Tell the user to clear the session before starting the next task. Then, only
   if the just-completed task file resolves to a `specs/<slug>/tasks/*.md` path
   AND at least one sibling `tasks/*.md` in that same directory has a
-  `Status: pending` header line, print one additional line pointing the user at
+  `Status: pending` header line — checked with `grep -l '^Status: pending'
+  specs/<slug>/tasks/*.md` (a header-only match, never a full read of each
+  sibling file) — print one additional line pointing the user at
   `$drain specs/<slug>` for continuous work across the remaining tasks
   (alongside, not replacing, the clear-session line). If the path is not under
   a `specs/<slug>/tasks/` layout, or the only siblings are `Status: blocked`
-  (or there are none), print no nudge line.
+  (or there are none — the `grep -l` prints nothing), print no nudge line.

@@ -91,3 +91,6 @@
 # seeded: task 03 (drain-plugin-path-resolution) — mirrored task 01's runtime-neutral resolution discipline (the "resolve once per session, never reuse a version number seen elsewhere in context" line) into both drain mirrors, worded to each runtime's own install layout; the Claude-Code-specific plugin-cache path construction was NOT ported. Anchors the pinned phrase in each mirror so neither leg can silently drop it.
 .claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|resolve once per session, never reuse a version number seen elsewhere in context
 .claude/skills/drain/reference.md|codex/.agents/skills/drain/SKILL.md|resolve once per session, never reuse a version number seen elsewhere in context
+# seeded: task 03 (cheap-task-status-checks) — mirrored task 02's two prose tightenings: build's sibling-status scan now names the header-only `grep -l '^Status: pending'` check, and drain's step 1 carries the header-only-checks-stay-cheap doctrine pointer (naming specs/status.sh). Anchors the invariant command tokens in each antigravity mirror so neither can silently re-drop.
+.claude/skills/build/SKILL.md|antigravity/.agents/workflows/build.md|grep -l '^Status: pending'
+.claude/skills/drain/SKILL.md|antigravity/.agents/workflows/drain.md|specs/status.sh
