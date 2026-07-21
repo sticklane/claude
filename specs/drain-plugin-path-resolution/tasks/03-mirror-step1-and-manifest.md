@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 14 turns
@@ -53,11 +53,14 @@ task 02's scope, not this task's.
 
 ## Acceptance
 
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` passes.
-- [ ] `grep -c "resolve once per session, never reuse a version number seen elsewhere in context" .claude/skills/drain/reference.md antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md`
+- [x] `bash tests/test_mirror_procedure_coverage.sh` passes.
+      Evidence: exit 0, no PROCEDURE GAP lines.
+- [x] `grep -c "resolve once per session, never reuse a version number seen elsewhere in context" .claude/skills/drain/reference.md antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md`
       shows 1+ in all three files (the source already carries it from
       task 01's recipe text — confirm task 01 landed first via `Depends
     on: 01`).
-- [ ] `grep -c "plugins/cache/agentic-toolkit" antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md`
+      Evidence: reference.md:1, antigravity drain.md:1, codex drain SKILL.md:1. Task 01 source phrase confirmed present.
+- [x] `grep -c "plugins/cache/agentic-toolkit" antigravity/.agents/workflows/drain.md codex/.agents/skills/drain/SKILL.md`
       shows 0 in both — confirms the load-bearing Step 2 literal was
       correctly excluded from both mirrors.
+      Evidence: antigravity drain.md:0, codex drain SKILL.md:0.

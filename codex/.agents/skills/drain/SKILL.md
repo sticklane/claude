@@ -281,7 +281,11 @@ pasted — resolve it to a concrete build-skill path the worker reads and
 follows verbatim, substituting only the task-specific pieces (task file path,
 branch, budget, any `## Answers`) into the dispatch, rather than inlining the
 build procedure's body; the path-pointer keeps each dispatch small and
-single-sources the contract to that one file. The worker sets `Contradicts-premise: true` alongside that
+single-sources the contract to that one file. Codex reaches the build skill
+through its `codex/.agents/skills/` discovery root (a symlink into the
+antigravity port), so
+resolve once per session, never reuse a version number seen elsewhere in context.
+The worker sets `Contradicts-premise: true` alongside that
 question only when its finding empirically refutes the SPEC's or task's stated
 root cause (naming the artifact and quoting the exact contradicted clause
 verbatim), not for an ordinary open gap. Await it and collect its verdict —
