@@ -10,7 +10,7 @@ Depends on: none
 Priority: P0
 Budget: 24 turns
 Spec: ../SPEC.md (statements 1, 2, 11; D3, D10 pin; R-B, R-E, R-V)
-Touch: agentic/, tests/test_agentic_bootstrap.sh, tests/test_agentic_roundtrip.sh, tests/test_agentic_pin.py, scripts/check.sh, .gitignore
+Touch: agentic/, tests/test_agentic_bootstrap.sh, tests/test_agentic_roundtrip.sh, tests/test_agentic_pin.py, scripts/check.sh, .gitignore, AGENTS.md
 
 ## Goal
 
@@ -21,9 +21,16 @@ implemented" for verbs later tasks fill), so sibling tasks stay
 Touch-disjoint on their own modules. `agentic init` works end to end:
 controlled `bd init` (side-effect files diffed and curated, never
 auto-committed to the host repo), `.beads/interactions.jsonl`
-gitignored, bd version checked against a pin, and tracker state imported
-from a committed JSONL when one exists. `bd export` and `bd import` are
-wrapped as internal helpers other tasks reuse.
+gitignored, bd version checked against a pin (a MISSING bd produces a clean error
+naming the pinned install command, never a confusing pin mismatch), and
+tracker state imported from a committed JSONL when one exists.
+`bd export` and `bd import` are wrapped as internal helpers other tasks
+reuse. This task also CREATES `scripts/check.sh` — the repo previously
+had none — as the canonical check: it runs the existing
+`tests/test_*.sh` loop plus `python3 -m pytest` over
+`tests/test_agentic_*.py`, discovering both BY GLOB so no later task
+ever edits it. AGENTS.md's quick commands point at it and its Map
+gains the `agentic/` component.
 
 ## Touch
 
@@ -45,7 +52,8 @@ tasks 03, 04, 06, 07, 11 in their own modules.
    register stub subcommands.
 3. Implement the pin check, curated init, gitignore handling, and the
    export/import helpers; make the three tests pass.
-4. Wire the new tests into `scripts/check.sh`.
+4. Create `scripts/check.sh` (glob discovery, both suites); update
+   AGENTS.md quick commands and Map accordingly.
 
 ## Acceptance
 
@@ -53,4 +61,6 @@ tasks 03, 04, 06, 07, 11 in their own modules.
 - [ ] `bash tests/test_agentic_roundtrip.sh` → prints `ROUNDTRIP OK` after a zero-record diff (R-E)
 - [ ] `bash tests/test_agentic_bootstrap.sh` → prints `BOOTSTRAP OK` with the imported count; only `git clone` + `agentic init` are executed against the fixture remote (R-B)
 - [ ] `bash -c 'cd "$(mktemp -d)" && git init -q . && agentic init >/dev/null 2>&1; git -C . status --porcelain | grep -c interactions'` → `0` (telemetry never dirties status)
-- [ ] `bash scripts/check.sh` → green including the new tests
+- [ ] `bash scripts/check.sh` → green, and its output lists both the pre-existing `tests/test_*.sh` names and the new agentic tests (proves glob discovery, not a hand-listed subset)
+- [ ] `python3 -m pytest tests/test_agentic_pin.py -q -k missing` → passes (bd absent from PATH → clean install-command error)
+- [ ] `grep -c "scripts/check.sh" AGENTS.md` → ≥ 1 (canonical check documented)

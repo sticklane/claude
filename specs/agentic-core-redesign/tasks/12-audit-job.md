@@ -36,11 +36,10 @@ standard write path (lock + sync). No new hook directories.
    run files nothing new (dedup against open audit tasks).
 2. Implement audit.py on top of agentprof's transcript-reading helpers
    where importable, else a minimal reader.
-3. Wire into check.sh; add the scheduling one-liner to README's agentic
-   section.
+3. Add the scheduling one-liner to README's agentic section.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_audit.py -q` → passes; red commit precedes green in this task's history (covers dedup on re-run)
+- [ ] `python3 -m pytest tests/test_agentic_audit.py -q` → passes (covers dedup on re-run)
 - [ ] `agentic audit --since 2026-07-01 --dry-run | head -20` → runs against this machine's real transcripts and prints its measures without writing (record output as evidence)
 - [ ] `bash scripts/check.sh` → green

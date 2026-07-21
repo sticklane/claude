@@ -10,7 +10,7 @@ Depends on: 08
 Priority: P1
 Budget: 30 turns
 Spec: ../SPEC.md (Migration step 4; statement 9)
-Touch: .claude/skills/drain/, .claude/skills/build/SKILL.md, .claude/skills/list-specs/, .claude/skills/prioritize/, .claude/skills/handoff/, .claude/skills/resume-handoff/, .claude/skills/\_shared/, specs/status.sh, evals/, AGENTS.md, README.md, .claude-plugin/plugin.json
+Touch: .claude/skills/, specs/status.sh, evals/, AGENTS.md, README.md, .claude-plugin/plugin.json, tests/test_drain_owner_protocol.sh, tests/test_drain_scheduler_window.sh, tests/test_status_cutover.sh
 
 ## Goal
 
@@ -38,7 +38,13 @@ drain's own baton/lease/handoff paths are deleted.
 2. Delete DRAIN-BATON/DRAIN-OWNER writing and reading paths, the
    flip-commit grep recovery, and the drain generation counters; rewrite
    drain/SKILL.md around `agentic loop` inside its existing launch
-   framing.
+   framing. Delete or rewrite the tests that exercise the deleted
+   machinery (`tests/test_drain_owner_protocol.sh`,
+   `tests/test_drain_scheduler_window.sh`) in the same commit — the
+   suite must be green AFTER the deletion, not around it. Add
+   `tests/test_status_cutover.sh` asserting `specs/status.sh` totals
+   equal the `agentic ready --json` count plus non-ready statuses it
+   reports.
 3. Update evals/drain to drive the loop; update AGENTS.md and README;
    bump plugin.json version (compare against this task's base commit,
    not a hard-coded literal).
@@ -46,8 +52,8 @@ drain's own baton/lease/handoff paths are deleted.
 
 ## Acceptance
 
-- [ ] `bash specs/status.sh` → renders from `agentic` output; run `agentic ready --json` alongside and record both as evidence — counts consistent
-- [ ] `grep -rn "DRAIN-BATON\|DRAIN-OWNER" .claude/skills/ | wc -l` → `0`
+- [ ] `bash tests/test_status_cutover.sh` → prints `CUTOVER OK` (computed equality between status.sh totals and agentic's counts — an assertion, not a recording)
+- [ ] `grep -rn "DRAIN-BATON\|DRAIN-OWNER" .claude/skills/ tests/ | wc -l` → `0` (machinery AND its tests gone)
 - [ ] `bash evals/run.sh drain 2>/dev/null || bash evals/drain/01-rolling-window/assert.sh` → the updated drain eval passes against the loop
 - [ ] `bash -c 'base=$(git merge-base HEAD origin/main); git show $base:.claude-plugin/plugin.json | grep version | diff - <(grep version .claude-plugin/plugin.json) >/dev/null && echo UNBUMPED || echo BUMPED'` → `BUMPED`
 - [ ] `bash scripts/check.sh` → green

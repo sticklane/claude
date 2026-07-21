@@ -38,11 +38,10 @@ immediately obsolete.
 2. Implement shadow.py over task 02's helpers and 04's lock (sync takes
    the write lock like any writer).
 3. Run the real import in this repo; commit the resulting JSONL export.
-4. Wire the test into scripts/check.sh.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_shadow.py -q` → passes; red commit precedes green in this task's history
-- [ ] `bash -c 'a=$(agentic ready --json | python3 -c "import json,sys;print(len(json.load(sys.stdin)))"); b=$(grep -l "^Status: pending" specs/*/tasks/*.md | xargs -I{} sh -c "grep -q \"^Depends on: none\" {} && echo {}" | wc -l); echo "agentic=$a md=$b"'` → the two counts are consistent with the frontier rules (record both numbers as evidence; investigate any mismatch rather than accepting it)
+- [ ] `python3 -m pytest tests/test_agentic_shadow.py -q` → passes
+- [ ] `python3 -m pytest tests/test_agentic_shadow.py -q -k differential` → passes: the test computes the dispatchable ID set from the markdown headers via `.claude/skills/drain/drain_frontier.py` (the pre-cutover implementation of the same rules) and asserts set equality with `agentic ready --json` on the real imported queue — two independent implementations agreeing, not a recorded observation
 - [ ] `git status --porcelain | grep -c interactions.jsonl` → `0` after a sync run
 - [ ] `bash scripts/check.sh` → green

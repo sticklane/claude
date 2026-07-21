@@ -10,7 +10,7 @@ Depends on: 09
 Priority: P2
 Budget: 30 turns
 Spec: ../SPEC.md (statement 12; component "Runtime adapters"; D5, D11; Migration step 5)
-Touch: antigravity/, codex/, CLAUDE.md, .claude/rules/mirror-procedure-discipline.md, .claude/rules/mirror-verification.md, tests/test_mirror_procedure_coverage.sh, tests/mirror-procedure-manifest.txt, tests/test_skill_chain_determinism.sh, .claude-plugin/plugin.json
+Touch: antigravity/, codex/, CLAUDE.md, .claude/rules/mirror-procedure-discipline.md, .claude/rules/mirror-verification.md, tests/test_mirror_procedure_coverage.sh, tests/mirror-procedure-manifest.txt, tests/test_skill_chain_determinism.sh, tests/test_antigravity_parity.sh, tests/test_antigravity_content_parity.sh, tests/test_codex_parity.sh, .claude-plugin/plugin.json
 
 ## Goal
 
@@ -44,7 +44,7 @@ concepts/commands that must appear), never diff-emptiness.
 ## Acceptance
 
 - [ ] `bash -c 'for t in antigravity codex; do grep -rlq "agentic loop\|agentic ready" $t/ || echo "no adapter content: $t"; done'` → no output (each runtime tree invokes the CLI)
-- [ ] `ls tests/mirror-procedure-manifest.txt tests/test_mirror_procedure_coverage.sh .claude/rules/mirror-procedure-discipline.md .claude/rules/mirror-verification.md 2>&1 | grep -c "No such file"` → `4`
+- [ ] `ls tests/mirror-procedure-manifest.txt tests/test_mirror_procedure_coverage.sh tests/test_antigravity_parity.sh tests/test_antigravity_content_parity.sh tests/test_codex_parity.sh .claude/rules/mirror-procedure-discipline.md .claude/rules/mirror-verification.md 2>&1 | grep -c "No such file"` → `7` (the parity gates die with the mirrors they guarded)
 - [ ] `grep -c "port chain" CLAUDE.md` → `0` (conventions rewritten, not orphaned)
 - [ ] `bash scripts/check.sh` → green with the deleted tests removed from the suite, and `claude plugin validate .claude-plugin` (or the repo's documented equivalent) passes
 

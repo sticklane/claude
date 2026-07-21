@@ -37,10 +37,9 @@ rather than shipping a wrapper tested against nothing.
    token budget (ceil(bytes/4)) and only symbols under the given paths;
    a missing binary produces the resolution chain in the error.
 2. Build ctx once (`cargo build --release`) and implement ctxcmd.py.
-3. Wire the test into scripts/check.sh.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_ctx.py -q` → passes against the actually-built ctx binary; red commit precedes green in this task's history
+- [ ] `python3 -m pytest tests/test_agentic_ctx.py -q` → passes against the actually-built ctx binary
 - [ ] `agentic ctx tree agentic --depth 1 | head -5` → prints the package's symbol outline (live behavior, this repo's index)
 - [ ] `bash scripts/check.sh` → green

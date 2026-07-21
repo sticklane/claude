@@ -40,13 +40,13 @@ workers only.
    runtime-native tools, PATH restricted to system + agentic + bd —
    run init→shadow-sync→ready→claim→compose→stub-worker→verdict→resume
    end to end against a fixture repo; exit 0.
-3. Implement loop.py; make everything green; wire into check.sh.
+3. Implement loop.py; make everything green.
 4. Re-run task 04's two race scripts against the loop-integrated write
    path (the spec lands R-C here).
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_loop.py -q` → passes; red commit precedes green in this task's history
+- [ ] `python3 -m pytest tests/test_agentic_loop.py -q` → passes
 - [ ] `bash tests/test_agentic_generic.sh` → prints `GENERIC OK` (R-G)
 - [ ] `bash tests/test_agentic_write_lock.sh && bash tests/test_agentic_clone_race.sh` → both still pass post-integration (R-C)
 - [ ] `bash scripts/check.sh` → green

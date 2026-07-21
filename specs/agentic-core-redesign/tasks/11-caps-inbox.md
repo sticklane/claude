@@ -37,11 +37,9 @@ rewrites — serialized to avoid collision, per the spec's ordering.
 2. Implement inbox.py, promote.py (auto-promote on critic READY
    recorded in tracker metadata), caps.toml wiring into the meter.
 3. Delete the launch-contract blocks; annotate human-gates.md.
-4. Wire into check.sh.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_inbox.py -q` → passes; red commit precedes green in this task's history
+- [ ] `python3 -m pytest tests/test_agentic_inbox.py -q` → passes
 - [ ] `grep -rn "launch-authorization\|launch authorization contract" .claude/skills/build/ .claude/skills/drain/ .claude/skills/prioritize/ | wc -l` → `0`
-- [ ] `bash -c 'agentic inbox | grep -cE "Questions|Promotions|Spend"'` → `3` against this repo's live store
 - [ ] `bash scripts/check.sh` → green

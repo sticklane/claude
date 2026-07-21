@@ -365,9 +365,11 @@ Binding on the breakdown stage, whenever it runs:
 Groups follow the decision-coupling test and the `- Group:` grammar
 pinned in `specs/drain-rolling-window/SPEC.md`'s Parallelization
 section (cited, not restated). Task 02 pre-registers every CLI
-subcommand stub precisely so 03/04/06 stay Touch-disjoint on their own
-modules; 10 and 12 share only a dependency on 09, not files or open
-choices. Tasks on no Group line run solo.
+subcommand stub AND creates `scripts/check.sh` with glob-based test
+discovery, precisely so 03/04/06 stay Touch-disjoint on their own
+modules and test files with no shared file to wire; 10 and 12 share
+only a dependency on 09, not files or open choices. Tasks on no Group
+line run solo.
 
 - Group: 01, 02
 - Group: 03, 04, 06

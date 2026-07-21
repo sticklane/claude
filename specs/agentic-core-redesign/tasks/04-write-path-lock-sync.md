@@ -41,16 +41,18 @@ use; the default for single commands is one commit per command.
    sequence against a bare fixture remote), claim.py, verdict.py.
 3. `tests/test_agentic_write_lock.sh`: run two `agentic verdict`
    commands concurrently in one checkout; assert both recorded in bd AND
-   the final committed JSONL contains both (no lost export).
+   the final committed JSONL contains both (no lost export). Then plant
+   a STALE lock (dead PID, old mtime) and assert a write command takes
+   it over after the timeout — D8's stale-lock recovery is a tested
+   behavior, not a promise.
 4. `tests/test_agentic_clone_race.sh`: two clones of one bare remote
    write near-simultaneously; assert both operations land after retries,
    or the loser exits nonzero with "already claimed" — and the remote's
    committed JSONL contains every surviving operation.
-5. Wire into scripts/check.sh.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_verdict.py -q` → passes; red commit precedes green in this task's history
-- [ ] `bash tests/test_agentic_write_lock.sh` → prints `LOCK OK` (both verdicts recorded, zero lost exports) (R-C a)
+- [ ] `python3 -m pytest tests/test_agentic_verdict.py -q` → passes
+- [ ] `bash tests/test_agentic_write_lock.sh` → prints `LOCK OK` (both verdicts recorded, zero lost exports) and `STALE TAKEOVER OK` (planted dead-PID lock taken over after timeout) (R-C a, D8)
 - [ ] `bash tests/test_agentic_clone_race.sh` → prints `RACE OK` (both land or clean semantic failure; remote JSONL complete) (R-C b)
 - [ ] `bash scripts/check.sh` → green

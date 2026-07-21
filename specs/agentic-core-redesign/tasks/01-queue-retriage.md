@@ -10,7 +10,7 @@ Depends on: none
 Priority: P1
 Budget: 16 turns
 Spec: ../SPEC.md (Migration step 1)
-Touch: specs/agentic-core-redesign/TRIAGE.md, specs/_/SPEC.md, specs/_/tasks/\*.md
+Touch: specs/
 
 ## Goal
 
@@ -25,8 +25,10 @@ drain ever dispatches them.
 
 ## Touch
 
-Header-line edits (`Status:`) on other specs' task files are in scope
-ONLY for items triaged `subsumed`. Do not edit any body text of other
+The `Touch:` header is the whole `specs/` tree because triage edits
+headers across many specs; the bounds in this section are the real
+scope. Header-line edits (`Status:`) on other specs' task files are in
+scope ONLY for items triaged `subsumed`. Do not edit any body text of other
 specs' files. Do not touch `specs/agentic-core-redesign/tasks/` beyond
 this file's own checkboxes.
 

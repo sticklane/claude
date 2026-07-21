@@ -39,10 +39,9 @@ registration exists from 02 — fill the module bodies only.
    ready.py, resume.py.
 3. Write `tests/test_agentic_latency.sh`: seed ≥500 issues in a scratch
    store, assert median wall time of 5 `agentic ready` runs < 1s (R-L).
-4. Wire both into scripts/check.sh.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_ready.py -q` → passes; red commit precedes green in this task's history
+- [ ] `python3 -m pytest tests/test_agentic_ready.py -q` → passes
 - [ ] `bash tests/test_agentic_latency.sh` → prints `MEDIAN <n>s OK` with n < 1 at ≥500 seeded issues (R-L)
 - [ ] `bash scripts/check.sh` → green

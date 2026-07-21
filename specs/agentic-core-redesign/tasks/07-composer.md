@@ -46,10 +46,10 @@ content. No loop work (task 08).
 2. Write `agentic/config/worker_instructions.md` (the one hand-written
    judgment document compose injects).
 3. Implement meter.py, screen.py, compose.py; make tests green.
-4. Wire into scripts/check.sh.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_compose.py -q` → passes; red commit precedes green in this task's history (covers R-M refusal)
+- [ ] `python3 -m pytest tests/test_agentic_compose.py -q` → passes (covers R-M refusal)
 - [ ] `bash tests/test_agentic_screen.sh` → prints `SCREEN OK` (R-S)
+- [ ] `grep -cE "check\.sh|AGENTIC_VERDICT" agentic/config/worker_instructions.md` → ≥ `2` (the instructions actually name the check command and the verdict-file contract, not a placeholder)
 - [ ] `bash scripts/check.sh` → green
