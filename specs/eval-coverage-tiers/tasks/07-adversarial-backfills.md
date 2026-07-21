@@ -42,11 +42,11 @@ conditional LAST to minimize the cross-spec race window.
 ## Acceptance
 
 - [ ] `for s in breakdown build drain evals critique; do ls -d
-    evals/$s/*-adv-* >/dev/null 2>&1 || { echo "missing: $s"; exit
-    1; }; done` → exit 0 (no `*-adv-*` dir exists anywhere under
+  evals/$s/*-adv-* >/dev/null 2>&1 || { echo "missing: $s"; exit
+  1; }; done` → exit 0 (no `*-adv-*` dir exists anywhere under
       evals/ today, verified 2026-07-19)
 - [ ] `for f in evals/*/*-adv-*/assert.sh; do bash -n "$f" || exit 1;
-    done` → exit 0
+  done` → exit 0
 - [ ] `git diff --stat <base>..HEAD -- evals/ | grep -v 'adv-'` shows
       no modified pre-existing scenario files (evidence-record the
       command output)

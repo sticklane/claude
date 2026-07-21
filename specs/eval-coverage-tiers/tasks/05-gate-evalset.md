@@ -3,7 +3,7 @@
 <!-- Machine-read fields; body sections never parsed by orchestrators. -->
 <!-- Append-only for workers: flip own Status:, tick checkboxes, add evidence lines, maintain plan block. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -31,9 +31,9 @@ assertions, no live hook execution).
 
 ## Acceptance
 
-- [ ] `ls -d evals/gate/0* | wc -l` → 2, one matching
+- [x] `ls -d evals/gate/0* | wc -l` → 2, one matching
       `evals/gate/02-adv-*` (dir absent today, verified 2026-07-19)
-- [ ] `for f in evals/gate/*/assert.sh; do bash -n "$f" || exit 1;
-    done` → exit 0
+- [x] `for f in evals/gate/*/assert.sh; do bash -n "$f" || exit 1;
+done` → exit 0
 - [ ] `./evals/run.sh gate` passes — manual-pending (paid headless run,
       human-launched, per docs/memory/unattended-worker-tool-limits.md)

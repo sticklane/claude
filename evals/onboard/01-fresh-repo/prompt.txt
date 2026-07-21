@@ -1,0 +1,16 @@
+/onboard
+
+Prepare this repository for agentic development. This is a NON-INTERACTIVE
+session — do not stop to ask questions; take the safe defaults below:
+
+- The repo's check command is `./run-tests.sh` (see README). It is cheap and
+  safe to RUN — run it to verify before recording it.
+- Produce the orientation split: write AGENTS.md (orientation: repo map,
+  verified commands, state) and CLAUDE.md (conventions, with the @AGENTS.md
+  bridge line), both well under 200 lines.
+- Write a .claude/settings.json permission allowlist covering the verified
+  command plus staging and committing, with a deny on `git push`.
+- Do NOT install quality-gate hooks or any Stop/PreToolUse/PostToolUse hook,
+  and do not run /gate — hook installs need live confirmation this headless
+  session cannot give. You may mention /gate as a next step, but install
+  nothing.

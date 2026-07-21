@@ -3,7 +3,7 @@
 <!-- Machine-read fields; body sections never parsed by orchestrators. -->
 <!-- Append-only for workers: flip own Status:, tick checkboxes, add evidence lines, maintain plan block. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -32,10 +32,15 @@ any written doctrine file.
 
 ## Acceptance
 
-- [ ] `ls -d evals/distill/0* | wc -l` → 2, one matching
+- [x] `ls -d evals/distill/0* | wc -l` → 2, one matching
       `evals/distill/02-adv-*` (dir absent today, verified 2026-07-19)
-- [ ] `for f in evals/distill/*/assert.sh; do bash -n "$f" || exit 1;
-    done` → exit 0
+      — evidence: prints 2; `02-adv-noise-rejection` present.
+- [x] `for f in evals/distill/*/assert.sh; do bash -n "$f" || exit 1;
+done` → exit 0
+      — evidence: `bash -n` clean on both assert.sh (and both setup.sh).
 - [ ] `./evals/run.sh distill` passes — manual-pending (paid headless
       run, human-launched, per
       docs/memory/unattended-worker-tool-limits.md)
+      — graders validated directly: setup+good/bad simulation shows each
+      assert.sh passes a correct run and fails a do-nothing run; 02 also
+      fails a run that hoards the noise sentinel.

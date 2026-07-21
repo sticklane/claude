@@ -147,6 +147,31 @@ class TailEventsTest(unittest.TestCase):
         self.assertGreaterEqual(len(events), 1)
         self.assertEqual(events[0]["idx"], 0)
 
+    def test_non_positive_window_terminates_and_returns_events(self):
+        """A caller passing window <= 0 must not spin forever: the growth loop
+        starts at cur == window (0 or negative), parses nothing, and without a
+        floor would double 0 -> 0 (or -1 -> -2 -> ...) never reaching file size.
+        The guard floors the next window at 1 so the loop still terminates and
+        the events render."""
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "s.jsonl"
+            _write_transcript(p, 8, pad=10)
+            for window in (0, -1):
+                events, total = ac.tail_events(str(p), n=50, window=window)
+                # Terminates (no hang) and yields the tail: a non-empty,
+                # contiguous suffix of the events ending at the last one.
+                self.assertGreaterEqual(
+                    len(events), 1, f"window={window} returned nothing"
+                )
+                idxs = [e["idx"] for e in events]
+                self.assertEqual(
+                    idxs[-1], 7, f"window={window} not tail-anchored"
+                )
+                self.assertEqual(
+                    idxs, list(range(idxs[0], 8)),
+                    f"window={window} not a contiguous suffix",
+                )
+
 
 class ElisionTest(unittest.TestCase):
     def _events(self):

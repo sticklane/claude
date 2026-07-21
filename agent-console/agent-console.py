@@ -1453,7 +1453,7 @@ def tail_events(path, n: int = 50, window: int = 65_536):
         # one event still renders. Gated on zero-parsed + non-empty so a
         # normally-parsing file never re-reads (the never-reads-whole-file bound).
         if in_window == 0 and size > 0 and cur < size:
-            cur = min(size, cur * 2)
+            cur = min(size, max(1, cur * 2))
             continue
         break
     read_bytes = len(chunk)
@@ -2322,8 +2322,18 @@ def render_workboard(
                 )
             else:
                 chips.append(f'<span class="gchip warn">&#8593;{g["ahead"]}</span>')
-        if g.get("behind"):
-            chips.append(f'<span class="gchip">&#8595;{g["behind"]}</span>')
+        behind = g.get("behind")
+        if behind is None:
+            # git_info could not compute the behind count — a config-derived
+            # upstream SHA that is absent from the local object store (nothing
+            # fetched). Surface it as an honest "behind: ?" rather than a silent
+            # zero, which would read as "up to date" (workboard-actions task 10).
+            chips.append(
+                '<span class="gchip" title="behind: ? — remote SHA not in '
+                'local object store (nothing fetched)">&#8595;?</span>'
+            )
+        elif behind:
+            chips.append(f'<span class="gchip">&#8595;{behind}</span>')
         inner = []
         if r["specs"]:
             lines = []

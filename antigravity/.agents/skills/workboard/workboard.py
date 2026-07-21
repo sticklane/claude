@@ -243,6 +243,13 @@ def git_info(repo):
             lr = run_git(
                 repo, "rev-list", "--left-right", "--count", f"{upstream}...HEAD"
             )
+            if not (lr and "\t" in lr):
+                # The config-derived upstream SHA resolved via ls-remote but is
+                # absent from the local object store (nothing fetched), so
+                # rev-list errored. Report behind as unknown (None) rather than
+                # a silently-wrong 0 — a stale local main must not hide a real
+                # gap; the workboard renders this as "behind: ?".
+                behind = None
     if lr and "\t" in lr:
         b, a = lr.split("\t")
         ahead, behind = int(a), int(b)
