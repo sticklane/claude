@@ -1,6 +1,6 @@
 # Task 05: Real-concurrency test for admission.py's lease-claim CAS
 
-Status: in-progress
+Status: done
 Depends on: 04
 Priority: P1
 Budget: 12 turns
