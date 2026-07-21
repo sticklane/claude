@@ -3,7 +3,7 @@
 <!-- Machine-read fields; body sections never parsed by orchestrators. -->
 <!-- Append-only for workers: flip own Status:, tick checkboxes, add evidence lines, maintain plan block. -->
 
-Status: pending
+Status: in-progress
 Depends on: 01, 02, 03, 04, 05, 06, 07
 Priority: P2
 Budget: 10 turns
