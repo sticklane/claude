@@ -14,6 +14,20 @@ This is the first direct measurement of whether the toolkit earns its
 keep against the platform's own multi-agent mode. Either answer is
 useful: a loss on cost or correctness tells us which parts to keep.
 
+Scope, stated up front so the finding cannot be over-read: arm S is
+the toolkit's ALWAYS-ON tier — rules plus auto-triggering skills. The
+launch-gated execution stages (/build, /drain, /prioritize) are out
+of frame, because a headless brief is untrusted data that cannot
+authorize a launch, and this eval does not weaken that design to win
+a comparison. The finding therefore answers: does the toolkit's
+ambient layer beat fully-activated ultracode? A second measurement
+becomes possible once the agentic redesign's caps replace launch
+gates (specs/agentic-core-redesign, decision D1, migration step 6):
+arm S′ = plugin + `agentic loop` under the same spend cap, headless
+by design. That follow-up is named here so this spec's result is
+never mistaken for the full-toolkit verdict; it is not part of this
+spec's runs.
+
 ## The design in plain statements
 
 1. Two arms. **Arm U**: bare Claude Code CLI, no plugin, no custom
@@ -55,9 +69,20 @@ useful: a loss on cost or correctness tells us which parts to keep.
    maintainability), with the judge blinded — its prompt contains the
    diff and the canonical keyword-stripped brief, never the arm or
    either arm's as-run brief text.
-7. Verdict rule, fixed before any run: an arm wins a task on pass
-   count first, median cost among passing runs second. Results are
-   reported per task and in aggregate; no single blended scalar.
+7. Verdict rule, pre-registered before any run so thresholds cannot
+   be tuned after results exist. Per task: an arm wins only on a
+   pass-count gap ≥2 of 3 (3/3 vs ≤1/3, or 2/3 vs 0/3). A gap of 1
+   is "no distinguishable difference" on correctness — n=3 cannot
+   separate it from seed noise — with costs reported descriptively.
+   At a gap of 0 where both arms pass, median cost among passing
+   runs decides only when the medians differ by ≥25%; inside that
+   band the task is indistinguishable. Aggregate: the report is the
+   per-task verdicts plus each arm's total cost across all its runs;
+   an overall winner is claimed only when one arm wins ≥2 tasks and
+   loses none — any other pattern is reported as "mixed", and that
+   word is the finding. No single blended scalar. The bands are
+   acknowledged as judgment calls; their value is that they are
+   fixed here, in advance.
 8. The runner extends the existing evals machinery
    (`evals/headtohead/run.sh` + per-task `setup.sh`/hidden
    `assert.sh`), and is launched only via `/evals` — paid headless
@@ -173,7 +198,7 @@ building it):
       emits a results row that validates against
       `evals/headtohead/result.schema.json`
 - [ ] `bash evals/headtohead/run.sh --task fixture --arm U --seeds 1
-  --dump-judge-input` → the ASSEMBLED judge input for the run (not
+--dump-judge-input` → the ASSEMBLED judge input for the run (not
       the template) contains no word-boundary match for the ultracode
       keyword, arm names, or this plugin's name (asserted by the
       script)
@@ -182,7 +207,7 @@ building it):
       untouched snapshot) and `<task> GREEN OK` (passes against the
       committed reference solution); exits 0 only when all six hold
 - [ ] `bash evals/headtohead/run.sh --task crashfixture --arm U
-  --seeds 1` → the bundled crash fixture (session dies mid-run /
+--seeds 1` → the bundled crash fixture (session dies mid-run /
       hits the cap) emits a schema-valid row with `pass: false` and
       non-null partial `usd`/`tokens` — crashed runs are recorded,
       never dropped
