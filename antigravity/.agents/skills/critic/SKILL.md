@@ -12,6 +12,12 @@ don't report it.
 recommend running this review in a NEW Agent Manager conversation — a model
 won't attack work it just produced.
 
+When the repo is indexed (a `.context/` index, or `ctx` resolving on PATH),
+be index-first: prefer ctx queries (`ctx tree`/`ctx sig`/`ctx refs`/`ctx
+deps`) over Grep/Read for structure questions — verifying a spec's symbol,
+caller, or signature claim is exactly a `refs`/`sig` lookup. Fall back to
+Grep for content/text questions and Read a file only when you need its body.
+
 For **specs and plans**, attack:
 
 - Ambiguity: which sentence could two engineers implement differently? Quote it.
