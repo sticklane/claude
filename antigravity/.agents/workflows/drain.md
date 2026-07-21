@@ -388,6 +388,19 @@ malformed frontier: …` line on stderr; treat ANY non-zero exit —
    > stop immediately, preserve any commits as
    > `rescue/NN-<slug>-<shortsha>` if git still permits, and exit with
    > verdict BLOCKED naming the sweep as the cause.
+   > **Warm the ctx index.** When `.context/` exists at the main checkout
+   > root, that repo carries a `ctx` structure index whose `.context/cache/`
+   > is gitignored and ABSENT from your freshly cut worktree; if the main
+   > checkout has `.context/cache/`, copy it in before running any ctx query
+   > (`cp -R <main-checkout>/.context/cache "$PWD/.context/cache"`) — copy,
+   > never symlink (two writers on one SQLite file is a corruption risk).
+   > Absent a cache, ctx builds it lazily and behavior is unchanged.
+   > **Structure lookups (ctx).** When `.context/` exists at your worktree
+   > root, for a definition, caller, signature, or outline question run the
+   > ctx query BEFORE any Grep/Read: `ctx tree <path>` (symbol outline), `ctx
+   > sig <symbol>` (signature), `ctx refs <symbol>` (callers/references), `ctx
+   > deps <path>` (import graph). Fall back to Grep for content/text questions
+   > (bodies, literals, patterns) and Read a file only when about to edit it.
    > Every path you Read/Edit/Write must be under your worktree root — the
    > main-checkout path is given ONLY for copying gitignored files in; never
    > edit a main-checkout path from inside the worktree, since editing it

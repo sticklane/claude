@@ -94,3 +94,8 @@
 # seeded: task 03 (cheap-task-status-checks) — mirrored task 02's two prose tightenings: build's sibling-status scan now names the header-only `grep -l '^Status: pending'` check, and drain's step 1 carries the header-only-checks-stay-cheap doctrine pointer (naming specs/status.sh). Anchors the invariant command tokens in each antigravity mirror so neither can silently re-drop.
 .claude/skills/build/SKILL.md|antigravity/.agents/workflows/build.md|grep -l '^Status: pending'
 .claude/skills/drain/SKILL.md|antigravity/.agents/workflows/drain.md|specs/status.sh
+# seeded: task 01 (ctx-dispatch-adoption) — the "Structure lookups (ctx)" dispatch stanza (index-first ctx tree/sig/refs/deps rule) landed in drain's worker prompt (reference.md) and build's explore step (SKILL.md); anchors the phrase in each mirror so neither leg can silently re-drop it.
+.claude/skills/drain/reference.md|antigravity/.agents/workflows/drain.md|Structure lookups (ctx)
+.claude/skills/drain/reference.md|codex/.agents/skills/drain/SKILL.md|Structure lookups (ctx)
+.claude/skills/build/SKILL.md|antigravity/.agents/workflows/build.md|Structure lookups (ctx)
+.claude/skills/build/SKILL.md|codex/.agents/skills/build/SKILL.md|Structure lookups (ctx)

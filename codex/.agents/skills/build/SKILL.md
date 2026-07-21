@@ -127,6 +127,14 @@ Do NOT preload the codebase: for anything unclear about existing code, fan out
 `scout` agents and work from their reports. Read a file directly only when you
 are about to edit it.
 
+**Structure lookups (ctx).** When `.context/` exists at the repo root, this
+repo carries a `ctx` structure index. For a definition, caller, signature, or
+outline question, run the ctx query BEFORE any Grep/Read: `ctx tree <path>`
+(symbol outline), `ctx sig <symbol>` (signature), `ctx refs <symbol>`
+(callers/references), `ctx deps <path>` (import graph). Fall back to Grep for
+content/text questions (bodies, literals, patterns) and Read a file only when
+about to edit it; brief every scout the same way.
+
 If the task file has no runnable acceptance criteria, stop and say the task
 isn't agent-ready — improvising weaker criteria silently is how "looks done"
 replaces "is done".
@@ -287,6 +295,13 @@ every time you enter it.
 - Log any reversible-default decisions taken this session (step 1's rule) to
   the task file's `## Decisions` section — one line each: decision, default
   taken, how to reverse. Append; never overwrite. No decisions → no section.
+- Persist a durable structure note (indexed repo only): when `.context/` exists
+  at the repo root and this task surfaced a symbol-anchored fact meeting the
+  code-comment bar — a gotcha, invariant, rationale, or todo tied to a specific
+  symbol, not a restatement of what the code plainly shows — offer to record it
+  with `ctx notes add <symbol> "<text>" --kind gotcha|invariant|rationale|todo`
+  before finishing (the note is committed and survives refactors the comment
+  would not).
 - Update the task file: Status `done`, tick acceptance boxes, one line of
   evidence each (from the verifier's report, not your own claim) — citing the
   `evidence/` file when an evidence path was passed in step 3; delete the plan
