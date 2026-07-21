@@ -44,12 +44,60 @@ pub trait VcsAdapter {
 }
 
 /// Select the adapter for `root`: the git adapter when a `.git` is present at
-/// or above `root`, else the no-VCS baseline (R5).
+/// or above `root`, else the no-VCS baseline (R5). Every non-baseline adapter
+/// is wrapped in the [`CtxignoreOverlay`] so `.ctxignore` is honored under any
+/// VCS; the baseline already applies `.ctxignore` internally and is returned
+/// unwrapped, never double-subtracted.
 pub fn detect(root: &Path) -> Box<dyn VcsAdapter> {
     if crate::project::git_root(root).is_some() {
-        Box::new(GitAdapter)
+        Box::new(CtxignoreOverlay {
+            inner: Box::new(GitAdapter),
+        })
     } else {
         Box::new(NoVcsBaseline)
+    }
+}
+
+/// A VCS-independent `.ctxignore` exclusion overlay wrapping any non-baseline
+/// adapter. It is purely subtractive: file lists drop `.ctxignore` matches and
+/// `is_ignored` ORs the overlay in, so a `.ctxignore` entry can only remove
+/// paths, never re-include what the inner VCS already ignores. Every other
+/// `VcsAdapter` method delegates verbatim to the inner adapter, so change
+/// feeds, snapshot identity, user identity, and hook location are unchanged.
+struct CtxignoreOverlay {
+    inner: Box<dyn VcsAdapter>,
+}
+
+impl VcsAdapter for CtxignoreOverlay {
+    fn name(&self) -> &'static str {
+        self.inner.name()
+    }
+
+    fn list_files(&self, root: &Path) -> io::Result<Vec<String>> {
+        let patterns = load_ctxignore(root);
+        let mut files = self.inner.list_files(root)?;
+        files.retain(|rel| !ctxignore_matches(&patterns, rel));
+        Ok(files)
+    }
+
+    fn is_ignored(&self, root: &Path, rel: &str) -> bool {
+        self.inner.is_ignored(root, rel) || ctxignore_matches(&load_ctxignore(root), rel)
+    }
+
+    fn change_feed(&self, root: &Path) -> Option<Vec<String>> {
+        self.inner.change_feed(root)
+    }
+
+    fn snapshot_id(&self, root: &Path) -> Option<String> {
+        self.inner.snapshot_id(root)
+    }
+
+    fn user_identity(&self, root: &Path) -> Option<String> {
+        self.inner.user_identity(root)
+    }
+
+    fn hook_dir(&self, root: &Path) -> Option<PathBuf> {
+        self.inner.hook_dir(root)
     }
 }
 
