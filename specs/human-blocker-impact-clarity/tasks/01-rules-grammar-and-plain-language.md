@@ -1,6 +1,6 @@
 # Task 01: human-blockers.md — Blocks: clause, plain-language rule, mandatory bullet
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 16 turns
