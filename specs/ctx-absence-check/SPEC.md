@@ -106,3 +106,11 @@ precedent).
   architecture rule; the agent's own Grep is the right executor).
 - Fuzzy/semantic matching beyond R4's cheap near-miss list.
 - Changing no-match exit codes or stdout/stderr routing.
+
+## Parallelization
+
+All three tasks are sequential — no concurrent-safe groups. Task 02
+extends task 01's same files (shared `no_match.rs` helper, `sig.rs`,
+`refs.rs`) rather than being Touch-disjoint from it. Task 03 depends on
+both for content accuracy (it describes the emitted command) and is
+additionally externally blocked on specs/ctx-skill-token-doctrine R7.
