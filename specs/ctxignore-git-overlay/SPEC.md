@@ -57,6 +57,11 @@ opt-out, no ability to re-include what the VCS already ignores.
   call unchanged (it already subtracts `.ctxignore` inside its own
   `list_files`/`is_ignored`) and is never double-wrapped. Any future
   adapter registered through `detect()` gets the overlay for free.
+  The wrapper delegates ALL other `VcsAdapter` methods — `name`,
+  `change_feed`, `snapshot_id`, `user_identity`, `hook_dir` — to the
+  inner adapter verbatim; in particular note-author resolution (C9,
+  `notes/mod.rs` via `detect().user_identity()`) must still return the
+  git committer identity, never fall to the trait default.
   Because double-subtraction is idempotent and thus invisible to
   output-only tests, acceptance includes a structural test that the
   baseline's file list is byte-identical before/after this change.
@@ -110,13 +115,23 @@ All runnable from the repo root; test names verified absent from
       `ctxignore_overlay_note_goes_stale_not_reanchored` (R4: a note
       anchored in a newly excluded file reports unresolved/stale, is
       not re-anchored elsewhere, and resolves again when the entry is
-      removed).
+      removed),
+      `ctxignore_overlay_git_note_author_preserved` (R3 delegation: in
+      a git fixture with `git config user.email` set AND a `.ctxignore`
+      present, a created note records that email as author — the
+      wrapped adapter's `user_identity` reaches the inner git adapter),
+      `ctxignore_overlay_at_excluded_file_exits_4` (R1: `ctx at` on a
+      committed-but-overlay-excluded file exits 4, proving the composed
+      `is_ignored` — not just the file list — applies the overlay).
 - [ ] `cd context-tree && cargo test ignore_rules` → still passes
       unchanged (R3/R5: no-VCS baseline regression gate).
-- [ ] `grep -c 'ctxignore' context-tree/README.md` ≥ 2 and
-      `grep -ci 'ctxignore' .claude/skills/ctx/SKILL.md` ≥ 1, with the
-      matching antigravity mirror updated in the same task and
-      `.claude-plugin/plugin.json` version bumped (R6).
+- [ ] `grep -c 'ctxignore' context-tree/README.md` ≥ 2,
+      `grep -ci 'ctxignore' .claude/skills/ctx/SKILL.md` ≥ 1, and
+      `grep -ci 'ctxignore' antigravity/.agents/skills/ctx/SKILL.md` ≥ 1
+      (R6 mirror — un-mirrored skill edits are the port-chain failure
+      CLAUDE.md warns about).
+- [ ] `grep -c '"version": "0.9.23"' .claude-plugin/plugin.json` → 0
+      (R6: plugin version bumped past the authoring-time 0.9.23).
 - [ ] `grep -c 'ctxignore-git-overlay' specs/codebase-context-tree/SPEC.md`
       ≥ 1, and its R4 no longer reads "in the no-VCS baseline" as the
       only `.ctxignore` mode (R7).
