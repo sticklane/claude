@@ -53,6 +53,10 @@ and gitignored; only notes are committed.
 - `ctx mcp` — stdio MCP server exposing the same nine queries as typed
   tools (register the stdio command `ctx mcp` in this harness's MCP config); useful when a
   harness prefers tools over shell.
+- `.ctxignore` at the repo root — a subtractive exclusion overlay honored
+  in both VCS and no-VCS modes, for dropping committed-but-derived paths
+  (checked-in `dist/`, vendored code, generated artifacts) the VCS itself
+  can't ignore.
 
 Scope cautions: extractors cover python, go, js, ts, bash, c, cpp, zig,
 kotlin, java, ocaml, haskell — NOT rust; `map` ranking currently
