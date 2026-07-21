@@ -35,6 +35,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdAntigravity(args[1:], stdout, stderr)
 	case "build":
 		return cmdBuild(args[1:], stdout, stderr)
+	case "skillcheck":
+		return cmdSkillcheck(args[1:], stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "agentprof: unknown subcommand %q\n", args[0])
 		usage(stderr)
@@ -70,6 +72,7 @@ Subcommands:
   otel     emit canonical samples from an OTLP/JSON trace export
   antigravity  emit canonical samples from Antigravity CLI conversation databases
   build    convert canonical sample JSONL into a pprof profile
+  skillcheck  audit skill trigger-accuracy and outcome from Claude Code transcripts
 
 Flags:
   --version   print version and exit
