@@ -11,14 +11,29 @@ narrative in the same file lives above it and is human-owned.
 Each open blocker is one checkbox line under the section:
 
 ```
-- [ ] <ISO date> · <source path> · <ask|run|provision|decide> — <one-line action>
+- [ ] <ISO date> · <source path> · <ask|run|provision|decide> — <plain-language action> — Blocks: <impact>
 ```
 
 The type mirrors the `Unblock:` types so nothing new is invented: `ask` =
 a question needing an answer; `run` = a command a human must run;
 `provision` = credentials, access, or a purchase; `decide` = a
-decision-shaped item (a stub or spec). The action is self-contained — a
-reader needs no other context to act on it.
+decision-shaped item (a stub or spec).
+
+The `<plain-language action>` clause must be **readable and actionable
+without opening the source file**: it is authored for a human skimming the
+section, not copied verbatim from a deferred question, an `Unblock:` line, a
+stub reason, or a critique finding. Expand jargon and task-ID shorthand into
+what it actually means — say what task 09 _does_, don't just name it; name
+the source file as a pointer, never as the explanation. The reader needs no
+other context to act on it.
+
+The `Blocks:` clause states what stays stuck while the item sits
+unresolved, so a human scanning the section can tell the item's cost without
+opening the source file and tracing `Depends on:` edges by hand. It names
+the downstream work the entry gates — the blocked task names (e.g. "Blocks:
+task 09 (notes CRUD), task 11 (MCP server)"), "Blocks: no other pending
+task" when nothing depends on it, or the one fixed stage a source type
+always gates (e.g. "Blocks: promotion of this stub to a dispatchable task").
 
 ## Rules
 
@@ -38,3 +53,7 @@ reader needs no other context to act on it.
   never edited by an agent.
 - **Append, don't reorder.** New entries append to the section; existing
   entries are not rewritten or reordered, only added or removed.
+- **`Blocks:` is mandatory.** Every entry filed after this change carries a
+  `Blocks:` clause stating its impact; the clause is never omitted. A filer
+  that cannot determine the impact writes `Blocks: unclear — <one-line
+reason>` rather than dropping the clause.

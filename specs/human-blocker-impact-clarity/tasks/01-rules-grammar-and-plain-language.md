@@ -1,6 +1,6 @@
 # Task 01: human-blockers.md — Blocks: clause, plain-language rule, mandatory bullet
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -40,22 +40,32 @@ no shared design decision (this spec pins the exact grammar and wording).
 
 ## Acceptance
 
-- [ ] `grep -c 'Blocks: <impact>' .claude/rules/human-blockers.md` → 1
+- [x] `grep -c 'Blocks: <impact>' .claude/rules/human-blockers.md` → 1
       (phrase absent today, count 0, verified 2026-07-19). Depth ceiling:
       L0 on a prose rules doc — behavioral complement is this task's
       end-to-end readability check below, which exercises what the grammar
       means rather than that its text exists.
-- [ ] `grep -n 'readable and actionable' .claude/rules/human-blockers.md` →
+      Evidence: verifier ran the command → `1`. PASS.
+- [x] `grep -n 'readable and actionable' .claude/rules/human-blockers.md` →
       at least one match (phrase absent today, count 0, verified
       2026-07-19; R2's behavioral check is the end-to-end criterion below)
-- [ ] `grep -c 'Blocks: unclear' .claude/rules/human-blockers.md` → ≥ 1
+      Evidence: verifier ran → match at line 22. PASS.
+- [x] `grep -c 'Blocks: unclear' .claude/rules/human-blockers.md` → ≥ 1
       (phrase absent today, count 0, verified 2026-07-19). Depth ceiling:
       L0 on a prose rules doc — behavioral complement is task 03's
       retrofit, the first real HUMAN.md entry re-filed under the new
       grammar, plus the end-to-end read below.
-- [ ] End-to-end (R2's readability bar): as the implementing/verifying
+      Evidence: verifier ran the command → `1`. PASS.
+- [x] End-to-end (R2's readability bar): as the implementing/verifying
       agent, with no other context beyond this file, read only
       `.claude/rules/human-blockers.md`'s updated grammar + Rules sections
       and write one sentence stating what a `Blocks:` clause on a
       hypothetical filed entry would mean — record that sentence as
       evidence; it must name both the ask and its impact.
+      Evidence (independent verifier, reading only the grammar + Rules
+      sections): "A `Blocks:` clause on a filed entry states, in plain
+      language, what the human is being asked to do (answer a question, run
+      a command, provision access, or make a decision) and, distinctly,
+      names the downstream work — the specific blocked task(s), 'no other
+      pending task,' or the fixed gated stage — that stays stuck until that
+      ask is resolved." Names both the ask and the impact. PASS.
