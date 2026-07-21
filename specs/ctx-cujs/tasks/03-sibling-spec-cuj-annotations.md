@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns
@@ -51,9 +51,9 @@ change to Problem/Solution/Requirements.
 
 ## Acceptance
 
-- [ ] `grep -l 'Serves CUJ' specs/ctx-skill-token-doctrine/SPEC.md specs/ctx-query-ergonomics/SPEC.md specs/ctx-static-analysis-augmentation/SPEC.md`
+- [x] `grep -l 'Serves CUJ' specs/ctx-skill-token-doctrine/SPEC.md specs/ctx-query-ergonomics/SPEC.md specs/ctx-static-analysis-augmentation/SPEC.md`
       lists all three named files.
-- [ ] `git diff --stat` for this task's commit touches only the three
+- [x] `git diff --stat` for this task's commit touches only the three
       files listed in Touch — no other spec, no non-header lines beyond
       the one inserted annotation line per file (spot-check the diff is a
       single-line insertion per file).

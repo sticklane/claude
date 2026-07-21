@@ -1,5 +1,7 @@
 # ctx skill: triggering, token-efficient reading doctrine, and model tiering
 
+Serves CUJ: SURVEY (docs/guides/ctx-cujs.md).
+
 Breakdown-ready: true
 
 ## Landing order (breakdown constraint — the SKILL.md editor registry)
