@@ -136,6 +136,12 @@ letting them default:
   issues, anything a linter/typechecker will catch, and style preferences
   not required by these rules. If not certain an issue is real, don't
   flag it.
+- Agent output in workflow and Agent-Manager conversations (drain/build
+  progress, task summaries) follows the writing charter: lead with the result, not narrated intent.
+  Replace a quality adjective with the checkable fact; state a known number
+  rather than a `~` approximation — but keep terse factual status lines. The
+  three tells and the status-telegraphy carve-out are in
+  `.agents/skills/prose-review/reference.md`'s "Agentic-register tells" subsection.
 - Work on a branch; commit checkpoints as you go so recovery is "discard
   the branch", never "untangle the tree".
 - Documentation currency: before the build workflow finishes a task, check

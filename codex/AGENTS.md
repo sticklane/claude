@@ -1,11 +1,13 @@
 # Agentic development toolkit — Codex CLI port
 
 This directory is the Codex CLI port of the toolkit. The shared pipeline
-orientation — precedence, token/context discipline, the idea → spec →
-(design) → breakdown → build/drain → distill flow, and how every stage
-hands off through a file on disk — lives in
-[`antigravity/AGENTS.md`](../antigravity/AGENTS.md); read it first. The
-skills under `.agents/skills/` here are relative symlinks into the
+orientation — precedence, token/context discipline, output and authoring
+conventions (the agentic-register writing principle included: lead with the
+result, not narrated intent), the idea → spec → (design) → breakdown →
+build/drain → distill flow, and how every stage hands off through a file on
+disk — lives in [`antigravity/AGENTS.md`](../antigravity/AGENTS.md); read it
+first, output/authoring conventions inherited from it and binding here too.
+The skills under `.agents/skills/` here are relative symlinks into the
 antigravity skill tree, so they stay in lockstep with it.
 
 ## Codex-specific fact
