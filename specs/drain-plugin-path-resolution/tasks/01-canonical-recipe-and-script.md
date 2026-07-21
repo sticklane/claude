@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 20 turns
@@ -64,12 +64,12 @@ task 02.
 
 ## Acceptance
 
-- [ ] `grep -c "plugin cache path found at dispatch" .claude/skills/drain/reference.md`
+- [x] `grep -c "plugin cache path found at dispatch" .claude/skills/drain/reference.md`
       → 0 (the vague phrase is gone).
-- [ ] `grep -q "plugins/cache/agentic-toolkit/agentic" .claude/skills/drain/reference.md`
+- [x] `grep -q "plugins/cache/agentic-toolkit/agentic" .claude/skills/drain/reference.md`
       → matches (the recipe's own content was added).
-- [ ] `awk '/^```bash/,/^```$/' .claude/skills/drain/reference.md | grep -q "plugins/cache/agentic-toolkit/agentic"`
+- [x] `awk '/^```bash/,/^```$/' .claude/skills/drain/reference.md | grep -q "plugins/cache/agentic-toolkit/agentic"`
       → matches (the recipe literal lives inside an actual fenced Bash
       block, not bare prose).
-- [ ] `[ -x bin/resolve-skill-path ]` — script exists and is executable.
-- [ ] `bash tests/test_resolve_skill_path.sh` passes.
+- [x] `[ -x bin/resolve-skill-path ]` — script exists and is executable.
+- [x] `bash tests/test_resolve_skill_path.sh` passes.
