@@ -1,6 +1,6 @@
 # Task 01: agentic-register tells subsection + mirror + gate + version
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 12 turns
