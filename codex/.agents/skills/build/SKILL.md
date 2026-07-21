@@ -46,7 +46,12 @@ spec pipeline), and do not launch.
 **Preconditions (all mandatory).**
 
 - Clean git state; work on a dedicated branch or worktree, so recovery from
-  a bad run is "discard the branch", never "untangle the tree".
+  a bad run is "discard the branch", never "untangle the tree". When the repo
+  has a `ctx` index (`.context/` at its root), a fresh worktree lacks the
+  gitignored `.context/cache/`; copy it in from the main checkout (`cp -R
+  <main>/.context/cache "$PWD/.context/cache"`) — copy, never symlink (two
+  writers on one SQLite file is a corruption risk) — so the isolated run
+  starts index-warm.
 - Runnable acceptance criteria present in the task file (no criteria → no
   autonomy).
 - Quality gates installed, or a bounded goal set.

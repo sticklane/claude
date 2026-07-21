@@ -20,7 +20,11 @@ with mechanical, runnable verification fits a bounded run. Core business
 logic or security-sensitive code doesn't disqualify a task — it raises the
 bar it must clear first: tighten acceptance criteria to runnable commands
 and confirm worktree isolation covers every side effect, or stay on
-unbounded attended execution. A task whose "correct" is a judgment call no
+unbounded attended execution. When a worktree-isolated run works a repo with
+a `ctx` index (`.context/` at its root), copy the gitignored `.context/cache/`
+in from the main checkout (`cp -R <main>/.context/cache "$PWD/.context/cache"`)
+— copy, never symlink (two writers on one SQLite file is a corruption risk) —
+so the run starts index-warm. A task whose "correct" is a judgment call no
 test can settle is an unresolved spec question, not a walk-away run — file
 it and resolve the spec instead of launching.
 
