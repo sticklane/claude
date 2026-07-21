@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 14 turns
@@ -47,6 +47,6 @@ gate). Do not touch skill files or plugin.json.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go test ./...` → exit 0, including new tests covering the three fixture cases above (indexed counts, non-indexed excluded, substring not counted)
-- [ ] `cd agentprof && go vet ./...` → exit 0
-- [ ] Report output over the fixture shows the ctx metric field (assert in test, parse the report structure — never exact full-output strings)
+- [x] `cd agentprof && go test ./...` → exit 0, including new tests covering the three fixture cases above (indexed counts, non-indexed excluded, substring not counted) — all 16 pkgs ok; new `internal/claude/ctx_usage_test.go` (`TestCollectCountsCtxUsageForIndexedRepoSession` = 3, `TestCollectExcludesCtxUsageForNonIndexedRepoSession` = 0, substring `getExecutionCtx` excluded) + `costsummary` `TestBuildSessionsSectionSurfacesCtxUsage` (evidence: specs/ctx-dispatch-adoption/evidence/04-agentprof-ctx-telemetry.md)
+- [x] `cd agentprof && go vet ./...` → exit 0 (no output; verifier-confirmed, evidence file)
+- [x] Report output over the fixture shows the ctx metric field — `costsummary.SessionStat.CtxUsage` (json `ctx_usage`) asserted via typed struct access (`s.Sessions["s1"].CtxUsage == 3`), not output strings; kept out of by_*/totals rollups (evidence file). Verifier mutation-test confirmed the substring-exclusion case is load-bearing, not vacuous.
