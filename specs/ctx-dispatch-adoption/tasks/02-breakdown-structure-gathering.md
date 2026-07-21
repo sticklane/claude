@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 8 turns
@@ -40,10 +40,10 @@ antigravity leg is a paraphrased port — content-coverage, not byte-diff.
 
 ## Acceptance
 
-- [ ] `grep -c 'ctx tree' .claude/skills/breakdown/SKILL.md` → ≥1
-- [ ] `grep -c '.context/' .claude/skills/breakdown/SKILL.md` → ≥1 (the index-presence condition)
-- [ ] `grep -c 'ctx tree' antigravity/.agents/workflows/breakdown.md` → ≥1
-- [ ] `grep -rc 'ctx show' .claude/skills/breakdown/ | grep -v ':0' | wc -l` → 0
+- [x] `grep -c 'ctx tree' .claude/skills/breakdown/SKILL.md` → ≥1 — returns 2 (Procedure step 2 rewritten with the index-first recipe)
+- [x] `grep -c '.context/' .claude/skills/breakdown/SKILL.md` → ≥1 (the index-presence condition) — returns 1 (the `.context/` at repo root condition)
+- [x] `grep -c 'ctx tree' antigravity/.agents/workflows/breakdown.md` → ≥1 — returns 2 (new "Structure gathering (ctx before scouts)" section)
+- [x] `grep -rc 'ctx show' .claude/skills/breakdown/ | grep -v ':0' | wc -l` → 0 — returns 0 (no `ctx show` introduced)
 
 Depth ceiling: L0/L1 prose greps — the artifact is skill doctrine; the
 behavioral complement is task 04's telemetry plus the existing breakdown
