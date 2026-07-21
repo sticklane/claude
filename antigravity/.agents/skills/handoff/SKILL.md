@@ -24,7 +24,29 @@ seeding this run's own successor.
    — pick a distinctly-named file instead (e.g. `HANDOFF-<short-topic>.md`)
    and name that path explicitly in your final message, since the default
    single-path convention assumes only one handoff is ever parked at a time.
-   Contain only what a fresh agent needs:
+   **The file opens with a fixed compact header block** — these five
+   `Key: value` lines are the first lines of every `HANDOFF.md`, ahead of
+   the free-form prose sections below (which are unchanged):
+   - `Task:` — a one-line name for the work (the spec/task path or a short
+     description). Required: this is the field a resumer actually compares
+     between candidates, since `Status:`/`Blocking on:` are often identical
+     across two in-flight threads.
+   - `Status:` — the task's current status (e.g. `in-progress`).
+   - `Next step:` — the exact immediate next action.
+   - `Resume with:` — the skill or command to run to continue.
+   - `Blocking on:` — what's blocking, or `nothing`.
+
+   So every `HANDOFF.md` opens with these five lines, verbatim shape:
+
+```
+Task: <spec/task path or one-line description of the work>
+Status: <in-progress | needs-verification | blocked | ...>
+Next step: <the exact immediate next action>
+Resume with: <the skill or command to run, e.g. /build or /resume-handoff>
+Blocking on: <what's blocking, or nothing>
+```
+
+   After that header block, contain only what a fresh agent needs:
    - **Task**: what we're doing and the task/spec file path.
    - **State**: what's done (with evidence), what's in flight, exact next step.
    - **Files touched**: paths, one line each on what changed and why.

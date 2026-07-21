@@ -16,9 +16,16 @@ consistent.
    `fixtures`, and `test_fixtures` directories.
    - Zero found: tell the user there's nothing to resume and stop.
      `Next stage: none — no handoff found`.
-   - Multiple found: list the paths and ask the user which one (or infer
+   - Multiple found: read each candidate's compact header only (its first
+     few `Key: value` lines — e.g. `head -n 10` per candidate, a bounded
+     read, never the full body), then ask the user which one (or infer
      from the live request if it already names the task) — never guess
-     silently.
+     silently. Each option shown lists that candidate's `Task:` and
+     `Status:` header values alongside its path, so the question is
+     answerable without opening any file. If two candidates' headers don't
+     distinguish them (e.g. identical `Task:` values), ask anyway with
+     whatever the headers show — no additional tiebreak logic; the skill
+     still always asks and never auto-selects.
 2. **Read** the chosen file in full before doing anything else. Do not
    re-derive state it already captures.
 3. **Surface, then resume.** State the resumed task and its recorded
