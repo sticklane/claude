@@ -106,6 +106,26 @@ Pointers are to files in this repo or primary external sources.
 - Both occurred with the relevant rules text in place — doctrine
   without mechanism.
 
+## Critique pass (critic agent, 2026-07-21)
+
+Verdict NOT-READY on the first draft; all findings folded into the
+spec in the same session. Blockers: (1) no `## Acceptance criteria`
+mapping the R-\* requirements to runnable checks — section added, one
+anchored check per requirement; (2) the budget cap rested on an
+unspecified cost signal absent on generic runtimes — layered spend
+signal specified (harness telemetry else wrapper estimate) as new
+requirement R-M. Majors: tracker-store/worktree topology undefined
+(resolved: single-writer, primary-checkout-only, workers never write);
+runtime-adapter conversion had no migration step (added as step 5 with
+interim mirror-manifest retirement); step 2 flipped source of truth
+before readers were re-pointed (resolved: shadow mode until step 4
+cutover); R-B bootstrap over-claimed a co-located-Dolt-remote result
+(resolved: committed-JSONL import is the canonical recipe, Dolt
+remotes optional). Minors: latency scale check added to acceptance;
+grant enforceability on grant-less runtimes stated honestly
+(UNENFORCED marker + composer-boundary floor); Next stage line given
+its artifact path.
+
 ## Hands-on bd battery (v1.1.0, this container, 2026-07-21)
 
 Full results in SPEC.md "Substrate verification". Headlines: metadata
