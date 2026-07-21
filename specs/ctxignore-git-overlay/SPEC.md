@@ -150,3 +150,12 @@ All runnable from the repo root; test names verified absent from
 - Rolling `.ctxignore` files out to consuming repos (e.g.
   `ynab-mcp-server`'s `dist/`) — one-line follow-up per repo after this
   ships, not part of this spec's gates.
+
+## Parallelization
+
+Two tasks, strictly serial: task 02 documents and supersedes contracts
+for behavior task 01 ships, and `Depends on: 01` encodes that. Touch
+sets are disjoint but the dependency is real — docs must not describe an
+unshipped overlay. No concurrent-safe groups (grammar per
+`specs/drain-rolling-window/SPEC.md`'s `## Parallelization` section);
+each task runs solo.
