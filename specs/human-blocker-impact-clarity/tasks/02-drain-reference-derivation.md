@@ -1,6 +1,6 @@
 # Task 02: drain reference.md — Blocks: derivation per HUMAN.md filing row
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 20 turns
