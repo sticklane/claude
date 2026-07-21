@@ -1,6 +1,6 @@
 # Head-to-head evaluation: this repo's skills vs ultracode, on Claude Code CLI
 
-Breakdown-ready: false
+Breakdown-ready: true
 Rigor: prototype
 
 ## The question
@@ -76,7 +76,8 @@ spec's runs.
    separate it from seed noise — with costs reported descriptively.
    At a gap of 0 where both arms pass, median cost among passing
    runs decides only when the medians differ by ≥25%; inside that
-   band the task is indistinguishable. Aggregate: the report is the
+   band the task is indistinguishable, and a gap of 0 where NEITHER
+   arm passes is likewise indistinguishable — both failed. Aggregate: the report is the
    per-task verdicts plus each arm's total cost across all its runs;
    an overall winner is claimed only when one arm wins ≥2 tasks and
    loses none — any other pattern is reported as "mixed", and that
@@ -198,7 +199,7 @@ building it):
       emits a results row that validates against
       `evals/headtohead/result.schema.json`
 - [ ] `bash evals/headtohead/run.sh --task fixture --arm U --seeds 1
---dump-judge-input` → the ASSEMBLED judge input for the run (not
+      --dump-judge-input` → the ASSEMBLED judge input for the run (not
       the template) contains no word-boundary match for the ultracode
       keyword, arm names, or this plugin's name (asserted by the
       script)
@@ -207,7 +208,7 @@ building it):
       untouched snapshot) and `<task> GREEN OK` (passes against the
       committed reference solution); exits 0 only when all six hold
 - [ ] `bash evals/headtohead/run.sh --task crashfixture --arm U
---seeds 1` → the bundled crash fixture (session dies mid-run /
+      --seeds 1` → the bundled crash fixture (session dies mid-run /
       hits the cap) emits a schema-valid row with `pass: false` and
       non-null partial `usd`/`tokens` — crashed runs are recorded,
       never dropped
