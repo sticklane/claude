@@ -1,121 +1,122 @@
-# HANDOFF: /drain whole-queue run — generation-3 hub refresh
+# HANDOFF: two threads — /drain whole-queue run (gen 5) + agentprof-skill-audit spec
 
 Note: `.claude/HANDOFF.md` is already occupied by an unrelated session's
 handoff (human-tasks/ynab-triage-skill work) — this file uses a distinct
-name to avoid clobbering it. Do not delete or edit `.claude/HANDOFF.md`;
-it belongs to a different task.
+name to avoid clobbering it. Do not delete or edit `.claude/HANDOFF.md`.
 
 ## Task
 
-A `/drain` run with no spec argument (whole `specs/` queue in scope),
-launched by the user in this conversation ("drain everything", then a
-second explicit `/drain` re-invocation, then "continue"). This session was
-the generation-1 interactive hub. It hit its wake budget twice (3 then 4
-cache re-primes, ~285k p90 context) and batoned twice:
-gen1 → gen2 (agentId no longer relevant, already completed) → gen3
-(background agent, id `a6dc129243c9ce2ad`, **still running as of this
-handoff** — do not spawn a duplicate generation-3 agent).
+Two independent threads run by this session, both still open:
+
+**Thread A — whole-queue `/drain` run.** User-authorized ("drain
+everything", re-invoked `/drain`, then "continue" after an interruption).
+Now on **generation 5** (background agent id `a526e9210f7e5ab37`, launched
+and still running as of this handoff — do not spawn a duplicate). Run-token
+`a750d87976c02e32`.
+
+**Thread B — new spec `specs/agentprof-skill-audit/SPEC.md`.** User asked
+for a skill that reviews chat logs (like `agentprof`) for skill trigger/
+outcome analysis during skill development. Ran `/idea`: scouted `agentprof`
+
+- `evals/` + transcript format (4 scouts), ran a `deep-research` pass on
+  frontier trajectory-evaluation literature, interviewed the user (7
+  questions across 2 rounds), wrote the spec. **Currently in `/critique`**
+  (background agent id `a5b55021045a7e085`, still running as of this
+  handoff — do not spawn a duplicate critique). This is a `/critique` retry:
+  the first attempt (id `a845984c2059f9518`) died from the same spend-limit
+  event as drain generation 4.
 
 ## State
 
-Landed and merged to `origin/main` (verified via drain's own merge-time
-gates, not re-verified here — see each spec's `evidence/spec-review.md`
-committed alongside):
+**Thread A history:** gen1 (this session) landed `human-blocker-impact-clarity`
+(4/4 done, released), `prompt-tweaking-roi` (1/1 done, released) — batoned.
+gen2 landed `drain-frontier-scanner` (done, released), `drain-session-naming-
+always-propose` (done, released), reclaimed a confirmed-stale 3-spec lease,
+started `drain-multi-spec-swarm`/`eval-coverage-tiers` — batoned. gen3
+continued both — batoned to gen4 (`specs/eval-coverage-tiers/DRAIN-BATON.md`,
+per its commit message: landed `drain-multi-spec-swarm` task 02,
+`eval-coverage-tiers` task 04, `drain-multi-spec-swarm`'s spec-completion
+review — 0 findings, 3 discovered, lease released — plus `eval-coverage-
+tiers` tasks 05, 06). gen4 flipped `eval-coverage-tiers`/07 to in-progress,
+then **died mid-dispatch from the account's monthly spend limit** (the human
+has since raised it via `/rate-limit-options`). This session ran the
+Environment-kill sweep: confirmed no worker branch/worktree existed for
+task 07 (nothing lost), reset it to `pending` (commit `7db4ece`, pushed).
+Per doctrine, halted rather than auto-relaunching; the human said "continue"
+so generation 5 was spawned to resume. gen4's baton file
+(`specs/eval-coverage-tiers/DRAIN-BATON.md`) is missing from disk despite a
+commit claiming to have written it — not investigated further, gen5 was told
+to run a fresh inventory rather than trust it.
 
-- `human-blocker-impact-clarity` — 4/4 tasks done, lease released
-- `prompt-tweaking-roi` — 1/1 task done, lease released
-- `drain-frontier-scanner` — 4/4 non-draft tasks done (05 left as draft
-  stub), lease released
-- `drain-session-naming-always-propose` — done, lease released
-- `drain-multi-spec-swarm` — partial (task 05 done this run before gen 2's
-  baton; task 02 still open), lease held under Run-token
-  `6da9bf9a672dfa74`
-- `eval-coverage-tiers` — partial (task 03 done; tasks 04-08 still open),
-  same lease
+**Thread B state:** `specs/agentprof-skill-audit/SPEC.md` written (no
+`## Open questions` — none named a tech/architecture choice, so no `/design`
+chain was needed). Awaiting the retry critique's verdict.
 
-Reclaimed: the 3-spec lease originally held by an abandoned "vm"-hosted
-run (Run-token `6da9bf9a672dfa74` itself, actually — gen 2 adopted that
-exact token when it confirmed the run dead and reclaimed it, rather than
-minting a new one, per the Reclaim procedure).
+## Exact next steps for the resuming session
 
-Currently in flight: generation 3 (agent `a6dc129243c9ce2ad`) adopting
-`specs/drain-multi-spec-swarm/DRAIN-BATON.md`, working: finish
-drain-multi-spec-swarm/02, finish eval-coverage-tiers/04-08,
-spec-completion review + release both leases, then critique intake
-(`drain-plugin-path-resolution`), 3b auto-breakdown
-(`drain-read-once-discipline`), then stub intake on ~9 draft stubs.
+**Thread A:** wait for generation 5's notification. If it batoned again,
+spawn the next generation the same way (Agent tool, `subagent_type: "claude"`,
+`run_in_background: true`, self-contained prompt: adopt the newest
+`DRAIN-BATON.md` — search `specs/*/DRAIN-OWNER.md` for the live
+`Run-token` if the baton file is again missing — follow
+`.claude/skills/drain/SKILL.md`, reuse `.claude/worktrees/drain-orchestrator`,
+emit `agentprof` markers, keep going per R1). If it reached the batch
+interview / exit checklist, the run is done — relay it.
 
-## Exact next step for the resuming session
+**Thread B:** wait for the critique verdict. On READY (or READY WITH NITS
+after a mechanical-findings fix loop, capped at 2-4 cycles per
+`.claude/rules/token-discipline.md`), confirm `Breakdown-ready: true` got
+written to the SPEC.md header, then self-chain `/breakdown` on it (Skill
+tool, per CLAUDE.md's self-chain conventions — a critic-READY artifact,
+model-invocable target, user hasn't scoped the request to spec-only). On
+NOT READY, relay findings and fix per the critique skill's triage (apply
+MECHANICAL findings directly, present JUDGMENT findings to the user before
+applying). If `/breakdown` completes and the human's live request already
+authorized draining ("drain everything" is still standing scope, not scoped
+to a snapshot of `specs/` as it existed when first said), the new
+`agentprof-skill-audit` spec's tasks become part of Thread A's queue
+automatically — generation 5+ was told to check for it during 3b
+auto-breakdown, but if `/breakdown` runs it directly in this thread first
+that's fine too, whichever happens first.
 
-1. Check for a live notification from agent `a6dc129243c9ce2ad` first —
-   if the harness already delivered one, read it before doing anything
-   else; don't re-derive what it already reported.
-2. If it batoned again (generation 4): find the newest
-   `specs/*/DRAIN-BATON.md` by commit time (`git log -1 --format=%cI -- '
-specs/*/DRAIN-BATON.md'` per candidate, or just check whichever spec(s)
-   still carry a `DRAIN-OWNER.md` under Run-token `6da9bf9a672dfa74`),
-   read it, and spawn generation 4 the same way generation 3 was spawned:
-   `Agent` tool, `subagent_type: "claude"`, `run_in_background: true`, a
-   self-contained prompt telling it to adopt the baton, follow
-   `.claude/skills/drain/SKILL.md`, reuse
-   `.claude/worktrees/drain-orchestrator`, emit `agentprof` stage markers,
-   keep going per the R1 exhaustion contract, and baton again itself at
-   its own threshold rather than running the resuming session's context
-   up. Then end that turn immediately (one-writer invariant) — don't keep
-   the resuming session as the active queue-writer either.
-3. If it reached step 4 (batch interview + seven-section exit checklist):
-   the run is done — relay the checklist to the user, no further spawning
-   needed.
+## Files touched this session (partial — see git log for full detail,
 
-## Files touched (this hub session, generations 1-2 directly; generation
+commits are the authoritative record)
 
-3's own changes are not yet known to this file)
-
-- `.claude/rules/human-blockers.md`, `.claude/skills/drain/reference.md`,
-  `HUMAN.md`, `antigravity/.agents/workflows/drain.md`,
-  `.claude-plugin/plugin.json` (`human-blocker-impact-clarity`'s 4 tasks)
-- `.claude/rules/token-discipline.md` (`prompt-tweaking-roi`'s 1 task)
-- Per-spec `DRAIN-OWNER.md` / `DRAIN-BATON.md` / `evidence/spec-review.md`
-  files across the specs listed above (queue-state bookkeeping)
+- Thread A: see per-generation baton "Done / next" sections in git history
+  (`git log --oneline --grep='baton pass'`) for the full per-task file list;
+  too large to re-list here.
+- Thread B: `specs/agentprof-skill-audit/SPEC.md` (new).
 
 ## Gotchas
 
-- `drain_frontier.py` exits 2 on any spec dir containing a `Status: draft`
-  or `Status: obsolete` task file ("malformed Status value") — confirmed
-  on 11 specs. Fall back to verbatim header reads there per SKILL.md's own
-  contract; it is NOT a real failure to route around differently.
+- **Account spend-limit hit mid-run** (both a critique dispatch and drain
+  generation 4 died from it in the same short window) — already raised by
+  the human, but a resuming session should watch for `status: failed` /
+  "monthly spend limit" in task-notifications and treat it as an
+  Environment-kill event (sweep in-progress locks after confirming no
+  worker artifacts exist, reset to pending, do not blindly relaunch without
+  checking — see `.claude/skills/drain/reference.md`'s "Environment kill").
+- `drain_frontier.py` exits 2 on any spec dir with a `Status: draft`/
+  `obsolete` task file — known pre-existing scanner gap, fall back to
+  verbatim header reads, not a real failure.
 - Task-file merges conflict on `Status: in-progress` vs `Status: done`
-  essentially every time (the orchestrator's own flip commit vs. the
-  worker's own close-out commit touching the same line) — always resolve
-  to `done`, it's mechanical.
-- A repo formatter/linter hook fires on Edit/Write of task and evidence
-  files — re-read before a follow-up Edit whose `old_string` targets a
-  just-reformatted region; it mangled a conflict-marker remnant into
-  escaped/broken text once this run (`prompt-tweaking-roi/01`'s task
-  file), needing a manual rewrite.
-- At least one implementation-worker skipped its own task file's
-  Status/checkbox close-out, misreading its `Touch:` header as excluding
-  the task file itself (`human-blocker-impact-clarity/04`) — drain had to
-  apply that close-out itself post-merge after independently re-verifying
-  the acceptance commands. Watch for this pattern recurring; may be worth
-  tightening the worker-prompt wording if it does.
-- Another live local Claude Code session (name `claude-9d` in
-  `claude agents --json`, cwd also `/Users/sjaconette/claude`) shares this
-  repo but works on unrelated tasks (it wrote the pre-existing
-  `.claude/HANDOFF.md` this file deliberately did not touch) — not a
-  drain collision, just noise if you check live sessions.
-- `agentprof:stage=*` / `agentprof:role=*` HTML-comment markers were
-  missed for this hub's first 5 verdicts before the human caught it —
-  emit them from the very first step in any successor generation.
+  essentially every time — always resolve to `done`.
+- A repo formatter/linter hook fires on Edit/Write of markdown files —
+  re-read before a follow-up Edit targeting a just-reformatted region.
+- A `DRAIN-BATON.md` can apparently vanish between being committed and a
+  later generation reading it (observed this session, gen4→gen5 boundary,
+  cause not diagnosed) — a resuming session should not assume a baton file
+  it expects to find is actually still there; re-derive state from
+  `DRAIN-OWNER.md` + a fresh `drain_frontier.py` inventory if it's missing.
+- Another live local Claude Code session (`claude-9d` in
+  `claude agents --json`) shares this repo's cwd on unrelated work — not a
+  collision.
 
 ## Verification
 
-No task from this hub session is unverified-and-parked: every `done` task
-listed above already passed drain's own merge-time whitelist-diff check
-plus project gates (`tests/test_*.sh`, `evals/lint-ultra-gate.sh`) before
-merging — that IS this run's verification layer, already applied per
-task, not a separate pass owed here. Two items are explicitly
-manual-pending (not blocking, both self-assessed compliant by their
-worker, awaiting a human/reviewer read): `prompt-tweaking-roi/01`'s R2/R4
-citation check, and `human-blocker-impact-clarity/03`'s end-to-end
-readability check.
+Thread A: every `done` task already passed drain's own merge-time
+whitelist-diff + gate checks before merging — not re-verified here.
+Thread B: nothing merged yet — spec is pre-implementation, verification
+happens at `/breakdown` → `/build`/`/drain` time per its own acceptance
+criteria (production rigor, TDD required).
