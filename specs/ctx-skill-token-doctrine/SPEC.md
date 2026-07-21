@@ -2,14 +2,26 @@
 
 Breakdown-ready: true
 
-## Landing order (breakdown constraint)
+## Landing order (breakdown constraint — the SKILL.md editor registry)
 
-Three specs edit the ctx SKILL.md (and its antigravity mirror):
-this one creates the "Reading ladder" (R2); ctx-static-analysis-
-augmentation R1 rewrites rung 2; ctx-query-ergonomics R4 rewrites rung
-3 and the command table. They MUST land serialized in that order —
-breakdown must not emit their SKILL.md-editing tasks as parallel work,
-and each such task edits SKILL.md and the mirror in the same commit.
+SEVEN specs edit the ctx SKILL.md (and its antigravity mirror). This
+section is the single serialization registry; a spec that edits the
+skill without a slot here may not be broken down. Order:
+
+1. this spec R2 (creates the "Reading ladder") and R7 (scope cautions)
+2. ctx-static-analysis-augmentation R1 (rung 2 ast-grep enrichment)
+3. ctx-query-ergonomics R4 (rungs 3-4 + command table)
+4. ctx-minified-skip R5 (rewrites R7's vendored-noise caution — depends
+   on R7 having landed)
+5. ctx-dead-code-zones R4 (rewrites R7's attic caution — same R7
+   dependency; command table rows)
+6. ctx-absence-check R5 (updates R7's absence-fallacy caution + VERIFY
+   ABSENCE ladder guidance)
+7. ctx-cujs R3 (one-line CUJ-playbook link — always last)
+
+These MUST land serialized in this order — breakdown must never emit
+two SKILL.md-editing tasks as parallel work — and each such task edits
+SKILL.md and the antigravity mirror in the same commit.
 
 ## Problem
 

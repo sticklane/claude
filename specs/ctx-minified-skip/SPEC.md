@@ -18,54 +18,78 @@ default with zero config.
 
 ## Solution
 
-At index time, before parsing, classify each candidate file with a
-cheap content check; classified-minified files are recorded in the
-index as skipped-with-reason (so tree/map can show them) but produce
-no symbols. Detection stays heuristic and conservative — the cost of a
-false positive (a real source file skipped) is silent blindness, so
-thresholds favor false negatives and every skip is visible.
+At index time, before parsing, classify each CANDIDATE file — defined
+as a file one of the `context-tree/src/lang/` extractors would accept;
+files no extractor parses (.md, .json, .css, sourcemaps) are not
+candidates and are untouched by this spec. Classified-minified
+candidates are recorded in the index as skipped-with-reason (so tree
+can show them) and produce no symbols. Detection stays heuristic and
+conservative — the cost of a false positive (a real source file
+skipped) is silent blindness, so thresholds favor false negatives and
+every skip is visible.
 
 Detection signal (tunable constants, pinned by tests):
 
-- Name pattern: `*.min.js`, `*.min.css`, `*.min.mjs` — always skipped.
-- Content heuristics for unsuffixed bundles, ALL required to trigger:
-  file > 50 KB; AND (average line length > 400 bytes OR a single line
-  > 5000 bytes holds > 50% of file bytes). Sourcemap comment
-  > (`//# sourceMappingURL=`) may strengthen but never suffices alone.
+- Name pattern: `*.min.js`, `*.min.mjs` (extractor-covered extensions
+  only — there is no CSS extractor, so `.min.css` is out of scope) —
+  always skipped.
+- Content heuristics for unsuffixed bundles, requiring file > 50 KB
+  AND either: (a) average line length > 400 bytes; or (b) total line
+  count ≤ 5 AND the largest line holds > 50% of file bytes (the
+  whole-bundle-on-one-line shape). The ≤ 5-line guard deliberately
+  exempts a normal source file containing one giant embedded literal
+  (base64 blob amid ordinary code) — that class must NOT be skipped,
+  and R3 pins it with a fixture. Sourcemap comments
+  (`//# sourceMappingURL=`) may strengthen but never suffice alone.
+
+Escape hatch (decided — the `.ctxignore` grammar is subtractive-only
+per ctxignore-git-overlay R2 and the shipped `CtxignoreOverlay`, so
+`!` negation is NOT available): a new optional sibling file
+`.ctxkeep`, same glob grammar as `.ctxignore` (reuse the existing
+matcher), whose sole semantic is "exempt matching paths from minified
+auto-skip". It is NOT a general re-include and cannot override
+`.ctxignore` membership.
 
 ## Requirements
 
-- R1 — Classification runs per-file at index time (per-file isolation
-  preserved; O(changed files)); result stored with a reason enum
-  (`minified-name` / `minified-content`). Re-classification follows
-  the same staleness rules as parsing.
+- R1 — Classification runs per-candidate-file at index time (per-file
+  isolation preserved; O(changed files)); result stored with a reason
+  enum (`minified-name` / `minified-content`). Re-classification
+  follows the same staleness rules as parsing.
 - R2 — Skipped files yield zero symbols in `map`/`refs`/`sig`;
-  `ctx tree <dir>` lists them with a `(skipped: minified)` marker
-  rather than omitting them (visibility rule — a skip must never look
-  like absence). Acceptance: golden test with a committed minified
-  fixture (name-pattern) and a generated single-line fixture
-  (content-pattern): map/refs contain none of their symbols; tree
-  shows both with the marker.
-- R3 — False-positive guard: golden test that a normal long source
-  file (> 50 KB, ordinary line lengths — generate a fixture) is NOT
-  skipped; and a one-line escape hatch documented (re-include via
-  `.ctxignore`-family config or a `!` override — reuse the existing
-  matcher grammar, do not invent new syntax; coordinate with
-  specs/ctxignore-git-overlay so overlay-excluded and
-  minified-skipped reasons stay distinct in output).
-- R4 — `ctx map` on a fixture repo containing the minified fixture
-  ranks only real symbols. Acceptance: golden map output contains no
-  fixture-bundle symbols.
-- R5 — Docs: context-tree docs + the ctx skill scope cautions replace
-  "map noise from committed vendored trees is a membership problem"
-  with the two-mechanism story (minified auto-skip vs explicit
-  .ctxignore membership) — skill+mirror same-commit, respecting the
-  Landing order in specs/ctx-skill-token-doctrine.
+  `ctx tree <dir>` lists them with a `(skipped: minified)` marker —
+  a NEW file-level output class: today tree renders only
+  symbol-bearing files, and non-candidate files (.md, .json) remain
+  omitted as before; only minified-skipped CANDIDATES gain the listed
+  marker (a skip must never look like absence, but non-parseable
+  files were never expected present). Acceptance: golden tests with a
+  committed `*.min.js` fixture and a generated ≤5-line single-line
+  bundle fixture: `map` output contains none of their symbols; `tree`
+  shows both with the marker; a `.md` file in the same fixture dir
+  stays unlisted.
+- R3 — False-positive guards, three fixtures, none skipped: (a) a
+  normal source file > 50 KB with ordinary line lengths; (b) a source
+  file with many ordinary lines plus one embedded > 50%-of-bytes
+  literal line (the ≤ 5-line guard's reason to exist); (c) a
+  `.ctxkeep`-matched copy of the minified fixture (escape hatch
+  works). Plus one golden asserting `.ctxkeep` does NOT resurrect a
+  `.ctxignore`-excluded path.
+- R4 — Docs: context-tree docs + the ctx skill scope cautions replace
+  the vendored-noise caution (authored by
+  specs/ctx-skill-token-doctrine R7 — HARD DEPENDENCY: this task
+  cannot land before R7 has) with the two-mechanism story (minified
+  auto-skip vs explicit .ctxignore membership vs .ctxkeep exemption).
+  This holds SLOT 4 of the SKILL.md editor registry in
+  token-doctrine's Landing order; skill + antigravity mirror
+  same-commit.
 
 ## Non-goals
 
-- General vendored-code exclusion (that is membership —
+- General vendored-code exclusion (membership —
   specs/ctxignore-git-overlay).
-- Beautified-bundle detection (normal line lengths, generated content)
-  — undetectable cheaply; membership config owns it.
+- Non-candidate file types (.min.css, sourcemaps, JSON data,
+  lockfiles) — no extractor parses them, so there is nothing to skip;
+  they gain no markers.
+- Beautified-bundle detection (normal line lengths, generated
+  content) — undetectable cheaply; membership config owns it.
 - Any model/LLM involvement (maintenance never calls a model).

@@ -24,10 +24,13 @@ CUJs by name instead of re-describing usage.
 
 The eight CUJs (to be refined, not restated, in the doc):
 
-1. ORIENT — "what is this codebase/module?" `map --limit` + `tree` per
-   top dir. Failure modes: index pollution (minified/vendored —
-   specs/ctx-minified-skip, specs/ctxignore-git-overlay), ranking
-   noise (codebase-context-tree tasks/16).
+1. ORIENT — "what is this codebase/module?" `map --tokens N` (note:
+   map has NO `--limit` flag — cli.rs gives it `--tokens`/`--doc`/
+   `--json`; the shipped skill table's `map [--limit N]` is wrong and
+   gets corrected in the R3 edit) + `tree` per top dir. Failure modes:
+   index pollution (minified/vendored — specs/ctx-minified-skip,
+   specs/ctxignore-git-overlay), ranking noise
+   (codebase-context-tree tasks/16).
 2. LOCATE — "where is X / who calls X?" `refs`/`sig`, file-scoped
    selector on ambiguity (specs/ctx-query-ergonomics R1). Failure
    mode: heuristic misresolution (specs/ctx-static-analysis-
@@ -50,26 +53,41 @@ The eight CUJs (to be refined, not restated, in the doc):
 
 ## Requirements
 
-- R1 — `docs/guides/ctx-cujs.md` exists, ≤180 lines, one section per
-  CUJ with the four fields (trigger, sequence, token shape, failure
-  modes), each failure mode citing its owning spec by path. Acceptance:
-  `grep -c '^## ' docs/guides/ctx-cujs.md` = 8; every
-  `specs/ctx-*`/`specs/ctxignore-*` path cited resolves
-  (`ls` each cited path).
-- R2 — Gap table: the doc ends with a table mapping CUJ → serving
-  spec(s) → status (shipped / specced / gap). Any cell marked "gap"
-  must have a one-line proposed next step. Acceptance: table present;
-  zero unexplained gaps.
+- R1 — `docs/guides/ctx-cujs.md` exists, ≤180 lines, one `## ` section
+  per CUJ plus a final `## Gap table` section (so exactly NINE `## `
+  headings — this count includes R2's table, resolving the R1/R2
+  tension), each CUJ carrying the four fields (trigger, sequence,
+  token shape, failure modes), each failure mode citing its owning
+  spec by path. Acceptance: `grep -c '^## ' docs/guides/ctx-cujs.md`
+  = 9; the last heading is `## Gap table`; every cited spec path
+  resolves (`ls` each).
+- R2 — Gap table: the doc's final `## Gap table` section maps CUJ →
+  serving spec(s) → status (shipped / specced / gap), where every
+  "shipped" cell cites the code path proving it (e.g.
+  ctxignore-git-overlay → context-tree/src/vcs/mod.rs overlay) and
+  every "specced" cell cites the spec path — a status without its
+  citation fails R2 (anti-gaming: statuses are evidence-backed, not
+  claimed). Any "gap" cell has a one-line proposed next step.
 - R3 — The ctx skill's body (`.claude/skills/ctx/SKILL.md` + the
   antigravity mirror, same-commit) links the doc once ("CUJ playbook:
-  docs/guides/ctx-cujs.md") — this is a one-line addition and must
-  respect the Landing order in specs/ctx-skill-token-doctrine (it
-  lands last, after the ladder edits, to avoid the shared-surface
-  merge trap).
-- R4 — Each of the four in-flight ctx specs gains a one-line "Serves
-  CUJ: <n>" annotation under its title (mechanical; no content
-  change). Acceptance: `grep -l 'Serves CUJ' specs/ctx-*/SPEC.md`
-  matches all four.
+  docs/guides/ctx-cujs.md") and fixes the command-table error `map
+[--limit N]` → `map [--tokens N]`. This holds SLOT 7 (always last)
+  of the SKILL.md editor registry in
+  specs/ctx-skill-token-doctrine's Landing order section. Acceptance:
+  `grep -q 'docs/guides/ctx-cujs.md' .claude/skills/ctx/SKILL.md`
+  and the same grep on the antigravity mirror both succeed;
+  `grep -c 'map \[--limit' .claude/skills/ctx/SKILL.md` returns 0.
+- R4 — The three in-flight sibling specs — EXACTLY
+  specs/ctx-skill-token-doctrine, specs/ctx-query-ergonomics,
+  specs/ctx-static-analysis-augmentation — each gain a one-line
+  "Serves CUJ: <n>" annotation under the title (mechanical; no content
+  change). specs/ctxignore-git-overlay is EXCLUDED: it already shipped
+  (overlay live in context-tree/src/vcs/mod.rs). The three new
+  round-2 specs already carry the line at authoring. Acceptance:
+  `grep -l 'Serves CUJ' specs/ctx-skill-token-doctrine/SPEC.md
+specs/ctx-query-ergonomics/SPEC.md
+specs/ctx-static-analysis-augmentation/SPEC.md` lists all three
+  named files.
 
 ## Non-goals
 

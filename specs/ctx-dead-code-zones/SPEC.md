@@ -30,8 +30,20 @@ skipping (specs/ctx-minified-skip).
 
 Config: reuse the `.ctxignore` file's home and matcher grammar in a
 sibling file `.ctxzones`, one `<label>: <glob>` per line (e.g.
-`archived: attic/`). No new glob syntax. Zero config → zero zones →
-output byte-identical to today.
+`archived: attic/`). Line-grammar edges (pinned here so goldens don't
+freeze accidents): label charset `[a-z0-9-]+`; the same label may
+appear on multiple lines (globs union); when two labels match one
+path, first match in file order wins (single tag per path);
+`--zone <label>` with an undeclared label errors (exit 2, message
+lists declared labels). No new glob syntax. Zero config → zero zones
+→ output byte-identical to today.
+
+Seam with specs/ctx-absence-check (one sentence, mirrored there):
+"no-match" means SYMBOL RESOLUTION FAILED and triggers the
+absence-check boundary output; a symbol that resolves but whose
+results are emptied by filters (`--live-only`, `--in`, `--zone`) is
+NOT a no-match — it emits R3's zones/filter tail, never the absence
+boundary, and exits 0.
 
 ## Requirements
 
@@ -48,16 +60,24 @@ output byte-identical to today.
   primitive for "only kept alive by dead code". Acceptance: fixture
   where a symbol's every reference is in-zone; `--live-only` output
   is empty with a one-line "N references exist only in zones:
-  <labels>" tail (never a bare empty result — same visibility rule as
-  minified skips: filtered-out must not look like absent).
-- R4 — Docs: skill command table + scope cautions updated (the attic
-  caution becomes "zone dead trees, don't exclude them"); skill +
-  antigravity mirror same-commit, respecting
-  specs/ctx-skill-token-doctrine's Landing order. The CUJ doc's
-  DEDUP/DEAD CODE section (specs/ctx-cujs R1) cites this spec.
-- R5 — fooszone follow-through recorded, not performed here: after
-  this ships, fooszone adds `.ctxzones` with `archived: attic/`
-  (a one-line task for that repo's TASKS.md; this spec only notes it).
+  <labels>" tail and exit 0 (resolution succeeded; contrast plain
+  refs no-match which stays nonzero — see the seam definition in
+  Solution; never a bare empty result — filtered-out must not look
+  like absent). Golden tests name their commands: `ctx refs <sym>`,
+  `ctx refs <sym> --live-only`, `ctx refs <sym> --zone archived`,
+  each in text and `--json` modes.
+- R4 — Docs: skill command table + scope cautions updated (rewrites
+  the attic/vendored caution AUTHORED BY token-doctrine R7 — hard
+  dependency, R7 must land first — to "zone dead trees, don't exclude
+  them"). This holds SLOT 5 of the SKILL.md editor registry in
+  token-doctrine's Landing order; skill + antigravity mirror
+  same-commit. The CUJ doc's DEDUP/DEAD CODE section
+  (specs/ctx-cujs R1) cites this spec.
+- R5 — fooszone follow-through: ALREADY RECORDED upstream — fooszone
+  `specs/repo-orientation-hygiene/SPEC.md` (REVISED 2026-07-21)
+  documents the `.ctxzones` + `archived: attic/` follow-up and its
+  TASKS.md line. This requirement is a no-op pointer; no task is
+  emitted for it.
 
 ## Non-goals
 
