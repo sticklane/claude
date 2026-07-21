@@ -1,6 +1,6 @@
 # Task 02: token-discipline.md swarm-mode carve-out
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 4 turns
@@ -31,7 +31,7 @@ Only `.claude/rules/token-discipline.md`. Do not touch
 
 ## Acceptance
 
-- [ ] `grep -ci "swarm.*10\|10.*swarm\|drain-multi-spec-swarm" .claude/rules/token-discipline.md` → ≥ 1
+- [x] `grep -ci "swarm.*10\|10.*swarm\|drain-multi-spec-swarm" .claude/rules/token-discipline.md` → ≥ 1
       (0 today, verified 2026-07-19). Depth ceiling: L0 grep on doctrine
       prose — the honest ceiling for a one-sentence rule edit. Behavioral
       complement, a named verifier judgment: confirm the carve-out
