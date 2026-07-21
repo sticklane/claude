@@ -1,6 +1,6 @@
 # Task 03: Retrofit the repo's current HUMAN.md entry to the new grammar
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 10 turns
