@@ -438,3 +438,38 @@ surprise requiring investigation each time; it's mechanical. (A
 `.gitattributes` custom merge driver scoped to task files' `Status:` line
 would eliminate the manual-resolve step entirely — worth a future spec if
 this keeps recurring.)
+
+## An ad-hoc Workflow-authored drain's own FAIL verdicts can be wrong — verify against merged main directly
+
+A custom ultracode `Workflow` script (not the `/drain` skill) dispatched
+three parallel `implementation-worker` agents in isolated worktrees, each
+of which hit a sandbox restriction blocking direct git operations against
+the shared main checkout. Each worker's own workaround — merge
+`origin/main` into its own branch, then `git push origin HEAD:main` — was
+sound, but the workflow's verify step then reported `verifyVerdict: FAIL`
+with "no implementation done" for all three tasks, quoting the merge-commit
+SHA (not the real feat commit) as evidence and citing the task file's own
+`Status: pending` header as corroboration. All three were actually fully
+implemented, merged, and `Status: done` on `origin/main` — the verify step
+had checked a pre-merge snapshot, not the post-merge state its own worker
+had just pushed. Never trust a workflow's FAIL/DONE verdict at face value
+when its own notes describe a mid-run merge-to-route-around-a-restriction:
+`git log`/`git show` the actual claimed commit hash against `origin/main`
+and re-run the acceptance criteria yourself before acting on the verdict
+(discarding real work, relaunching, or reporting failure to the user).
+
+## A spec partly drained outside the `/drain` skill leaves gaps in spec-completion-review's diff recovery
+
+Spec-completion review recovers its diff range by grepping for the pinned
+`drain: <slug> task NN in-progress` commit message
+(`.claude/skills/drain/reference.md`'s "Spec-completion review worker").
+When a spec's earlier tasks were completed by a non-skill process (an
+ad-hoc `Workflow` script, a hand-run `/build`, or any flow that doesn't
+write that exact commit contract), the grep finds only the commits the
+standard `/drain` skill itself wrote this run — the recovered range silently
+excludes those earlier tasks' product diffs, not just their docs/config
+ones. This isn't a bug to fix mid-run: if those earlier tasks were already
+independently verified (e.g. by inspecting `origin/main` directly), it's
+correct for the narrower range to skip re-reviewing them — just don't
+mistake a narrow "skipped: docs-only" verdict for "the whole spec's product
+code was reviewed."
