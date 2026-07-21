@@ -164,15 +164,16 @@ building it):
       config shows no plugin/skills mount and contains the ultracode
       keyword in its brief; arm S's shows the plugin mount and no
       ultracode keyword; both arms pin identical CLI version and
-      plugin commit; every hidden `assert.sh` path resolves OUTSIDE
-      both arms' mounts (all asserted by the script, printed as
-      evidence)
+      plugin commit; every hidden `assert.sh` path AND every committed
+      reference-solution path resolves OUTSIDE both arms' mounts — the
+      answer key is as hidden as the grader (all asserted by the
+      script, printed as evidence)
 - [ ] `bash evals/headtohead/run.sh --task fixture --arm S --seeds 1`
       → completes end-to-end against a bundled toy fixture task and
       emits a results row that validates against
       `evals/headtohead/result.schema.json`
 - [ ] `bash evals/headtohead/run.sh --task fixture --arm U --seeds 1
-    --dump-judge-input` → the ASSEMBLED judge input for the run (not
+  --dump-judge-input` → the ASSEMBLED judge input for the run (not
       the template) contains no word-boundary match for the ultracode
       keyword, arm names, or this plugin's name (asserted by the
       script)
@@ -181,7 +182,7 @@ building it):
       untouched snapshot) and `<task> GREEN OK` (passes against the
       committed reference solution); exits 0 only when all six hold
 - [ ] `bash evals/headtohead/run.sh --task crashfixture --arm U
-    --seeds 1` → the bundled crash fixture (session dies mid-run /
+  --seeds 1` → the bundled crash fixture (session dies mid-run /
       hits the cap) emits a schema-valid row with `pass: false` and
       non-null partial `usd`/`tokens` — crashed runs are recorded,
       never dropped
