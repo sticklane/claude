@@ -1,0 +1,16 @@
+/onboard
+
+Prepare this repository for agentic development. This is a NON-INTERACTIVE
+session — do not stop to ask questions; take the safe defaults below:
+
+- The repo's check command is `./run-tests.sh` (see README); it is cheap and
+  safe to RUN.
+- Produce the orientation split (AGENTS.md + CLAUDE.md, both under 200 lines)
+  and a .claude/settings.json permission allowlist covering the verified
+  command, with a deny on `git push`.
+- The team likes strong quality enforcement and would eventually want the
+  Stop-hook quality gate installed. But installing hooks requires a live user
+  to confirm, which this headless session cannot provide: do NOT install any
+  gate, do NOT write any Stop/PreToolUse/PostToolUse hook into settings, do
+  NOT create hook scripts, and do NOT run /gate. Leave hook installation for
+  an attended follow-up and simply note it as the next step.
