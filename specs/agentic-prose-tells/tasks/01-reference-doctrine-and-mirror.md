@@ -1,6 +1,6 @@
 # Task 01: agentic-register tells subsection + mirror + gate + version
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 12 turns
@@ -56,15 +56,15 @@ it documents (no meta-discourse, no varnish) — dogfood the doctrine.
 
 ## Acceptance
 
-- [ ] `grep -q '^## Agentic-register tells' .claude/skills/prose-review/reference.md` → present
-- [ ] `test $(awk '/^## Agentic-register tells/{f=1;next} /^## /{f=0} f' .claude/skills/prose-review/reference.md | grep -Eio 'meta-discourse|false precision on knowable|evaluative varnish' | sort -u | wc -l) -eq 3` → three distinct tell names
-- [ ] `SUB=$(awk '/^## Agentic-register tells/{f=1;next} /^## /{f=0} f' .claude/skills/prose-review/reference.md); test $(printf '%s' "$SUB" | grep -Eic 'arxiv|liang|kobak|singhal|kalai') -ge 3 && test $(printf '%s' "$SUB" | grep -c 'Before') -ge 3` → each tell cited + has a before→after
-- [ ] `awk '/^## Agentic-register tells/{f=1;next} /^## /{f=0} f' .claude/skills/prose-review/reference.md | grep -qi 'RLHF-trained assistant'` and `! awk '/^## Agentic-register tells/{f=1;next} /^## /{f=0} f' .claude/skills/prose-review/reference.md | grep -Eq '717,369|519 (local )?sessions'` → runtime-neutral, no operator counts
-- [ ] `awk '/^## Agentic-register tells/{f=1;next} /^## /{f=0} f' .claude/skills/prose-review/reference.md | grep -qi 'status-telegraphy carve-out'` and the block matches `item-1`, `gates green`, and a T3-hit example
-- [ ] `awk '/## Table of contents/{f=1;next} f&&/^Loaded on demand/{f=0} f' .claude/skills/prose-review/reference.md | grep -qi 'agentic-register'` → TOC block names it
-- [ ] `grep -Eq '^[^#].*\|Agentic-register tells' tests/mirror-procedure-manifest.txt` → real manifest data line
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` → exits 0
-- [ ] `test $(awk '/^## Agentic-register tells/{f=1;next} /^## /{f=0} f' antigravity/.agents/skills/prose-review/reference.md | grep -Eio 'meta-discourse|false precision on knowable|evaluative varnish' | sort -u | wc -l) -eq 3` → mirror carries the full subsection
-- [ ] `grep -q '^## Agentic-register tells' codex/.agents/skills/prose-review/reference.md` → Codex symlink resolves
-- [ ] `git show HEAD:.claude-plugin/plugin.json | grep -q '"version": "0.9.29"' && grep -q '"version": "0.9.30"' .claude-plugin/plugin.json` → version bumped from its base value
-- [ ] `test $(wc -l < .claude/skills/prose-review/SKILL.md) -lt 500` → SKILL.md untouched, under budget
+- [x] `grep -q '^## Agentic-register tells' .claude/skills/prose-review/reference.md` → present — grep -c returned 1
+- [x] `test $(awk '...' | grep -Eio 'meta-discourse|false precision on knowable|evaluative varnish' | sort -u | wc -l) -eq 3` → three distinct tell names — extracted names: evaluative varnish / false precision on knowable / meta-discourse
+- [x] each tell cited + has a before→after — grep -Eic 'arxiv|liang|kobak|singhal|kalai' = 8 (≥3); grep -c 'Before' = 3 (≥3)
+- [x] runtime-neutral, no operator counts — 'RLHF-trained assistant' present (2 lines); '717,369|519 (local )?sessions' absent (0 matches)
+- [x] status-telegraphy carve-out block — 'status-telegraphy carve-out'=1, 'item-1'=1, 'gates green'=1, T3-hit 'landed clean'=2 all present
+- [x] TOC block names it — awk-extracted TOC block matches 'agentic-register' (1)
+- [x] real manifest data line — `grep -Eq '^[^#].*\|Agentic-register tells' tests/mirror-procedure-manifest.txt` matched (1)
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exits 0 — gate_exit=0
+- [x] mirror carries the full subsection — antigravity subsection extracted names: evaluative varnish / false precision on knowable / meta-discourse (3 distinct)
+- [x] `grep -q '^## Agentic-register tells' codex/.agents/skills/prose-review/reference.md` → Codex symlink resolves — grep -c returned 1 (symlink → antigravity mirror)
+- [x] version bumped from its base value — `git show HEAD:.claude-plugin/plugin.json` = "0.9.29"; working tree = "0.9.30"
+- [x] `test $(wc -l < .claude/skills/prose-review/SKILL.md) -lt 500` → SKILL.md untouched, 84 lines
