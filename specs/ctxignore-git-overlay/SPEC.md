@@ -72,9 +72,11 @@ opt-out, no ability to re-include what the VCS already ignores.
   entry re-indexes the path on the next sweep. No new sync verb, no
   cache-clear instruction in docs. Notes anchored to symbols in
   overlay-excluded files become unresolved/stale by the existing
-  staleness mechanism — no re-anchor into an excluded file is
-  attempted, and no note content is deleted; un-ignoring the path
-  restores resolution.
+  staleness mechanism *when no equivalent symbol remains in the indexed
+  set* (the layered re-anchor may legitimately re-anchor to a
+  byte-identical twin, e.g. the `src/` copy of an excluded `dist/`
+  symbol) — no re-anchor into an excluded file is attempted, and no
+  note content is deleted; un-ignoring the path restores resolution.
 - R5 — Unchanged invariants: `.context/cache/` is never indexed
   regardless of any ignore entry; a repo with no `.ctxignore` behaves
   byte-identically to today (both adapters).
