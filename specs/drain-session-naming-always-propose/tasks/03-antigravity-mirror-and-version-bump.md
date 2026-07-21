@@ -1,6 +1,6 @@
 # Task 03: Mirror the trigger fix into antigravity + bump plugin.json
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 18 turns
