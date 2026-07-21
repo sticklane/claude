@@ -1,6 +1,6 @@
 # Task 02: SKILL.md — stop implying naming is gen-1-only
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 10 turns
