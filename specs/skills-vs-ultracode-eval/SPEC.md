@@ -2,8 +2,6 @@
 
 Breakdown-ready: false
 Rigor: prototype
-Status: waiting
-Unblock: ask: Which 3 mid-sized coding tasks form the corpus? Candidates must meet the selection criteria in "The corpus" — name 3 repos/tasks or approve the suggested sourcing.
 
 ## The question
 
@@ -32,12 +30,14 @@ useful: a loss on cost or correctness tells us which parts to keep.
    whether skills trigger is part of what is measured — a toolkit that
    only works when the human invokes it by name has an adoption
    problem, which is a finding, not noise.
-4. The corpus is 3 mid-sized coding tasks (60–90 minutes at human
-   scale, multi-file, in codebases with green test suites). Each task
-   ships as: a repo snapshot ref, a ≤6-sentence brief, and a **hidden
-   acceptance script** (held out of both arms' filesystems) that runs
-   the repo's tests plus task-specific checks. Hidden because a
-   visible script invites teaching-to-the-test in both arms.
+4. The corpus is 3 purpose-built fixture tasks (multi-file, roughly
+   30–90 minutes at human scale, each a small codebase with a green
+   test suite, bundled in-repo so snapshots are exactly repeatable).
+   Each task ships as: a fixture repo snapshot, a ≤6-sentence brief,
+   and a **hidden acceptance script** (held out of both arms'
+   filesystems) that runs the repo's tests plus task-specific checks.
+   Hidden because a visible script invites teaching-to-the-test in
+   both arms.
 5. Each arm runs each task **3 times** — 18 headless sessions total.
    Variance across the 3 seeds is reported alongside the mean; a
    configuration that passes 3/3 cheaply but occasionally is worse
@@ -60,19 +60,74 @@ useful: a loss on cost or correctness tells us which parts to keep.
    the finding; the harness, not the finding, is what the tasks below
    build.
 
-## The corpus (selection criteria — the open decision)
+## The corpus (decided 2026-07-21)
 
-A candidate task qualifies if: its repo has a green test suite at the
-snapshot ref; the work spans ≥3 files; the brief fits in 6 sentences
-with no hidden requirements; correctness is checkable by tests
-(existing + task-specific hidden ones), not by reading prose; and the
-repo fits the container (no privileged setup, no interactive auth —
-docs/memory/unattended-worker-tool-limits.md). Suggested sourcing:
-one task each from three real repos on this machine that already meet
-the criteria (e.g. the ynab-mcp-server, budget_analysis, and
-agent-console codebases), authored as fixture snapshots so runs are
-repeatable. The maintainer names or approves the 3 (Unblock above);
-everything else in this spec is decided.
+Selection bar (unchanged): green test suite at the snapshot; work
+spans ≥3 files; brief ≤6 sentences with no hidden requirements;
+correctness checkable by tests, not prose; container-fit (no
+privileged setup, no interactive auth, no network installs —
+docs/memory/unattended-worker-tool-limits.md).
+
+Decision: maintainer direction (2026-07-21 live session) chose
+purpose-built fixture tasks over mining real repos — exactly
+repeatable snapshots, no private-repo coupling, stdlib-only in both
+languages so nothing is fetched at run time. The three deliberately
+span the coupling spectrum so neither arm gets a corpus-shaped
+advantage: T1 is tightly coupled (favors careful single-context
+reasoning), T3 is breadth-first mechanical (the fan-out shape
+multi-agent orchestration claims), T2 sits between.
+
+**T1 — `ledger` (Python, coupled bug-fix).** A small expense-tracker
+CLI (storage.py / report.py / cli.py + tests) whose monthly totals
+drift by cents on some ledgers: amounts flow as binary floats across
+all three modules, so the fix requires reasoning across boundaries,
+not a print-time patch. Brief: "The monthly report in this expense
+tracker drifts by a few cents on some ledgers. Find the cause and fix
+it so every report total is exact to the cent for any input ledger.
+All existing tests must stay green. Add regression coverage for the
+failure you found. Do not change the CLI's output format." Hidden
+checks: full suite; three held-out ledgers (including
+float-pathological amounts) whose report totals must match exact
+expected values; the shipped repro ledger now exact.
+
+**T2 — `notes-api` (Python stdlib HTTP, additive feature).** A small
+JSON notes service (router.py / handlers.py / store.py /
+validation.py / API.md + tests) whose list endpoint returns
+everything at once. Brief: "This notes service's GET /notes endpoint
+returns every note at once, which is unusable for large stores. Add
+limit/offset pagination and an optional tag filter as query
+parameters, with input validation returning HTTP 400 in the API's
+standard error shape for bad values. The response must include enough
+metadata for a client to page through all notes. Update API.md to
+document the new parameters. All existing tests must stay green; add
+tests for the new behavior." Hidden checks: full suite; black-box
+HTTP sequences against the running server — page math on a seeded
+store, tag filter alone and combined, limit=0 / negative /
+non-numeric → 400 in the standard shape, offset past the end → empty
+page with metadata; API.md names both parameters.
+
+**T3 — `sitegen` (Node, stdlib + node:test, breadth-first
+refactor).** A small static-site generator whose date-formatting
+logic is duplicated with drift across several modules (render.js,
+feed.js, archive.js, meta.js), one copy wrong for certain dates.
+Brief: "This static-site generator has date-formatting logic
+duplicated across several modules, and the copies have drifted — at
+least one renders certain dates wrong. Unify the duplicates into a
+single shared module and migrate every call site to it. Rendered
+output for the bundled sample site must stay identical, except where
+the buggy copy produced wrong dates — those must now be correct. All
+tests must stay green; add coverage pinning the corrected behavior."
+Hidden checks: full suite; build the sample site and diff against a
+golden output tree (correct dates baked in); exactly one
+date-format definition remains across src/ (structural count); the
+known-bad dates render correctly.
+
+Fixture repos and hidden scripts live under
+`evals/headtohead/tasks/<name>/` (repo snapshot + brief committed;
+`assert.sh` stored outside the arms' mounts per the harness design).
+Authoring them — with each fixture's suite green and each hidden
+script failing against the unmodified snapshot, passing against a
+reference solution — is harness build work for the breakdown.
 
 ## Controls and honesty rules
 
@@ -111,4 +166,4 @@ building it):
       `turns`, `wall_s` populated from the real transcript
 
 Next stage: /critique specs/skills-vs-ultracode-eval/SPEC.md, then
-/breakdown after the corpus Unblock is answered (human-launched).
+/breakdown (human-launched) — the corpus Unblock is resolved above.
