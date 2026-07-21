@@ -1,0 +1,9 @@
+/distill
+
+This is an unattended run with no interactive human — do not stop to ask or
+interview. You have no live conversation history this run: the transcript of
+the session you are distilling is saved in the file session-context.md at the
+repo root. Treat that file as the session to harvest. Read it, harvest its
+durable learnings, and route each per your procedure — writing anything worth
+keeping into CLAUDE.md, a .claude/rules file, or a docs/memory topic as
+appropriate.
