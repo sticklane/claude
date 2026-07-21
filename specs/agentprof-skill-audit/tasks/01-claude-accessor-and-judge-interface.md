@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P0
 Budget: 28 turns
@@ -77,11 +77,16 @@ two shared building blocks.
 
 ## Acceptance
 
-- [ ] `cd agentprof && go build ./...` succeeds.
-- [ ] `cd agentprof && go test ./internal/claude/... -run TestSkillInvocations`
+- [x] `cd agentprof && go build ./...` succeeds. (verifier: clean build, no output)
+- [x] `cd agentprof && go test ./internal/claude/... -run TestSkillInvocations`
       passes (red-first: confirm it fails before the implementation step).
-- [ ] `cd agentprof && go test ./internal/claude/... -run TestSkillFrontmatter`
+      (red confirmed: `undefined: claude.SkillInvocations` before impl; verifier: PASS)
+- [x] `cd agentprof && go test ./internal/claude/... -run TestSkillFrontmatter`
       passes (red-first), covering all four fixture cases in step 4.
-- [ ] `cd agentprof && go test ./internal/judge/...` passes, including the
+      (red confirmed before impl; verifier: 4/4 fixture cases PASS)
+- [x] `cd agentprof && go test ./internal/judge/...` passes, including the
       command-construction test asserting `CLAUDE_CONFIG_DIR` is set on the
       built command without executing it (red-first).
+      (red confirmed before impl; verifier: 3/3 PASS, command built without subprocess)
+
+Evidence: specs/agentprof-skill-audit/evidence/01-claude-accessor-and-judge-interface.md
