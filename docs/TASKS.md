@@ -133,3 +133,11 @@ http://127.0.0.1:8899/workboard` timed out 3x (60-85s, 0 bytes) on
   unconditionally OFFER, or spec the awaited-successor path as concretely
   as the nohup template. Incident + scrubbed transcript:
   docs/incidents/2026-07-21-drain-detached-relaunch.md (2026-07-21)
+- **drain: `drain_frontier.py` rejects the skill's own `draft`/`obsolete`
+  Status values.** On any queue containing discovered-work stubs or closed
+  stubs (both statuses the drain SKILL itself defines), the scanner prints
+  "malformed Status value 'draft'|'obsolete'" and exits non-zero, forcing
+  every generation onto the verbatim header-read fallback — observed on the
+  whole ~/specs queue, toolkit 0.9.29, 2026-07-21. Teach the scanner the
+  full status enum (pending/in-progress/done/deferred/blocked/failed/
+  draft/obsolete/skipped) and add a fixture with a draft stub. (2026-07-21)
