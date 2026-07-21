@@ -267,12 +267,14 @@ line every time you enter it.
 - Tell the user to `/clear` before starting the next task. Then, only if
   the just-completed task file resolves to a `specs/<slug>/tasks/*.md` path
   AND at least one sibling `tasks/*.md` in that same directory has a
-  `Status: pending` header line, print one additional line pointing the user
+  `Status: pending` header line — checked with `grep -l '^Status: pending'
+  specs/<slug>/tasks/*.md` (a header-only match, never a full `Read` of each
+  sibling file) — print one additional line pointing the user
   at `/drain specs/<slug>` for continuous work across the remaining tasks
   (alongside, not replacing, the `/clear` line). If the path is not under a
   `specs/<slug>/tasks/` layout, or the only siblings are `Status: blocked`
-  (or there are no siblings), print no nudge line — this is a printed
-  pointer, not a loop, so do not over-fire it.
+  (or there are no siblings — the `grep -l` prints nothing), print no nudge
+  line — this is a printed pointer, not a loop, so do not over-fire it.
 
 ## Ultra path
 

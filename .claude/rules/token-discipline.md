@@ -13,6 +13,12 @@ tokens on decisions; delegate consumption of raw material to subagents.
   conclusions, not the file dumps.
 - Read a file directly only when you are about to edit it, and prefer reading
   the relevant slice over the whole file.
+- **Header-only task checks use the cheap tools, never a full `Read`.** To
+  read a task file's header fields alone — `Status`, `Depends on`,
+  `Priority`, `Budget`, `Touch` — use `grep '^Status:'` / `grep '^Depends
+  on:'`, `specs/status.sh`, or `drain_frontier.py`'s own JSON, never an
+  unbounded `Read` of the task body. This is the doctrine home the drain and
+  build skills point at for any ad hoc header-only check.
 - Verification, review, and research that produce lots of intermediate output
   belong in subagents (`verifier`, `critic`, `Explore`) whose transcripts are
   discarded — only their final report costs you anything.

@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P1
 Budget: 15 turns
@@ -54,21 +54,25 @@ on:'` / `specs/status.sh` / `drain_frontier.py`'s own JSON, never an
 
 ## Acceptance
 
-- [ ] `grep -n "grep -l.*Status" .claude/skills/build/SKILL.md` returns a
+- [x] `grep -n "grep -l.*Status" .claude/skills/build/SKILL.md` returns a
       match at the closing-step sibling-scan location.
+      → passed: match at line 270 (closing-step sibling scan), see output above.
       Depth ceiling: this is a prose-only doctrine edit with no runtime to
       exercise — L0 text-presence is the ceiling; the behavioral
       complement is `/build`'s own closing step actually running the
       documented `grep` command on a live repo, which only an attended
       `/build` run can exercise (not unattended-verifiable).
-- [ ] `grep -n "status.sh" .claude/skills/drain/SKILL.md` returns a match
+- [x] `grep -n "status.sh" .claude/skills/drain/SKILL.md` returns a match
       near step 1 (anchored on `status.sh` alone — confirmed absent today;
+      → passed: match at line 85, in the doctrine line added right after the
+      step-1 `drain_frontier.py` invocation, see output above.
       `drain_frontier` already appears pre-existing 3× in this file at
       the step-1 invocation and is not a safe anchor, since it would match
       before this task does any work).
       Depth ceiling: same as above — L0 is the ceiling for a doctrine
       pointer; the behavioral complement is a live drain run actually
       following the pointer, not unattended-verifiable.
-- [ ] `grep -c "header-only\|never a full .Read." .claude/rules/token-discipline.md`
+- [x] `grep -c "header-only\|never a full .Read." .claude/rules/token-discipline.md`
       → 1 or more.
+      → passed: grep -c returned 2, see output above.
       Depth ceiling: same as above.
