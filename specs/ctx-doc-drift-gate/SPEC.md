@@ -61,7 +61,10 @@ docs/guides/ctx-cujs.md — the two surfaces agents load at query time.
   Waiver retirement is owned by THIS spec: a dedicated task, blocked on
   cujs/02 landing, whose Touch includes the R1 test file, deletes the
   seeded entry — cujs/02's own Touch has no grant to the test file, so
-  it cannot do it. Acceptance: test exists and runs green; with the
+  it cannot do it. The retirement task's own acceptance is "the R1
+  test runs green with the seeded entry removed" — running it before
+  cujs/02 lands fails on the map row, so premature execution
+  self-detects rather than silently redding main. Acceptance: test exists and runs green; with the
   waiver entry removed and cujs/02 unlanded it fails on the map row in
   BOTH files (demonstrated once in the task's evidence, then
   re-waived); the stale-waiver warning path has a test.
@@ -82,8 +85,11 @@ docs/guides/ctx-cujs.md — the two surfaces agents load at query time.
   scoping makes the check runnable and immune to pre-existing scattered
   mentions (`--depth`, `--tokens`, `--doc`, `--no-sync` are confirmed
   absent from the whole skill today; the section header is confirmed
-  absent too); the rust caution no longer claims rust is unextracted AND
-  `ctx tree context-tree/src` returning symbols is cited as the check;
+  absent too); the rust caution fix is runnable —
+  `grep -c 'NOT rust' .claude/skills/ctx/SKILL.md` = 0 (the literal
+  exists in the scope cautions today) AND `grep -q 'ctx tree
+  context-tree/src' .claude/skills/ctx/SKILL.md` succeeds (the cited
+  self-check, confirmed absent today);
   skill + antigravity mirror edited in the same commit; plugin.json
   bump per conventions. R1's conformance test then validates every
   newly documented flag against the binary, closing the loop.
@@ -115,11 +121,15 @@ update; the frozen "SLOT 7" number and the
 registry text. cujs task 02's gate greps exactly its listed predecessor
 markers, so without (c) "cujs lands last" is unenforced against R2 (R2
 and cujs/02 both edit the command-table region, so this serialization
-is load-bearing, not cosmetic). Before amending cujs/02, the breakdown
-session checks specs/ctx-cujs/DRAIN-OWNER.md for a live drain lease and
-defers the amendment rather than editing a leased spec's task
-mid-drain (concurrent-sessions rule; cujs/02 is parked DEFERRED, so a
-short wait is cheap). R2's task then lands
+is load-bearing, not cosmetic). Before touching the registry, the
+breakdown session checks specs/ctx-cujs/DRAIN-OWNER.md for a live
+drain lease; a live lease defers the ENTIRE registry commit — (a), (b),
+and (c) together, atomically — never a split that lands (a)+(b) while
+deferring (c), which would leave the registry at N slots while cujs/02
+still greps N-2 markers, exactly the inconsistency (c) prevents
+(concurrent-sessions rule; cujs/02 is parked DEFERRED, so a short wait
+is cheap — the R2 task is simply filed blocked on the registry commit).
+R2's task then lands
 serialized per the registry. R1 and R3 touch no skill file and may
 proceed independently of the registry chain — but note R1 depends on
 nothing landing first thanks to its waiver list. If

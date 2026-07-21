@@ -83,9 +83,14 @@ parallel work on the same files (concurrent-sessions collision rule).
   and `codex/.agents/skills/build/SKILL.md` — real content, not
   symlinks), all confirmed absent today; and a
   `<source>|<mirror>|Structure lookups (ctx)` line is added to
-  `tests/test_mirror_procedure_coverage.sh`'s manifest for each
-  source→mirror pair so a future re-drop is caught (CLAUDE.md's
-  "unlisted mirror silently ships un-mirrored" failure mode); the
+  `tests/mirror-procedure-manifest.txt` (the manifest file itself —
+  `tests/test_mirror_procedure_coverage.sh` is its reader, and it
+  silently skips unlisted pairs, so the manifest line is the entire
+  anti-re-drop protection) for each source→mirror pair, with the
+  source field naming the specific file the stanza landed in;
+  runnable check: `grep -c 'Structure lookups (ctx)'
+  tests/mirror-procedure-manifest.txt` ≥4 (CLAUDE.md's "unlisted
+  mirror silently ships un-mirrored" failure mode); the
   stanza is inside the dispatch-prompt
   template text, not a surrounding narrative section; mirror legs
   (antigravity + codex for drain/build) and plugin.json bump per
