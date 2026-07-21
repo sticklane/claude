@@ -236,3 +236,9 @@ Extraction helper used below: `SUB` = the subsection body,
 - [ ] `grep -q '"version": "0.9.30"' .claude-plugin/plugin.json` (R5)
 - [ ] `awk '/## Table of contents/{f=1;next} f&&/^Loaded on demand/{f=0} f' .claude/skills/prose-review/reference.md | grep -qi 'agentic-register'` — TOC block names the subsection (R6)
 - [ ] `test $(wc -l < .claude/skills/prose-review/SKILL.md) -lt 500` (R6)
+
+## Parallelization
+
+Task 02 (author-side conventions) cites the finalized subsection wording from
+task 01 (reference doctrine) — a shared undecided-design coupling — so they
+serialize. No concurrent-safe groups; both tasks run solo in order 01 → 02.
