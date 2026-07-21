@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P3
 Budget: 6 turns
@@ -70,7 +70,7 @@ names them as examples in prose.
 - [ ] `grep -n "^## Cache economics" .claude/rules/token-discipline.md` → exactly one match
 - [ ] `grep -c "^## " .claude/rules/token-discipline.md` → 8 (re-verify
       against `git show HEAD:.claude/rules/token-discipline.md | grep -c
-    '^## '` at dispatch time in case another spec landed a section first)
+  '^## '` at dispatch time in case another spec landed a section first)
 - [ ] MANUAL: a human or reviewing agent reads the new bullet and confirms
       it cites at least one named, URL-backed source (R2) and does not
       duplicate the section's existing three bullets (R4) — mark
