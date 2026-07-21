@@ -1,6 +1,6 @@
 # Task 02: docs, parent-spec supersession, mirror + plugin bump
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 8 turns
