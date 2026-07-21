@@ -1,6 +1,6 @@
 # Task 02: author-side principle in every runtime's conventions doc
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 8 turns
@@ -48,8 +48,8 @@ finalizes. The authored prose must itself avoid meta-discourse and varnish.
 
 ## Acceptance
 
-- [ ] `test $(grep -c 'lead with the result, not narrated intent' CLAUDE.md) -eq 1` and `awk '/lead with the result, not narrated intent/{p=1} p&&/reference.md/{print;exit}' CLAUDE.md | grep -q reference.md` → Claude bullet present + cites reference
-- [ ] `grep -Ei 'lead with the result, not narrated intent' CLAUDE.md | grep -Eqi 'status|telegraphy|factual'` → carve-out clause present on the bullet
-- [ ] `test $(grep -c 'lead with the result, not narrated intent' antigravity/AGENTS.md) -eq 1` → Antigravity bound
-- [ ] `! grep -A1 'lead with the result, not narrated intent' antigravity/AGENTS.md | grep -q '\.claude/'` → antigravity citation uses no `.claude/` path
-- [ ] `grep -Eqi 'authoring convention|output convention|lead with the result, not narrated intent' codex/AGENTS.md` → Codex bound, not silently skipped
+- [x] `test $(grep -c 'lead with the result, not narrated intent' CLAUDE.md) -eq 1` and `awk '/lead with the result, not narrated intent/{p=1} p&&/reference.md/{print;exit}' CLAUDE.md | grep -q reference.md` → Claude bullet present + cites reference — evidence: grep -c = 1; awk prints the `.claude/skills/prose-review/reference.md` citation line.
+- [x] `grep -Ei 'lead with the result, not narrated intent' CLAUDE.md | grep -Eqi 'status|telegraphy|factual'` → carve-out clause present on the bullet — evidence: the canonical-phrase line carries "keep terse factual status lines"; matched `factual`/`status`.
+- [x] `test $(grep -c 'lead with the result, not narrated intent' antigravity/AGENTS.md) -eq 1` → Antigravity bound — evidence: grep -c = 1 in antigravity/AGENTS.md under `## Quality discipline`.
+- [x] `! grep -A1 'lead with the result, not narrated intent' antigravity/AGENTS.md | grep -q '\.claude/'` → antigravity citation uses no `.claude/` path — evidence: cites `.agents/skills/prose-review/reference.md` (runtime-local); no `.claude/` in phrase line or the line after.
+- [x] `grep -Eqi 'authoring convention|output convention|lead with the result, not narrated intent' codex/AGENTS.md` → Codex bound, not silently skipped — evidence: deferral clause widened to name "output and authoring conventions ... inherited from it and binding here too"; matched `authoring convention`.

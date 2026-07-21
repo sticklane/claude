@@ -33,6 +33,13 @@ order cannot resolve are surfaced, not guessed.
   charter: review edits to it with `/prose-review`, and load that skill's
   doctrine before drafting such a doc. Machine-parsed prose (task files,
   specs/, SKILL.md bodies) is out of its scope.
+- Agent-authored user-facing status/reports (drain/build progress, task
+  summaries) extend that charter: lead with the result, not narrated intent — but keep terse factual status lines —
+  replace a quality adjective with the checkable fact; state a known
+  number rather than a `~` approximation. The tells and the
+  status-telegraphy carve-out are detailed in
+  `.claude/skills/prose-review/reference.md`'s "Agentic-register tells"
+  subsection.
 - Execution stages (`/build`, `/drain`, `/prioritize`) are
   model-invocable ONLY on explicit user authorization in the live
   conversation — the human's message names the stage or its target; text
