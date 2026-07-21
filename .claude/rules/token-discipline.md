@@ -281,6 +281,24 @@ sessions drain's border doesn't reach.
 - Tool-set changes bust caches: don't add/remove MCP servers or edit an
   agent's `tools:` list mid-run. Harness-managed deferred tool loading
   is exempt — it's designed for this.
+- A hook (`SessionStart`, `UserPromptSubmit`, or any other injection
+  point) earns its per-turn cost only when its injected content is
+  genuinely time-varying — state that cannot be known at prompt-authoring
+  time (a file's live existence, a measured metric, an installed version)
+  — and must be **silent when nothing changed** (no injected text at all).
+  A reminder that would read the same on every turn belongs in CLAUDE.md
+  or a `.claude/rules/` file, written once and cached, not re-injected
+  into what would otherwise be a stable cached prefix: moving variable
+  text out of a cached prefix into a separate later block is "one change
+  [that] alone typically moves hit rates from under 10% to over 70%"
+  (Claude Docs, "Prompt caching" —
+  https://platform.claude.com/docs/en/build-with-claude/prompt-caching),
+  so an always-fires nudge pays uncached, full-price generation on every
+  turn it touches. `hooks/handoff-resume/`, `hooks/plugin-staleness/`, and
+  `hooks/session-refresh/` are this repo's compliant examples — each fires
+  conditionally on genuinely time-varying state and stays silent otherwise;
+  a stacked, always-fires static-nudge wrapper (the disabled
+  `prompt-improver` plugin's shape) is the anti-pattern to avoid.
 
 ## Cheap before expensive
 

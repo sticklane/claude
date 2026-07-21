@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P3
 Budget: 6 turns
@@ -54,24 +54,28 @@ names them as examples in prose.
 
 ## Acceptance
 
-- [ ] `grep -c "genuinely time-sensitive\|genuinely time-varying" .claude/rules/token-discipline.md` → ≥ 1
-      (count 0 today, verified 2026-07-19)
-- [ ] `grep -c "silent when nothing changed\|silent when that state hasn't changed" .claude/rules/token-discipline.md` → ≥ 1
-      (count 0 today, verified 2026-07-19)
-- [ ] `grep -c "hooks/handoff-resume" .claude/rules/token-discipline.md` → ≥ 1
-      (count 0 today, verified 2026-07-19)
-- [ ] `grep -c "hooks/plugin-staleness" .claude/rules/token-discipline.md` → ≥ 1
-      (count 0 today, verified 2026-07-19)
-- [ ] `grep -c "hooks/session-refresh" .claude/rules/token-discipline.md` → ≥ 1
+- [x] `grep -c "genuinely time-sensitive\|genuinely time-varying" .claude/rules/token-discipline.md` → ≥ 1
+      (count 0 today, verified 2026-07-19) — PASS: returned 2
+- [x] `grep -c "silent when nothing changed\|silent when that state hasn't changed" .claude/rules/token-discipline.md` → ≥ 1
+      (count 0 today, verified 2026-07-19) — PASS: returned 1
+- [x] `grep -c "hooks/handoff-resume" .claude/rules/token-discipline.md` → ≥ 1
+      (count 0 today, verified 2026-07-19) — PASS: returned 1
+- [x] `grep -c "hooks/plugin-staleness" .claude/rules/token-discipline.md` → ≥ 1
+      (count 0 today, verified 2026-07-19) — PASS: returned 1
+- [x] `grep -c "hooks/session-refresh" .claude/rules/token-discipline.md` → ≥ 1 — PASS: returned 1
       (count 0 today, verified 2026-07-19 — use the `hooks/session-refresh`
       path form specifically; the bare `session-refresh` string already
       matches the file's existing "## Session refresh" section twice and
       would pass vacuously)
-- [ ] `grep -n "^## Cache economics" .claude/rules/token-discipline.md` → exactly one match
-- [ ] `grep -c "^## " .claude/rules/token-discipline.md` → 8 (re-verify
+- [x] `grep -n "^## Cache economics" .claude/rules/token-discipline.md` → exactly one match — PASS: single match at line 273
+- [x] `grep -c "^## " .claude/rules/token-discipline.md` → 8 — PASS: returned 8 (HEAD also 8, no section added/removed) (re-verify
       against `git show HEAD:.claude/rules/token-discipline.md | grep -c
-    '^## '` at dispatch time in case another spec landed a section first)
-- [ ] MANUAL: a human or reviewing agent reads the new bullet and confirms
-      it cites at least one named, URL-backed source (R2) and does not
-      duplicate the section's existing three bullets (R4) — mark
-      manual-pending if dispatched unattended.
+'^## '` at dispatch time in case another spec landed a section first)
+- [~] MANUAL (manual-pending, dispatched unattended): a human or reviewing
+  agent reads the new bullet and confirms it cites at least one named,
+  URL-backed source (R2) and does not duplicate the section's existing
+  three bullets (R4). Self-assessed: bullet cites Claude Docs "Prompt
+  caching" with full URL (R2 met); extends the section with a distinct
+  hook-injection point rather than restating static-content-at-front /
+  mid-session-edit-invalidation / tool-set-churn (R4 met). Awaits
+  human/reviewer confirmation.
