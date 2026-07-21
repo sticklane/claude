@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -72,21 +72,25 @@ task 02's and the closing task's scope.
 
 ## Acceptance
 
-- [ ] `python3 .claude/skills/drain/drain_frontier.py
+- [x] `python3 .claude/skills/drain/drain_frontier.py
       .claude/skills/drain/test-fixtures/frontier-strict/dangling-dep`
       (no flag) exits 0 and its stdout JSON contains a
       `"kind": "unresolved-external-dep"` diagnostic — unchanged from
-      today.
-- [ ] `python3 .claude/skills/drain/drain_frontier.py
+      today. → passed: exit 0, diagnostic present (RED baseline run above).
+- [x] `python3 .claude/skills/drain/drain_frontier.py
       .claude/skills/drain/test-fixtures/frontier-strict/dangling-dep
       --strict` exits nonzero, stdout still contains the same JSON as the
       no-flag run, and stderr names the offending task path and the
-      dangling reference (`99`).
-- [ ] `python3 .claude/skills/drain/drain_frontier.py
+      dangling reference (`99`). → passed: exit 2, stdout byte-identical to
+      no-flag run (`diff` clean), stderr = "…/01-x.md: unresolved
+      dependency 99".
+- [x] `python3 .claude/skills/drain/drain_frontier.py
       .claude/skills/drain/test-fixtures/frontier-strict/valid-deps
       --strict` exits 0 with stdout identical to the same command without
-      `--strict`.
-- [ ] `diff .claude/skills/drain/drain_frontier.py
-      antigravity/.agents/skills/drain/drain_frontier.py` exits 0.
-- [ ] `diff .claude/skills/drain/drain_frontier.py
-      codex/.agents/skills/drain/drain_frontier.py` exits 0.
+      `--strict`. → passed: exit 0, stdout `diff` clean, zero stderr bytes.
+- [x] `diff .claude/skills/drain/drain_frontier.py
+      antigravity/.agents/skills/drain/drain_frontier.py` exits 0. → passed
+      (exit 0 after `cp`).
+- [x] `diff .claude/skills/drain/drain_frontier.py
+      codex/.agents/skills/drain/drain_frontier.py` exits 0. → passed
+      (exit 0 after `cp`).
