@@ -25,7 +25,13 @@ tokens on decisions; delegate consumption of raw material to subagents.
   scattered ones; >5 is reserved for read-only breadth-first fan-outs) and
   let /drain's rolling top-up keep it full — refilling on each collected
   verdict, not at a wave barrier — rather than launching a fixed batch and
-  idling finished workers behind the slowest. This tightens the sizing
+  idling finished workers behind the slowest. **Swarm-mode carve-out:**
+  drain's multi-spec swarm mode (`specs/drain-multi-spec-swarm`) is the
+  sanctioned exception to this 3–5 ceiling — it may hold up to 3 concurrent
+  spec leases whose dispatchable tasks share one global window capped at ≤10
+  total live workers across every claimed spec; that raised swarm cap of ≤10
+  is a documented exception, not a silent violation of this rule. This
+  tightens the sizing
   guidance; it does not change the opt-in default above. The cross-vendor
   evidence for both the window and the rolling claim-next design is in
   docs/external-playbooks.md (cited, not restated).
