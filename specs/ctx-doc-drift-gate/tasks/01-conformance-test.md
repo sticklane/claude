@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 14 turns
@@ -53,9 +53,9 @@ it proves the spec's riskiest assumption (tokenizer over real doc prose).
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test --test doc_conformance` → exit 0 (green with the seeded waiver)
-- [ ] Evidence captured in this task's Progress notes: the test output failing on `map --limit` in BOTH skill files with the waiver removed (run once, then re-seed)
-- [ ] `cd context-tree && cargo test --test doc_conformance -- --nocapture 2>&1 | grep -c 'reverse-coverage'` → ≥1 (report section emitted)
-- [ ] Stale-waiver warning path has a passing test (assert warning emitted, exit still 0)
-- [ ] `grep -c 'map --limit' context-tree/tests/doc_conformance.rs` → ≥1 (seeded waiver present until task 03 retires it)
-- [ ] `cd context-tree && cargo clippy --tests -- -D warnings` → exit 0
+- [x] `cd context-tree && cargo test --test doc_conformance` → exit 0 (green with the seeded waiver) — verifier: "test result: ok. 5 passed; 0 failed"
+- [x] Evidence captured in this task's Progress notes: the test output failing on `map --limit` in BOTH skill files with the waiver removed (run once, then re-seed) — RED reproduced (worker + verifier): drift on `map [--limit N]` in both `.claude/skills/ctx/SKILL.md` and `antigravity/.agents/skills/ctx/SKILL.md`; captured in the verdict/Progress and evidence/01-conformance-test.md
+- [x] `cd context-tree && cargo test --test doc_conformance -- --nocapture 2>&1 | grep -c 'reverse-coverage'` → ≥1 (report section emitted) — verifier: grep -c → 1
+- [x] Stale-waiver warning path has a passing test (assert warning emitted, exit still 0) — `stale_waiver_warns_without_failing` passes (asserts drift empty AND WARNING text present)
+- [x] `grep -c 'map --limit' context-tree/tests/doc_conformance.rs` → ≥1 (seeded waiver present until task 03 retires it) — grep -c → 4
+- [x] `cd context-tree && cargo clippy --tests -- -D warnings` → exit 0 — verifier: clean, exit 0 (also `context-tree/scripts/check.sh` green)
