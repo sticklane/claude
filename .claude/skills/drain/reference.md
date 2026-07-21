@@ -1911,10 +1911,37 @@ tied to the exit-checklist section it summarizes:
 | NOT-READY specs (critique intake)                      | `decide`      | §4                |
 
 Each entry is one checkbox line — `- [ ] <ISO date> · <source path> · <type>
-— <one-line action>` — appended to the section. `Unblock: agent:` blocked
-tasks are NOT filed: an agent, not a human, clears them. Sections 6
-(promoted this run) and 7 (next commands) are informational summary lines,
-not open human blockers, so they are not filed either.
+— <plain-language action> — Blocks: <impact>` — appended to the section.
+`Unblock: agent:` blocked tasks are NOT filed: an agent, not a human, clears
+them. Sections 6 (promoted this run) and 7 (next commands) are informational
+summary lines, not open human blockers, so they are not filed either.
+
+**Deriving each entry's `Blocks:` clause.** Every filed entry carries a
+`Blocks:` clause stating what stays stuck while it sits unresolved
+(`.claude/rules/human-blockers.md`, cited not restated); how that clause is
+derived splits the six rows above into two groups:
+
+- **The four dependency-bearing rows** — "Deferred questions still
+  unanswered", "`Contradicts-premise` deferred", "`Unblock: ask:` blocked
+  tasks", "`Unblock: run:` blocked tasks" — are each filed from a task file
+  whose `Status:` is `deferred` or `blocked`, so it is a valid `Depends on:`
+  target other `pending` tasks may name. Derive the blocked-task-name set
+  from the SAME **unblocking-power** lookup `/drain`'s SKILL.md step 2
+  dispatch tie-break already computes (`.claude/skills/drain/SKILL.md:130` —
+  "count of still-`pending` tasks whose `Depends on:` names this task,
+  resolved as the dispatchability check does"): that computation already
+  walks the full candidate set to produce its count, so expose the
+  underlying task-name set it counts rather than re-traversing, and render
+  `Blocks:` from those names (e.g. `Blocks: task 09 (notes CRUD), task 11
+(MCP server)`), or `Blocks: no other pending task` when the set is empty.
+- **The two fixed-phrase rows** are not task files with `Depends on:`
+  dependents — a draft stub and a whole spec are not queue nodes other tasks
+  point at — so nothing is traversed; each takes a literal per-row string:
+
+| Fixed-phrase row                      | Literal `Blocks:` string                                 |
+| ------------------------------------- | -------------------------------------------------------- |
+| Decision-shaped or gate-refused stubs | `Blocks: promotion of this stub to a dispatchable task`  |
+| NOT-READY specs (critique intake)     | `Blocks: breakdown of this spec into dispatchable tasks` |
 
 **Same-commit deletion on answer.** When the batch interview's answer flow
 flips a `Status: deferred` task back to `pending`, the commit that writes
