@@ -123,4 +123,17 @@ fi
 [ -e specs/demo/DRAIN-BATON.md ] && fail "DRAIN-BATON.md left in tree after queue drained"
 [ -e specs/demo/DRAIN-OWNER.md ] && fail "DRAIN-OWNER.md lease not released after queue drained"
 
-echo "assert: all checks passed (${#tasks[@]} tasks done, $landings distinct landings, per-task Touch enforced, single generation / no baton)"
+# Check 6 (R4 trajectory): the drain run must have actually invoked the
+# frontier scanner. Guard first: an empty or missing EVAL_TRANSCRIPT (the
+# runner's no-locatable-transcript warning case) fails LOUDLY here, never
+# silently passes — a trajectory assertion with no transcript to read has
+# proved nothing. Then grep the claude-code stream-json JSONL for a
+# drain_frontier.py invocation (the EVAL_TRANSCRIPT mechanism per
+# specs/trajectory-evals).
+if [ -z "${EVAL_TRANSCRIPT:-}" ] || [ ! -s "$EVAL_TRANSCRIPT" ]; then
+  fail "EVAL_TRANSCRIPT is empty or missing; cannot check the frontier-scanner trajectory (transcript unavailable)"
+fi
+grep -q 'drain_frontier\.py' "$EVAL_TRANSCRIPT" \
+  || fail "transcript shows no drain_frontier.py invocation in $EVAL_TRANSCRIPT; the drain run appears not to have run the frontier scanner"
+
+echo "assert: all checks passed (${#tasks[@]} tasks done, $landings distinct landings, per-task Touch enforced, single generation / no baton, frontier scanner ran)"

@@ -1,0 +1,18 @@
+/idea Document the `--strict` flag in the README
+
+Treat this as an interactive session in which every interview question is
+ALREADY answered below — do not stop to ask, use these answers:
+
+- Problem/user: src/lint.sh recently gained a `--strict` flag (warnings become
+  fatal), but README.md never explains it, so users do not know it exists or
+  when to use it.
+- Behavior: README.md gains a short section describing what `--strict` turns on
+  and its trade-off (a clean run can start failing).
+- Technical approach: edit README.md only; no code change.
+- Scope OUT: changing the flag's runtime behavior; documenting any other flag.
+- Verification: confirm the README mentions the flag — e.g. grep README.md for
+  the word "strict".
+- Rigor: production.
+
+Write the spec only — do NOT chain into /critique or /breakdown; I will run
+those in a fresh session.

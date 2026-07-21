@@ -1,6 +1,6 @@
 # Task 02: token-discipline.md swarm-mode carve-out
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 4 turns

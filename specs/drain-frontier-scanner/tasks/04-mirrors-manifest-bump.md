@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: pending
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 10 turns
@@ -35,15 +35,21 @@ phrase, never an antigravity line. plugin.json version bumped.
 
 ## Acceptance
 
-- [ ] `grep -c 'drain_frontier' codex/.agents/skills/drain/SKILL.md` →
+- [x] `grep -c 'drain_frontier' codex/.agents/skills/drain/SKILL.md` →
       ≥ 1 (0 today, verified 2026-07-19)
-- [ ] `grep -c 'codex/.agents/skills/drain/SKILL.md.*drain_frontier'
-    tests/mirror-procedure-manifest.txt` → ≥ 1 and `bash
-    tests/test_mirror_procedure_coverage.sh` → exit 0
-- [ ] Antigravity divergence classification recorded in
+      Evidence: → 2 (inventory + tie-break steps ported); evidence/04-mirrors-manifest-bump.md.
+- [x] `grep -c 'codex/.agents/skills/drain/SKILL.md.*drain_frontier'
+tests/mirror-procedure-manifest.txt` → ≥ 1 and `bash
+tests/test_mirror_procedure_coverage.sh` → exit 0
+      Evidence: manifest grep → 1; coverage gate exit 0; evidence/04-mirrors-manifest-bump.md.
+- [x] Antigravity divergence classification recorded in
       `specs/drain-frontier-scanner/evidence/` (load-bearing or
       incidental, with the live-check result). Depth ceiling:
       classification is a judgment record — behavioral complement is
       the mirror-verification live check itself, evidence-recorded.
-- [ ] `git show <this task's own commit> -- .claude-plugin/plugin.json |
-    grep -q '^+.*"version"'` → exit 0
+      Evidence: classified INCIDENTAL (path-only); live cross-reference
+      check RESOLVES for the cited scanner path in both mirror trees;
+      evidence/04-mirrors-manifest-bump.md.
+- [x] `git show <this task's own commit> -- .claude-plugin/plugin.json |
+grep -q '^+.*"version"'` → exit 0
+      Evidence: version 0.9.24 → 0.9.25; verified against this task's commit below.

@@ -40,15 +40,19 @@ involved, never a blanket stage-everything; a concurrent session's own
 staged or working-tree changes must never ride along. Stated once here;
 every commit below follows it without restating it.
 
-**Name the run (gen 1, best-effort).** At gen-1 startup, if the run/tab has
-no custom name already, name it the repo plus a **deterministic** descriptor
-of the specs being drained: sort this run's spec slugs alphabetically, join
-with `,`, then cap the joined string at 40 chars (truncate and append `…` if
-longer) — the same input specs always produce the same descriptor; never
-paraphrase or abbreviate by hand (e.g. `claude · drain: model-pins,reprime-vis`)
-— using whatever naming surface the runtime offers (terminal title escape,
-Agent Manager run name); skip silently where none exists, and never re-name
-on baton generations.
+**Name the run (best-effort).** If the run/tab has no custom name already,
+name it the repo plus a **deterministic** descriptor of the specs being
+drained: sort this run's spec slugs alphabetically, join with `,`, then cap
+the joined string at 40 chars (truncate and append `…` if longer) — the same
+input specs always produce the same descriptor; never paraphrase or
+abbreviate by hand (e.g. `claude · drain: model-pins,reprime-vis`) — using
+whatever naming surface the runtime offers (terminal title escape, Agent
+Manager run name). Fires once per session — the first time this run reaches
+step 1, regardless of the adopted owner lease's `Generation:` number (a
+session-refreshed drain that adopts a mid-flight lease at `Generation: 3`
+still proposes on its first pass, since a resumed run's own tab has never yet
+been named). Skip if already named this run, or if no naming surface exists —
+a headless baton self-relaunch or an awaited subagent spawn has neither.
 
 **Startup session sweep (advisory).** Before inventory, check whether
 another live session's working directory is this same repo — the Agent
@@ -150,8 +154,12 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
        `AGENTS.md`'s "Concurrent sessions" section, leaving the human to choose
        take-theirs / merge-both / manual reconcile. An attended session MAY
        ask instead, at its own discretion — not required here.
-       Read only each task file's header lines (`Status`,
-       `Depends on`, `Priority`, `Budget`, `Touch`) — not the bodies. `Budget`
+       Invoke `python3 .agents/skills/drain/drain_frontier.py <spec-dir>`
+       per spec dir and treat its output as authoritative for the
+       dispatchable set and ordering. Missing script or non-zero exit →
+       today's header read verbatim (`Status`, `Depends on`, `Priority`,
+       `Budget`, `Touch`) — not the bodies, quoting the scanner's stderr in
+       the fallback log line. `Budget`
        feeds the worker's over-budget stop; `Priority` is an optional
        tie-break (absent = P2). Dispatchable = `pending` with all
        dependencies `done`.
@@ -289,7 +297,9 @@ malformed frontier: …` line on stderr; treat ANY non-zero exit —
    `<!-- agentprof:stage=dispatch -->` verbatim each time you enter it,
    including each time step 3's loop sends you back here — not once per
    session. When several tasks are dispatchable
-   at once, apply the deterministic tie-break: dispatch lowest `Priority`
+   at once, dispatch in the scanner's emitted order — the tie-break is
+   computed by drain_frontier; a fallback read applies the same triple by
+   hand: lowest `Priority`
    value first (absent = P2), then greatest unblocking-power — the count
    of still-`pending` tasks whose `Depends on:` names this task, counted
    over the task files inventoried this run and resolving `Depends on:`

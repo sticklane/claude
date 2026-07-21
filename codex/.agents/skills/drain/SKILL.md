@@ -123,10 +123,13 @@ and reconcile local `main` against the remote: skip if no remote, warn on a
 fetch failure, fast-forward if only the remote moved, halt-and-report if both
 sides diverged — so the reads below see current shared state.
 
-Read only the header fields of each task file (`Status`, `Depends on`,
-`Priority`, `Budget`, `Touch`) — not the bodies; workers read their own task.
-A task is **dispatchable** when `Status: pending` and every dependency is
-`done`. `Status: draft` stubs are never dispatchable directly — stub intake
+Invoke `python3 .agents/skills/drain/drain_frontier.py <spec-dir>` per spec
+dir and treat its output as authoritative for the dispatchable set and
+ordering. Missing script or non-zero exit → today's header read verbatim
+(`Status`, `Depends on`, `Priority`, `Budget`, `Touch` — not the bodies;
+workers read their own task), quoting the scanner's stderr in the fallback
+log line. A task is **dispatchable** when `Status: pending` and every
+dependency is `done`. `Status: draft` stubs are never dispatchable directly — stub intake
 (below) screens and gates actionable ones and flips gate-passed stubs
 `draft` → `pending` in the same run.
 
@@ -183,11 +186,12 @@ returning only a structured **verdict + evidence capped at ≤ 2k tokens**,
 never its transcript: status, merged commit/branch, per-criterion pass/fail
 with one-line evidence, and deferred items only.
 
-When several tasks are dispatchable at once, apply the deterministic
-tie-break: lowest `Priority` value first (absent = P2), then greatest
-unblocking power (count of still-`pending` tasks that depend on this one),
-then lexicographic task-file path. Drain computes the order; the model never
-reorders the queue mid-run.
+When several tasks are dispatchable at once, dispatch in the scanner's
+emitted order — the tie-break is computed by drain_frontier; a fallback read
+applies the same triple by hand: lowest `Priority` value first (absent = P2),
+then greatest unblocking power (count of still-`pending` tasks that depend on
+this one), then lexicographic task-file path. Drain computes the order; the
+model never reorders the queue mid-run.
 
 **Rolling window of W workers.** Drain keeps up to **W** workers in flight and
 tops the window up on every verdict rather than at a wave barrier. Default

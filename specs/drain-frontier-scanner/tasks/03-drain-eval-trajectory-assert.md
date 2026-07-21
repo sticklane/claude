@@ -3,7 +3,7 @@
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 6 turns
@@ -27,9 +27,10 @@ passing. Existing artifact assertions in the file are untouched.
 
 ## Acceptance
 
-- [ ] `grep -rl 'drain_frontier' evals/drain/ | grep -q assert.sh` →
+- [x] `grep -rl 'drain_frontier' evals/drain/ | grep -q assert.sh` →
       exit 0, and `bash -n evals/drain/01-rolling-window/assert.sh` →
       exit 0 (committed half)
+      Evidence: both commands ran → grep exit 0, `bash -n` exit 0.
 - [ ] `./evals/run.sh drain` passes — manual-pending (paid headless
       run, human-launched, per
       docs/memory/unattended-worker-tool-limits.md); this run is R4's

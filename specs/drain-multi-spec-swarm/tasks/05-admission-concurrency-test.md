@@ -1,6 +1,6 @@
 # Task 05: Real-concurrency test for admission.py's lease-claim CAS
 
-Status: pending
+Status: done
 Depends on: 04
 Priority: P1
 Budget: 12 turns
@@ -83,12 +83,15 @@ merged by the time this task starts) or `drain_frontier.py` (owned by
 
 ## Acceptance
 
-- [ ] `test -f .claude/skills/drain/test_admission_concurrency.py` → file
+- [x] `test -f .claude/skills/drain/test_admission_concurrency.py` → file
       exists (absent today, verified 2026-07-19)
-- [ ] `python3 .claude/skills/drain/test_admission_concurrency.py` → exits 0
-- [ ] `python3 .claude/skills/drain/test_admission_concurrency.py | grep -co '^scenario: [a-c] passed'`
+      Evidence: file created; `test -f` → OK.
+- [x] `python3 .claude/skills/drain/test_admission_concurrency.py` → exits 0
+      Evidence: exit 0 on 10/10 consecutive runs (flakiness loop, races stable).
+- [x] `python3 .claude/skills/drain/test_admission_concurrency.py | grep -co '^scenario: [a-c] passed'`
       → 3 (the file does not exist today, so this cannot pass vacuously)
-- [ ] Each scenario spawns genuinely concurrent processes — a code-review
+      Evidence: 3 markers (`scenario: a/b/c passed`) on 10/10 runs.
+- [x] Each scenario spawns genuinely concurrent processes — a code-review
       check (not grep-anchorable): the implementation must use
       `multiprocessing.Process`/`Pool` (or equivalent real-OS-concurrency
       primitive) to launch the racing workers, not a `for` loop calling
@@ -99,8 +102,18 @@ merged by the time this task starts) or `drain_frontier.py` (owned by
       → ≥ 1), with the verifier's own read confirming it's actually used to
       launch concurrent racers in each of the three scenarios, not just
       imported and unused.
-- [ ] Scenario (c)'s implementation specifically confirms via code review
+      Evidence: `import multiprocessing` grep → 1; all three scenarios route
+      through `_run_race`, which builds `mp.Process` per racer and starts
+      them, each worker `barrier.wait()`-synced (`mp.Barrier`) into the CAS
+      window. Independent verifier confirmed genuine per-scenario concurrency
+      (PASS, line-grounded).
+- [x] Scenario (c)'s implementation specifically confirms via code review
       that BOTH racing processes actively attempt the reclaim write (not one
       passive pre-seeded holder plus one reclaimer) — the round-10
       respecification's whole point, otherwise this scenario silently
       regresses to the finding critique raised.
+      Evidence: stale lease seeded in fixture SETUP (backdated seed commit,
+      GIT_COMMITTER_DATE=2020); both spawned `_worker_reclaim` processes
+      independently `read_owner`→`owner_liveness`(ALL_STALE)→`claim_decision`
+      (reclaim) then `git_cas_claim`; assertion `all(r in {won,lost})` fails
+      if either failed to attempt the write. Verifier confirmed PASS.
