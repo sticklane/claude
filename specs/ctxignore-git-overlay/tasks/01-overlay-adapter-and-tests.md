@@ -1,6 +1,6 @@
 # Task 01: `.ctxignore` overlay adapter in `detect()` + full test suite
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 24 turns
@@ -50,7 +50,7 @@ completion report).
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test ctxignore_overlay` → passes and the
+- [x] `cd context-tree && cargo test ctxignore_overlay` → passes and the
       suite contains these exact test names (L2 behavioral, per
       SPEC.md's Acceptance):
       `ctxignore_overlay_excludes_committed_paths_under_git`,
@@ -61,8 +61,12 @@ completion report).
       `ctxignore_overlay_note_goes_stale_not_reanchored`,
       `ctxignore_overlay_git_note_author_preserved`,
       `ctxignore_overlay_at_excluded_file_exits_4`
-- [ ] `cd context-tree && cargo test ignore_rules` → passes unchanged
+      — verifier: 8/8 pass, all 8 names present (evidence/01-overlay-adapter-and-tests.md).
+- [x] `cd context-tree && cargo test ignore_rules` → passes unchanged
       (R3/R5 no-VCS baseline regression gate)
-- [ ] `cd context-tree && cargo test` → full suite green (no collateral
+      — verifier: 2/2 pass unchanged.
+- [x] `cd context-tree && cargo test` → full suite green (no collateral
       regressions in query/notes/reanchor suites)
-- [ ] `bash context-tree/scripts/check.sh` → green (fmt, clippy, tests)
+      — verifier: full suite green, no failures.
+- [x] `bash context-tree/scripts/check.sh` → green (fmt, clippy, tests)
+      — verifier: exit 0 (fmt --check, clippy -D warnings, tests all green).
