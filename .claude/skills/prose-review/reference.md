@@ -3,9 +3,10 @@
 ## Table of contents
 
 The nine-item rubric (with vendor quotes · item-1 carve-out ·
-DeepMind note) · Diátaxis — structure by what the reader needs RIGHT NOW
-(quadrant table bound to house doc locations) · Google-style essentials Vale
-can't check · The reader test (distilled).
+DeepMind note) · Agentic-register tells (three RLHF-assistant tics +
+status-telegraphy carve-out) · Diátaxis — structure by what the reader needs
+RIGHT NOW (quadrant table bound to house doc locations) · Google-style
+essentials Vale can't check · The reader test (distilled).
 
 Loaded on demand — the SKILL.md body names the passes; this file carries the
 doctrine each pass applies. The rubric and style bindings are stable,
@@ -103,6 +104,71 @@ specific prose antipattern — only Workspace style-*matching* features and
 generic prompt-clarity advice. It is recorded here as contributing nothing
 rather than silently omitted or padded with an invented item, so a later
 reader knows the vendor was checked, not skipped.
+
+## Agentic-register tells
+
+Three tics the nine-item rubric does not name, in a register its charter —
+human-facing docs — does not reach: agent-authored status and progress reports
+(drain/build output, task summaries). They are documented as general
+RLHF-trained assistant behaviors, not Claude-specific, so they bind every
+runtime this toolkit ports to equally; much of the measuring evidence is on
+GPT, so they apply at least as strongly to Gemini and GPT agents as to Claude.
+Each tell carries a name, a one-line description, a cited source, a
+before→after rewrite, and a boundary against the rubric item it neighbors. A
+count, where one is cited, is measured on one operator's Claude corpus and is
+illustrative of the general pattern, not a per-runtime figure.
+
+**T1 — meta-discourse (announce-then-do process narration).** A clause spent on
+what the answer is *about to* do, or on the response's own structure, rather
+than the substance. "Let me check the config", "Now I'll run the tests", "In
+this section I explain…" — the reader already watches the action fire. Source:
+Singhal et al., "A Long Way to Go: Investigating Length Correlations in RLHF"
+(arXiv:2310.03716) — reward models conflate length with quality, so an unearned
+preamble is the kind of length RLHF rewards.
+- Before: "Let me read the manifest to see which phrases are seeded."
+- After: "The manifest seeds eight phrases:" — then the list.
+- Boundary vs item 6 (stock acknowledgments): item 6 is a contentless
+  pleasantry opener ("Got it"); T1 previews *work*, naming an action about to
+  fire rather than greeting.
+
+**T2 — false precision on knowable quantities.** A `~`, `well under`, or `well
+over` on a value already in hand — a diff line count, a runner's test count, a
+measured timing — manufacturing fuzz over a fact the writer can state exactly.
+Source: Kalai et al. (OpenAI), "Why Language Models Hallucinate"
+(arXiv:2509.04664) — eval incentives reward confident specificity, and the
+learned `~`/`likely` surface phrase does not track real confidence
+(arXiv:2505.24778).
+- Before: "Trimmed ~40 lines; the suite now runs in well under a minute."
+- After: "Trimmed 38 lines; the suite runs in 41s."
+- Boundary vs item 2 (hedging/disclaimers): item 2 reads *less* committal than
+  warranted; T2 reads *more* precise than warranted over a number in hand.
+
+**T3 — evaluative varnish substituting for the checkable fact.** A quality
+adjective — "clean", "solid", "robust", "holistic" — standing in place of the
+fact it summarizes. "Landed clean" names no conflict status or gate result;
+"clean merge" names no test outcome. Intensifiers ("genuinely") and salience
+labels ("notably", "clearly") inflate the same way. Source: Liang et al.,
+"Monitoring AI-Modified Content at Scale" (ICML 2024, arXiv:2403.07183) —
+adjectives are the most discriminative AI-overused part of speech, with
+"robust" and "holistic" in the Top-100 table; Kobak et al. (arXiv:2406.07016)
+find style words dominate excess vocabulary.
+- Before: "The refactor landed clean and the suite is solid."
+- After: "The refactor merged with no conflicts; 214 tests pass, 0 fail."
+- Boundary vs items 5 and 9: item 5 (purple prose) is hyperbole and cliché;
+  item 9 is progress narrated as achievement. T3 is the specific cash-out
+  failure — an adjective where a checkable fact belonged.
+
+**Status-telegraphy carve-out.** Modeled on the item-1 carve-out (which spares
+genuinely discrete lists from the list-overuse flag), this spares terse status
+lines from the T3 flag. The boundary is what the line does: a line that STATES
+verifiable state is exempt; a line where a bare adjective SUBSTITUTES for that
+state is a T3 hit. "gates green", "merged and pushed", and "waiting on task 09"
+report a checkable fact tersely — exempt, and not to be padded into prose.
+"landed clean" alone reports no fact — a T3 hit. The two are complementary, not
+overlapping: telegraphy carries the fact, varnish replaces it. When unsure
+whether a terse line states a fact or paints over one, do not flag it —
+over-suppressing a true status line is the damage this carve-out prevents. Like
+the three tells, this applies to any RLHF-trained assistant.
 
 ## Diátaxis — structure by what the reader needs RIGHT NOW
 
