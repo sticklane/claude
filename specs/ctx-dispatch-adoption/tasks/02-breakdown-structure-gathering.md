@@ -49,3 +49,18 @@ Depth ceiling: L0/L1 prose greps — the artifact is skill doctrine; the
 behavioral complement is task 04's telemetry plus the existing breakdown
 evalset (`evals/breakdown/`), which a follow-up eval scenario can extend
 to assert ctx-first scouting in an indexed fixture.
+
+## Decisions
+
+- 2026-07-21: Placed the antigravity port as a new "## Structure gathering
+  (ctx before scouts)" section directly after the delegator line (before
+  the `Unblock:` section), rather than inline. Reversible: relocate or
+  inline the prose block.
+
+## Discovered
+
+- `antigravity/.agents/skills/breakdown/SKILL.md` step 2 still reads
+  scout-only ("use the scout skill") and is now procedurally diverged
+  from the updated `.claude/skills/breakdown/SKILL.md` step 2 — this
+  task's Touch targeted the workflow delegator, not the skill it
+  delegates to. See task 07.
