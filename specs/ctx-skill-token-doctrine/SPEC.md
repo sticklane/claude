@@ -135,8 +135,14 @@ antigravity/.agents/skills/ctx/SKILL.md)` is empty (mirror parity;
   exactness path; identical-qpath collisions across directories are
   unresolvable via `sig` (fall back to sliced Read); `map` noise from
   committed vendored/generated trees is an index-membership problem fixed
-  by specs/ctxignore-git-overlay, not by more querying. Acceptance:
-  cautions mention all three.
+  by specs/ctxignore-git-overlay, not by more querying; and the
+  ABSENCE FALLACY — "no symbol matches" means no _symbol_ by that
+  name, never that the string is absent from code: object fields, JSON
+  keys, and string literals are not indexed, so an absence claim must
+  be grep-verified before asserting it (live failure 2026-07-20: a
+  spec claimed `figureBboxes` was gone on ctx evidence; it was live
+  inside `migrateLabel` as object keys). Acceptance: cautions mention
+  all four.
 
 ## Non-goals
 
