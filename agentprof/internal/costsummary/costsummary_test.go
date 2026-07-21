@@ -330,6 +330,41 @@ func TestBuildSessionsSectionNonNilWhenEmpty(t *testing.T) {
 	}
 }
 
+func TestBuildSessionsSectionSurfacesCtxUsage(t *testing.T) {
+	samples := []schema.Sample{
+		// session s1: two main-loop calls carrying ctx_usage, summed per session.
+		sample("s1", []string{"proj", "t01 · x", "skill:build", "main", "claude-fable-5"},
+			map[string]int64{"calls": 1, "ctx_usage": 2}),
+		sample("s1", []string{"proj", "t02 · y", "skill:build", "main", "claude-fable-5"},
+			map[string]int64{"calls": 1, "ctx_usage": 1}),
+		// A subagent call carrying ctx_usage must NOT contribute — per-session
+		// ctx usage is main-loop-scoped, matching the percentile scope.
+		sample("s1", []string{"proj", "t03 · z", "skill:build", "main", "agent:scout", "claude-haiku-4-5"},
+			map[string]int64{"calls": 1, "ctx_usage": 99}),
+		// session s2: a main-loop call with no ctx usage.
+		sample("s2", []string{"beta", "t01 · h", "(no skill)", "main", "claude-sonnet-4-5"},
+			map[string]int64{"calls": 1}),
+	}
+	s := Build(samples, nil)
+	if got := s.Sessions["s1"].CtxUsage; got != 3 {
+		t.Errorf("sessions[s1].ctx_usage = %d, want 3 (2+1, subagent excluded)", got)
+	}
+	if got := s.Sessions["s2"].CtxUsage; got != 0 {
+		t.Errorf("sessions[s2].ctx_usage = %d, want 0 (no ctx usage)", got)
+	}
+	// ctx_usage is a per-session metric: it must not leak into the by_* rollups
+	// or the grand totals alongside token/cost sample types.
+	if _, ok := s.Totals["ctx_usage"]; ok {
+		t.Errorf("totals must not carry ctx_usage; got %v", s.Totals)
+	}
+	if _, ok := s.BySkill["skill:build"]["ctx_usage"]; ok {
+		t.Error("by_skill must not carry ctx_usage")
+	}
+	if _, ok := s.ByProject["proj"]["ctx_usage"]; ok {
+		t.Error("by_project must not carry ctx_usage")
+	}
+}
+
 // untypedSample builds a model-call sample whose stack ends in the given agent
 // chain frames followed by the model leaf (e.g. "agent:claude", "agent:claude").
 func untypedSample(session string, chain []string, model string, calls, cost int64) schema.Sample {
