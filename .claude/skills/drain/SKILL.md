@@ -47,10 +47,11 @@ evidence — stages an explicit path list and commits only those paths; never
 concurrent session's staged or working-tree changes must never ride along —
 every path-scoped commit below follows this without restating it.
 
-**Gen-1 startup advisories (best-effort, never blocking).** At gen-1 startup
-ONLY, drain runs three non-blocking advisories — **name the terminal tab**,
-**sweep foreign live sessions**, and print **hub-economics** relaunch
-recommendations — none gating dispatch (procedures in
+**Gen-1 startup advisories (best-effort, never blocking).** Drain runs three
+non-blocking advisories — **name the terminal tab** (not gen-1-restricted; its
+own precise trigger lives in [reference.md](reference.md)), and, at gen-1
+startup ONLY, **sweep foreign live sessions** and print **hub-economics**
+relaunch recommendations — none gating dispatch (procedures in
 [reference.md](reference.md)'s "Gen-1 startup advisories" — load only the
 named section, Grep-then-offset). It also pins the **mechanical preflight sweep**: a gen-1
 pass, before step 1, across EVERY spec in scope that reclaims dead leases and

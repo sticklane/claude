@@ -36,7 +36,7 @@ shared design decision.
 
 ## Acceptance
 
-- [ ] `grep -c "not gen-1-restricted" .claude/skills/drain/SKILL.md` → ≥ 1
+- [x] `grep -c "not gen-1-restricted" .claude/skills/drain/SKILL.md` → ≥ 1
       (0 today, verified 2026-07-19). Depth ceiling: L0 grep on a
       one-line prose summary — the honest ceiling for this artifact.
       Behavioral complement, a named verifier judgment: confirm the note
@@ -44,3 +44,11 @@ shared design decision.
       advisories" paragraph while the other two advisories keep their
       gen-1-only framing, and that it points to reference.md rather than
       restating the trigger.
+
+Evidence (2026-07-20): `grep -c "not gen-1-restricted"` → 1. Edit places
+the inline note on **name the terminal tab** ("not gen-1-restricted; its own
+precise trigger lives in reference.md"); the "at gen-1 startup ONLY" scope
+now applies to **sweep foreign live sessions** and **hub-economics** only,
+which keep their gen-1-only framing. Note points to reference.md, does not
+restate the trigger. `bash evals/lint-skill-size-gate.sh` OK,
+`bash evals/lint-ultra-gate.sh` OK.
