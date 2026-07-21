@@ -156,7 +156,12 @@ advisories; on any failure, one "sweep unavailable" line, never blocking.
        ask instead, at its own discretion — not required here.
        Invoke `python3 .agents/skills/drain/drain_frontier.py <spec-dir>`
        per spec dir and treat its output as authoritative for the
-       dispatchable set and ordering. Missing script or non-zero exit →
+       dispatchable set and ordering. **Header-only checks stay cheap**
+       (doctrine home: AGENTS.md's "Delegation defaults"): any check of a
+       task's header fields alone — anywhere in this procedure or added
+       later — uses `drain_frontier.py`'s own JSON, `specs/status.sh`, or
+       `grep '^Status:'` / `grep '^Depends on:'`, never an unbounded read of
+       the task file. Missing script or non-zero exit →
        today's header read verbatim (`Status`, `Depends on`, `Priority`,
        `Budget`, `Touch`) — not the bodies, quoting the scanner's stderr in
        the fallback log line. `Budget`
