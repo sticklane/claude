@@ -22,10 +22,12 @@ useful: a loss on cost or correctness tells us which parts to keep.
    (skills, agents, rules); ultracode never opted in; no other
    difference.
 2. Everything else pinned and identical: model ID, effort, container
-   image, network policy, repo snapshot per task (a git ref), and the
-   task brief text (identical except the arm-U opt-in keyword — each
-   arm's mechanism is activated exactly the way its documentation says
-   to activate it, and nothing else is added).
+   image, network policy, repo snapshot per task (a git ref), the
+   Claude Code CLI version, the agentic plugin commit (both recorded
+   in the config dump), and the task brief text (identical except the
+   arm-U opt-in keyword — each arm's mechanism is activated exactly
+   the way its documentation says to activate it, and nothing else is
+   added).
 3. No arm-specific coaching. Arm S's brief does not name any skill;
    whether skills trigger is part of what is measured — a toolkit that
    only works when the human invokes it by name has an adoption
@@ -44,11 +46,15 @@ useful: a loss on cost or correctness tells us which parts to keep.
    than one that passes 2/3 predictably, and the numbers must show
    that.
 6. Measured per run, recorded as one JSONL row: hidden-script
-   pass/fail (primary); total cost in USD and tokens from the session
-   transcript; wall-clock; turn count; subagent/workflow spawn count;
-   diff line count; and a single-call rubric-judge score (1–5,
-   correctness-independent maintainability), with the judge blinded —
-   its prompt contains the diff and brief, never the arm.
+   pass/fail (primary); total cost in USD and tokens summed across
+   the root session AND every spawned workflow/subagent session,
+   computed identically for both arms (single-transcript accounting
+   would undercount whichever arm spawns more); wall-clock; turn
+   count; subagent/workflow spawn count; diff line count; and a
+   single-call rubric-judge score (1–5, correctness-independent
+   maintainability), with the judge blinded — its prompt contains the
+   diff and the canonical keyword-stripped brief, never the arm or
+   either arm's as-run brief text.
 7. Verdict rule, fixed before any run: an arm wins a task on pass
    count first, median cost among passing runs second. Results are
    reported per task and in aggregate; no single blended scalar.
@@ -126,8 +132,10 @@ Fixture repos and hidden scripts live under
 `evals/headtohead/tasks/<name>/` (repo snapshot + brief committed;
 `assert.sh` stored outside the arms' mounts per the harness design).
 Authoring them — with each fixture's suite green and each hidden
-script failing against the unmodified snapshot, passing against a
-reference solution — is harness build work for the breakdown.
+script failing against the unmodified snapshot and passing against a
+COMMITTED reference solution per task — is harness build work for the
+breakdown; the calibration acceptance criterion below is what proves
+the instrument.
 
 ## Controls and honesty rules
 
@@ -155,15 +163,32 @@ building it):
 - [ ] `bash evals/headtohead/run.sh --dry-run --dump-config` → arm U's
       config shows no plugin/skills mount and contains the ultracode
       keyword in its brief; arm S's shows the plugin mount and no
-      ultracode keyword (asserted by the script, printed as evidence)
+      ultracode keyword; both arms pin identical CLI version and
+      plugin commit; every hidden `assert.sh` path resolves OUTSIDE
+      both arms' mounts (all asserted by the script, printed as
+      evidence)
 - [ ] `bash evals/headtohead/run.sh --task fixture --arm S --seeds 1`
       → completes end-to-end against a bundled toy fixture task and
       emits a results row that validates against
       `evals/headtohead/result.schema.json`
-- [ ] `grep -ciE "arm|ultracode|skills" evals/headtohead/judge-prompt.md`
-      → `0` (judge blinding)
+- [ ] `bash evals/headtohead/run.sh --task fixture --arm U --seeds 1
+    --dump-judge-input` → the ASSEMBLED judge input for the run (not
+      the template) contains no word-boundary match for the ultracode
+      keyword, arm names, or this plugin's name (asserted by the
+      script)
+- [ ] `bash evals/headtohead/calibrate.sh` → for each of T1/T2/T3
+      prints `<task> RED OK` (hidden script fails against the
+      untouched snapshot) and `<task> GREEN OK` (passes against the
+      committed reference solution); exits 0 only when all six hold
+- [ ] `bash evals/headtohead/run.sh --task crashfixture --arm U
+    --seeds 1` → the bundled crash fixture (session dies mid-run /
+      hits the cap) emits a schema-valid row with `pass: false` and
+      non-null partial `usd`/`tokens` — crashed runs are recorded,
+      never dropped
 - [ ] fixture run's results row contains non-null `usd`, `tokens`,
-      `turns`, `wall_s` populated from the real transcript
+      `turns`, `wall_s`, and its `tokens` EXCEEDS the root
+      transcript's own total when the fixture's stub work spawns a
+      child session (spawned work is summed, both arms' mechanisms)
 
 Next stage: /critique specs/skills-vs-ultracode-eval/SPEC.md, then
 /breakdown (human-launched) — the corpus Unblock is resolved above.
