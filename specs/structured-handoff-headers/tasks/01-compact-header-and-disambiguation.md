@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P1
 Budget: 15 turns
@@ -55,17 +55,22 @@ unaffected — it only flags existence, never reads content) or any real
 
 ## Acceptance
 
-- [ ] `grep -n "^Task:\|Resume with:\|Blocking on:" .claude/skills/handoff/SKILL.md`
+- [x] `grep -n "^Task:\|Resume with:\|Blocking on:" .claude/skills/handoff/SKILL.md`
       returns matches, including a required `Task:` field.
+      → passed: matches on `Task:`/`Resume with:`/`Blocking on:` (a literal
+      `Task:`-prefixed template line landed at column 0), see output above.
       Depth ceiling: prose-only template documentation, no runtime to
       exercise unattended — L0 is the ceiling; the behavioral complement
       is the MANUAL-PENDING criterion in the closing task's acceptance
       (an attended `/handoff` run producing a real header-shaped file).
-- [ ] `grep -n "compact header\|head -n" .claude/skills/resume-handoff/SKILL.md`
+- [x] `grep -n "compact header\|head -n" .claude/skills/resume-handoff/SKILL.md`
       returns a match specifically within the "Multiple found" branch (not
       elsewhere in the file).
+      → passed: matches at lines 20-21, both inside the step 1 "Multiple
+      found" branch, see output above.
       Depth ceiling: same as above.
-- [ ] `grep -n "AskUserQuestion" .claude/skills/resume-handoff/SKILL.md`
+- [x] `grep -n "AskUserQuestion" .claude/skills/resume-handoff/SKILL.md`
       still returns a match after the edit — confirms the change augments
       the existing question with header content rather than removing it
       (the never-guess-silently regression guard).
+      → passed: still matches at line 23, see output above.
