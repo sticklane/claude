@@ -79,7 +79,11 @@ lease", Remote divergence check — load only the named section, Grep-then-offse
 
 Invoke `python3 .claude/skills/drain/drain_frontier.py <spec-dir>` per spec
 dir and treat its output as authoritative for the dispatchable set and
-ordering. Missing script or non-zero exit → today's header read verbatim
+ordering. **Header-only checks stay cheap (doctrine home:
+`.claude/rules/token-discipline.md`'s "Delegation defaults"):** any check of
+a task's header fields alone — anywhere in this procedure or added later —
+uses `drain_frontier.py`'s own JSON, `specs/status.sh`, or `grep '^Status:'`
+/ `grep '^Depends on:'`, never an unbounded `Read` of the task file. Missing script or non-zero exit → today's header read verbatim
 (`Status`, `Depends on`, `Priority`, `Budget`, `Touch` — never the bodies;
 workers read their own task), quoting the scanner's stderr in the fallback
 log line. `Budget` feeds the worker's over-budget stop and the headless
