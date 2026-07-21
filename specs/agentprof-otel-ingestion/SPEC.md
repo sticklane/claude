@@ -1,8 +1,11 @@
 # agentprof OpenTelemetry ingestion for coding CLIs
 
+Breakdown-ready: true
+
 Produced by the 2026-07-21 investigation session. All critic-raised
 design decisions were resolved by the maintainer on 2026-07-21 (see
-Decisions); scope is pprof-only profiling of OTel data.
+Decisions); scope is pprof-only profiling of OTel data. Critic verdict
+READY (round 4, 2026-07-21).
 
 ## Problem
 
@@ -57,7 +60,8 @@ parses.
 - `agentprof otel <input> -o out.pb.gz` already writes a pprof profile
   directly (`cmd_otel.go:33`; `output.Write` handles `.pb.gz`), so the
   otel→pprof consumer relationship exists today; `agentprof build`
-  reads positional file paths only (`cmd_build.go:29`, no stdin).
+  reads positional file paths only (`parsePositionals`, `main.go:51`;
+  no stdin).
 - The `otel` subcommand is undocumented in `agentprof/README.md`.
 
 ## Research grounding (external claims, with confidence)
