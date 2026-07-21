@@ -1,5 +1,5 @@
-Run-token: 6da9bf9a672dfa74
-Host: vm
-Started: 2026-07-20T16:37:12Z
+Run-token: a750d87976c02e32
+Host: stevens
+Started: 2026-07-21T02:34:09Z
 Generation: 2
 Spec: specs/drain-session-naming-always-propose
