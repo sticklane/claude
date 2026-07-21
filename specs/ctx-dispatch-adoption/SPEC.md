@@ -51,6 +51,12 @@ Its one same-file seam: R3b edits /onboard's SKILL.md, which
 token-doctrine R6a also edits (different sections) — the two tasks land
 serialized, whichever is second rebasing on the first.
 
+Intra-spec file sharing: R1, R4, and R6 all edit the drain/build skill
+files (R1 + R4 both touch `.claude/skills/drain/` and
+`.claude/skills/build/`; R6 touches build's SKILL.md). Breakdown must
+emit these as ONE task or as explicitly serialized tasks — never
+parallel work on the same files (concurrent-sessions collision rule).
+
 ## Requirements
 
 - R1 — Worker dispatch stanza (drain + build). The worker dispatch
@@ -61,11 +67,17 @@ serialized, whichever is second rebasing on the first.
   reference `show` before it exists) with one concrete example each, and
   states the rule as a procedure step, not a preference: "for a
   definition, caller, signature, or outline question, run the ctx query
-  BEFORE any Grep/Read; escalate per the reading ladder." Rationale for
-  stanza-over-hint: the 0%-compliance evidence above. Acceptance:
-  `grep -rl 'Structure lookups (ctx)' .claude/skills/drain/
-  .claude/skills/build/` returns ≥2 files (phrase confirmed absent from
-  the repo today, grep -c = 0); the stanza is inside the dispatch-prompt
+  BEFORE any Grep/Read; fall back to Grep for content/text questions
+  (bodies, literals, patterns) and Read a file only when about to edit
+  it." The stanza is self-contained — dispatched workers do not have
+  the ctx SKILL.md loaded, so it must not reference the reading ladder
+  by name. Rationale for stanza-over-hint: the 0%-compliance evidence
+  above. Acceptance: `grep -rl 'Structure lookups (ctx)'
+  .claude/skills/drain/` returns ≥1 file AND `grep -rl 'Structure
+  lookups (ctx)' .claude/skills/build/` returns ≥1 file (phrase
+  confirmed absent from the repo today, grep -c = 0) — both directories
+  independently, so the criterion cannot green on drain alone; the
+  stanza is inside the dispatch-prompt
   template text, not a surrounding narrative section; mirror legs
   (antigravity + codex for drain/build) and plugin.json bump per
   CLAUDE.md's authoring conventions (cited, not restated).
@@ -84,16 +96,23 @@ serialized, whichever is second rebasing on the first.
   (`.claude/agents/critic.md`) gains `Bash(ctx *)` in its tools
   frontmatter plus one prompt line to prefer ctx for structure questions
   when the repo is indexed — a critic verifying a spec's symbol claims
-  is exactly a refs/sig consumer. (b) The /onboard (or gate) skill's
-  permission-allowlist step adds `Bash(ctx *)` to the recommended
-  allowlist when the repo is indexed. (c) A rollout checklist task (may
-  be executed by an attended session; the repos are outside this repo's
-  Touch scope) adds `Bash(ctx *)` to the 8 indexed repos'
-  `.claude/settings.json` allowlists, with the exact per-repo command
-  written in the task. Acceptance: (a) `grep -q 'Bash(ctx' .claude/agents/critic.md`
-  (confirmed absent today); (b) grep in the
-  onboard/gate skill file; (c) checklist task exists with runnable
-  commands and its Status reflects the attended-rollout path
+  is exactly a refs/sig consumer. The antigravity critic mirror
+  (agents→skills port under `antigravity/.agents/skills/`) carries the
+  same change in the same commit, with the plugin.json bump per
+  conventions. (b) The /onboard skill's permission-allowlist step —
+  `.claude/skills/onboard/SKILL.md` §4 "Permissions" specifically, NOT
+  the gate skill (gate owns hooks/deny rules, not the allowlist) — adds
+  `Bash(ctx *)` to the recommended allowlist when the repo is indexed.
+  (c) A rollout checklist task (may be executed by an attended session;
+  the repos are outside this repo's Touch scope) adds `Bash(ctx *)` to
+  the 8 indexed repos' `.claude/settings.json` allowlists, with the
+  exact per-repo command written in the task. Acceptance: (a)
+  `grep -q 'Bash(ctx' .claude/agents/critic.md` succeeds AND the same
+  grep succeeds against the antigravity critic mirror (both confirmed
+  absent today); (b) `grep -q 'Bash(ctx' .claude/skills/onboard/SKILL.md`
+  succeeds (confirmed absent today — the file has zero ctx mentions);
+  (c) checklist task exists with runnable commands and its Status
+  reflects the attended-rollout path
   (docs/memory/unattended-worker-tool-limits.md pattern).
 
 - R4 — Worktree cache warmth. The worktree-creation step in drain's (and
@@ -105,16 +124,22 @@ serialized, whichever is second rebasing on the first.
   procedure text (`grep -q '.context/cache' .claude/skills/drain/` files;
   confirmed absent today); a live check — create a scratch worktree per
   the procedure in an indexed repo and assert
-  `.context/cache/index.sqlite` exists in it — is scripted in the task.
+  `.context/cache/index.sqlite` exists in it — is scripted in the task;
+  antigravity + codex mirror legs for the drain/build edits and the
+  plugin.json bump per CLAUDE.md conventions (same obligation as R1 —
+  a task landing R4 without R1 carries them itself).
 
 - R5 — Adoption telemetry. agentprof reports per-session ctx usage:
   count of Bash tool calls whose command invokes `ctx
   <tree|sig|refs|deps|at|map|notes|show>` plus Skill-tool invocations of
   `agentic:ctx`, for sessions whose cwd resolves to an indexed repo.
   Baseline (this review): 0 outside the fooszone survey + rollout
-  sessions. Acceptance: a Go test over a fixture transcript containing
-  both invocation shapes asserts the counts; the report surfaces the
-  metric alongside existing skill attribution.
+  sessions. Acceptance: a Go test over fixture transcripts asserts (i)
+  the counts for both invocation shapes in an indexed-repo session AND
+  (ii) that a session whose cwd is NOT an indexed repo contributes zero
+  to the metric even when its transcript contains ctx-shaped commands —
+  the cwd→indexed filter is load-bearing, not decorative; the report
+  surfaces the metric alongside existing skill attribution.
 
 - R6 — Notes adoption nudge. /build's attended completion step gains:
   in an indexed repo, if this task surfaced a symbol-anchored fact
