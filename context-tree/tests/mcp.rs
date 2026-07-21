@@ -214,3 +214,45 @@ fn mcp_notes_add_writes_file() {
         "notes_add via the MCP path must create exactly one note file on disk"
     );
 }
+
+/// specs/ctx-absence-check R2 (task 01): a no-match through the MCP `sig` tool
+/// carries the same extended `boundary_note`/`suggested_check` fields the CLI
+/// `--json` path emits — proving the shared `render()` core, not just the CLI.
+#[test]
+fn sig_no_match_via_mcp_carries_boundary_fields() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "a.py", "def a():\n    return 1\n");
+    sleep(PAST);
+    init(root);
+
+    let call = json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": { "name": "sig", "arguments": { "symbol": "Nonexistent" } }
+    });
+    let responses = mcp_session(root, &[call]);
+    let resp = response(&responses, 1);
+    let text = resp["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_else(|| panic!("tools/call sig no-match has no text content: {resp}"));
+    let v: Value = serde_json::from_str(text).unwrap();
+
+    assert_eq!(
+        v["error"].as_str(),
+        Some("no match"),
+        "MCP no-match returns the error object: {v}"
+    );
+    assert!(
+        v["boundary_note"].as_str().is_some(),
+        "MCP no-match carries boundary_note: {v}"
+    );
+    let sc = v["suggested_check"]
+        .as_str()
+        .unwrap_or_else(|| panic!("MCP no-match carries suggested_check: {v}"));
+    assert!(
+        sc.contains("grep -rl") && sc.contains("| head -20"),
+        "MCP suggested_check is a bounded grep: {sc}"
+    );
+}

@@ -9,7 +9,9 @@
 //! is excluded from the cross-file candidate set. Results cap at `--limit`
 //! (default 50) per direction with a truncation line naming the flag.
 
-use crate::cmd::{EXIT_AMBIGUOUS, EXIT_NO_MATCH, format_note_marker, load_index, note_value};
+use crate::cmd::{
+    EXIT_AMBIGUOUS, EXIT_NO_MATCH, format_note_marker, load_index, no_match, note_value,
+};
 use crate::index::{IndexStore, RefRow, ScopeRow, SymbolRow};
 use crate::lsp::EnrichmentCache;
 use crate::path::resolve_suffix;
@@ -101,10 +103,17 @@ pub fn render(args: &Args) -> (String, ExitCode) {
             if args.json {
                 out.push_str(&format!(
                     "{}\n",
-                    json!({ "error": "no match", "symbol": args.symbol })
+                    json!({
+                        "error": "no match",
+                        "symbol": args.symbol,
+                        "boundary_note": no_match::BOUNDARY_NOTE,
+                        "suggested_check": no_match::suggested_check(&args.symbol),
+                    })
                 ));
             } else {
                 eprintln!("ctx refs: no symbol matches '{}'", args.symbol);
+                eprintln!("note: {}", no_match::BOUNDARY_NOTE);
+                eprintln!("  {}", no_match::suggested_check(&args.symbol));
             }
             return (out, ExitCode::from(EXIT_NO_MATCH));
         }

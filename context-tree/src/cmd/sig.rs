@@ -3,7 +3,8 @@
 //! ambiguous match (candidate list printed).
 
 use crate::cmd::{
-    EXIT_AMBIGUOUS, EXIT_NO_MATCH, first_doc_line, format_note_marker, load_index, note_value,
+    EXIT_AMBIGUOUS, EXIT_NO_MATCH, first_doc_line, format_note_marker, load_index, no_match,
+    note_value,
 };
 use crate::index::SymbolRow;
 use crate::path::resolve_suffix;
@@ -70,10 +71,17 @@ pub fn render(args: &Args) -> (String, ExitCode) {
             if args.json {
                 out.push_str(&format!(
                     "{}\n",
-                    json!({ "error": "no match", "symbol": args.symbol })
+                    json!({
+                        "error": "no match",
+                        "symbol": args.symbol,
+                        "boundary_note": no_match::BOUNDARY_NOTE,
+                        "suggested_check": no_match::suggested_check(&args.symbol),
+                    })
                 ));
             } else {
                 eprintln!("ctx sig: no symbol matches '{}'", args.symbol);
+                eprintln!("note: {}", no_match::BOUNDARY_NOTE);
+                eprintln!("  {}", no_match::suggested_check(&args.symbol));
             }
             (out, ExitCode::from(EXIT_NO_MATCH))
         }

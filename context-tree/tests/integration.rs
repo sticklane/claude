@@ -244,3 +244,73 @@ fn json_all_verbs() {
         assert!(v.get(key).is_some(), "ctx {args:?} carries .{key}: {v}");
     }
 }
+
+fn stderr(out: &Output) -> String {
+    String::from_utf8(out.stderr.clone()).unwrap()
+}
+
+/// specs/ctx-absence-check R1 (task 01): a `sig` no-match prints a three-part
+/// boundary output on stderr — the no-match line, the boundary note stating the
+/// symbol/text distinction, and a bounded `grep` — with stdout empty and the
+/// exit code unchanged (1). A symbol containing `$`/`'` is shell-escaped in the
+/// suggested command.
+#[test]
+fn no_match_text_mode_emits_boundary_note_and_bounded_grep() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    ctx_ok(root, &["init"]);
+    write(root, "app.py", "def solo():\n    return 1\n");
+    sleep(PAST);
+
+    let out = ctx(root, &["sig", "a$b'c"]);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "no-match exit code is unchanged: {out:?}"
+    );
+    assert!(
+        stdout(&out).is_empty(),
+        "stdout stays empty on a no-match: {:?}",
+        stdout(&out)
+    );
+
+    let parts: Vec<String> = stderr(&out)
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(str::to_string)
+        .collect();
+    assert_eq!(
+        parts.len(),
+        3,
+        "exactly three parts on stderr (no-match line, note, grep): {parts:?}"
+    );
+
+    assert!(
+        parts[0].contains("no symbol matches") && parts[0].contains("a$b'c"),
+        "part 1 is the no-match line naming the symbol: {}",
+        parts[0]
+    );
+    let note = parts[1].to_lowercase();
+    assert!(
+        note.contains("object field")
+            && note.contains("json key")
+            && note.contains("string literal"),
+        "part 2 states that fields/keys/literals are not indexed: {}",
+        parts[1]
+    );
+    let grep = parts[2].trim();
+    assert!(
+        grep.starts_with("grep -rl"),
+        "part 3 is a bounded grep command: {grep}"
+    );
+    assert!(
+        grep.contains("| head -20"),
+        "part 3 is bounded by `head -20`: {grep}"
+    );
+    // POSIX single-quote escaping: wrap in '', inner ' becomes '\'' , and $ is
+    // literal inside single quotes — so `a$b'c` renders as `'a$b'\''c'`.
+    assert!(
+        grep.contains("'a$b'\\''c'"),
+        "the `$`/`'` symbol is shell-escaped in the suggested command: {grep}"
+    );
+}

@@ -6,6 +6,7 @@ pub mod at;
 pub mod deps;
 pub mod hooks;
 pub mod map;
+pub mod no_match;
 pub mod notes;
 pub mod refs;
 pub mod sig;

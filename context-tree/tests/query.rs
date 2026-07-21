@@ -323,6 +323,52 @@ fn sig_no_match_exits_1() {
     assert_eq!(out.status.code(), Some(1), "no match exits 1");
 }
 
+/// specs/ctx-absence-check R2 (task 01): `sig --json` no-match EXTENDS the
+/// existing error object — the legacy `error`/`symbol` keys survive unchanged
+/// and `boundary_note`/`suggested_check` are added. The suggested command is
+/// brace-free (repeated `--include` flags) and bounded.
+#[test]
+fn sig_no_match_json_extends_error_object() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "app.py", TWO_HANDLERS);
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["sig", "Nonexistent", "--json"]);
+    assert_eq!(out.status.code(), Some(1), "no-match exit code unchanged");
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+
+    // Legacy keys survive unchanged.
+    assert_eq!(
+        v["error"].as_str(),
+        Some("no match"),
+        "legacy error key: {v}"
+    );
+    assert_eq!(
+        v["symbol"].as_str(),
+        Some("Nonexistent"),
+        "legacy symbol key: {v}"
+    );
+
+    // New keys added.
+    assert!(
+        v["boundary_note"].as_str().is_some(),
+        "boundary_note key added: {v}"
+    );
+    let sc = v["suggested_check"]
+        .as_str()
+        .unwrap_or_else(|| panic!("suggested_check key added: {v}"));
+    assert!(
+        sc.contains("grep -rl") && sc.contains("| head -20"),
+        "suggested_check is a bounded grep: {sc}"
+    );
+    assert!(
+        !sc.contains('{'),
+        "suggested_check uses repeated flags, not a brace pattern: {sc}"
+    );
+}
+
 #[test]
 fn sig_ambiguous_lists_candidates_and_exits_3() {
     let dir = tempfile::tempdir().unwrap();
