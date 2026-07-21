@@ -661,8 +661,66 @@ tracking ref that can lag, the prompt's first step force-syncs the worktree
 to the default branch so the worker always builds on current state and its
 branch merges back cleanly. At dispatch time, resolve build's SKILL.md to
 a concrete path — `.claude/skills/build/SKILL.md` when the toolkit is
-in-repo, otherwise the plugin cache path found at dispatch — and
-substitute it for `<build-skill-path>` below. Workers cannot invoke
+in-repo, otherwise the installed plugin-cache copy — using the **canonical
+skill-path resolution recipe** just below, and substitute it for
+`<build-skill-path>`.
+
+**Canonical skill-path resolution recipe.** Resolve any `<skill>/<file>`
+path-pointer this section delivers (build's SKILL.md above, and any other) in
+two steps, cheapest first. The discipline for both steps is one line:
+resolve once per session, never reuse a version number seen elsewhere in context.
+This is the same resolve-once, reuse discipline `drain-read-once-discipline`
+establishes for `reference.md`'s own content (cite it, don't restate the
+rationale). In the toolkit dev checkout,
+`bin/resolve-skill-path <repo-relative-path>` runs exactly these two steps as
+one command (stdout is the resolved path; exit 1 with a stderr diagnostic
+when neither branch resolves) — it is the **in-repo shortcut only**,
+unreachable from a non-toolkit repo before bootstrap, so in that case run the
+plugin-cache branch by hand:
+
+```bash
+# Resolve <repo-relative-path> (e.g. .claude/skills/build/SKILL.md) to a
+# concrete path. Two steps, cheapest first; resolve once per session.
+skill_rel=".claude/skills/build/SKILL.md"   # the <skill>/<file> pointer
+
+# Step 1 — in-repo (no CLI call): present relative to the repo root?
+# If yes, that IS the path — the toolkit is in-repo, stop here.
+if [ -f "$skill_rel" ]; then
+  printf '%s\n' "$skill_rel"
+else
+  # Step 2 — plugin-cache install: resolve the INSTALLED version freshly via
+  # `claude plugin list --json` (the exact parse bin/plugin-installed-version
+  # already implements — quote it, don't reinvent a second parse), then
+  # construct and verify the versioned cache path. Never substitute a version
+  # number recalled from a spec, an evidence file, or an earlier turn — only
+  # ever the freshly-queried value.
+  version="$(claude plugin list --json 2>/dev/null | python3 -c '
+import json, sys
+
+target = "agentic@agentic-toolkit"
+try:
+    plugins = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+if not isinstance(plugins, list):
+    sys.exit(1)
+for p in plugins:
+    if isinstance(p, dict) and p.get("id") == target and p.get("version"):
+        print(p["version"])
+        sys.exit(0)
+sys.exit(1)
+')"
+  cache_path="$HOME/.claude/plugins/cache/agentic-toolkit/agentic/$version/$skill_rel"
+  if [ -n "$version" ] && [ -f "$cache_path" ]; then
+    printf '%s\n' "$cache_path"
+  else
+    echo "resolve: neither in-repo nor plugin-cache resolved $skill_rel" >&2
+    exit 1
+  fi
+fi
+```
+
+Workers cannot invoke
 launch-gated execution skills (their context carries no live-user
 authorization — CLAUDE.md's execution-stage bullet), so the prompt must
 carry a readable path, resolved at dispatch:
