@@ -314,3 +314,124 @@ fn no_match_text_mode_emits_boundary_note_and_bounded_grep() {
         "the `$`/`'` symbol is shell-escaped in the suggested command: {grep}"
     );
 }
+
+/// The non-empty stderr lines of a `ctx` invocation, in order.
+fn stderr_parts(out: &Output) -> Vec<String> {
+    stderr(out)
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// Index of the first stderr part that is task 01's boundary note (the
+/// fields/keys/literals-not-indexed line), or a panic naming the parts seen.
+fn boundary_note_index(parts: &[String]) -> usize {
+    parts
+        .iter()
+        .position(|l| {
+            let l = l.to_lowercase();
+            l.contains("object field") && l.contains("json key") && l.contains("string literal")
+        })
+        .unwrap_or_else(|| panic!("boundary note present on stderr: {parts:?}"))
+}
+
+/// specs/ctx-absence-check R4 (task 02): a `sig` no-match whose query is a case
+/// variant of an indexed symbol lists that near-miss as a "did you mean"
+/// candidate BEFORE task 01's boundary note (text mode, on stderr).
+#[test]
+fn sig_no_match_lists_did_you_mean_before_boundary_note() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    ctx_ok(root, &["init"]);
+    // Only the camelCase `figureBboxes` is indexed; the query is a case variant.
+    write(root, "app.py", "def figureBboxes():\n    return 1\n");
+    sleep(PAST);
+
+    let out = ctx(root, &["sig", "FigureBboxes"]);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "case-variant miss still exits 1: {out:?}"
+    );
+
+    let parts = stderr_parts(&out);
+    let dym_idx = parts
+        .iter()
+        .position(|l| l.to_lowercase().contains("did you mean"))
+        .unwrap_or_else(|| panic!("a `did you mean` line is present: {parts:?}"));
+    let note_idx = boundary_note_index(&parts);
+    assert!(
+        dym_idx < note_idx,
+        "the did-you-mean list precedes the boundary note: {parts:?}"
+    );
+    // Parse the did-you-mean region (between its header and the note) rather
+    // than substring-matching the whole blob.
+    let region = parts[dym_idx..note_idx].join(" ");
+    assert!(
+        region.contains("figureBboxes"),
+        "the case-variant candidate is listed: {region}"
+    );
+}
+
+/// specs/ctx-absence-check R4 (task 02): a `refs` no-match also lists near-miss
+/// candidates — the listing lives in the shared no-match path, so both commands
+/// get it.
+#[test]
+fn refs_no_match_lists_did_you_mean_candidates() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    ctx_ok(root, &["init"]);
+    write(root, "app.py", "def figureBboxes():\n    return 1\n");
+    sleep(PAST);
+
+    let out = ctx(root, &["refs", "FigureBboxes"]);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "case-variant miss exits 1: {out:?}"
+    );
+
+    let parts = stderr_parts(&out);
+    let dym_idx = parts
+        .iter()
+        .position(|l| l.to_lowercase().contains("did you mean"))
+        .unwrap_or_else(|| panic!("a `did you mean` line is present: {parts:?}"));
+    let note_idx = boundary_note_index(&parts);
+    assert!(
+        dym_idx < note_idx,
+        "did-you-mean precedes the note: {parts:?}"
+    );
+    assert!(
+        parts[dym_idx..note_idx].join(" ").contains("figureBboxes"),
+        "the case-variant candidate is listed: {parts:?}"
+    );
+}
+
+/// specs/ctx-absence-check R4 (task 02): a no-match with no near-miss candidate
+/// emits output identical to task 01's baseline — exactly the three parts
+/// (no-match line, note, grep) and no "did you mean" line.
+#[test]
+fn no_match_without_near_miss_omits_did_you_mean() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    ctx_ok(root, &["init"]);
+    write(root, "app.py", "def solo():\n    return 1\n");
+    sleep(PAST);
+
+    let out = ctx(root, &["sig", "Zzzznonexistent"]);
+    assert_eq!(out.status.code(), Some(1), "no-match exits 1: {out:?}");
+
+    let parts = stderr_parts(&out);
+    assert!(
+        !parts
+            .iter()
+            .any(|l| l.to_lowercase().contains("did you mean")),
+        "no `did you mean` line when nothing is close: {parts:?}"
+    );
+    assert_eq!(
+        parts.len(),
+        3,
+        "exactly task 01's three parts when there is no near-miss: {parts:?}"
+    );
+}
