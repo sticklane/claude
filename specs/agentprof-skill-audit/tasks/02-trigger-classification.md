@@ -12,6 +12,25 @@ Budget: 22 turns
 Spec: ../SPEC.md (requirements R3, R3a, R4, R5)
 Touch: agentprof/cmd_skillcheck_trigger.go, agentprof/cmd_skillcheck_trigger_test.go
 
+<!--
+PLAN (delete at close-out):
+- New package-main file cmd_skillcheck_trigger.go exposing:
+  - ClassifyTriggers([]TriggerInput, Resolver, judge.Judge) ([]TriggerResult, error)
+    population split: CommandTag!="" → explicit_invocation; !PrecededByUserTurn →
+    self_chained; else resolve SKILL.md → unresolvable / (DisableModelInvocation →
+    explicit_invocation) / judge → correctly-triggered|misfired.
+  - Resolver{Cwd, PluginCacheRoot}: resolve(name) tries cwd/.claude/skills/<name>/SKILL.md
+    then <root>/*/*/skills/<name>/SKILL.md (marketplace/plugin globs); installedSkillPaths()
+    enumerates both layouts for possible-miss.
+  - DetectPossibleMisses([]string userTurns, Resolver) ([]PossibleMiss, error): deterministic
+    quoted-phrase extraction from each installed skill's description (via claude.SkillFrontmatter),
+    case-insensitive substring match, no judge call.
+- TriggerInput pairs a claude.SkillInvocation with its preceding user-turn text (task 01's
+  SkillInvocation carries no user-turn text; the judge prompt needs it — see Decisions).
+- Tests all named Test ClassifyTrigger* so `-run TestClassifyTrigger` exercises the possible-miss
+  cases too. Order: stub+tests (red) → impl (green).
+-->
+
 ## Goal
 
 A `ClassifyTriggers` function (or similarly-named entry point in
