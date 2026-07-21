@@ -2,6 +2,15 @@
 
 Breakdown-ready: true
 
+## Landing order (breakdown constraint)
+
+Three specs edit the ctx SKILL.md (and its antigravity mirror):
+this one creates the "Reading ladder" (R2); ctx-static-analysis-
+augmentation R1 rewrites rung 2; ctx-query-ergonomics R4 rewrites rung
+3 and the command table. They MUST land serialized in that order —
+breakdown must not emit their SKILL.md-editing tasks as parallel work,
+and each such task edits SKILL.md and the mirror in the same commit.
+
 ## Problem
 
 Live evidence from a fooszone survey session (2026-07-20): the `ctx` skill
@@ -52,10 +61,14 @@ token-discipline rule). No changes to the `ctx` binary.
   skill", "ctx the codebase") and survey phrasing ("understand the
   codebase", "survey the repo structure", "deep-dive the code structure").
   Keep the existing negative scope ("not for content/text search").
-  Acceptance: `grep -c 'use ctx' .claude/skills/ctx/SKILL.md` ≥ 1, and
-  each phrase family above appears in the description line. Mirror the
-  change to `antigravity/.agents/skills/ctx/SKILL.md` (content-parity
-  audit exists: specs/codequality-antigravity-content-parity).
+  Acceptance (all against the frontmatter description line, not the
+  body): `sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md`
+  piped to grep must match each of "use ctx", "with ctx"/"via ctx",
+  and one survey phrase ("understand the codebase" or "survey the
+  repo"); and `diff <(sed -n 's/^description: *//p'
+.claude/skills/ctx/SKILL.md) <(sed -n 's/^description: *//p'
+antigravity/.agents/skills/ctx/SKILL.md)` is empty (mirror parity;
+  audit: specs/codequality-antigravity-content-parity).
 
 - R2 — Escalation ladder. Add a "Reading ladder" section to the skill
   body prescribing, in order: (1) ctx query; (2) structural content
@@ -83,23 +96,38 @@ token-discipline rule). No changes to the `ctx` binary.
   and returns a distilled structure report — the main model never reads
   raw query dumps for surveys. The queries themselves are deterministic
   CLI calls; the model tier only governs whose context absorbs the
-  output. Acceptance: section present; contains an explicit dispatch
-  prompt template for the scout including the ctx command table.
+  output. Delegation is only functional once R5's tool grant exists —
+  R4's skill text must not ship ahead of R5. Acceptance: section
+  present; contains an explicit dispatch prompt template for the scout
+  including the ctx command table; and R5's grant check passes.
 
-- R5 — Scout integration. The `scout` agent definition's prompt gains a
-  line directing it to prefer `ctx` queries (when the repo is indexed)
-  before Grep/Read, so cheap-tier delegation from R4 works without the
-  skill needing to trigger inside the subagent. Acceptance: scout
-  definition mentions ctx with the binary-resolution one-liner.
+- R5 — Scout integration. Two changes to the `scout` agent definition
+  (`.claude/agents/scout.md`), both required: (a) add `Bash(ctx *)` to
+  the frontmatter tool allowlist — today the allowlist (Read, Grep,
+  Glob, Bash(git log/show *), Bash(ls *), Bash(wc *)) physically cannot
+  execute the ctx binary, so any prompt-only change is dead text (see
+  `.claude/rules/token-discipline.md`'s note that scout has no MCP
+  grant either); (b) the prompt gains a line directing it to prefer
+  `ctx` queries (when the repo is indexed) before Grep/Read, with the
+  binary-resolution one-liner. Acceptance: `grep -q 'Bash(ctx'
+.claude/agents/scout.md` succeeds AND the prompt mentions ctx; a
+  prompt mention without the grant fails R5.
 
-- R6 — CLAUDE.md guidance propagation. (a) The /onboard skill's CLAUDE.md
-  template emits an "Answering structure questions" section (modeled on
-  fooszone's) when the repo has a ctx index, including the reading
-  ladder's rung order. (b) The toolkit's token-discipline rule
-  (`.claude/rules/token-discipline.md` or equivalent distributed copy)
-  names index-first reading as the default for structural questions,
-  before scout dispatch. Acceptance: template renders the section for an
-  indexed repo; rule file names ctx.
+- R6 — CLAUDE.md guidance propagation. (a) The /onboard skill's
+  procedure (`.claude/skills/onboard/SKILL.md` — a prose procedure, not
+  a rendering template) gains an instruction: when the target repo has a
+  ctx index (`.context/` present or `ctx` resolves per the skill's
+  binary-resolution order), write an "Answering structure questions"
+  section (modeled on fooszone's) into the repo's **CLAUDE.md** —
+  conventions file, per onboard's orientation/conventions split —
+  including the reading ladder's rung order. (b) The toolkit's
+  token-discipline rule (`.claude/rules/token-discipline.md`) names
+  index-first reading as the default for structural questions, before
+  scout dispatch. Acceptance: `grep -q 'Answering structure questions'
+.claude/skills/onboard/SKILL.md` succeeds and the surrounding
+  instruction names CLAUDE.md and the index-presence condition;
+  `grep -qi 'ctx' .claude/rules/token-discipline.md` succeeds in the
+  structural-questions context.
 
 - R7 — Scope cautions currency. Skill scope cautions add: refs/sig
   results are name-resolution heuristics (tagged `heuristic`), not

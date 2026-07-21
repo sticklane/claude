@@ -38,10 +38,13 @@ file path, symbol line span — is already in the index):
    Ambiguity listings (already emitted) gain a "rerun with" hint line
    showing the file-scoped form for each candidate.
 2. `ctx show <symbol> [--head N]`: print the symbol's source span from
-   the working tree (span from the index, bytes from the file — stays
-   consistent with lazy staleness sweep). `--head N` truncates long
-   bodies; default prints whole span with a truncation guard (e.g. cap
-   at 200 lines with a "… +K more lines, use --head/Read" tail).
+   the working tree. `show` MUST run the lazy staleness sweep before
+   resolving the span (like every other query) — the span is then read
+   from the freshly-reconciled index, so an edit that shifts the
+   symbol's lines cannot produce a stale-range dump. `--head N`
+   truncates long bodies; default prints whole span with a truncation
+   guard (e.g. cap at 200 lines with a "… +K more lines, use
+   --head/Read" tail).
 3. `--in <path-prefix>` (repeatable) and `--not-in <path-prefix>` on
    `refs` (and `map`), filtering results by file path prefix.
 
@@ -52,17 +55,29 @@ file path, symbol line span — is already in the index):
   returns exactly one result and the bare form's ambiguity listing
   includes the rerun hints. Golden tests (insta) for both.
 - R2 — `ctx show`: output is exactly the symbol's span (verified
-  against a fixture with known line ranges); respects staleness (edit
-  the fixture, query again, get new bytes); truncation guard behavior
-  pinned; `--json` returns `{path, start_line, end_line, text}`.
+  against a fixture with known line ranges); staleness test MUST use a
+  span-shifting edit — insert/delete lines ABOVE the symbol so its line
+  range moves, query again, and assert the returned span is
+  re-resolved to the new location (a fixed-range re-read would fail
+  this); truncation guard behavior pinned; `--json` returns
+  `{path, start_line, end_line, text}`.
 - R3 — Filters: `refs <sym> --in go/cmd --not-in attic` returns only
   matching paths; filters compose with the existing output format and
   `--json`. Golden tests.
 - R4 — Docs: skill command table (both `.claude/skills/ctx/SKILL.md`
   and the antigravity mirror) gains rows for `show` and the selector/
-  filter forms; the reading ladder in specs/ctx-skill-token-doctrine R2
-  is updated so rung 3 becomes `ctx show` (sliced Read demotes to rung
-  4's about-to-edit case).
+  filter forms; the reading ladder (created by
+  specs/ctx-skill-token-doctrine R2) is rewritten to exactly this
+  four-rung list, verbatim: (1) ctx query; (2) structural content
+  search (ast-grep where available, else Grep) for body/literal/pattern
+  questions; (3) `ctx show <symbol>` when a located symbol's body must
+  be read; (4) Read — sliced (`offset`/`limit`) when needed context
+  exceeds one symbol's span, whole-file only when about to edit. This
+  supersedes token-doctrine's original rung 3 ("sliced Read"); both
+  specs agree on this final list. Landing order: this task lands AFTER
+  ctx-skill-token-doctrine R2 and after any
+  ctx-static-analysis-augmentation SKILL.md edits, serialized, editing
+  skill + mirror in the same commit.
 - R5 — Architecture rules hold: no whole-tree work at query time; the
   span lookup is O(one symbol), the file read is O(one file).
 

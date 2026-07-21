@@ -1,7 +1,14 @@
 # ctx: augment with traditional static analysis (exact refs, structural search, clone detection)
 
-Breakdown-ready: false — two decision forks below need /design (or a
-maintainer call) before breakdown.
+Breakdown-ready: false — the fork-gated requirements (R2 per F1, R3 per
+F2) need /design before breakdown. R1, R4, and R5 are doctrine-only and
+NOT fork-gated: they become breakable as soon as
+ctx-skill-token-doctrine R2 (the reading ladder they amend) has landed;
+a partial breakdown covering only R1/R4/R5 is explicitly authorized
+then. Landing order: any task here that edits the ctx SKILL.md (and its
+antigravity mirror) lands AFTER ctx-skill-token-doctrine R2 and BEFORE
+ctx-query-ergonomics R4, serialized, editing skill + mirror in the same
+commit (see the Landing order section in ctx-skill-token-doctrine).
 
 ## Problem
 
@@ -74,11 +81,15 @@ structure", and must not creep into ctx.
   documented recipe run against the `main.rodSpecs`-style ambiguity
   reproduces a disambiguated answer.
 - R3 — Clone detection per F2's decision. A supported, documented way to
-  get a clone report for a mixed TS/Go repo, surfaced where F2 decides;
-  run against fooszone it must rediscover the three-homography cluster
-  (src/video/homography.ts, src/annotator/components/Canvas.tsx,
-  src/viewer/possessionAnalyzer.ts). Acceptance: that named cluster
-  appears in the report output.
+  get a clone report for a mixed TS/Go repo, surfaced where F2 decides.
+  Acceptance: an IN-REPO fixture (two committed fixture files containing
+  a known duplicated function, one TS pair and one Go pair) is
+  rediscovered by the documented recipe, asserted by a test or runnable
+  check in this repo — not by pointing at another repo's drifting
+  contents. The fooszone three-homography case is recorded as a worked
+  example in the recipe docs only (non-normative; note that whether a
+  detector clusters a .tsx component with a .ts module is
+  threshold-dependent).
 - R4 — Boundary statement. ctx docs and skill state the division:
   structure queries (ctx) / structural content search (ast-grep) /
   exactness on demand (LSP path) / correctness diagnostics (check.sh
