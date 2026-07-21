@@ -40,14 +40,20 @@ may land concurrently), `agentprof/main.go`, or `agentprof/cmd_skillcheck.go`
    resolution in the fixed order SPEC.md Solution step 3 states: (a)
    `.claude/skills/<name>/SKILL.md` relative to the transcript's recorded
    `cwd`; (b) the plugin-cache path; (c) `unresolvable` if neither exists.
-   Test all three paths with fixtures.
+   Once a path resolves, call task 01's `claude.SkillFrontmatter` to read
+   its `description:`/`disable-model-invocation:` fields — **do not write
+   your own frontmatter parser**; task 01 owns the single shared one task
+   03 also calls, so a second one here would collide with it in this same
+   `package main` at merge time. Test all three resolution paths with
+   fixtures.
 3. For each resolved invocation, call the task-01 `Judge` interface (via
    its `Fake` in tests) with a trigger-correctness prompt comparing the
    skill's description against the preceding user turn(s); classify
    `correctly-triggered`/`misfired` from the judge's answer.
 4. Implement the possible-miss detector (R5): deterministic keyword/phrase
    match (no judge call) between every currently-installed skill's
-   declared trigger phrases and non-triggering user turns' text.
+   declared trigger phrases (read via `claude.SkillFrontmatter`, same as
+   step 2 — not a separate parser) and non-triggering user turns' text.
    "Currently-installed" enumerates from `.claude/skills/*/SKILL.md` under
    the invocation cwd plus the plugin-cache layout from step 2 — test with
    a fixture skill set and a turn containing (and one not containing) a

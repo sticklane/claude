@@ -15,27 +15,36 @@ Touch: agentprof/cmd_skillcheck_outcome.go, agentprof/cmd_skillcheck_outcome_tes
 ## Goal
 
 A `ClassifyOutcome` function (or similarly-named entry point in
-`cmd_skillcheck_outcome.go`) takes a `correctly-triggered` invocation
-(from task 02's output shape) and scores `success`/`failure`/`unknown`
-using either the invoked skill's `outcome-rubric:` frontmatter (if
-present, judged as ONE dimension/one call) or the generic rubric's three
-questions (each a separate call) — every outcome-judge prompt explicitly
-instructs the judge not to trust the invocation's own closing message.
+`cmd_skillcheck_outcome.go`) takes ONE of task 01's `SkillInvocation`
+values (already assumed by the caller to be `correctly-triggered` — this
+task's own package never imports or references anything from task 02's
+`cmd_skillcheck_trigger.go`; task 04 is what adapts a trigger-classified
+invocation into the call this function expects) plus that invocation's
+resolved `SKILL.md` path, and scores `success`/`failure`/`unknown` using
+either the invoked skill's `outcome-rubric:` frontmatter (if present,
+judged as ONE dimension/one call) or the generic rubric's three questions
+(each a separate call) — every outcome-judge prompt explicitly instructs
+the judge not to trust the invocation's own closing message.
 
 ## Touch
 
 Only `agentprof/cmd_skillcheck_outcome.go` and its test file. Do not touch
 `agentprof/cmd_skillcheck_trigger.go` (task 02 — Touch-disjoint sibling,
-may land concurrently), `agentprof/main.go`, or `agentprof/cmd_skillcheck.go`
-(task 04's entrypoint/wiring). `misfired`/`unresolvable` invocations are
-never passed to this code path at all (task 04 wires that gating) — this
-task's functions only need to handle already-`correctly-triggered` input.
+may land concurrently; this task's code must compile and its tests must
+pass with task 02's files entirely absent from the tree, since both may be
+worked in separate isolated worktrees before either merges), `agentprof/
+main.go`, or `agentprof/cmd_skillcheck.go` (task 04's entrypoint/wiring,
+which performs the trigger→outcome adaptation and the
+`misfired`/`unresolvable` gating — this task's functions only need to
+handle input already known to be `correctly-triggered`).
 
 ## Steps
 
-1. Implement `outcome-rubric:` frontmatter parsing for a `SKILL.md` path.
-   Write a failing test first: a fixture `SKILL.md` with the field present,
-   one without.
+1. Read `outcome-rubric:` via task 01's `claude.SkillFrontmatter` — **do
+   not write your own frontmatter parser**; task 01 owns the single shared
+   one task 02 also calls, so a second one here would collide with it in
+   this same `package main` at merge time. Write a failing test first: a
+   fixture `SKILL.md` with the field present, one without.
 2. Implement the generic rubric as three fixed judge-call prompts (terminal
    non-error state; explicit error/blocked/deferred signal; user
    correction/redo shortly after) per SPEC.md's Solution "Generic outcome
