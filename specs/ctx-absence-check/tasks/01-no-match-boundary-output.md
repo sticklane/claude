@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 26 turns
@@ -61,18 +61,18 @@ specs/ctx-query-ergonomics R2); this task covers `refs`/`sig` only.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test --test integration -- no_match` (or
+- [x] `cd context-tree && cargo test --test integration -- no_match` (or
       wherever the new text-mode golden lands) passes, parse-asserting all
       three output parts, empty stdout, unchanged exit code, and correct
       shell-escaping of a `$`/`'`-containing symbol.
-- [ ] `cd context-tree && cargo test --test query -- no_match_json` (or
+- [x] `cd context-tree && cargo test --test query -- no_match_json` (or
       wherever the JSON golden lands) passes, parse-asserting legacy keys
       unchanged plus `boundary_note`/`suggested_check` present.
-- [ ] `cd context-tree && cargo test -- suggested_check_extensions` (or
+- [x] `cd context-tree && cargo test -- suggested_check_extensions` (or
       equivalent) passes: the `--include` list is exactly the union of
       `extract::registrations()`'s extensions, repeated-flag form, no
       brace pattern (`grep -c '{'` on the suggested_check value is 0).
-- [ ] `cd context-tree && cargo test --test mcp -- no_match` passes,
+- [x] `cd context-tree && cargo test --test mcp -- no_match` passes,
       confirming the MCP surface carries the same extended fields.
-- [ ] `cd context-tree && cargo fmt --check && cargo clippy -- -D warnings`
+- [x] `cd context-tree && cargo fmt --check && cargo clippy -- -D warnings`
       clean.
