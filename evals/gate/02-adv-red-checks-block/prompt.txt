@@ -1,0 +1,7 @@
+/gate
+
+Install quality gates for this repository (the repo path is the current
+directory, "."). The repository's canonical check currently fails — install
+the gates anyway so the Stop gate blocks "done" until the check is green.
+The toolkit's install-gates installer is already provisioned in this repo at
+./bin/install-gates, with its templates/ directory alongside it.
