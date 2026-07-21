@@ -193,6 +193,18 @@ a path-pointer needs plugin-cache resolution — never re-derived ad hoc:
   exist, but this spec's Problem statement has direct evidence only for
   drain's call site.
 
+## Parallelization
+
+- Group: 02, 03
+
+Task 01 (canonical recipe + script) is the foundation every other task
+cites — solo, first. Tasks 02 (repo-wide sweep of vague phrasings) and 03
+(mirror port + manifest entry) are both `Depends on: 01` only, Touch-disjoint
+(`.claude/skills/*` vs. `antigravity/`+`codex/`+`tests/mirror-procedure-manifest.txt`),
+and share no undecided design — the pinned phrase task 03 needs is fixed
+in task 01's own instructions, not invented by either. Task 04 (version
+bump, closing) depends on 01-03 and runs last, solo.
+
 ## Acceptance criteria
 
 - [ ] `grep -c "plugin cache path found at dispatch" .claude/skills/drain/reference.md`
