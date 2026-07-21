@@ -362,3 +362,79 @@ with the orchestrator's OWN pid, a stale artifact of the just-completed
 background dispatch, not a foreign process) and delete the now-merged task
 branch, THEN run gates — never leave worktree cleanup for "later" once a
 gate run is about to start.
+
+## agentprof stage/role markers are easy to silently skip mid-dispatch
+
+SKILL.md states the `<!-- agentprof:stage=X -->` opening-line requirement
+and the `<!-- agentprof:role=worker-attemptN -->` worker-prompt-prefix
+requirement inline at each step, but nothing mechanically enforces either
+— a hub focused on the flip/dispatch/merge mechanics can (and, observed
+2026-07-20, did) skip both for several verdicts running before catching
+itself. Nothing downstream fails when this happens — agentprof cost
+attribution for that stretch is just silently missing, so there's no error
+to catch it. Treat emitting the markers as part of the step itself, not an
+optional annotation: write the stage marker as literally the first line of
+the turn where you enter that step, and prepend the role marker to the
+dispatch prompt string before anything else, every single dispatch.
+
+## A worker can misread its own task file as excluded from its `Touch:` scope
+
+A dispatched worker's close-out is expected to flip its own task file's
+`Status:` line, tick its acceptance checkboxes, and add evidence lines —
+this is standing per drain's append-only whitelist contract, regardless of
+what the task's `Touch:` header lists (that header scopes PRODUCT files,
+not the task file's own queue-state fields). Observed 2026-07-20: a worker
+finished all product-file changes correctly but left its task file
+untouched, reasoning in its verdict that the file was "outside this task's
+Touch: scope." The orchestrator had to apply the Status/checkbox close-out
+itself post-merge, after independently re-running the acceptance commands
+to confirm DONE was actually earned. If a DONE verdict's branch shows no
+diff at all under `*/tasks/*.md` for the dispatched task's own file, don't
+treat that as a clean whitelist pass — it means the worker skipped its own
+close-out, and the orchestrator must do it (re-verifying each acceptance
+command itself first, never taking the verdict's self-report on faith for
+a bookkeeping edit nobody else checked).
+
+## Verifying whether a suspicious DRAIN-OWNER.md lease is actually live
+
+The Owner-lease liveness check (newest of: last commit touching
+`specs/<slug>/`, or an `in-progress` task's Stale-lock signals, against the
+15-min grace window) has a real blind spot: a process can make a commit,
+then immediately switch to unrelated work, and the lease reads FRESH for
+the full 15 minutes regardless of whether anything is still actively
+working it. Observed 2026-07-20: a lease held by a "remote container"
+(per its own DRAIN-BATON.md narrative) read FRESH by commit timestamp, but
+turned out to have no live process anywhere. The verification recipe that
+actually resolved it, in order: (1) `claude agents --json` for every
+session whose `cwd` resolves into the repo; (2) for each "busy" candidate,
+don't stop at the status flag — read the tail of that session's own
+transcript (`~/.claude/projects/<project>/<sessionId>.jsonl`, last few
+hundred lines, filtered to `tool_use` entries) to see what it's ACTUALLY
+doing right now, not what its cwd merely suggests; (3) `ps aux | grep
+claude` plus checking each PID for a controlling TTY — a real detached
+headless generation has none, so if every local `claude` process has a
+TTY, no headless relaunch is running either; (4) corroborate the lease's
+own narrative against `gh pr view`/`gh run list` for matching real commits/
+merges/CI runs (confirms the lease's content is genuine history, not
+fabricated, even once you've established nothing is currently running);
+(5) redo the timestamp arithmetic precisely against wall-clock `date -u`
+right before acting — a lease that read FRESH ten minutes ago may have
+crossed the 15-min window by the time the investigation finishes. A lease
+can be simultaneously "genuinely produced by something real" AND "nothing
+is running against it right now" — both facts matter, and confirming the
+second one is what actually licenses a reclaim.
+
+## Task-file merge conflicts on `Status:` are the norm, not the exception
+
+Every task this session (2026-07-20) hit the same trivial merge conflict
+on the task file: the orchestrator's own `pending`→`in-progress` flip
+commit and the worker's own `in-progress`→`done` close-out commit both
+touch the literal `Status:` line, so merging the worker's branch back
+always conflicts there — 100% of tasks, not an edge case. Resolution is
+always the same: keep `Status: done` (the worker's side), drop the
+`in-progress` HEAD side, nothing else in the file needs manual review
+unless a _second_ conflict hunk appears elsewhere. Don't treat this as a
+surprise requiring investigation each time; it's mechanical. (A
+`.gitattributes` custom merge driver scoped to task files' `Status:` line
+would eliminate the manual-resolve step entirely — worth a future spec if
+this keeps recurring.)

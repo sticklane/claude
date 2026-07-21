@@ -17,14 +17,21 @@ continuation of itself: the "Awaited children, never detached" policy in
 seeding this run's own successor.
 
 1. Write `HANDOFF.md` next to the active task/spec file (or at the repo
-   root if there isn't one), containing only what a fresh agent needs:
+   root if there isn't one). **Check first whether that default path is
+   already occupied by an unrelated task's handoff** (another concurrent
+   run's own in-flight parking file — read it far enough to tell if its Task
+   section describes different work than yours); if so, do not overwrite it
+   — pick a distinctly-named file instead (e.g. `HANDOFF-<short-topic>.md`)
+   and name that path explicitly in your final message, since the default
+   single-path convention assumes only one handoff is ever parked at a time.
+   Contain only what a fresh agent needs:
    - **Task**: what we're doing and the task/spec file path.
    - **State**: what's done (with evidence), what's in flight, exact next step.
    - **Files touched**: paths, one line each on what changed and why.
    - **Gotchas**: everything learned the hard way this session — wrong
      assumptions, commands that need flags, tests that are slow/flaky.
    - **Verification**: which acceptance criteria pass right now, which don't.
-   Facts and paths only — no narrative. Over a page means dead weight.
+     Facts and paths only — no narrative. Over a page means dead weight.
 2. Apply the verifier skill to any work COMPLETED this conversation (a
    task whose Status flipped to done, a spec whose criteria you're
    claiming met) before parking — completed work leaves the conversation
