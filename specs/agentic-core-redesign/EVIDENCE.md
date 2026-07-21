@@ -126,6 +126,33 @@ grant enforceability on grant-less runtimes stated honestly
 (UNENFORCED marker + composer-boundary floor); Next stage line given
 its artifact path.
 
+## Second critique pass + boil-down (2026-07-21)
+
+A second critic run against the rewritten spec returned NOT-READY
+with two majors, both about write discipline: (1) "one tracker
+writer" was a convention, not a mechanism, and the R-C acceptance
+test raced a topology the design forbids instead of the race the
+sync design introduces; (2) cross-clone consistency was unspecified
+while the repo demonstrably runs concurrent sessions in separate
+clones. Resolved by making both mechanical: D8 (repo-level write
+lock on all tracker-write commands) and D9 (pull → import → apply →
+export → commit → push, re-apply on push rejection, JSONL never
+hand-merged), with R-C's acceptance replaced by a same-machine
+lock test and a two-clone race test. Minors resolved: restored the
+named reader list in migration step 4, both mirror rules files and
+CLAUDE.md's port-chain conventions in step 5, the F12
+worktree-resolution fact behind "workers never write", per-iteration
+export batching, and cut the unconsumed memory-compaction purchase
+justification.
+
+A maintainer-directed boil-down (reduce the document to plain
+statements; gaps mark unclear ideas) exposed and fixed additional
+mush the structural passes missed: "judgment framing" became "the
+repo's worker instructions"; the timer-based "veto window" (nothing
+would run the timer) became immediate promotion + inbox listing +
+`agentic demote`; the inbox was pinned as a command over tracker
+state, not an app; AI-writing vocabulary ("substrate") removed.
+
 ## Hands-on bd battery (v1.1.0, this container, 2026-07-21)
 
 Full results in SPEC.md "Substrate verification". Headlines: metadata

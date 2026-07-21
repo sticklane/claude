@@ -3,389 +3,319 @@
 Breakdown-ready: false
 Rigor: production
 
-## What we are building
+## The design in plain statements
 
-`agentic` — one tested command-line program (Python v0) that owns the
-mechanical half of agent-driven development, plus the small set of
-pieces around it. The CLI:
+What we are building:
 
-- tracks work as a dependency graph, wrapping the beads issue tracker
-  (`bd`, version-pinned) behind our own interface — agents and skills
-  never call `bd` directly;
-- computes what is ready to work, claims it atomically, and records
-  worker results as JSON verdicts validated against a schema;
-- composes every worker dispatch: the prompt, an injected code-map
-  slice, tool grants, the model tier, the verdict schema, an
-  injection screen, and a spend check, in one envelope;
-- runs the drain loop as code — dispatch, collect, record, repeat —
-  with the model appearing only inside workers and at explicit
-  judgment points;
-- enforces spend budgets, refusing to dispatch past a cap;
-- syncs all tracker state through ordinary git: every write commits a
-  JSONL export, and a fresh clone rebuilds from it with one command.
+1. One command-line program, `agentic` (Python), tested like any
+   other production code.
+2. Tasks, their dependencies, and their status live in beads (`bd`),
+   a pinned third-party issue tracker. Agents and people use
+   `agentic`; nothing else calls `bd`.
+3. `agentic ready` lists tasks whose blockers are done and whose
+   declared file paths do not overlap another claimed task.
+4. `agentic claim <id>` marks one task in progress; claims are
+   atomic.
+5. Workers return one JSON result. `agentic verdict` checks it
+   against a schema, updates the task, and files discovered work as
+   new tasks linked to their origin.
+6. `agentic compose <id>` prints everything a worker run needs: the
+   task, this repo's worker instructions (how to build, test, and
+   report here), a code map of the files the task touches, the
+   allowed tools, the model to use, and the result schema. It
+   refuses if the task text fails the injection screen or the run is
+   out of budget.
+7. A short script is the work loop: ready → claim → compose → run
+   worker → verdict → repeat.
+8. `agentic resume` prints where things stand. There are no handoff
+   files, batons, or lease files.
+9. Spending has a cap enforced at dispatch: hitting the cap stops
+   new work. Staying under it never needs a human approval.
+10. Tracker state is exported to one JSONL file committed to git. A
+    fresh clone runs `agentic init` and has everything.
+11. Each agent runtime (Claude Code, Antigravity, Codex) gets a
+    small folder of prompts that call `agentic`. Nothing is copied
+    by hand between runtimes.
+12. `agentic inbox` prints the one list a human needs: questions to
+    answer, recent auto-promotions to undo, spending, priorities.
+13. A scheduled job measures whether agents actually use these tools
+    and files failures as tasks.
 
-Around the CLI: a thin adapter per agent runtime (Claude Code,
-Antigravity, Codex) that shells out to it; one human inbox for
-questions, vetoes, budget changes, and priorities; and a scheduled
-behavior audit that measures whether the machinery is actually being
-used and files regressions as tracker issues.
+Why:
 
-What stays hand-written: judgment prompts (what good work looks
-like), context-management guidance, and the untrusted-data rule.
-Everything procedural lives in the CLI and its tests.
+1. Today's work loop is English that a model re-reads every run, and
+   models skip steps in it — every drain incident so far was a
+   skipped prose step. Code does not skip steps.
+2. Task state has no defined format: four scripts parse it with
+   their own regexes, the rules are restated six times across three
+   hand-copied directory trees, and the copies drift.
+3. Resuming today needs five files because a prose loop loses its
+   place. A code loop's position is a query.
+4. Human approvals sit in front of cheap reversible actions (24
+   ready drafts are parked on manual promotion), while the actual
+   money leaks happened with every rule in place. A cap stops
+   spending; an approval only stops work.
+5. Any agent runtime with shell access must be able to run all of
+   this. That is why the core is a CLI and not a feature of one
+   runtime.
 
-## Why
-
-Four measured failures of the current prose-based machinery (all
-numbers and pointers in EVIDENCE.md):
-
-1. The run loop is ~2,500 lines of skill prose a model re-interprets
-   every generation, and it skips steps: every drain incident to date
-   is a missed prose step, and every fix so far has been more prose.
-   Code cannot skip a step; prose demonstrably does.
-2. State has no schema — a dozen header lines parsed by four
-   separately-maintained regexes, everything else free prose that
-   frontier models re-parse on every pass, restated 4–6× across three
-   hand-mirrored runtime trees. There is no validator anywhere.
-3. Resumption is five overlapping artifacts (Status headers, baton,
-   lease file, handoff file, HUMAN.md) that exist because a prose
-   loop loses its place. A code loop's resume is a query.
-4. Human approval gates sit at category boundaries instead of cost
-   boundaries: 24 ready drafts are parked on manual promotion while
-   cheap revertible actions carry launch ceremony. For a solo
-   operator, spend caps protect better than approvals and don't
-   block the queue.
-
-The binding constraint: any AI agent runtime with shell access must
-be able to run the whole pipeline. That is why the core is a CLI and
-runtime-native features are optional accelerators.
-
-## How
-
-Standard tools, standard patterns, as little invention as possible:
-
-- **Buy the tracker, own the interface.** beads provides the
-  dependency graph, ready-work computation, atomic claims,
-  `discovered-from` provenance edges, and memory compaction. Our
-  wrapper owns the schema (Touch/Rigor/Budget in bd's typed metadata
-  field), validation on write, screening, and budgets — so the
-  substrate is swappable and its quirks are contained.
-- **Design decisions are recorded as decisions** (below, ADR-style:
-  decision, context, consequence) — not doctrine prose scattered
-  across rules files.
-- **Industry practice over bespoke convention:** JSON Schema for
-  verdicts and dispatch envelopes; conventional CLI shape
-  (subcommands, `--json`, meaningful exit codes); a single-writer
-  data topology instead of distributed-write cleverness; pinned
-  dependencies with a reproducible bootstrap; unit + integration
-  tests in CI for every mechanical path (the same discipline that
-  already covers `drain_frontier.py` and `admission.py`, extended to
-  the loop those modules feed).
-- **Git is the only transport.** Tracker state travels as a committed
-  JSONL export and rebuilds from it. bd's embedded Dolt storage
-  engine is an internal implementation detail of bd; its remote-sync
-  machinery (`bd dolt push`, `bd bootstrap`, Dolt remotes) is not
-  used at all (decision D9).
+Boiling the previous draft down to these statements exposed soft
+spots, each now resolved: who may write the tracker and when (D8 and
+D9's sync rules), what the composer's "framing" concretely is (the
+repo's worker instructions), what the inbox concretely is (a
+command, not an app), and a purchase justification nothing consumed
+(memory compaction — cut).
 
 ## Design decisions
 
-Each: the decision, why, and what it costs. These supersede the
-corresponding rules text; migration step 8 rewrites `.claude/rules/`
-to match.
+Each: the decision, why, what it costs.
 
-- **D1 — Spend budgets replace approval gates.** Why: solo operator;
-  approvals blocked the queue (24 parked drafts) without preventing
-  the measured cost leaks. Consequence: a mis-set cap can overspend
-  before a human looks; mitigated by conservative defaults,
-  over-counting meters, and hard refusal at cap (R-M).
-- **D2 — Procedure lives in code; prose is for judgment and context
-  guidance.** Why: 0% compliance with prose "prefer X" hints;
-  skipped prose steps caused every drain incident. Consequence: a
-  bug in shared code hits every run — accepted because deterministic
-  failures are testable and fixed once; obligates first-class tests.
-- **D3 — beads is the tracker; no shadow rebuild.** Why: it solves
-  ready/claim/provenance/compaction better than our markdown
-  machinery, and our own churn record in this layer is worse than
-  upstream's. "bd-lite" is dead including as a named fallback; the
-  insurance is the owned interface plus the JSONL in git.
-  Consequence: upstream churn risk (storage changed twice in five
+- **D1 — Caps, not approvals.** Why: solo operator; approvals
+  blocked the queue without preventing the measured leaks.
+  Drafts that pass the critic are promoted immediately and listed in
+  the inbox; `agentic demote <id>` reverts one. No timer-based veto
+  window — nothing would run the timer. Cost: a mis-set cap can
+  overspend before anyone looks; defaults are conservative and the
+  inbox shows spend.
+- **D2 — Procedure is code; prose is for judgment and context
+  habits.** Why: 0% compliance with "prefer X" prose; skipped prose
+  steps caused every drain incident. Cost: a bug in shared code hits
+  every run — accepted because such bugs are testable and fixed
+  once; the mechanical paths get unit and integration tests in CI,
+  the same discipline that already covers `drain_frontier.py` and
+  `admission.py`.
+- **D3 — Use beads; do not build a tracker.** Why: it already does
+  ready-work computation, atomic claims, and typed dependencies
+  including discovered-from, and our own record maintaining this
+  layer is worse than upstream's. "bd-lite" is dead, including as a
+  named fallback; the insurance is the wrapper interface plus the
+  JSONL in git. Cost: upstream churn (storage changed twice in five
   months), contained by version pinning (R-V).
-- **D4 — Adoption is engineered, never requested.** Injection,
-  grants, and schemas instead of "prefer" prose. Why: the ctx case
-  study — a finished tool at near-zero utilization because every
-  surface defaulted to grep. Consequence: the composer must exist
-  before the habits it replaces can be deleted.
-- **D5 — The CLI is the source of truth; runtime directories are
-  thin adapters.** Why: three hand-mirrored prose trees drift, and
-  the guard machinery admits it can't catch the failure modes.
-  Consequence: the mirror chain and its guards are deleted, and
-  `.claude/` loses its privileged status.
-- **D6 — Single session, single task is the default; the multi-agent
-  pipeline is opt-in for parallel queues.** Why: multi-agent costs
-  ~15× tokens and most personal work is coupled, not parallel.
-- **D7 — Machine-consumed artifacts get schemas; the human gets one
-  inbox.** Why: models read these artifacts tens of times per human
-  read; prose optimized for a reader who rarely shows up.
-- **D8 — One tracker writer.** Workers return verdict JSON; only the
-  orchestrator's loop writes state, from the primary checkout. Why:
-  eliminates the multi-writer problem instead of solving it, and
-  keeps worker worktrees free of tracker side effects. Consequence:
-  a future multi-session topology needs bd's server mode, validated
-  then (R-C).
-- **D9 — Git is the only sync transport; the Dolt remote path is
-  rejected.** Why: it is a second sync system, unverified against
-  real (non-Dolt) origins, and the committed JSONL already carries
-  full state losslessly. Consequence: none for a solo single-machine
-  operator; revisit only if a genuinely distributed topology appears.
-- **D10 — No pilot; hands-on verification instead.** The substrate
-  was exercised against the real binary the same day (battery below);
-  anything it falsifies amends these decisions rather than silently
-  shipping. Concurrency is a stated requirement (R-C), not a day-one
-  experiment.
-- **D11 — Runtime-native task/team features (Claude Code teams,
-  Workflow tool) are adapter accelerators, never the core.** Why:
-  they fail the any-runtime constraint.
+- **D4 — Adoption is built in, never requested.** Context is
+  injected, tools are granted, results are schema-checked; no
+  "please prefer" prose. Why: ctx — a finished tool at near-zero use
+  because every default said grep. Cost: the composer must exist
+  before the prose habits it replaces can be deleted.
+- **D5 — The CLI is the source of truth; runtime folders are thin.**
+  Why: three hand-copied prose trees drift, and the checking gate
+  admits it cannot catch the failure modes. Cost: the mirror chain,
+  its gates, and CLAUDE.md's port-chain authoring conventions are
+  deleted and rewritten; `.claude/` loses its special status.
+- **D6 — One session, one task is the default.** The multi-worker
+  loop is opt-in for genuinely parallel queues. Why: multi-agent
+  work costs ~15× the tokens and most work is coupled.
+- **D7 — Machine-read artifacts get schemas; the human gets the
+  inbox.** Why: models read these files tens of times per human
+  read.
+- **D8 — Tracker writes are serialized by a lock, not by
+  convention.** Every `agentic` write command takes a repo-level
+  lock file first, so a human running `agentic verdict` by hand
+  during a loop is safe, and two concurrent processes cannot lose an
+  export. Workers never write: they return JSON, and `bd` resolves
+  worktrees to the primary checkout's store anyway (verified,
+  battery F12), so worker worktrees carry no tracker changes into
+  their diffs. Cost: a stale-lock recovery path must exist.
+- **D9 — Git is the only transport, with explicit sync rules.** A
+  tracker write is: take the lock, `git pull`, import the JSONL if
+  it changed, apply the operation to bd, export, commit, push. If
+  the push is rejected, pull and re-apply. Operations are semantic
+  (claim X, record verdict on Y), so re-applying after a sync either
+  succeeds or fails cleanly ("already claimed"); the generated JSONL
+  is never hand-merged — on conflict, take the remote version,
+  import, re-apply, re-export. The loop batches one
+  export-commit-push per iteration, about the same commit rate as
+  today's prose drain (~3 per task). bd's own remote-sync feature
+  (Dolt remotes, `bd dolt push`, `bd bootstrap`) is not used. Why:
+  one transport, and it is the one every clone already has. Cost:
+  tracker commits appear on the primary branch; two clones writing
+  at once serialize on push order.
+- **D10 — No pilot; we tested the real binary.** Same-day battery
+  results below; anything they falsify amends these decisions.
+  Write-race behavior gets its tests at loop integration (R-C), not
+  day one.
+- **D11 — Runtime-native features (Claude Code teams, the Workflow
+  tool) are optional add-ons in adapters, never the core.** Why:
+  they fail the any-runtime requirement.
 
-## Target architecture
+## Component details
 
-Six components. The first two carry almost all of the leverage.
+Only what the statements above don't already say.
 
-### 1. `agentic` — the CLI
+**The composer** (`agentic compose`). The spend check needs a live
+spend number on every runtime, so the signal is layered: harness
+telemetry where the runtime exposes it, otherwise the composer's own
+conservative estimate — it produces every prompt and receives every
+verdict, so it meters ceil(bytes/4) per dispatch, over-counting by
+design (R-M). Tool grants are enforced where the runtime has a
+permission system; where it has none they degrade to prompt text and
+are marked UNENFORCED in the output. What holds on every runtime is
+what the composer itself controls: injection, schema checks, and
+budget refusal. The scheduled audit tracks how often unenforced
+grants are ignored.
 
-- `agentic ready` — Touch-disjoint admissible set over `bd ready`
-  (absorbs `drain_frontier.py`'s ordering + co-admission).
-- `agentic claim <id>` — atomic claim via bd, stamped with run
-  identity (absorbs the per-task CAS status flip and lease logic).
-- `agentic verdict <id> --json` — validates the worker verdict
-  against its JSON Schema (DONE/BLOCKED/DEFERRED, typed Unblock,
-  Discovered list), writes tracker state, files discovered work with
-  `discovered-from` edges.
-- `agentic resume` — prints frontier + in-flight claims; replaces the
-  baton, drain's handoff files, and the flip-commit grep.
-- `agentic compose <task-id>` — the composer (component 2).
-- `agentic init` — controlled bootstrap: wraps `bd init` (curating
-  its side effects), imports the committed JSONL, gitignores bd's
-  telemetry file.
-- Schema on write: Touch/Rigor/Budget in bd's metadata JSON (typed,
-  queryable, lossless through export — battery A3); acceptance
-  criteria in bd's native field; the CLI is the sole writer, so
-  validation happens at the only write path.
-- Sync: every tracker write commits a fresh `bd export` JSONL to the
-  primary branch from the primary checkout — never from worker
-  worktrees, so drain's whitelist merge is untouched. No Dolt
-  remotes (D9).
-- ctx stays a sibling binary with the same surface conventions;
-  folding it in later is optional.
+**The loop.** Runs where the tracker lives (the primary checkout).
+Deferred worker questions become tracker records shown by
+`agentic inbox`.
 
-### 2. The composer
+**Runtime adapters.** Per runtime: prompts that call `agentic`,
+native hook wiring, an onboarding snippet. The mirror-procedure
+manifest, parity gates, verification sweeps, and both mirror rules
+files (mirror-procedure-discipline.md, mirror-verification.md) are
+deleted with the prose they guarded.
 
-`agentic compose <task-id>` emits the complete dispatch envelope:
+**The inbox.** `agentic inbox` is a command over tracker state, not
+a new app. The existing workboard can render the same data later.
 
-- worker prompt assembled from the task body + judgment framing,
-- tool grants derived per-dispatch (not frozen in agent frontmatter),
-- injected context: a token-budgeted ctx map slice scoped to the
-  task's Touch paths — pushed into the prompt, not offered as a tool,
-- model/effort tier from config,
-- the verdict JSON Schema the worker must return,
-- untrusted-data screening of task-sourced text before it becomes a
-  prompt,
-- spend check: compose refuses once the run's cap is crossed. The
-  spend signal is layered so the cap binds on every runtime: harness
-  telemetry where available, otherwise the wrapper's own conservative
-  estimate (it composes every prompt and collects every verdict;
-  ceil(bytes/4) per dispatch, over-counting by design) — R-M.
+**The audit job.** Scheduled, cheap-tier: reads transcripts and
+tracker data; measures index-vs-grep ratio, model-tier violations,
+verdict-schema conformance, spend vs caps; files findings as tasks
+linked discovered-from.
 
-Grant enforceability is runtime-tiered: enforced where the runtime
-has a permission primitive; recorded as UNENFORCED in the envelope
-where it doesn't. The floor that holds everywhere is what the
-composer itself controls: injection, schema validation of returns,
-and budget refusal. Behavior-CI measures bypass rates.
+## Requirements
 
-### 3. The drain loop
-
-`while (t = agentic ready --claim-next): compose → dispatch → collect
-verdict → agentic verdict`. A script owns the loop; workers return
-verdict JSON and never write the tracker (D8). Baton, generation
-counters, flip-commit recovery, and the five continuity artifacts are
-deleted — resume is `agentic resume` in a fresh session. Deferred
-questions become tracker records surfaced in the inbox.
-
-### 4. Runtime adapters
-
-Per runtime: a thin skill/workflow set that frames judgment and
-shells out to `agentic`; native hook wiring; an onboarding snippet.
-The mirror-procedure rules, phrase manifest, parity gates, and
-verification sweeps are deleted with the prose they guarded.
-
-### 5. The human inbox
-
-One surface (workboard evolution): questions awaiting answers, items
-in veto windows, budget approvals, priority decisions. HUMAN.md's
-agent-filed section, deferred-question batches, and draft promotion
-converge here. Drafts auto-promote on critic READY with a veto
-window (D1), inverting today's opt-in bottleneck.
-
-### 6. Behavior-CI
-
-A scheduled cheap-tier audit measuring whether the machinery is used:
-index-vs-grep ratio, tier violations, verdict-schema conformance,
-spend vs budgets — filing findings as tracker issues with
-`discovered-from` provenance.
-
-## Design requirements
-
-- **R-G (hard): any-agent genericity.** Every workflow executable by
-  any agent runtime with shell access; runtime-native features are
-  optional accelerators only.
-- **R-C: 5–10 concurrent workers** on one machine with zero lost
-  tracker writes. The architecture keeps tracker writers at one
-  process (D8), so bd's embedded single-writer mode suffices; the
-  documented escalation for a future multi-writer topology is bd's
-  server mode, validated then. A claim race test lands with the
-  drain-loop integration.
-- **R-L: per-command tracker latency ceiling 1s.** Measured (v1.1.0,
-  warm, ~15-issue DB): ~0.3s reads, ~0.5s writes — ≈1.5s overhead per
-  claim+show+update cycle. Dolt latency is size-sensitive, so
-  acceptance re-measures at ≥500 issues. The wrapper batches where bd
-  allows and treats a >1s call as a regression.
-- **R-B: fresh-clone bootstrap ≤ 2 commands**: `git clone <url> &&
-agentic init` — ordinary git only, rebuilt from the committed JSONL
-  (D9). Scriptable in a setup hook.
-- **R-E: state recoverable from ordinary git alone**, verified by a
-  round-trip test in CI.
-- **R-M: the spend cap binds everywhere.** A live spend signal exists
-  on every R-G runtime — telemetry where present, the composer's
-  estimate otherwise; a dispatch that cannot be metered is refused.
-- **R-S: untrusted-data screening** at the compose boundary for all
+- **R-G (hard):** every workflow runnable by any agent runtime with
+  shell access; runtime-native features optional.
+- **R-C:** no lost tracker writes under the concurrency we actually
+  have: (a) two concurrent `agentic` write commands on one machine —
+  serialized by the D8 lock; (b) two clones writing — serialized by
+  D9 push order, loser re-applies or fails cleanly. Worker count
+  (5–10) is unaffected because workers do not write.
+- **R-L:** per-command tracker latency ceiling 1s. Measured on a
+  ~15-issue store: ~0.3s reads, ~0.5s writes; Dolt latency grows
+  with size, so acceptance re-measures at ≥500 issues.
+- **R-B:** fresh-clone bootstrap is `git clone <url> && agentic
+init` — ordinary git only, rebuilt from the committed JSONL.
+- **R-E:** all tracker state recoverable from ordinary git alone,
+  proven by a round-trip test in CI.
+- **R-M:** the spend cap binds on every runtime — telemetry where
+  present, the composer's estimate otherwise; a dispatch that cannot
+  be metered is refused.
+- **R-S:** injection screening at the compose boundary for all
   tracker-sourced text.
-- **R-V: version-pinned substrate**; upgrades are deliberate,
+- **R-V:** bd is version-pinned; upgrades are deliberate,
   migration-tested events.
 
-## Substrate verification (hands-on battery, bd v1.1.0, 2026-07-21)
+## Verified against the real bd (v1.1.0, 2026-07-21)
 
-Run live against the real binary (embedded backend). Full summary in
+Live battery in this container, embedded backend. Details in
 EVIDENCE.md.
 
-- **Schema fit: PASS, via metadata not labels.** Labels survive our
-  exact strings but silently truncate at 255 chars and comma-split at
-  create; `--label-pattern` is broken. The `--metadata` JSON field
-  stores typed structures, round-trips losslessly, and filters via
-  `--metadata-field` — Touch/Rigor/Budget live there.
-  `acceptance_criteria` is a native field; `--design`, `--notes`,
-  `--estimate`, `--spec-id` also exist.
-- **Graph/ready: PASS.** `discovered-from` is non-blocking (right for
-  provenance); `parent-child` blockage propagates transitively;
-  `bd ready --json` is priority-sorted and filterable with
-  `--explain`; `bd ready --claim` is the documented atomic claim
-  (race untested — R-C).
-- **Latency: measured** — R-L numbers; `bd init` 3.5s one-time.
-- **Export/import: PASS, lossless.** JSONL carries labels, metadata,
-  acceptance criteria, dep types, closed status, preserved IDs;
-  export → fresh init → import → re-export diffs to zero records.
-  R-E holds. Export excludes Dolt-internal history — fine; issues are
-  the contract.
-- **Git integration.** Tracker state is invisible to normal git and
-  does not ride normal push/clone. bd's own remote sync worked only
-  against a co-located local Dolt remote; plain git origins host no
-  Dolt server. Design consequence: D9 — the Dolt remote path is
-  rejected, committed JSONL is the only transport.
-- **Ops caveats the wrapper owns:** `bd init` writes and auto-commits
-  AGENTS.md/CLAUDE.md/settings files into the host repo (curated by
-  `agentic init`); `.beads/interactions.jsonl` telemetry dirties git
-  status (gitignored at adoption); npm install is 137M. No daemon
-  lingers; no stale locks observed.
-- **Not verified (by decision, D10):** multi-writer race behavior —
-  avoided architecturally (D8), escalation validated only if needed.
+- **Fields: use metadata, not labels.** Labels survive our exact
+  strings but silently truncate at 255 chars, comma-split at create,
+  and `--label-pattern` is broken. The `--metadata` JSON field
+  stores typed structures, filters via `--metadata-field`, and
+  round-trips losslessly — Touch/Rigor/Budget live there.
+  `acceptance_criteria` is a native field.
+- **Graph and ready-work: pass.** `discovered-from` is non-blocking;
+  `parent-child` blocking propagates; `bd ready --json` is
+  priority-sorted and filterable; `bd ready --claim` is the
+  documented atomic claim (race untested — R-C).
+- **Worktrees: pass.** `bd` resolves a git worktree to the primary
+  checkout's store (F12) — the fact behind D8's "worker worktrees
+  carry no tracker changes."
+- **Latency: measured** (R-L numbers); `bd init` 3.5s once.
+- **Export/import: lossless.** Labels, metadata, acceptance
+  criteria, dependency types, closed status, preserved IDs; export →
+  fresh init → import → re-export diffs to zero records.
+- **Git: tracker state does not ride normal push/clone.** bd's own
+  remote sync worked only against a co-located local Dolt remote;
+  plain git origins host no Dolt server. Hence D9: committed JSONL
+  is the only transport.
+- **Ops facts `agentic init` must own:** `bd init` writes and
+  auto-commits AGENTS.md/CLAUDE.md/settings files into the host repo
+  (curate them); `.beads/interactions.jsonl` is tracked telemetry
+  that dirties `git status` (gitignore it); the npm install is 137M.
+  No background daemon; no stale locks observed.
 
-## Migration sequence
+## Migration
 
-Ordered. Each step leaves the system working — steps 2–3 run in
-shadow mode so nothing flips until step 4's cutover. Queue re-triage
-happens FIRST so no further effort lands on subsumed work.
+Ordered; each step leaves the system working. Steps 2–3 run in
+shadow mode so nothing flips until step 4.
 
 1. **Re-triage the open queue** against this design: every open
-   spec/task marked keep / subsumed / fold-into-design. Known
-   subsumed: mirror-procedure machinery, drain self-patch cluster,
+   spec/task marked keep / subsumed / fold-in. Known subsumed: the
+   mirror machinery, the drain self-patch cluster,
    ctx-dispatch-adoption's prompt-stanza tasks.
-2. **`agentic` v0 (shadow mode)**: ready/claim/verdict/resume over a
-   pinned bd; `agentic init`; JSONL export hook; import the ~37 live
-   items. Markdown headers REMAIN source of truth — one-way sync
-   markdown→bd; every existing reader keeps working.
-3. **Composer v0**: verdict schema, grants, ctx map injection,
-   screen, spend metering (R-M); /build switches to it. From here,
-   mirror-manifest rows covering files being replaced are marked
-   retired.
-4. **Drain loop v0 + cutover**: the code loop runs; bd becomes source
-   of truth; headers become wrapper-generated; markdown-header
-   readers re-point into the wrapper or retire; baton/owner/handoff
-   artifacts retired; evals assert loop behavior; the R-C race test
-   lands.
-5. **Runtime adapters**: antigravity/ and codex/ convert to thin
-   adapters; the mirror machinery retires in the same step.
-6. **Budgets + inbox**: rules rewrite (delete launch contracts, add
-   cap config), inbox v0 with veto-window promotion.
-7. **Behavior-CI v0**: scheduled audit + auto-filed findings.
-8. **Rules shrinkage**: classify every rules line per D2; delete or
-   mechanize; end-state ≈ untrusted-data + context guidance + CLI
-   pointers.
+2. **`agentic` v0, shadow mode**: ready/claim/verdict/resume over
+   pinned bd; the D8 lock and D9 sync rules; `agentic init`; import
+   the ~37 live items. Markdown headers remain the source of truth,
+   synced one-way into bd; every existing reader keeps working.
+3. **Composer v0**: result schema, grants, code-map injection,
+   screen, spend metering; /build switches to it. Mirror-manifest
+   rows for files being replaced are marked retired from here on.
+4. **Loop v0 and cutover**: bd becomes the source of truth; headers
+   become generated; the markdown-header readers —
+   `drain_frontier.py`, `list_specs.py`, `status.sh`,
+   `prioritize_scan.py` — re-point into the wrapper or retire;
+   baton, lease, and handoff artifacts deleted; evals assert loop
+   behavior; the R-C write-race tests land here.
+5. **Runtime adapters**: antigravity/ and codex/ become thin
+   adapters; the mirror manifest, parity gates, sweeps, both mirror
+   rules files, and CLAUDE.md's port-chain authoring conventions are
+   deleted or rewritten in the same step.
+6. **Caps and inbox**: launch-contract prose deleted, cap config
+   added, `agentic inbox` and `agentic demote` land, drafts
+   auto-promote on critic pass.
+7. **Audit job v0**: scheduled measurement, findings filed as tasks.
+8. **Rules shrinkage**: every rules line classified per D2 —
+   mechanized, kept as judgment/context guidance, or deleted.
 
 ## Acceptance criteria
 
-One runnable check per requirement; breakdown tasks derive their
-`## Acceptance` from these. Anchors verified against current state
-(no `agentic` entrypoint, no `tests/test_agentic_*` file exists
-today), so none can pass vacuously.
+One runnable check per requirement; breakdown tasks derive theirs
+from these. Anchors verified against current state: no `agentic`
+entrypoint and no `tests/test_agentic_*` file exists today, so none
+can pass vacuously.
 
-- [ ] R-G: `tests/test_agentic_generic.sh` exercises
+- [ ] R-G: `tests/test_agentic_generic.sh` runs
       ready→claim→compose→verdict→resume end-to-end in a bare shell
       (no MCP, no runtime-native tools); exit 0.
-- [ ] R-C: `tests/test_agentic_claim_race.sh` races 8 concurrent
-      `agentic claim` calls on one issue; exactly one winner, zero
-      lost writes; lands with migration step 4.
+- [ ] R-C: `tests/test_agentic_write_lock.sh` runs two concurrent
+      `agentic verdict` commands; both recorded, no lost JSONL
+      export. `tests/test_agentic_clone_race.sh` writes from two
+      clones of one remote; both operations land (or the loser fails
+      with a clean "already claimed"), and the final committed JSONL
+      contains both. Land with step 4.
 - [ ] R-L: `tests/test_agentic_latency.sh` seeds ≥500 issues; median
-      `agentic ready` wall time over 5 runs < 1s.
-- [ ] R-B: `tests/test_agentic_bootstrap.sh` clones into a temp dir,
-      runs `git clone && agentic init`, asserts `agentic ready`
-      exits 0 reporting the imported issue count.
+      `agentic ready` over 5 runs < 1s.
+- [ ] R-B: `tests/test_agentic_bootstrap.sh` clones to a temp dir,
+      runs `agentic init`, asserts `agentic ready` exits 0 with the
+      imported issue count.
 - [ ] R-E: `tests/test_agentic_roundtrip.sh` rebuilds the tracker
       from the committed JSONL alone; re-export diffs to zero
-      differing records.
-- [ ] R-M: unit test — with harness telemetry absent, the estimate
-      meter accumulates and `agentic compose` hard-refuses once the
-      cap is crossed.
-- [ ] R-S: `tests/test_agentic_screen.sh` feeds `agentic compose` an
-      issue whose description embeds a screen-stub fixture injection
-      string; compose refuses or neutralizes, asserted on output.
-- [ ] R-V: unit test — the wrapper refuses to run against a bd
-      version other than the pin, with a clear upgrade pointer.
+      records.
+- [ ] R-M: unit test — with no harness telemetry, the estimate meter
+      accumulates and `agentic compose` refuses past the cap.
+- [ ] R-S: `tests/test_agentic_screen.sh` composes a task whose
+      description embeds a screen-stub fixture injection string;
+      compose refuses or neutralizes it, asserted on output.
+- [ ] R-V: unit test — the wrapper refuses to run against any bd
+      version but the pin, with an upgrade pointer.
 
 ## Risks
 
-- **Upstream churn (beads).** Storage changed twice in 5 months; live
-  migration footguns exist. Mitigation: pin (R-V), sole access via
-  the wrapper, committed JSONL (R-E). Accepted residual: a forced
-  migration someday costs a bounded integration sprint.
-- **Schema-fit residuals (battery-bounded).** Label hazards (silent
-  truncation, comma-split, broken `--label-pattern`) avoided via
-  metadata; remaining integration hazards — `bd init` side effects,
-  tracked telemetry file — owned by `agentic init`.
-- **Composer as single point of failure.** A bug hits every dispatch;
-  accepted per D2, obligating first-class tests and evals on that
-  path.
-- **Adoption of `agentic` itself.** The ctx failure mode applies to
-  our own CLI. Mitigation is structural: the composer is the only
-  dispatch path, grants are composed in, behavior-CI measures bypass
-  from day one.
-- **Budget errors.** A mis-set cap can overspend; estimates can drift
-  from true cost. Mitigation: conservative defaults, over-counting
-  meters, spend surfaced in the inbox, hard refusal at cap.
+- **Upstream churn (beads).** Storage changed twice in five months.
+  Contained by the pin (R-V), the wrapper, and the JSONL in git
+  (R-E). Residual: a forced migration someday costs a bounded
+  integration effort.
+- **A composer bug hits every dispatch.** Accepted per D2; the
+  composer path gets tests and evals first, not last.
+- **`agentic` could suffer ctx's fate** (built, unused). The
+  mitigation is structural: the composer is the only dispatch path,
+  grants are composed in, and the audit job measures bypass from
+  day one.
+- **Cap errors.** A mis-set cap overspends; estimates drift from
+  true cost. Conservative defaults, over-counting meters, spend in
+  the inbox, hard refusal at cap.
+- **Stale write lock.** The D8 lock needs timeout-and-takeover
+  handling; specified at implementation, tested with R-C.
 
 ## Open questions
 
-- Verdict transport: file-based JSON vs stdout capture per runtime —
-  adapter-level detail, decided during composer v0.
-- Whether ctx folds into `agentic` as a subcommand (one binary) or
-  stays sibling with shared conventions.
+- Verdict transport: file vs stdout per runtime — adapter detail,
+  decided during composer v0.
+- Whether ctx becomes an `agentic` subcommand or stays a sibling
+  binary with the same conventions.
 
 Next stage: /breakdown specs/agentic-core-redesign/SPEC.md
 (human-launched, after Breakdown-ready flips on review).
