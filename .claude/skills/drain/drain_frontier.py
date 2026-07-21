@@ -45,6 +45,8 @@ _KNOWN_STATUS = (
         "failed",
         "needs-verification",
         "needs_verification",
+        "draft",
+        "obsolete",
     }
 )
 
