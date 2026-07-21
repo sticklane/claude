@@ -340,7 +340,11 @@ fn sig_no_match_json_extends_error_object() {
     let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
 
     // Legacy keys survive unchanged.
-    assert_eq!(v["error"].as_str(), Some("no match"), "legacy error key: {v}");
+    assert_eq!(
+        v["error"].as_str(),
+        Some("no match"),
+        "legacy error key: {v}"
+    );
     assert_eq!(
         v["symbol"].as_str(),
         Some("Nonexistent"),
