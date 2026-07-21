@@ -24,7 +24,7 @@ func ctxSessionDir(t *testing.T, cwd string) string {
 	line := `{"type":"assistant","timestamp":"2026-07-01T09:00:00Z","cwd":"` + cwd + `","sessionId":"sess-ctx","message":{"model":"claude-fable-5","usage":{"input_tokens":10,"output_tokens":1},"content":[` +
 		`{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ctx tree internal/claude/claude.go"}},` +
 		`{"type":"tool_use","id":"t2","name":"Bash","input":{"command":"cd agentprof && ctx refs Collect"}},` +
-		`{"type":"tool_use","id":"t3","name":"Skill","input":{"command":"agentic:ctx"}},` +
+		`{"type":"tool_use","id":"t3","name":"Skill","input":{"skill":"agentic:ctx"}},` +
 		`{"type":"tool_use","id":"t4","name":"Bash","input":{"command":"grep -rn getExecutionCtx ."}}` +
 		`]}}`
 	if err := os.WriteFile(filepath.Join(proj, "sess-ctx.jsonl"), []byte(line+"\n"), 0o644); err != nil {

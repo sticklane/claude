@@ -31,10 +31,13 @@ func isCtxSkillCommand(cmd string) bool {
 	return cmd == "ctx"
 }
 
-// ctxToolInput is the tool_use input field ctx detection reads: the shell
-// command (Bash) or invoked skill name (Skill), both under "command".
+// ctxToolInput is the tool_use input ctx detection reads. A Bash call carries
+// its shell command under "command"; a Skill call carries the invoked skill
+// name under "skill" (the real Claude Code shape — NOT "command"; "command" is
+// kept only as a defensive fallback for legacy/synthetic input shapes).
 type ctxToolInput struct {
 	Command string `json:"command"`
+	Skill   string `json:"skill"`
 }
 
 // isCtxToolUse reports whether a tool_use block is a ctx-usage event: a Bash
@@ -51,7 +54,11 @@ func isCtxToolUse(name string, input json.RawMessage) bool {
 	case "Bash":
 		return isCtxBashCommand(in.Command)
 	case "Skill":
-		return isCtxSkillCommand(in.Command)
+		skill := in.Skill
+		if skill == "" {
+			skill = in.Command
+		}
+		return isCtxSkillCommand(skill)
 	}
 	return false
 }
