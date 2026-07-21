@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Resolves a repo-relative skill path (e.g. .claude/skills/build/SKILL.md) to
+# a concrete absolute path, implementing the canonical two-step skill-path
+# resolution recipe documented in .claude/skills/drain/reference.md's "Worker
+# prompt" section. This is the IN-REPO SHORTCUT for that recipe: it is only
+# reachable when the toolkit itself is checked out (bin/ sits at a known
+# relative path under the repo root). It is NOT reachable from a non-toolkit
+# repo before bootstrap — in that case run the recipe's two steps by hand.
+#
+# Step 1 (cheapest, no CLI call): is <repo-relative-path> present relative to
+# the repo root? If yes, that IS the path — the toolkit is in-repo, stop.
+# Step 2 (plugin-cache install): resolve the INSTALLED version freshly via
+# `claude plugin list --json` (the exact parse bin/plugin-installed-version
+# uses), then construct and verify
+# $HOME/.claude/plugins/cache/agentic-toolkit/agentic/<version>/<repo-relative-path>.
+# Resolve once per session, never reuse a version number seen elsewhere in
+# context — only ever the freshly-queried value.
+#
+# Output: resolved absolute path on stdout, exit 0. On failure (neither
+# branch resolves): empty stdout, stderr diagnostic naming what was tried,
+# exit 1.
+#
+# Usage: bin/resolve-skill-path <repo-relative-path>
+set -u
+
+rel="${1:-}"
+if [ -z "$rel" ]; then
+  echo "resolve-skill-path: usage: resolve-skill-path <repo-relative-path>" >&2
+  exit 1
+fi
+
+# Repo root: the parent of the directory holding this script (bin/).
+root="$(cd "$(dirname "$0")/.." && pwd)"
+
+# --- Step 1: in-repo -------------------------------------------------------
+if [ -f "$root/$rel" ]; then
+  printf '%s\n' "$root/$rel"
+  exit 0
+fi
+
+# --- Step 2: plugin-cache install ------------------------------------------
+version=""
+if command -v claude >/dev/null 2>&1; then
+  version="$(claude plugin list --json 2>/dev/null | python3 -c '
+import json, sys
+
+target = "agentic@agentic-toolkit"
+try:
+    plugins = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+if not isinstance(plugins, list):
+    sys.exit(1)
+for p in plugins:
+    if isinstance(p, dict) and p.get("id") == target and p.get("version"):
+        print(p["version"])
+        sys.exit(0)
+sys.exit(1)
+')"
+fi
+
+if [ -z "$version" ]; then
+  echo "resolve-skill-path: could not resolve $rel — not present in-repo at $root/$rel, and \`claude plugin list --json\` reported no installed agentic@agentic-toolkit version" >&2
+  exit 1
+fi
+
+cache_path="$HOME/.claude/plugins/cache/agentic-toolkit/agentic/$version/$rel"
+if [ -f "$cache_path" ]; then
+  printf '%s\n' "$cache_path"
+  exit 0
+fi
+
+echo "resolve-skill-path: could not resolve $rel — not present in-repo at $root/$rel, and constructed plugin-cache path $cache_path does not exist (installed version $version)" >&2
+exit 1
