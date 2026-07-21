@@ -16,6 +16,13 @@ The runner invokes `setup.sh`/`assert.sh` with bare `bash`, and macOS's
 system bash is 3.2 — write them to bash 3.2 (no `declare -A` or other
 bash-4+ syntax), or they misbehave silently rather than erroring.
 
+Which skills need a scenario, and the adversarial `NN-adv-*` directory naming
+the tier bar checks for, live in the coverage policy
+[evals/COVERAGE.md](../../../evals/COVERAGE.md) (`bash evals/lint-eval-coverage.sh`
+enforces it) — read that table rather than restating it when scaffolding a new
+scenario; name an adversarial scenario (correct outcome: refuse, flag, or not
+act) `NN-adv-*`.
+
 ## setup.sh
 
 ```bash

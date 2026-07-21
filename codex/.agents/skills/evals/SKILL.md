@@ -44,6 +44,18 @@ to confirm the skill delegated to a scout rather than reading the codebase
 directly. Trajectory failure messages respect the same ~10-line budget as
 artifact ones (below).
 
+## Coverage policy and the adversarial-scenario convention
+
+Which skills need an evalset — and to what bar — is set by the tier table in
+`evals/COVERAGE.md`, enforced model-free by `bash evals/lint-eval-coverage.sh`
+(invoked directly, never wired into `run.sh`, which spawns paid sessions).
+Read that table rather than restating it here: Tier A skills require ≥2
+scenarios including at least one adversarial — a scenario whose correct
+outcome is to refuse, flag, or not act, named with the `NN-adv-*` directory
+convention so the lint can spot it without executing anything. Tier B skills
+stand on a named model-free test; Tier C skills are waived with a recorded
+reason. A new skill missing from the table fails the lint.
+
 ## 1. Scaffold if no evalset exists
 
 If `evals/<skill>/` has no scenario, create `evals/<skill>/01-<name>/` with
