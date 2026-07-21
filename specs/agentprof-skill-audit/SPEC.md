@@ -359,3 +359,13 @@ session` is rejected with an error at flag-parse time (no usable `--model`
 ## Open questions
 
 (none — resolved via interview + research above)
+
+## Parallelization
+
+Task 01 (foundation) must land first. Tasks 02 (trigger classification)
+and 03 (outcome classification) are Touch-disjoint (`cmd_skillcheck_trigger.go`
+vs `cmd_skillcheck_outcome.go`) and share no undecided design — both simply
+consume task 01's already-fixed `Judge` interface — so they run
+concurrently. Task 04 (CLI wiring + report) depends on both and runs last.
+
+- Group: 02, 03
