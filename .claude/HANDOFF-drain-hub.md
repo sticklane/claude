@@ -1,4 +1,28 @@
-# HANDOFF: two threads — /drain whole-queue run (gen 5) + agentprof-skill-audit spec
+# HANDOFF: /drain whole-queue run (gen 5, still live) — agentprof-skill-audit spec is DONE, ready to /build or /drain
+
+**Thread B (agentprof-skill-audit) is complete as of this update**: spec
+went through 3 critique rounds (all findings fixed) to READY, `/breakdown`
+produced 4 tasks with a sanity-check pass (2 findings fixed: a shared
+`SkillFrontmatter` accessor moved into task 01 to avoid a duplicate-parser
+merge collision between tasks 02/03, and task 03's input decoupled from
+task 02's output shape). Nothing more to do on Thread B except the
+launch-gated next step: `/build specs/agentprof-skill-audit/tasks/01-*.md`
+(fresh session, task 01 first — 02/03 can run concurrently in separate
+worktrees after 01 lands, then 04) or fold it into Thread A's `/drain`
+scope (it's a normal spec with tasks/ now, drain will pick it up like any
+other on its next inventory pass). Everything below this point is
+Thread A-only context, superseding the equivalent section further down
+this file (kept for the git-history/gotchas value, not re-read top to
+bottom).
+
+**Thread A status as of this update**: generation 5 is confirmed alive and
+working (leases held on `specs/ctxignore-git-overlay` and
+`specs/eval-coverage-tiers`, each with an in-progress task — a worker is
+currently out on each). No sign of another environment-kill-style crash.
+A resuming session should just wait for its notification; do not spawn a
+duplicate generation.
+
+---
 
 Note: `.claude/HANDOFF.md` is already occupied by an unrelated session's
 handoff (human-tasks/ynab-triage-skill work) — this file uses a distinct
