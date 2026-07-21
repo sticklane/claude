@@ -55,9 +55,20 @@ installed") — not as a finding per file.
 
 ### 3. Evalset presence
 
-For toolkit-style repos, list skills changed since the last eval run, or
-with no evalset at all. Each such skill is a finding ("skill X changed since
-last eval / has no evalset"). No gaps → "evalset presence: clean".
+For toolkit-style repos, read the tier policy in `evals/COVERAGE.md` (cite it;
+don't restate the table) and judge each skill against its row rather than
+flagging every evalset-less skill equally:
+
+- **Tier A** — a skill under its scenario bar (or with no evalset), or one
+  changed since its last eval run, is a finding.
+- **Tier B** — check the row's named model-free test file(s) exist and are
+  current; a missing named test is a finding.
+- **Tier C** — report as waived in one line echoing the row's recorded
+  reason, not a per-skill finding.
+- A skill directory absent from `evals/COVERAGE.md` is itself the finding —
+  the policy must name every skill.
+
+No gaps → "evalset presence: clean".
 
 ### 4. Memory hygiene
 
