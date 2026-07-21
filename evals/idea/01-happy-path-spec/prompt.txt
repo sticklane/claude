@@ -1,0 +1,20 @@
+/idea Add task due-dates and an `overdue` command to the tasks CLI
+
+Treat this as an interactive session in which every interview question is
+ALREADY answered below — do not stop to ask, use these answers:
+
+- Problem/user: people tracking work in src/tasks.sh cannot tell which tasks
+  are late. Tasks have no due date and there is no way to list what is overdue.
+- Behavior: `src/tasks.sh add "buy milk" --due 2026-07-25` stores a due date
+  alongside the task; `src/tasks.sh overdue` prints only the tasks whose due
+  date is strictly before today. An empty overdue list prints nothing and
+  exits 0. A task added with no `--due` never appears in `overdue`.
+- Technical approach: extend the existing flat-file store in src/tasks.sh;
+  keep the append-to-file format, adding a due-date column.
+- Scope OUT: recurring tasks, reminders/notifications, and time zones.
+- Verification: a shell test that adds one past-due and one future task, runs
+  `overdue`, and asserts the past-due task appears while the future one does not.
+- Rigor: production.
+
+Write the spec only — do NOT chain into /critique or /breakdown; I will run
+those in a fresh session.
