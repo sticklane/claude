@@ -67,19 +67,26 @@ file path, symbol line span — is already in the index):
 - R4 — Docs: skill command table (both `.claude/skills/ctx/SKILL.md`
   and the antigravity mirror) gains rows for `show` and the selector/
   filter forms; the reading ladder (created by
-  specs/ctx-skill-token-doctrine R2) is rewritten to exactly this
-  four-rung list, verbatim: (1) ctx query; (2) structural content
-  search (ast-grep where available, else Grep) for body/literal/pattern
-  questions; (3) `ctx show <symbol>` when a located symbol's body must
-  be read; (4) Read — sliced (`offset`/`limit`) when needed context
-  exceeds one symbol's span, whole-file only when about to edit. This
-  supersedes token-doctrine's original rung 3 ("sliced Read"); both
-  specs agree on this final list. Landing order: this task lands AFTER
+  specs/ctx-skill-token-doctrine R2) is updated so the four-rung
+  SEQUENCE reads: (1) ctx query; (2) structural content search; (3)
+  `ctx show <symbol>` when a located symbol's body must be read; (4)
+  Read — sliced (`offset`/`limit`) when needed context exceeds one
+  symbol's span, whole-file only when about to edit. Scope of this
+  edit: R4 rewrites ONLY rungs 3 and 4 (verbatim as given) and the
+  command table — rung 3 becomes `ctx show`, and sliced Read folds
+  into rung 4. Rung 1 and rung 2 are NOT touched: rung 2's ast-grep
+  enrichment (ctx-static-analysis-augmentation R1, which lands
+  earlier) is preserved exactly as landed, and R4's acceptance
+  re-runs augmentation R1's `ast-grep --pattern` grep to prove it
+  survived. Landing order: this task lands AFTER
   ctx-skill-token-doctrine R2 and after any
   ctx-static-analysis-augmentation SKILL.md edits, serialized, editing
   skill + mirror in the same commit.
 - R5 — Architecture rules hold: no whole-tree work at query time; the
-  span lookup is O(one symbol), the file read is O(one file).
+  span lookup is O(one symbol), the file read is O(one file). This is
+  a design-review constraint on the implementation (checked in code
+  review against the architecture rules), not a runnable acceptance —
+  R1-R3's golden tests do not and cannot enforce it.
 
 ## Non-goals
 
