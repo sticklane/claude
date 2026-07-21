@@ -1,6 +1,6 @@
 # agentic: a tested CLI that runs the agent work pipeline
 
-Breakdown-ready: false
+Breakdown-ready: true
 Rigor: production
 
 ## The design in plain statements
@@ -360,5 +360,57 @@ Binding on the breakdown stage, whenever it runs:
   runnable by a fresh session with no conversation context, and a
   worker editing its own acceptance criterion is a failed task.
 
-Next stage: /breakdown specs/agentic-core-redesign/SPEC.md
-(human-launched, after Breakdown-ready flips on review).
+## Parallelization
+
+Groups follow the decision-coupling test and the `- Group:` grammar
+pinned in `specs/drain-rolling-window/SPEC.md`'s Parallelization
+section (cited, not restated). Task 02 pre-registers every CLI
+subcommand stub precisely so 03/04/06 stay Touch-disjoint on their own
+modules; 10 and 12 share only a dependency on 09, not files or open
+choices. Tasks on no Group line run solo.
+
+- Group: 01, 02
+- Group: 03, 04, 06
+- Group: 10, 12
+
+## Breakdown coverage
+
+Required by "Breakdown requirements": every plain statement, decision
+cost, migration step, and requirement maps to at least one task.
+
+| Item                              | Task(s)                                 |
+| --------------------------------- | --------------------------------------- |
+| S1 one tested CLI                 | 02 (all tasks extend)                   |
+| S2 bd behind the interface        | 02, 04                                  |
+| S3 ready                          | 03                                      |
+| S4 claim                          | 04                                      |
+| S5 verdict file                   | 04                                      |
+| S6 compose                        | 07                                      |
+| S7 agentic ctx                    | 06                                      |
+| S8 loop                           | 08                                      |
+| S9 resume, no handoff files       | 03, 09                                  |
+| S10 cap at dispatch               | 07, 11                                  |
+| S11 JSONL in git                  | 02, 04, 05                              |
+| S12 runtime folders               | 10                                      |
+| S13 inbox                         | 11                                      |
+| S14 audit job                     | 12                                      |
+| D1 caps/promote/demote            | 11                                      |
+| D2 tests on every mechanical path | 02–08 (red-first), 13                   |
+| D3 pin                            | 02                                      |
+| D4 composer before habit deletion | 07 (gates 09–11)                        |
+| D5 mirror deletion + CLAUDE.md    | 10                                      |
+| D6 default framing in skills      | 09, 10                                  |
+| D7 schemas / inbox                | 04, 07, 11                              |
+| D8 lock + stale recovery          | 04                                      |
+| D9 sync rules + batching          | 04, 08                                  |
+| D10 race tests at integration     | 04, 08 (battery already done)           |
+| D11 native features as add-ons    | 10                                      |
+| M1–M8                             | 01; 02–05; 06–07; 08–09; 10; 11; 12; 13 |
+| R-G                               | 08                                      |
+| R-C                               | 04, 08                                  |
+| R-L                               | 03                                      |
+| R-B, R-E, R-V                     | 02                                      |
+| R-M, R-S                          | 07                                      |
+
+Next stage: /build specs/agentic-core-redesign/tasks/01-\*.md or
+/drain specs/agentic-core-redesign (human-launched).
