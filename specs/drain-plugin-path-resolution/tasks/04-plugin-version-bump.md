@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: 01, 02, 03
 Priority: P3
 Budget: 6 turns
@@ -33,13 +33,15 @@ any other field or file.
 
 ## Acceptance
 
-- [ ] `base=$(git merge-base HEAD main); git show "$base":.claude-plugin/plugin.json | grep '"version"'`
+- [x] `base=$(git merge-base HEAD main); git show "$base":.claude-plugin/plugin.json | grep '"version"'`
       vs. `grep '"version"' .claude-plugin/plugin.json` (current) — the
       two values differ (confirms this task's own commit changed it, not
-      unrelated drift).
-- [ ] The current value's dotted-integer parse
+      unrelated drift). Evidence: base `0.9.29`, current `0.9.30`.
+- [x] The current value's dotted-integer parse
       (`grep -oE '[0-9]+\.[0-9]+\.[0-9]+' .claude-plugin/plugin.json`,
       split on `.`) is greater than the base value's, compared
       component-by-component as integers (confirms a real bump, not a
       revert or typo — e.g. `0.9.30 > 0.9.29` holds, `0.9.3 > 0.9.29`
-      does not by string comparison, must compare as integers).
+      does not by string comparison, must compare as integers). Evidence:
+      0=0, 9=9, 30>29 — greater, patch-bump convention matched (last 5
+      bumps were all patch increments).

@@ -372,6 +372,15 @@ def main(argv=None):
         default=[],
         help="in-flight task paths whose Touch forms the claim set",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="fail (nonzero exit) if any unresolved-external-dep diagnostic is "
+        "present, printing each offending task path and dangling reference to "
+        "stderr; a whole-specs/-tree check (drain_frontier.py specs/*/ "
+        "--strict), never a single spec dir (would false-positive on a "
+        "legitimate forward cross-spec reference). stdout JSON is unchanged.",
+    )
     args = parser.parse_args(argv)
     try:
         frontier = compute_frontier(args.spec_dirs, args.window, args.claimed)
@@ -380,6 +389,16 @@ def main(argv=None):
         return 2
     json.dump(frontier, sys.stdout, indent=2)
     sys.stdout.write("\n")
+    if args.strict:
+        dangling = [
+            d
+            for d in frontier["diagnostics"]
+            if d.get("kind") == "unresolved-external-dep"
+        ]
+        if dangling:
+            for d in dangling:
+                print(f"{d['path']}: unresolved dependency {d['dep']}", file=sys.stderr)
+            return 2
     return 0
 
 

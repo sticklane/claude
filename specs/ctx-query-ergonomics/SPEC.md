@@ -1,5 +1,7 @@
 # ctx query ergonomics: file-scoped selectors, symbol-bounded body retrieval, ref filters
 
+Serves CUJ: LOCATE, and DIG IN (docs/guides/ctx-cujs.md).
+
 Breakdown-ready: true
 
 ## Problem

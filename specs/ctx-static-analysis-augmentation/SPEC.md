@@ -1,5 +1,7 @@
 # ctx: augment with traditional static analysis (exact refs, structural search, clone detection)
 
+Serves CUJ: IMPACT, and DEDUP / DEAD CODE (docs/guides/ctx-cujs.md).
+
 Breakdown-ready: false — the fork-gated requirements (R2 per F1, R3 per
 F2) need /design before breakdown. R1, R4, and R5 are doctrine-only and
 NOT fork-gated: they become breakable as soon as
