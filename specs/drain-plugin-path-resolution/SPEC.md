@@ -1,5 +1,7 @@
 # Drain plugin-cache path resolution
 
+Breakdown-ready: true
+
 ## Problem
 
 The same 11-transcript audit that motivated `drain-read-once-discipline`
