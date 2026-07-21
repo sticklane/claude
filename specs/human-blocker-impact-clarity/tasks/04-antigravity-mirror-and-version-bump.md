@@ -1,6 +1,6 @@
 # Task 04: Mirror the derivation into antigravity + bump plugin.json
 
-Status: pending
+Status: in-progress
 Depends on: 02
 Priority: P2
 Budget: 16 turns
