@@ -17,8 +17,11 @@ scenarios=(evals/greet/[0-9][0-9]-*/)
 [ "${#scenarios[@]}" -eq 1 ] \
   || fail "expected exactly 1 evals/greet scenario dir, found ${#scenarios[@]} — /evals scaffolded over an existing evalset"
 
-git diff --quiet HEAD -- evals/greet/ \
-  || fail "/evals modified the existing evalset's committed files — it must not scaffold over an existing evalset"
+# Compare against the fixture's root commit (what setup.sh seeded), not HEAD:
+# this catches a modification whether /evals left it uncommitted OR committed it.
+base=$(git rev-list --max-parents=0 HEAD | head -1)
+git diff --quiet "$base" -- evals/greet/ \
+  || fail "/evals changed the existing evalset's files (committed or not) — it must not scaffold over an existing evalset"
 
 grep -q 'ADV_SENTINEL_DO_NOT_OVERWRITE' evals/greet/01-hello/assert.sh \
   || fail "sentinel gone from evals/greet/01-hello/assert.sh — the seeded grader was clobbered"
