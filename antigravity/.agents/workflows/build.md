@@ -20,7 +20,11 @@ with mechanical, runnable verification fits a bounded run. Core business
 logic or security-sensitive code doesn't disqualify a task — it raises the
 bar it must clear first: tighten acceptance criteria to runnable commands
 and confirm worktree isolation covers every side effect, or stay on
-unbounded attended execution. A task whose "correct" is a judgment call no
+unbounded attended execution. When a worktree-isolated run works a repo with
+a `ctx` index (`.context/` at its root), copy the gitignored `.context/cache/`
+in from the main checkout (`cp -R <main>/.context/cache "$PWD/.context/cache"`)
+— copy, never symlink (two writers on one SQLite file is a corruption risk) —
+so the run starts index-warm. A task whose "correct" is a judgment call no
 test can settle is an unresolved spec question, not a walk-away run — file
 it and resolve the spec instead of launching.
 
@@ -53,6 +57,13 @@ own.
    conclusions. Read a file in full only when about to edit it. If the
    task has no runnable acceptance criteria, STOP and say it isn't
    agent-ready — don't improvise weaker criteria.
+   **Structure lookups (ctx).** When `.context/` exists at the repo root,
+   this repo carries a `ctx` structure index. For a definition, caller,
+   signature, or outline question, run the ctx query BEFORE any Grep/Read:
+   `ctx tree <path>` (symbol outline), `ctx sig <symbol>` (signature), `ctx
+   refs <symbol>` (callers/references), `ctx deps <path>` (import graph).
+   Fall back to Grep for content/text questions (bodies, literals, patterns)
+   and Read a file only when about to edit it; brief every scout the same way.
    **Rigor tier (gate scaling).** Read the task's effective `Rigor:` header
    (the task's own, else its spec's; absent = `production`). `production` (or
    absent) is the full procedure below, unchanged. `Rigor: prototype` scales
@@ -197,7 +208,14 @@ own.
    restated). Log any reversible-default decisions taken
    this session (step 2's rule) to the task file's `## Decisions` section —
    one line each: decision, default taken, how to reverse. Append; never
-   overwrite prior entries. No decisions taken → no section needed. Update
+   overwrite prior entries. No decisions taken → no section needed.
+   Persist a durable structure note (indexed repo only): when `.context/`
+   exists at the repo root and this task surfaced a symbol-anchored fact
+   meeting the code-comment bar — a gotcha, invariant, rationale, or todo
+   tied to a specific symbol, not a restatement of what the code plainly
+   shows — offer to record it with `ctx notes add <symbol> "<text>" --kind
+   gotcha|invariant|rationale|todo` before finishing (the note is committed
+   and survives refactors the comment would not). Update
    the task file (Status
    `done`, ticked boxes, one line of evidence each rather than
    duplicating output — citing the `evidence/` file when an evidence

@@ -756,6 +756,23 @@ resolution recipe above:
 <main-checkout>/apps/x/.dev.vars "$PWD/apps/x/.dev.vars"`). Never commit
 > such a file; confirm your VCS status shows it untracked before committing.
 >
+> **Warm the ctx index.** When `.context/` exists at the main checkout root,
+> that repo carries a `ctx` structure index whose `.context/cache/` is
+> gitignored and therefore ABSENT from your freshly cut worktree. If the
+> main checkout has `.context/cache/`, copy it into your worktree before
+> running any ctx query — `cp -R <main-checkout>/.context/cache
+> "$PWD/.context/cache"` — copy, never symlink (two writers on one SQLite
+> file is a corruption risk). Absent a cache, ctx builds it lazily and
+> behavior is unchanged.
+>
+> **Structure lookups (ctx).** When `.context/` exists at your worktree
+> root, for a definition, caller, signature, or outline question run the
+> ctx query BEFORE any Grep/Read: `ctx tree <path>` (a file's or module's
+> symbol outline), `ctx sig <symbol>` (a symbol's signature), `ctx refs
+> <symbol>` (its callers/references), `ctx deps <path>` (a file's import
+> graph). Fall back to Grep for content/text questions (bodies, literals,
+> patterns) and Read a file only when about to edit it.
+>
 > Every path you Read/Edit/Write must be under your worktree root (your
 > shell's initial $PWD) — the main-checkout path above is given ONLY for
 > copying gitignored files in; never edit a main-checkout path from inside

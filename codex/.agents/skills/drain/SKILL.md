@@ -306,6 +306,19 @@ most once per edit round — after your own successful Edit/Write the harness
 confirms the new state, so never re-read to verify, re-reading only the
 region another writer changed.
 
+Two ctx guards ride the same dispatch when the source repo has a `ctx` index
+(`.context/` at the main checkout root), addressed to the worker. **Warm the
+ctx index:** `.context/cache/` is gitignored and ABSENT from your freshly cut
+worktree, so copy it in before running any ctx query (`cp -R
+<main-checkout>/.context/cache "$PWD/.context/cache"`) — copy, never symlink
+(two writers on one SQLite file is a corruption risk); absent a cache, ctx
+builds it lazily and behavior is unchanged. **Structure lookups (ctx):** for a
+definition, caller, signature, or outline question run the ctx query BEFORE any
+Grep/Read — `ctx tree <path>` (symbol outline), `ctx sig <symbol>` (signature),
+`ctx refs <symbol>` (callers/references), `ctx deps <path>` (import graph) —
+falling back to Grep for content/text questions (bodies, literals, patterns)
+and Reading a file only when about to edit it.
+
 ## 3. Collect the verdict
 
 Emit `<!-- agentprof:stage=collect-verdict -->` verbatim as this step's
