@@ -187,3 +187,15 @@ parallel work on the same files (concurrent-sessions collision rule).
 evidence/ctx-usage-review-2026-07-21.md (session ids for every claim).
 
 Next stage: /critique (this SPEC.md), then /breakdown.
+
+## Parallelization
+
+Tasks 01–04 are Touch-disjoint (drain/build files; breakdown files;
+critic/onboard files; agentprof/) and share no undecided design — the
+index-first rule each encodes is pinned verbatim in this spec, not left
+open per task. Task 05 is MANUAL (attended session, cross-repo) and runs
+solo whenever a human picks it up. Task 06 is the closing plugin bump,
+serialized after 01–03. Group grammar per
+specs/drain-rolling-window/SPEC.md's Parallelization section.
+
+- Group: 01, 02, 03, 04

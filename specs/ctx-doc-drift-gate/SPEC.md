@@ -153,3 +153,10 @@ increments the already-updated count.
 2026-07-21).
 
 Next stage: /critique (this SPEC.md), then /breakdown.
+
+## Parallelization
+
+No concurrent-safe groups. Task 01 runs solo; tasks 02 and 03 are filed
+blocked (02 on the deferred registry commit — live ctx-cujs drain lease
+at breakdown time, 2026-07-21; 03 on ctx-cujs/tasks/02 landing) and are
+serial behind their unblocks by construction.

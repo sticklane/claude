@@ -115,3 +115,14 @@ must keep emitting absence-check's boundary output, never R1's tail.
 (fooszone F4/F6 instances; live repro commands 2026-07-21).
 
 Next stage: /critique (this SPEC.md), then /breakdown.
+
+## Parallelization
+
+Tasks 01 (refs.rs/deps.rs/no_match.rs + own test file) and 02 (tree.rs +
+cli.rs + own test file) are Touch-disjoint and decision-decoupled (tail
+wording and --files semantics are each pinned in this spec). Task 03 is
+filed blocked on the deferred registry commit and additionally depends
+on 01+02. Group grammar per specs/drain-rolling-window/SPEC.md's
+Parallelization section.
+
+- Group: 01, 02
