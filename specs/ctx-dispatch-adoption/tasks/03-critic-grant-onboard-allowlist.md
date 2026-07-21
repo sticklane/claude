@@ -59,3 +59,29 @@ Depth ceiling: L0/L1 greps — frontmatter grants and prompt prose have no
 runnable behavior in-repo; the behavioral complement is task 04's
 telemetry (critic-session ctx invocations) and a future critic evalset
 scenario in an indexed fixture repo.
+
+## Decisions
+
+- 2026-07-21: `antigravity/.agents/workflows/onboard.md` is a thin
+  pointer wrapper; the real antigravity onboard content (including §4
+  Permissions/Guardrails) lives in `antigravity/.agents/skills/onboard/SKILL.md`
+  (out of this task's Touch). Satisfied criterion c6 by adding the
+  ctx-guardrail note to the permitted wrapper file, framed in
+  antigravity's own Terminal Execution Policy guardrail terms rather than
+  a faked settings.json allowlist mechanism. Reversible: delete the added
+  paragraph.
+- 2026-07-21: `tests/mirror-procedure-manifest.txt` left unseeded for the
+  new "index-first: prefer ctx" critic phrase — not in Touch, and no
+  existing manifest phrase broke. Reversible: n/a (no change made).
+
+## Discovered
+
+- The new critic "index-first: prefer ctx" phrase is present in both
+  critic legs (`.claude/agents/critic.md`,
+  `antigravity/.agents/skills/critic/SKILL.md`) but not seeded in
+  `tests/mirror-procedure-manifest.txt`, leaving it unprotected from a
+  silent re-drop. See task 08.
+- `antigravity/.agents/workflows/onboard.md`'s ctx-guardrail note now sits
+  in the thin pointer wrapper rather than beside the actual §4 Guardrails
+  step in `antigravity/.agents/skills/onboard/SKILL.md` — a future
+  consolidation could move it there for coherence. See task 09.
