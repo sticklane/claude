@@ -106,7 +106,18 @@ Pointers are to files in this repo or primary external sources.
 - Both occurred with the relevant rules text in place — doctrine
   without mechanism.
 
-## Hands-on bd battery (v1.1.0, this container)
+## Hands-on bd battery (v1.1.0, this container, 2026-07-21)
 
-See SPEC.md "Substrate verification" — filled from the battery run
-before this spec leaves draft.
+Full results in SPEC.md "Substrate verification". Headlines: metadata
+JSON field beats labels for structured fields (typed, queryable,
+lossless; labels silently truncate at 255 chars and comma-split);
+`discovered-from` non-blocking and `parent-child` transitively
+blocking as required; `bd ready --claim` is the documented atomic
+claim; latency ~0.3s read / ~0.5s write warm, `bd init` 3.5s;
+JSONL export→import round-trip lossless with IDs preserved; tracker
+state does not ride normal git push/clone — `bd dolt push` publishes,
+`bd bootstrap` (~1s) hydrates a fresh clone; `bd init` auto-commits
+AGENTS.md/CLAUDE.md/settings edits into the host repo and
+`.beads/interactions.jsonl` is tracked telemetry churn — both owned
+by the wrapper at adoption. Multi-writer racing deliberately untested
+(design requirement R-C, maintainer decision).

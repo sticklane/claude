@@ -127,11 +127,13 @@ directly.
   replaces DRAIN-BATON.md, HANDOFF machinery for drain, and the
   flip-commit grep. Resume is a query.
 - `agentic compose <task-id>` — see composer, below.
-- Schema enforcement on write: Touch/Rigor/Budget ride bd labels under
-  a wrapper-validated grammar (exact grammar fixed by the battery
-  results); acceptance criteria use bd's native field. Hand-editing
-  tracker state is out; the CLI is the sole writer (validator for
-  free).
+- Schema enforcement on write: Touch/Rigor/Budget live in bd's native
+  `--metadata` JSON field (typed arrays/ints, queryable via
+  `--metadata-field`, lossless through export — battery A3), with
+  optional `rigor:`/`budget:` mirror labels only where cheap
+  OR-filtering helps; acceptance criteria use bd's native field.
+  Hand-editing tracker state is out; the CLI is the sole writer
+  (validator for free).
 - Sync + escape: a post-write hook commits a `bd export` JSONL, so
   full tracker state is recoverable from ordinary git alone, and
   fresh-clone bootstrap follows the battery-verified recipe.
@@ -207,11 +209,16 @@ provenance. A default only stays a default if regressions get caught.
   machine (worktrees + shared checkout) without corruption; queueing
   acceptable, lost writes not. Mechanism selected at integration time
   (embedded flock vs `dolt sql-server`).
-- **R-L: per-command tracker latency** must fit a dispatch loop that
-  makes tens of calls per session — budget set from measured battery
-  numbers (see below), with a stated ceiling per call.
+- **R-L: per-command tracker latency ceiling 1s.** Measured (v1.1.0
+  embedded, warm): ~0.3s reads, ~0.5s writes — ≈1.5s CLI overhead per
+  claim+show+update cycle. The wrapper batches where bd allows
+  (`--deps` at create, multi-id update) and treats a >1s single call
+  as a regression.
 - **R-B: fresh-clone bootstrap ≤ 2 commands** before `agentic ready`
-  works, scriptable in a SessionStart/setup hook.
+  works, scriptable in a SessionStart/setup hook. Verified recipe:
+  `git clone <url> && bd bootstrap` (~1s against a local remote);
+  publishing state back is `bd dolt push`, owned by the wrapper's
+  post-write path, never left to agents.
 - **R-E: state recoverable from ordinary git alone** (the committed
   JSONL export), verified by a round-trip test in CI.
 - **R-S: untrusted-data screening** at the compose boundary for all
@@ -219,13 +226,51 @@ provenance. A default only stays a default if regressions get caught.
 - **R-V: version-pinned substrate**; upgrades are deliberate,
   migration-tested events.
 
-## Substrate verification (hands-on battery, bd v1.1.0)
+## Substrate verification (hands-on battery, bd v1.1.0, 2026-07-21)
 
-PENDING — battery running at authoring time; results land here before
-this spec leaves draft. Sections: label-grammar fit (A), graph/ready
-semantics (B), single-process latency (D7), export/import fidelity
-(E), ops footprint (F), git-integration behavior (G: what a normal
-push/clone carries; the fresh-clone recipe feeding R-B).
+Run live in this container against the real binary (embedded Dolt
+backend). Full transcript summarized in EVIDENCE.md.
+
+- **Schema fit: PASS, via metadata not labels.** Labels survive our
+  exact strings (`/ * : . -` all safe, exact-match filtering works)
+  but silently truncate at 255 chars and comma-split at create;
+  `--label-pattern` is broken. bd's `--metadata` JSON field stores
+  typed structures (`{"touch":[...],"rigor":"prototype",
+"budget_tokens":120000}`), round-trips losslessly, and filters via
+  `--metadata-field` / `--has-metadata-key` — the wrapper carries
+  Touch/Rigor/Budget there. `acceptance_criteria` is a native field
+  and round-trips multiline markdown verbatim; `--design`, `--notes`,
+  `--estimate`, `--spec-id` fields also exist.
+- **Graph/ready: PASS.** All needed dep types incl. `discovered-from`
+  (non-blocking, as required for provenance) and `parent-child`
+  (blockage propagates transitively; parent unblocked ⇒ children
+  ready). `bd ready --json` is priority-sorted, filterable, and
+  `--explain` prints per-issue reasoning. `bd ready --claim` is the
+  documented atomic-claim primitive (race behavior untested — R-C).
+- **Latency: measured** — see R-L numbers. `bd init` 3.5s one-time.
+- **Export/import: PASS, lossless.** JSONL export carries labels,
+  metadata, acceptance criteria, dep types, closed status, and
+  preserved IDs; export → fresh init → import → re-export diffed to
+  zero differing records. The escape hatch is real (R-E holds). Export
+  excludes Dolt branch/commit history — acceptable; issues are the
+  contract.
+- **Git integration: as designed for, now with the verified recipe.**
+  Tracker state is invisible to normal git (no local ref churn; clean
+  separation) and does NOT ride normal `git push`/`git clone`;
+  `bd dolt push` publishes to a Dolt remote auto-configured from git
+  origin, and `bd bootstrap` (~1s) hydrates a fresh clone. A fetch
+  refspec for `refs/dolt/*` does NOT substitute — bd reads its
+  materialized store, not git refs.
+- **Ops caveats the wrapper must own:** `bd init` writes AND
+  auto-commits AGENTS.md, CLAUDE.md, `.claude/settings.json`, and
+  `.codex/` config into the host repo — the wrapper performs init in
+  controlled form and diffs/curates these; `.beads/interactions.jsonl`
+  is tracked telemetry that dirties `git status` on every command —
+  gitignore it at adoption; npm install is 137M. No daemon lingers;
+  no stale locks observed.
+- **Not verified (by decision):** multi-writer race behavior — carried
+  as requirement R-C, selected mechanism validated at integration
+  time.
 
 ## Migration sequence
 
@@ -256,11 +301,13 @@ FIRST so no further effort lands on subsumed work.
   live migration footguns exist. Mitigation: version pin (R-V), sole
   access through the wrapper, committed JSONL (R-E). Accepted residual:
   a future forced migration costs a bounded integration sprint.
-- **Label-grammar strain.** Structured fields in labels is
-  string-stuffing with a validator. Mitigation: grammar owned and
-  enforced by the wrapper only; if it strains, escalate upstream
-  (custom-fields request) before building around it. Battery results
-  bound this risk before breakdown.
+- **Schema-fit residuals (battery-bounded).** The label plan's risks
+  materialized in testing (silent 255-char truncation, comma-split,
+  broken `--label-pattern`) and are AVOIDED by carrying structured
+  fields in bd's metadata JSON instead; labels are optional mirrors
+  only. Residual integration hazards the wrapper must own: `bd init`'s
+  uninvited writes + auto-commit into the host repo, and the tracked
+  `interactions.jsonl` telemetry (gitignored at adoption).
 - **Composer as single point of failure.** A composer bug affects
   every dispatch (vs stochastic prose failures). Accepted
   deliberately: deterministic, testable, fixable-once beats
@@ -278,7 +325,8 @@ FIRST so no further effort lands on subsumed work.
 
 - Wrapper language: Python (matches existing tested modules; slower
   startup) vs Go/Rust (single static binary; rewrite cost). Leaning
-  Python v0 absorbing existing code, revisit only if R-L fails.
+  Python v0 absorbing existing code; bd itself costs 0.3–0.5s/call, so
+  wrapper startup is not the bottleneck — revisit only if R-L fails.
 - Verdict transport: file-based JSON vs stdout capture per runtime —
   adapter-level detail, decided during composer v0.
 - Whether ctx folds into `agentic` as a subcommand (one binary) or
