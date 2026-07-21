@@ -1,6 +1,6 @@
 # Task 02: drain reference.md — Blocks: derivation per HUMAN.md filing row
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -49,15 +49,19 @@ dispatchable tasks`.
 
 ## Acceptance
 
-- [ ] `grep -c 'promotion of this stub to a dispatchable task' .claude/skills/drain/reference.md` → 1
-      (phrase absent today, count 0, verified 2026-07-19)
-- [ ] `grep -c 'breakdown of this spec into dispatchable tasks' .claude/skills/drain/reference.md` → 1
-      (phrase absent today, count 0, verified 2026-07-19)
-- [ ] `sed -n '/^## HUMAN.md filing (R2)/,/^## /p' .claude/skills/drain/reference.md | grep -c 'unblocking-power'` → ≥ 1
-      (the dependency-bearing rows cite the computation by name, within
-      this section specifically — not merely present elsewhere in the
-      file; section heading exists at reference.md:1718 and the
-      section-scoped count is 0 today, verified 2026-07-19)
+- [x] `grep -c 'promotion of this stub to a dispatchable task' .claude/skills/drain/reference.md` → 1
+      (verifier: → 1; stub-row fixed phrase rendered in the 2-row table)
+- [x] `grep -c 'breakdown of this spec into dispatchable tasks' .claude/skills/drain/reference.md` → 1
+      (verifier: → 1; NOT-READY-spec-row fixed phrase in the same table)
+- [x] `sed -n '/^## HUMAN.md filing (R2)/,/^## /p' .claude/skills/drain/reference.md | grep -c 'unblocking-power'` → ≥ 1
+      (verifier: → 1, match inside the "HUMAN.md filing (R2)" section
+      (heading at reference.md:1890), citing SKILL.md step 2's
+      unblocking-power computation by name)
+      (behavioral complement: verifier confirmed the derivation rule's
+      SKILL.md:130 citation is accurate; no live `Unblock: ask:`/`run:`
+      blocked task exists in specs/, so the by-hand application was
+      vacuous per the depth-ceiling instruction, judged coherent)
+      evidence: specs/human-blocker-impact-clarity/evidence/02-drain-reference-derivation.md
 - Depth ceiling (covers the three checks above): L0/L1 on skill-reference
   prose — the two fixed phrases are themselves pinned verbatim by the
   spec, so text-presence is most of the requirement. Behavioral
@@ -66,3 +70,13 @@ dispatchable tasks`.
   repo's `specs/`, applies the documented derivation, and confirms the
   derived `Blocks:` task-name set matches the tasks whose `Depends on:`
   actually name it (or "no other pending task" when none do).
+
+## Decisions
+
+- Refreshed the inline entry-grammar copy line in the "HUMAN.md filing (R2)"
+  section (`<one-line action>` → `<plain-language action> — Blocks: <impact>`)
+  so the illustrative example stays consistent with the `Blocks:` derivation
+  guidance this task adds and with task 01's already-landed grammar in
+  human-blockers.md. Reversible default: not required by any acceptance
+  criterion; stays inside the Touch-scoped file. Reverse by restoring the
+  line to `- [ ] <ISO date> · <source path> · <type> — <one-line action>`.
