@@ -40,15 +40,19 @@ involved, never a blanket stage-everything; a concurrent session's own
 staged or working-tree changes must never ride along. Stated once here;
 every commit below follows it without restating it.
 
-**Name the run (gen 1, best-effort).** At gen-1 startup, if the run/tab has
-no custom name already, name it the repo plus a **deterministic** descriptor
-of the specs being drained: sort this run's spec slugs alphabetically, join
-with `,`, then cap the joined string at 40 chars (truncate and append `…` if
-longer) — the same input specs always produce the same descriptor; never
-paraphrase or abbreviate by hand (e.g. `claude · drain: model-pins,reprime-vis`)
-— using whatever naming surface the runtime offers (terminal title escape,
-Agent Manager run name); skip silently where none exists, and never re-name
-on baton generations.
+**Name the run (best-effort).** If the run/tab has no custom name already,
+name it the repo plus a **deterministic** descriptor of the specs being
+drained: sort this run's spec slugs alphabetically, join with `,`, then cap
+the joined string at 40 chars (truncate and append `…` if longer) — the same
+input specs always produce the same descriptor; never paraphrase or
+abbreviate by hand (e.g. `claude · drain: model-pins,reprime-vis`) — using
+whatever naming surface the runtime offers (terminal title escape, Agent
+Manager run name). Fires once per session — the first time this run reaches
+step 1, regardless of the adopted owner lease's `Generation:` number (a
+session-refreshed drain that adopts a mid-flight lease at `Generation: 3`
+still proposes on its first pass, since a resumed run's own tab has never yet
+been named). Skip if already named this run, or if no naming surface exists —
+a headless baton self-relaunch or an awaited subagent spawn has neither.
 
 **Startup session sweep (advisory).** Before inventory, check whether
 another live session's working directory is this same repo — the Agent
