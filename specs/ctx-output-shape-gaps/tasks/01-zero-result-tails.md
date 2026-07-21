@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 14 turns
@@ -57,6 +57,20 @@ future filter tail — pin with a test).
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test --test zero_result_tails` → exit 0, covering: (a) def-preserved + "0 references to <name>" tail; module-symbol deps suggestion; (b) "no indexed importers" on a real leaf; (c) "path not in index" on a nonexistent path; (b)≠(c) distinction; exit codes unchanged; --json note field + legacy keys; MCP parity; no tail on symbol no-match
-- [ ] `cd context-tree && cargo test` → exit 0 (no regression across the suite)
-- [ ] `cd context-tree && cargo clippy --tests -- -D warnings` → exit 0
+- [x] `cd context-tree && cargo test --test zero_result_tails` → exit 0, covering: (a) def-preserved + "0 references to <name>" tail; module-symbol deps suggestion; (b) "no indexed importers" on a real leaf; (c) "path not in index" on a nonexistent path; (b)≠(c) distinction; exit codes unchanged; --json note field + legacy keys; MCP parity; no tail on symbol no-match — verifier: 13 passed, L3 (real `ctx` subprocess + MCP round-trip)
+- [x] `cd context-tree && cargo test` → exit 0 (no regression across the suite) — verifier: full suite green
+- [x] `cd context-tree && cargo clippy --tests -- -D warnings` → exit 0 — verifier: clean, exit 0
+
+## Decisions
+
+- 2026-07-21: Forward-direction zero-edge `deps` wording is `no indexed
+  imports out of <path>` (the spec pinned only the reverse phrasing "no
+  indexed importers of <path>"). Reversible: edit the forward-branch
+  format string in `deps.rs::render`.
+- 2026-07-21: The module-symbol suggestion is folded into the single
+  `note` string (`"0 references to <q>; for import-level callers, try:
+  ctx deps --reverse <file>"`) rather than two separate stderr lines.
+  Reversible: split into two `eprintln!`/two note fields in `refs.rs`.
+- 2026-07-21: When a resolved name has multiple def rows, the suggestion
+  path uses the first def with `kind == "module"`. Reversible: change the
+  `.find()` selector in `refs.rs::render`.
