@@ -12,10 +12,9 @@ spawned generation 2 as a **detached headless process**
 an unsupervised background session the human only discovered afterward
 ("why did we start this as a separate process").
 
-The full (scrubbed) session transcript is alongside this file:
-`2026-07-21-drain-detached-relaunch-session.jsonl` (one private local-only
-skill's listing description redacted; a later foreground turn may be absent
-— the copy was snapshotted mid-session).
+The full session transcript is retained locally outside the repo (it embeds
+personal session context, so it is not published; a later foreground turn may
+be absent — the copy was snapshotted mid-session).
 
 ## Why the model chose the detached path
 
