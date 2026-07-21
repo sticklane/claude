@@ -16,29 +16,33 @@ What we are building:
    declared file paths do not overlap another claimed task.
 4. `agentic claim <id>` marks one task in progress; claims are
    atomic.
-5. Workers return one JSON result. `agentic verdict` checks it
-   against a schema, updates the task, and files discovered work as
-   new tasks linked to their origin.
+5. Workers write one JSON result to a file that compose names.
+   `agentic verdict` checks it against a schema, updates the task,
+   and files discovered work as new tasks linked to their origin.
 6. `agentic compose <id>` prints everything a worker run needs: the
    task, this repo's worker instructions (how to build, test, and
    report here), a code map of the files the task touches, the
-   allowed tools, the model to use, and the result schema. It
-   refuses if the task text fails the injection screen or the run is
-   out of budget.
-7. A short script is the work loop: ready → claim → compose → run
+   allowed tools, the model to use, the result schema, and the
+   verdict file path. It refuses if the task text fails the
+   injection screen or the run is out of budget.
+7. The code-structure index is part of the same program:
+   `agentic ctx tree|sig|refs|deps|map` answers structure questions,
+   and compose's code map comes from it. One program to install,
+   grant, inject from, and measure.
+8. A short script is the work loop: ready → claim → compose → run
    worker → verdict → repeat.
-8. `agentic resume` prints where things stand. There are no handoff
+9. `agentic resume` prints where things stand. There are no handoff
    files, batons, or lease files.
-9. Spending has a cap enforced at dispatch: hitting the cap stops
-   new work. Staying under it never needs a human approval.
-10. Tracker state is exported to one JSONL file committed to git. A
+10. Spending has a cap enforced at dispatch: hitting the cap stops
+    new work. Staying under it never needs a human approval.
+11. Tracker state is exported to one JSONL file committed to git. A
     fresh clone runs `agentic init` and has everything.
-11. Each agent runtime (Claude Code, Antigravity, Codex) gets a
+12. Each agent runtime (Claude Code, Antigravity, Codex) gets a
     small folder of prompts that call `agentic`. Nothing is copied
     by hand between runtimes.
-12. `agentic inbox` prints the one list a human needs: questions to
+13. `agentic inbox` prints the one list a human needs: questions to
     answer, recent auto-promotions to undo, spending, priorities.
-13. A scheduled job measures whether agents actually use these tools
+14. A scheduled job measures whether agents actually use these tools
     and files failures as tasks.
 
 Why:
@@ -63,7 +67,7 @@ Boiling the previous draft down to these statements exposed soft
 spots, each now resolved: who may write the tracker and when (D8 and
 D9's sync rules), what the composer's "framing" concretely is (the
 repo's worker instructions), what the inbox concretely is (a
-command, not an app), and a purchase justification nothing consumed
+command, not an app), and a claimed benefit nothing consumed
 (memory compaction — cut).
 
 ## Design decisions
@@ -157,6 +161,23 @@ grants are ignored.
 Deferred worker questions become tracker records shown by
 `agentic inbox`.
 
+**Verdict transport: a file, not stdout.** compose names a verdict
+file path (and sets it as an environment variable where the runtime
+allows); the worker's last step writes its JSON there; the loop runs
+`agentic verdict <id> --file <path>`. A missing or schema-invalid
+file marks the attempt failed and returns the task to ready with the
+failure recorded. Chosen because agent runtimes mix logs into their
+output, while a file works on every runtime with a filesystem and
+stays inspectable after a failure — the same reason GitHub Actions
+replaced stdout parsing (`set-output`) with the $GITHUB_OUTPUT file.
+
+**ctx.** `agentic ctx …` fronts the existing ctx binary the same way
+the tracker verbs front bd: one interface, engines underneath.
+compose calls it for the code map; agents answer structure questions
+through the same program they already hold a grant for. Whether the
+Rust engine is later merged into the Python package is an
+implementation choice, not a design question.
+
 **Runtime adapters.** Per runtime: prompts that call `agentic`,
 native hook wiring, an onboarding snippet. The mirror-procedure
 manifest, parity gates, verification sweeps, and both mirror rules
@@ -240,9 +261,10 @@ shadow mode so nothing flips until step 4.
    pinned bd; the D8 lock and D9 sync rules; `agentic init`; import
    the ~37 live items. Markdown headers remain the source of truth,
    synced one-way into bd; every existing reader keeps working.
-3. **Composer v0**: result schema, grants, code-map injection,
-   screen, spend metering; /build switches to it. Mirror-manifest
-   rows for files being replaced are marked retired from here on.
+3. **Composer v0**: result schema, verdict-file transport, grants,
+   code-map injection via `agentic ctx`, screen, spend metering;
+   /build switches to it. Mirror-manifest rows for files being
+   replaced are marked retired from here on.
 4. **Loop v0 and cutover**: bd becomes the source of truth; headers
    become generated; the markdown-header readers —
    `drain_frontier.py`, `list_specs.py`, `status.sh`,
@@ -310,12 +332,33 @@ can pass vacuously.
 - **Stale write lock.** The D8 lock needs timeout-and-takeover
   handling; specified at implementation, tested with R-C.
 
-## Open questions
+## Breakdown requirements
 
-- Verdict transport: file vs stdout per runtime — adapter detail,
-  decided during composer v0.
-- Whether ctx becomes an `agentic` subcommand or stays a sibling
-  binary with the same conventions.
+Binding on the breakdown stage, whenever it runs:
+
+- **Coverage is proven, not assumed.** Every plain statement (1–14),
+  every decision cost (D1–D11), and every migration step maps to at
+  least one task, shown in a coverage table shipped with the
+  breakdown. A statement with no task is a breakdown defect.
+  Deletion work — mirrors, baton, lease and handoff files, retired
+  readers, rules prose — gets tasks exactly like construction work.
+- **The unglamorous work is enumerated explicitly:** packaging and
+  install; the write lock and its stale-lock recovery; the
+  shadow-mode markdown→bd sync; importing the ~37 live items;
+  curating `bd init`'s side effects; grants derivation per runtime;
+  the three adapter folders; eval updates; AGENTS.md and README
+  updates; CI wiring for every new test.
+- **Acceptance must require the behavior, not the artifact.** Each
+  task's acceptance is a command whose pass requires the feature to
+  work — a test that runs against the real binary — never "file
+  exists", "line count under N", or a phrase-grep a worker can
+  satisfy by pasting the phrase. Tests are shown failing before the
+  implementation lands, and the verifier re-runs the commands itself
+  rather than trusting the worker's transcript
+  (docs/memory/anchored-acceptance-criteria.md).
+- **No task verifies itself.** Criteria live in the task file, are
+  runnable by a fresh session with no conversation context, and a
+  worker editing its own acceptance criterion is a failed task.
 
 Next stage: /breakdown specs/agentic-core-redesign/SPEC.md
 (human-launched, after Breakdown-ready flips on review).

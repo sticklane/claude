@@ -142,7 +142,7 @@ lock test and a two-clone race test. Minors resolved: restored the
 named reader list in migration step 4, both mirror rules files and
 CLAUDE.md's port-chain conventions in step 5, the F12
 worktree-resolution fact behind "workers never write", per-iteration
-export batching, and cut the unconsumed memory-compaction purchase
+export batching, and cut the unconsumed memory-compaction
 justification.
 
 A maintainer-directed boil-down (reduce the document to plain
