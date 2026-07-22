@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 8 turns
@@ -54,8 +54,12 @@ any `src/cmd/*.rs` renderer or `src/cli.rs` in this task.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test --test zones_config` → all new tests pass.
-- [ ] `cd context-tree && grep -n 'pub(crate) fn glob_match' src/vcs/mod.rs` →
+- [x] `cd context-tree && cargo test --test zones_config` → all new tests pass.
+      Evidence: 8/8 tests pass (0 failed).
+- [x] `cd context-tree && grep -n 'pub(crate) fn glob_match' src/vcs/mod.rs` →
       the matcher is shared, not re-implemented in `zones.rs`
-      (`grep -c 'fn glob_match' src/zones.rs` → `0`).
-- [ ] `cd context-tree && bash scripts/check.sh` → exits 0 (fmt, clippy, tests).
+      (`grep -c 'fn glob_match' src/zones.rs` → `0`). Evidence: both checks
+      confirmed — `glob_match` is `pub(crate)` in `vcs/mod.rs:270`, zero
+      matches in `zones.rs`.
+- [x] `cd context-tree && bash scripts/check.sh` → exits 0 (fmt, clippy, tests).
+      Evidence: exit 0, no fmt/clippy warnings, full test suite green.
