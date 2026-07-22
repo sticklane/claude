@@ -640,7 +640,9 @@ assert_not "R7b negative: no source replacement without scripts/git-hooks/pre-co
   out_has "git-hooks"
 
 # ---------------------------------------------------------------------------
-# R9: beads leftovers abort the run with a pointer to the beads exit spec.
+# R9 (inverted 2026-07-22, agentic-core-redesign pivot): a .beads/ dir marks
+# a bd-tracked repo — the bd-compliance Stop hook installs alongside the
+# standard gates. The pre-pivot "beads leftovers abort" is retired.
 # ---------------------------------------------------------------------------
 
 BD="$TMP/beadsfix"
@@ -648,9 +650,38 @@ mkrepo "$BD"
 printf 'requests\n' > "$BD/requirements.txt"
 mkdir "$BD/.beads"
 run_install "$BD"
-assert_not "R9: beads repo aborts" test "$RI_EXIT" -eq 0
-assert "R9: abort mentions beads-full-exit" out_has "beads-full-exit"
-assert "R9: nothing written" test ! -d "$BD/.claude" -a ! -e "$BD/scripts"
+assert_eq "R9: beads repo installs" 0 "$RI_EXIT"
+assert "R9: bd-compliance hook copied and executable" \
+  test -x "$BD/.claude/hooks/bd-compliance.sh"
+assert "R9: settings Stop entry references bd-compliance" \
+  grep -q 'bd-compliance.sh' "$BD/.claude/settings.json"
+bdh1="$(find_hash "$BD")"
+run_install "$BD"
+assert_eq "R9: second run exits 0" 0 "$RI_EXIT"
+bdh2="$(find_hash "$BD")"
+assert_eq "R9/R3: double-run managed-file hashes identical" "$bdh1" "$bdh2"
+assert_not "R9 negative: no bd-compliance entry without .beads/" \
+  grep -q 'bd-compliance' "$SH/.claude/settings.json"
+
+# A bd-owned hooks path (bd init sets core.hooksPath=.beads/hooks) is never
+# touched: bd's own pre-commit stays in place, nothing is archived, and no
+# gate pre-commit is installed into bd's hooks dir.
+BH="$TMP/beadshookspath"
+mkrepo "$BH"
+printf 'requests\n' > "$BH/requirements.txt"
+mkdir -p "$BH/.beads/hooks"
+printf '#!/bin/sh\n# bd sync hook\nexit 0\n' > "$BH/.beads/hooks/pre-commit"
+chmod 755 "$BH/.beads/hooks/pre-commit"
+git -C "$BH" config core.hooksPath .beads/hooks
+run_install "$BH"
+assert_eq "R9 hooksPath: exits 0" 0 "$RI_EXIT"
+assert "R9 hooksPath: bd pre-commit untouched" \
+  grep -q 'bd sync hook' "$BH/.beads/hooks/pre-commit"
+assert_not "R9 hooksPath: no archive created" \
+  test -e "$BH/.beads/hooks/pre-commit.pre-gates"
+assert "R9 hooksPath: reports bd-owned skip" out_has "bd-owned"
+assert "R9 hooksPath: bd-compliance hook still installs" \
+  test -x "$BH/.claude/hooks/bd-compliance.sh"
 
 # ---------------------------------------------------------------------------
 # R6: inventory exclusion rules — worktrees and hidden paths programmatic;

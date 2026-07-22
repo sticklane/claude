@@ -83,9 +83,13 @@ Registration in `.claude/settings.json`:
 }
 ```
 
-A repo running the bd queue (the `/work` skill) adds its own bd-compliance
-check as a second entry in the same `Stop` array, same shape — never merged
-into the stop-gate entry's own `hooks` list:
+A repo with `.beads/` (the `/work` skill's queue) gets this wired by
+`bin/install-gates` automatically: it copies the hook to
+`.claude/hooks/bd-compliance.sh` and appends a second entry in the same
+`Stop` array, same shape — never merged into the stop-gate entry's own
+`hooks` list. (In the toolkit repo itself the source lives at
+`hooks/bd-compliance/check.sh`; the installed copy is what settings
+reference.)
 
 ```json
 {

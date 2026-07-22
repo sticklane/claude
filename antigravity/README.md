@@ -38,6 +38,7 @@ be listed. Type `/idea` in the agent input to test a workflow.
 | Tier language (scout/session/deep/frontier-tier) + `.claude/runtime.md` tier pins | Same tier vocabulary in `AGENTS.md`; the tier→model mapping is recorded in `runtimes/antigravity.md` (model choice is a human selection in the Agent Manager model picker, not a pinnable flag) |
 | Ultracode workflow scripts (`.claude/workflows/*.js`)                             | Human-dispatched launch-list workflows — no scripted fan-out in Antigravity; the port's existing workflows already express the degraded pattern                                                 |
 | `workflow-author` skill                                                           | Not ported — its entire job is authoring `.claude/workflows/*.js` for the Claude-Code-specific `Workflow` tool, and Antigravity has no scripted fan-out primitive to author against             |
+| `work` skill                                                                     | Not ported — added after the 2026-07-22 data-portability pivot (root CLAUDE.md: mirror content is superseded and queued for deletion); other runtimes consume the bd queue directly            |
 
 The human-launch gates and their rationale: the toolkit repo's
 docs/human-gates.md — in Antigravity every workflow is human-launched

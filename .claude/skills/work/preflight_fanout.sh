@@ -2,10 +2,12 @@
 # preflight_fanout.sh — the pre-flight fan-out guard for /work (SPEC.md
 # "The pre-flight fan-out guard", specs/beads-daily-skill/SPEC.md).
 #
-# Before /work authors or runs a native workflow script, this estimates the
-# token floor of the proposed agent count (count x the measured per-agent
-# floor) and refuses above a configured threshold unless explicitly
-# overridden. No workflow is written until this passes.
+# Before /work authors or runs a native workflow script, this gates on the
+# proposed AGENT COUNT: above AGENTIC_FANOUT_THRESHOLD it refuses unless
+# explicitly overridden. The token estimate it prints (count x the measured
+# per-agent floor) is informational context for the human/model deciding —
+# it never drives the refuse/allow decision. No workflow is written until
+# this passes.
 #
 #   Usage:  preflight_fanout.sh <agent-count> [--override]
 #

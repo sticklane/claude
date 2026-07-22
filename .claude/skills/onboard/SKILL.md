@@ -110,9 +110,10 @@ Per repo:
 
 1. `bd init`, curated: keep the AGENTS.md snippet it writes, gitignore
    `.beads/interactions.jsonl`, and commit the `issues.jsonl` export.
-2. `/gate` to install the Stop hook with the bd-compliance check
-   included (`hooks/bd-compliance/check.sh`), plus format-on-edit if
-   wanted.
+2. `/gate` to install the Stop hook — with `.beads/` present from
+   step 1, its installer also copies the bd-compliance check to
+   `.claude/hooks/bd-compliance.sh` and wires it as a second Stop
+   entry — plus format-on-edit if wanted.
 3. Add `Bash(bd *)` to the settings allowlist (§4) — the grant class
    whose absence measurably killed tool adoption before.
 4. Seed the queue: file the repo's first epics and issues from
