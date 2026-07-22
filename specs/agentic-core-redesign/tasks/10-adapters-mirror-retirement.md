@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 30 turns
@@ -49,10 +49,41 @@ concepts/commands that must appear), never diff-emptiness.
 
 ## Acceptance
 
-- [ ] `bash -c 'for t in antigravity codex; do [ -d $t ] && [ $(ls $t | wc -l) -gt 1 ] && echo "tree survives: $t"; done; exit 0'` → no output (each tree reduced to a single README.md pointing at the data layer)
-- [ ] `ls tests/mirror-procedure-manifest.txt tests/test_mirror_procedure_coverage.sh tests/test_antigravity_parity.sh tests/test_antigravity_content_parity.sh tests/test_codex_parity.sh .claude/rules/mirror-procedure-discipline.md .claude/rules/mirror-verification.md 2>&1 | grep -c "No such file"` → `7` (the parity gates die with the mirrors they guarded)
-- [ ] `grep -c "port chain" CLAUDE.md` → `0` (conventions rewritten, not orphaned)
-- [ ] `bash scripts/check.sh` → green with the deleted tests removed from the suite, and `claude plugin validate .claude-plugin` (or the repo's documented equivalent) passes
+- [x] `bash -c 'for t in antigravity codex; do [ -d $t ] && [ $(ls $t | wc -l) -gt 1 ] && echo "tree survives: $t"; done; exit 0'` → no output (each tree reduced to a single README.md pointing at the data layer)
+- [x] `ls tests/mirror-procedure-manifest.txt tests/test_mirror_procedure_coverage.sh tests/test_antigravity_parity.sh tests/test_antigravity_content_parity.sh tests/test_codex_parity.sh .claude/rules/mirror-procedure-discipline.md .claude/rules/mirror-verification.md 2>&1 | grep -c "No such file"` → `7` (the parity gates die with the mirrors they guarded)
+- [x] `grep -c "port chain" CLAUDE.md` → `0` (conventions rewritten, not orphaned)
+- [x] `bash scripts/check.sh` → green with the deleted tests removed from the suite, and `claude plugin validate .claude-plugin` (or the repo's documented equivalent) passes
+
+Evidence (2026-07-22, branch claude/design-review-gaps-grfr6w):
+
+- AC1: `antigravity/` and `codex/` each reduced to a single `README.md`
+  data-layer pointer (`.agents/`, `AGENTS.md`, the `runtimes` symlink, and
+  `verify-live.sh` deleted); the tree-survives probe emits no output.
+  Commit 587bad7.
+- AC2: manifest, coverage test, three parity gates, and both mirror rules
+  files deleted — `No such file` count is 7. Commit 1b9f4e5.
+- AC3: CLAUDE.md's port-chain mirror bullet rewritten to data-level
+  portability; `grep -c "port chain" CLAUDE.md` → 0. Commit 8bc41d4.
+- AC4: no `scripts/check.sh` exists in this repo, so the documented
+  equivalent (AGENTS.md Commands: `for t in tests/test_*.sh; do bash "$t";
+done` plus `claude plugin validate .`) was run — 0 new failures
+  introduced, `claude plugin validate .` passes, `plugin.json` bumped
+  0.10.0 → 0.11.0 (commit ad3c250). The one remaining RED,
+  `tests/test_skill_chain_determinism.sh`, is a pre-existing intentional
+  RED owned by specs/deterministic-skill-chaining (RED at this task's
+  baseline); only its dangling citation to the deleted files was updated,
+  behavior unchanged.
+- Out-of-Touch note (needs orchestrator ratification):
+  `tests/test_install_docs.sh` — owned by no task and absent from this
+  task's Touch — had its antigravity cp-path check (former R3) removed
+  because it validated the retired antigravity install-copy model that this
+  task deletes; its R1/R2 root-README plugin-install checks are retained.
+  The orphaned `tests/fixtures/content-parity/` (only consumer was the
+  deleted content-parity gate) was left in place to stay within Touch.
+- Depth-ceiling complement: the "one live smoke session per runtime" is
+  moot under the pivot — no per-runtime procedure tree survives to
+  smoke-test; each tree is a static data-layer README, so there is no
+  adapter behavior to exercise. No manual-pending item remains.
 
 Depth ceiling: L1 for adapter-prose quality — whether the adapter prompts
 read well per runtime is a human judgment; the behavioral complement is
