@@ -18,6 +18,16 @@
 #                             (pass:false + partial cost) — crashed runs are
 #                             recorded, never dropped.
 #
+# Judge-input assembly / blinding:
+#   --task <t> --arm <U|S> --dump-judge-input
+#                             produces the run's diff, assembles the single-call
+#                             rubric-judge input (rubric + canonical
+#                             keyword-stripped brief + diff), prints it INSTEAD
+#                             of scoring, and asserts the ASSEMBLED input leaks
+#                             no arm signal — no word-boundary ultracode keyword,
+#                             no "arm U"/"arm S" attribution, no plugin name.
+#                             Exits non-zero if any leak is found.
+#
 # The stub CLI (evals/headtohead/lib/stub-session.sh, per-task stub.sh) means
 # these runs need no API key and no network — they exercise the runner's
 # plumbing, not a model.
@@ -41,6 +51,10 @@ TURN_CAP="${HEADTOHEAD_TURN_CAP:-60}"
 USD_CAP="${HEADTOHEAD_USD_CAP:-5.00}"
 ULTRACODE_KEYWORD="ultracode"
 PLUGIN_MOUNT_SRC=".claude"
+# The distributed plugin's name (.claude-plugin/plugin.json). Blinding must
+# strip it from the judge input: only arm S mounts this plugin, so its name
+# would attribute the diff.
+PLUGIN_NAME="agentic"
 
 ARMS=(U S)
 SEEDS=(1 2 3)
@@ -53,12 +67,16 @@ Usage:
   run.sh --task <t> --arm <U|S> --seeds <n>
                                           run <n> stub sessions, append a
                                           schema-valid results row per run
+  run.sh --task <t> --arm <U|S> --dump-judge-input
+                                          print the assembled, blinded judge
+                                          input for one run, exit 0/1
 EOF
 }
 
 # --- flags --------------------------------------------------------------
 DRY_RUN=0
 DUMP_CONFIG=0
+DUMP_JUDGE=0
 TASK=""
 ARM=""
 SEEDS_N=""
@@ -69,7 +87,7 @@ while [ $# -gt 0 ]; do
     --task) TASK="${2:-}"; shift 2 ;;
     --arm) ARM="${2:-}"; shift 2 ;;
     --seeds) SEEDS_N="${2:-}"; shift 2 ;;
-    --dump-judge-input) shift ;;
+    --dump-judge-input) DUMP_JUDGE=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "run.sh: unknown argument: $1" >&2; usage >&2; exit 1 ;;
   esac
@@ -381,6 +399,109 @@ run_sessions() {
   echo "results appended to $jsonl"
 }
 
+# --- judge input assembly + blinding ---------------------------------------
+
+# canonical_brief TASK — the arm-neutral brief text exactly as the brief file
+# holds it, with NO arm's opt-in keyword appended. This is the only brief the
+# blinded judge sees; never effective_brief, which carries arm U's ultracode
+# keyword and would leak the arm.
+canonical_brief() {
+  local task="$1" brief_path
+  brief_path="$(task_field "$task" brief)"
+  if [ -n "$brief_path" ] && [ -f "$REPO_ROOT/$brief_path" ]; then
+    cat "$REPO_ROOT/$brief_path"
+  else
+    printf '[brief pending: %s]' "$brief_path"
+  fi
+}
+
+# assemble_judge_input TASK DIFF_FILE — the single-call judge prompt: the
+# maintainability rubric, then the canonical keyword-stripped brief, then the
+# run's diff. Nothing arm-specific is added; that is what makes it blindable.
+assemble_judge_input() {
+  local task="$1" diff_file="$2"
+  cat "$HERE/judge-rubric.md"
+  printf '\n## Canonical task brief\n\n'
+  canonical_brief "$task"
+  printf '\n\n## Diff under review\n\n```diff\n'
+  cat "$diff_file"
+  printf '```\n'
+}
+
+# assert_blinded FILE — fail (return 1) if the assembled judge input holds any
+# arm signal: a word-boundary ultracode keyword, an "arm U"/"arm S"
+# attribution, or the plugin name. Asserted against the ASSEMBLED input, not
+# the template — the diff or brief could in principle carry a leak too.
+assert_blinded() {
+  local file="$1" fail=0 arm
+  if grep -iqw "$ULTRACODE_KEYWORD" "$file"; then
+    echo "BLIND FAIL: judge input contains the ultracode keyword" >&2
+    fail=1
+  fi
+  if grep -iqw "$PLUGIN_NAME" "$file"; then
+    echo "BLIND FAIL: judge input contains the plugin name ($PLUGIN_NAME)" >&2
+    fail=1
+  fi
+  for arm in "${ARMS[@]}"; do
+    if grep -iEq "(^|[^[:alnum:]])arm ${arm}([^[:alnum:]]|\$)" "$file"; then
+      echo "BLIND FAIL: judge input names arm ${arm}" >&2
+      fail=1
+    fi
+  done
+  return "$fail"
+}
+
+# dump_judge_input — produce one run's diff, assemble the blinded judge input,
+# print it, and assert blinding. Prints instead of scoring; exits non-zero on
+# any blinding failure.
+dump_judge_input() {
+  local task="$TASK" arm="$ARM"
+
+  case "$arm" in
+    U|S) ;;
+    *) echo "run.sh: --arm must be U or S (got '${arm}')" >&2; exit 1 ;;
+  esac
+
+  local snapshot
+  snapshot="$(task_field "$task" snapshot)" \
+    || { echo "run.sh: unknown task: $task" >&2; exit 1; }
+
+  local abs_snapshot taskdir stub
+  abs_snapshot="$REPO_ROOT/$snapshot"
+  taskdir="$(dirname "$abs_snapshot")"
+  stub="$taskdir/stub.sh"
+  [ -d "$abs_snapshot" ] || { echo "run.sh: missing snapshot: $abs_snapshot" >&2; exit 1; }
+  [ -f "$stub" ] || { echo "run.sh: missing stub session: $stub" >&2; exit 1; }
+
+  local tmp transcripts diff_file assembled
+  tmp="$(mktemp -d)"
+  transcripts="$tmp/transcripts"
+  diff_file="$tmp/diff"
+  assembled="$tmp/judge-input"
+  mkdir -p "$transcripts"
+  # Diff two RELATIVE dirs (before/after) from inside the temp so the diff
+  # headers carry neutral labels, never the absolute worktree path — that path
+  # holds the spec slug, which itself contains the ultracode keyword and would
+  # leak the eval into a judge input that is supposed to be blind.
+  cp -R "$abs_snapshot" "$tmp/before"
+  cp -R "$abs_snapshot" "$tmp/after"
+
+  # Produce the run's diff (a crashed stub still leaves whatever it wrote).
+  "$stub" "$tmp/after" "$transcripts" "$arm" 1 >/dev/null 2>&1 || true
+  ( cd "$tmp" && diff -rN before after ) > "$diff_file" 2>/dev/null || true
+
+  assemble_judge_input "$task" "$diff_file" > "$assembled"
+  cat "$assembled"
+
+  if assert_blinded "$assembled"; then
+    rm -rf "$tmp"
+    return 0
+  else
+    rm -rf "$tmp"
+    return 1
+  fi
+}
+
 # --- main -------------------------------------------------------------
 if [ "$DRY_RUN" -eq 1 ] && [ "$DUMP_CONFIG" -eq 1 ]; then
   if dump_config; then
@@ -391,6 +512,12 @@ if [ "$DRY_RUN" -eq 1 ] && [ "$DUMP_CONFIG" -eq 1 ]; then
 elif [ "$DRY_RUN" -eq 1 ]; then
   plan_dry_run
   exit 0
+elif [ "$DUMP_JUDGE" -eq 1 ] && [ -n "$TASK" ] && [ -n "$ARM" ]; then
+  if dump_judge_input; then
+    exit 0
+  else
+    exit 1
+  fi
 elif [ -n "$TASK" ] && [ -n "$ARM" ]; then
   run_sessions
   exit 0
