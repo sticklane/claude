@@ -144,5 +144,27 @@ kotlin, java, ocaml, haskell — NOT rust; `map` ranking currently
 over-weights bash locals on mixed repos (spec stub 16). Capability
 evidence: `specs/codebase-context-tree/evidence/capability-shakedown-2026-07-20.md`.
 
+Trust boundaries of a query result:
+
+- **`refs`/`sig` are name-resolution heuristics, not compiler-verified.** A
+  ref ctx returns (and especially one it tags `heuristic`) is a best-effort
+  name match, not a resolved binding — treat a load-bearing edge as a lead
+  to confirm, not proof. The exactness path is
+  `specs/ctx-static-analysis-augmentation`.
+- **Identical-qpath collisions are unresolvable via `sig`.** When two defs in
+  different directories share a qualified path, `sig <qpath>` can't tell them
+  apart; fall back to a sliced Read of each candidate body to pick the right
+  one.
+- **`map` noise from committed vendored/generated trees is an
+  index-membership problem, not a query problem.** Checked-in `dist/`,
+  vendored code, and generated artifacts inflate rankings; the fix is
+  excluding them from the index (`specs/ctxignore-git-overlay`), not more
+  querying.
+- **The ABSENCE FALLACY.** "No symbol matches" means there is no _symbol_ by
+  that name — never that the string is absent from the code. Object fields,
+  JSON keys, and string literals are not indexed, so an empty ctx result is
+  not evidence of absence: any absence claim must be grep-verified before you
+  assert it.
+
 Next stage: none — tool-usage skill; queries and notes land in the working
 tree (notes committed by whoever owns the current change).
