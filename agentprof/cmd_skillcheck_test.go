@@ -93,18 +93,18 @@ Body.
 func e2eTranscript() []string {
 	return []string{
 		`{"type":"user","timestamp":"2026-07-10T09:00:00Z","cwd":"/x/app","message":{"role":"user","content":"please do the good thing"}}`,
-		`{"type":"assistant","timestamp":"2026-07-10T09:00:01Z","cwd":"/x/app","message":{"id":"m1","model":"claude-fable-5","content":[{"type":"tool_use","id":"tg","name":"Skill","input":{"command":"goodskill"}}]}}`,
+		`{"type":"assistant","timestamp":"2026-07-10T09:00:01Z","cwd":"/x/app","message":{"id":"m1","model":"claude-fable-5","content":[{"type":"tool_use","id":"tg","name":"Skill","input":{"skill":"goodskill"}}]}}`,
 		`{"type":"user","timestamp":"2026-07-10T09:00:02Z","cwd":"/x/app","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tg","content":"good done; verifier PASS"}]}}`,
 		`{"type":"user","timestamp":"2026-07-10T09:00:03Z","cwd":"/x/app","message":{"role":"user","content":"now handle the unrelated thing"}}`,
-		`{"type":"assistant","timestamp":"2026-07-10T09:00:04Z","cwd":"/x/app","message":{"id":"m2","model":"claude-fable-5","content":[{"type":"tool_use","id":"tb","name":"Skill","input":{"command":"badskill"}}]}}`,
+		`{"type":"assistant","timestamp":"2026-07-10T09:00:04Z","cwd":"/x/app","message":{"id":"m2","model":"claude-fable-5","content":[{"type":"tool_use","id":"tb","name":"Skill","input":{"skill":"badskill"}}]}}`,
 		`{"type":"user","timestamp":"2026-07-10T09:00:05Z","cwd":"/x/app","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tb","content":"bad result"}]}}`,
 		`{"type":"user","timestamp":"2026-07-10T09:00:06Z","cwd":"/x/app","message":{"role":"user","content":"please summon the ghost"}}`,
-		`{"type":"assistant","timestamp":"2026-07-10T09:00:07Z","cwd":"/x/app","message":{"id":"m3","model":"claude-fable-5","content":[{"type":"tool_use","id":"th","name":"Skill","input":{"command":"ghostskill"}}]}}`,
+		`{"type":"assistant","timestamp":"2026-07-10T09:00:07Z","cwd":"/x/app","message":{"id":"m3","model":"claude-fable-5","content":[{"type":"tool_use","id":"th","name":"Skill","input":{"skill":"ghostskill"}}]}}`,
 		`{"type":"user","timestamp":"2026-07-10T09:00:08Z","cwd":"/x/app","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th","content":"ghost result"}]}}`,
-		`{"type":"assistant","timestamp":"2026-07-10T09:00:09Z","cwd":"/x/app","message":{"id":"m4","model":"claude-fable-5","content":[{"type":"tool_use","id":"ts","name":"Skill","input":{"command":"goodskill"}}]}}`,
+		`{"type":"assistant","timestamp":"2026-07-10T09:00:09Z","cwd":"/x/app","message":{"id":"m4","model":"claude-fable-5","content":[{"type":"tool_use","id":"ts","name":"Skill","input":{"skill":"goodskill"}}]}}`,
 		`{"type":"user","timestamp":"2026-07-10T09:00:10Z","cwd":"/x/app","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"ts","content":"chained good"}]}}`,
 		`{"type":"user","timestamp":"2026-07-10T09:00:11Z","cwd":"/x/app","message":{"role":"user","content":"<command-name>build</command-name><command-args>specs/x</command-args>"}}`,
-		`{"type":"assistant","timestamp":"2026-07-10T09:00:12Z","cwd":"/x/app","message":{"id":"m5","model":"claude-fable-5","content":[{"type":"tool_use","id":"te","name":"Skill","input":{"command":"build","args":"specs/x"}}]}}`,
+		`{"type":"assistant","timestamp":"2026-07-10T09:00:12Z","cwd":"/x/app","message":{"id":"m5","model":"claude-fable-5","content":[{"type":"tool_use","id":"te","name":"Skill","input":{"skill":"build","args":"specs/x"}}]}}`,
 		`{"type":"user","timestamp":"2026-07-10T09:00:13Z","cwd":"/x/app","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"te","content":"built"}]}}`,
 	}
 }

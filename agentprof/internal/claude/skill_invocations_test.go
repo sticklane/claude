@@ -33,12 +33,12 @@ func writeTranscript(t *testing.T, lines ...string) string {
 func skillInvocationFixture() []string {
 	return []string{
 		`{"type":"user","timestamp":"2026-07-01T09:00:00Z","cwd":"/x/app","message":{"role":"user","content":"start please"}}`,
-		`{"type":"assistant","timestamp":"2026-07-01T09:00:01Z","cwd":"/x/app","message":{"id":"m1","model":"claude-fable-5","content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"command":"morning-brief"}}]}}`,
+		`{"type":"assistant","timestamp":"2026-07-01T09:00:01Z","cwd":"/x/app","message":{"id":"m1","model":"claude-fable-5","content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"skill":"morning-brief"}}]}}`,
 		`{"type":"user","timestamp":"2026-07-01T09:00:02Z","cwd":"/x/app","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"brief ready"}]}}`,
-		`{"type":"assistant","timestamp":"2026-07-01T09:00:03Z","cwd":"/x/app","message":{"id":"m2","model":"claude-fable-5","content":[{"type":"tool_use","id":"toolu_2","name":"Skill","input":{"command":"daily-sync"}}]}}`,
+		`{"type":"assistant","timestamp":"2026-07-01T09:00:03Z","cwd":"/x/app","message":{"id":"m2","model":"claude-fable-5","content":[{"type":"tool_use","id":"toolu_2","name":"Skill","input":{"skill":"daily-sync"}}]}}`,
 		`{"type":"user","timestamp":"2026-07-01T09:00:04Z","cwd":"/x/app","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_2","content":"synced"}]}}`,
 		`{"type":"user","timestamp":"2026-07-01T09:00:05Z","cwd":"/x/app","message":{"role":"user","content":"<command-name>build</command-name><command-args>specs/x</command-args>"}}`,
-		`{"type":"assistant","timestamp":"2026-07-01T09:00:06Z","cwd":"/x/app","message":{"id":"m3","model":"claude-fable-5","content":[{"type":"tool_use","id":"toolu_3","name":"Skill","input":{"command":"build","args":"specs/x"}}]}}`,
+		`{"type":"assistant","timestamp":"2026-07-01T09:00:06Z","cwd":"/x/app","message":{"id":"m3","model":"claude-fable-5","content":[{"type":"tool_use","id":"toolu_3","name":"Skill","input":{"skill":"build","args":"specs/x"}}]}}`,
 		`{"type":"user","timestamp":"2026-07-01T09:00:07Z","cwd":"/x/app","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_3","content":"built"}]}}`,
 	}
 }
