@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: 02, 03, 04, 05, 06
 Priority: P2
 Budget: 12 turns
@@ -45,10 +45,10 @@ code actually does — every command shown must be one that runs.
 
 Runnable commands only:
 
-- [ ] `grep -c "otel serve" agentprof/README.md` → ≥1 (was 0 before this task) (L1)
-- [ ] `grep -c "/v1/logs" agentprof/README.md` → ≥1 (logs route documented) (L1)
-- [ ] `grep -c "OTEL_EXPORTER_OTLP_PROTOCOL" agentprof/README.md` → ≥1 (spool guidance present) (L1)
-- [ ] `bash agentprof/scripts/check.sh` → exits 0 (gofmt/vet/test unaffected by a docs-only change)
+- [x] `grep -c "otel serve" agentprof/README.md` → ≥1 (was 0 before this task) (L1)
+- [x] `grep -c "/v1/logs" agentprof/README.md` → ≥1 (logs route documented) (L1)
+- [x] `grep -c "OTEL_EXPORTER_OTLP_PROTOCOL" agentprof/README.md` → ≥1 (spool guidance present) (L1)
+- [x] `bash agentprof/scripts/check.sh` → exits 0 (gofmt/vet/test unaffected by a docs-only change)
 
 Depth ceiling: criteria are L1 (presence of documented commands/routes in
 prose). Prose correctness is not mechanically checkable — the behavioral
