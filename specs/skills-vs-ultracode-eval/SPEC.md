@@ -219,3 +219,13 @@ building it):
 
 Next stage: /critique specs/skills-vs-ultracode-eval/SPEC.md, then
 /breakdown (human-launched) — the corpus Unblock is resolved above.
+
+## Parallelization
+
+Tasks 01→02→03 serialize: all three edit `run.sh`, and 02 needs 01's schema
+and 03 needs a run 02 produces. Tasks 04/05/06 each own a disjoint
+`tasks/<name>/` fixture directory and share no undecided design once 01 fixes
+the out-of-mount path layout, so they are concurrent-safe; 03 is disjoint from
+them too. Task 07 (calibration) depends on all three fixtures.
+
+- Group: 03, 04, 05, 06
