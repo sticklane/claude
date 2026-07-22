@@ -1,6 +1,6 @@
 # Task 07: Calibration harness — RED/GREEN proof for all three fixtures
 
-Status: in-progress
+Status: done
 Depends on: 04, 05, 06
 Priority: P1
 Budget: 12 turns
@@ -34,4 +34,4 @@ any fixture or the runner.
 
 ## Acceptance
 
-- [ ] `bash evals/headtohead/calibrate.sh` → prints `ledger RED OK`, `ledger GREEN OK`, `notes-api RED OK`, `notes-api GREEN OK`, `sitegen RED OK`, `sitegen GREEN OK`; exits 0 only when all six hold
+- [x] `bash evals/headtohead/calibrate.sh` → prints `ledger RED OK`, `ledger GREEN OK`, `notes-api RED OK`, `notes-api GREEN OK`, `sitegen RED OK`, `sitegen GREEN OK`; exits 0 only when all six hold
