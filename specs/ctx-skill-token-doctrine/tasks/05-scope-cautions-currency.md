@@ -1,6 +1,6 @@
 # Task 05: Scope cautions currency (R7)
 
-Status: pending
+Status: in-progress
 Depends on: 04
 Priority: P2
 Budget: 8 turns
