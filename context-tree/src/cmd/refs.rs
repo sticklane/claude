@@ -26,6 +26,7 @@ use crate::cmd::{
 use crate::index::{IndexStore, RefRow, ScopeRow, SymbolRow};
 use crate::lsp::EnrichmentCache;
 use crate::path::resolve_suffix;
+use crate::zones::ZoneConfig;
 use serde_json::json;
 use std::collections::HashSet;
 use std::path::Path;
@@ -81,6 +82,16 @@ fn zero_refs_note(query: &str, module_file: Option<&str>) -> String {
     }
 }
 
+/// ` [zone:<label>]` when `path` falls in a declared zone, else empty (R1). The
+/// leading space keeps it a suffix on the result line; zero `.ctxzones` →
+/// `zone_of` is always `None` → empty string → output unchanged from today.
+fn zone_suffix(zones: &ZoneConfig, path: &str) -> String {
+    match zones.zone_of(path) {
+        Some(label) => format!(" [zone:{label}]"),
+        None => String::new(),
+    }
+}
+
 /// `precise` when the enrichment cache confirms the reference `name` at
 /// `path:line` (1-based), `heuristic` otherwise (including no cache).
 fn ref_label(cache: Option<&EnrichmentCache>, name: &str, path: &str, line: usize) -> &'static str {
@@ -103,6 +114,8 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         Ok(v) => v,
         Err(code) => return (String::new(), code),
     };
+    // R1: zone tagging — loaded once per render; empty config tags nothing.
+    let zones = ZoneConfig::load(&root);
     // Optional LSP enrichment (R11): absent cache => every result stays heuristic.
     let mut cache = EnrichmentCache::load(&root);
     // `--exact` (task 01 / R2): no current-generation cache yet => try to
@@ -224,6 +237,7 @@ pub fn render(args: &Args) -> (String, ExitCode) {
                 ref_omitted,
                 cache.as_ref(),
                 note.as_deref(),
+                &zones,
             ),
             ExitCode::SUCCESS,
         );
@@ -239,13 +253,14 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         };
         let sig_suffix = signature.map(|s| format!(" {s}")).unwrap_or_default();
         out.push_str(&format!(
-            "def {} {}:{} {}{}{}\n",
+            "def {} {}:{} {}{}{}{}\n",
             d.qpath,
             d.path,
             line_of(&root, &d.path, d.ident_start_byte),
             label,
             sig_suffix,
             marker,
+            zone_suffix(&zones, &d.path),
         ));
     }
     if def_omitted > 0 {
@@ -268,12 +283,13 @@ pub fn render(args: &Args) -> (String, ExitCode) {
             String::new()
         };
         out.push_str(&format!(
-            "ref {} {}:{} {}{}\n",
+            "ref {} {}:{} {}{}{}\n",
             r.name,
             r.path,
             r.row + 1,
             label,
             attribution,
+            zone_suffix(&zones, &r.path),
         ));
     }
     if ref_omitted > 0 {
@@ -299,6 +315,7 @@ fn render_json(
     ref_omitted: usize,
     cache: Option<&EnrichmentCache>,
     note: Option<&str>,
+    zones: &ZoneConfig,
 ) -> String {
     let definitions: Vec<_> = defs
         .iter()
@@ -316,6 +333,11 @@ fn render_json(
             // enrichment cache the JSON stays byte-for-byte the task-07 shape.
             if let Some(sig) = signature {
                 obj["signature"] = json!(sig);
+            }
+            // R1: extend-never-replace — a `zone` key only when the path is
+            // zoned, so live results keep the pre-zone JSON shape byte-for-byte.
+            if let Some(label) = zones.zone_of(&d.path) {
+                obj["zone"] = json!(label);
             }
             obj
         })
@@ -338,6 +360,10 @@ fn render_json(
                 && let Some(def) = cache.and_then(|c| c.precise_def(&r.name, &r.path, r.row + 1))
             {
                 obj["def"] = json!(def);
+            }
+            // R1: same extend-never-replace zone key as the definitions above.
+            if let Some(label) = zones.zone_of(&r.path) {
+                obj["zone"] = json!(label);
             }
             obj
         })
