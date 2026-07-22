@@ -134,6 +134,10 @@ impl CtxServer {
         cmd::map::render(&cmd::map::Args {
             tokens: p.tokens.unwrap_or(1000),
             doc: p.doc.unwrap_or(false),
+            // Zone filtering (task 03 / R2) is CLI-only; the MCP wrapper stays
+            // an unfiltered read over the whole ranked set.
+            zone: None,
+            live_only: false,
             json: true,
             no_sync: false,
         })
@@ -160,9 +164,12 @@ impl CtxServer {
             // `<path>:<name>` selector still rides inside `symbol`.
             in_paths: Vec::new(),
             // `--exact` (task 01 / R2) is a CLI-only on-demand trigger; the
-            // MCP wrapper stays read-only over whatever cache already exists,
-            // out of this task's Touch (`context-tree/src/mcp/` untouched).
+            // MCP wrapper stays read-only over whatever cache already exists.
             exact: false,
+            // Zone filtering (task 03 / R2) is CLI-only; the MCP wrapper stays
+            // an unfiltered read.
+            zone: None,
+            live_only: false,
             json: true,
             no_sync: false,
         })

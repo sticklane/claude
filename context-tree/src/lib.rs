@@ -156,6 +156,8 @@ pub fn run() -> ExitCode {
             limit,
             in_paths,
             exact,
+            zone,
+            live_only,
             json,
             no_sync,
         }) => cmd::refs::run(cmd::refs::Args {
@@ -163,6 +165,8 @@ pub fn run() -> ExitCode {
             limit,
             in_paths,
             exact,
+            zone,
+            live_only,
             json,
             no_sync,
         }),
@@ -178,11 +182,15 @@ pub fn run() -> ExitCode {
         Some(cli::Command::Map {
             tokens,
             doc,
+            zone,
+            live_only,
             json,
             no_sync,
         }) => cmd::map::run(cmd::map::Args {
             tokens,
             doc,
+            zone,
+            live_only,
             json,
             no_sync,
         }),
