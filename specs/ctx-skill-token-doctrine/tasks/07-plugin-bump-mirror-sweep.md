@@ -1,6 +1,6 @@
 # Task 07: Plugin version bump + mirror closure sweep
 
-Status: pending
+Status: in-progress
 Depends on: 01, 03, 04, 05, 06
 Priority: P3
 Budget: 6 turns
