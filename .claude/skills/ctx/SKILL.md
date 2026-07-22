@@ -33,6 +33,47 @@ qualified paths (`pkg.mod.Class.method`); ambiguous short names list their
 candidates. `refs` output tags each def with `[notes:N]` when notes are
 anchored there — follow up with `ctx notes <symbol>`.
 
+## Reading ladder
+
+Escalate in order — stop at the cheapest rung that answers the question, and
+never jump straight to a whole-file Read:
+
+1. **ctx query** — any structural question (where/what-shape/who-calls/
+   imports/encloses). Returns lines, not files.
+2. **Structural content search** — for body/literal/pattern questions ctx
+   can't answer: `ast-grep` where available (structural, syntax-aware), else
+   `Grep` capped with `-l` (names only) or `-C 0` (no context lines).
+3. **Sliced Read** — when a specific body must actually be read, Read with
+   `offset`/`limit` around a ctx-reported line (`ctx at <file>:<line>` or a
+   `refs`/`sig` line gives you the number), not the whole file.
+4. **Whole-file Read** — only when you are about to edit the file.
+
+Escalate off rung 1 on exactly these triggers:
+
+- **Symbol not indexed** — ctx returns nothing and the extractor doesn't
+  cover that language (rung 2).
+- **Identical-qpath ambiguity** — two defs share a qualified path so ctx
+  can't disambiguate; confirm the right one by reading its body (rung 3).
+- **`heuristic` tag on a load-bearing ref** — a ref ctx flags `heuristic`
+  (best-effort, not resolved) that a decision depends on: verify it (rung 2/3).
+- **Body/literal/pattern questions** — "what string does it return", "which
+  branch sets X" — content ctx doesn't carry (rung 2).
+
+## Output hygiene
+
+ctx output is for a decision, not for the transcript — keep it bounded:
+
+- **Cap wide output.** Pipe `map`/`tree`/`refs` through `head`, or slice with
+  `--limit` / `--json | jq`. Worked example:
+  `ctx map --limit 30 | head` (top refs only);
+  `ctx refs Foo --json | jq -r '.[].file'` (just the files).
+- **Batch independent queries** into one shell invocation
+  (`ctx sig Foo; ctx refs Foo; ctx deps bar.py`) rather than one round-trip
+  each.
+- **Paste only what the decision needs.** Never dump a full `tree`/`refs`
+  into conversation when the answer is one symbol or one count — summarize
+  the rest.
+
 ## Notes — durable, refactor-surviving knowledge
 
 - `ctx notes add <symbol> "<text>" --kind gotcha|invariant|rationale|todo`

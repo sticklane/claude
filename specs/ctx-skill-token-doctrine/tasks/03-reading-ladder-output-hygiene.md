@@ -1,6 +1,6 @@
 # Task 03: Reading ladder + output hygiene sections (R2, R3)
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
@@ -46,9 +46,9 @@ touch the frontmatter description (task 01) or the survey/scope sections
 
 ## Acceptance
 
-- [ ] `grep -q 'Reading ladder' .claude/skills/ctx/SKILL.md` → exit 0
-- [ ] `grep -Eqi 'ast-grep' .claude/skills/ctx/SKILL.md && grep -qi 'offset' .claude/skills/ctx/SKILL.md` → exit 0 (rungs 2 and 3 present)
-- [ ] `grep -qi 'not indexed\|heuristic' .claude/skills/ctx/SKILL.md && grep -qi 'qpath\|identical' .claude/skills/ctx/SKILL.md` → exit 0 (escalation triggers named)
-- [ ] `grep -qi 'Output hygiene' .claude/skills/ctx/SKILL.md && grep -q '| head\|--limit\|jq' .claude/skills/ctx/SKILL.md` → exit 0 (hygiene section + worked pipe example)
-- [ ] `grep -qi 'ladder' antigravity/.agents/skills/ctx/SKILL.md && grep -qi 'hygiene\|--limit\| head' antigravity/.agents/skills/ctx/SKILL.md` → exit 0 (mirror coverage)
-- [ ] `test "$(wc -l < .claude/skills/ctx/SKILL.md)" -lt 500` → exit 0
+- [x] `grep -q 'Reading ladder' .claude/skills/ctx/SKILL.md` → exit 0
+- [x] `grep -Eqi 'ast-grep' .claude/skills/ctx/SKILL.md && grep -qi 'offset' .claude/skills/ctx/SKILL.md` → exit 0 (rungs 2 and 3 present)
+- [x] `grep -qi 'not indexed\|heuristic' .claude/skills/ctx/SKILL.md && grep -qi 'qpath\|identical' .claude/skills/ctx/SKILL.md` → exit 0 (escalation triggers named)
+- [x] `grep -qi 'Output hygiene' .claude/skills/ctx/SKILL.md && grep -q '| head\|--limit\|jq' .claude/skills/ctx/SKILL.md` → exit 0 (hygiene section + worked pipe example)
+- [x] `grep -qi 'ladder' antigravity/.agents/skills/ctx/SKILL.md && grep -qi 'hygiene\|--limit\| head' antigravity/.agents/skills/ctx/SKILL.md` → exit 0 (mirror coverage)
+- [x] `test "$(wc -l < .claude/skills/ctx/SKILL.md)" -lt 500` → exit 0
