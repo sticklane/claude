@@ -1,6 +1,6 @@
 # Task 02: Stub session runner — results row, cost summing, crash-as-fail, toy fixtures
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 28 turns

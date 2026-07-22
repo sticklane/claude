@@ -1,6 +1,6 @@
 # Task 03: Reading ladder + output hygiene sections (R2, R3)
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 12 turns

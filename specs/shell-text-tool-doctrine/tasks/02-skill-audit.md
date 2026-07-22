@@ -1,6 +1,6 @@
 # Task 02: Audit skill-embedded shell text commands
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 12 turns

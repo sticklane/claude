@@ -1,6 +1,6 @@
 # Task 03: `.ctxkeep` escape hatch
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 12 turns

@@ -1,6 +1,6 @@
 # Task 05: Fixture T2 — `notes-api` (Python stdlib HTTP additive feature) + reference
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 20 turns

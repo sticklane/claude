@@ -1,6 +1,6 @@
 # Task 02: Tree `(skipped: minified)` marker + zero-symbol queries
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P1
 Budget: 12 turns

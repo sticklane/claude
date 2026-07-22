@@ -1,6 +1,6 @@
 # Task 06: Fixture T3 — `sitegen` (Node breadth-first refactor) + reference
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 20 turns

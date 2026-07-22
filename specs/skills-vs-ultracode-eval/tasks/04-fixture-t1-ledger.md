@@ -1,6 +1,6 @@
 # Task 04: Fixture T1 — `ledger` (Python coupled bug-fix) + reference solution
 
-Status: pending
+Status: in-progress
 Depends on: 01
 Priority: P2
 Budget: 20 turns
