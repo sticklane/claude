@@ -47,6 +47,18 @@ what passes "would removing this line cause an agent to make a mistake?":
   never edit"), known gotchas, and the repo's check command — AGENTS.md is
   Antigravity's native context file, so these live here, not in a separate
   rules file.
+- When the repo is indexed (a `.context/` directory at its root, or `ctx`
+  resolving on PATH), also add an "Answering structure questions" section
+  naming `ctx` as the first stop for a structure question — ahead of a file
+  read or a scout dispatch — the reading ladder's rung order, one rung per
+  question shape: `ctx tree <path>` (file/module contents), `ctx sig
+  <symbol>` (signature), `ctx map` (important symbols), `ctx deps <path>`
+  (imports/dependents), `ctx refs <symbol>` (definition and usages), `ctx at
+  <file>:<line>` (enclosing symbol), `ctx notes <symbol>` (pinned gotchas) —
+  falling back to reading the file or dispatching a scout only when `ctx`
+  can't answer. AGENTS.md is Antigravity's native context file, so this
+  section lives here rather than in a separate CLAUDE.md the way Claude
+  Code's mirror does.
 - Optional: if the repo is ever edited by more than one live session in the
   same non-worktree checkout, a bullet pointing at the concurrent-sessions
   pre-flight pattern (this toolkit's `.claude/rules/concurrent-sessions.md`,
