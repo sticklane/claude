@@ -1,6 +1,6 @@
 # Task 06: Fixture T3 — `sitegen` (Node breadth-first refactor) + reference
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 20 turns
@@ -43,7 +43,7 @@ edit the runner, other fixtures, or `calibrate.sh`.
 
 ## Acceptance
 
-- [ ] `cd evals/headtohead/tasks/sitegen/<snapshot> && node --test` (or the fixture's test command) → suite green at the snapshot
-- [ ] running the hidden `assert.sh` against the UNTOUCHED snapshot → exits non-zero (RED)
-- [ ] running the hidden `assert.sh` against the committed reference solution → exits 0 (GREEN)
-- [ ] the T3 brief is ≤6 sentences (sentence-count check)
+- [x] `cd evals/headtohead/tasks/sitegen/<snapshot> && node --test` (or the fixture's test command) → suite green at the snapshot — verified: `cd repo && node --test` exits 0, 12 tests pass.
+- [x] running the hidden `assert.sh` against the UNTOUCHED snapshot → exits non-zero (RED) — verified: `bash assert.sh repo` exits 1; 3 checks fail (4 formatDate defs not 1; index.html golden diff shows `undefined 25, 2023`; December leak).
+- [x] running the hidden `assert.sh` against the committed reference solution → exits 0 (GREEN) — verified: `bash assert.sh reference` exits 0; all four checks pass.
+- [x] the T3 brief is ≤6 sentences (sentence-count check) — verified: brief.md is 4 sentences, verbatim from the spec's T3 brief.
