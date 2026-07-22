@@ -836,6 +836,217 @@ func TestDetectDialectFallsBackToGenericForUnknownPrefix(t *testing.T) {
 	}
 }
 
+// --- Frames-only-ancestor cost fallback (Task 03) ---
+
+// spanAt builds one span JSON object with explicit start/end nanos and the
+// shared trace ID. attrs are the span's attribute JSON objects (empty = a
+// frames-only span carrying no token metrics).
+func spanAt(spanID, parentSpanID, name, start, end string, attrs ...string) string {
+	parent := ""
+	if parentSpanID != "" {
+		parent = `"parentSpanId":"` + parentSpanID + `",`
+	}
+	return `{"traceId":"` + testTraceID + `","spanId":"` + spanID + `",` + parent +
+		`"name":"` + name + `","startTimeUnixNano":"` + start + `","endTimeUnixNano":"` + end + `",` +
+		`"attributes":[` + strings.Join(attrs, ",") + `]}`
+}
+
+// tokenSpanAt is spanAt carrying Claude Code's bare token keys.
+func tokenSpanAt(spanID, parentSpanID, name, start, end string) string {
+	return spanAt(spanID, parentSpanID, name, start, end,
+		intAttr("input_tokens", "100"), intAttr("output_tokens", "50"))
+}
+
+// costByLeaf flushes acc and maps each emitted sample's leaf frame name to its
+// cost_microusd (0 when the sample carries no cost). It fails on any skipped
+// span. A leaf name absent from the map means that span emitted no sample.
+func costByLeaf(t *testing.T, acc *Accumulator) map[string]int64 {
+	t.Helper()
+	samples, skipped := acc.Flush()
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0", skipped)
+	}
+	out := make(map[string]int64)
+	for _, s := range samples {
+		out[s.Stack[len(s.Stack)-1]] = s.Values["cost_microusd"]
+	}
+	return out
+}
+
+func TestAncestorCostAttachesToSingleContainingDescendant(t *testing.T) {
+	// Cost targets a frames-only ancestor; the one token-bearing descendant
+	// whose time range contains the event timestamp receives it.
+	acc := NewAccumulator()
+	trace := export("claude-code",
+		spanAt("aa00000000000001", "", "claude_code.interaction", "1700000000000000000", "1700000000005000000"),
+		tokenSpanAt("bb00000000000001", "aa00000000000001", "claude_code.llm_request", "1700000000001000000", "1700000000002000000"),
+	)
+	if err := acc.AddJSON([]byte(trace)); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	rec := costLogRecord(testTraceID, "aa00000000000001", "claude_code.api_request", "1700000000001500000", doubleAttr("cost_usd", "0.041230"))
+	if err := acc.AddLogsJSON([]byte(logsExport("claude-code", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	byLeaf := costByLeaf(t, acc)
+	if got := byLeaf["claude_code.llm_request"]; got != 41230 {
+		t.Errorf("descendant cost_microusd = %d, want 41230 (redistributed from ancestor)", got)
+	}
+	if _, ok := byLeaf["claude_code.interaction"]; ok {
+		t.Errorf("frames-only ancestor emitted a sample; cost should have moved to the descendant")
+	}
+}
+
+func TestAncestorCostPrefersEarliestStartAmongContainingDescendants(t *testing.T) {
+	// Two token-bearing descendants both contain the event timestamp; the one
+	// with the earlier span start wins.
+	acc := NewAccumulator()
+	trace := export("claude-code",
+		spanAt("aa00000000000001", "", "claude_code.interaction", "1700000000000000000", "1700000000005000000"),
+		tokenSpanAt("bb00000000000001", "aa00000000000001", "claude_code.earlier", "1700000000001000000", "1700000000004000000"),
+		tokenSpanAt("cc00000000000001", "aa00000000000001", "claude_code.later", "1700000000001500000", "1700000000004000000"),
+	)
+	if err := acc.AddJSON([]byte(trace)); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	rec := costLogRecord(testTraceID, "aa00000000000001", "claude_code.api_request", "1700000000002000000", doubleAttr("cost_usd", "0.041230"))
+	if err := acc.AddLogsJSON([]byte(logsExport("claude-code", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	byLeaf := costByLeaf(t, acc)
+	if got := byLeaf["claude_code.earlier"]; got != 41230 {
+		t.Errorf("earliest-start descendant cost = %d, want 41230", got)
+	}
+	if got := byLeaf["claude_code.later"]; got != 0 {
+		t.Errorf("later-start descendant cost = %d, want 0 (earliest wins the tie-break)", got)
+	}
+}
+
+func TestAncestorCostFallsBackToLatestDescendantStartedBeforeEvent(t *testing.T) {
+	// No descendant's time range contains the event timestamp (the event lands
+	// after both ended); the latest-started descendant receives the cost.
+	acc := NewAccumulator()
+	trace := export("claude-code",
+		spanAt("aa00000000000001", "", "claude_code.interaction", "1700000000000000000", "1700000000005000000"),
+		tokenSpanAt("bb00000000000001", "aa00000000000001", "claude_code.first", "1700000000001000000", "1700000000001200000"),
+		tokenSpanAt("cc00000000000001", "aa00000000000001", "claude_code.second", "1700000000001500000", "1700000000001700000"),
+	)
+	if err := acc.AddJSON([]byte(trace)); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	rec := costLogRecord(testTraceID, "aa00000000000001", "claude_code.api_request", "1700000000003000000", doubleAttr("cost_usd", "0.041230"))
+	if err := acc.AddLogsJSON([]byte(logsExport("claude-code", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	byLeaf := costByLeaf(t, acc)
+	if got := byLeaf["claude_code.second"]; got != 41230 {
+		t.Errorf("latest-started descendant cost = %d, want 41230 (started-before fallback)", got)
+	}
+	if got := byLeaf["claude_code.first"]; got != 0 {
+		t.Errorf("earlier descendant cost = %d, want 0", got)
+	}
+}
+
+func TestAncestorFallbackLeavesDirectTokenMatchUnchanged(t *testing.T) {
+	// Regression: a cost record naming a token-bearing span directly still
+	// attaches to that span (Task 02's fast path), never a descendant walk.
+	acc := NewAccumulator()
+	sp := claudeCodeTokenSpan(testSpanID, "", "claude_code.llm_request")
+	if err := acc.AddJSON([]byte(export("claude-code", sp))); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	rec := costLogRecord(testTraceID, testSpanID, "claude_code.api_request", testStart, doubleAttr("cost_usd", "0.041230"))
+	if err := acc.AddLogsJSON([]byte(logsExport("claude-code", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	byLeaf := costByLeaf(t, acc)
+	if got := byLeaf["claude_code.llm_request"]; got != 41230 {
+		t.Errorf("direct-match token span cost = %d, want 41230 (unchanged)", got)
+	}
+	if len(byLeaf) != 1 {
+		t.Errorf("emitted %d samples, want 1 (direct match, no extra descendant)", len(byLeaf))
+	}
+}
+
+func TestGoldenAncestorSingleDescendantFixture(t *testing.T) {
+	acc := NewAccumulator()
+	for _, f := range []struct {
+		name string
+		logs bool
+	}{
+		{"testdata/ancestor_single_trace.json", false},
+		{"testdata/ancestor_single_cost.json", true},
+	} {
+		data, err := os.ReadFile(f.name)
+		if err != nil {
+			t.Fatalf("ReadFile(%s) error = %v", f.name, err)
+		}
+		if f.logs {
+			err = acc.AddLogsJSON(data)
+		} else {
+			err = acc.AddJSON(data)
+		}
+		if err != nil {
+			t.Fatalf("adding %s: %v", f.name, err)
+		}
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0", skipped)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("len(samples) = %d, want 1 (cost redistributed onto the sole descendant)", len(samples))
+	}
+	s := samples[0]
+	if got := s.Stack[len(s.Stack)-1]; got != "claude_code.llm_request" {
+		t.Errorf("leaf frame = %q, want claude_code.llm_request", got)
+	}
+	if s.Values["cost_microusd"] != 41230 || s.Values["input_tokens"] != 200 {
+		t.Errorf("sample values = %v, want cost_microusd 41230 + input_tokens 200", s.Values)
+	}
+}
+
+func TestGoldenAncestorMultiDescendantFixture(t *testing.T) {
+	acc := NewAccumulator()
+	for _, f := range []struct {
+		name string
+		logs bool
+	}{
+		{"testdata/ancestor_multi_trace.json", false},
+		{"testdata/ancestor_multi_cost.json", true},
+	} {
+		data, err := os.ReadFile(f.name)
+		if err != nil {
+			t.Fatalf("ReadFile(%s) error = %v", f.name, err)
+		}
+		if f.logs {
+			err = acc.AddLogsJSON(data)
+		} else {
+			err = acc.AddJSON(data)
+		}
+		if err != nil {
+			t.Fatalf("adding %s: %v", f.name, err)
+		}
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0", skipped)
+	}
+	if len(samples) != 2 {
+		t.Fatalf("len(samples) = %d, want 2 (both token descendants emit; only the earliest carries cost)", len(samples))
+	}
+	byLeaf := make(map[string]int64)
+	for _, s := range samples {
+		byLeaf[s.Stack[len(s.Stack)-1]] = s.Values["cost_microusd"]
+	}
+	if got := byLeaf["claude_code.llm_request_first"]; got != 41230 {
+		t.Errorf("earliest-start descendant cost = %d, want 41230", got)
+	}
+	if got := byLeaf["claude_code.llm_request_second"]; got != 0 {
+		t.Errorf("later-start descendant cost = %d, want 0", got)
+	}
+}
+
 // --- Benchmark ---
 
 // benchBatch builds one OTLP/JSON export object with n token-bearing gen_ai

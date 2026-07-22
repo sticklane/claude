@@ -190,21 +190,22 @@ func (a *Accumulator) LogLen() int {
 
 // Flush resolves parent chains across everything accumulated and returns the
 // samples, plus the count of invalid skipped spans. Cost-bearing log records
-// join onto the span whose (trace_id, span_id) they name directly (the
-// frames-only-ancestor descendant walk is Task 03); the emit gate is relaxed
-// to hasTokens OR attached cost. Span samples come first in first-seen span
+// join onto the span whose (trace_id, span_id) they name directly; when that
+// span is a frames-only ancestor, the cost redistributes to the token-bearing
+// descendant selected by resolveCostTarget. The emit gate is relaxed to
+// hasTokens OR attached cost. Span samples come first in first-seen span
 // order, then flat samples for records without trace context.
 func (a *Accumulator) Flush() ([]schema.Sample, int) {
-	// Index each cost record onto the span it names directly. Multiple records
+	// Index each cost record onto the span it attaches to. Multiple records
 	// targeting one span sum. A record naming no accumulated span attaches
-	// nothing here (Task 03's descendant fallback completes that path).
+	// nothing here (it degrades to a flat sample only when it also lacks trace
+	// context).
 	costBySpan := make(map[spanKey]int64)
 	for _, lr := range a.logs {
 		if !lr.hasCost || lr.traceID == "" || lr.spanID == "" {
 			continue
 		}
-		key := spanKey{lr.traceID, lr.spanID}
-		if _, ok := a.spans[key]; ok {
+		if key, ok := a.resolveCostTarget(lr); ok {
 			costBySpan[key] += lr.costMicro
 		}
 	}
@@ -235,6 +236,87 @@ func (a *Accumulator) Flush() ([]schema.Sample, int) {
 		samples = append(samples, flatSample(lr))
 	}
 	return samples, skipped
+}
+
+// resolveCostTarget picks the span a cost record's cost attaches to (SPEC.md
+// design pt 6). A record naming a token-bearing span attaches to it directly
+// (Task 02's fast path). A record naming a frames-only ancestor redistributes
+// to a token-bearing descendant within the same trace: the earliest-start
+// descendant whose time range contains the event timestamp, else the
+// latest-started descendant that began before the event. A frames-only span
+// with no qualifying token-bearing descendant keeps the cost itself. The bool
+// is false when the named span is not accumulated (nothing to attach to).
+func (a *Accumulator) resolveCostTarget(lr *logRec) (spanKey, bool) {
+	key := spanKey{lr.traceID, lr.spanID}
+	target, ok := a.spans[key]
+	if !ok {
+		return spanKey{}, false
+	}
+	if target.hasTokens {
+		return key, true // direct token-bearing match: no descendant walk
+	}
+	descs := a.tokenDescendants(target)
+	if len(descs) == 0 {
+		return key, true // frames-only span, no descendants: cost stays here
+	}
+	// Prefer the earliest-start descendant whose time range contains the event.
+	var best *spanRec
+	for _, d := range descs {
+		if d.start <= lr.timestamp && lr.timestamp <= d.end {
+			if best == nil || d.start < best.start {
+				best = d
+			}
+		}
+	}
+	if best == nil {
+		// None contains the event: fall back to the latest descendant that
+		// started before it.
+		for _, d := range descs {
+			if d.start < lr.timestamp {
+				if best == nil || d.start > best.start {
+					best = d
+				}
+			}
+		}
+	}
+	if best == nil {
+		return key, true // no descendant started before the event: keep here
+	}
+	return spanKey{best.traceID, best.spanID}, true
+}
+
+// tokenDescendants returns the token-bearing spans transitively descended from
+// ancestor within the same trace, in first-seen order.
+func (a *Accumulator) tokenDescendants(ancestor *spanRec) []*spanRec {
+	var out []*spanRec
+	for _, key := range a.order {
+		rec := a.spans[key]
+		if rec.traceID != ancestor.traceID || !rec.hasTokens {
+			continue
+		}
+		if a.isDescendant(rec, ancestor) {
+			out = append(out, rec)
+		}
+	}
+	return out
+}
+
+// isDescendant reports whether ancestor lies on rec's parent chain. A missing
+// parent stops the walk (orphan tolerance); a repeated span ID breaks cycles.
+func (a *Accumulator) isDescendant(rec, ancestor *spanRec) bool {
+	seen := make(map[string]bool)
+	for cur := rec; cur.parentSpanID != "" && !seen[cur.spanID]; {
+		seen[cur.spanID] = true
+		parent, ok := a.spans[spanKey{cur.traceID, cur.parentSpanID}]
+		if !ok {
+			return false
+		}
+		if parent.spanID == ancestor.spanID {
+			return true
+		}
+		cur = parent
+	}
+	return false
 }
 
 func (a *Accumulator) add(td *tracev1.TracesData) {
