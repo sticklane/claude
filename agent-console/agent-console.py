@@ -631,7 +631,10 @@ def _kanban_column(status: str) -> str:
     catch-all workboard uses, rendered in the single Blocked column."""
     s = (status or "").strip().lower()
     if s in workboard.CLOSED_TASK_STATUSES:
-        return s.capitalize()  # done→Done, deferred→Deferred, skipped→Skipped
+        col = s.capitalize()  # done→Done, deferred→Deferred, skipped→Skipped
+        # Guard a future 4th closed status without a dedicated column: keep it
+        # closed-side ("Done") rather than letting buckets[col] KeyError.
+        return col if col in _KANBAN_COLUMNS else "Done"
     if s not in workboard.OPEN_TASK_STATUSES:
         return "Blocked"
     if s in _KANBAN_IN_PROGRESS:
@@ -2041,7 +2044,9 @@ def _dispatch_btn(kind: str, target: str, label: str, confirm: str) -> str:
     )
 
 
-def _unblock_recheck_btns(path: str, unblock: dict | None, label: str, git_root: bool) -> str:
+def _unblock_recheck_btns(
+    path: str, unblock: dict | None, label: str, git_root: bool
+) -> str:
     """Both dispatch buttons for a waiting-spec header or a blocked task file
     (unblock-next-steps R7). Gated identically to _add_unblock_recheck() in the
     action registry — git-repo root, truthy path, truthy unblock, non-`ask` —
@@ -2049,12 +2054,20 @@ def _unblock_recheck_btns(path: str, unblock: dict | None, label: str, git_root:
     string when any gate fails."""
     if not git_root or not path or not unblock or unblock.get("type") == "ask":
         return ""
-    ub = _dispatch_btn("unblock", path, f"unblock: {label}",
+    ub = _dispatch_btn(
+        "unblock",
+        path,
+        f"unblock: {label}",
         f"Unblock {label}? Launches a Claude agent to act on the unblock step "
-        "(agent with write access, costs tokens).")
-    rc = _dispatch_btn("recheck", path, f"recheck: {label}",
+        "(agent with write access, costs tokens).",
+    )
+    rc = _dispatch_btn(
+        "recheck",
+        path,
+        f"recheck: {label}",
         f"Recheck {label}? Launches a Claude agent to re-verify whether the "
-        "blocker cleared (costs tokens).")
+        "blocker cleared (costs tokens).",
+    )
     return ub + rc
 
 
@@ -2373,13 +2386,20 @@ def render_workboard(
                 # spec path; each non-ask blocked task keys on its own file
                 # path. Not gated on sp["total"] — a waiting spec often has 0.
                 ub = _unblock_recheck_btns(
-                    sp.get("path", ""), sp.get("unblock"), f"spec {sp['slug']}", git_root
+                    sp.get("path", ""),
+                    sp.get("unblock"),
+                    f"spec {sp['slug']}",
+                    git_root,
                 )
                 bt_lines = []
                 for bt in sp.get("blocked_tasks") or []:
                     tpath = bt.get("path") or ""
-                    tlabel = bt.get("title") or (os.path.basename(tpath) if tpath else "")
-                    btns = _unblock_recheck_btns(tpath, bt.get("unblock"), tlabel, git_root)
+                    tlabel = bt.get("title") or (
+                        os.path.basename(tpath) if tpath else ""
+                    )
+                    btns = _unblock_recheck_btns(
+                        tpath, bt.get("unblock"), tlabel, git_root
+                    )
                     if btns:
                         bt_lines.append(
                             f'<div class="line evt"><span class="trunc">{esc(tlabel)}</span>{btns}</div>'
