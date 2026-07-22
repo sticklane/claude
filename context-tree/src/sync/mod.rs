@@ -11,7 +11,7 @@ pub mod lock;
 
 use crate::index::IndexStore;
 use crate::notes::reanchor::{self, Candidate, OldAnchor};
-use crate::{extract, vcs};
+use crate::{extract, minified, vcs};
 use journal::{JournalRecord, Trigger};
 use lock::AdvisoryLock;
 use sha2::{Digest, Sha256};
@@ -177,25 +177,42 @@ pub fn run_sync(root: &Path, trigger: Trigger) -> io::Result<SyncStats> {
             .upsert_file(rel, &file_hash, size, mtime)
             .map_err(to_io)?;
         // A known-language file re-parses; anything else is tracked (so it is
-        // not re-hashed forever) but produces no facts.
+        // not re-hashed forever) but produces no facts. A candidate
+        // classified minified (R1) skips the extractor entirely — no
+        // `extractor.extract` call, zero facts — recording a skip reason
+        // instead; the seam for a `.ctxkeep` exemption gate lives here for a
+        // later task to fill.
         if let Some(extractor) = extract::for_extension(ext) {
-            let result = extractor.extract(rel, &content);
-            if result.parse_failed {
-                parse_failed_files.insert(rel.clone());
+            if let Some(reason) = minified::classify(rel, &content) {
+                // replace_facts clears any stale facts from a prior
+                // non-minified parse, matching parsing's own staleness rule.
+                store
+                    .replace_facts(file_id, &extract::ExtractResult::default())
+                    .map_err(to_io)?;
+                store
+                    .set_skip_reason(file_id, Some(reason.as_str()))
+                    .map_err(to_io)?;
             } else {
-                for s in &result.symbols {
-                    changed_syms.push(Candidate {
-                        qpath: s.qpath.clone(),
-                        name: s.name.clone(),
-                        kind: s.kind.as_str().to_string(),
-                        body_hash: s.body_hash.clone(),
-                        body_tokens: s.body_tokens.clone(),
-                        file: rel.clone(),
-                        row: s.full_span.start.row + 1,
-                    });
+                let result = extractor.extract(rel, &content);
+                if result.parse_failed {
+                    parse_failed_files.insert(rel.clone());
+                } else {
+                    for s in &result.symbols {
+                        changed_syms.push(Candidate {
+                            qpath: s.qpath.clone(),
+                            name: s.name.clone(),
+                            kind: s.kind.as_str().to_string(),
+                            body_hash: s.body_hash.clone(),
+                            body_tokens: s.body_tokens.clone(),
+                            file: rel.clone(),
+                            row: s.full_span.start.row + 1,
+                        });
+                    }
                 }
+                store.replace_facts(file_id, &result).map_err(to_io)?;
+                // Clear a stale skip reason from a prior minified classification.
+                store.set_skip_reason(file_id, None).map_err(to_io)?;
             }
-            store.replace_facts(file_id, &result).map_err(to_io)?;
             parsed += 1;
         }
     }
