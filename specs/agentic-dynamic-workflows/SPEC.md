@@ -1,7 +1,9 @@
 # agentic dynamic workflows: dispatch, run, watch
 
-Breakdown-ready: false
+Breakdown-ready: true
 Rigor: production
+Status: waiting
+Unblock: run: for t in specs/agentic-core-redesign/tasks/04-write-path-lock-sync.md specs/agentic-core-redesign/tasks/07-composer.md; do grep -q '^Status: done' "$t" || echo "not done: $t"; done
 
 ## The design in plain statements
 
@@ -35,8 +37,9 @@ ultracode's full functionality on any agent runtime:
 6. `agentic phase <title>` and `agentic log <msg>` append typed
    progress events; `agentic watch [run-id]` renders the live
    terminal tree — phase boxes, one row per agent with label, tier,
-   state, queued-vs-started, attempt, last event, tokens, elapsed —
-   and workboard renders the same stream in the browser.
+   state, queued-vs-started, attempt, last event, tokens, elapsed.
+   (Workboard rendering the same stream in the browser is a later
+   consumer — DW10 — not a deliverable of this spec.)
 7. Every run files a tracker issue (script hash, budget, actuals);
    findings a workflow keeps become tracker tasks linked
    `discovered-from` the run issue. Ultracode results evaporate;
@@ -261,7 +264,8 @@ exists (the core package itself is still landing), and no
       refuses.
 - [ ] RW-N: `tests/test_agentic_dispatch_silent.sh` — export the
       tracker, run 8 concurrent dispatches, re-export; the diff is
-      empty and no write-lock acquisition is recorded.
+      empty, and the write-lock's attempt counter (a facility the
+      lock exposes for exactly this test) reads zero.
 - [ ] RW-O: `tests/test_agentic_run_stop.sh` — stop a running
       fixture mid-run: in-flight dispatches settle, the journal is
       clean, `agentic runs` shows the stopped state, and a resume
@@ -275,7 +279,10 @@ exists (the core package itself is still landing), and no
       unknown tier warns and uses the session default.
 - [ ] RW-D: `tests/test_agentic_run_tracker.py` — a fixture run
       files its run issue, writes final actuals to metadata, and a
-      kept finding lands `discovered-from` the run issue.
+      kept finding lands `discovered-from` the run issue; invoking
+      `agentic run` from a git worktree (non-primary checkout) exits
+      with the typed refusal before any dispatch launches
+      (statement 7's guard, tested).
 
 ## Sequencing
 
