@@ -138,6 +138,10 @@ impl CtxServer {
             // an unfiltered read over the whole ranked set.
             zone: None,
             live_only: false,
+            // `--in`/`--not-in` are CLI-only result filters (task 03 / R3); the
+            // MCP wrapper exposes no such parameter, so it keeps every symbol.
+            in_paths: Vec::new(),
+            not_in_paths: Vec::new(),
             json: true,
             no_sync: false,
         })
@@ -163,6 +167,9 @@ impl CtxServer {
             // `--in` is a CLI-only disambiguating flag (task 02 / R1); a
             // `<path>:<name>` selector still rides inside `symbol`.
             in_paths: Vec::new(),
+            // `--not-in` is a CLI-only result filter (task 03 / R3); the MCP
+            // wrapper exposes no such parameter, so it drops nothing.
+            not_in_paths: Vec::new(),
             // `--exact` (task 01 / R2) is a CLI-only on-demand trigger; the
             // MCP wrapper stays read-only over whatever cache already exists.
             exact: false,
