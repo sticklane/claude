@@ -50,17 +50,30 @@ var (
 )
 
 // dialect identifies one CLI's OTel export convention by its span-name
-// prefix. Task 04 appends gemini_cli.*/qwen-code.*/codex.* entries to
-// dialects below without reshaping this type or detectDialect's loop —
-// alias lists stay data-driven since the GenAI semconv is pre-stable.
+// prefix and the attribute key(s) carrying its session identifier. Alias
+// lists stay data-driven since the GenAI semconv is pre-stable — adding a
+// dialect is a table row, not a code path.
 type dialect struct {
-	name       string
-	spanPrefix string
+	name        string
+	spanPrefix  string
+	sessionKeys []string // session-identifier attribute keys, highest precedence first
 }
 
+// dialects maps each recognized coding-CLI export convention to its session
+// key. Claude Code emits session.id; Codex emits conversation.id; Gemini CLI
+// and Qwen Code mirror the GenAI semconv and emit session.id. Token metrics
+// resolve through the shared alias set (inputTokenKeys, …), so a dialect row
+// only needs its detection prefix and session key.
 var dialects = []dialect{
-	{name: "claude_code", spanPrefix: "claude_code."},
+	{name: "claude_code", spanPrefix: "claude_code.", sessionKeys: []string{"session.id"}},
+	{name: "codex", spanPrefix: "codex.", sessionKeys: []string{"conversation.id"}},
+	{name: "gemini_cli", spanPrefix: "gemini_cli.", sessionKeys: []string{"session.id"}},
+	{name: "qwen-code", spanPrefix: "qwen-code.", sessionKeys: []string{"session.id"}},
 }
+
+// genericSessionKeys resolve labels["session"] for an unrecognized gen_ai.*
+// service that matches no dialect prefix.
+var genericSessionKeys = []string{"gen_ai.conversation.id", "session.id"}
 
 // detectDialect returns the matched dialect's name for a span, or "" when
 // no span-name prefix matches (the generic gen_ai.* fallback).
@@ -71,6 +84,18 @@ func detectDialect(spanName string) string {
 		}
 	}
 	return ""
+}
+
+// sessionKeysFor returns the session-identifier attribute keys for a detected
+// dialect name, falling back to genericSessionKeys when the name is empty or
+// unrecognized (the generic gen_ai.* path).
+func sessionKeysFor(dialectName string) []string {
+	for _, d := range dialects {
+		if d.name == dialectName {
+			return d.sessionKeys
+		}
+	}
+	return genericSessionKeys
 }
 
 type spanKey struct{ traceID, spanID string }
@@ -91,6 +116,7 @@ type spanRec struct {
 	model        string
 	system       string
 	dialect      string // detected export dialect, e.g. "claude_code"; "" = generic
+	session      string // session identifier for labels["session"]; "" = absent
 }
 
 type tokenMetric struct {
@@ -410,6 +436,7 @@ func newSpanRec(sp *tracev1.Span, service string) *spanRec {
 	rec.model = firstString(attrs, "gen_ai.response.model", "gen_ai.request.model")
 	rec.system = firstString(attrs, "gen_ai.system", "gen_ai.provider.name")
 	rec.dialect = detectDialect(rec.name)
+	rec.session = firstString(attrs, sessionKeysFor(rec.dialect)...)
 	return rec
 }
 
@@ -466,6 +493,9 @@ func (a *Accumulator) sample(rec *spanRec, cost int64, hasCost bool) schema.Samp
 	}
 	if rec.system != "" {
 		s.Labels["system"] = rec.system
+	}
+	if rec.session != "" {
+		s.Labels["session"] = rec.session
 	}
 	return s
 }
