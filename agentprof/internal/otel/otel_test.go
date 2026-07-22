@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -61,6 +62,13 @@ func strAttr(key, v string) string {
 
 func tokenSpan(spanID, parentSpanID, name string, extraAttrs ...string) string {
 	attrs := append([]string{intAttr("gen_ai.usage.input_tokens", "100"), intAttr("gen_ai.usage.output_tokens", "50")}, extraAttrs...)
+	return span(spanID, parentSpanID, name, attrs...)
+}
+
+// claudeCodeTokenSpan builds a span carrying Claude Code's bare token keys
+// (not the gen_ai.usage.* aliases).
+func claudeCodeTokenSpan(spanID, parentSpanID, name string, extraAttrs ...string) string {
+	attrs := append([]string{intAttr("input_tokens", "100"), intAttr("output_tokens", "50")}, extraAttrs...)
 	return span(spanID, parentSpanID, name, attrs...)
 }
 
@@ -163,6 +171,62 @@ func TestNonIntTokenValueSkipsSpan(t *testing.T) {
 	}
 	if skipped != 1 {
 		t.Errorf("skipped = %d, want 1", skipped)
+	}
+}
+
+// --- Claude Code aliases (bare keys + cache tokens) ---
+
+func TestClaudeCodeBareTokenKeysEmitSample(t *testing.T) {
+	sp := claudeCodeTokenSpan(testSpanID, "", "claude_code.llm_request")
+	_, values, _, _ := flushOne(t, export("claude-code", sp))
+	if values["input_tokens"] != 100 {
+		t.Errorf("input_tokens = %d, want 100", values["input_tokens"])
+	}
+	if values["output_tokens"] != 50 {
+		t.Errorf("output_tokens = %d, want 50", values["output_tokens"])
+	}
+}
+
+func TestClaudeCodeCacheCreationTokensMapToCacheWriteTokens(t *testing.T) {
+	sp := claudeCodeTokenSpan(testSpanID, "", "claude_code.llm_request", intAttr("cache_creation_tokens", "40"))
+	_, values, _, _ := flushOne(t, export("claude-code", sp))
+	if values["cache_write_tokens"] != 40 {
+		t.Errorf("cache_write_tokens = %d, want 40", values["cache_write_tokens"])
+	}
+	for k := range values {
+		if strings.HasPrefix(k, "cache_creation") {
+			t.Errorf("Values contains raw source key %q, want only canonical cache_write_tokens", k)
+		}
+	}
+}
+
+func TestClaudeCodeCacheReadTokensSurface(t *testing.T) {
+	sp := claudeCodeTokenSpan(testSpanID, "", "claude_code.llm_request", intAttr("cache_read_tokens", "18"))
+	_, values, _, _ := flushOne(t, export("claude-code", sp))
+	if values["cache_read_tokens"] != 18 {
+		t.Errorf("cache_read_tokens = %d, want 18", values["cache_read_tokens"])
+	}
+}
+
+func TestCacheTokenValuesOmittedWhenAbsent(t *testing.T) {
+	_, values, _, _ := flushOne(t, export("claude-code", claudeCodeTokenSpan(testSpanID, "", "claude_code.llm_request")))
+	if _, ok := values["cache_read_tokens"]; ok {
+		t.Errorf("cache_read_tokens present = %d, want absent", values["cache_read_tokens"])
+	}
+	if _, ok := values["cache_write_tokens"]; ok {
+		t.Errorf("cache_write_tokens present = %d, want absent", values["cache_write_tokens"])
+	}
+}
+
+// TestGenAiUsageKeysUnaffectedByClaudeCodeAliases is the regression check:
+// adding Claude Code's bare-key aliases must not change resolution of the
+// existing gen_ai.usage.* keys (canonical still wins over legacy).
+func TestGenAiUsageKeysUnaffectedByClaudeCodeAliases(t *testing.T) {
+	sp := span(testSpanID, "", "llm-call",
+		intAttr("gen_ai.usage.prompt_tokens", "999"), intAttr("gen_ai.usage.input_tokens", "100"))
+	_, values, _, _ := flushOne(t, export("svc", sp))
+	if values["input_tokens"] != 100 {
+		t.Errorf("input_tokens = %d, want 100 (canonical gen_ai key should still win)", values["input_tokens"])
 	}
 }
 
@@ -496,6 +560,47 @@ func TestEveryNonIDBytePreservedVerbatim(t *testing.T) {
 	}
 	if string(out) != want {
 		t.Errorf("splice output not byte-preserving.\n got: %q\nwant: %q", string(out), want)
+	}
+}
+
+// --- Golden fixtures (Claude Code dialect) ---
+
+func TestClaudeCodeGoldenFixtureDecodesBareAndCacheKeys(t *testing.T) {
+	data, err := os.ReadFile("testdata/claude_code_cache_tokens.json")
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	acc := NewAccumulator()
+	if err := acc.AddJSON(data); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0", skipped)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("len(samples) = %d, want 1", len(samples))
+	}
+	want := map[string]int64{"input_tokens": 200, "output_tokens": 80, "cache_read_tokens": 30, "cache_write_tokens": 500}
+	got := samples[0].Values
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("Values[%q] = %d, want %d", k, got[k], v)
+		}
+	}
+}
+
+// --- Dialect detection ---
+
+func TestDetectDialectMatchesClaudeCodeSpanPrefix(t *testing.T) {
+	if d := detectDialect("claude_code.llm_request"); d != "claude_code" {
+		t.Errorf("detectDialect() = %q, want %q", d, "claude_code")
+	}
+}
+
+func TestDetectDialectFallsBackToGenericForUnknownPrefix(t *testing.T) {
+	if d := detectDialect("llm.chat"); d != "" {
+		t.Errorf("detectDialect() = %q, want empty (generic fallback)", d)
 	}
 }
 
