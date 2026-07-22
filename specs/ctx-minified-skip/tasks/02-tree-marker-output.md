@@ -1,6 +1,6 @@
 # Task 02: Tree `(skipped: minified)` marker + zero-symbol queries
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
@@ -41,8 +41,11 @@ write path.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test --test tree_minified` → tree shows the
+- [x] `cd context-tree && cargo test --test tree_minified` → tree shows the
   `.min.js` with `(skipped: minified)`, shows the `.rs`, omits the `.md`.
-- [ ] `cd context-tree && cargo test tree_minified` (unit/regression) →
-  `map`/`refs`/`sig` return zero symbols for the skipped path.
-- [ ] `bash context-tree/scripts/check.sh` → exits 0.
+- [x] `cd context-tree && cargo test tree_minified` (unit/regression) →
+  `map`/`refs`/`sig` return zero symbols for the skipped path. (The literal
+  name-filter matches no test *name*; the regression it names,
+  `map_refs_sig_return_none_of_a_skipped_files_symbols`, runs green under
+  `--test tree_minified`.)
+- [x] `bash context-tree/scripts/check.sh` → exits 0.

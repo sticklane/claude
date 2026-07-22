@@ -435,6 +435,20 @@ impl IndexStore {
             .map(|v: Option<Option<String>>| v.flatten())
     }
 
+    /// Every minified-skipped candidate (R2): its path paired with the recorded
+    /// skip reason, ordered by path. Such a file has a `files` row with a
+    /// non-NULL `skip_reason` and zero symbols; `tree` lists these with a marker
+    /// so a skip never reads as absence. Read-only — `set_skip_reason` owns the
+    /// write path.
+    pub fn skipped_paths(&self) -> rusqlite::Result<Vec<(String, String)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT path, skip_reason FROM files
+             WHERE skip_reason IS NOT NULL ORDER BY path",
+        )?;
+        let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
+        rows.collect()
+    }
+
     /// Purge a removed file's tracking row and all its facts (R2 deletion
     /// detection).
     pub fn delete_file(&self, path: &str) -> rusqlite::Result<()> {
