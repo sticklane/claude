@@ -6,7 +6,7 @@
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
 Status: blocked
-Unblock: run: ls specs/beads-daily-skill/tasks/*.md >/dev/null 2>&1 && for t in specs/beads-daily-skill/tasks/*.md; do grep -q '^Status: done' "$t" || echo "not done: $t"; done || echo "beads-daily-skill not yet broken down"
+Unblock: run: test -f .claude/skills/work/SKILL.md && test -f hooks/bd-compliance/check.sh && echo "/work implemented - gate open" || echo "waiting: /work implementation (specs/beads-daily-skill, implemented directly per the 2026-07-22 maintainer direction - no tasks/ breakdown exists)"
 Depends on: 05
 Priority: P1
 Budget: 30 turns
