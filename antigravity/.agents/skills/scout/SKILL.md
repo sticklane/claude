@@ -7,6 +7,10 @@ Answer ONE focused question about the code and produce a compact,
 structured answer — without flooding the conversation with file contents.
 
 Rules:
+- When `.context/` exists at the repo root, prefer `ctx tree/sig/refs/deps`
+  over grep/read for a definition, caller, signature, or outline question.
+  Resolve the binary, in order: `ctx` on PATH → `context-tree/target/release/ctx`.
+  Grep/read stay the fallback for content questions and unindexed repos.
 - Search first (grep/glob) to narrow down; read slices, not whole files.
 - No code changes. This is reconnaissance only.
 - Deliverable format, under 300 words:
