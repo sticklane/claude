@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 12 turns
@@ -64,14 +64,14 @@ OUT of scope, do NOT touch:
 
 Runnable commands (from `context-tree/`):
 
-- [ ] `cargo test --test lsp` → green; includes the new test-double
+- [x] `cargo test --test lsp` → green; includes the new test-double
   disambiguation test proving `--exact` disambiguates a two-package
   same-name symbol and that the no-server path is byte-identical to plain
   `ctx refs`. (L2 — behavioral, no external server needed.)
-- [ ] `cargo build --release && ./target/release/ctx refs <heuristic-symbol>`
+- [x] `cargo build --release && ./target/release/ctx refs <heuristic-symbol>`
   with no LSP server on PATH → output unchanged from a pre-`--exact` run
   (every def still tagged `heuristic`, exit 0). (L2 — behavioral fallback.)
-- [ ] `cargo clippy --all-targets -- -D warnings` → clean. (L1.)
+- [x] `cargo clippy --all-targets -- -D warnings` → clean. (L1.)
 - [ ] MANUAL-PENDING (privileged): live disambiguation against a real
   server — `cargo test refs_lsp_precise_live -- --ignored` with `gopls` (or
   `typescript-language-server`) installed. A sandboxed/drained worker cannot

@@ -334,11 +334,10 @@ fn render_json(
             // `--exact` disambiguation (R2): the confirming definition's
             // qpath, when the cache attributes this reference to one. Only
             // added under `--exact`, so plain `ctx refs --json` is unchanged.
-            if args.exact {
-                if let Some(def) = cache.and_then(|c| c.precise_def(&r.name, &r.path, r.row + 1))
-                {
-                    obj["def"] = json!(def);
-                }
+            if args.exact
+                && let Some(def) = cache.and_then(|c| c.precise_def(&r.name, &r.path, r.row + 1))
+            {
+                obj["def"] = json!(def);
             }
             obj
         })

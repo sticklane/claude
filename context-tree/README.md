@@ -141,6 +141,26 @@ ref parse_note context-tree/src/notes/mod.rs:255
 
 Options: `--limit <N>` caps the number of references (default 50).
 
+By default every result is tagged `heuristic` — a syntactic name match. Add
+`--exact` to consult a language server when one is installed for the matched
+symbol's language (`rust-analyzer` for `.rs`, `gopls` for `.go`,
+`typescript-language-server` for `.ts`/`.tsx`/`.js`; override the binary with
+`CTX_LSP_SERVER`, `CTX_LSP_SERVER_GO`, or `CTX_LSP_SERVER_TS`). References the
+server confirms are upgraded to `precise` and each is attributed to the exact
+definition it resolved against — so two same-named symbols in different
+packages are told apart:
+
+```sh
+$ ctx refs --exact rodSpecs
+ref rodSpecs pkg_a/mod.rs:6 precise -> pkg_a.mod.rodSpecs
+ref rodSpecs pkg_b/mod.rs:6 precise -> pkg_b.mod.rodSpecs
+```
+
+Results are cached in `.context/cache/` under a generation stamp that
+invalidates when the index changes. When no server binary is on `PATH` for the
+symbol's language, `--exact` falls through to the heuristic path and its output
+is byte-identical to plain `ctx refs`.
+
 ### `ctx at <file>:<line>` — enclosing symbol
 
 Prints the innermost symbol enclosing a line (1-based) and its containment
