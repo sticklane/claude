@@ -600,3 +600,203 @@ fn rebuild_equivalence_transparent_rebuild_on_tampered_schema_version() {
         "the post-tamper sweep re-parsed the full indexed file count"
     );
 }
+
+// ----------------------------------------------------------------------------
+// file-scoped selector `<path>:<name>` + `--in <path-prefix>` (R1, task 02)
+// ----------------------------------------------------------------------------
+
+/// Two `package main` Go files in different directories both defining a
+/// package-level `rodSpecs` — the collision C1 alone cannot resolve, since the
+/// Go module component is the package name so both symbols carry the qualified
+/// path `main.rodSpecs`.
+const RODSPECS_A: &str = "package main\n\nvar rodSpecs = 1\n";
+const RODSPECS_B: &str = "package main\n\nvar rodSpecs = 2\n";
+
+fn two_rodspecs(root: &Path) {
+    write(root, "go/cmd/mlhybrid/main.go", RODSPECS_A);
+    write(root, "go/cmd/mloverlay/main.go", RODSPECS_B);
+    sleep(PAST);
+    init(root);
+}
+
+#[test]
+fn selector_bare_form_is_ambiguous_but_file_scoped_form_resolves_uniquely_for_sig() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    // The bare qpath suffix cannot pick a file — exit 3.
+    let bare = ctx(root, &["sig", "rodSpecs"]);
+    assert_eq!(
+        bare.status.code(),
+        Some(3),
+        "the bare collision is ambiguous: {}",
+        stdout(&bare)
+    );
+
+    // The file-scoped `<path>:<name>` form narrows to exactly one — exit 0.
+    let scoped = ctx(root, &["sig", "go/cmd/mlhybrid/main.go:rodSpecs"]);
+    assert_eq!(
+        scoped.status.code(),
+        Some(0),
+        "the file-scoped selector resolves uniquely: {} / {}",
+        stdout(&scoped),
+        stderr(&scoped)
+    );
+}
+
+#[test]
+fn selector_in_prefix_flag_disambiguates_the_collision_for_sig() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    let out = ctx(root, &["sig", "rodSpecs", "--in", "go/cmd/mlhybrid"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "--in narrows the candidate set to one file: {} / {}",
+        stdout(&out),
+        stderr(&out)
+    );
+}
+
+#[test]
+fn selector_file_scoped_form_resolves_uniquely_for_show() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    assert_eq!(ctx(root, &["show", "rodSpecs"]).status.code(), Some(3));
+    let out = ctx(root, &["show", "go/cmd/mloverlay/main.go:rodSpecs"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "show resolves the file-scoped selector: {} / {}",
+        stdout(&out),
+        stderr(&out)
+    );
+    assert!(
+        stdout(&out).contains("rodSpecs"),
+        "show prints the selected symbol's span: {}",
+        stdout(&out)
+    );
+}
+
+#[test]
+fn selector_file_scoped_form_resolves_uniquely_for_refs() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    let out = ctx(root, &["refs", "go/cmd/mlhybrid/main.go:rodSpecs"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "refs resolves the file-scoped selector: {} / {}",
+        stdout(&out),
+        stderr(&out)
+    );
+    let def_lines = stdout(&out)
+        .lines()
+        .filter(|l| l.starts_with("def "))
+        .count();
+    assert_eq!(
+        def_lines,
+        1,
+        "exactly one definition survives the file filter: {}",
+        stdout(&out)
+    );
+    assert!(
+        stdout(&out).contains("go/cmd/mlhybrid/main.go"),
+        "the surviving def is from the named file: {}",
+        stdout(&out)
+    );
+}
+
+#[test]
+fn selector_file_scoped_form_resolves_uniquely_for_notes() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    // Bare add is ambiguous (exit 3); the file-scoped anchor resolves.
+    assert_eq!(
+        ctx(root, &["notes", "add", "rodSpecs", "body"])
+            .status
+            .code(),
+        Some(3),
+        "the bare anchor is ambiguous"
+    );
+    let add = ctx(
+        root,
+        &["notes", "add", "go/cmd/mlhybrid/main.go:rodSpecs", "body"],
+    );
+    assert_eq!(
+        add.status.code(),
+        Some(0),
+        "notes add resolves the file-scoped anchor: {} / {}",
+        stdout(&add),
+        stderr(&add)
+    );
+    let show = ctx(root, &["notes", "go/cmd/mlhybrid/main.go:rodSpecs"]);
+    assert_eq!(
+        show.status.code(),
+        Some(0),
+        "notes show resolves the file-scoped selector: {} / {}",
+        stdout(&show),
+        stderr(&show)
+    );
+    assert!(
+        stdout(&show).contains("body"),
+        "notes show prints the note anchored under that file: {}",
+        stdout(&show)
+    );
+}
+
+#[test]
+fn ambiguity_listing_gains_a_per_candidate_file_scoped_rerun_hint() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    let out = ctx(root, &["sig", "rodSpecs"]);
+    assert_eq!(
+        out.status.code(),
+        Some(3),
+        "still ambiguous: {}",
+        stdout(&out)
+    );
+    let text = stdout(&out);
+    // Each candidate now shows the file-scoped form to rerun with. The `:rodSpecs`
+    // suffix distinguishes the hint from the existing `<file>:<line>` locator.
+    assert!(
+        text.contains("go/cmd/mlhybrid/main.go:rodSpecs"),
+        "rerun hint for candidate A: {text}"
+    );
+    assert!(
+        text.contains("go/cmd/mloverlay/main.go:rodSpecs"),
+        "rerun hint for candidate B: {text}"
+    );
+}
+
+#[test]
+fn ambiguity_json_carries_a_per_candidate_rerun_selector() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    let out = ctx(root, &["sig", "rodSpecs", "--json"]);
+    assert_eq!(out.status.code(), Some(3));
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    let candidates = v["candidates"].as_array().expect("candidates array");
+    let reruns: Vec<&str> = candidates
+        .iter()
+        .filter_map(|c| c["rerun"].as_str())
+        .collect();
+    assert!(
+        reruns.contains(&"go/cmd/mlhybrid/main.go:rodSpecs")
+            && reruns.contains(&"go/cmd/mloverlay/main.go:rodSpecs"),
+        "each candidate carries its file-scoped rerun selector: {v}"
+    );
+}

@@ -119,6 +119,10 @@ impl CtxServer {
         cmd::sig::render(&cmd::sig::Args {
             symbol: p.symbol,
             doc: p.doc.unwrap_or(false),
+            // `--in` is a CLI-only disambiguating flag (task 02 / R1); the MCP
+            // wrapper passes none, and a `<path>:<name>` selector still works
+            // because it rides inside `symbol`.
+            in_paths: Vec::new(),
             json: true,
             no_sync: false,
         })
@@ -152,6 +156,9 @@ impl CtxServer {
         cmd::refs::render(&cmd::refs::Args {
             symbol: p.symbol,
             limit: p.limit.unwrap_or(50),
+            // `--in` is a CLI-only disambiguating flag (task 02 / R1); a
+            // `<path>:<name>` selector still rides inside `symbol`.
+            in_paths: Vec::new(),
             // `--exact` (task 01 / R2) is a CLI-only on-demand trigger; the
             // MCP wrapper stays read-only over whatever cache already exists,
             // out of this task's Touch (`context-tree/src/mcp/` untouched).
@@ -183,6 +190,9 @@ impl CtxServer {
                 text: p.text,
                 kind: p.kind,
                 file: p.file,
+                // `--in` is CLI-only (task 02 / R1); a `<path>:<name>` anchor
+                // selector still rides inside `symbol`.
+                in_paths: Vec::new(),
             },
             json: true,
             no_sync: false,
@@ -196,7 +206,12 @@ impl CtxServer {
     )]
     fn notes(&self, Parameters(p): Parameters<NotesShowParams>) -> String {
         cmd::notes::render(&cmd::notes::Args {
-            action: cmd::notes::Action::Show { symbol: p.symbol },
+            action: cmd::notes::Action::Show {
+                symbol: p.symbol,
+                // `--in` is CLI-only (task 02 / R1); a `<path>:<name>` selector
+                // still rides inside `symbol`.
+                in_paths: Vec::new(),
+            },
             json: true,
             no_sync: false,
         })

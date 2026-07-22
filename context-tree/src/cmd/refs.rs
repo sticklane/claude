@@ -25,7 +25,7 @@ use crate::cmd::{
 };
 use crate::index::{IndexStore, RefRow, ScopeRow, SymbolRow};
 use crate::lsp::EnrichmentCache;
-use crate::path::resolve_suffix;
+use crate::path::{Selector, resolve_suffix};
 use serde_json::json;
 use std::collections::HashSet;
 use std::path::Path;
@@ -35,6 +35,8 @@ use std::process::ExitCode;
 pub struct Args {
     pub symbol: String,
     pub limit: usize,
+    /// `--in <path-prefix>` filters (repeatable); narrows C3 resolution by file.
+    pub in_paths: Vec<String>,
     pub exact: bool,
     pub json: bool,
     pub no_sync: bool,
@@ -121,12 +123,16 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         }
     };
 
-    // Resolve <symbol> per C3: exact/suffix over qualified paths.
+    // Resolve <symbol> per C3, narrowed by any `<path>:<name>` selector or `--in`
+    // path-prefix filters (R1): exact/suffix over qualified paths, then file scope.
+    let selector = Selector::parse(&args.symbol, &args.in_paths);
     let qpaths: Vec<String> = all.iter().map(|s| s.qpath.clone()).collect();
-    let matched: HashSet<&str> = resolve_suffix(&qpaths, &args.symbol).into_iter().collect();
+    let matched: HashSet<&str> = resolve_suffix(&qpaths, &selector.name)
+        .into_iter()
+        .collect();
     let mut defs: Vec<&SymbolRow> = all
         .iter()
-        .filter(|s| matched.contains(s.qpath.as_str()))
+        .filter(|s| matched.contains(s.qpath.as_str()) && selector.accepts_file(&s.path))
         .collect();
     defs.sort_by(|a, b| a.qpath.cmp(&b.qpath));
 
@@ -158,9 +164,13 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         }
         1 => {}
         _ => {
-            // C3: a suffix spanning several distinct symbols is ambiguous.
+            // C3: a suffix spanning several distinct symbols is ambiguous. Each
+            // candidate carries its file-scoped `<path>:<name>` rerun form (R1).
             if args.json {
-                let candidates: Vec<_> = defs.iter().map(|d| json!(d.qpath)).collect();
+                let candidates: Vec<_> = defs
+                    .iter()
+                    .map(|d| json!({ "qpath": d.qpath, "rerun": format!("{}:{}", d.path, d.name) }))
+                    .collect();
                 out.push_str(&format!(
                     "{}\n",
                     json!({ "error": "ambiguous", "symbol": args.symbol, "candidates": candidates })
@@ -168,7 +178,10 @@ pub fn render(args: &Args) -> (String, ExitCode) {
             } else {
                 eprintln!("ctx refs: '{}' is ambiguous — candidates:", args.symbol);
                 for d in &defs {
-                    out.push_str(&format!("{}\n", d.qpath));
+                    out.push_str(&format!(
+                        "{}\n  rerun with: {}:{}\n",
+                        d.qpath, d.path, d.name
+                    ));
                 }
             }
             return (out, ExitCode::from(EXIT_AMBIGUOUS));
