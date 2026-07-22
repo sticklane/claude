@@ -1,5 +1,7 @@
-//! `ctx map` — a ranked project overview ordered by reference-graph importance
-//! (R8), truncated to a token budget (C7), with `--doc` and C10 markers.
+//! `ctx map` — a ranked project overview ordered by kind tier then
+//! reference-graph importance (R8: the API surface above down-weighted
+//! `variable`-kind symbols), truncated to a token budget (C7), with `--doc` and
+//! C10 markers.
 
 use crate::cmd::{first_doc_line, format_note_marker, load_index, note_value, tokens_for_bytes};
 use crate::index::{IndexStore, SymbolRow};
@@ -14,6 +16,26 @@ pub struct Args {
     pub doc: bool,
     pub json: bool,
     pub no_sync: bool,
+}
+
+/// Rank tier for `ctx map` ordering (R8 refinement): lower sorts first. The API
+/// surface — functions, classes, methods, and every non-`variable` kind — leads
+/// (tier 0/1); `variable`-kind symbols are down-weighted below it (tier 2/3);
+/// and a duplicate-name `#N`-suffixed qpath sinks below its un-suffixed peers
+/// within each tier. Bash test-scratch locals — the `variable`+`#N` combination
+/// whose bare name is over-credited because reference counts are keyed by name —
+/// therefore sort last, rather than crowding out the real symbols they used to
+/// (capability-shakedown finding 2026-07-20). The intra-tier order stays
+/// reference-count-then-qpath, unchanged.
+fn rank_tier(sym: &SymbolRow) -> u8 {
+    let is_variable = sym.kind == "variable";
+    let is_dedup = sym.qpath.contains('#');
+    match (is_variable, is_dedup) {
+        (false, false) => 0,
+        (false, true) => 1,
+        (true, false) => 2,
+        (true, true) => 3,
+    }
 }
 
 /// One rendered ranked line for a symbol (without the trailing newline). R1: an
@@ -63,16 +85,19 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         }
     };
 
-    // Rank by reference-graph importance (R8), tie-broken by qpath so the order
-    // is deterministic (rebuild-stable) rather than lexical/insertion order.
+    // Rank by kind tier first — the API surface above down-weighted `variable`
+    // symbols (R8 refinement) — then reference-graph importance (R8), then qpath
+    // so the order is deterministic (rebuild-stable) rather than
+    // lexical/insertion order.
     let mut ranked: Vec<(&SymbolRow, usize)> = all
         .iter()
         .map(|s| (s, counts.get(&s.name).copied().unwrap_or(0)))
         .collect();
     ranked.sort_by(|a, b| {
-        Reverse(a.1)
-            .cmp(&Reverse(b.1))
-            .then(a.0.qpath.cmp(&b.0.qpath))
+        rank_tier(a.0)
+            .cmp(&rank_tier(b.0))
+            .then_with(|| Reverse(a.1).cmp(&Reverse(b.1)))
+            .then_with(|| a.0.qpath.cmp(&b.0.qpath))
     });
 
     // Truncate to the token budget (C7): a line joins the output only while the
