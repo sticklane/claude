@@ -158,11 +158,13 @@ func cmdOtelServe(args []string, stdout, stderr io.Writer) int {
 }
 
 // otelReceiver is the OTLP/HTTP trace receiver: handlers run concurrently,
-// so span accumulation and batch logging are mutex-guarded (R8).
+// so span accumulation and batch logging are mutex-guarded (R8). Metrics
+// accumulate into a coarse cross-check total that never feeds flush (R10).
 type otelReceiver struct {
-	mu   sync.Mutex
-	acc  *otel.Accumulator
-	logw io.Writer
+	mu      sync.Mutex
+	acc     *otel.Accumulator
+	metrics otel.MetricTotals
+	logw    io.Writer
 }
 
 func newOtelReceiver(logw io.Writer) *otelReceiver {
@@ -171,7 +173,7 @@ func newOtelReceiver(logw io.Writer) *otelReceiver {
 
 func (r *otelReceiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch req.URL.Path {
-	case "/v1/traces", "/v1/logs": // /v1/metrics stays unregistered (R10)
+	case "/v1/traces", "/v1/logs", "/v1/metrics":
 	default:
 		http.NotFound(w, req)
 		return
@@ -193,26 +195,41 @@ func (r *otelReceiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	r.mu.Lock()
-	if req.URL.Path == "/v1/logs" {
+	var accepted int
+	var unit string
+	switch req.URL.Path {
+	case "/v1/metrics":
+		// Metrics are a coarse cross-check (R10): decoded and summed, but never
+		// joined into the sample flush, so they cannot override a trace sample.
+		var mt *otel.MetricTotals
+		if ct == "application/json" {
+			mt, err = otel.DecodeMetricsJSON(body)
+		} else {
+			mt, err = otel.DecodeMetricsProto(body)
+		}
+		if err == nil {
+			r.metrics.Add(mt)
+			accepted, unit = mt.Points, "metric points"
+		}
+	case "/v1/logs":
 		before := r.acc.LogLen()
 		if ct == "application/json" {
 			err = r.acc.AddLogsJSON(body)
 		} else {
 			err = r.acc.AddLogsProto(body)
 		}
-		if err == nil {
-			fmt.Fprintf(r.logw, "accepted %d log records\n", r.acc.LogLen()-before)
-		}
-	} else {
+		accepted, unit = r.acc.LogLen()-before, "log records"
+	default: // /v1/traces
 		before := r.acc.Len()
 		if ct == "application/json" {
 			err = r.acc.AddJSON(body)
 		} else {
 			err = r.acc.AddProto(body)
 		}
-		if err == nil {
-			fmt.Fprintf(r.logw, "accepted %d spans\n", r.acc.Len()-before)
-		}
+		accepted, unit = r.acc.Len()-before, "spans"
+	}
+	if err == nil {
+		fmt.Fprintf(r.logw, "accepted %d %s\n", accepted, unit)
 	}
 	r.mu.Unlock()
 	if err != nil {

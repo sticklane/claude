@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: 02
 Priority: P3
 Budget: 16 turns
@@ -47,6 +47,6 @@ this task stays disjoint from the otel.go-editing tasks.
 
 Runnable commands only:
 
-- [ ] `cd agentprof && go test . -run 'OtelServe.*Metrics|Metrics' -v` → metrics route + decode tests pass (L2)
-- [ ] `grep -c '/v1/metrics' agentprof/cmd_otel.go` → ≥1 (route registered, no longer only in a comment)
-- [ ] `bash agentprof/scripts/check.sh` → exits 0
+- [x] `cd agentprof && go test . -run 'OtelServe.*Metrics|Metrics' -v` → metrics route + decode tests pass (L2)
+- [x] `grep -c '/v1/metrics' agentprof/cmd_otel.go` → ≥1 (route registered, no longer only in a comment)
+- [x] `bash agentprof/scripts/check.sh` → exits 0
