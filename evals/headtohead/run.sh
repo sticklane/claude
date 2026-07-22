@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
 # evals/headtohead/run.sh — head-to-head eval runner.
 #
-# This task builds the planning/config/isolation core only:
+# Planning / config / isolation core:
 #   --dry-run                 lists the 18 planned sessions, launches nothing
 #   --dry-run --dump-config   dumps each arm's effective config and proves
 #                             arm isolation, in-script, exiting non-zero on
 #                             any failed assertion
 #
-# The actual session-launch path (running a real session, writing a results
-# row) is a later task; invoking run.sh without --dry-run here reports that
-# plainly rather than pretending to launch anything.
+# Session-run path (stub-driven, no paid model session):
+#   --task <t> --arm <U|S> --seeds <n>
+#                             runs a STUB session per seed against the bundled
+#                             fixture task, sums usd/tokens across the root and
+#                             every spawned child session, scores the produced
+#                             worktree with the hidden out-of-mount assert.sh,
+#                             and appends one schema-validated results row per
+#                             run. A crashed/capped session still records a row
+#                             (pass:false + partial cost) — crashed runs are
+#                             recorded, never dropped.
+#
+# The stub CLI (evals/headtohead/lib/stub-session.sh, per-task stub.sh) means
+# these runs need no API key and no network — they exercise the runner's
+# plumbing, not a model.
 #
 # Written for bash 3.2 (macOS system bash) — no associative arrays.
 set -euo pipefail
@@ -37,21 +48,27 @@ SEEDS=(1 2 3)
 usage() {
   cat <<'EOF'
 Usage:
-  run.sh --dry-run                     list the 18 planned sessions, exit 0
-  run.sh --dry-run --dump-config       dump + assert arm isolation, exit 0/1
+  run.sh --dry-run                        list the 18 planned sessions, exit 0
+  run.sh --dry-run --dump-config          dump + assert arm isolation, exit 0/1
+  run.sh --task <t> --arm <U|S> --seeds <n>
+                                          run <n> stub sessions, append a
+                                          schema-valid results row per run
 EOF
 }
 
 # --- flags --------------------------------------------------------------
 DRY_RUN=0
 DUMP_CONFIG=0
+TASK=""
+ARM=""
+SEEDS_N=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1; shift ;;
     --dump-config) DUMP_CONFIG=1; shift ;;
-    --task) shift 2 ;;
-    --arm) shift 2 ;;
-    --seeds) shift 2 ;;
+    --task) TASK="${2:-}"; shift 2 ;;
+    --arm) ARM="${2:-}"; shift 2 ;;
+    --seeds) SEEDS_N="${2:-}"; shift 2 ;;
     --dump-judge-input) shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "run.sh: unknown argument: $1" >&2; usage >&2; exit 1 ;;
@@ -276,6 +293,94 @@ dump_config() {
   return "$CHECK_FAIL"
 }
 
+# --- session-run path (stub-driven) ----------------------------------------
+
+# now — high-resolution wall clock as a float, for wall_s measurement.
+now() { python3 -c 'import time; print("%.3f" % time.time())'; }
+
+# run_sessions — run SEEDS_N stub sessions of task TASK as arm ARM, appending
+# one schema-validated results row per run. Each run: copy the in-mount
+# snapshot into a fresh worktree, invoke the task's out-of-mount stub.sh (which
+# emits root + child transcripts and simulates the arm's edits), sum cost across
+# every transcript, score the worktree with the hidden assert.sh, and emit the
+# row. A non-zero stub exit is a crash: the row is still written, pass:false,
+# with whatever partial cost the stub accrued before dying.
+run_sessions() {
+  local task="$TASK" arm="$ARM" nseeds="${SEEDS_N:-1}"
+
+  case "$arm" in
+    U|S) ;;
+    *) echo "run.sh: --arm must be U or S (got '${arm}')" >&2; exit 1 ;;
+  esac
+  case "$nseeds" in
+    ''|*[!0-9]*) echo "run.sh: --seeds must be a positive integer" >&2; exit 1 ;;
+  esac
+  [ "$nseeds" -ge 1 ] || { echo "run.sh: --seeds must be >= 1" >&2; exit 1; }
+
+  local snapshot assert_path
+  snapshot="$(task_field "$task" snapshot)" \
+    || { echo "run.sh: unknown task: $task" >&2; exit 1; }
+  assert_path="$(task_field "$task" assert)"
+
+  local abs_snapshot abs_assert taskdir stub
+  abs_snapshot="$REPO_ROOT/$snapshot"
+  abs_assert="$REPO_ROOT/$assert_path"
+  taskdir="$(dirname "$abs_snapshot")"
+  stub="$taskdir/stub.sh"
+
+  [ -d "$abs_snapshot" ] || { echo "run.sh: missing snapshot: $abs_snapshot" >&2; exit 1; }
+  [ -f "$stub" ] || { echo "run.sh: missing stub session: $stub" >&2; exit 1; }
+
+  local schema="$HERE/result.schema.json"
+  local lib="$HERE/lib"
+  local results_dir jsonl
+  results_dir="${HEADTOHEAD_RESULTS_DIR:-$(mktemp -d)}"
+  mkdir -p "$results_dir"
+  jsonl="$results_dir/results.jsonl"
+
+  local seed
+  for seed in $(seq 1 "$nseeds"); do
+    local rundir="$results_dir/runs/${task}_${arm}_s${seed}"
+    rm -rf "$rundir"
+    mkdir -p "$rundir/transcripts"
+    local workdir="$rundir/workdir"
+    local transcripts="$rundir/transcripts"
+    cp -R "$abs_snapshot" "$workdir"
+
+    local start end wall crashed=0
+    start="$(now)"
+    "$stub" "$workdir" "$transcripts" "$arm" "$seed" || crashed=1
+    end="$(now)"
+    wall="$(awk "BEGIN{d=$end-$start; if(d<0)d=0; printf \"%.3f\", d}")"
+
+    # Added+deleted line count of the produced diff. -N treats a file absent on
+    # one side as empty, so a newly created file's lines count as added.
+    local diff_lines
+    diff_lines="$(diff -rN "$abs_snapshot" "$workdir" 2>/dev/null | grep -c '^[<>]' || true)"
+    [ -n "$diff_lines" ] || diff_lines=0
+
+    local pass_flag=0
+    if [ "$crashed" -eq 0 ]; then
+      if ( cd "$workdir" && bash "$abs_assert" >/dev/null 2>&1 ); then
+        pass_flag=1
+      fi
+    fi
+
+    local row
+    row="$(python3 "$lib/build_row.py" \
+      --schema "$schema" --transcripts "$transcripts" \
+      --task "$task" --arm "$arm" --seed "$seed" \
+      --pass "$pass_flag" --wall-s "$wall" --diff-lines "$diff_lines")" \
+      || { echo "run.sh: results row failed to build/validate for $task/$arm/seed$seed" >&2; exit 1; }
+
+    printf '%s\n' "$row" >> "$jsonl"
+    printf 'run task=%s arm=%s seed=%s crashed=%s pass=%s\n  %s\n' \
+      "$task" "$arm" "$seed" "$crashed" "$pass_flag" "$row"
+  done
+
+  echo "results appended to $jsonl"
+}
+
 # --- main -------------------------------------------------------------
 if [ "$DRY_RUN" -eq 1 ] && [ "$DUMP_CONFIG" -eq 1 ]; then
   if dump_config; then
@@ -286,7 +391,11 @@ if [ "$DRY_RUN" -eq 1 ] && [ "$DUMP_CONFIG" -eq 1 ]; then
 elif [ "$DRY_RUN" -eq 1 ]; then
   plan_dry_run
   exit 0
+elif [ -n "$TASK" ] && [ -n "$ARM" ]; then
+  run_sessions
+  exit 0
 else
-  echo "run.sh: session launching is not implemented by this task; use --dry-run" >&2
+  echo "run.sh: nothing to do — pass --dry-run, or --task <t> --arm <U|S>" >&2
+  usage >&2
   exit 1
 fi
