@@ -442,6 +442,54 @@ fn map_ranking_orders_by_reference_count_not_alphabetical() {
     );
 }
 
+/// A real-repo pathology (capability-shakedown finding 2026-07-20): a bash
+/// scratch variable reused at top level dedups into `t#1`/`t#2`/`t#3`, and
+/// because reference counts are keyed by bare name, every dedup copy inherits
+/// the full aggregate count of the common name `t` — crowding real functions
+/// out of the top of `ctx map`. Ranking must down-weight `variable`-kind
+/// symbols relative to functions/classes/methods so the API surface leads.
+const BASH_SCRATCH_NOISE: &str = "\
+t=\"a\"
+t=\"b\"
+t=\"c\"
+
+real_api() {
+  echo hi
+}
+
+caller() {
+  t alpha
+  t beta
+  t gamma
+  t delta
+  t epsilon
+  real_api
+}
+";
+
+#[test]
+fn map_ranks_functions_above_high_ref_scratch_variables() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "lib.sh", BASH_SCRATCH_NOISE);
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["map"]);
+    assert_eq!(out.status.code(), Some(0));
+    let text = stdout(&out);
+    let fi = text
+        .find("real_api")
+        .unwrap_or_else(|| panic!("real_api absent:\n{text}"));
+    let vi = text
+        .find("lib.t#1")
+        .unwrap_or_else(|| panic!("variable lib.t#1 absent:\n{text}"));
+    assert!(
+        fi < vi,
+        "a function must rank above high-ref-count scratch variables:\n{text}"
+    );
+}
+
 #[test]
 fn map_token_budget_truncates_output() {
     let dir = tempfile::tempdir().unwrap();
