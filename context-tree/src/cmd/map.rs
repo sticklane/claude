@@ -3,6 +3,7 @@
 
 use crate::cmd::{first_doc_line, format_note_marker, load_index, note_value, tokens_for_bytes};
 use crate::index::{IndexStore, SymbolRow};
+use crate::zones::ZoneConfig;
 use serde_json::json;
 use std::cmp::Reverse;
 use std::process::ExitCode;
@@ -15,13 +16,19 @@ pub struct Args {
     pub no_sync: bool,
 }
 
-/// One rendered ranked line for a symbol (without the trailing newline).
-fn line_for(store: &IndexStore, sym: &SymbolRow, doc: bool) -> String {
+/// One rendered ranked line for a symbol (without the trailing newline). R1: an
+/// in-zone symbol's line ends with ` [zone:<label>]` — appended here so the
+/// marker's bytes count against the token budget below; zero `.ctxzones` adds
+/// nothing, keeping the line byte-for-byte identical to today.
+fn line_for(store: &IndexStore, sym: &SymbolRow, doc: bool, zones: &ZoneConfig) -> String {
     let mut line = format!("{} {}", sym.kind, sym.qpath);
     line.push_str(&format_note_marker(store.note_marker(sym.id)));
     if doc && let Some(first) = first_doc_line(&sym.docstring) {
         line.push_str(" — ");
         line.push_str(first);
+    }
+    if let Some(label) = zones.zone_of(&sym.path) {
+        line.push_str(&format!(" [zone:{label}]"));
     }
     line
 }
@@ -35,10 +42,12 @@ pub fn run(args: Args) -> ExitCode {
 /// The exact stdout `run` would print, paired with the exit code. Shared with
 /// the MCP wrapper (R15); error diagnostics still go to stderr via `eprintln!`.
 pub fn render(args: &Args) -> (String, ExitCode) {
-    let (_root, store) = match load_index(args.no_sync) {
+    let (root, store) = match load_index(args.no_sync) {
         Ok(v) => v,
         Err(code) => return (String::new(), code),
     };
+    // R1: zone tagging — loaded once per render; empty config tags nothing.
+    let zones = ZoneConfig::load(&root);
     let all = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
@@ -72,7 +81,7 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     let mut bytes = 0usize;
     let mut truncated = false;
     for (sym, refs) in ranked {
-        let line = line_for(&store, sym, args.doc);
+        let line = line_for(&store, sym, args.doc, &zones);
         let next = bytes + line.len() + 1; // + newline
         if tokens_for_bytes(next) > args.tokens {
             truncated = true;
@@ -86,14 +95,20 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         let symbols: Vec<serde_json::Value> = included
             .iter()
             .map(|(sym, refs, _)| {
-                json!({
+                let mut obj = json!({
                     "qpath": sym.qpath,
                     "kind": sym.kind,
                     "refs": refs,
                     "signature": sym.signature,
                     "docstring": if args.doc { sym.docstring.clone() } else { String::new() },
                     "notes": note_value(&store, sym.id),
-                })
+                });
+                // R1: extend-never-replace — `zone` only on a zoned path, so the
+                // zero-config JSON stays byte-for-byte identical to today.
+                if let Some(label) = zones.zone_of(&sym.path) {
+                    obj["zone"] = json!(label);
+                }
+                obj
             })
             .collect();
         (

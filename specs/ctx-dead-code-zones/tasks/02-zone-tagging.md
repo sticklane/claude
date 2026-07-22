@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
@@ -48,8 +48,10 @@ tags both its file-header lines and, in `--json`, each symbol object by
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test --test zones_tagging` → all new tests pass.
-- [ ] `cd context-tree && cargo test --test ctxignore_overlay --test query` →
+- [x] `cd context-tree && cargo test --test zones_tagging` → all new tests pass.
+      Evidence: 7/7 pass (refs/tree/map text+JSON tagging + zero-config control).
+- [x] `cd context-tree && cargo test --test ctxignore_overlay --test query` →
       pre-existing query/overlay goldens still pass (no output regression when no
-      `.ctxzones` is present).
-- [ ] `cd context-tree && bash scripts/check.sh` → exits 0.
+      `.ctxzones` is present). Evidence: 8/8 overlay + 20/20 query pass.
+- [x] `cd context-tree && bash scripts/check.sh` → exits 0. Evidence: full suite
+      green (fmt, clippy, all integration tests); CHECK_EXIT=0.

@@ -3,9 +3,19 @@
 
 use crate::cmd::{first_doc_line, format_note_marker, load_index, note_value};
 use crate::index::{IndexStore, SymbolRow};
+use crate::zones::ZoneConfig;
 use serde_json::json;
 use std::collections::HashMap;
 use std::process::ExitCode;
+
+/// ` [zone:<label>]` when `path` falls in a declared zone, else empty (R1). Zero
+/// `.ctxzones` → `zone_of` is always `None` → empty → output unchanged.
+fn zone_suffix(zones: &ZoneConfig, path: &str) -> String {
+    match zones.zone_of(path) {
+        Some(label) => format!(" [zone:{label}]"),
+        None => String::new(),
+    }
+}
 
 /// Parsed `ctx tree` arguments.
 pub struct Args {
@@ -78,10 +88,12 @@ pub fn run(args: Args) -> ExitCode {
 /// to the server's JSON-RPC stdout channel; error diagnostics still go to
 /// stderr via `eprintln!`.
 pub fn render(args: &Args) -> (String, ExitCode) {
-    let (_root, store) = match load_index(args.no_sync) {
+    let (root, store) = match load_index(args.no_sync) {
         Ok(v) => v,
         Err(code) => return (String::new(), code),
     };
+    // R1: zone tagging — loaded once per render; empty config tags nothing.
+    let zones = ZoneConfig::load(&root);
 
     if args.files {
         return render_files(args, &store);
@@ -109,7 +121,10 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     let omitted = selected.len().saturating_sub(args.limit);
 
     if args.json {
-        return (render_json(args, &store, shown, omitted), ExitCode::SUCCESS);
+        return (
+            render_json(args, &store, shown, omitted, &zones),
+            ExitCode::SUCCESS,
+        );
     }
 
     let mut out = String::new();
@@ -117,6 +132,7 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     for (sym, depth) in shown {
         if current_file != Some(sym.path.as_str()) {
             out.push_str(&sym.path);
+            out.push_str(&zone_suffix(&zones, &sym.path));
             out.push('\n');
             current_file = Some(sym.path.as_str());
         }
@@ -177,10 +193,11 @@ fn render_json<'a>(
     store: &IndexStore,
     shown: impl Iterator<Item = &'a (&'a SymbolRow, usize)>,
     omitted: usize,
+    zones: &ZoneConfig,
 ) -> String {
     let symbols: Vec<serde_json::Value> = shown
         .map(|(sym, depth)| {
-            json!({
+            let mut obj = json!({
                 "qpath": sym.qpath,
                 "kind": sym.kind,
                 "name": sym.name,
@@ -189,7 +206,13 @@ fn render_json<'a>(
                 "signature": sym.signature,
                 "docstring": if args.doc { sym.docstring.clone() } else { String::new() },
                 "notes": note_value(store, sym.id),
-            })
+            });
+            // R1: extend-never-replace — `zone` only on a zoned path, so the
+            // zero-config JSON stays byte-for-byte identical to today.
+            if let Some(label) = zones.zone_of(&sym.path) {
+                obj["zone"] = json!(label);
+            }
+            obj
         })
         .collect();
     let payload = json!({
