@@ -16,6 +16,7 @@ pub mod path;
 pub mod project;
 pub mod sync;
 pub mod vcs;
+pub mod zones;
 
 use clap::Parser;
 use std::process::ExitCode;
