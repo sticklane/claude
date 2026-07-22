@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02, 03
 Priority: P2
 Budget: 4 turns
@@ -34,9 +34,9 @@ task" pattern, avoiding three tasks contending on plugin.json.
 
 ## Acceptance
 
-- [ ] `git show $(git merge-base HEAD origin/main):.claude-plugin/plugin.json | grep '"version"'` differs from `grep '"version"' .claude-plugin/plugin.json` (changed from this task's own base commit — never a hard-coded literal; a sibling spec may bump concurrently)
-- [ ] `python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"` → exit 0
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` → exit 0
+- [x] `git show $(git merge-base HEAD origin/main):.claude-plugin/plugin.json | grep '"version"'` differs from `grep '"version"' .claude-plugin/plugin.json` (changed from this task's own base commit — never a hard-coded literal; a sibling spec may bump concurrently) — base 0.9.31 (at merge-base 6535289), bumped to 0.9.32.
+- [x] `python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"` → exit 0 — verified, exit 0.
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0 — verified, exit 0.
 
 Depth ceiling: L1 — a version bump has no deeper runnable check; the
 mirror sweep is the closure-triggered manual/agent read
