@@ -1,6 +1,6 @@
 # Task 02: Stub session runner — results row, cost summing, crash-as-fail, toy fixtures
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 28 turns
@@ -46,6 +46,6 @@ fixtures (04-06). Use a stub CLI so the run needs no API key and no network.
 
 ## Acceptance
 
-- [ ] `bash evals/headtohead/run.sh --task fixture --arm S --seeds 1` → emits one results row that validates against `evals/headtohead/result.schema.json` (validation asserted by the run or a bundled validator invoked in the same command); exits 0
-- [ ] `bash evals/headtohead/run.sh --task fixture --arm S --seeds 1` then inspecting the emitted row → `usd`, `tokens`, `turns`, `wall_s` are all non-null AND `tokens` exceeds the root transcript's own total (child-session cost is summed)
-- [ ] `bash evals/headtohead/run.sh --task crashfixture --arm U --seeds 1` → emits a schema-valid row with `pass: false` and non-null partial `usd` and `tokens`
+- [x] `bash evals/headtohead/run.sh --task fixture --arm S --seeds 1` → emits one results row that validates against `evals/headtohead/result.schema.json` (validation asserted by the run or a bundled validator invoked in the same command); exits 0
+- [x] `bash evals/headtohead/run.sh --task fixture --arm S --seeds 1` then inspecting the emitted row → `usd`, `tokens`, `turns`, `wall_s` are all non-null AND `tokens` exceeds the root transcript's own total (child-session cost is summed)
+- [x] `bash evals/headtohead/run.sh --task crashfixture --arm U --seeds 1` → emits a schema-valid row with `pass: false` and non-null partial `usd` and `tokens`
