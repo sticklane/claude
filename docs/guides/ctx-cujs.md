@@ -67,14 +67,17 @@ as a stand-in for a query ctx should answer directly.
 
 - **Trigger:** you found the symbol and now need its body, not just its
   signature.
-- **Sequence:** `ctx show <symbol>` to print exactly the symbol's span
-  (specs/ctx-query-ergonomics R2); fall back to `Read` only for the lines
-  past that span you still need.
+- **Sequence:** `ctx show <symbol>` to print exactly the symbol's source span
+  (specs/ctx-query-ergonomics R2); fall back to a span-scoped `Read` only for
+  the lines past that span you still need. When you have a `file:line` rather
+  than a name, `ctx at <file>:<line>` resolves the enclosing symbol first.
 - **Token shape:** one symbol's source span — bounded by the definition, not
   the enclosing file.
-- **Failure modes:** `show` is not yet shipped, so today this journey
-  degrades to `ctx at <file>:<line>` + a span-scoped `Read`, which over-reads
-  when the symbol is large (specs/ctx-query-ergonomics R2).
+- **Failure modes:** a bare `<symbol>` that resolves ambiguously prints its
+  candidate qpaths instead of a span — rerun with the `<path>:<name>` selector
+  it suggests. Name-based resolution can still pick the wrong same-named
+  symbol until the LSP layer lands (specs/ctx-static-analysis-augmentation
+  F1).
 
 ## 4. VERIFY ABSENCE — "is X gone?"
 
