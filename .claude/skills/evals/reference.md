@@ -144,7 +144,9 @@ greps the JSONL:
   || fail "EVAL_TRANSCRIPT is empty or missing; cannot check the trajectory"
 
 # Confirm the skill delegated to a scout rather than reading code directly.
-grep -Eq '"subagent_type"[[:space:]]*:[[:space:]]*"scout"' "$EVAL_TRANSCRIPT" \
+# subagent_type may be namespaced ("agentic:scout"), confirmed against a
+# real live-capture transcript (specs/trajectory-evals/evidence/stream-json-task-event.md).
+grep -Eq '"subagent_type"[[:space:]]*:[[:space:]]*"([A-Za-z0-9_-]+:)?scout"' "$EVAL_TRANSCRIPT" \
   || fail "transcript shows no scout delegation"
 ```
 

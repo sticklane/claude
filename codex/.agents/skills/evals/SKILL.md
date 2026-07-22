@@ -39,10 +39,11 @@ produced. It is opt-in and purely additive: a scenario that ignores it keeps
 grading artifacts exactly as before, so no existing `assert.sh` needs
 editing. The runner leaves it empty and warns when no transcript is
 locatable, so a trajectory assertion guards for an empty value first, then
-greps the JSONL — e.g. `grep -q '"subagent_type":"scout"' "$EVAL_TRANSCRIPT"`
-to confirm the skill delegated to a scout rather than reading the codebase
-directly. Trajectory failure messages respect the same ~10-line budget as
-artifact ones (below).
+greps the JSONL — e.g. `grep -Eq '"subagent_type"[[:space:]]*:[[:space:]]*"([A-Za-z0-9_-]+:)?scout"' "$EVAL_TRANSCRIPT"`
+(subagent_type may be namespaced, e.g. `"agentic:scout"`) to confirm the
+skill delegated to a scout rather than reading the codebase directly.
+Trajectory failure messages respect the same ~10-line budget as artifact
+ones (below).
 
 ## Coverage policy and the adversarial-scenario convention
 
