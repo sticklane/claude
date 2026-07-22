@@ -1,11 +1,11 @@
 # Task 03: Point authoring skills at the shell-text-tools rule
 
-Status: pending
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 6 turns
 Spec: ../SPEC.md (requirement R3)
-Touch: .claude/skills/idea/SKILL.md, .claude/skills/breakdown/SKILL.md, .claude/skills/critique/SKILL.md
+Touch: .claude/skills/idea/SKILL.md, .claude/skills/breakdown/SKILL.md, .claude/skills/critique/SKILL.md, antigravity/.agents/skills/idea/SKILL.md, antigravity/.agents/skills/breakdown/SKILL.md
 
 ## Touch
 
@@ -28,5 +28,7 @@ breakdown/SKILL.md — serialize to avoid a same-file collision.
 
 ## Acceptance
 
-- [ ] `grep -l 'shell-text-tools' .claude/skills/idea/SKILL.md .claude/skills/breakdown/SKILL.md` → matches both files
-- [ ] `grep -c 'shell-text-tools' .claude/skills/critique/SKILL.md` → ≥1
+- [x] `grep -l 'shell-text-tools' .claude/skills/idea/SKILL.md .claude/skills/breakdown/SKILL.md` → matches both files
+- [x] `grep -c 'shell-text-tools' .claude/skills/critique/SKILL.md` → ≥1
+- [x] `grep -c 'shell-text-tools' antigravity/.agents/skills/idea/SKILL.md` → ≥1 (mirror the pointer where the antigravity counterpart embeds the same anchored-acceptance-criteria guidance)
+- [x] `grep -c 'shell-text-tools' antigravity/.agents/skills/breakdown/SKILL.md` → ≥1 (same, for breakdown's ladder-classification guidance)

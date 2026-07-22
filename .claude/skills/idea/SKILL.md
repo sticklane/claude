@@ -146,6 +146,10 @@ that criterion is written into the SPEC.md above, never deferred to
    legitimately bottom out at L0/L1; the annotation legalizes that ceiling
    instead of letting a grep pose as behavioral proof.
 
+Author each acceptance command anchored-and-bounded per
+`.claude/rules/shell-text-tools.md` (cited, not restated): anchor greps to
+structure over file-wide literals and cap every command's output.
+
 ## 5. Resolve open technology/architecture choices
 
 Run this check immediately after writing the spec (step 4), before the first

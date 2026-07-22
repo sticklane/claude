@@ -1,4 +1,4 @@
-Status: pending
+Status: done
 Discovered-from: specs/ctx-dispatch-adoption/tasks/04-agentprof-ctx-telemetry.md
 Spec: ../SPEC.md
 Blocking: no
@@ -20,4 +20,9 @@ zeroing out skill-attribution numbers agentprof has been reporting.
 
 ## Acceptance
 
-<!-- draft: needs runnable criteria before promotion -->
+Run from the `agentprof/` directory unless noted.
+
+- [x] `skillInput` reads the real field: `grep -c 'json:"skill"' internal/claude/skill_invocations.go` returns 1, and `grep -c 'json:"command"' internal/claude/skill_invocations.go` returns 0 (no Skill-input field still reads `command`).
+- [x] No test fixture fabricates a `Skill` tool_use with the wrong input field: `grep -rn '"name":"Skill","input":{"command"' *.go internal/` returns nothing (Bash tool_use blocks, which legitimately use `input.command`, are untouched).
+- [x] The core parse test uses the real field and passes: `go test ./internal/claude/ -run TestSkillInvocationsPairsResultsCommandTagsAndUserTurns` is `ok`, and that test's fixture now sends `{"skill":...}` (it fails against the pre-fix `command`-reading code — confirmed red-first).
+- [x] The whole suite and canonical check are green: `bash scripts/check.sh` exits 0 (format-check, vet, `go test ./...` all pass), so the skillcheck e2e table again attributes invocations to named skills instead of an empty name.

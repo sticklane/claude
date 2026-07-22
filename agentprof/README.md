@@ -351,6 +351,93 @@ in frames or labels. Rows without a parseable `logging_time` or usage data
 are skipped and counted on stderr. A runnable sample export ships in
 `testdata/vertex-logs.json`.
 
+## OpenTelemetry traces
+
+`agentprof otel` turns an OpenTelemetry (OTel) trace export into a pprof
+profile. Coding CLIs that emit OTLP — Claude Code, Codex, Gemini CLI, and Qwen
+Code — record each LLM request as a span carrying its token counts, and
+agentprof reads that span tree into `[service.name, root_span…leaf_span]`
+stacks with the model as a label. Point it at an OTLP/JSON export file:
+
+```sh
+./agentprof otel trace.json -o otel.pb.gz
+go tool pprof -top -sample_index=input_tokens otel.pb.gz
+```
+
+The input is a single OTLP/JSON trace-export object, or JSONL of such objects
+as written by the OpenTelemetry Collector's `fileexporter`. Logs-export
+objects are accepted in the same stream, so a Collector file that mixes traces
+and cost-bearing log events feeds straight in. Only spans carrying a
+recognized token attribute — `input_tokens`, `output_tokens`,
+`cache_read_tokens`, `cache_creation_tokens`, or their `gen_ai.usage.*`
+semantic-convention aliases — become samples; the rest are skipped and counted
+on stderr. To merge OTel spend with other sources, write JSONL instead of
+`.pb.gz` and hand the file to `agentprof build`; `build` reads positional file
+paths, so there is no pipe form:
+
+```sh
+./agentprof otel trace.json -o otel.jsonl
+./agentprof build otel.jsonl claude.jsonl -o all.pb.gz
+```
+
+A span is attributed to a CLI by its span-name prefix (`claude_code.`,
+`codex.`, `gemini_cli.`, `qwen-code.`), and the matched dialect fixes which
+attribute carries the session id — `session.id` for Claude Code, Gemini CLI,
+and Qwen Code; `conversation.id` for Codex — surfaced as the `session` label. A
+`gen_ai.*` service that matches no prefix still profiles: it falls back to a
+generic session key with no dialect label.
+
+Claude Code reports dollar cost on a separate `claude_code.api_request` log
+event rather than on the span. When a cost-bearing log record (`cost_usd`, or
+the `gen_ai.usage.cost` alias) shares a trace and span id with a span, its cost
+joins that span's sample as `cost_microusd` (`round(cost_usd × 1e6)`); a cost
+record with no trace context degrades to a flat `[service, event-name]` sample.
+For non-Claude dialects that report tokens but no cost, `--pricing` supplies a
+rate table — a JSON file whose `models` array prefix-matches model ids to
+per-million-token USD prices:
+
+```json
+{"models": [{"prefix": "gemini-2.5", "input": 1.25, "output": 10, "cache_read": 0.31, "cache_write": 1.625}]}
+```
+
+```sh
+./agentprof otel trace.json --pricing rates.json -o otel.pb.gz
+```
+
+Entries are matched in list order, first match wins, so list a more specific
+prefix before a shorter one it overlaps. Claude models are always priced from
+the built-in table regardless of `--pricing`.
+
+Because OTel is prospective — a trace exists only while a session runs and
+exports it — `otel serve` runs a live OTLP/HTTP receiver so you can capture as
+sessions happen instead of exporting a file afterward:
+
+```sh
+./agentprof otel serve --addr localhost:4318 -o session.pb.gz
+```
+
+It listens on `localhost:4318` by default and accepts `/v1/traces`,
+`/v1/logs`, and `/v1/metrics` in JSON or protobuf, transparently
+decompressing gzip request bodies (`Content-Encoding: gzip`). Point a CLI's
+OTLP/HTTP exporter at it, run your sessions, then stop the receiver with
+Ctrl-C: it drains in-flight requests, flushes the accumulated spans to `-o`
+(required for `serve`), and reports the sample count on stderr. Traces build
+the profile and correlated log events add cost; `/v1/metrics` is decoded only
+as a coarse cross-check total and never overrides a trace sample.
+
+The OTel path produces pprof profiles for flamegraph analysis only — it does
+not feed `costsummary` or the workboard cost panel, which stay Claude- and
+Antigravity-sourced. Its samples are raw span-structured stacks, not the
+`project > skill > agent > model` frames costsummary parses.
+
+A live receiver misses any session that runs while it is down. Two file-mode
+spool paths close that gap: Gemini CLI and Qwen Code can write telemetry to a
+local `outfile`, and an OpenTelemetry Collector can persist batches through its
+`fileexporter` — feed either file to `agentprof otel` afterward. For an emitter
+that speaks only gRPC, set `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` (every
+target CLI supports OTLP/HTTP) rather than expecting a 4317 gRPC listener;
+`otel serve` is HTTP-only.
+
 ## Mixed-source profiles
 
 `agentprof build` merges any number of canonical-schema JSONL files into one
@@ -420,6 +507,31 @@ bundled sample (2 of its 6 lines are deliberately invalid):
 go tool pprof -top custom.pb.gz
 ```
 
+## Auditing skill triggers and outcomes
+
+`agentprof skillcheck` is a read-only report, not a profile adapter: instead
+of pricing token spend it reads this machine's Claude Code transcripts and
+audits how a skill actually got used. For every `Skill` tool invocation it
+finds, it classifies whether the trigger was a correct model auto-trigger or
+a misfire, judges whether correctly-triggered runs reached a successful
+outcome, and flags user turns that read like a skill should have fired but
+didn't. A skill author reads the per-skill trigger-accuracy and
+outcome-success counts while iterating on a `SKILL.md`'s `description` and
+body — the same window the cost report gives on spend.
+
+```sh
+./agentprof skillcheck --days 7 --format table
+```
+
+Explicit slash-command invocations and skill self-chains are counted but
+never scored as correct or misfired — only model auto-triggers carry a
+trigger verdict. Outcome grading runs a `claude -p` judge subprocess;
+`--judge-tier` picks its model (`scout` by default, `deep`, or `frontier`),
+and each judge call gets an isolated `CLAUDE_CONFIG_DIR` so grading never
+writes into the `~/.claude` tree being audited. `--skill NAME` restricts the
+report to one skill; `--format json` (the default) emits the full per-skill
+aggregate with a transcript citation on every finding.
+
 ## Commands
 
 | Command                                                                   | What it does                                                               |
@@ -427,7 +539,10 @@ go tool pprof -top custom.pb.gz
 | `agentprof claude [--claude-dir PATH] [--days N \| --since RFC3339] [--merge cache.jsonl] [--summary costs.json] [--name-turns] [--reprime-threshold N] [--keep-pending] [--frame-denylist PATH] [-o out]` | Claude Code transcripts → samples. Defaults: `~/.claude`, 30 days (`--since` is the mutually-exclusive absolute cutoff), `--reprime-threshold 50000` (0 disables), denylist `~/.config/agentprof/frame-denylist`, stdout. `--merge` keeps a 7-day rolling JSONL cache; `--summary` writes the pre-aggregated Cost JSON the workboard panel reads; `--keep-pending` keeps one `tool:(pending)` sample per unmatched tool call instead of consolidating them. |
 | `agentprof gcp <billing.json> [--frame-labels k1,k2] [-o out]`            | GCP billing export rows → samples.                                         |
 | `agentprof vertex <logs.json> [-o out]`                                   | Vertex AI request-response logging rows → samples.                         |
+| `agentprof otel <trace.json> [--pricing config.json] [-o out]`            | OTLP/JSON trace export (or Collector JSONL) → samples.                      |
+| `agentprof otel serve [--addr localhost:4318] [--pricing config.json] -o out` | Live OTLP/HTTP receiver (`/v1/traces`, `/v1/logs`, `/v1/metrics`; JSON, protobuf, gzip) → samples on Ctrl-C. |
 | `agentprof build <samples.jsonl>... -o out.pb.gz`                         | Canonical-schema JSONL → pprof profile.                                    |
+| `agentprof skillcheck [--claude-dir PATH] [--days N \| --since RFC3339] [--skill NAME] [--judge-tier scout\|deep\|frontier] [--format json\|table] [-o out]` | Claude Code transcripts → per-skill skill-trigger and outcome audit (read-only; emits a report, not a profile). |
 | `agentprof --version`                                                     | Print version.                                                             |
 
 For all adapters, an `-o` path ending `.pb.gz` writes the pprof profile

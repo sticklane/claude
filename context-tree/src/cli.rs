@@ -111,6 +111,10 @@ pub enum Command {
         /// Narrow C3 resolution to symbols under this path prefix (repeatable).
         #[arg(long = "in")]
         in_paths: Vec<String>,
+        /// Drop result rows whose owning file is under this path prefix
+        /// (repeatable; R3). Composes with `--in`: exclusion wins.
+        #[arg(long = "not-in")]
+        not_in_paths: Vec<String>,
         /// Consult a language server (task 01 / R2) when one is available for
         /// the matched symbol's language, upgrading references it confirms
         /// from `heuristic` to `precise` and attributing each to the specific
@@ -118,6 +122,17 @@ pub enum Command {
         /// behaves byte-identically to plain `ctx refs`.
         #[arg(long)]
         exact: bool,
+        /// Keep only references/definitions whose file falls in this declared
+        /// zone (R2). Mutually exclusive with `--live-only`; an undeclared
+        /// label errors (exit 2) listing the declared labels.
+        #[arg(long, conflicts_with = "live_only")]
+        zone: Option<String>,
+        /// Exclude every zoned result, keeping only live (unzoned) ones (R2/R3);
+        /// when it filters away every reference of a symbol whose references are
+        /// all in-zone, a `N references exist only in zones: <labels>` tail is
+        /// emitted and the command exits 0.
+        #[arg(long = "live-only")]
+        live_only: bool,
         /// Emit JSON instead of plain text.
         #[arg(long)]
         json: bool,
@@ -144,6 +159,22 @@ pub enum Command {
         /// Append each symbol's first docstring line, counted within the budget.
         #[arg(long)]
         doc: bool,
+        /// Keep only symbols whose file falls in this declared zone (R2).
+        /// Mutually exclusive with `--live-only`; an undeclared label errors
+        /// (exit 2) listing the declared labels.
+        #[arg(long, conflicts_with = "live_only")]
+        zone: Option<String>,
+        /// Exclude every zoned symbol, keeping only live (unzoned) ones (R2).
+        #[arg(long = "live-only")]
+        live_only: bool,
+        /// Keep only symbols whose owning file is under this path prefix
+        /// (repeatable; R3). Empty = keep all.
+        #[arg(long = "in")]
+        in_paths: Vec<String>,
+        /// Drop symbols whose owning file is under this path prefix
+        /// (repeatable; R3). Composes with `--in`: exclusion wins.
+        #[arg(long = "not-in")]
+        not_in_paths: Vec<String>,
         /// Emit JSON instead of plain text.
         #[arg(long)]
         json: bool,

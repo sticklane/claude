@@ -146,6 +146,10 @@ explicit depth ceiling annotation in the memory file's annotation grammar (a
 behavioral complement — an eval scenario, a manual-pending human read, or a
 named verifier judgment instruction).
 
+Author each acceptance command anchored-and-bounded per
+`.claude/rules/shell-text-tools.md` (cited, not restated): anchor greps to
+structure over file-wide literals and cap every command's output.
+
 While authoring a task's acceptance commands, classify each for privileged/
 OS-level access: a task whose acceptance commands require `launchctl`, a
 system installer/package-manager install step, or interactive OAuth is

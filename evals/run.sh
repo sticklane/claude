@@ -9,6 +9,12 @@
 # Failed fixtures are kept (path printed) for forensics; passing ones
 # are deleted.
 #
+# Shared script deps are provisioned centrally so scenarios don't hand-copy
+# them: .claude/skills/_shared and the top-level runtimes/ land in every
+# fixture. A scenario may add an optional skill-deps.txt (one sibling skill
+# dir name per line; blanks and #-comments ignored) to also provision skills
+# its script loads as a library (e.g. prioritize_scan.py loads workboard.py).
+#
 # Env knobs: EVALS_ROOT (scenario dir), SKILLS_ROOT (skill provisioning
 # source, for external repos' evals), AGENTS_ROOT (agents provisioning
 # source; defaults to SKILLS_ROOT's sibling agents/, skipped if absent),
@@ -107,6 +113,35 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     mkdir -p "$EVAL_DIR/.claude/skills"
     cp -rL "$SKILLS_ROOT/$skill" "$EVAL_DIR/.claude/skills/"
     [ -d "$AGENTS_ROOT" ] && cp -r "$AGENTS_ROOT" "$EVAL_DIR/.claude/agents"
+
+    # Provision shared script dependencies centrally so scenarios don't
+    # hand-copy them: several skills' scripts import .claude/skills/_shared
+    # (headers.py, viz.py, …) and the top-level runtimes/ (parse_headless.py).
+    # Both are shared assets, not skills (no SKILL.md), so provisioning them
+    # never adds a spurious skill to the sandbox's listing. Sourced the same
+    # way as the skill under test — _shared from SKILLS_ROOT, runtimes/ from
+    # this checkout — and guarded by existence so external-repo evals that
+    # lack them are unaffected.
+    [ -d "$SKILLS_ROOT/_shared" ] && cp -rL "$SKILLS_ROOT/_shared" "$EVAL_DIR/.claude/skills/"
+    [ -d "$ROOT/runtimes" ] && cp -rL "$ROOT/runtimes" "$EVAL_DIR/runtimes"
+
+    # Optional skill-deps.txt: a scenario naming sibling *skills* its script
+    # loads as a library (e.g. prioritize_scan.py loads workboard.py). One
+    # skill dir name per line; blank lines and #-comments ignored. Declared
+    # explicitly rather than provisioning all skills, so the sandbox keeps
+    # only the skill under test plus its named deps — no blanket pollution.
+    if [ -f "$scenario/skill-deps.txt" ]; then
+      while IFS= read -r dep || [ -n "$dep" ]; do
+        dep="${dep%%#*}"
+        dep="$(printf '%s' "$dep" | tr -d '[:space:]')"
+        [ -z "$dep" ] && continue
+        if [ -d "$SKILLS_ROOT/$dep" ]; then
+          cp -rL "$SKILLS_ROOT/$dep" "$EVAL_DIR/.claude/skills/"
+        else
+          echo "eval: skill-dep '$dep' for '$name' not found under $SKILLS_ROOT (skipped)" >&2
+        fi
+      done < "$scenario/skill-deps.txt"
+    fi
 
     # Also provision the Agent Skills layout (.agents/skills/) that
     # Antigravity and Codex discover from, unconditionally and regardless

@@ -15,6 +15,14 @@
 # UNANCHORED grep criterion (no verified-date note), and a self-referential
 # doctrine-word grep with NO depth-ceiling annotation. It asserts STRUCTURE
 # (the anchoring/ceiling markers), never incidental prose.
+#
+# Both markers are scoped to the Acceptance section body ($accept), not the
+# whole spec file: /idea records the "verified <date>" note and the
+# `Depth ceiling:` line inline with the criterion they annotate (SKILL.md
+# step 3 + step 4), so a marker that appears only in Problem/Requirements
+# elsewhere in the file does not anchor the acceptance criterion under test.
+# File-wide greps let an unanchored grep criterion pass whenever those strings
+# happened to appear anywhere else in the spec.
 set -u
 
 fail() { echo "ASSERT FAIL: $*" >&2; exit 1; }
@@ -38,14 +46,16 @@ grep_crit="$(printf '%s\n' "$accept" | grep -E '^[[:space:]]*-[[:space:]]*\[[ xX
 
 if [ -n "$grep_crit" ]; then
   # Anti-pattern 1 — unanchored grep criterion: the spec keeps a grep
-  # criterion but records no "verified <date>" anchor note anywhere.
-  grep -Eqi 'verified[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}' "$spec" \
-    || fail "keeps a grep acceptance criterion but records no 'verified <date>' anchor note (unanchored grep criterion)"
+  # criterion but records no "verified <date>" anchor note in the Acceptance
+  # section (a note elsewhere in the file does not anchor this criterion).
+  printf '%s\n' "$accept" | grep -Eqi 'verified[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}' \
+    || fail "keeps a grep acceptance criterion but records no 'verified <date>' anchor note in the Acceptance section (unanchored grep criterion)"
 
   # Anti-pattern 2 — self-referential doctrine-word grep with no depth
-  # ceiling: the L0 grep is not legalized by a 'Depth ceiling:' annotation.
-  grep -Eqi '^[[:space:]]*Depth ceiling:' "$spec" \
-    || fail "keeps a doctrine-word grep criterion but carries no 'Depth ceiling:' annotation naming a behavioral complement"
+  # ceiling: the L0 grep is not legalized by a 'Depth ceiling:' annotation
+  # in the Acceptance section (an annotation elsewhere does not legalize it).
+  printf '%s\n' "$accept" | grep -Eqi '^[[:space:]]*Depth ceiling:' \
+    || fail "keeps a doctrine-word grep criterion but carries no 'Depth ceiling:' annotation in the Acceptance section naming a behavioral complement"
 fi
 
 echo "assert: all checks passed (no unanchored or unceilinged doctrine-word grep criterion)"

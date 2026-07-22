@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: pending
+Status: done
 Depends on: 02
 Priority: P2
 Budget: 18 turns
@@ -55,6 +55,6 @@ Add fixtures under `internal/otel/testdata/` with
 
 Runnable commands only:
 
-- [ ] `cd agentprof && go test ./internal/otel/ -run 'Ancestor|Descendant' -v` → new fallback + tie-break tests pass (L2)
-- [ ] `cd agentprof && go test ./internal/otel/ -v` → full package green, no regression in Task 02's direct-match join (L2)
-- [ ] `bash agentprof/scripts/check.sh` → exits 0
+- [x] `cd agentprof && go test ./internal/otel/ -run 'Ancestor|Descendant' -v` → new fallback + tie-break tests pass (L2)
+- [x] `cd agentprof && go test ./internal/otel/ -v` → full package green, no regression in Task 02's direct-match join (L2)
+- [x] `bash agentprof/scripts/check.sh` → exits 0

@@ -25,7 +25,7 @@ use crate::cmd::{
 };
 use crate::index::{IndexStore, RefRow, ScopeRow, SymbolRow};
 use crate::lsp::EnrichmentCache;
-use crate::path::{Selector, resolve_suffix};
+use crate::path::{PathFilter, Selector, resolve_suffix};
 use crate::zones::ZoneConfig;
 use serde_json::json;
 use std::collections::HashSet;
@@ -36,9 +36,17 @@ use std::process::ExitCode;
 pub struct Args {
     pub symbol: String,
     pub limit: usize,
-    /// `--in <path-prefix>` filters (repeatable); narrows C3 resolution by file.
+    /// `--in <path-prefix>` filters (repeatable); narrows C3 resolution by file
+    /// (task 02) AND narrows the emitted result rows by owning file path (R3).
     pub in_paths: Vec<String>,
+    /// `--not-in <path-prefix>` filters (repeatable); drops result rows whose
+    /// owning file is under the prefix (R3). Exclusion wins over `--in`.
+    pub not_in_paths: Vec<String>,
     pub exact: bool,
+    /// `--zone <label>` (R2): keep only results whose file is in that zone.
+    pub zone: Option<String>,
+    /// `--live-only` (R2/R3): exclude every zoned result.
+    pub live_only: bool,
     pub json: bool,
     pub no_sync: bool,
 }
@@ -84,6 +92,20 @@ fn zero_refs_note(query: &str, module_file: Option<&str>) -> String {
     }
 }
 
+/// The R3 zones-only diagnostic tail: `--live-only` filtered away every one of
+/// a resolved symbol's `count` references because they ALL lived in the listed
+/// zones. This is the "only kept alive by dead code" primitive — it states the
+/// filtered fact rather than emitting a bare empty result, and is emphatically
+/// NOT the `no_match` boundary (resolution succeeded). Built once, shared
+/// between the stderr tail and the `--json` `note` field, mirroring
+/// `zero_refs_note`.
+fn zones_only_note(count: usize, labels: &[&str]) -> String {
+    format!(
+        "{count} references exist only in zones: {}",
+        labels.join(", ")
+    )
+}
+
 /// ` [zone:<label>]` when `path` falls in a declared zone, else empty (R1). The
 /// leading space keeps it a suffix on the result line; zero `.ctxzones` →
 /// `zone_of` is always `None` → empty string → output unchanged from today.
@@ -118,6 +140,11 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     };
     // R1: zone tagging — loaded once per render; empty config tags nothing.
     let zones = ZoneConfig::load(&root);
+    // R2: an undeclared `--zone <label>` is a usage error (exit 2) before any
+    // resolution work; the message lists `.ctxzones`'s declared labels.
+    if let Err(code) = crate::cmd::validate_zone(&zones, args.zone.as_deref(), "refs") {
+        return (String::new(), code);
+    }
     // Optional LSP enrichment (R11): absent cache => every result stays heuristic.
     let mut cache = EnrichmentCache::load(&root);
     // `--exact` (task 01 / R2): no current-generation cache yet => try to
@@ -154,15 +181,20 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     match names.len() {
         0 => {
             if args.json {
-                out.push_str(&format!(
-                    "{}\n",
-                    json!({
-                        "error": "no match",
-                        "symbol": args.symbol,
-                        "boundary_note": no_match::BOUNDARY_NOTE,
-                        "suggested_check": no_match::suggested_check(&args.symbol),
-                    })
-                ));
+                let mut obj = json!({
+                    "error": "no match",
+                    "symbol": args.symbol,
+                    "boundary_note": no_match::BOUNDARY_NOTE,
+                    "suggested_check": no_match::suggested_check(&args.symbol),
+                });
+                // R4 near-miss list, mirrored into JSON (task 05): present only
+                // when candidates exist, so the no-candidate object is unchanged.
+                let candidates =
+                    no_match::did_you_mean(&args.symbol, all.iter().map(|s| s.name.as_str()));
+                if !candidates.is_empty() {
+                    obj["did_you_mean"] = json!(candidates);
+                }
+                out.push_str(&format!("{obj}\n"));
             } else {
                 eprintln!("ctx refs: no symbol matches '{}'", args.symbol);
                 let candidates =
@@ -221,19 +253,68 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         .filter(|r| r.name == target_name && !is_shadowed(r, &scopes))
         .collect();
 
+    // R3 (task 03): narrow the EMITTED result rows by owning file path. Applied
+    // after C3 resolution — so task 02's `--in` disambiguation of the candidate
+    // set is intact — and before the truncation/limit counts below, so the
+    // `... more` tails reflect the filtered set.
+    let path_filter = PathFilter::new(&args.in_paths, &args.not_in_paths);
+    let defs: Vec<&SymbolRow> = defs
+        .into_iter()
+        .filter(|d| path_filter.keep(&d.path))
+        .collect();
+    let refs: Vec<&RefRow> = refs
+        .into_iter()
+        .filter(|r| path_filter.keep(&r.path))
+        .collect();
+
+    // R2/R3: apply the `--zone`/`--live-only` display filter to the already
+    // path-filtered result vectors (composing order-independently with the path
+    // filters — spec R2). Capture the pre-filter reference count and the zones
+    // of the references filtered away so the R3 zones-only tail can name them.
+    let orig_ref_count = refs.len();
+    let zone = args.zone.as_deref();
+    let removed_ref_zones: Vec<&str> = refs
+        .iter()
+        .filter(|r| !crate::cmd::zone_filter_keeps(&zones, &r.path, zone, args.live_only))
+        .filter_map(|r| zones.zone_of(&r.path))
+        .collect();
+    let refs: Vec<&RefRow> = refs
+        .into_iter()
+        .filter(|r| crate::cmd::zone_filter_keeps(&zones, &r.path, zone, args.live_only))
+        .collect();
+    let defs: Vec<&SymbolRow> = defs
+        .into_iter()
+        .filter(|d| crate::cmd::zone_filter_keeps(&zones, &d.path, zone, args.live_only))
+        .collect();
+
     let def_shown = defs.len().min(args.limit);
     let ref_shown = refs.len().min(args.limit);
     let def_omitted = defs.len() - def_shown;
     let ref_omitted = refs.len() - ref_shown;
 
-    // R1a: a resolved symbol with zero references gets a diagnostic tail rather
-    // than bare emptiness. Built once, shared between stderr and the JSON note.
+    // Diagnostic tail (built once, shared between stderr and the JSON note):
+    //   * R3 — `--live-only` filtered away a NON-empty ref set whose every
+    //     reference was in-zone: state the zones-only fact (never the no_match
+    //     boundary — resolution succeeded), naming the zones.
+    //   * R1a — a symbol that genuinely resolved to zero references keeps its
+    //     "0 references to <query>" tail.
+    //   * A `--zone <label>` that merely filtered to empty emits no misleading
+    //     "0 references" tail (there ARE references, just none in that zone).
     let note = if refs.is_empty() {
-        let module_file = defs
-            .iter()
-            .find(|d| d.kind == "module")
-            .map(|d| d.path.as_str());
-        Some(zero_refs_note(&args.symbol, module_file))
+        if args.live_only && orig_ref_count > 0 {
+            let mut labels = removed_ref_zones.clone();
+            labels.sort_unstable();
+            labels.dedup();
+            Some(zones_only_note(orig_ref_count, &labels))
+        } else if orig_ref_count == 0 {
+            let module_file = defs
+                .iter()
+                .find(|d| d.kind == "module")
+                .map(|d| d.path.as_str());
+            Some(zero_refs_note(&args.symbol, module_file))
+        } else {
+            None
+        }
     } else {
         None
     };

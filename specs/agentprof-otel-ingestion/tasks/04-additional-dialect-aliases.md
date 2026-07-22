@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: pending
+Status: done
 Depends on: 03
 Priority: P2
 Budget: 16 turns
@@ -46,10 +46,10 @@ cost-join logic (Tasks 02/03). Add per-dialect fixtures under
 
 Runnable commands only:
 
-- [ ] `cd agentprof && go test ./internal/otel/ -run 'Codex|Gemini|Qwen|Dialect' -v` → per-dialect tests pass (L2)
-- [ ] `grep -c 'gemini_cli' agentprof/internal/otel/otel.go` → ≥1 (dialect registered)
-- [ ] `grep -c 'labels\["session"\]\|"session"' agentprof/internal/otel/otel.go` → ≥1 (session label mapped)
-- [ ] `bash agentprof/scripts/check.sh` → exits 0
+- [x] `cd agentprof && go test ./internal/otel/ -run 'Codex|Gemini|Qwen|Dialect' -v` → per-dialect tests pass (L2)
+- [x] `grep -c 'gemini_cli' agentprof/internal/otel/otel.go` → ≥1 (dialect registered)
+- [x] `grep -c 'labels\["session"\]\|"session"' agentprof/internal/otel/otel.go` → ≥1 (session label mapped)
+- [x] `bash agentprof/scripts/check.sh` → exits 0
 - [ ] MANUAL-PENDING (human, not drain-gated): live-verify Gemini CLI span
       nesting and Codex `session_loop` span shape against real exports before
       relying on those dialects in production — SPEC.md Phasing marks this a

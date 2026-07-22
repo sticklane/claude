@@ -1,4 +1,4 @@
-Status: pending
+Status: done
 Discovered-from: specs/trajectory-evals/evidence/spec-review.md
 Spec: ../SPEC.md
 Blocking: no
@@ -16,7 +16,7 @@ necessary, adjust the grep.
 
 ## Acceptance
 
-- [ ] A capture record exists at
+- [x] A capture record exists at
       `specs/trajectory-evals/evidence/stream-json-task-event.md` (no
       such file today, verified 2026-07-19) containing: the exact
       `claude -p --output-format stream-json` command run, the run date,
@@ -27,7 +27,7 @@ necessary, adjust the grep.
       headless session: it is human-launched or orchestrator-run; a
       drained worker marks this criterion manual-pending with that
       reason (docs/memory/unattended-worker-tool-limits.md).
-- [ ] Pattern-matches-reality (runnable, stays valid whether or not the
+- [x] Pattern-matches-reality (runnable, stays valid whether or not the
       grep gets adjusted): extracting the committed pattern from the
       assert script and running it against the captured event exits 0 —
       `pat=$(sed -n "s/^grep -Eq '\(.*\)' \"\$EVAL_TRANSCRIPT\".*/\1/p" evals/breakdown/02-scout-delegation/assert.sh); grep -Eq "$pat" specs/trajectory-evals/evidence/stream-json-task-event.md`
@@ -47,3 +47,21 @@ real transcript data (behavioral), but the evidence file's provenance —
 that the event genuinely came from a live run rather than being typed —
 is not machine-provable; complement is a manual-pending human
 re-run/attestation of the capture command.
+
+## Evidence (done)
+
+Capture run by the drain orchestrator (this task's own text designates
+that as acceptable — "human-launched or orchestrator-run"), 2026-07-22.
+Full command, run date, and verbatim JSONL event line recorded in
+`specs/trajectory-evals/evidence/stream-json-task-event.md`.
+
+**Real finding**: the assumed pattern was wrong on a genuine axis, not
+just the hedged one — the live `subagent_type` value is plugin-namespaced
+(`"agentic:scout"`), which the old bare-`"scout"` pattern does NOT match
+(verified: re-ran the pre-fix pattern against the captured event, it
+correctly fails to match, confirming this was a real false-fail bug, not
+a theoretical one). Fixed by widening the pattern to
+`"subagent_type"[[:space:]]*:[[:space:]]*"([A-Za-z0-9_-]+:)?scout"` in
+all three carriers: `evals/breakdown/02-scout-delegation/assert.sh`,
+`.claude/skills/evals/reference.md`, and `codex/.agents/skills/evals/SKILL.md`'s
+inline example. Both acceptance criteria re-run for real and pass.

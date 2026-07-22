@@ -811,4 +811,20 @@ mod tests {
         assert_eq!(store.note_marker(1), None);
         assert_eq!(store.note_marker(999), None);
     }
+
+    /// Guard, not a red-first regression test (specs/codebase-context-tree
+    /// task 15): `size as i64` / `size as u64` is a lossless two's-complement
+    /// bit reinterpretation for every `u64`, and SQLite INTEGER stores the
+    /// full signed 64-bit range, so this already passes today. It exists to
+    /// catch a future well-meaning "defensive" saturating/checked cast that
+    /// would silently clamp large sizes and reintroduce real data loss.
+    #[test]
+    fn file_size_above_i64_max_round_trips_losslessly() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = IndexStore::open(dir.path()).unwrap();
+        let big = (i64::MAX as u64) + 1;
+        store.upsert_file("big.bin", "h", big, 0).unwrap();
+        let states = store.file_states().unwrap();
+        assert_eq!(states["big.bin"].size, big);
+    }
 }

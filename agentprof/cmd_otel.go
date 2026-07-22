@@ -32,12 +32,13 @@ func cmdOtel(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("otel", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (default stdout)")
+	pricingPath := fs.String("pricing", "", "path to a user pricing config (JSON) for cost-from-tokens on non-Claude models")
 	inputs, ok := parsePositionals(fs, args)
 	if !ok {
 		return 2
 	}
 	if len(inputs) != 1 {
-		fmt.Fprintln(stderr, "agentprof otel: expected exactly one OTLP trace file\nusage: agentprof otel <trace.json> [-o out]")
+		fmt.Fprintln(stderr, "agentprof otel: expected exactly one OTLP trace file\nusage: agentprof otel <trace.json> [-o out] [--pricing config.json]")
 		return 2
 	}
 
@@ -47,7 +48,12 @@ func cmdOtel(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
+	rates, ok := loadUserPricing(*pricingPath, stderr)
+	if !ok {
+		return 1
+	}
 	acc := otel.NewAccumulator()
+	acc.SetUserPricing(rates)
 	badLines := 0
 	// A leading '{' is first tried as one whole-file object; on failure the
 	// accumulator is untouched, so fall back to line-by-line JSONL (R2).
@@ -83,6 +89,26 @@ func cmdOtel(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// loadUserPricing reads and decodes a --pricing config path into a user rate
+// table. An empty path yields the Claude-table-only default (nil, true). A
+// read or decode failure reports to stderr and returns ok=false.
+func loadUserPricing(path string, stderr io.Writer) ([]otel.UserRate, bool) {
+	if path == "" {
+		return nil, true
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintf(stderr, "agentprof otel: %v\n", err)
+		return nil, false
+	}
+	rates, err := otel.ParseUserPricing(data)
+	if err != nil {
+		fmt.Fprintf(stderr, "agentprof otel: invalid pricing config: %v\n", err)
+		return nil, false
+	}
+	return rates, true
 }
 
 // addOTLP feeds one OTLP/JSON export object into the accumulator, accepting
@@ -121,15 +147,21 @@ func cmdOtelServe(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	addr := fs.String("addr", "localhost:4318", "listen address for the OTLP/HTTP receiver")
 	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (required)")
+	pricingPath := fs.String("pricing", "", "path to a user pricing config (JSON) for cost-from-tokens on non-Claude models")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if *out == "" {
-		fmt.Fprintln(stderr, "agentprof otel serve: -o is required\nusage: agentprof otel serve [--addr localhost:4318] -o <out>")
+		fmt.Fprintln(stderr, "agentprof otel serve: -o is required\nusage: agentprof otel serve [--addr localhost:4318] -o <out> [--pricing config.json]")
 		return 1
 	}
 
+	rates, ok := loadUserPricing(*pricingPath, stderr)
+	if !ok {
+		return 1
+	}
 	rcv := newOtelReceiver(stderr)
+	rcv.acc.SetUserPricing(rates)
 	ln, err := net.Listen("tcp", *addr)
 	if err != nil {
 		fmt.Fprintf(stderr, "agentprof otel serve: %v\n", err)
@@ -158,11 +190,13 @@ func cmdOtelServe(args []string, stdout, stderr io.Writer) int {
 }
 
 // otelReceiver is the OTLP/HTTP trace receiver: handlers run concurrently,
-// so span accumulation and batch logging are mutex-guarded (R8).
+// so span accumulation and batch logging are mutex-guarded (R8). Metrics
+// accumulate into a coarse cross-check total that never feeds flush (R10).
 type otelReceiver struct {
-	mu   sync.Mutex
-	acc  *otel.Accumulator
-	logw io.Writer
+	mu      sync.Mutex
+	acc     *otel.Accumulator
+	metrics otel.MetricTotals
+	logw    io.Writer
 }
 
 func newOtelReceiver(logw io.Writer) *otelReceiver {
@@ -171,7 +205,7 @@ func newOtelReceiver(logw io.Writer) *otelReceiver {
 
 func (r *otelReceiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch req.URL.Path {
-	case "/v1/traces", "/v1/logs": // /v1/metrics stays unregistered (R10)
+	case "/v1/traces", "/v1/logs", "/v1/metrics":
 	default:
 		http.NotFound(w, req)
 		return
@@ -193,26 +227,41 @@ func (r *otelReceiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	r.mu.Lock()
-	if req.URL.Path == "/v1/logs" {
+	var accepted int
+	var unit string
+	switch req.URL.Path {
+	case "/v1/metrics":
+		// Metrics are a coarse cross-check (R10): decoded and summed, but never
+		// joined into the sample flush, so they cannot override a trace sample.
+		var mt *otel.MetricTotals
+		if ct == "application/json" {
+			mt, err = otel.DecodeMetricsJSON(body)
+		} else {
+			mt, err = otel.DecodeMetricsProto(body)
+		}
+		if err == nil {
+			r.metrics.Add(mt)
+			accepted, unit = mt.Points, "metric points"
+		}
+	case "/v1/logs":
 		before := r.acc.LogLen()
 		if ct == "application/json" {
 			err = r.acc.AddLogsJSON(body)
 		} else {
 			err = r.acc.AddLogsProto(body)
 		}
-		if err == nil {
-			fmt.Fprintf(r.logw, "accepted %d log records\n", r.acc.LogLen()-before)
-		}
-	} else {
+		accepted, unit = r.acc.LogLen()-before, "log records"
+	default: // /v1/traces
 		before := r.acc.Len()
 		if ct == "application/json" {
 			err = r.acc.AddJSON(body)
 		} else {
 			err = r.acc.AddProto(body)
 		}
-		if err == nil {
-			fmt.Fprintf(r.logw, "accepted %d spans\n", r.acc.Len()-before)
-		}
+		accepted, unit = r.acc.Len()-before, "spans"
+	}
+	if err == nil {
+		fmt.Fprintf(r.logw, "accepted %d %s\n", accepted, unit)
 	}
 	r.mu.Unlock()
 	if err != nil {

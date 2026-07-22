@@ -34,11 +34,11 @@ if [ -z "${EVAL_TRANSCRIPT:-}" ] || [ ! -s "$EVAL_TRANSCRIPT" ]; then
 fi
 
 # The transcript is the claude-code stream-json JSONL. A /breakdown that
-# delegated its file-dependency mapping to a scout emits a Task tool_use
-# whose input carries subagent_type "scout". (Assumed JSONL field name;
-# see this task's ## Decisions — a human re-confirms it against a real
-# transcript and adjusts the pattern if the field is nested differently.)
-grep -Eq '"subagent_type"[[:space:]]*:[[:space:]]*"scout"' "$EVAL_TRANSCRIPT" \
+# delegated its file-dependency mapping to a scout emits an Agent/Task
+# tool_use whose input carries subagent_type "scout" or a namespaced form
+# like "agentic:scout" (confirmed against a real live-capture transcript,
+# specs/trajectory-evals/evidence/stream-json-task-event.md).
+grep -Eq '"subagent_type"[[:space:]]*:[[:space:]]*"([A-Za-z0-9_-]+:)?scout"' "$EVAL_TRANSCRIPT" \
   || fail "transcript shows no scout delegation (no '\"subagent_type\":\"scout\"' in $EVAL_TRANSCRIPT); /breakdown appears to have read the codebase directly instead of asking a scout"
 
 echo "assert: all checks passed (${#tasks[@]} task files, scout delegation present)"

@@ -74,6 +74,46 @@ ctx output is for a decision, not for the transcript — keep it bounded:
   into conversation when the answer is one symbol or one count — summarize
   the rest.
 
+## Codebase survey
+
+Whole-repo understanding requests ("understand this codebase", "survey the
+structure", "how is this organized") run a fixed recipe of deterministic ctx
+calls:
+
+1. `ctx map --limit N` — the most-referenced symbols, the load-bearing core.
+2. `ctx tree <module>` per top-level module — the structural outline of each.
+3. `ctx deps <entry-point>` on the entry points — what the mains pull in.
+
+**Tiering rule — the queries are always deterministic CLI calls; the tier
+only governs whose context absorbs the output.** Up to ~4 targeted queries
+run **inline** in the main session (delegation overhead exceeds the savings
+at that size). A batched survey — many modules, or an open-ended
+multi-question exploration — is delegated to a **cheap-tier scout** (Claude
+default: Haiku; scout already carries the `Bash(ctx *)` grant) whose prompt
+embeds the recipe and returns a distilled structure report. The main model
+never reads raw query dumps for a survey; it reads the scout's summary.
+
+Scout dispatch-prompt template (embeds the ctx command table so the scout
+runs the recipe itself):
+
+```
+Survey <repo/subtree> using the `ctx` code-structure index — do NOT read
+whole files. Run these deterministic queries and return a distilled
+structure report (≤300 words), never raw dumps:
+
+  ctx map --limit 30            most-referenced symbols (the core)
+  ctx tree <path>               structural outline of a dir/file
+  ctx deps <file>               what a file imports
+  ctx sig <name>                signature + doc of a symbol
+  ctx refs <name>               who references a symbol
+  ctx at <file>:<line>          what encloses a line
+
+Recipe: map --limit 30 first; then `tree` each top-level module; then
+`deps` on the entry points. Cap every wide output (`| head`, `--limit`,
+`--json | jq`). Report: the core symbols, each module's role in one line,
+and the entry-point dependency shape. Summarize — do not paste full trees.
+```
+
 ## Notes — durable, refactor-surviving knowledge
 
 - `ctx notes add <symbol> "<text>" --kind gotcha|invariant|rationale|todo`
@@ -103,6 +143,28 @@ Scope cautions: extractors cover python, go, js, ts, bash, c, cpp, zig,
 kotlin, java, ocaml, haskell — NOT rust; `map` ranking currently
 over-weights bash locals on mixed repos (spec stub 16). Capability
 evidence: `specs/codebase-context-tree/evidence/capability-shakedown-2026-07-20.md`.
+
+Trust boundaries of a query result:
+
+- **`refs`/`sig` are name-resolution heuristics, not compiler-verified.** A
+  ref ctx returns (and especially one it tags `heuristic`) is a best-effort
+  name match, not a resolved binding — treat a load-bearing edge as a lead
+  to confirm, not proof. The exactness path is
+  `specs/ctx-static-analysis-augmentation`.
+- **Identical-qpath collisions are unresolvable via `sig`.** When two defs in
+  different directories share a qualified path, `sig <qpath>` can't tell them
+  apart; fall back to a sliced Read of each candidate body to pick the right
+  one.
+- **`map` noise from committed vendored/generated trees is an
+  index-membership problem, not a query problem.** Checked-in `dist/`,
+  vendored code, and generated artifacts inflate rankings; the fix is
+  excluding them from the index (`specs/ctxignore-git-overlay`), not more
+  querying.
+- **The ABSENCE FALLACY.** "No symbol matches" means there is no _symbol_ by
+  that name — never that the string is absent from the code. Object fields,
+  JSON keys, and string literals are not indexed, so an empty ctx result is
+  not evidence of absence: any absence claim must be grep-verified before you
+  assert it.
 
 Next stage: none — tool-usage skill; queries and notes land in the working
 tree (notes committed by whoever owns the current change).
