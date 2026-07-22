@@ -161,3 +161,15 @@ read as today's skills. It is invoked directly, never wired into
 - `.context/` holds a persistent `ctx` code-structure index (`/ctx` skill).
   Prefer `ctx tree|sig|refs|deps|map|at` over reading files for structure;
   leave durable symbol notes via `ctx notes add` (committed; DB gitignored).
+
+
+## Beads issue tracker (transition scope)
+
+bd (beads) tracks session-level and newly discovered work: `bd prime`
+at session start, `bd ready` for the queue, claim before working,
+close on done — the `/work` skill owns the flow. Transition boundary,
+until core task 09 (specs/agentic-core-redesign) cuts over: the
+markdown task headers under specs/ remain the source of truth for
+spec work; bd's managed guidance in AGENTS.md ("do not use markdown
+TODO lists") binds only after that cutover.
+

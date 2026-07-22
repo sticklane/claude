@@ -1,48 +1,62 @@
 {
-  "model": "opusplan",
   "hooks": {
-    "SessionStart": [
+    "PostToolUse": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/plugin-staleness/staleness-check.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-tool-format.sh",
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "Edit|Write"
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
         "hooks": [
           {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-protect.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-protect.sh",
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "Edit|Write"
       }
     ],
-    "PostToolUse": [
+    "SessionStart": [
       {
-        "matcher": "Edit|Write",
         "hooks": [
           {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-tool-format.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/plugin-staleness/staleness-check.sh",
+            "type": "command"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "bd prime --hook-json",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
       }
     ],
     "Stop": [
       {
         "hooks": [
           {
-            "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/plugin-autorefresh/autorefresh.sh",
-            "timeout": 180
+            "timeout": 180,
+            "type": "command"
           }
         ]
       }
+    ]
+  },
+  "model": "opusplan",
+  "permissions": {
+    "allow": [
+      "Bash(bd *)"
     ]
   }
 }
