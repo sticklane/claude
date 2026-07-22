@@ -1,4 +1,5 @@
-Status: draft
+Status: obsolete
+Closed: subsumed by specs/agentic-core-redesign — see specs/agentic-core-redesign/TRIAGE.md
 Discovered-from: specs/ctx-dispatch-adoption/tasks/02-breakdown-structure-gathering.md
 Spec: ../SPEC.md
 Blocking: no

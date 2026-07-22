@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -41,9 +41,27 @@ this file's own checkboxes.
 
 ## Acceptance
 
-- [ ] `bash -c 'open=$(grep -l "^Status: \(pending\|blocked\|deferred\|draft\)" specs/*/tasks/*.md | grep -v agentic-core-redesign | wc -l); rows=$(grep -c "· \(keep\|subsumed\|fold-in\) ·" specs/agentic-core-redesign/TRIAGE.md); [ "$rows" -ge "$open" ] && echo COVERED'` → prints `COVERED` (every open item has a triage row; specs without tasks/ add rows beyond the minimum)
-- [ ] `bash -c 'for f in $(grep "· subsumed ·" specs/agentic-core-redesign/TRIAGE.md | cut -d" " -f1); do case "$f" in specs/*/tasks/*.md) grep -q "^Status: obsolete" "$f" || echo "not flipped: $f";; esac; done'` → no output (every subsumed task file is flipped)
+- [x] `bash -c 'open=$(grep -l "^Status: \(pending\|blocked\|deferred\|draft\)" specs/*/tasks/*.md | grep -v agentic-core-redesign | wc -l); rows=$(grep -c "· \(keep\|subsumed\|fold-in\) ·" specs/agentic-core-redesign/TRIAGE.md); [ "$rows" -ge "$open" ] && echo COVERED'` → prints `COVERED` (every open item has a triage row; specs without tasks/ add rows beyond the minimum)
+      Evidence: prints `COVERED` (open=26 post-flip, rows=50; 50 open items triaged — 38 task files + 12 tasks-less specs).
+- [x] `bash -c 'for f in $(grep "· subsumed ·" specs/agentic-core-redesign/TRIAGE.md | cut -d" " -f1); do case "$f" in specs/*/tasks/*.md) grep -q "^Status: obsolete" "$f" || echo "not flipped: $f";; esac; done'` → no output (every subsumed task file is flipped)
+      Evidence: no output — all 13 subsumed task files carry `^Status: obsolete`.
 
 Depth ceiling: L1 — triage verdicts are human judgments over prose; the
 behavioral complement is a maintainer read of TRIAGE.md before drain runs
 on the remaining queue.
+
+## Decisions
+
+- Bare subsumed SPEC.md headers left unedited (4 specs): default taken —
+  record verdict in TRIAGE.md only, no Status flip. Rationale: this task's
+  `## Touch` scopes header edits to other specs' *task files* ("Header-line
+  edits (Status:) on other specs' task files ... ONLY for items triaged
+  subsumed") and forbids editing other specs' body text; a bare SPEC.md is
+  not a task file, and its Depth-ceiling-L1 maintainer read keeps it out of
+  auto-breakdown. Reverse: add `Status: obsolete` to those four SPEC.md
+  headers if a later policy authorizes bare-spec header edits.
+- `fold-in` verdict used zero times: default taken — every item resolved to
+  keep (surviving component) or subsumed (deleted/replaced machinery); no
+  half-built work needed absorption into an agentic task. Reverse: re-triage
+  any item to fold-in with a named target if the redesign's task graph is
+  found to be missing coverage it should carry.
