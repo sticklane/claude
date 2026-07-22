@@ -25,7 +25,7 @@ use crate::cmd::{
 };
 use crate::index::{IndexStore, RefRow, ScopeRow, SymbolRow};
 use crate::lsp::EnrichmentCache;
-use crate::path::{Selector, resolve_suffix};
+use crate::path::{PathFilter, Selector, resolve_suffix};
 use crate::zones::ZoneConfig;
 use serde_json::json;
 use std::collections::HashSet;
@@ -36,8 +36,12 @@ use std::process::ExitCode;
 pub struct Args {
     pub symbol: String,
     pub limit: usize,
-    /// `--in <path-prefix>` filters (repeatable); narrows C3 resolution by file.
+    /// `--in <path-prefix>` filters (repeatable); narrows C3 resolution by file
+    /// (task 02) AND narrows the emitted result rows by owning file path (R3).
     pub in_paths: Vec<String>,
+    /// `--not-in <path-prefix>` filters (repeatable); drops result rows whose
+    /// owning file is under the prefix (R3). Exclusion wins over `--in`.
+    pub not_in_paths: Vec<String>,
     pub exact: bool,
     pub json: bool,
     pub no_sync: bool,
@@ -224,6 +228,20 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     let refs: Vec<&RefRow> = all_refs
         .iter()
         .filter(|r| r.name == target_name && !is_shadowed(r, &scopes))
+        .collect();
+
+    // R3 (task 03): narrow the EMITTED result rows by owning file path. Applied
+    // after C3 resolution — so task 02's `--in` disambiguation of the candidate
+    // set is intact — and before the truncation/limit counts below, so the
+    // `... more` tails reflect the filtered set.
+    let path_filter = PathFilter::new(&args.in_paths, &args.not_in_paths);
+    let defs: Vec<&SymbolRow> = defs
+        .into_iter()
+        .filter(|d| path_filter.keep(&d.path))
+        .collect();
+    let refs: Vec<&RefRow> = refs
+        .into_iter()
+        .filter(|r| path_filter.keep(&r.path))
         .collect();
 
     let def_shown = defs.len().min(args.limit);

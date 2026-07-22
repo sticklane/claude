@@ -120,6 +120,41 @@ fn split_file_selector(query: &str) -> (Option<&str>, &str) {
     (None, query)
 }
 
+/// A result-row filter by owning file path prefix (R3, task 03): keep a path
+/// when it lies under at least one `--in` prefix (empty `--in` = keep-all) AND
+/// under none of the `--not-in` prefixes. Distinct from [`Selector`], which
+/// uses `--in` to disambiguate the resolved definition set (task 02); this
+/// narrows the EMITTED rows of `refs` and `map` by owning file path. Both reuse
+/// the same `/`-boundary [`path_under_prefix`] helper, so `go/cmd` keeps
+/// `go/cmd/main.go` but not `go/cmdx/main.go`.
+pub struct PathFilter<'a> {
+    in_prefixes: &'a [String],
+    not_in_prefixes: &'a [String],
+}
+
+impl<'a> PathFilter<'a> {
+    /// Build a filter from the repeatable `--in` and `--not-in` prefixes.
+    pub fn new(in_prefixes: &'a [String], not_in_prefixes: &'a [String]) -> PathFilter<'a> {
+        PathFilter {
+            in_prefixes,
+            not_in_prefixes,
+        }
+    }
+
+    /// True when `path` passes both constraints: under some `--in` prefix (or
+    /// no `--in` given) AND under no `--not-in` prefix. Exclusion wins over
+    /// inclusion when a path matches both.
+    pub fn keep(&self, path: &str) -> bool {
+        let included = self.in_prefixes.is_empty()
+            || self.in_prefixes.iter().any(|p| path_under_prefix(path, p));
+        let excluded = self
+            .not_in_prefixes
+            .iter()
+            .any(|p| path_under_prefix(path, p));
+        included && !excluded
+    }
+}
+
 /// True when `path` equals `prefix` or lies under it on a `/` boundary, so
 /// `go/cmd` matches `go/cmd/main.go` but not `go/cmdx/main.go`.
 fn path_under_prefix(path: &str, prefix: &str) -> bool {
@@ -212,5 +247,42 @@ mod selector_tests {
         // The exact file is under `go/`, not `attic/`, so nothing passes.
         assert!(!s.accepts_file("go/cmd/mlhybrid/main.go"));
         assert!(!s.accepts_file("attic/other.go"));
+    }
+
+    #[test]
+    fn path_filter_empty_in_keeps_every_path() {
+        let f = PathFilter::new(&[], &[]);
+        assert!(f.keep("go/cmd/main.go"));
+        assert!(f.keep("attic/old.go"));
+    }
+
+    #[test]
+    fn path_filter_in_keeps_only_matching_prefixes_on_boundaries() {
+        let ins = ["go/cmd".to_string()];
+        let f = PathFilter::new(&ins, &[]);
+        assert!(f.keep("go/cmd/main.go"));
+        assert!(!f.keep("go/cmdx/main.go"), "no boundary-crossing prefix");
+        assert!(!f.keep("attic/old.go"));
+    }
+
+    #[test]
+    fn path_filter_not_in_excludes_and_wins_over_in() {
+        let ins = ["go".to_string()];
+        let nots = ["go/attic".to_string()];
+        let f = PathFilter::new(&ins, &nots);
+        assert!(f.keep("go/cmd/main.go"));
+        assert!(
+            !f.keep("go/attic/old.go"),
+            "exclusion wins when a path matches both --in and --not-in"
+        );
+    }
+
+    #[test]
+    fn path_filter_repeated_in_is_any_of() {
+        let ins = ["go/a".to_string(), "go/b".to_string()];
+        let f = PathFilter::new(&ins, &[]);
+        assert!(f.keep("go/a/x.go"));
+        assert!(f.keep("go/b/y.go"));
+        assert!(!f.keep("go/c/z.go"));
     }
 }

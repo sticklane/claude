@@ -5,6 +5,7 @@
 
 use crate::cmd::{first_doc_line, format_note_marker, load_index, note_value, tokens_for_bytes};
 use crate::index::{IndexStore, SymbolRow};
+use crate::path::PathFilter;
 use crate::zones::ZoneConfig;
 use serde_json::json;
 use std::cmp::Reverse;
@@ -14,6 +15,12 @@ use std::process::ExitCode;
 pub struct Args {
     pub tokens: usize,
     pub doc: bool,
+    /// `--in <path-prefix>` (repeatable; R3): keep only symbols under one of
+    /// these owning-file prefixes. Empty = keep all.
+    pub in_paths: Vec<String>,
+    /// `--not-in <path-prefix>` (repeatable; R3): drop symbols under one of
+    /// these owning-file prefixes. Exclusion wins over `--in`.
+    pub not_in_paths: Vec<String>,
     pub json: bool,
     pub no_sync: bool,
 }
@@ -85,12 +92,18 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         }
     };
 
+    // R3 (task 03): narrow the ranked set by owning file path before ranking
+    // and truncation, so the token budget and any truncation reflect the
+    // filtered symbols.
+    let path_filter = PathFilter::new(&args.in_paths, &args.not_in_paths);
+
     // Rank by kind tier first — the API surface above down-weighted `variable`
     // symbols (R8 refinement) — then reference-graph importance (R8), then qpath
     // so the order is deterministic (rebuild-stable) rather than
     // lexical/insertion order.
     let mut ranked: Vec<(&SymbolRow, usize)> = all
         .iter()
+        .filter(|s| path_filter.keep(&s.path))
         .map(|s| (s, counts.get(&s.name).copied().unwrap_or(0)))
         .collect();
     ranked.sort_by(|a, b| {

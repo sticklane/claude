@@ -111,6 +111,10 @@ pub enum Command {
         /// Narrow C3 resolution to symbols under this path prefix (repeatable).
         #[arg(long = "in")]
         in_paths: Vec<String>,
+        /// Drop result rows whose owning file is under this path prefix
+        /// (repeatable; R3). Composes with `--in`: exclusion wins.
+        #[arg(long = "not-in")]
+        not_in_paths: Vec<String>,
         /// Consult a language server (task 01 / R2) when one is available for
         /// the matched symbol's language, upgrading references it confirms
         /// from `heuristic` to `precise` and attributing each to the specific
@@ -144,6 +148,14 @@ pub enum Command {
         /// Append each symbol's first docstring line, counted within the budget.
         #[arg(long)]
         doc: bool,
+        /// Keep only symbols whose owning file is under this path prefix
+        /// (repeatable; R3). Empty = keep all.
+        #[arg(long = "in")]
+        in_paths: Vec<String>,
+        /// Drop symbols whose owning file is under this path prefix
+        /// (repeatable; R3). Composes with `--in`: exclusion wins.
+        #[arg(long = "not-in")]
+        not_in_paths: Vec<String>,
         /// Emit JSON instead of plain text.
         #[arg(long)]
         json: bool,
