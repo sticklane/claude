@@ -1,6 +1,6 @@
 # Task 01: Minified detection classifier + index skip storage
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 24 turns
