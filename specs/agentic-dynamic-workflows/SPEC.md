@@ -2,8 +2,6 @@
 
 Breakdown-ready: true
 Rigor: production
-Status: waiting
-Unblock: run: for t in specs/agentic-core-redesign/tasks/04-write-path-lock-sync.md specs/agentic-core-redesign/tasks/07-composer.md; do grep -q '^Status: done' "$t" || echo "not done: $t"; done
 
 ## The design in plain statements
 
@@ -297,5 +295,60 @@ breakdown-requirements contract: the coverage table must map every
 plain statement (1–11), every DW decision cost, and every RW
 requirement to at least one task.
 
-Next stage: /critique specs/agentic-dynamic-workflows/SPEC.md, then
-/breakdown (human-launched, after core tasks 04 and 07 land).
+## Parallelization
+
+Groups follow the decision-coupling test and the `- Group:` grammar
+pinned in `specs/drain-rolling-window/SPEC.md`'s Parallelization
+section (cited, not restated). The spec-level waiting gate was
+replaced at breakdown by task-level `Status: blocked` + `Unblock:
+run:` headers on the three tasks that genuinely need core work
+(02 → core 07; 05 → core 04; 07 → core 05) — nothing auto-flips
+those; a human or later session re-runs each check and flips the
+status. Task 01 (schema + watch) is dispatchable immediately: it
+reads fixture files and depends on nothing. Task 09 is a draft
+awaiting human promotion, deliberately.
+
+- Group: 04, 05, 06
+
+## Breakdown coverage
+
+Required by the base spec's breakdown-requirements contract: every
+plain statement, decision cost, and requirement maps to a task.
+
+| Item                               | Task(s)                              |
+| ---------------------------------- | ------------------------------------ |
+| S1 dispatch primitive              | 02                                   |
+| S2 host-language scripts           | 08 (example proves the model)        |
+| S3 run + prefix replay             | 03                                   |
+| S4 hierarchical ledger             | 04                                   |
+| S5 tier aliases                    | 02                                   |
+| S6 phase/log + watch               | 01, 06                               |
+| S7 run issues + checkout guard     | 05, 03 (guard)                       |
+| S8 queue bridge / loop-as-workflow | 08; 09 (draft, the unification)      |
+| S9 ctx-shaped fan-out              | 08 (example), 02 (map injection)     |
+| S10 saved workflows                | 08                                   |
+| S11 runs/stop                      | 06                                   |
+| DW1 no interpreter                 | 08                                   |
+| DW2 tracker-silent + tested        | 02, 04 (RW-N)                        |
+| DW3 prefix replay                  | 03                                   |
+| DW4 ledger + turns factor          | 04, 07                               |
+| DW5 structural caps                | 04                                   |
+| DW6 no batons                      | 03 (replay is the successor)         |
+| DW7 beads durable half             | 05                                   |
+| DW8 ctx briefs + unmetered         | 02, 04                               |
+| DW9 tier aliases                   | 02                                   |
+| DW10 progress contract             | 01                                   |
+| DW11 caps not opt-ins              | 04 (pool default-allow), 02 (screen) |
+| DW12 native boundary               | 08 (docs + workflow-author rewrite)  |
+| RW-G                               | 08                                   |
+| RW-P, RW-T                         | 02                                   |
+| RW-J                               | 03                                   |
+| RW-B, RW-C, RW-N                   | 04                                   |
+| RW-O                               | 06                                   |
+| RW-F                               | 07                                   |
+| RW-V                               | 01                                   |
+| RW-D                               | 05                                   |
+
+Next stage: /build specs/agentic-dynamic-workflows/tasks/01-progress-schema-watch.md or
+/drain specs/agentic-dynamic-workflows (human-launched; tasks 02, 05,
+07 stay blocked until their core-task gates clear).
