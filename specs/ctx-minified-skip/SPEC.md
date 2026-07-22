@@ -93,3 +93,15 @@ auto-skip". It is NOT a general re-include and cannot override
 - Beautified-bundle detection (normal line lengths, generated
   content) — undetectable cheaply; membership config owns it.
 - Any model/LLM involvement (maintenance never calls a model).
+
+## Parallelization
+
+Tasks 02 and 03 both depend only on task 01 and are Touch-disjoint (02 owns
+tree output + an index read query; 03 owns the `.ctxkeep` loader in
+`src/vcs/mod.rs` plus the exemption gate in `src/minified.rs`), with no
+shared undecided design — the skip-reason enum and index storage are fixed
+by task 01 before either runs. They may run concurrently. Task 04 (goldens)
+depends on 01+02+03; task 05 (docs) is blocked on
+specs/ctx-skill-token-doctrine R7 and lands last.
+
+- Group: 02, 03
