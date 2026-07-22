@@ -1175,6 +1175,152 @@ func TestGoldenAncestorMultiDescendantFixture(t *testing.T) {
 	}
 }
 
+// --- Cost from tokens (Claude table) + user pricing config ---
+
+// TestCostFromTokensComputesClaudeModelCost: a token-only span whose model
+// prefix-matches the built-in Claude pricing table gets a cost_microusd
+// computed from its tokens (no emitted cost attribute present).
+func TestCostFromTokensComputesClaudeModelCost(t *testing.T) {
+	sp := tokenSpan(testSpanID, "", "llm-call",
+		strAttr("gen_ai.response.model", "claude-sonnet-4-5"))
+	_, values, _, _ := flushOne(t, export("svc", sp))
+	// claude-sonnet- rates: input $3/MTok, output $15/MTok. 100 input + 50
+	// output = 100*3 + 50*15 = 1050 micro-USD (USD/MTok == micro-USD/token).
+	if got := values["cost_microusd"]; got != 1050 {
+		t.Errorf("cost_microusd = %d, want 1050 (computed from Claude table)", got)
+	}
+	if values["input_tokens"] != 100 {
+		t.Errorf("input_tokens = %d, want 100 (tokens still emitted)", values["input_tokens"])
+	}
+}
+
+// TestEmittedCostWinsOverComputedFromTokens: when a span carries both tokens
+// (a priceable Claude model) and an emitted cost attribute, the emitted value
+// is kept — computation never overrides it.
+func TestEmittedCostWinsOverComputedFromTokens(t *testing.T) {
+	sp := tokenSpan(testSpanID, "", "llm-call",
+		strAttr("gen_ai.response.model", "claude-sonnet-4-5"))
+	rec := costLogRecord(testTraceID, testSpanID, "claude_code.api_request", testStart,
+		doubleAttr("cost_usd", "0.000009"))
+	acc := NewAccumulator()
+	if err := acc.AddJSON([]byte(export("svc", sp))); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	if err := acc.AddLogsJSON([]byte(logsExport("svc", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 || len(samples) != 1 {
+		t.Fatalf("Flush() = %d samples, %d skipped, want 1, 0", len(samples), skipped)
+	}
+	// Emitted 0.000009 USD = 9 micro-USD; computed-from-tokens would be 1050.
+	if got := samples[0].Values["cost_microusd"]; got != 9 {
+		t.Errorf("cost_microusd = %d, want 9 (emitted wins over computed 1050)", got)
+	}
+}
+
+// TestCostFromTokensGeminiModelStaysTokensOnly: a Gemini-model token-only span
+// gets no cost_microusd — the Gemini table is exact-map on Antigravity display
+// strings that OTel API model IDs never hit (Decision 6), and no user config is
+// supplied.
+func TestCostFromTokensGeminiModelStaysTokensOnly(t *testing.T) {
+	sp := tokenSpan(testSpanID, "", "gemini_cli.generate",
+		strAttr("gen_ai.response.model", "gemini-2.5-pro"))
+	_, values, _, _ := flushOne(t, export("gemini", sp))
+	if _, ok := values["cost_microusd"]; ok {
+		t.Errorf("cost_microusd present = %d, want absent (Gemini stays tokens-only)", values["cost_microusd"])
+	}
+	if values["input_tokens"] != 100 {
+		t.Errorf("input_tokens = %d, want 100 (tokens still emitted)", values["input_tokens"])
+	}
+}
+
+// TestUserPricingConfigAppliesToNonClaudeModel: a --pricing-supplied rate table
+// prices a non-Claude model the built-in Claude table does not match.
+func TestUserPricingConfigAppliesToNonClaudeModel(t *testing.T) {
+	sp := tokenSpan(testSpanID, "", "gemini_cli.generate",
+		strAttr("gen_ai.response.model", "gemini-2.5-pro"))
+	acc := NewAccumulator()
+	acc.SetUserPricing([]UserRate{{Prefix: "gemini-2.5", Input: 1.25, Output: 10}})
+	if err := acc.AddJSON([]byte(export("gemini", sp))); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 || len(samples) != 1 {
+		t.Fatalf("Flush() = %d samples, %d skipped, want 1, 0", len(samples), skipped)
+	}
+	// 100 input * 1.25 + 50 output * 10 = 125 + 500 = 625 micro-USD.
+	if got := samples[0].Values["cost_microusd"]; got != 625 {
+		t.Errorf("cost_microusd = %d, want 625 (user rate table)", got)
+	}
+}
+
+// TestParseUserPricingDecodesModelsArray: the --pricing config decoder reads a
+// {"models":[…]} object into ordered prefix-matched rate entries.
+func TestParseUserPricingDecodesModelsArray(t *testing.T) {
+	cfg := `{"models":[{"prefix":"gemini-2.5","input":1.25,"output":10,"cache_read":0.31,"cache_write":1.625}]}`
+	rates, err := ParseUserPricing([]byte(cfg))
+	if err != nil {
+		t.Fatalf("ParseUserPricing() error = %v", err)
+	}
+	if len(rates) != 1 {
+		t.Fatalf("len(rates) = %d, want 1", len(rates))
+	}
+	r := rates[0]
+	if r.Prefix != "gemini-2.5" || r.Input != 1.25 || r.Output != 10 || r.CacheRead != 0.31 || r.CacheWrite != 1.625 {
+		t.Errorf("parsed rate = %+v, want prefix gemini-2.5 with input 1.25 output 10 cache_read 0.31 cache_write 1.625", r)
+	}
+}
+
+// TestPricingGoldenFixturesComputeCost exercises both compute paths through
+// golden OTLP/JSON fixtures: the Claude-table path and the user-config path.
+func TestPricingGoldenFixturesComputeCost(t *testing.T) {
+	// Claude-table compute path.
+	claudeData, err := os.ReadFile("testdata/pricing_claude_compute.json")
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	acc := NewAccumulator()
+	if err := acc.AddJSON(claudeData); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 || len(samples) != 1 {
+		t.Fatalf("Flush() = %d samples, %d skipped, want 1, 0", len(samples), skipped)
+	}
+	// claude-sonnet- rates on 200 input + 80 output = 200*3 + 80*15 = 1800.
+	if got := samples[0].Values["cost_microusd"]; got != 1800 {
+		t.Errorf("Claude-table cost_microusd = %d, want 1800", got)
+	}
+
+	// User-config compute path.
+	cfgData, err := os.ReadFile("testdata/pricing_user_config.json")
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	rates, err := ParseUserPricing(cfgData)
+	if err != nil {
+		t.Fatalf("ParseUserPricing() error = %v", err)
+	}
+	modelData, err := os.ReadFile("testdata/pricing_user_model.json")
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	acc2 := NewAccumulator()
+	acc2.SetUserPricing(rates)
+	if err := acc2.AddJSON(modelData); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	samples2, skipped2 := acc2.Flush()
+	if skipped2 != 0 || len(samples2) != 1 {
+		t.Fatalf("Flush() = %d samples, %d skipped, want 1, 0", len(samples2), skipped2)
+	}
+	// gemini-2.5 user rates on 100 input + 50 output = 100*1.25 + 50*10 = 625.
+	if got := samples2[0].Values["cost_microusd"]; got != 625 {
+		t.Errorf("user-config cost_microusd = %d, want 625", got)
+	}
+}
+
 // --- Benchmark ---
 
 // benchBatch builds one OTLP/JSON export object with n token-bearing gen_ai

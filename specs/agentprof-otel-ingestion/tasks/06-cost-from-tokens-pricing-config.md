@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: 04
 Priority: P2
 Budget: 18 turns
@@ -53,7 +53,7 @@ under `internal/otel/testdata/` with `pricing`-prefixed names.
 
 Runnable commands only:
 
-- [ ] `cd agentprof && go test ./internal/otel/ -run 'CostFromTokens|Pricing|Emitted' -v` → compute + precedence + Gemini-tokens-only tests pass (L2)
-- [ ] `cd agentprof && go test . -run 'Otel.*Pricing' -v` → `--pricing` flag test passes (L2)
-- [ ] `grep -c 'internal/pricing' agentprof/internal/otel/otel.go` → ≥1 (pricing table wired)
-- [ ] `bash agentprof/scripts/check.sh` → exits 0
+- [x] `cd agentprof && go test ./internal/otel/ -run 'CostFromTokens|Pricing|Emitted' -v` → compute + precedence + Gemini-tokens-only tests pass (L2)
+- [x] `cd agentprof && go test . -run 'Otel.*Pricing' -v` → `--pricing` flag test passes (L2)
+- [x] `grep -c 'internal/pricing' agentprof/internal/otel/otel.go` → ≥1 (pricing table wired)
+- [x] `bash agentprof/scripts/check.sh` → exits 0
