@@ -104,6 +104,7 @@ impl CtxServer {
     fn tree(&self, Parameters(p): Parameters<TreeParams>) -> String {
         cmd::tree::render(&cmd::tree::Args {
             path: p.path.unwrap_or_else(|| ".".to_string()),
+            files: false,
             depth: p.depth,
             limit: p.limit.unwrap_or(200),
             doc: p.doc.unwrap_or(false),

@@ -10,6 +10,7 @@ use std::process::ExitCode;
 /// Parsed `ctx tree` arguments.
 pub struct Args {
     pub path: String,
+    pub files: bool,
     pub depth: Option<usize>,
     pub limit: usize,
     pub doc: bool,
@@ -26,6 +27,24 @@ fn in_scope(path: &str, scope: &str) -> bool {
         return true;
     }
     path == scope || path.starts_with(&format!("{scope}/"))
+}
+
+/// Directory-level depth of an indexed file `path` relative to the query
+/// `scope`, 1-based: a file directly in `scope` is depth 1, one subdirectory
+/// down is depth 2, and so on. Measured from the query path, never the index
+/// root. Assumes `path` is already in scope (see [`in_scope`]).
+fn file_depth(path: &str, scope: &str) -> usize {
+    let scope = scope.strip_prefix("./").unwrap_or(scope);
+    let rel = if scope.is_empty() || scope == "." {
+        path
+    } else if path == scope {
+        // The scope names this exact file: it sits at the query path itself.
+        return 1;
+    } else {
+        // in_scope guarantees `path` starts with `scope/`.
+        &path[scope.len() + 1..]
+    };
+    1 + rel.matches('/').count()
 }
 
 /// Containment depth (0 = top-level) via the C1 parent chain, bounded so a
@@ -63,6 +82,11 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         Ok(v) => v,
         Err(code) => return (String::new(), code),
     };
+
+    if args.files {
+        return render_files(args, &store);
+    }
+
     let all = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
@@ -111,6 +135,39 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     }
     if omitted > 0 {
         out.push_str(&format!("... {omitted} more (raise --limit)\n"));
+    }
+    (out, ExitCode::SUCCESS)
+}
+
+/// `--files` mode: the indexed file paths under `args.path`, one per line (or a
+/// JSON array with `--json`), filtered by the directory-level `--depth` cap. No
+/// symbol lines — this answers "which files are under X" directly, so the
+/// emitted count equals the index's file membership under the path.
+fn render_files(args: &Args, store: &IndexStore) -> (String, ExitCode) {
+    let paths = match store.indexed_paths() {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("ctx tree: {e}");
+            return (String::new(), ExitCode::FAILURE);
+        }
+    };
+    let selected: Vec<&str> = paths
+        .iter()
+        .map(String::as_str)
+        .filter(|p| in_scope(p, &args.path))
+        .filter(|p| {
+            args.depth
+                .is_none_or(|cap| file_depth(p, &args.path) <= cap)
+        })
+        .collect();
+
+    if args.json {
+        return (format!("{}\n", json!(selected)), ExitCode::SUCCESS);
+    }
+    let mut out = String::new();
+    for p in selected {
+        out.push_str(p);
+        out.push('\n');
     }
     (out, ExitCode::SUCCESS)
 }

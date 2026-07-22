@@ -97,6 +97,7 @@ pub fn run() -> ExitCode {
         }
         Some(cli::Command::Tree {
             path,
+            files,
             depth,
             limit,
             doc,
@@ -104,6 +105,7 @@ pub fn run() -> ExitCode {
             no_sync,
         }) => cmd::tree::run(cmd::tree::Args {
             path,
+            files,
             depth,
             limit,
             doc,
