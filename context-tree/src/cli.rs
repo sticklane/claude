@@ -67,6 +67,20 @@ pub enum Command {
         #[arg(long = "no-sync")]
         no_sync: bool,
     },
+    /// Resolved symbol's exact source span from the working tree (R2).
+    Show {
+        /// Symbol name or qualified-path suffix.
+        symbol: String,
+        /// Cap the plain-text output at N lines (default 200).
+        #[arg(long)]
+        head: Option<usize>,
+        /// Emit JSON instead of plain text.
+        #[arg(long)]
+        json: bool,
+        /// Skip the R3 staleness sweep and read the current snapshot.
+        #[arg(long = "no-sync")]
+        no_sync: bool,
+    },
     /// Module-level import edges into or out of a path (R9).
     Deps {
         /// Path (file or directory prefix) whose import edges to show.
