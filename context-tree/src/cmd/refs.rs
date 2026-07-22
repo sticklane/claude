@@ -39,6 +39,10 @@ pub struct Args {
     /// `--in <path-prefix>` filters (repeatable); narrows C3 resolution by file.
     pub in_paths: Vec<String>,
     pub exact: bool,
+    /// `--zone <label>` (R2): keep only results whose file is in that zone.
+    pub zone: Option<String>,
+    /// `--live-only` (R2/R3): exclude every zoned result.
+    pub live_only: bool,
     pub json: bool,
     pub no_sync: bool,
 }
@@ -84,6 +88,20 @@ fn zero_refs_note(query: &str, module_file: Option<&str>) -> String {
     }
 }
 
+/// The R3 zones-only diagnostic tail: `--live-only` filtered away every one of
+/// a resolved symbol's `count` references because they ALL lived in the listed
+/// zones. This is the "only kept alive by dead code" primitive — it states the
+/// filtered fact rather than emitting a bare empty result, and is emphatically
+/// NOT the `no_match` boundary (resolution succeeded). Built once, shared
+/// between the stderr tail and the `--json` `note` field, mirroring
+/// `zero_refs_note`.
+fn zones_only_note(count: usize, labels: &[&str]) -> String {
+    format!(
+        "{count} references exist only in zones: {}",
+        labels.join(", ")
+    )
+}
+
 /// ` [zone:<label>]` when `path` falls in a declared zone, else empty (R1). The
 /// leading space keeps it a suffix on the result line; zero `.ctxzones` →
 /// `zone_of` is always `None` → empty string → output unchanged from today.
@@ -118,6 +136,11 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     };
     // R1: zone tagging — loaded once per render; empty config tags nothing.
     let zones = ZoneConfig::load(&root);
+    // R2: an undeclared `--zone <label>` is a usage error (exit 2) before any
+    // resolution work; the message lists `.ctxzones`'s declared labels.
+    if let Err(code) = crate::cmd::validate_zone(&zones, args.zone.as_deref(), "refs") {
+        return (String::new(), code);
+    }
     // Optional LSP enrichment (R11): absent cache => every result stays heuristic.
     let mut cache = EnrichmentCache::load(&root);
     // `--exact` (task 01 / R2): no current-generation cache yet => try to
@@ -226,19 +249,54 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         .filter(|r| r.name == target_name && !is_shadowed(r, &scopes))
         .collect();
 
+    // R2/R3: apply the `--zone`/`--live-only` display filter to the already-
+    // resolved result vectors (composing order-independently with the path
+    // filters — spec R2). Capture the pre-filter reference count and the zones
+    // of the references filtered away so the R3 zones-only tail can name them.
+    let orig_ref_count = refs.len();
+    let zone = args.zone.as_deref();
+    let removed_ref_zones: Vec<&str> = refs
+        .iter()
+        .filter(|r| !crate::cmd::zone_filter_keeps(&zones, &r.path, zone, args.live_only))
+        .filter_map(|r| zones.zone_of(&r.path))
+        .collect();
+    let refs: Vec<&RefRow> = refs
+        .into_iter()
+        .filter(|r| crate::cmd::zone_filter_keeps(&zones, &r.path, zone, args.live_only))
+        .collect();
+    let defs: Vec<&SymbolRow> = defs
+        .into_iter()
+        .filter(|d| crate::cmd::zone_filter_keeps(&zones, &d.path, zone, args.live_only))
+        .collect();
+
     let def_shown = defs.len().min(args.limit);
     let ref_shown = refs.len().min(args.limit);
     let def_omitted = defs.len() - def_shown;
     let ref_omitted = refs.len() - ref_shown;
 
-    // R1a: a resolved symbol with zero references gets a diagnostic tail rather
-    // than bare emptiness. Built once, shared between stderr and the JSON note.
+    // Diagnostic tail (built once, shared between stderr and the JSON note):
+    //   * R3 — `--live-only` filtered away a NON-empty ref set whose every
+    //     reference was in-zone: state the zones-only fact (never the no_match
+    //     boundary — resolution succeeded), naming the zones.
+    //   * R1a — a symbol that genuinely resolved to zero references keeps its
+    //     "0 references to <query>" tail.
+    //   * A `--zone <label>` that merely filtered to empty emits no misleading
+    //     "0 references" tail (there ARE references, just none in that zone).
     let note = if refs.is_empty() {
-        let module_file = defs
-            .iter()
-            .find(|d| d.kind == "module")
-            .map(|d| d.path.as_str());
-        Some(zero_refs_note(&args.symbol, module_file))
+        if args.live_only && orig_ref_count > 0 {
+            let mut labels = removed_ref_zones.clone();
+            labels.sort_unstable();
+            labels.dedup();
+            Some(zones_only_note(orig_ref_count, &labels))
+        } else if orig_ref_count == 0 {
+            let module_file = defs
+                .iter()
+                .find(|d| d.kind == "module")
+                .map(|d| d.path.as_str());
+            Some(zero_refs_note(&args.symbol, module_file))
+        } else {
+            None
+        }
     } else {
         None
     };

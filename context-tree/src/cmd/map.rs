@@ -14,6 +14,10 @@ use std::process::ExitCode;
 pub struct Args {
     pub tokens: usize,
     pub doc: bool,
+    /// `--zone <label>` (R2): keep only symbols whose file is in that zone.
+    pub zone: Option<String>,
+    /// `--live-only` (R2): exclude every zoned symbol.
+    pub live_only: bool,
     pub json: bool,
     pub no_sync: bool,
 }
@@ -70,6 +74,11 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     };
     // R1: zone tagging — loaded once per render; empty config tags nothing.
     let zones = ZoneConfig::load(&root);
+    // R2: an undeclared `--zone <label>` is a usage error (exit 2); the message
+    // lists `.ctxzones`'s declared labels.
+    if let Err(code) = crate::cmd::validate_zone(&zones, args.zone.as_deref(), "map") {
+        return (String::new(), code);
+    }
     let all = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
@@ -89,8 +98,12 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     // symbols (R8 refinement) — then reference-graph importance (R8), then qpath
     // so the order is deterministic (rebuild-stable) rather than
     // lexical/insertion order.
+    // R2: apply the `--zone`/`--live-only` display filter before ranking, so a
+    // filtered-out symbol never consumes the token budget of a kept one.
+    let zone = args.zone.as_deref();
     let mut ranked: Vec<(&SymbolRow, usize)> = all
         .iter()
+        .filter(|s| crate::cmd::zone_filter_keeps(&zones, &s.path, zone, args.live_only))
         .map(|s| (s, counts.get(&s.name).copied().unwrap_or(0)))
         .collect();
     ranked.sort_by(|a, b| {
