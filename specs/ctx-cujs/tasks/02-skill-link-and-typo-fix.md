@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: deferred
 Depends on: 01
 Priority: P2
 Budget: 10 turns
@@ -87,3 +87,11 @@ this task will likely park DEFERRED for a while.
     main`) — a real bump, not unrelated drift.
 - [ ] `git diff --stat` for this task's commit touches only the three
       files listed in Touch.
+
+## Deferred questions
+
+- [2026-07-22 /drain] specs/ctx-skill-token-doctrine's SKILL.md editor
+  registry slots 1-6 have not all landed yet (none of the six sibling
+  specs' SKILL.md edits are present on `.claude/skills/ctx/SKILL.md` at
+  current main — all 6 registry markers absent). Blocking: this task's
+  Step 2 gate; it cannot proceed to its own edits until slots 1-6 land.
