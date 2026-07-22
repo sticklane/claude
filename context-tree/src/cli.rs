@@ -102,6 +102,13 @@ pub enum Command {
         /// Cap on results shown per direction before a truncation line.
         #[arg(long, default_value_t = 50)]
         limit: usize,
+        /// Consult a language server (task 01 / R2) when one is available for
+        /// the matched symbol's language, upgrading references it confirms
+        /// from `heuristic` to `precise` and attributing each to the specific
+        /// definition it resolved against. With no server binary available,
+        /// behaves byte-identically to plain `ctx refs`.
+        #[arg(long)]
+        exact: bool,
         /// Emit JSON instead of plain text.
         #[arg(long)]
         json: bool,

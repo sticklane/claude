@@ -150,11 +150,13 @@ pub fn run() -> ExitCode {
         Some(cli::Command::Refs {
             symbol,
             limit,
+            exact,
             json,
             no_sync,
         }) => cmd::refs::run(cmd::refs::Args {
             symbol,
             limit,
+            exact,
             json,
             no_sync,
         }),
