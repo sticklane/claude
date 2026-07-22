@@ -1,6 +1,6 @@
 # Task 02: Audit skill-embedded shell text commands
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 12 turns
@@ -34,6 +34,6 @@ command usages. Must NOT touch the rule file (Task 01).
 
 ## Acceptance
 
-- [ ] `test -f specs/shell-text-tool-doctrine/evidence/r2-sweep.md` → exit 0
-- [ ] `grep -Ec 'ok|bounded-fix|write-violation' specs/shell-text-tool-doctrine/evidence/r2-sweep.md` → ≥11 (one row per swept file)
-- [ ] `grep -rnE 'sed -i|cat >' .claude/skills/ --include=SKILL.md --include=reference.md | grep -v 'evals/reference.md' | grep -v 'gate/reference.md'` → no unannotated write-shaped usage remains
+- [x] `test -f specs/shell-text-tool-doctrine/evidence/r2-sweep.md` → exit 0
+- [x] `grep -Ec 'ok|bounded-fix|write-violation' specs/shell-text-tool-doctrine/evidence/r2-sweep.md` → ≥11 (one row per swept file) — got 51
+- [x] `grep -rnE 'sed -i|cat >' .claude/skills/ --include=SKILL.md --include=reference.md | grep -v 'evals/reference.md' | grep -v 'gate/reference.md'` → no unannotated write-shaped usage remains
