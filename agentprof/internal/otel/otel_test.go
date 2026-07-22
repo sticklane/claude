@@ -836,6 +836,134 @@ func TestDetectDialectFallsBackToGenericForUnknownPrefix(t *testing.T) {
 	}
 }
 
+// --- Additional dialects (Task 04): codex / gemini_cli / qwen-code ---
+
+func TestDetectDialectMatchesCodexSpanPrefix(t *testing.T) {
+	if d := detectDialect("codex.session_loop"); d != "codex" {
+		t.Errorf("detectDialect() = %q, want %q", d, "codex")
+	}
+}
+
+func TestDetectDialectMatchesGeminiSpanPrefix(t *testing.T) {
+	if d := detectDialect("gemini_cli.generate_content"); d != "gemini_cli" {
+		t.Errorf("detectDialect() = %q, want %q", d, "gemini_cli")
+	}
+}
+
+func TestDetectDialectMatchesQwenSpanPrefix(t *testing.T) {
+	if d := detectDialect("qwen-code.generate_content"); d != "qwen-code" {
+		t.Errorf("detectDialect() = %q, want %q", d, "qwen-code")
+	}
+}
+
+// Codex maps its own session identifier — conversation.id — into
+// labels["session"], while its gen_ai.usage.* tokens resolve via the shared
+// base alias set.
+func TestCodexDialectMapsConversationIDToSession(t *testing.T) {
+	sp := tokenSpan(testSpanID, "", "codex.session_loop", strAttr("conversation.id", "conv-abc"))
+	_, values, labels, _ := flushOne(t, export("codex", sp))
+	if labels["session"] != "conv-abc" {
+		t.Errorf("labels[session] = %q, want %q", labels["session"], "conv-abc")
+	}
+	if values["input_tokens"] != 100 || values["output_tokens"] != 50 {
+		t.Errorf("tokens = %d/%d, want 100/50", values["input_tokens"], values["output_tokens"])
+	}
+}
+
+func TestGeminiDialectMapsSessionIDToSession(t *testing.T) {
+	sp := tokenSpan(testSpanID, "", "gemini_cli.generate_content", strAttr("session.id", "gem-123"))
+	_, values, labels, _ := flushOne(t, export("gemini-cli", sp))
+	if labels["session"] != "gem-123" {
+		t.Errorf("labels[session] = %q, want %q", labels["session"], "gem-123")
+	}
+	if values["input_tokens"] != 100 {
+		t.Errorf("input_tokens = %d, want 100", values["input_tokens"])
+	}
+}
+
+func TestQwenDialectMapsSessionIDToSession(t *testing.T) {
+	sp := tokenSpan(testSpanID, "", "qwen-code.generate_content", strAttr("session.id", "qwen-9"))
+	_, _, labels, _ := flushOne(t, export("qwen-code", sp))
+	if labels["session"] != "qwen-9" {
+		t.Errorf("labels[session] = %q, want %q", labels["session"], "qwen-9")
+	}
+}
+
+// An unrecognized gen_ai.* service carries no dialect prefix: the base alias
+// set still resolves gen_ai.usage.* tokens, and the generic session key
+// populates labels["session"].
+func TestGenericGenAiDialectFallsBackToBaseAliasSet(t *testing.T) {
+	sp := tokenSpan(testSpanID, "", "gen_ai.chat", strAttr("gen_ai.conversation.id", "gen-77"))
+	_, values, labels, _ := flushOne(t, export("some-service", sp))
+	if values["input_tokens"] != 100 {
+		t.Errorf("input_tokens = %d, want 100 (base alias set)", values["input_tokens"])
+	}
+	if labels["session"] != "gen-77" {
+		t.Errorf("labels[session] = %q, want %q", labels["session"], "gen-77")
+	}
+}
+
+// A span with no session attribute omits the session label entirely.
+func TestDialectSessionLabelOmittedWhenSessionKeyAbsent(t *testing.T) {
+	sp := tokenSpan(testSpanID, "", "codex.session_loop")
+	_, _, labels, _ := flushOne(t, export("codex", sp))
+	if _, ok := labels["session"]; ok {
+		t.Errorf("labels[session] present = %q, want absent", labels["session"])
+	}
+}
+
+// flushDialectFixture reads a golden OTLP/JSON trace fixture, flushes it, and
+// returns the single emitted sample's values and labels.
+func flushDialectFixture(t *testing.T, path string) (map[string]int64, map[string]string) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	acc := NewAccumulator()
+	if err := acc.AddJSON(data); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0", skipped)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("len(samples) = %d, want 1", len(samples))
+	}
+	return samples[0].Values, samples[0].Labels
+}
+
+func TestCodexGoldenFixtureMapsSessionAndTokens(t *testing.T) {
+	values, labels := flushDialectFixture(t, "testdata/codex_session.json")
+	if labels["session"] != "codex-conv-01" {
+		t.Errorf("labels[session] = %q, want codex-conv-01", labels["session"])
+	}
+	if values["input_tokens"] != 300 || values["output_tokens"] != 120 {
+		t.Errorf("tokens = %d/%d, want 300/120", values["input_tokens"], values["output_tokens"])
+	}
+}
+
+func TestGeminiGoldenFixtureMapsSessionAndTokens(t *testing.T) {
+	values, labels := flushDialectFixture(t, "testdata/gemini_session.json")
+	if labels["session"] != "gemini-sess-01" {
+		t.Errorf("labels[session] = %q, want gemini-sess-01", labels["session"])
+	}
+	if values["input_tokens"] != 250 || values["output_tokens"] != 90 {
+		t.Errorf("tokens = %d/%d, want 250/90", values["input_tokens"], values["output_tokens"])
+	}
+}
+
+func TestQwenGoldenFixtureMapsSessionAndTokens(t *testing.T) {
+	values, labels := flushDialectFixture(t, "testdata/qwen_session.json")
+	if labels["session"] != "qwen-sess-01" {
+		t.Errorf("labels[session] = %q, want qwen-sess-01", labels["session"])
+	}
+	if values["input_tokens"] != 150 || values["output_tokens"] != 60 {
+		t.Errorf("tokens = %d/%d, want 150/60", values["input_tokens"], values["output_tokens"])
+	}
+}
+
 // --- Frames-only-ancestor cost fallback (Task 03) ---
 
 // spanAt builds one span JSON object with explicit start/end nanos and the
