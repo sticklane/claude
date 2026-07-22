@@ -1,6 +1,6 @@
 # Task 05: Fixture T2 — `notes-api` (Python stdlib HTTP additive feature) + reference
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 20 turns
@@ -41,7 +41,7 @@ edit the runner, other fixtures, or `calibrate.sh`.
 
 ## Acceptance
 
-- [ ] `cd evals/headtohead/tasks/notes-api/<snapshot> && python3 -m pytest` (or the fixture's test command) → suite green at the snapshot
-- [ ] running the hidden `assert.sh` against the UNTOUCHED snapshot → exits non-zero (RED)
-- [ ] running the hidden `assert.sh` against the committed reference solution → exits 0 (GREEN)
-- [ ] the T2 brief is ≤6 sentences (sentence-count check)
+- [x] `cd evals/headtohead/tasks/notes-api/<snapshot> && python3 -m pytest` (or the fixture's test command) → suite green at the snapshot — verified: `repo/` suite 9 passed.
+- [x] running the hidden `assert.sh` against the UNTOUCHED snapshot → exits non-zero (RED) — verified: `assert.sh repo` exits 1 (suite green, black-box paging/tag/400 checks fail).
+- [x] running the hidden `assert.sh` against the committed reference solution → exits 0 (GREEN) — verified: `assert.sh reference` prints `BLACKBOX OK` / `PASS`, exit 0 (reference suite 17 passed).
+- [x] the T2 brief is ≤6 sentences (sentence-count check) — verified: 5 sentences.
