@@ -1,6 +1,6 @@
 # Task 01: Runner core — results schema, dry-run planner, config-dump arm isolation
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 24 turns
