@@ -1,6 +1,6 @@
 # Task 07: Plugin version bump + mirror closure sweep
 
-Status: in-progress
+Status: done
 Depends on: 01, 03, 04, 05, 06
 Priority: P3
 Budget: 6 turns
@@ -36,7 +36,7 @@ having landed.
 
 ## Acceptance
 
-- [ ] `test "$(git show HEAD:.claude-plugin/plugin.json | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p')" != "$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' .claude-plugin/plugin.json)"` → exit 0 (version changed from this task's base-commit value, not a hard-coded literal)
-- [ ] `grep -qi 'ladder\|survey\|ABSENCE' antigravity/.agents/skills/ctx/SKILL.md` → exit 0 (ctx mirror carries R2/R4/R7 content)
-- [ ] `grep -qi 'ctx' antigravity/.agents/skills/scout/SKILL.md` → exit 0 (scout mirror carries prefer-ctx guidance)
-- [ ] `grep -qi 'structure question\|ctx\|index-first' antigravity/.agents/skills/onboard/SKILL.md` → exit 0 (onboard mirror carries R6 content)
+- [x] `test "$(git show HEAD:.claude-plugin/plugin.json | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p')" != "$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' .claude-plugin/plugin.json)"` → exit 0 (version changed from this task's base-commit value, not a hard-coded literal)
+- [x] `grep -qi 'ladder\|survey\|ABSENCE' antigravity/.agents/skills/ctx/SKILL.md` → exit 0 (ctx mirror carries R2/R4/R7 content)
+- [x] `grep -qi 'ctx' antigravity/.agents/skills/scout/SKILL.md` → exit 0 (scout mirror carries prefer-ctx guidance)
+- [x] `grep -qi 'structure question\|ctx\|index-first' antigravity/.agents/skills/onboard/SKILL.md` → exit 0 (onboard mirror carries R6 content)
