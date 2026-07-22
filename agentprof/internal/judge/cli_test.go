@@ -80,3 +80,39 @@ func TestFakeJudgeRecordsPromptAndTier(t *testing.T) {
 		t.Errorf("recorded call = %+v, want {Prompt:is it good? Tier:opus}", fake.Calls[0])
 	}
 }
+
+func TestFakeReturnsRepliesInSequence(t *testing.T) {
+	f := &Fake{Replies: []string{"success", "failure", "unknown"}}
+
+	var got []string
+	for i := 0; i < 3; i++ {
+		reply, err := f.Judge("grade dimension", "haiku")
+		if err != nil {
+			t.Fatalf("Judge call %d: %v", i, err)
+		}
+		got = append(got, reply)
+	}
+
+	want := []string{"success", "failure", "unknown"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("call %d reply = %q, want %q", i, got[i], want[i])
+		}
+	}
+	if len(f.Calls) != 3 {
+		t.Errorf("recorded %d calls, want 3", len(f.Calls))
+	}
+}
+
+func TestFakeRepliesFallBackToReplyWhenExhausted(t *testing.T) {
+	f := &Fake{Replies: []string{"first"}, Reply: "default"}
+
+	first, _ := f.Judge("p", "haiku")
+	if first != "first" {
+		t.Errorf("call 0 reply = %q, want %q (from Replies)", first, "first")
+	}
+	second, _ := f.Judge("p", "haiku")
+	if second != "default" {
+		t.Errorf("call 1 reply = %q, want %q (Reply fallback after Replies exhausted)", second, "default")
+	}
+}
