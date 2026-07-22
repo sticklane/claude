@@ -1,6 +1,6 @@
 # Task 04: Fixture T1 — `ledger` (Python coupled bug-fix) + reference solution
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P2
 Budget: 20 turns
@@ -42,7 +42,7 @@ or `calibrate.sh` (task 07 wires calibration across all three).
 
 ## Acceptance
 
-- [ ] `cd evals/headtohead/tasks/ledger/<snapshot> && python3 -m pytest` (or the fixture's test command) → suite green at the snapshot
-- [ ] running the hidden `assert.sh` against the UNTOUCHED snapshot → exits non-zero (RED)
-- [ ] running the hidden `assert.sh` against the committed reference solution → exits 0 (GREEN)
-- [ ] the T1 brief is ≤6 sentences (sentence-count check)
+- [x] `cd evals/headtohead/tasks/ledger/<snapshot> && python3 -m pytest` (or the fixture's test command) → suite green at the snapshot
+- [x] running the hidden `assert.sh` against the UNTOUCHED snapshot → exits non-zero (RED)
+- [x] running the hidden `assert.sh` against the committed reference solution → exits 0 (GREEN)
+- [x] the T1 brief is ≤6 sentences (sentence-count check)

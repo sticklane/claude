@@ -1,0 +1,1 @@
+The monthly report in this expense tracker drifts by a few cents on some ledgers. Find the cause and fix it so every report total is exact to the cent for any input ledger. All existing tests must stay green. Add regression coverage for the failure you found. Do not change the CLI's output format.
