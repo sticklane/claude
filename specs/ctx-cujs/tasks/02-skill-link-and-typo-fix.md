@@ -8,7 +8,7 @@
 Status: blocked
 Unblock: run: bash -c 'for m in "Reading ladder" "ABSENCE FALLACY" "ast-grep --pattern" "ctx show <symbol>" ".ctxkeep" "zone dead trees" "now emits the guard itself"; do grep -q "$m" .claude/skills/ctx/SKILL.md || echo "still missing: $m"; done' — empty output means all 6 sibling specs (ctx-skill-token-doctrine, ctx-static-analysis-augmentation, ctx-query-ergonomics, ctx-minified-skip, ctx-dead-code-zones, ctx-absence-check) have landed their SKILL.md edits; flip back to pending and re-dispatch.
 Depends on: 01
-Priority: P2
+Priority: P3
 Budget: 10 turns
 Spec: ../SPEC.md (requirements R3)
 Touch: .claude/skills/ctx/SKILL.md, antigravity/.agents/skills/ctx/SKILL.md, .claude-plugin/plugin.json

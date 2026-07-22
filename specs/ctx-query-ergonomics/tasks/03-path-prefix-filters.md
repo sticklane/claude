@@ -4,7 +4,7 @@
 
 Status: pending
 Depends on: 02
-Priority: P2
+Priority: P3
 Budget: 20 turns
 Spec: ../SPEC.md (requirement R3)
 Touch: context-tree/src/cmd/refs.rs, context-tree/src/cmd/map.rs, context-tree/src/path.rs, context-tree/src/cli.rs, context-tree/src/lib.rs, context-tree/tests/query.rs

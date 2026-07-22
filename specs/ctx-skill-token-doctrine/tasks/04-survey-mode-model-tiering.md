@@ -2,7 +2,7 @@
 
 Status: pending
 Depends on: 03, 02
-Priority: P1
+Priority: P3
 Budget: 10 turns
 Spec: ../SPEC.md (requirement R4)
 Touch: .claude/skills/ctx/SKILL.md, antigravity/.agents/skills/ctx/SKILL.md

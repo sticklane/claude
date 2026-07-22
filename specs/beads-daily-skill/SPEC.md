@@ -1,60 +1,130 @@
-# A daily-driver skill: beads + native orchestration with tier discipline
+# /work — the skill that runs every session off the bd queue
 
 Breakdown-ready: true
 Rigor: prototype
 
-## Problem
+Slug note: the directory keeps its original name (beads-daily-skill)
+because task gates reference it; the skill itself is named `/work`.
 
-The 2026-07-22 worth-it review (research + this session's measurements)
-found the minimal stack — bd for state, native ultracode for fan-out,
-per-stage model routing for cost — covers most ATTENDED daily work at a
-fraction of the custom machinery's cost, but the toolkit ships no skill
-teaching it. Meanwhile the community-reported failure of exactly this
-stack is model non-compliance ("agents forget beads by hour two"), the
-same 0%-compliance disease this repo measured with ctx.
+## What it is, plainly
 
-## Solution
+`/work` is one skill that answers the three questions every session
+has: what should I do, how do I track what I am doing, and how do I
+spread work across agents. Its answers: the bd queue, the bd queue,
+and a native workflow the skill writes for you.
 
-One skill, `/queue` (working name), that makes the minimal stack the
-attended default: it teaches (1) session start = `bd prime` + `bd
-ready`; (2) work lands in bd — claim before starting, close on done,
-file discovered work with `discovered-from`; (3) fan-out via native
-ultracode WITH the cost discipline inline in every script it authors —
-per-stage `model:` routing (scout tier for mechanical stages), capped
-schema'd returns, script-variable context isolation; (4) results that
-matter are filed to bd before the run ends (ultracode results
-evaporate). Compliance is not left to prose alone: the skill's
-description triggers on queue/task/what's-next phrasing, and the
-session-start injection comes from `bd prime` (bd's own mechanism),
-not a new hook. Two mechanical companions ship with it, per the
-2026-07-22 pivot: (a) a **compliance Stop hook** — the session cannot
-end "done" while bd issues it claimed sit unclosed, converting the
-community-reported "forgets beads by hour two" failure into a
-mechanical refusal; (b) a **pre-flight budget check** — a small
-script the skill runs before authoring a fan-out, estimating agent
-count x per-agent floor against a configured threshold and requiring
-an explicit override above it (advisory-plus-thin-guard, the ratified
-cost posture). The injection screen (screen-stub.sh) applies to any
-tracker-sourced text entering an authored script's prompts.
+A session with it looks like this. You open a repo and say "what's
+next." The skill runs `bd ready` and shows the unblocked tasks. You
+pick one, or it takes the top one. It claims the issue in bd, does
+the work, and closes the issue when done. If it finds new work along
+the way, it files a bd issue linked to the task that surfaced it.
+When it needs to understand unfamiliar code, it sends cheap scout
+agents (Haiku tier, capped returns) rather than reading files into
+the main context. If the work is genuinely parallel — review five
+modules, fix twelve call sites — it writes a short native workflow
+script, scouts on cheap models, judgment on the session model, runs
+it, and files the surviving results as bd issues before they
+evaporate. When you come back tomorrow and say "what's next," the
+queue already knows where everything stands. There are no handoff
+files.
+
+Two mechanisms back it, so none of this depends on the model
+remembering to cooperate:
+
+- **The compliance Stop hook.** A session cannot end "done" while bd
+  issues it claimed are still open. Forgetting the tracker becomes a
+  refusal, not a quiet drift.
+- **The pre-flight fan-out guard.** Before the skill runs a workflow
+  it wrote, a small script estimates agent count times the measured
+  per-agent floor; above a configured threshold it requires an
+  explicit override.
+
+The injection screen (screen-stub.sh) applies to any tracker-sourced
+text the skill puts into a workflow prompt.
+
+Code exploration note (maintainer direction, 2026-07-22): ctx is
+deprioritized and is NOT part of this skill or the standard install.
+The exploration default is cheap scout agents. ctx remains a
+standalone product; integrating it is revisited when it earns its
+place in this flow.
+
+## Installation in other repos
+
+Once per machine:
+
+1. The plugin: `agentic@agentic-toolkit` (skills, agents, rules —
+   including `/work`, `/onboard`, `/gate`, and the judgment skills).
+2. `bd`, pinned 1.1.0 (`brew install beads`, per the recorded core
+   task 02 decision).
+
+Per repo, owned by an extended `/onboard` (this spec adds the bd
+steps to the existing onboard flow):
+
+1. `bd init`, curated: keep the AGENTS.md snippet it writes, gitignore
+   `.beads/interactions.jsonl`, commit the `issues.jsonl` export.
+2. `/gate` installs the Stop hook with the bd-compliance check
+   included, plus format-on-edit if wanted.
+3. Settings allowlist: `Bash(bd *)` — the grant class whose absence
+   measurably killed tool adoption before.
+4. Seed the queue: file the repo's first epics and issues from
+   whatever plan exists, so `bd ready` has answers on day one.
+
+Verification, per repo, before calling the install done: `bd ready`
+returns; "what's next" triggers `/work`; the Stop hook blocks a
+fixture claimed-open "done".
+
+## CUJs — tested as part of the work, not assumed
+
+Each journey is run live and recorded; the mechanical ones also get
+eval scenarios. Live runs happen on TWO repos: this one and one real
+consuming repo (e.g. ynab-mcp-server), because an install that only
+works in its home repo is not an install.
+
+- **CUJ-1 Fresh install.** Empty-queue repo → the per-repo steps →
+  `bd ready` works and `/work` triggers on "what's next."
+- **CUJ-2 Track and resume.** Start a task via `/work` (issue
+  claimed); end the session with work unfinished — the hook allows
+  exit only after the issue is closed, deferred with a note, or
+  unclaimed; new session, "what's next" resumes from the queue with
+  no re-explanation.
+- **CUJ-3 Fan-out with scouts.** A genuinely parallel request → the
+  skill writes a native workflow whose mechanical/scouting stages
+  carry a cheap-tier `model:` option → results the run keeps are
+  filed as bd issues before the session ends.
+- **CUJ-4 Discovered work.** Mid-task, a worker surfaces a bug → it
+  is filed as a bd issue with a discovered-from link to the task
+  that surfaced it.
+- **CUJ-5 Second repo.** Repeat CUJ-1 and CUJ-2 on the consuming
+  repo, following only the written install steps — a test of the
+  plan, not of the author.
+- **CUJ-6 Portability read.** From a bare shell with no plugin, read
+  the queue (`bd list --json` or the committed JSONL) and answer
+  "what is in progress" — proving the data layer stands alone.
 
 ## Acceptance criteria
 
-- [ ] the skill file exists with trigger phrases covering "what's
-      next", "work the queue", "track this", and fan-out asks; passes
-      `bash evals/lint-ultra-gate.sh` if it mentions ultracode
+- [ ] the skill file exists as `/work` with trigger phrases covering
+      "what's next", "work the queue", "track this", and fan-out
+      asks; passes `bash evals/lint-ultra-gate.sh` if it mentions
+      ultracode
 - [ ] a fresh-session eval scenario (evals/, stub-CLI tier) shows the
-      skill: claiming before work, closing on done, and authoring a
+      skill claiming before work, closing on done, and authoring a
       fan-out script whose mechanical stages carry a cheap-tier
       `model:` option
-- [ ] a hook test: a fixture session state with a claimed-open bd
-      issue → the Stop hook blocks completion with the issue named;
+- [ ] a hook test: fixture session state with a claimed-open bd
+      issue → the Stop hook blocks completion naming the issue;
       close it → the hook passes
 - [ ] the pre-flight check, fed a fixture plan of 30 agents against a
       20-agent threshold, refuses without the override flag and
       passes with it
-- [ ] AGENTS.md names the skill as the attended daily default; the
+- [ ] `/onboard`'s flow includes the per-repo bd/gate/allowlist
+      steps, and its doc names the once-per-machine prerequisites
+- [ ] CUJ evidence: all six journeys run live, each with a short
+      evidence note (commands, outputs, bd issue IDs) under this
+      spec's `evidence/`; CUJ-1 and CUJ-2 on both repos, per CUJ-5
+- [ ] AGENTS.md names `/work` as the attended daily default; the
       unattended queue mode is the same skill run headless
 
 Next stage: /breakdown specs/beads-daily-skill/SPEC.md
-(human-launched) — or build directly; it is one skill file plus one
-eval scenario.
+(human-launched) — likely 3 tasks: the skill + hook + guard; the
+onboard extension; the CUJ live-run evidence pass.

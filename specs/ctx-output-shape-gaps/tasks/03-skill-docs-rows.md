@@ -8,7 +8,7 @@
 Status: blocked
 Unblock: run: grep -q 'ctx-output-shape-gaps' specs/ctx-skill-token-doctrine/SPEC.md || echo "BLOCKED: registry slot absent — an attended/breakdown session must land the atomic registry commit (SPEC.md R3 (a)+(b)+(c)) once the specs/ctx-cujs/DRAIN-OWNER.md lease clears"
 Depends on: 01, 02
-Priority: P2
+Priority: P3
 Budget: 6 turns
 Spec: ../SPEC.md (requirement R3)
 Touch: .claude/skills/ctx/SKILL.md, antigravity/.agents/skills/ctx/SKILL.md, .claude-plugin/plugin.json

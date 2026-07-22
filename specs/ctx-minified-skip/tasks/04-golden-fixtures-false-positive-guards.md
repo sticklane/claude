@@ -2,7 +2,7 @@
 
 Status: pending
 Depends on: 01, 02, 03
-Priority: P1
+Priority: P3
 Budget: 16 turns
 Spec: ../SPEC.md (requirements R2, R3)
 Touch: context-tree/tests/minified_golden.rs, context-tree/tests/fixtures
