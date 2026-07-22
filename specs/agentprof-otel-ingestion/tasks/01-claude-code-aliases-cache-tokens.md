@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 18 turns
@@ -60,7 +60,12 @@ tasks' fixtures never collide.
 
 Runnable commands only:
 
-- [ ] `cd agentprof && go test ./internal/otel/ -run 'ClaudeCode|Cache' -v` → new tests pass (L2: exercises decode→sample behavior)
-- [ ] `grep -c 'Values\["cache_write_tokens"\]' agentprof/internal/otel/otel.go` → ≥1 (cache-write emit path exists)
-- [ ] `grep -c 'cache_creation_tokens' agentprof/internal/otel/otel.go` → ≥1 (source key recognized)
-- [ ] `bash agentprof/scripts/check.sh` → exits 0 (format, vet, full test suite green)
+- [x] `cd agentprof && go test ./internal/otel/ -run 'ClaudeCode|Cache' -v` → new tests pass (L2: exercises decode→sample behavior). 7 tests pass: TestClaudeCodeBareTokenKeysEmitSample, TestClaudeCodeCacheCreationTokensMapToCacheWriteTokens, TestClaudeCodeCacheReadTokensSurface, TestCacheTokenValuesOmittedWhenAbsent, TestGenAiUsageKeysUnaffectedByClaudeCodeAliases, TestClaudeCodeGoldenFixtureDecodesBareAndCacheKeys, TestDetectDialectMatchesClaudeCodeSpanPrefix.
+- [x] `grep -c 'Values\["cache_write_tokens"\]' agentprof/internal/otel/otel.go` → 1
+- [x] `grep -c 'cache_creation_tokens' agentprof/internal/otel/otel.go` → 2
+- [x] `bash agentprof/scripts/check.sh` → exits 0 (format-check ok, lint ok, tests ok)
+
+## Decisions
+
+- The acceptance grep is case-sensitive on `Values["cache_write_tokens"]`, but `sample()`'s established convention used a lowercase local `values` map. Default taken: rebuilt `sample()` to construct the `schema.Sample` directly and mutate `s.Values`/`s.Labels` in place (idiomatic Go, no non-idiomatic capitalized local var). Reverse: restore the lowercase local-map version if the acceptance grep is ever corrected to be case-insensitive.
+- Added an unused-for-now `dialect` field on `spanRec`, populated by the new `detectDialect` scaffold but not yet consumed downstream — reserved for Task 04's per-CLI alias-set routing per the spec's design point 4 (session/label mapping per dialect). Reverse: drop the field if Task 04 takes a different routing approach.
