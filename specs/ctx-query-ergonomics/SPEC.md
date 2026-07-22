@@ -96,3 +96,14 @@ file path, symbol line span — is already in the index):
   blowouts; one symbol per `show`).
 - Ranking changes to `map` (specs/codebase-context-tree tasks/16).
 - Exactness/LSP (specs/ctx-static-analysis-augmentation).
+
+## Parallelization
+
+The four tasks form one strictly serial chain (01 → 02 → 03 → 04) with no
+concurrent-safe groups. Serialization is forced, not incidental: task 02 wires
+the file-scoped selector into `ctx show`, so it depends on task 01 shipping the
+command; tasks 02 and 03 both define/extend the shared `--in` path-prefix flag
+on `refs` and both edit `cli.rs`/`lib.rs`/`path.rs` (a shared undecided
+design + `Touch` overlap that fails the decision-coupling test); task 04
+documents all three features and is additionally cross-spec-blocked. No
+`- Group:` lines — every task runs solo.
