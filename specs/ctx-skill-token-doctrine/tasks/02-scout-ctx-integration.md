@@ -1,6 +1,6 @@
 # Task 02: Grant scout the ctx binary and prefer-ctx prompt (R5)
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 8 turns
