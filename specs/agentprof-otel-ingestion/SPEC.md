@@ -258,3 +258,16 @@ default), untyped-fanout depth. Antigravity has no OTel path at all.
   OTel signal.
 - Data loss while the receiver is down is inherent to the push model;
   spool mitigations reduce but don't eliminate it.
+
+## Parallelization
+
+Nearly everything funnels through `internal/otel/otel.go`, so the chain is
+mostly serial: 01 → 02 → 03 → 04 → 06 → 07, with the README (07) landing
+last as the single writer of `README.md`. The one concurrent-safe pair is
+Task 03 (frames-only-ancestor cost fallback, `otel.go`) and Task 05
+(`/v1/metrics` route, `cmd_otel.go` + new `internal/otel/metrics.go`): both
+depend only on Task 02, they touch disjoint files, and neither shares an
+undecided design choice — metrics decoding is independent of the cost-join
+rule.
+
+- Group: 03, 05
