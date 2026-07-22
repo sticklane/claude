@@ -125,6 +125,7 @@ works in its home repo is not an install.
 - [ ] AGENTS.md names `/work` as the attended daily default; the
       unattended queue mode is the same skill run headless
 
-Next stage: /breakdown specs/beads-daily-skill/SPEC.md
-(human-launched) — likely 3 tasks: the skill + hook + guard; the
-onboard extension; the CUJ live-run evidence pass.
+Next stage: none — implemented directly (2026-07-22, maintainer-
+directed). Evidence under evidence/; the open remainder is CUJ-5's
+consuming-repo run and CUJ-1's fresh-session trigger observation,
+both marked MANUAL-PENDING in their evidence notes.
