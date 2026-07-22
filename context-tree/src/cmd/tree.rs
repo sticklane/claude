@@ -120,17 +120,38 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     let shown = selected.iter().take(args.limit);
     let omitted = selected.len().saturating_sub(args.limit);
 
+    // Minified-skipped candidates in scope, path-ordered (R2). A skipped file
+    // has zero symbols, so it never appears among `selected`; tree lists it
+    // with a marker so a skip never reads as absence.
+    let skipped: Vec<(String, String)> = match store.skipped_paths() {
+        Ok(v) => v
+            .into_iter()
+            .filter(|(p, _)| in_scope(p, &args.path))
+            .collect(),
+        Err(e) => {
+            eprintln!("ctx tree: {e}");
+            return (String::new(), ExitCode::FAILURE);
+        }
+    };
+
     if args.json {
         return (
-            render_json(args, &store, shown, omitted, &zones),
+            render_json(args, &store, shown, omitted, &zones, &skipped),
             ExitCode::SUCCESS,
         );
     }
 
     let mut out = String::new();
     let mut current_file: Option<&str> = None;
+    let mut si = 0; // next skipped candidate to emit, interleaved in path order
     for (sym, depth) in shown {
         if current_file != Some(sym.path.as_str()) {
+            while si < skipped.len() && skipped[si].0.as_str() < sym.path.as_str() {
+                out.push_str(&skipped[si].0);
+                out.push_str(&skip_marker(&skipped[si].1));
+                out.push('\n');
+                si += 1;
+            }
             out.push_str(&sym.path);
             out.push_str(&zone_suffix(&zones, &sym.path));
             out.push('\n');
@@ -149,10 +170,25 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         }
         out.push('\n');
     }
+    // Skipped candidates sorting after the last symbol-bearing file.
+    while si < skipped.len() {
+        out.push_str(&skipped[si].0);
+        out.push_str(&skip_marker(&skipped[si].1));
+        out.push('\n');
+        si += 1;
+    }
     if omitted > 0 {
         out.push_str(&format!("... {omitted} more (raise --limit)\n"));
     }
     (out, ExitCode::SUCCESS)
+}
+
+/// The trailing marker for a skipped-file line: the reason's category (the part
+/// before the first `-`, so `minified-name` and `minified-content` both render
+/// as the single `(skipped: minified)` output class R2 specifies).
+fn skip_marker(reason: &str) -> String {
+    let category = reason.split('-').next().unwrap_or(reason);
+    format!(" (skipped: {category})")
 }
 
 /// `--files` mode: the indexed file paths under `args.path`, one per line (or a
@@ -194,6 +230,7 @@ fn render_json<'a>(
     shown: impl Iterator<Item = &'a (&'a SymbolRow, usize)>,
     omitted: usize,
     zones: &ZoneConfig,
+    skipped: &[(String, String)],
 ) -> String {
     let symbols: Vec<serde_json::Value> = shown
         .map(|(sym, depth)| {
@@ -215,10 +252,21 @@ fn render_json<'a>(
             obj
         })
         .collect();
+    let skipped_json: Vec<serde_json::Value> = skipped
+        .iter()
+        .map(|(path, reason)| {
+            json!({
+                "path": path,
+                "reason": reason,
+                "marker": skip_marker(reason).trim(),
+            })
+        })
+        .collect();
     let payload = json!({
         "path": args.path,
         "truncated": omitted,
         "symbols": symbols,
+        "skipped": skipped_json,
     });
     format!("{payload}\n")
 }
