@@ -1,6 +1,6 @@
 # Task 01: Author the shell-text-tools rule file
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P0
 Budget: 8 turns
