@@ -169,10 +169,21 @@ Two real ultracode runs were executed and inspected for this design
   metered — reading the index must never compete with the budget
   for doing work — and RW-B's acceptance asserts a ctx query leaves
   the meter unchanged.
-- **DW9 — Tier aliases only.** `--tier scout|session|deep|frontier`
-  maps to model+effort in the runtime profile; a profile without a
-  pin inherits the session default. Matches the existing
-  tier-language convention and the observed alias resolution.
+- **DW9 — Tier aliases only, default-cheap inside runs.** `--tier
+scout|session|deep|frontier` maps to model+effort in the runtime
+  profile. Defaults are position-aware: a tier-less dispatch INSIDE
+  a run resolves to scout-tier — fan-out is exactly where the
+  inverted tier ladder burned money (the measured
+  frontier-model-running-grep incidents) — while a tier-less
+  standalone dispatch inherits the session default, since a single
+  ad hoc dispatch carries the session's intent. Script authors
+  override per stage; the workflow-author skill teaches the
+  stage-type mapping (mechanical → scout, judgment → session/deep),
+  which is where that guidance lives after rules shrinkage retires
+  its prose home. Cost: a judgment-shaped fan-out whose author
+  forgets the override gets cheap-model answers — visible in watch
+  and the run issue, recoverable by editing the script and
+  re-running (prefix replay makes the retry cheap).
 - **DW10 — The progress stream is part of the contract; the
   terminal renderer is the deliverable.** Typed events with the
   observed field set, appended beside the journal; `watch` is a
@@ -301,11 +312,11 @@ Groups follow the decision-coupling test and the `- Group:` grammar
 pinned in `specs/drain-rolling-window/SPEC.md`'s Parallelization
 section (cited, not restated). The spec-level waiting gate was
 replaced at breakdown by task-level `Status: blocked` + `Unblock:
-run:` headers on the three tasks that genuinely need core work
-(02 → core 07; 05 → core 04; 07 → core 05) — nothing auto-flips
-those; a human or later session re-runs each check and flips the
-status. Task 01 (schema + watch) is dispatchable immediately: it
-reads fixture files and depends on nothing. Task 09 is a draft
+run:` headers on the four tasks that genuinely need core work
+(01 → core 02, which creates the package and scripts/check.sh
+everything here lands in; 02 → core 07; 05 → core 04; 07 → core 05) — nothing auto-flips those; a human or later session re-runs
+each check and flips the status. Task 01 becomes the first
+dispatchable task the moment core 02 lands. Task 09 is a draft
 awaiting human promotion, deliberately.
 
 - Group: 04, 05, 06

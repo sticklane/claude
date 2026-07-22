@@ -5,12 +5,13 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: blocked
+Unblock: run: grep -q '^Status: done' specs/agentic-core-redesign/tasks/02-package-init-bootstrap.md || echo "core task 02 (package scaffold, check.sh) not done"
 Depends on: none
 Priority: P1
 Budget: 24 turns
 Spec: ../SPEC.md (statement 6; DW10; RW-V)
-Touch: agentic/watch.py, agentic/schema/progress-event.json, tests/test_agentic_watch.sh, tests/fixtures/progress/
+Touch: agentic/watch.py, agentic/validate_events.py, agentic/schema/progress-event.json, tests/test_agentic_watch.sh, tests/fixtures/progress/
 
 ## Goal
 
@@ -26,7 +27,7 @@ schema is fixed by its consumer, not improvised by each emitter.
 
 ## Touch
 
-No dependency on any other agentic verb: watch reads a file. The
+Gated on core task 02 because the package and scripts/check.sh it lands in are created there; beyond that, no dependency on any other agentic verb: watch reads a file. Nothing auto-flips this task; re-run the Unblock check and flip Status once core 02 is done. The
 fixture stream is committed with frozen timestamps and a pinned
 stream-end clock; elapsed is always computed against the stream-end
 clock, never the wall clock.
@@ -39,7 +40,9 @@ clock, never the wall clock.
    malformed-event fixture → typed warning line, exit 0 (rendering
    is best-effort, never crashes the run it observes).
 2. Author `agentic/schema/progress-event.json` from the spec's field
-   set; validate the fixture stream against it in the test.
+   set, and `agentic/validate_events.py` (the module the acceptance
+   invokes) to validate any stream file against it; validate the
+   fixture stream in the test.
 3. Implement watch.py: one-shot render mode (used by the test) and
    follow mode (tail + re-render).
 

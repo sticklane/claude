@@ -11,7 +11,7 @@ Depends on: none
 Priority: P2
 Budget: 16 turns
 Spec: ../SPEC.md (DW4; RW-F)
-Touch: agentic/shadow.py, tests/test_agentic_turns_factor.py
+Touch: agentic/shadow.py, scripts/measure_turn_factor.py, tests/test_agentic_turns_factor.py
 
 ## Goal
 
@@ -36,12 +36,16 @@ core 05 is done.
    of 9000 tokens/turn resolves to `budget_tokens: 54000` in the
    synced metadata; a profile with no factor produces a typed
    warning and no budget_tokens (never a silent default).
-2. Measure the real factor from agentprof transcript data on this
-   machine; record value, source query, and date in the profile.
+2. Write `scripts/measure_turn_factor.py`: derives the factor from
+   agentprof transcript data and, with `--check <profile>`, re-runs
+   the measurement and asserts the recorded value reproduces within
+   ±20% — the measurement is a committed, re-runnable script, not a
+   one-time claim. Record value, source query, sample size, and date
+   in the profile.
 3. Implement the mapping in the shadow module.
 
 ## Acceptance
 
 - [ ] `python3 -m pytest tests/test_agentic_turns_factor.py -q` → passes (RW-F, incl. the no-factor warning path)
-- [ ] `grep -A2 "tokens_per_turn" agentic/config/*.toml | grep -c "source"` → ≥ 1 (the factor carries its measurement source, not a bare number)
+- [ ] `python3 scripts/measure_turn_factor.py --check agentic/config/*.toml` → prints `FACTOR REPRODUCED` (re-measurement matches the recorded value within ±20% — fails on any unmeasured or stale value; a pasted "source" string cannot pass this)
 - [ ] `bash scripts/check.sh` → green

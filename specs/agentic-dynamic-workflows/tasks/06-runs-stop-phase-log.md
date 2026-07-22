@@ -22,6 +22,13 @@ halt after in-flight dispatches settle — the journal ends clean
 journaled. `agentic phase <title>` and `agentic log <msg>` append
 schema-valid progress events for host scripts to narrate with.
 
+## Touch
+
+Wires in exclusively through task 03's extension points (ledger
+hook / tracker callbacks / stop-signal check); this task never edits
+run.py or dispatch.py — that is what keeps Group: 04, 05, 06
+Touch-disjoint and safe to run concurrently.
+
 ## Steps
 
 1. Write `tests/test_agentic_run_stop.sh` failing first: start a

@@ -23,6 +23,10 @@ typed, journaled. Tier aliases resolve through the runtime profile
 dispatch charges the meter (core task 07's module), passes
 tracker-sourced text through the screen, emits progress events
 conforming to task 01's schema — and never touches the tracker.
+Tier defaults follow DW9 as amended: a tier-less dispatch INSIDE a
+run defaults to scout-tier (fan-out is where the inverted tier
+ladder burns money), while a tier-less standalone dispatch inherits
+the session default; both defaults log which rule fired.
 
 ## Touch
 
@@ -46,5 +50,5 @@ Status once core 07 is done.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_dispatch.py -q` → passes (RW-P, RW-T; covers screen refusal and event-schema conformance)
+- [ ] `python3 -m pytest tests/test_agentic_dispatch.py -q` → passes (RW-P, RW-T; covers screen refusal, event-schema conformance, and both tier-default paths: in-run tier-less → scout, standalone tier-less → session default, each with the logged rule)
 - [ ] `bash scripts/check.sh` → green

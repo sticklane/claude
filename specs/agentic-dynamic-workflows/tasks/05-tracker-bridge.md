@@ -27,7 +27,9 @@ summary that rides the committed JSONL export.
 Blocked on core task 04 because every tracker write here goes through
 its lock and sync rules — no parallel write path. Nothing auto-flips
 this task: re-run the Unblock check and flip Status once core 04 is
-done.
+done. Wires in exclusively through task 03's tracker callbacks
+(start/checkpoint/finish); this task never edits run.py or
+dispatch.py — that is what keeps Group: 04, 05, 06 Touch-disjoint.
 
 ## Steps
 

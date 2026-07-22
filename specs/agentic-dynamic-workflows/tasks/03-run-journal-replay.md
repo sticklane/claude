@@ -21,6 +21,11 @@ everything after it runs live (the observed ultracode semantics,
 DW3). Invoked from a non-primary checkout (a git worktree), it exits
 with the typed refusal before any dispatch launches. The run dir
 carries journal.jsonl + progress.jsonl (gitignored derived state).
+run.py ships its extension points as part of THIS task, so tasks
+04/05/06 wire in from their own modules without ever editing run.py:
+a per-dispatch ledger charge hook, run-start/checkpoint/finish
+callbacks, and a stop-signal check between dispatches — each a no-op
+until its consumer task registers it.
 
 ## Touch
 
@@ -39,11 +44,14 @@ file.
    typed refusal, no dispatch launched, exit nonzero.
 2. Implement run.py: run-id assignment, journal ownership, prefix
    validity (a changed content-hash invalidates all later positions),
-   primary-checkout guard.
+   primary-checkout guard, and the three extension points (ledger
+   hook, tracker callbacks, stop-signal check) with stub-callback
+   tests proving each fires at the right moment.
 3. Progress events for run start/end phases validate against task
    01's schema.
 
 ## Acceptance
 
 - [ ] `bash tests/test_agentic_run_replay.sh` → prints `REPLAY OK` (5/0, then 2/3 — prefix semantics) and `GUARD OK` (worktree refusal) (RW-J + statement 7 guard)
+- [ ] `python3 -m pytest tests/ -q -k run_hooks` → passes (stub callbacks prove the ledger hook fires per dispatch, tracker callbacks at start/checkpoint/finish, and the stop check between dispatches)
 - [ ] `bash scripts/check.sh` → green

@@ -23,6 +23,13 @@ leave the meter unchanged. Dispatch's tracker-silence — the
 load-bearing concurrency invariant — is proven on the store, and the
 write lock exposes an attempt counter so the proof is not vacuous.
 
+## Touch
+
+Wires in exclusively through task 03's extension points (ledger
+hook / tracker callbacks / stop-signal check); this task never edits
+run.py or dispatch.py — that is what keeps Group: 04, 05, 06
+Touch-disjoint and safe to run concurrently.
+
 ## Steps
 
 1. Write failing tests first: `tests/test_agentic_run_budget.py`
