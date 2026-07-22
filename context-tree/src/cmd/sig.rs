@@ -7,7 +7,7 @@ use crate::cmd::{
     note_value,
 };
 use crate::index::SymbolRow;
-use crate::path::resolve_suffix;
+use crate::path::{Selector, resolve_suffix};
 use serde_json::json;
 use std::collections::HashSet;
 use std::path::Path;
@@ -17,6 +17,8 @@ use std::process::ExitCode;
 pub struct Args {
     pub symbol: String,
     pub doc: bool,
+    /// `--in <path-prefix>` filters (repeatable); narrows C3 resolution by file.
+    pub in_paths: Vec<String>,
     pub json: bool,
     pub no_sync: bool,
 }
@@ -57,11 +59,16 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         }
     };
 
+    // A `<path>:<name>` selector and/or `--in` prefixes narrow C3 resolution to
+    // symbols in the named file / under the named prefix (R1).
+    let selector = Selector::parse(&args.symbol, &args.in_paths);
     let qpaths: Vec<String> = all.iter().map(|s| s.qpath.clone()).collect();
-    let matched: HashSet<&str> = resolve_suffix(&qpaths, &args.symbol).into_iter().collect();
+    let matched: HashSet<&str> = resolve_suffix(&qpaths, &selector.name)
+        .into_iter()
+        .collect();
     let mut hits: Vec<&SymbolRow> = all
         .iter()
-        .filter(|s| matched.contains(s.qpath.as_str()))
+        .filter(|s| matched.contains(s.qpath.as_str()) && selector.accepts_file(&s.path))
         .collect();
     hits.sort_by(|a, b| a.qpath.cmp(&b.qpath));
 
@@ -126,6 +133,7 @@ pub fn render(args: &Args) -> (String, ExitCode) {
                             "qpath": s.qpath,
                             "file": s.path,
                             "line": line_of(&root, &s.path, s.ident_start_byte),
+                            "rerun": format!("{}:{}", s.path, s.name),
                         })
                     })
                     .collect();
@@ -137,10 +145,12 @@ pub fn render(args: &Args) -> (String, ExitCode) {
                 eprintln!("ctx sig: '{}' is ambiguous — candidates:", args.symbol);
                 for s in many {
                     out.push_str(&format!(
-                        "{}  {}:{}\n",
+                        "{}  {}:{}\n  rerun with: {}:{}\n",
                         s.qpath,
                         s.path,
-                        line_of(&root, &s.path, s.ident_start_byte)
+                        line_of(&root, &s.path, s.ident_start_byte),
+                        s.path,
+                        s.name,
                     ));
                 }
             }

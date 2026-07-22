@@ -8,6 +8,7 @@ use crate::cmd::{EXIT_AMBIGUOUS, EXIT_NO_MATCH, load_index};
 use crate::index::NoteRow;
 use crate::notes::anchor::{self, Resolution};
 use crate::notes::{self, NoteDraft};
+use crate::path::Selector;
 use serde_json::json;
 use std::io::Read;
 use std::process::ExitCode;
@@ -19,6 +20,8 @@ pub enum Action {
         text: Option<String>,
         kind: Option<String>,
         file: Option<String>,
+        /// `--in <path-prefix>` filters; narrow C3 anchor resolution by file (R1).
+        in_paths: Vec<String>,
     },
     List {
         kind: Option<String>,
@@ -27,6 +30,8 @@ pub enum Action {
     },
     Show {
         symbol: String,
+        /// `--in <path-prefix>` filters; narrow C3 anchor resolution by file (R1).
+        in_paths: Vec<String>,
     },
     /// `ctx notes` with neither a subcommand nor a `<symbol>`.
     Usage,
@@ -55,18 +60,20 @@ pub fn render(args: &Args) -> (String, ExitCode) {
             text,
             kind,
             file,
+            in_paths,
         } => add(
             symbol,
             text.clone(),
             kind.clone(),
             file.clone(),
+            in_paths,
             args.no_sync,
             args.json,
         ),
         Action::List { kind, stale, file } => {
             list(kind.clone(), *stale, file.clone(), args.no_sync, args.json)
         }
-        Action::Show { symbol } => show(symbol, args.no_sync, args.json),
+        Action::Show { symbol, in_paths } => show(symbol, in_paths, args.no_sync, args.json),
         Action::Usage => {
             eprintln!("ctx notes: expected `add`, `list`, or a <symbol>");
             (String::new(), ExitCode::from(EXIT_NO_MATCH))
@@ -98,6 +105,7 @@ fn add(
     text: Option<String>,
     kind: Option<String>,
     file: Option<String>,
+    in_paths: &[String],
     no_sync: bool,
     json: bool,
 ) -> (String, ExitCode) {
@@ -112,16 +120,20 @@ fn add(
         Ok(v) => v,
         Err(code) => return (String::new(), code),
     };
-    let symbols = match store.all_symbols() {
+    // A `<path>:<name>` selector and/or `--in` prefixes narrow the anchor set to
+    // symbols in the named file / under the named prefix before C3 resolution (R1).
+    let selector = Selector::parse(symbol, in_paths);
+    let mut symbols = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx notes add: {e}");
             return (String::new(), ExitCode::FAILURE);
         }
     };
+    symbols.retain(|s| selector.accepts_file(&s.path));
 
     let mut out = String::new();
-    match anchor::resolve(&symbols, symbol) {
+    match anchor::resolve(&symbols, &selector.name) {
         Resolution::None => {
             eprintln!("ctx notes add: no symbol matches '{symbol}'");
             (out, ExitCode::from(EXIT_NO_MATCH))
@@ -129,7 +141,10 @@ fn add(
         Resolution::Ambiguous(candidates) => {
             eprintln!("ctx notes add: '{symbol}' is ambiguous — candidates:");
             for s in candidates {
-                out.push_str(&format!("{}  {}\n", s.qpath, s.path));
+                out.push_str(&format!(
+                    "{}  {}\n  rerun with: {}:{}\n",
+                    s.qpath, s.path, s.path, s.name
+                ));
             }
             (out, ExitCode::from(EXIT_AMBIGUOUS))
         }
@@ -223,20 +238,24 @@ fn list(
     (out, ExitCode::SUCCESS)
 }
 
-fn show(symbol: &str, no_sync: bool, json: bool) -> (String, ExitCode) {
+fn show(symbol: &str, in_paths: &[String], no_sync: bool, json: bool) -> (String, ExitCode) {
     let (_root, store) = match load_index(no_sync) {
         Ok(v) => v,
         Err(code) => return (String::new(), code),
     };
-    let symbols = match store.all_symbols() {
+    // A `<path>:<name>` selector and/or `--in` prefixes narrow the anchor set to
+    // symbols in the named file / under the named prefix before C3 resolution (R1).
+    let selector = Selector::parse(symbol, in_paths);
+    let mut symbols = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
             eprintln!("ctx notes: {e}");
             return (String::new(), ExitCode::FAILURE);
         }
     };
+    symbols.retain(|s| selector.accepts_file(&s.path));
     let mut out = String::new();
-    let qpath = match anchor::resolve(&symbols, symbol) {
+    let qpath = match anchor::resolve(&symbols, &selector.name) {
         Resolution::None => {
             eprintln!("ctx notes: no symbol matches '{symbol}'");
             return (String::new(), ExitCode::from(EXIT_NO_MATCH));
@@ -244,7 +263,10 @@ fn show(symbol: &str, no_sync: bool, json: bool) -> (String, ExitCode) {
         Resolution::Ambiguous(candidates) => {
             eprintln!("ctx notes: '{symbol}' is ambiguous — candidates:");
             for s in candidates {
-                out.push_str(&format!("{}  {}\n", s.qpath, s.path));
+                out.push_str(&format!(
+                    "{}  {}\n  rerun with: {}:{}\n",
+                    s.qpath, s.path, s.path, s.name
+                ));
             }
             return (out, ExitCode::from(EXIT_AMBIGUOUS));
         }

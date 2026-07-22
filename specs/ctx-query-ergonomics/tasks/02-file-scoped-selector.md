@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 28 turns
@@ -57,5 +57,5 @@ task 03. Do NOT touch any `SKILL.md` (task 04). This task shares `cli.rs` /
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test` → new selector + ambiguity-hint golden tests pass
-- [ ] `bash context-tree/scripts/check.sh` → exits 0
+- [x] `cd context-tree && cargo test` → new selector + ambiguity-hint golden tests pass
+- [x] `bash context-tree/scripts/check.sh` → exits 0

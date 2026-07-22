@@ -55,11 +55,14 @@ pub enum Command {
     },
     /// Signature (and docstring) for a symbol, resolved by C3 suffix (R7).
     Sig {
-        /// Symbol name or qualified-path suffix.
+        /// Symbol name, `<path>:<name>` file-scoped selector, or qpath suffix.
         symbol: String,
         /// Print the full docstring rather than only its first line.
         #[arg(long)]
         doc: bool,
+        /// Narrow C3 resolution to symbols under this path prefix (repeatable).
+        #[arg(long = "in")]
+        in_paths: Vec<String>,
         /// Emit JSON instead of plain text.
         #[arg(long)]
         json: bool,
@@ -69,11 +72,14 @@ pub enum Command {
     },
     /// Resolved symbol's exact source span from the working tree (R2).
     Show {
-        /// Symbol name or qualified-path suffix.
+        /// Symbol name, `<path>:<name>` file-scoped selector, or qpath suffix.
         symbol: String,
         /// Cap the plain-text output at N lines (default 200).
         #[arg(long)]
         head: Option<usize>,
+        /// Narrow C3 resolution to symbols under this path prefix (repeatable).
+        #[arg(long = "in")]
+        in_paths: Vec<String>,
         /// Emit JSON instead of plain text.
         #[arg(long)]
         json: bool,
@@ -97,11 +103,14 @@ pub enum Command {
     },
     /// Definitions and references for a symbol, resolved by C3 suffix (R10).
     Refs {
-        /// Symbol name or qualified-path suffix.
+        /// Symbol name, `<path>:<name>` file-scoped selector, or qpath suffix.
         symbol: String,
         /// Cap on results shown per direction before a truncation line.
         #[arg(long, default_value_t = 50)]
         limit: usize,
+        /// Narrow C3 resolution to symbols under this path prefix (repeatable).
+        #[arg(long = "in")]
+        in_paths: Vec<String>,
         /// Consult a language server (task 01 / R2) when one is available for
         /// the matched symbol's language, upgrading references it confirms
         /// from `heuristic` to `precise` and attributing each to the specific
@@ -178,8 +187,12 @@ pub enum HooksAction {
 pub struct NotesArgs {
     #[command(subcommand)]
     pub action: Option<NotesAction>,
-    /// Bare form `ctx notes <symbol>`: show that symbol's notes (C3 suffix).
+    /// Bare form `ctx notes <symbol>`: show that symbol's notes. Accepts a
+    /// `<path>:<name>` file-scoped selector as well as a bare C3 suffix.
     pub symbol: Option<String>,
+    /// Narrow C3 anchor resolution to symbols under this path prefix (repeatable).
+    #[arg(long = "in")]
+    pub in_paths: Vec<String>,
     /// Emit JSON instead of plain text.
     #[arg(long)]
     pub json: bool,
@@ -193,7 +206,7 @@ pub enum NotesAction {
     /// Anchor a note to a symbol (R12). Body from the positional text,
     /// `--file <path>`, or stdin via `--file -`.
     Add {
-        /// Symbol name or qualified-path suffix (C3).
+        /// Symbol name, `<path>:<name>` file-scoped selector, or qpath suffix.
         symbol: String,
         /// Note body; omit to read from `--file <path>` or stdin (`--file -`).
         text: Option<String>,
@@ -203,6 +216,9 @@ pub enum NotesAction {
         /// Read the body from a file, or from stdin when the path is `-`.
         #[arg(long)]
         file: Option<String>,
+        /// Narrow C3 anchor resolution to symbols under this path prefix (repeatable).
+        #[arg(long = "in")]
+        in_paths: Vec<String>,
         /// Emit JSON instead of plain text.
         #[arg(long)]
         json: bool,

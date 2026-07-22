@@ -117,22 +117,26 @@ pub fn run() -> ExitCode {
         Some(cli::Command::Sig {
             symbol,
             doc,
+            in_paths,
             json,
             no_sync,
         }) => cmd::sig::run(cmd::sig::Args {
             symbol,
             doc,
+            in_paths,
             json,
             no_sync,
         }),
         Some(cli::Command::Show {
             symbol,
             head,
+            in_paths,
             json,
             no_sync,
         }) => cmd::show::run(cmd::show::Args {
             symbol,
             head,
+            in_paths,
             json,
             no_sync,
         }),
@@ -150,12 +154,14 @@ pub fn run() -> ExitCode {
         Some(cli::Command::Refs {
             symbol,
             limit,
+            in_paths,
             exact,
             json,
             no_sync,
         }) => cmd::refs::run(cmd::refs::Args {
             symbol,
             limit,
+            in_paths,
             exact,
             json,
             no_sync,
@@ -184,6 +190,7 @@ pub fn run() -> ExitCode {
             let cli::NotesArgs {
                 action,
                 symbol,
+                in_paths,
                 json,
                 no_sync,
             } = notes;
@@ -193,6 +200,7 @@ pub fn run() -> ExitCode {
                     text,
                     kind,
                     file,
+                    in_paths,
                     json,
                     no_sync,
                 }) => cmd::notes::Args {
@@ -201,6 +209,7 @@ pub fn run() -> ExitCode {
                         text,
                         kind: kind.map(|k| k.as_str().to_string()),
                         file,
+                        in_paths,
                     },
                     json,
                     no_sync,
@@ -222,7 +231,10 @@ pub fn run() -> ExitCode {
                 },
                 None => cmd::notes::Args {
                     action: match symbol {
-                        Some(s) => cmd::notes::Action::Show { symbol: s },
+                        Some(s) => cmd::notes::Action::Show {
+                            symbol: s,
+                            in_paths,
+                        },
                         None => cmd::notes::Action::Usage,
                     },
                     json,
