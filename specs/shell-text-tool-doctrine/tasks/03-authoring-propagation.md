@@ -1,6 +1,6 @@
 # Task 03: Point authoring skills at the shell-text-tools rule
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 6 turns
