@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: deferred
 Depends on: none
 Priority: P0
 Budget: 24 turns
@@ -64,3 +64,54 @@ tasks 03, 04, 06, 07, 11 in their own modules.
 - [ ] `bash scripts/check.sh` → green, and its output lists both the pre-existing `tests/test_*.sh` names and the new agentic tests (proves glob discovery, not a hand-listed subset)
 - [ ] `python3 -m pytest tests/test_agentic_pin.py -q -k missing` → passes (bd absent from PATH → clean install-command error)
 - [ ] `grep -c "scripts/check.sh" AGENTS.md` → ≥ 1 (canonical check documented)
+
+## Deferred questions
+
+- [2026-07-21 /drain] Contradicts-premise: true — this file. Contradicted
+  excerpt: "`bash scripts/check.sh` → green, and its output lists both the
+  pre-existing". Evidence: two pre-existing `tests/test_*.sh` files fail
+  unconditionally on plain `main`, both outside this task's `Touch`, so a
+  glob-all canonical check is honest-red for reasons this task cannot fix:
+  `tests/test_skill_chain_determinism.sh` asserts
+  `evals/lint-skill-chain-determinism.sh` exists (it doesn't — built by
+  `specs/deterministic-skill-chaining`); `tests/test_eval_coverage_lint.sh`
+  runs `evals/lint-eval-coverage.sh`, which uses bash 4+ `declare -A` against
+  this host's bash 3.2. Question: should the new `scripts/check.sh` (a)
+  quarantine these two as documented known-red so check.sh goes green (the
+  worker declined to do this unilaterally — it reads as a gamed pass), (b)
+  wait for those two specs to fix/quarantine their own tests first, then
+  check.sh goes green unchanged, or (c) have criterion 5 amended to scope
+  "green" to non-placeholder tests? All other criteria (1, 2, 3, 4, 6, 7)
+  pass; the implementation is otherwise complete on branch
+  `task/02-agentic-core-redesign` (discarded per drain's DEFERRED handling —
+  re-derivable from this task's Steps on re-dispatch).
+
+## Decisions
+
+- [2026-07-21 /drain] Installed bd 1.1.0 via `brew install beads` (pulls
+  dolt) — required because the task wraps bd, and bd is not buildable from
+  source on this host (`go install` fails on ICU headers). Reverse: `brew
+  uninstall beads dolt`.
+- [2026-07-21 /drain] Symlinked `~/.local/bin/agentic` → repo `bin/agentic`
+  so the bare `agentic` command resolves on the login PATH (neither repo
+  `bin/` nor the pip framework-scripts dir is on PATH here). Points at the
+  main checkout, so it activates on merge. Reverse: `rm ~/.local/bin/agentic`.
+- [2026-07-21 /drain] Pinned bd version = `1.1.0`, install pointer `brew
+  install beads`, upgrade pointer `brew upgrade beads` (SPEC pins 1.1.0; the
+  brew bottle is the clean install path). Reverse: edit `agentic/bd.py`.
+- [2026-07-21 /drain] Committed transport JSONL = `.beads/issues.jsonl` (bd
+  export default); telemetry `.beads/interactions.jsonl` stays gitignored.
+  Reverse: edit `agentic/initialize.py`.
+
+## Progress
+
+- [2026-07-21 /drain] DEFERRED (Contradicts-premise). Done: package,
+  `agentic init`, bd pin + missing/wrong-version errors, curated bd
+  bootstrap, JSONL round-trip/bootstrap against real bd, export/import
+  helpers, `scripts/check.sh` (glob discovery), AGENTS.md/.gitignore — all
+  implemented and independently verified (acceptance criteria 1–4, 6, 7
+  pass). Remaining: criterion 5's "green" run of `scripts/check.sh`,
+  blocked entirely on the two pre-existing out-of-Touch red tests named
+  above — not on anything left to implement. A re-dispatch after this
+  question is answered should start from the Decisions above rather than
+  re-deriving them, and does not need to redo Steps 1–3.
