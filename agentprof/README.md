@@ -420,6 +420,31 @@ bundled sample (2 of its 6 lines are deliberately invalid):
 go tool pprof -top custom.pb.gz
 ```
 
+## Auditing skill triggers and outcomes
+
+`agentprof skillcheck` is a read-only report, not a profile adapter: instead
+of pricing token spend it reads this machine's Claude Code transcripts and
+audits how a skill actually got used. For every `Skill` tool invocation it
+finds, it classifies whether the trigger was a correct model auto-trigger or
+a misfire, judges whether correctly-triggered runs reached a successful
+outcome, and flags user turns that read like a skill should have fired but
+didn't. A skill author reads the per-skill trigger-accuracy and
+outcome-success counts while iterating on a `SKILL.md`'s `description` and
+body — the same window the cost report gives on spend.
+
+```sh
+./agentprof skillcheck --days 7 --format table
+```
+
+Explicit slash-command invocations and skill self-chains are counted but
+never scored as correct or misfired — only model auto-triggers carry a
+trigger verdict. Outcome grading runs a `claude -p` judge subprocess;
+`--judge-tier` picks its model (`scout` by default, `deep`, or `frontier`),
+and each judge call gets an isolated `CLAUDE_CONFIG_DIR` so grading never
+writes into the `~/.claude` tree being audited. `--skill NAME` restricts the
+report to one skill; `--format json` (the default) emits the full per-skill
+aggregate with a transcript citation on every finding.
+
 ## Commands
 
 | Command                                                                   | What it does                                                               |
@@ -428,6 +453,7 @@ go tool pprof -top custom.pb.gz
 | `agentprof gcp <billing.json> [--frame-labels k1,k2] [-o out]`            | GCP billing export rows → samples.                                         |
 | `agentprof vertex <logs.json> [-o out]`                                   | Vertex AI request-response logging rows → samples.                         |
 | `agentprof build <samples.jsonl>... -o out.pb.gz`                         | Canonical-schema JSONL → pprof profile.                                    |
+| `agentprof skillcheck [--claude-dir PATH] [--days N \| --since RFC3339] [--skill NAME] [--judge-tier scout\|deep\|frontier] [--format json\|table] [-o out]` | Claude Code transcripts → per-skill skill-trigger and outcome audit (read-only; emits a report, not a profile). |
 | `agentprof --version`                                                     | Print version.                                                             |
 
 For all adapters, an `-o` path ending `.pb.gz` writes the pprof profile
