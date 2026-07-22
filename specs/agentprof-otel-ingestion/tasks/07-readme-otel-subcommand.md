@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: pending
+Status: in-progress
 Depends on: 02, 03, 04, 05, 06
 Priority: P2
 Budget: 12 turns
