@@ -44,9 +44,12 @@ fn indexed_extensions() -> Vec<&'static str> {
 }
 
 /// The bounded `grep` to check whether `symbol` appears as text (not just as an
-/// indexed symbol): one repeated `--include='*.<ext>'` flag per indexed
-/// extension — never a brace pattern, which grep's fnmatch does not expand —
-/// the shell-escaped literal, and a `| head -20` bound.
+/// indexed symbol): `-F` so the symbol is matched as a fixed string, not a regex
+/// (a symbol with `[`/`$`/`(` etc. would otherwise error or silently mismatch —
+/// the false-"absent" verdict this module exists to prevent); one repeated
+/// `--include='*.<ext>'` flag per indexed extension — never a brace pattern,
+/// which grep's fnmatch does not expand — the shell-escaped literal, and a
+/// `| head -20` bound.
 pub fn suggested_check(symbol: &str) -> String {
     let includes = indexed_extensions()
         .iter()
@@ -54,7 +57,7 @@ pub fn suggested_check(symbol: &str) -> String {
         .collect::<Vec<_>>()
         .join(" ");
     format!(
-        "grep -rl {includes} {} . | head -20",
+        "grep -rlF {includes} {} . | head -20",
         shell_single_quote(symbol)
     )
 }
@@ -120,6 +123,42 @@ mod tests {
         // Never a brace pattern (grep's fnmatch would match nothing).
         assert!(!cmd.contains('{'), "no brace pattern in the command: {cmd}");
         assert!(cmd.contains("| head -20"), "bounded by `head -20`: {cmd}");
+    }
+
+    /// Regression: a symbol containing regex metacharacters must be matched
+    /// LITERALLY by the suggested command. Without fixed-string matching, grep
+    /// reads the symbol as a regex — `a[b` errors (unbalanced bracket) and a
+    /// mid-pattern anchor can mismatch — so the file that literally contains the
+    /// symbol is reported ABSENT: the exact "absence is not absence" fallacy this
+    /// module exists to prevent. Runs the produced command and asserts it finds a
+    /// file whose text is the literal symbol.
+    #[test]
+    fn suggested_check_matches_regex_metacharacter_symbols_literally() {
+        for symbol in ["a[b", "a$b'c"] {
+            let dir = tempfile::tempdir().unwrap();
+            // `.rs` is an indexed extension, so the suggested command's
+            // `--include` set covers this probe file.
+            std::fs::write(
+                dir.path().join("probe.rs"),
+                format!("let v = {symbol:?};\n"),
+            )
+            .unwrap();
+
+            let cmd = suggested_check(symbol);
+            let output = std::process::Command::new("sh")
+                .arg("-c")
+                .arg(&cmd)
+                .current_dir(dir.path())
+                .output()
+                .expect("run the suggested grep command");
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            assert!(
+                stdout.contains("probe.rs"),
+                "suggested command must literally match symbol {symbol:?}: \
+                 cmd=`{cmd}` stdout={stdout:?} stderr={:?}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
     }
 
     #[test]
