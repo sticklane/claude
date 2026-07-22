@@ -2,6 +2,8 @@
 
 Breakdown-ready: true
 Rigor: production
+Status: waiting
+Unblock: run: test -f specs/skills-vs-ultracode-eval/EVIDENCE.md || echo "parked pending the head-to-head verdict (2026-07-22 worth-it review): native ultracode + per-stage model routing + the beads daily skill covers attended dynamic-workflow needs today; build this only if the eval finding or a load-bearing second runtime or recurring cross-session-resume pain justifies it"
 
 ## The design in plain statements
 

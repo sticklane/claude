@@ -1,6 +1,15 @@
 # evals/headtohead/tasks.manifest — single source of truth for the planner
 # and the arm-isolation check.
 #
+# Fixture contract (frozen; every task's grader and author cites this):
+#   - assert.sh REQUIRES the target repo dir as $1 and refuses argless
+#     invocation (a default target could silently grade the pristine
+#     snapshot instead of an arm's worktree).
+#   - reference/ is a FULL repo directory (the solved snapshot), not a
+#     patch; calibrate GREEN runs assert.sh against it directly.
+#   - brief.md lives at tasks/<name>/brief.md — it is READ AS THE PROMPT
+#     by the runner; it is never placed inside repo/ (the mount).
+#
 # Format: one task per line, fields separated by "|" (comments and blank
 # lines are skipped):
 #

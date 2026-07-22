@@ -16,10 +16,10 @@
 # condition-substring appears in skill-md-path, required-imperative-
 # substring must appear within window-lines of it, else the gate flags
 # file:line and exits non-zero. A skill with no manifest line is skipped
-# (opt-in heuristic, not exhaustive — same documented-blind-spot shape as
-# tests/test_mirror_procedure_coverage.sh; see
-# .claude/rules/mirror-procedure-discipline.md's "heuristic with blind
-# spots" section for the precedent this mirrors).
+# (opt-in heuristic, not exhaustive — a presence/proximity check has the
+# documented blind spots any grep-based coverage gate does: it cannot see
+# content that moved position without changing, nor content a file adds
+# that its manifest never seeded).
 #
 # This test currently fails at the "gate script exists" assertion below —
 # that failure IS the RED step; evals/lint-skill-chain-determinism.sh does

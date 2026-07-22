@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# Install-docs consistency gate (specs/install-docs-gate, R1-R6): the
-# install commands in README.md and the cp paths in antigravity/README.md
-# must stay consistent with .claude-plugin/{plugin,marketplace}.json and the
-# repo tree. Rides the repo's existing
+# Install-docs consistency gate (specs/install-docs-gate, R1-R2): the
+# `/plugin install` and `/plugin marketplace add` commands in README.md
+# must stay consistent with .claude-plugin/{plugin,marketplace}.json.
+# Rides the repo's existing
 # `for t in tests/test_*.sh; do bash "$t"; done` gate (AGENTS.md:36).
+#
+# The antigravity cp-path check (former R3) was removed with the
+# antigravity/ mirror tree in the 2026-07-22 data-portability pivot
+# (specs/agentic-core-redesign task 10): no ported tree is installed now.
 #
 # R6: an optional first argument overrides the repo root (defaulting to this
 # script's own repo root, resolved the same way tests/test_doc_links.sh
@@ -15,7 +19,6 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${1:-$here/..}" && pwd)"
 
 readme="$repo_root/README.md"
-ag_readme="$repo_root/antigravity/README.md"
 plugin_json="$repo_root/.claude-plugin/plugin.json"
 marketplace_json="$repo_root/.claude-plugin/marketplace.json"
 
@@ -56,7 +59,7 @@ json_owner_name() {
   fi
 }
 
-for f in "$readme" "$ag_readme" "$plugin_json" "$marketplace_json"; do
+for f in "$readme" "$plugin_json" "$marketplace_json"; do
   [ -f "$f" ] || { assert "required file exists: $f" 1; }
 done
 
@@ -108,44 +111,6 @@ done < <(grep -oE '/plugin marketplace add [^/ ]+/[^ ]+' "$readme" | sed -E 's#^
 
 if [ "$r2_count" -eq 0 ]; then
   assert "README.md has at least one '/plugin marketplace add <owner>/<repo>' command" 1
-fi
-
-# --- R3: every source path a `cp` command in antigravity/README.md's install
-# section copies from must exist under repo_root. Extraction: scope to the
-# `## Install` section, take each `cp` line, drop flags and any trailing inline
-# `# comment`, drop the last operand (the `.` destination), strip a leading
-# `~/agentic-toolkit/` clone-dir prefix from each source, and check existence.
-r3_count=0
-while IFS= read -r src; do
-  [ -z "$src" ] && continue
-  r3_count=$((r3_count + 1))
-  rel="${src#\~/agentic-toolkit/}"
-  if [ -e "$repo_root/$rel" ]; then
-    assert "antigravity install cp source '$src' exists at $rel" 0
-  else
-    assert "missing path: antigravity/README.md cp source '$src' -> $repo_root/$rel does not exist" 1
-  fi
-done < <(awk '
-  /^## / { insec = ($0 ~ /^## Install([[:space:]]|$)/) ? 1 : 0 }
-  insec && /^[[:space:]]*cp[[:space:]]/ {
-    sub(/#.*/, "")                 # strip trailing inline comment
-    n = split($0, tok, /[[:space:]]+/)
-    # collect operands (non-flag tokens after the leading cp)
-    ops = 0
-    for (i = 1; i <= n; i++) {
-      t = tok[i]
-      if (t == "" || t == "cp") continue
-      if (substr(t, 1, 1) == "-") continue
-      ops++
-      operand[ops] = t
-    }
-    # last operand is the destination; print the rest (sources)
-    for (i = 1; i < ops; i++) print operand[i]
-  }
-' "$ag_readme")
-
-if [ "$r3_count" -eq 0 ]; then
-  assert "antigravity/README.md install section has at least one 'cp' source path" 1
 fi
 
 echo "pass: $pass fail: $fail"

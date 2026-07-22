@@ -5,7 +5,8 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: obsolete
+Superseded: 2026-07-22 data-portability pivot (maintainer-ratified) — native ultracode is the execution engine; see ../SPEC.md addendum. Keeper fragments (screen, pre-flight budget check, tier doctrine) fold into specs/beads-daily-skill.
 Depends on: 05, 07
 Priority: P1
 Budget: 24 turns

@@ -5,7 +5,7 @@
 Status: blocked
 Unblock: run: ls specs/ctx-skill-token-doctrine/tasks/*.md >/dev/null 2>&1 && { for f in specs/ctx-skill-token-doctrine/tasks/*.md; do grep -q '^Status: done' "$f" || echo "not done: $f"; done; } || echo "ctx-skill-token-doctrine not broken down yet"
 Depends on: 03
-Priority: P2
+Priority: P3
 Budget: 8 turns
 Spec: ../SPEC.md (R4)
 Touch: .claude/skills/ctx/SKILL.md, antigravity/.agents/skills/ctx/SKILL.md, docs/guides/ctx-cujs.md

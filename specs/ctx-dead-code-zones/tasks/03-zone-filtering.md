@@ -4,7 +4,7 @@
 
 Status: done
 Depends on: 01, 02
-Priority: P1
+Priority: P3
 Budget: 14 turns
 Spec: ../SPEC.md (R2, R3)
 Touch: context-tree/src/cli.rs, context-tree/src/cmd/refs.rs, context-tree/src/cmd/map.rs, context-tree/src/cmd/mod.rs, context-tree/tests/zones_filter.rs, context-tree/src/lib.rs, context-tree/src/mcp/mod.rs

@@ -83,6 +83,40 @@ Registration in `.claude/settings.json`:
 }
 ```
 
+A repo with `.beads/` (the `/work` skill's queue) gets this wired by
+`bin/install-gates` automatically: it copies the hook to
+`.claude/hooks/bd-compliance.sh` and appends a second entry in the same
+`Stop` array, same shape — never merged into the stop-gate entry's own
+`hooks` list. (In the toolkit repo itself the source lives at
+`hooks/bd-compliance/check.sh`; the installed copy is what settings
+reference.)
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-gate.sh",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/bd-compliance/check.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 Stop hooks fire whenever Claude finishes responding, not only at task
 completion — keep the check cheap, or the gate taxes every conversational
 turn. If the check is too slow to re-run each round, use the

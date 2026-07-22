@@ -15,3 +15,13 @@ vale/styles/Google/
 # drain's self-relaunch log (reference.md "Baton pass" nohup wrapper) —
 # a runtime artifact per spec dir, never meant to be tracked.
 specs/*/.drain-gen.log
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+# Interaction telemetry (local-only, grows unbounded)
+.beads/interactions.jsonl
+# Per-session claim file (bd-compliance hook state, runtime-only)
+.beads/session-claims

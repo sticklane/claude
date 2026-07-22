@@ -414,5 +414,38 @@ cost, migration step, and requirement maps to at least one task.
 | R-B, R-E, R-V                     | 02                                      |
 | R-M, R-S                          | 07                                      |
 
+## Addendum — 2026-07-22 pivot to skill-augmented native orchestration (maintainer-ratified)
+
+Two decisions, ratified verbatim in the live session, supersede parts
+of this spec:
+
+1. **Claude Code is the primary runtime; portability drops from
+   procedure-level to data-level.** bd's queue, ctx's index, and task
+   files remain readable by any agent; nothing guarantees other
+   runtimes can run the same procedures. Consequences: D5's adapter
+   model is superseded — the antigravity/ and codex/ trees are
+   deleted outright (task 10, now unconditional and unblocked), the
+   mirror machinery dies with them, and R-G relaxes to R-G′:
+   any-agent readability of the data layer. D11 inverts: native
+   ultracode IS the execution engine for dynamic work, not an
+   accelerator; specs/agentic-dynamic-workflows stays parked.
+2. **Cost enforcement is advisory-plus-thin-guard, not a metered
+   ledger.** Native caps (16-concurrent/1,000-agent), tier routing in
+   every authored script, agentprof attribution, and an optional
+   pre-flight budget check replace the composer's metered refusals.
+   R-M is satisfied at that level.
+
+Task dispositions under this addendum: 02–05 continue (the bd
+substrate and glue; their consumer is the beads-daily drain flow, not
+a composer); 06/07/08 are obsolete (native engine; keeper fragments —
+the injection screen, the pre-flight guard, tier doctrine — fold into
+specs/beads-daily-skill, which is the pivot's centerpiece); 09 gates
+on the beads-daily skill and re-points readers onto bd; 10 deletes
+the mirror trees unconditionally; 11 shrinks to the launch-contract
+deletion; 12 (audit) and 13 (rules shrinkage) continue unchanged and
+gain importance. The head-to-head eval remains the empirical check on
+this pivot: arm S′ under the new architecture is exactly
+"skill-augmented ultracode with our skills."
+
 Next stage: /build specs/agentic-core-redesign/tasks/01-\*.md or
 /drain specs/agentic-core-redesign (human-launched).

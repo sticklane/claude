@@ -3,7 +3,7 @@
 Status: blocked
 Unblock: run: d=specs/ctx-skill-token-doctrine/tasks; if [ ! -d "$d" ]; then echo "not done: ctx-skill-token-doctrine not broken down"; else for f in "$d"/*.md; do grep -q '^Status: done' "$f" || echo "not done: $f"; done; fi
 Depends on: 01, 02, 03, 04
-Priority: P2
+Priority: P3
 Budget: 14 turns
 Spec: ../SPEC.md (requirement R4)
 Touch: context-tree/README.md, .claude/skills/ctx/SKILL.md, antigravity/.agents/skills/ctx/SKILL.md, .claude-plugin/plugin.json

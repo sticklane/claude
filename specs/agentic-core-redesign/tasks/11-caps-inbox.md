@@ -10,36 +10,26 @@ Depends on: 10
 Priority: P2
 Budget: 24 turns
 Spec: ../SPEC.md (statements 10, 13; D1; Migration step 6)
-Touch: agentic/inbox.py, agentic/promote.py, agentic/config/caps.toml, .claude/skills/build/SKILL.md, .claude/skills/drain/SKILL.md, .claude/skills/prioritize/SKILL.md, docs/human-gates.md, tests/test_agentic_inbox.py
+Touch: .claude/skills/build/SKILL.md, .claude/skills/drain/SKILL.md, .claude/skills/prioritize/SKILL.md, docs/human-gates.md
 
 ## Goal
 
-`agentic inbox` prints the one human list — open questions, recent
-auto-promotions (undoable), spend against caps, priority calls.
-`agentic demote <id>` reverts a promotion. Drafts that pass the critic
-promote automatically. Cap defaults live in `agentic/config/caps.toml`
-and the composer reads them. The launch-authorization contract prose in
-build/drain/prioritize SKILL.md files is deleted (the untrusted-data
-rule stays); docs/human-gates.md gains a short header noting D1
-supersedes its framework, kept as history.
-
-## Touch
-
-Depends on task 10 because it edits the same SKILL.md files task 10
-rewrites — serialized to avoid collision, per the spec's ordering.
+PIVOTED SCOPE (2026-07-22 addendum, ../SPEC.md): the caps/inbox BUILD
+is superseded — promotion/demotion are bd status flips, the inbox is
+`bd ready` plus deferred-question issues, and the pre-flight budget
+guard belongs to specs/beads-daily-skill. What remains here is the
+deletion half: the launch-authorization contract prose in
+build/drain/prioritize SKILL.md files is removed (the untrusted-data
+rule stays), and docs/human-gates.md gains a short header noting the
+caps decision supersedes its framework, kept as history.
 
 ## Steps
 
-1. Write `tests/test_agentic_inbox.py` failing first: fixture store with
-   a deferred question, a fresh promotion, and metered spend → inbox
-   output contains all three sections; demote flips the promotion back
-   to draft and the inbox reflects it.
-2. Implement inbox.py, promote.py (auto-promote on critic READY
-   recorded in tracker metadata), caps.toml wiring into the meter.
-3. Delete the launch-contract blocks; annotate human-gates.md.
+1. Delete the launch-contract blocks from the three SKILL.md files.
+2. Annotate docs/human-gates.md with the supersession header.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_inbox.py -q` → passes
 - [ ] `grep -rn "launch-authorization\|launch authorization contract" .claude/skills/build/ .claude/skills/drain/ .claude/skills/prioritize/ | wc -l` → `0`
+- [ ] `grep -c "superseded" docs/human-gates.md` → ≥ 1 (history annotated, not deleted)
 - [ ] `bash scripts/check.sh` → green
