@@ -1,5 +1,8 @@
 # Attended-only tasks require proven human-boundedness + a HUMAN.md entry
 
+Status: obsolete
+Subsumed: recorded in specs/agentic-core-redesign/TRIAGE.md — delivered by the agentic redesign
+
 ## Problem
 
 Maintainer directive (Steven, 2026-07-21): "we should not be filing

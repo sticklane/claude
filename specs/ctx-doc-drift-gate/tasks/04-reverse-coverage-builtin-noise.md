@@ -1,4 +1,4 @@
-Status: draft
+Status: pending
 Discovered-from: specs/ctx-doc-drift-gate/tasks/01-conformance-test.md
 Spec: ../SPEC.md
 Blocking: no

@@ -1,4 +1,4 @@
-Status: draft
+Status: pending
 Discovered-from: specs/trajectory-evals/evidence/spec-review.md
 Spec: ../SPEC.md
 Blocking: no

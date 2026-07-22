@@ -2,6 +2,9 @@
 
 Breakdown-ready: true
 
+Status: obsolete
+Subsumed: recorded in specs/agentic-core-redesign/TRIAGE.md — delivered by the agentic redesign
+
 ## Problem
 
 A recently-merged spec (`drain-hub-context-discipline`) fixed a _width_

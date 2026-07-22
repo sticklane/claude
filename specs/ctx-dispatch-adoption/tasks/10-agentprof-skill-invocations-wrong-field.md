@@ -1,4 +1,4 @@
-Status: draft
+Status: pending
 Discovered-from: specs/ctx-dispatch-adoption/tasks/04-agentprof-ctx-telemetry.md
 Spec: ../SPEC.md
 Blocking: no

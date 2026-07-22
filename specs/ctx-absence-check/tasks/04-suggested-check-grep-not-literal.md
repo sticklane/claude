@@ -1,4 +1,4 @@
-Status: draft
+Status: pending
 Discovered-from: spec-completion review (2026-07-21)
 Spec: ../SPEC.md
 Blocking: no
