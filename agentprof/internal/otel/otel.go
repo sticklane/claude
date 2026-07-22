@@ -9,10 +9,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"math"
 	"strings"
 	"time"
 
 	commonv1 "go.opentelemetry.io/proto/otlp/common/v1"
+	logsv1 "go.opentelemetry.io/proto/otlp/logs/v1"
 	resourcev1 "go.opentelemetry.io/proto/otlp/resource/v1"
 	tracev1 "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -21,7 +23,15 @@ import (
 	"github.com/sticklane/agentprof/internal/schema"
 )
 
-const unknownService = "(unknown service)"
+const (
+	unknownService = "(unknown service)"
+	unknownEvent   = "(unknown event)"
+)
+
+// costUSDKeys are the log-record attribute keys carrying an explicit fractional
+// USD cost, highest precedence first. Claude Code emits bare cost_usd; the
+// value converts to integer cost_microusd via round(cost_usd * 1e6).
+var costUSDKeys = []string{"cost_usd", "gen_ai.usage.cost"}
 
 // Recognized usage-token attribute keys, highest precedence first. Claude
 // Code emits bare keys rather than the GenAI semconv's gen_ai.usage.*
@@ -88,13 +98,28 @@ type tokenMetric struct {
 	present bool
 }
 
-// Accumulator collects spans from decoded OTLP trace batches.
+// logRec is a decoded OTLP log record carrying an explicit cost. When its
+// trace_id/span_id match a span, its cost joins onto that span's sample;
+// without trace context it degrades to a flat [service, event-name] sample.
+type logRec struct {
+	traceID     string // lowercase hex ("" = absent)
+	spanID      string // lowercase hex ("" = absent)
+	timestamp   uint64
+	serviceName string
+	eventName   string
+	costMicro   int64
+	hasCost     bool
+}
+
+// Accumulator collects spans and cost-bearing log records from decoded OTLP
+// batches.
 type Accumulator struct {
 	spans map[spanKey]*spanRec
 	order []spanKey // first-seen order
+	logs  []*logRec // cost/log records in first-seen order
 }
 
-// NewAccumulator returns an empty span accumulator.
+// NewAccumulator returns an empty accumulator.
 func NewAccumulator() *Accumulator {
 	return &Accumulator{spans: make(map[spanKey]*spanRec)}
 }
@@ -126,26 +151,88 @@ func (a *Accumulator) AddProto(data []byte) error {
 	return nil
 }
 
+// AddLogsJSON decodes one OTLP/JSON logs-export object and accumulates its
+// records. Like AddJSON, the hex trace_id/span_id fields are rewritten to the
+// base64 protojson expects before unmarshaling.
+func (a *Accumulator) AddLogsJSON(data []byte) error {
+	fixed, err := hexIDsToBase64(data)
+	if err != nil {
+		return err
+	}
+	var ld logsv1.LogsData
+	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
+	if err := opts.Unmarshal(fixed, &ld); err != nil {
+		return err
+	}
+	a.addLogs(&ld)
+	return nil
+}
+
+// AddLogsProto decodes OTLP protobuf logs data and accumulates its records.
+func (a *Accumulator) AddLogsProto(data []byte) error {
+	var ld logsv1.LogsData
+	if err := proto.Unmarshal(data, &ld); err != nil {
+		return err
+	}
+	a.addLogs(&ld)
+	return nil
+}
+
 // Len reports the number of distinct spans accumulated so far.
 func (a *Accumulator) Len() int {
 	return len(a.order)
 }
 
+// LogLen reports the number of log records accumulated so far.
+func (a *Accumulator) LogLen() int {
+	return len(a.logs)
+}
+
 // Flush resolves parent chains across everything accumulated and returns the
-// samples in first-seen span order, plus the count of invalid skipped spans.
+// samples, plus the count of invalid skipped spans. Cost-bearing log records
+// join onto the span whose (trace_id, span_id) they name directly (the
+// frames-only-ancestor descendant walk is Task 03); the emit gate is relaxed
+// to hasTokens OR attached cost. Span samples come first in first-seen span
+// order, then flat samples for records without trace context.
 func (a *Accumulator) Flush() ([]schema.Sample, int) {
+	// Index each cost record onto the span it names directly. Multiple records
+	// targeting one span sum. A record naming no accumulated span attaches
+	// nothing here (Task 03's descendant fallback completes that path).
+	costBySpan := make(map[spanKey]int64)
+	for _, lr := range a.logs {
+		if !lr.hasCost || lr.traceID == "" || lr.spanID == "" {
+			continue
+		}
+		key := spanKey{lr.traceID, lr.spanID}
+		if _, ok := a.spans[key]; ok {
+			costBySpan[key] += lr.costMicro
+		}
+	}
+
 	var samples []schema.Sample
 	skipped := 0
 	for _, key := range a.order {
 		rec := a.spans[key]
-		if !rec.hasTokens {
-			continue // frames-only span: context for descendants
+		cost, hasCost := costBySpan[key]
+		if !rec.hasTokens && !hasCost {
+			continue // frames-only span with no cost: context for descendants
 		}
 		if rec.invalid || rec.end < rec.start {
 			skipped++
 			continue
 		}
-		samples = append(samples, a.sample(rec))
+		samples = append(samples, a.sample(rec, cost, hasCost))
+	}
+
+	// A record without trace context degrades to a flat [service, event] sample.
+	for _, lr := range a.logs {
+		if lr.traceID != "" && lr.spanID != "" {
+			continue // had trace context (joined above, or unresolved for Task 03)
+		}
+		if !lr.hasCost {
+			continue
+		}
+		samples = append(samples, flatSample(lr))
 	}
 	return samples, skipped
 }
@@ -165,6 +252,57 @@ func (a *Accumulator) add(td *tracev1.TracesData) {
 			}
 		}
 	}
+}
+
+func (a *Accumulator) addLogs(ld *logsv1.LogsData) {
+	for _, rl := range ld.GetResourceLogs() {
+		service := serviceName(rl.GetResource())
+		for _, sl := range rl.GetScopeLogs() {
+			for _, lr := range sl.GetLogRecords() {
+				a.logs = append(a.logs, newLogRec(lr, service))
+			}
+		}
+	}
+}
+
+func newLogRec(lr *logsv1.LogRecord, service string) *logRec {
+	rec := &logRec{
+		traceID:     hex.EncodeToString(lr.GetTraceId()),
+		spanID:      hex.EncodeToString(lr.GetSpanId()),
+		timestamp:   lr.GetTimeUnixNano(),
+		serviceName: service,
+		eventName:   lr.GetEventName(),
+	}
+	attrs := make(map[string]*commonv1.AnyValue, len(lr.GetAttributes()))
+	for _, kv := range lr.GetAttributes() {
+		if _, ok := attrs[kv.GetKey()]; !ok {
+			attrs[kv.GetKey()] = kv.GetValue()
+		}
+	}
+	if rec.eventName == "" {
+		rec.eventName = firstString(attrs, "event.name")
+	}
+	rec.costMicro, rec.hasCost = costMicroUSD(attrs)
+	return rec
+}
+
+// costMicroUSD resolves a fractional-USD cost attribute (highest-precedence key
+// first) and converts it to integer micro-USD via round(cost * 1e6). Both
+// double and integer USD values are accepted.
+func costMicroUSD(attrs map[string]*commonv1.AnyValue) (int64, bool) {
+	for _, k := range costUSDKeys {
+		v, ok := attrs[k]
+		if !ok {
+			continue
+		}
+		switch val := v.GetValue().(type) {
+		case *commonv1.AnyValue_DoubleValue:
+			return int64(math.Round(val.DoubleValue * 1e6)), true
+		case *commonv1.AnyValue_IntValue:
+			return val.IntValue * 1_000_000, true
+		}
+	}
+	return 0, false
 }
 
 func newSpanRec(sp *tracev1.Span, service string) *spanRec {
@@ -216,7 +354,7 @@ func (r *spanRec) tokenMetric(attrs map[string]*commonv1.AnyValue, keys []string
 	return m
 }
 
-func (a *Accumulator) sample(rec *spanRec) schema.Sample {
+func (a *Accumulator) sample(rec *spanRec, cost int64, hasCost bool) schema.Sample {
 	s := schema.Sample{
 		Time:  time.Unix(0, int64(rec.start)).UTC(),
 		Stack: a.stack(rec),
@@ -225,6 +363,9 @@ func (a *Accumulator) sample(rec *spanRec) schema.Sample {
 			"wall_ms": int64((rec.end - rec.start + 500_000) / 1_000_000),
 		},
 		Labels: map[string]string{"source": "otel", "trace_id": rec.traceID},
+	}
+	if hasCost {
+		s.Values["cost_microusd"] = cost
 	}
 	if rec.input.present {
 		s.Values["input_tokens"] = rec.input.value
@@ -243,6 +384,29 @@ func (a *Accumulator) sample(rec *spanRec) schema.Sample {
 	}
 	if rec.system != "" {
 		s.Labels["system"] = rec.system
+	}
+	return s
+}
+
+// flatSample renders a cost-bearing log record with no trace context as a
+// two-frame [service, event-name] sample — token/cost intact, hierarchy absent.
+func flatSample(lr *logRec) schema.Sample {
+	svc := lr.serviceName
+	if svc == "" {
+		svc = unknownService
+	}
+	event := lr.eventName
+	if event == "" {
+		event = unknownEvent
+	}
+	s := schema.Sample{
+		Time:   time.Unix(0, int64(lr.timestamp)).UTC(),
+		Stack:  []string{svc, event},
+		Values: map[string]int64{"calls": 1},
+		Labels: map[string]string{"source": "otel"},
+	}
+	if lr.hasCost {
+		s.Values["cost_microusd"] = lr.costMicro
 	}
 	return s
 }
