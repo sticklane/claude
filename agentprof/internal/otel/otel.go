@@ -20,6 +20,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/sticklane/agentprof/internal/pricing"
 	"github.com/sticklane/agentprof/internal/schema"
 )
 
@@ -137,17 +138,53 @@ type logRec struct {
 	hasCost     bool
 }
 
+// UserRate holds per-MTok USD prices for one user-supplied pricing entry,
+// matched by model-id prefix. A dollars-per-MTok figure is numerically
+// identical to micro-USD per token (mirroring internal/pricing's rates). It
+// lets a --pricing config price non-Claude dialects without baking a new
+// vendor table into the binary (SPEC.md design pt 5).
+type UserRate struct {
+	Prefix     string  `json:"prefix"`
+	Input      float64 `json:"input"`
+	Output     float64 `json:"output"`
+	CacheRead  float64 `json:"cache_read"`
+	CacheWrite float64 `json:"cache_write"`
+}
+
+// ParseUserPricing decodes a --pricing config: a JSON object with a "models"
+// array of UserRate entries. Entries are prefix-matched in list order (first
+// match wins), so more specific prefixes should be listed before shorter ones
+// they overlap with.
+func ParseUserPricing(data []byte) ([]UserRate, error) {
+	var cfg struct {
+		Models []UserRate `json:"models"`
+	}
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	return cfg.Models, nil
+}
+
 // Accumulator collects spans and cost-bearing log records from decoded OTLP
 // batches.
 type Accumulator struct {
-	spans map[spanKey]*spanRec
-	order []spanKey // first-seen order
-	logs  []*logRec // cost/log records in first-seen order
+	spans   map[spanKey]*spanRec
+	order   []spanKey  // first-seen order
+	logs    []*logRec  // cost/log records in first-seen order
+	pricing []UserRate // user-supplied rate table (--pricing); nil = Claude-table-only
 }
 
 // NewAccumulator returns an empty accumulator.
 func NewAccumulator() *Accumulator {
 	return &Accumulator{spans: make(map[spanKey]*spanRec)}
+}
+
+// SetUserPricing installs a user-supplied rate table, consulted for
+// cost-from-tokens only when the built-in Claude pricing table does not
+// prefix-match a token-only span's model. Nil or empty leaves the
+// Claude-table-only default.
+func (a *Accumulator) SetUserPricing(rates []UserRate) {
+	a.pricing = rates
 }
 
 // AddJSON decodes one OTLP/JSON trace-export object and accumulates its
@@ -247,6 +284,13 @@ func (a *Accumulator) Flush() ([]schema.Sample, int) {
 		if rec.invalid || rec.end < rec.start {
 			skipped++
 			continue
+		}
+		// Cost precedence: an emitted (joined) cost wins; otherwise compute
+		// from tokens where a pricing table matches, else stay tokens-only.
+		if !hasCost && rec.hasTokens {
+			if c, ok := a.priceFromTokens(rec); ok {
+				cost, hasCost = c, true
+			}
 		}
 		samples = append(samples, a.sample(rec, cost, hasCost))
 	}
@@ -461,6 +505,46 @@ func (r *spanRec) tokenMetric(attrs map[string]*commonv1.AnyValue, keys []string
 		}
 	}
 	return m
+}
+
+// priceFromTokens computes a token-only span's cost in micro-USD. It prefers
+// the built-in Claude pricing table (prefix-matched claude-* model IDs) and
+// falls back to the user-supplied rate table for other dialects. Gemini stays
+// tokens-only unless a --pricing entry matches: its baked table is exact-map
+// on Antigravity display strings that OTel API model IDs never hit (SPEC.md
+// Decision 6). Returns ok=false when no table matches the model.
+func (a *Accumulator) priceFromTokens(rec *spanRec) (int64, bool) {
+	if rec.model == "" {
+		return 0, false
+	}
+	u := pricing.Usage{
+		InputTokens:         rec.input.value,
+		OutputTokens:        rec.output.value,
+		CacheReadTokens:     rec.cacheRead.value,
+		CacheCreationTokens: rec.cacheWrite.value,
+	}
+	if c, ok := pricing.Price(rec.model, u); ok {
+		return c, true
+	}
+	return a.userPrice(rec, u)
+}
+
+// userPrice prices a model from the user-supplied rate table (--pricing),
+// matching the first entry whose prefix the model carries. Rates are USD per
+// MTok, numerically micro-USD per token. Returns ok=false when no entry
+// matches (or no config was supplied).
+func (a *Accumulator) userPrice(rec *spanRec, u pricing.Usage) (int64, bool) {
+	for _, r := range a.pricing {
+		if !strings.HasPrefix(rec.model, r.Prefix) {
+			continue
+		}
+		micro := float64(u.InputTokens)*r.Input +
+			float64(u.OutputTokens)*r.Output +
+			float64(u.CacheReadTokens)*r.CacheRead +
+			float64(u.CacheCreationTokens)*r.CacheWrite
+		return int64(math.Round(micro)), true
+	}
+	return 0, false
 }
 
 func (a *Accumulator) sample(rec *spanRec, cost int64, hasCost bool) schema.Sample {

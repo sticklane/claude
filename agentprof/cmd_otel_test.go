@@ -709,3 +709,51 @@ func TestCmdOtelFileModeAcceptsLogsExportObject(t *testing.T) {
 		t.Errorf("stderr = %q, want no invalid-line report for a valid logs object", stderr)
 	}
 }
+
+// TestCmdOtelPricingFlagAppliesUserRates: `otel <trace> --pricing <config>`
+// prices a non-Claude token-only span from the user-supplied rate table,
+// end to end through the CLI.
+func TestCmdOtelPricingFlagAppliesUserRates(t *testing.T) {
+	code, stdout, stderr := runOtel(t,
+		"internal/otel/testdata/pricing_user_model.json",
+		"--pricing", "internal/otel/testdata/pricing_user_config.json")
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", code, stderr)
+	}
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("got %d samples, want 1 (stdout: %q)", len(lines), stdout)
+	}
+	var s struct {
+		Values map[string]int64 `json:"values"`
+	}
+	if err := json.Unmarshal([]byte(lines[0]), &s); err != nil {
+		t.Fatalf("sample not JSON: %v", err)
+	}
+	// gemini-2.5 user rates on 100 input + 50 output = 100*1.25 + 50*10 = 625.
+	if s.Values["cost_microusd"] != 625 {
+		t.Errorf("cost_microusd = %d, want 625 (user pricing config)", s.Values["cost_microusd"])
+	}
+}
+
+// TestCmdOtelPricingFlagAbsentLeavesNonClaudeTokensOnly: with no --pricing
+// flag, a non-Claude token-only span stays tokens-only (Claude-table-only).
+func TestCmdOtelPricingFlagAbsentLeavesNonClaudeTokensOnly(t *testing.T) {
+	code, stdout, stderr := runOtel(t, "internal/otel/testdata/pricing_user_model.json")
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", code, stderr)
+	}
+	var s struct {
+		Values map[string]int64 `json:"values"`
+	}
+	line := strings.TrimSpace(stdout)
+	if err := json.Unmarshal([]byte(line), &s); err != nil {
+		t.Fatalf("sample not JSON: %v", err)
+	}
+	if _, ok := s.Values["cost_microusd"]; ok {
+		t.Errorf("cost_microusd present = %d, want absent without --pricing", s.Values["cost_microusd"])
+	}
+	if s.Values["input_tokens"] != 100 {
+		t.Errorf("input_tokens = %d, want 100", s.Values["input_tokens"])
+	}
+}
