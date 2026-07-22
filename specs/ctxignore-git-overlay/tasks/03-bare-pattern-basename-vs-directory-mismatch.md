@@ -1,4 +1,4 @@
-Status: draft
+Status: pending
 Discovered-from: specs/ctxignore-git-overlay/evidence/spec-review.md
 Spec: ../SPEC.md
 Blocking: no

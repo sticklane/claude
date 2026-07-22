@@ -70,9 +70,9 @@ tasks 03, 04, 06, 07, 11 in their own modules.
 - [2026-07-22 maintainer] To the deferred question on criterion 5:
   option (a) — ignore the two pre-existing red tests for now.
   `scripts/check.sh` carries an explicit KNOWN-RED quarantine list
-  naming `tests/test_skill_chain_determinism.sh` (owner:
-  specs/deterministic-skill-chaining — asserts a lint script that
-  spec has not built yet) and `tests/test_eval_coverage_lint.sh`
+  naming `tests/test_skill_chain_determinism.sh` (retired by core
+  task 10 with the mirror machinery — its owning spec is now
+  obsolete, subsumed by the redesign) and `tests/test_eval_coverage_lint.sh`
   (owner: specs/eval-coverage-tiers — needs bash 4+, host has 3.2).
   Quarantined tests still run and print their status but do not fail
   the suite; the list is printed in check.sh output so the quarantine
