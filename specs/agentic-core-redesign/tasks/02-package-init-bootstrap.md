@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: deferred
+Status: pending
 Depends on: none
 Priority: P0
 Budget: 24 turns
@@ -64,6 +64,22 @@ tasks 03, 04, 06, 07, 11 in their own modules.
 - [ ] `bash scripts/check.sh` → green, and its output lists both the pre-existing `tests/test_*.sh` names and the new agentic tests (proves glob discovery, not a hand-listed subset)
 - [ ] `python3 -m pytest tests/test_agentic_pin.py -q -k missing` → passes (bd absent from PATH → clean install-command error)
 - [ ] `grep -c "scripts/check.sh" AGENTS.md` → ≥ 1 (canonical check documented)
+
+## Answers
+
+- [2026-07-22 maintainer] To the deferred question on criterion 5:
+  option (a) — ignore the two pre-existing red tests for now.
+  `scripts/check.sh` carries an explicit KNOWN-RED quarantine list
+  naming `tests/test_skill_chain_determinism.sh` (owner:
+  specs/deterministic-skill-chaining — asserts a lint script that
+  spec has not built yet) and `tests/test_eval_coverage_lint.sh`
+  (owner: specs/eval-coverage-tiers — needs bash 4+, host has 3.2).
+  Quarantined tests still run and print their status but do not fail
+  the suite; the list is printed in check.sh output so the quarantine
+  is visible, never silent. Remove each entry when its owning spec
+  fixes the test. Criterion 5's "green" means green with this
+  documented quarantine. Re-dispatch starts from the recorded
+  Decisions; Steps 1-3 are done and verified.
 
 ## Deferred questions
 
