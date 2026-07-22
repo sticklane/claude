@@ -32,6 +32,11 @@ pub enum Command {
     Tree {
         /// Path (file or directory prefix) to outline.
         path: String,
+        /// List indexed file paths under `path`, one per line, with no symbol
+        /// lines (`--json`: an array of paths). Here `--depth` counts
+        /// directory levels below `path` (files directly in `path` = depth 1).
+        #[arg(long)]
+        files: bool,
         /// Cap the containment depth shown (top-level is depth 1).
         #[arg(long)]
         depth: Option<usize>,
