@@ -1,6 +1,6 @@
 # Task 02: Grant scout the ctx binary and prefer-ctx prompt (R5)
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 8 turns
@@ -41,6 +41,6 @@ exists; land this before 04.
 
 ## Acceptance
 
-- [ ] `grep -q 'Bash(ctx' .claude/agents/scout.md` → exit 0 (grant present)
-- [ ] `grep -qi 'ctx' .claude/agents/scout.md` matches in prompt-body context (prefer-ctx guidance present, not just the frontmatter grant)
-- [ ] `grep -qi 'ctx' antigravity/.agents/skills/scout/SKILL.md` → exit 0 (mirror carries prefer-ctx guidance)
+- [x] `grep -q 'Bash(ctx' .claude/agents/scout.md` → exit 0 (grant present) — verified: PASS, `tools:` line now includes `Bash(ctx *)`.
+- [x] `grep -qi 'ctx' .claude/agents/scout.md` matches in prompt-body context (prefer-ctx guidance present, not just the frontmatter grant) — verified: PASS, new Rules bullet directs preferring `ctx tree/sig/refs/deps` with the binary-resolution one-liner.
+- [x] `grep -qi 'ctx' antigravity/.agents/skills/scout/SKILL.md` → exit 0 (mirror carries prefer-ctx guidance) — verified: PASS, matching Rules bullet added (no `tools:` frontmatter to widen there).
