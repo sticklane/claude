@@ -1,6 +1,6 @@
 # Task 01: Minified detection classifier + index skip storage
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 24 turns
@@ -50,9 +50,55 @@ not implement `.ctxkeep` here.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test minified` → classifier + boundary
+- [x] `cd context-tree && cargo test minified` → classifier + boundary
   unit tests pass (constants and all three false-negative boundaries).
-- [ ] `cd context-tree && cargo test --test minified` → a synced `*.min.js`
+  Evidence: 11 `minified_classify_*` tests pass (renamed to carry the
+  `minified` substring so this filtered command selects them).
+- [x] `cd context-tree && cargo test --test minified` → a synced `*.min.js`
   fixture records reason `minified-name` and yields zero symbols in the index.
-- [ ] `bash context-tree/scripts/check.sh` → exits 0 (lint + typecheck +
-  tests green).
+  Evidence: all 12 tests in `tests/minified.rs` pass, including
+  `sync_records_skip_reason_and_yields_zero_symbols_for_min_js`.
+- [x] `bash context-tree/scripts/check.sh` → exits 0 (lint + typecheck +
+  tests green). Evidence: `cargo fmt --check`, `cargo clippy --all-targets
+  -- -D warnings`, and `cargo test` (full suite, all existing tests plus
+  the new ones) all passed; exit code 0.
+
+## Decisions
+
+- Decision: criterion (a)'s "average line length" is a trimmed mean —
+  computed over all lines EXCLUDING the single longest one — rather than a
+  plain whole-file mean. Default taken: implemented the trimmed version
+  (documented in `src/minified.rs`'s doc comment on `is_minified_content`).
+  Reason: a plain mean is forced above 400 bytes/line for ANY few-line file
+  over 50 KB regardless of shape (e.g. 51200 bytes / 6 lines ≈ 8533 avg),
+  which would wrongly flag R3's explicit false-positive fixture — many
+  ordinary lines plus one embedded >50%-of-bytes literal — since the plain
+  mean stays dragged up by that one outlier line no matter how many
+  ordinary lines surround it. How to reverse: replace `avg_rest`'s
+  exclude-largest computation with `size / line_count.max(1)`; doing so
+  will also require reworking or dropping the R3(b) false-positive test
+  (`minified_classify_does_not_flag_many_ordinary_lines_with_one_embedded_literal`),
+  since a plain mean cannot satisfy that fixture's "must not be skipped"
+  requirement for any file actually over the 50 KB threshold.
+- Decision: `skip_reason` is a nullable `TEXT` column added directly to the
+  existing `files` table (schema bumped 3→4, triggering the existing C4
+  transparent-rebuild-on-version-mismatch path) rather than a separate
+  table. Default taken: single-column approach. Reason: it is a 1:1
+  per-file attribute sharing the file row's exact staleness lifecycle, and
+  every read (`skip_reason_for_path`) and write (`set_skip_reason`) is
+  already keyed by file/path. How to reverse: extract a `skip_reasons(file_id
+  PRIMARY KEY, reason TEXT NOT NULL)` table if a future need arises (e.g.
+  tracking skip-reason history) that a single column can't serve.
+- Decision: the build procedure's pre-commit review fallback (`/code-review`
+  unavailable → one awaited subagent on the diff) could not run as
+  specified — this dispatch's toolset exposed no generic subagent-dispatch
+  tool (`ToolSearch` for "Agent"/"subagent"/"general-purpose" returned
+  none). Default taken: performed the review pass myself, reading the full
+  diff directly and checking staleness handling, boundary math, and
+  Touch-list conformance by hand; no findings required fixing. How to
+  reverse: N/A — re-run `/code-review` or a subagent pass post-merge if a
+  subagent-dispatch tool becomes available and a second opinion is wanted.
+
+## Discovered
+
+- None.

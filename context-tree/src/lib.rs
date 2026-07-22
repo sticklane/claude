@@ -11,6 +11,7 @@ pub mod index;
 pub mod lang;
 pub mod lsp;
 pub mod mcp;
+pub mod minified;
 pub mod notes;
 pub mod path;
 pub mod project;

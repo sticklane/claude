@@ -14,17 +14,18 @@ use std::time::Duration;
 
 /// Bumped whenever the on-disk schema shape changes; a version-mismatched or
 /// unreadable cache is wiped and rebuilt transparently (C4).
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 const SCHEMA_SQL: &str = "
 CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS sync_meta (id INTEGER PRIMARY KEY CHECK (id = 0), last_sync_ns INTEGER);
 CREATE TABLE IF NOT EXISTS files (
-    id       INTEGER PRIMARY KEY,
-    path     TEXT NOT NULL UNIQUE,
-    hash     TEXT NOT NULL,
-    size     INTEGER NOT NULL,
-    mtime_ns INTEGER NOT NULL
+    id          INTEGER PRIMARY KEY,
+    path        TEXT NOT NULL UNIQUE,
+    hash        TEXT NOT NULL,
+    size        INTEGER NOT NULL,
+    mtime_ns    INTEGER NOT NULL,
+    skip_reason TEXT
 );
 CREATE TABLE IF NOT EXISTS symbols (
     id               INTEGER PRIMARY KEY,
@@ -407,6 +408,31 @@ impl IndexStore {
             )?;
         }
         Ok(())
+    }
+
+    /// Record (or clear, with `None`) a file's minified-skip reason (R1).
+    /// Called on every re-parse of a changed candidate file — whether it
+    /// classifies minified or not — so a file that stops being minified
+    /// (or starts being minified) never carries a stale reason.
+    pub fn set_skip_reason(&self, file_id: i64, reason: Option<&str>) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "UPDATE files SET skip_reason = ?2 WHERE id = ?1",
+            params![file_id, reason],
+        )?;
+        Ok(())
+    }
+
+    /// A file's recorded minified-skip reason, if any (R1). `None` for a
+    /// file that parsed normally, or that isn't indexed at all.
+    pub fn skip_reason_for_path(&self, path: &str) -> rusqlite::Result<Option<String>> {
+        self.conn
+            .query_row(
+                "SELECT skip_reason FROM files WHERE path = ?1",
+                [path],
+                |r| r.get(0),
+            )
+            .optional()
+            .map(|v: Option<Option<String>>| v.flatten())
     }
 
     /// Purge a removed file's tracking row and all its facts (R2 deletion
