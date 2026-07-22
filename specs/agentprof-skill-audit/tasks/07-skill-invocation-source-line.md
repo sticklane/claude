@@ -1,4 +1,4 @@
-Status: draft
+Status: pending
 Discovered-from: specs/agentprof-skill-audit/tasks/04-cli-wiring-and-report.md
 Spec: ../SPEC.md
 Blocking: no

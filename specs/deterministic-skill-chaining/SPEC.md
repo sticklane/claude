@@ -1,7 +1,9 @@
 # Enforce code-mediated control flow for skill-to-skill chaining
 
-Status: open
 Priority: P2
+
+Status: obsolete
+Subsumed: recorded in specs/agentic-core-redesign/TRIAGE.md — delivered by the agentic redesign
 
 ## Problem
 

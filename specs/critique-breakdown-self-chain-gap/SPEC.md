@@ -1,7 +1,9 @@
 # critique doesn't self-chain into breakdown on a READY verdict
 
-Status: open
 Priority: P2
+
+Status: obsolete
+Subsumed: recorded in specs/agentic-core-redesign/TRIAGE.md — delivered by the agentic redesign
 
 ## Problem
 
