@@ -6,9 +6,17 @@ tokens on decisions; delegate consumption of raw material to subagents.
 
 ## Delegation defaults
 
+- **Index-first, before scout dispatch, when the repo is indexed.** When
+  `.context/` exists at the repo root (or `ctx` resolves on PATH), a
+  structural question — a definition, a caller, a signature, an outline, an
+  import graph — goes to the `ctx` index FIRST: `ctx tree`/`sig`/`refs`/
+  `deps`/`map`/`at`, cheaper than dispatching a `scout` because it reads the
+  index, not the raw files. Dispatch `scout` (never a bare Read) only for
+  content/text questions the index can't answer — bodies, literals,
+  patterns — or when the repo carries no index at all.
 - **Never read files into main context to "look around."** Use the `scout`
   agent (scout-tier, read-only; Claude default: Haiku) for any
-  where/how/what-exists question. Fan out
+  where/how/what-exists question the index above doesn't cover. Fan out
   multiple scouts in parallel for independent questions; you keep the
   conclusions, not the file dumps.
 - Read a file directly only when you are about to edit it, and prefer reading

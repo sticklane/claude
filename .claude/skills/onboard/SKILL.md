@@ -86,7 +86,19 @@ profile.
 When the target repo is indexed (a `.context/` directory at its root, or
 `ctx` resolving on PATH), also recommend `Bash(ctx *)` in the allowlist so
 agents can run the code-structure index (`ctx tree`/`sig`/`refs`/`deps`)
-index-first instead of grepping for structure.
+index-first instead of grepping for structure. Same gate, one more write:
+add an "Answering structure questions" section to the repo's **CLAUDE.md**
+(conventions, not AGENTS.md orientation) naming `ctx` as the first stop for
+a structure question, ahead of a file read or a scout dispatch — the
+reading ladder's rung order, one rung per question shape: `ctx tree <path>`
+(what a file/module contains), `ctx sig <symbol>` (a symbol's signature),
+`ctx map` (the important symbols), `ctx deps <path>` (imports/dependents),
+`ctx refs <symbol>` (definition and usages), `ctx at <file>:<line>`
+(enclosing symbol), `ctx notes <symbol>` (pinned gotchas) — falling back to
+reading the file or dispatching a scout only when `ctx` can't answer. Model
+the section on `context-tree/README.md`'s "Adoption: route structure
+questions to `ctx`" block when that repo is available; otherwise write the
+ladder above directly.
 
 ## 5. Offer the next layer
 
