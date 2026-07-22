@@ -1,6 +1,6 @@
 # Task 05: Scope cautions currency (R7)
 
-Status: in-progress
+Status: done
 Depends on: 04
 Priority: P2
 Budget: 8 turns
@@ -39,8 +39,8 @@ self-contained block.
 
 ## Acceptance
 
-- [ ] `grep -qi 'heuristic' .claude/skills/ctx/SKILL.md && grep -qi 'not compiler-verified\|exactness\|ctx-static-analysis' .claude/skills/ctx/SKILL.md` → exit 0 (caution 1)
-- [ ] `grep -qi 'qpath\|identical' .claude/skills/ctx/SKILL.md && grep -qi 'sliced read\|fall back' .claude/skills/ctx/SKILL.md` → exit 0 (caution 2)
-- [ ] `grep -qi 'ctxignore-git-overlay\|vendored\|index-membership' .claude/skills/ctx/SKILL.md` → exit 0 (caution 3)
-- [ ] `grep -qi 'ABSENCE FALLACY' .claude/skills/ctx/SKILL.md && grep -qi 'grep-verified\|string literal\|json key' .claude/skills/ctx/SKILL.md` → exit 0 (caution 4)
-- [ ] `grep -qi 'ABSENCE\|heuristic' antigravity/.agents/skills/ctx/SKILL.md && grep -qi 'ctxignore\|vendored' antigravity/.agents/skills/ctx/SKILL.md` → exit 0 (mirror coverage)
+- [x] `grep -qi 'heuristic' .claude/skills/ctx/SKILL.md && grep -qi 'not compiler-verified\|exactness\|ctx-static-analysis' .claude/skills/ctx/SKILL.md` → exit 0 (caution 1)
+- [x] `grep -qi 'qpath\|identical' .claude/skills/ctx/SKILL.md && grep -qi 'sliced read\|fall back' .claude/skills/ctx/SKILL.md` → exit 0 (caution 2)
+- [x] `grep -qi 'ctxignore-git-overlay\|vendored\|index-membership' .claude/skills/ctx/SKILL.md` → exit 0 (caution 3)
+- [x] `grep -qi 'ABSENCE FALLACY' .claude/skills/ctx/SKILL.md && grep -qi 'grep-verified\|string literal\|json key' .claude/skills/ctx/SKILL.md` → exit 0 (caution 4)
+- [x] `grep -qi 'ABSENCE\|heuristic' antigravity/.agents/skills/ctx/SKILL.md && grep -qi 'ctxignore\|vendored' antigravity/.agents/skills/ctx/SKILL.md` → exit 0 (mirror coverage)
