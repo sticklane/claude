@@ -10,6 +10,7 @@ import (
 	"time"
 
 	commonv1 "go.opentelemetry.io/proto/otlp/common/v1"
+	logsv1 "go.opentelemetry.io/proto/otlp/logs/v1"
 	tracev1 "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -587,6 +588,237 @@ func TestClaudeCodeGoldenFixtureDecodesBareAndCacheKeys(t *testing.T) {
 		if got[k] != v {
 			t.Errorf("Values[%q] = %d, want %d", k, got[k], v)
 		}
+	}
+}
+
+// --- Log ingestion + trace-context cost join ---
+
+// logsExport wraps log-record JSON objects in a single OTLP/JSON logs-export
+// object. An empty service omits the service.name resource attribute.
+func logsExport(service string, records ...string) string {
+	resource := ""
+	if service != "" {
+		resource = `"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"` + service + `"}}]},`
+	}
+	return `{"resourceLogs":[{` + resource + `"scopeLogs":[{"logRecords":[` + strings.Join(records, ",") + `]}]}]}`
+}
+
+// costLogRecord builds one OTLP/JSON log record. Empty traceID/spanID omit the
+// trace-context fields (a record without trace context degrades to a flat
+// sample). Empty eventName omits the event_name field.
+func costLogRecord(traceID, spanID, eventName, ts string, attrs ...string) string {
+	ctx := ""
+	if traceID != "" {
+		ctx += `"traceId":"` + traceID + `",`
+	}
+	if spanID != "" {
+		ctx += `"spanId":"` + spanID + `",`
+	}
+	ev := ""
+	if eventName != "" {
+		ev = `"eventName":"` + eventName + `",`
+	}
+	return `{` + ctx + ev + `"timeUnixNano":"` + ts + `","attributes":[` + strings.Join(attrs, ",") + `]}`
+}
+
+func doubleAttr(key, v string) string {
+	return `{"key":"` + key + `","value":{"doubleValue":` + v + `}}`
+}
+
+func TestLogRecordCostAttachesToMatchingTokenSpan(t *testing.T) {
+	acc := NewAccumulator()
+	sp := claudeCodeTokenSpan(testSpanID, "", "claude_code.llm_request")
+	if err := acc.AddJSON([]byte(export("claude-code", sp))); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	rec := costLogRecord(testTraceID, testSpanID, "claude_code.api_request", testStart, doubleAttr("cost_usd", "0.041230"))
+	if err := acc.AddLogsJSON([]byte(logsExport("claude-code", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0", skipped)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("len(samples) = %d, want 1", len(samples))
+	}
+	if got := samples[0].Values["cost_microusd"]; got != 41230 {
+		t.Errorf("cost_microusd = %d, want 41230", got)
+	}
+	if got := samples[0].Values["input_tokens"]; got != 100 {
+		t.Errorf("input_tokens = %d, want 100 (span tokens retained)", got)
+	}
+}
+
+func TestLogCostUSDRoundsToNearestMicroUSD(t *testing.T) {
+	// 0.0000015 USD * 1e6 = 1.5 micro-USD, which rounds to 2.
+	acc := NewAccumulator()
+	sp := claudeCodeTokenSpan(testSpanID, "", "claude_code.llm_request")
+	if err := acc.AddJSON([]byte(export("claude-code", sp))); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	rec := costLogRecord(testTraceID, testSpanID, "claude_code.api_request", testStart, doubleAttr("cost_usd", "0.0000015"))
+	if err := acc.AddLogsJSON([]byte(logsExport("claude-code", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	samples, _ := acc.Flush()
+	if len(samples) != 1 {
+		t.Fatalf("len(samples) = %d, want 1", len(samples))
+	}
+	if got := samples[0].Values["cost_microusd"]; got != 2 {
+		t.Errorf("cost_microusd = %d, want 2 (1.5 rounds to 2)", got)
+	}
+}
+
+func TestCostOnlySpanEmittedUnderRelaxedFlushGate(t *testing.T) {
+	// A span with no token attributes emits nothing under the old gate; with a
+	// cost record joined, the relaxed hasTokens||hasCost gate emits it.
+	acc := NewAccumulator()
+	sp := span(testSpanID, "", "claude_code.tool") // no token attributes
+	if err := acc.AddJSON([]byte(export("claude-code", sp))); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	rec := costLogRecord(testTraceID, testSpanID, "claude_code.api_request", testStart, doubleAttr("cost_usd", "0.001000"))
+	if err := acc.AddLogsJSON([]byte(logsExport("claude-code", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0", skipped)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("len(samples) = %d, want 1 (relaxed gate emits cost-only span)", len(samples))
+	}
+	if got := samples[0].Values["cost_microusd"]; got != 1000 {
+		t.Errorf("cost_microusd = %d, want 1000", got)
+	}
+	if _, ok := samples[0].Values["input_tokens"]; ok {
+		t.Errorf("input_tokens present on a token-less span, want absent")
+	}
+}
+
+func TestLogRecordWithoutTraceContextYieldsFlatSample(t *testing.T) {
+	acc := NewAccumulator()
+	rec := costLogRecord("", "", "claude_code.api_request", testStart, doubleAttr("cost_usd", "0.002500"))
+	if err := acc.AddLogsJSON([]byte(logsExport("claude-code", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0", skipped)
+	}
+	if len(samples) != 1 {
+		t.Fatalf("len(samples) = %d, want 1", len(samples))
+	}
+	if got := strings.Join(samples[0].Stack, "|"); got != "claude-code|claude_code.api_request" {
+		t.Errorf("flat stack = %q, want %q", got, "claude-code|claude_code.api_request")
+	}
+	if got := samples[0].Values["cost_microusd"]; got != 2500 {
+		t.Errorf("cost_microusd = %d, want 2500", got)
+	}
+}
+
+func TestLogRecordEventNameFromAttributeWhenFieldAbsent(t *testing.T) {
+	// Older emitters carry the event name in an event.name attribute rather
+	// than the dedicated event_name field; a flat sample still names it.
+	acc := NewAccumulator()
+	rec := costLogRecord("", "", "", testStart,
+		strAttr("event.name", "claude_code.api_request"), doubleAttr("cost_usd", "0.000100"))
+	if err := acc.AddLogsJSON([]byte(logsExport("claude-code", rec))); err != nil {
+		t.Fatalf("AddLogsJSON() error = %v", err)
+	}
+	samples, _ := acc.Flush()
+	if len(samples) != 1 {
+		t.Fatalf("len(samples) = %d, want 1", len(samples))
+	}
+	if got := samples[0].Stack[len(samples[0].Stack)-1]; got != "claude_code.api_request" {
+		t.Errorf("flat leaf frame = %q, want %q", got, "claude_code.api_request")
+	}
+}
+
+func TestAddLogsProtoJoinsCostOntoSpan(t *testing.T) {
+	acc := NewAccumulator()
+	sp := claudeCodeTokenSpan(testSpanID, "", "claude_code.llm_request")
+	if err := acc.AddJSON([]byte(export("claude-code", sp))); err != nil {
+		t.Fatalf("AddJSON() error = %v", err)
+	}
+	ld := &logsv1.LogsData{
+		ResourceLogs: []*logsv1.ResourceLogs{{
+			ScopeLogs: []*logsv1.ScopeLogs{{
+				LogRecords: []*logsv1.LogRecord{{
+					TraceId:      []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					SpanId:       []byte{1, 2, 3, 4, 5, 6, 7, 8},
+					EventName:    "claude_code.api_request",
+					TimeUnixNano: 1700000000000000000,
+					Attributes: []*commonv1.KeyValue{{
+						Key:   "cost_usd",
+						Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 0.5}},
+					}},
+				}},
+			}},
+		}},
+	}
+	raw, err := proto.Marshal(ld)
+	if err != nil {
+		t.Fatalf("proto.Marshal() error = %v", err)
+	}
+	if err := acc.AddLogsProto(raw); err != nil {
+		t.Fatalf("AddLogsProto() error = %v", err)
+	}
+	samples, _ := acc.Flush()
+	if len(samples) != 1 {
+		t.Fatalf("len(samples) = %d, want 1", len(samples))
+	}
+	if got := samples[0].Values["cost_microusd"]; got != 500000 {
+		t.Errorf("cost_microusd = %d, want 500000", got)
+	}
+}
+
+func TestGoldenCostLogFixturesJoinAndDegrade(t *testing.T) {
+	acc := NewAccumulator()
+	for _, f := range []struct {
+		name string
+		logs bool
+	}{
+		{"testdata/cost_correlated_trace.json", false},
+		{"testdata/cost_correlated_log.json", true},
+		{"testdata/logs_uncorrelated_cost.json", true},
+	} {
+		data, err := os.ReadFile(f.name)
+		if err != nil {
+			t.Fatalf("ReadFile(%s) error = %v", f.name, err)
+		}
+		if f.logs {
+			err = acc.AddLogsJSON(data)
+		} else {
+			err = acc.AddJSON(data)
+		}
+		if err != nil {
+			t.Fatalf("adding %s: %v", f.name, err)
+		}
+	}
+	samples, skipped := acc.Flush()
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0", skipped)
+	}
+	if len(samples) != 2 {
+		t.Fatalf("len(samples) = %d, want 2 (one joined span + one flat log)", len(samples))
+	}
+	// Sample 0: the token span with the correlated cost joined onto it.
+	joined := samples[0]
+	if joined.Values["input_tokens"] != 200 || joined.Values["cost_microusd"] != 41230 {
+		t.Errorf("joined sample = %v, want input_tokens 200 + cost_microusd 41230", joined.Values)
+	}
+	if got := joined.Stack[len(joined.Stack)-1]; got != "claude_code.llm_request" {
+		t.Errorf("joined leaf frame = %q, want claude_code.llm_request", got)
+	}
+	// Sample 1: the uncorrelated cost log degraded to a flat sample.
+	flat := samples[1]
+	if got := strings.Join(flat.Stack, "|"); got != "claude-code|claude_code.api_request" {
+		t.Errorf("flat stack = %q, want claude-code|claude_code.api_request", got)
+	}
+	if flat.Values["cost_microusd"] != 7500 {
+		t.Errorf("flat cost_microusd = %d, want 7500", flat.Values["cost_microusd"])
 	}
 }
 

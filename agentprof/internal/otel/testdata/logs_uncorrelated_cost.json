@@ -1,0 +1,1 @@
+{"resourceLogs":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"claude-code"}}]},"scopeLogs":[{"logRecords":[{"eventName":"claude_code.api_request","timeUnixNano":"1700000002000000000","attributes":[{"key":"cost_usd","value":{"doubleValue":0.007500}}]}]}]}]}

@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: 01
 Priority: P1
 Budget: 26 turns
@@ -69,11 +69,11 @@ may attach nothing yet (Task 03 completes that path). Add fixtures under
 
 Runnable commands only:
 
-- [ ] `cd agentprof && go test ./internal/otel/ -run 'Cost|Log|Flush' -v` → new join/gate tests pass (L2)
-- [ ] `cd agentprof && go test . -run 'OtelServe.*Logs|OtelServe.*Gzip' -v` → `/v1/logs` + gzip receiver tests pass (L2)
-- [ ] `grep -c '/v1/logs' agentprof/cmd_otel.go` → ≥1 (route registered)
-- [ ] `grep -c 'cost_microusd' agentprof/internal/otel/otel.go` → ≥1 (cost emit path)
-- [ ] `bash agentprof/scripts/check.sh` → exits 0
+- [x] `cd agentprof && go test ./internal/otel/ -run 'Cost|Log|Flush' -v` → new join/gate tests pass (L2)
+- [x] `cd agentprof && go test . -run 'OtelServe.*Logs|OtelServe.*Gzip' -v` → `/v1/logs` + gzip receiver tests pass (L2)
+- [x] `grep -c '/v1/logs' agentprof/cmd_otel.go` → ≥1 (route registered)
+- [x] `grep -c 'cost_microusd' agentprof/internal/otel/otel.go` → ≥1 (cost emit path)
+- [x] `bash agentprof/scripts/check.sh` → exits 0
 - [ ] MANUAL-PENDING (human, not drain-gated): confirm against a real Claude
       Code capture which span the `claude_code.api_request` cost event's
       `span_id` actually targets — the spec files this as a manual-pending

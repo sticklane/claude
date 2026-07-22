@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"flag"
 	"fmt"
@@ -51,12 +52,12 @@ func cmdOtel(args []string, stdout, stderr io.Writer) int {
 	// A leading '{' is first tried as one whole-file object; on failure the
 	// accumulator is untouched, so fall back to line-by-line JSONL (R2).
 	whole := bytes.TrimSpace(data)
-	if len(whole) == 0 || whole[0] != '{' || acc.AddJSON(whole) != nil {
+	if len(whole) == 0 || whole[0] != '{' || addOTLP(acc, whole) != nil {
 		for _, line := range bytes.Split(data, []byte("\n")) {
 			if line = bytes.TrimSpace(line); len(line) == 0 {
 				continue
 			}
-			if acc.AddJSON(line) != nil {
+			if addOTLP(acc, line) != nil {
 				badLines++
 			}
 		}
@@ -82,6 +83,34 @@ func cmdOtel(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// addOTLP feeds one OTLP/JSON export object into the accumulator, accepting
+// either a trace-export (`resourceSpans`) or a logs-export (`resourceLogs`)
+// object — a Collector fileexporter JSONL stream mixes both. Each decoder
+// discards the other's payload as unknown fields, so both are tried; the
+// object is bad only when neither decodes.
+func addOTLP(acc *otel.Accumulator, data []byte) error {
+	errTraces := acc.AddJSON(data)
+	errLogs := acc.AddLogsJSON(data)
+	if errTraces != nil && errLogs != nil {
+		return errTraces
+	}
+	return nil
+}
+
+// readBody reads a receiver request body, transparently decompressing it when
+// the client sets `Content-Encoding: gzip` (shared by all receiver routes).
+func readBody(req *http.Request) ([]byte, error) {
+	if strings.EqualFold(req.Header.Get("Content-Encoding"), "gzip") {
+		gz, err := gzip.NewReader(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		defer gz.Close()
+		return io.ReadAll(gz)
+	}
+	return io.ReadAll(req.Body)
 }
 
 // cmdOtelServe runs an OTLP/HTTP receiver until SIGINT/SIGTERM, then drains
@@ -141,8 +170,10 @@ func newOtelReceiver(logw io.Writer) *otelReceiver {
 }
 
 func (r *otelReceiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if req.URL.Path != "/v1/traces" {
-		http.NotFound(w, req) // includes /v1/metrics and /v1/logs (R10)
+	switch req.URL.Path {
+	case "/v1/traces", "/v1/logs": // /v1/metrics stays unregistered (R10)
+	default:
+		http.NotFound(w, req)
 		return
 	}
 	if req.Method != http.MethodPost {
@@ -155,21 +186,33 @@ func (r *otelReceiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "unsupported content type", http.StatusUnsupportedMediaType)
 		return
 	}
-	body, err := io.ReadAll(req.Body)
+	body, err := readBody(req)
 	if err != nil {
 		http.Error(w, "cannot read request body", http.StatusBadRequest)
 		return
 	}
 
 	r.mu.Lock()
-	before := r.acc.Len()
-	if ct == "application/json" {
-		err = r.acc.AddJSON(body)
+	if req.URL.Path == "/v1/logs" {
+		before := r.acc.LogLen()
+		if ct == "application/json" {
+			err = r.acc.AddLogsJSON(body)
+		} else {
+			err = r.acc.AddLogsProto(body)
+		}
+		if err == nil {
+			fmt.Fprintf(r.logw, "accepted %d log records\n", r.acc.LogLen()-before)
+		}
 	} else {
-		err = r.acc.AddProto(body)
-	}
-	if err == nil {
-		fmt.Fprintf(r.logw, "accepted %d spans\n", r.acc.Len()-before)
+		before := r.acc.Len()
+		if ct == "application/json" {
+			err = r.acc.AddJSON(body)
+		} else {
+			err = r.acc.AddProto(body)
+		}
+		if err == nil {
+			fmt.Fprintf(r.logw, "accepted %d spans\n", r.acc.Len()-before)
+		}
 	}
 	r.mu.Unlock()
 	if err != nil {
