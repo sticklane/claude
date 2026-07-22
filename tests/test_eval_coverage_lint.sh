@@ -139,4 +139,31 @@ run_lint "$T"
 printf '%s\n' "$OUT" | grep -q 'tier-c-empty-reason: cc' \
   || fail "empty-reason violation not named for cc" "$OUT"
 
-echo "eval-coverage lint selftest: OK (conforming + 5 violation classes)"
+# --- case 6: skills dir absent entirely ------------------------------------
+# COVERAGE.md present but no .claude/skills tree at all: the [!_]* enumeration
+# glob expands to nothing under nullglob, so without a guard the lint would
+# pass vacuously (exit 0 having checked no skill). It must fail loudly instead,
+# the same way the missing-COVERAGE.md case does.
+newtree
+write_coverage "$T" <<'ROWS'
+| aa | A | >=2 scenarios, >=1 adversarial (NN-adv-*) | |
+ROWS
+run_lint "$T"
+[ "$RC" -ne 0 ] || fail "absent skills dir should exit non-zero, not pass vacuously" "$OUT"
+printf '%s\n' "$OUT" | grep -q 'no skill dirs' \
+  || fail "absent-skills-dir violation not named" "$OUT"
+
+# --- case 7: skills dir present but holds no [!_]* entry --------------------
+# Only a _shared dir (excluded by the [!_]* glob) exists: same vacuous-pass
+# shape as case 6 — zero enumerable skills — and must fail the same way.
+newtree
+mkdir -p "$T/.claude/skills/_shared"
+write_coverage "$T" <<'ROWS'
+| aa | A | >=2 scenarios, >=1 adversarial (NN-adv-*) | |
+ROWS
+run_lint "$T"
+[ "$RC" -ne 0 ] || fail "skills dir with only _shared should exit non-zero" "$OUT"
+printf '%s\n' "$OUT" | grep -q 'no skill dirs' \
+  || fail "empty-skills-dir violation not named" "$OUT"
+
+echo "eval-coverage lint selftest: OK (conforming + 5 violation classes + 2 empty-skills-dir guards)"
