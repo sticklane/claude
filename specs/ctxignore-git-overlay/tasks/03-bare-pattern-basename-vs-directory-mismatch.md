@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/ctxignore-git-overlay/evidence/spec-review.md
 Spec: ../SPEC.md
 Blocking: no

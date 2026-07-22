@@ -1,6 +1,6 @@
 # Task 04: Codebase survey section + model tiering (R4)
 
-Status: pending
+Status: in-progress
 Depends on: 03, 02
 Priority: P1
 Budget: 10 turns

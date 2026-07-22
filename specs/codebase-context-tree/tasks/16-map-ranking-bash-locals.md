@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/codebase-context-tree/evidence/capability-shakedown-2026-07-20.md
 Spec: ../SPEC.md
 Blocking: no

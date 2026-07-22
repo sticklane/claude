@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/agentprof-skill-audit/tasks/03-outcome-classification.md
 Spec: ../SPEC.md
 Blocking: no

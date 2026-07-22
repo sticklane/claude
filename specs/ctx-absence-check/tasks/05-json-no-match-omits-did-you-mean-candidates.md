@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: spec-completion review (2026-07-21)
 Spec: ../SPEC.md
 Blocking: no

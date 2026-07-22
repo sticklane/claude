@@ -1,6 +1,6 @@
 # Task 03: Judge input assembly and blinding
 
-Status: pending
+Status: in-progress
 Depends on: 02
 Priority: P1
 Budget: 16 turns

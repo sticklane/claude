@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/eval-coverage-tiers/tasks/02-prioritize-evalset.md
 Spec: ../SPEC.md
 Blocking: no

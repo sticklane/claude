@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/trajectory-evals/evidence/spec-review.md
 Spec: ../SPEC.md
 Blocking: no

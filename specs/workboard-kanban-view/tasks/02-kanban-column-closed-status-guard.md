@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/workboard-kanban-view/tasks/01-kanban-board-view.md
 Spec: ../SPEC.md
 Blocking: no

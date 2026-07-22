@@ -1,4 +1,4 @@
-Status: pending
+Status: in-progress
 Discovered-from: specs/eval-coverage-tiers/tasks/01-coverage-table-and-lint.md
 Spec: ../SPEC.md
 Blocking: no

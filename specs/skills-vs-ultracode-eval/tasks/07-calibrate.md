@@ -1,6 +1,6 @@
 # Task 07: Calibration harness — RED/GREEN proof for all three fixtures
 
-Status: pending
+Status: in-progress
 Depends on: 04, 05, 06
 Priority: P1
 Budget: 12 turns
