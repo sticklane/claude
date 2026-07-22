@@ -2,7 +2,7 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 20 turns
@@ -62,5 +62,9 @@ scope for R2 (CLI-only); leave the MCP surface unchanged.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test show` → the new `tests/show.rs` cases pass
-- [ ] `bash context-tree/scripts/check.sh` → exits 0 (fmt, clippy -D warnings, all tests)
+- [x] `cd context-tree && cargo test show` → the new `tests/show.rs` cases pass
+      — evidence: 5/5 passed (span correctness, staleness re-resolution,
+      `--head N` cap, 200-line default truncation guard, `--json`).
+- [x] `bash context-tree/scripts/check.sh` → exits 0 (fmt, clippy -D warnings, all tests)
+      — evidence: full workspace suite green after `cargo fmt` (one
+      auto-applied formatting diff in `show.rs`), 0 clippy warnings.

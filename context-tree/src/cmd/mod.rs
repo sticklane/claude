@@ -9,6 +9,7 @@ pub mod map;
 pub mod no_match;
 pub mod notes;
 pub mod refs;
+pub mod show;
 pub mod sig;
 pub mod tree;
 

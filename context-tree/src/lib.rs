@@ -125,6 +125,17 @@ pub fn run() -> ExitCode {
             json,
             no_sync,
         }),
+        Some(cli::Command::Show {
+            symbol,
+            head,
+            json,
+            no_sync,
+        }) => cmd::show::run(cmd::show::Args {
+            symbol,
+            head,
+            json,
+            no_sync,
+        }),
         Some(cli::Command::Deps {
             path,
             reverse,
