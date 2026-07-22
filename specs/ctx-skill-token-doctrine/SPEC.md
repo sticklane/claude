@@ -169,3 +169,21 @@ antigravity/.agents/skills/ctx/SKILL.md)` is empty (mirror parity;
 - fooszone memory: `feedback-ctx-skill-triggering.md` (2026-07-20 session).
 - Aider repo map: https://aider.chat/2023/10/22/repomap.html
 - Codebase-Memory: https://arxiv.org/html/2603.27277v1
+
+## Parallelization
+
+The five ctx SKILL.md edits (tasks 01, 03, 04, 05 — R1/R2+R3/R4/R7) must
+serialize: they edit the same `.claude/skills/ctx/SKILL.md` (and its
+antigravity mirror), which the Landing-order registry forbids emitting as
+parallel work. That chain is encoded by `Depends on:` (03→01, 04→03, 05→04),
+not by grouping. Task 04 additionally depends on task 02 (R5): R4's survey
+delegation is only functional once scout carries the `Bash(ctx *)` grant, so
+04's text must not ship ahead of 02.
+
+The concurrent-safe group is the no-dependency, disjoint-`Touch` set: task 01
+(ctx SKILL.md frontmatter), task 02 (scout.md + mirror), and task 06 (onboard
++ token-discipline). They share no files and no open design choice, so they
+may run together; the serial chain (03→04→05) and the closing sweep (07) run
+per their dependency edges.
+
+- Group: 01, 02, 06
