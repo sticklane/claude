@@ -256,3 +256,38 @@ fn sig_no_match_via_mcp_carries_boundary_fields() {
         "MCP suggested_check is a bounded grep: {sc}"
     );
 }
+
+/// specs/ctx-absence-check task 05: a case-variant no-match through the MCP
+/// `sig` tool carries the `did_you_mean` candidate array the CLI `--json` path
+/// emits — the R4 near-miss list reaches JSON/MCP consumers via shared
+/// `render()`.
+#[test]
+fn sig_no_match_via_mcp_carries_did_you_mean() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    // Only camelCase `figureBboxes` is indexed; the MCP query is a case variant.
+    write(root, "app.py", "def figureBboxes():\n    return 1\n");
+    sleep(PAST);
+    init(root);
+
+    let call = json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": { "name": "sig", "arguments": { "symbol": "FigureBboxes" } }
+    });
+    let responses = mcp_session(root, &[call]);
+    let resp = response(&responses, 1);
+    let text = resp["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_else(|| panic!("tools/call sig no-match has no text content: {resp}"));
+    let v: Value = serde_json::from_str(text).unwrap();
+
+    let cands = v["did_you_mean"]
+        .as_array()
+        .unwrap_or_else(|| panic!("MCP no-match carries did_you_mean array: {v}"));
+    assert!(
+        cands.iter().any(|c| c.as_str() == Some("figureBboxes")),
+        "MCP did_you_mean lists the case-variant candidate: {v}"
+    );
+}

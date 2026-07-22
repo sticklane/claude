@@ -369,6 +369,87 @@ fn sig_no_match_json_extends_error_object() {
     );
 }
 
+/// specs/ctx-absence-check task 05: a `sig --json` no-match whose query is a
+/// case variant of an indexed symbol carries the near-miss candidate list in a
+/// `did_you_mean` array — JSON/MCP consumers get the same R4 suggestion the
+/// text path prints, alongside the unchanged legacy and boundary keys.
+#[test]
+fn sig_no_match_json_includes_did_you_mean_candidates() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    // Only the camelCase `figureBboxes` is indexed; the query is a case variant.
+    write(root, "app.py", "def figureBboxes():\n    return 1\n");
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["sig", "FigureBboxes", "--json"]);
+    assert_eq!(out.status.code(), Some(1), "case-variant miss exits 1");
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+
+    // Legacy + boundary keys still present (parity gap is additive only).
+    assert_eq!(
+        v["error"].as_str(),
+        Some("no match"),
+        "legacy error key: {v}"
+    );
+    assert!(
+        v["boundary_note"].as_str().is_some(),
+        "boundary_note survives: {v}"
+    );
+
+    let cands = v["did_you_mean"]
+        .as_array()
+        .unwrap_or_else(|| panic!("did_you_mean is a JSON array: {v}"));
+    assert!(
+        cands.iter().any(|c| c.as_str() == Some("figureBboxes")),
+        "the case-variant candidate is listed: {v}"
+    );
+}
+
+/// specs/ctx-absence-check task 05: a `sig --json` no-match with no near-miss
+/// candidate OMITS the `did_you_mean` key entirely — the no-candidate object
+/// stays byte-identical to the task-01 R2 shape.
+#[test]
+fn sig_no_match_json_omits_did_you_mean_when_no_near_miss() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "app.py", "def solo():\n    return 1\n");
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["sig", "Zzzznonexistent", "--json"]);
+    assert_eq!(out.status.code(), Some(1), "no-match exits 1");
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+
+    assert!(
+        v.get("did_you_mean").is_none(),
+        "no did_you_mean key when nothing is close: {v}"
+    );
+}
+
+/// specs/ctx-absence-check task 05: the `refs --json` surface carries the same
+/// `did_you_mean` array as `sig --json` — both share the no-match path.
+#[test]
+fn refs_no_match_json_includes_did_you_mean_candidates() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "app.py", "def figureBboxes():\n    return 1\n");
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["refs", "FigureBboxes", "--json"]);
+    assert_eq!(out.status.code(), Some(1), "case-variant miss exits 1");
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+
+    let cands = v["did_you_mean"]
+        .as_array()
+        .unwrap_or_else(|| panic!("did_you_mean is a JSON array: {v}"));
+    assert!(
+        cands.iter().any(|c| c.as_str() == Some("figureBboxes")),
+        "the case-variant candidate is listed: {v}"
+    );
+}
+
 #[test]
 fn sig_ambiguous_lists_candidates_and_exits_3() {
     let dir = tempfile::tempdir().unwrap();

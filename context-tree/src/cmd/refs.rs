@@ -154,15 +154,20 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     match names.len() {
         0 => {
             if args.json {
-                out.push_str(&format!(
-                    "{}\n",
-                    json!({
-                        "error": "no match",
-                        "symbol": args.symbol,
-                        "boundary_note": no_match::BOUNDARY_NOTE,
-                        "suggested_check": no_match::suggested_check(&args.symbol),
-                    })
-                ));
+                let mut obj = json!({
+                    "error": "no match",
+                    "symbol": args.symbol,
+                    "boundary_note": no_match::BOUNDARY_NOTE,
+                    "suggested_check": no_match::suggested_check(&args.symbol),
+                });
+                // R4 near-miss list, mirrored into JSON (task 05): present only
+                // when candidates exist, so the no-candidate object is unchanged.
+                let candidates =
+                    no_match::did_you_mean(&args.symbol, all.iter().map(|s| s.name.as_str()));
+                if !candidates.is_empty() {
+                    obj["did_you_mean"] = json!(candidates);
+                }
+                out.push_str(&format!("{obj}\n"));
             } else {
                 eprintln!("ctx refs: no symbol matches '{}'", args.symbol);
                 let candidates =
