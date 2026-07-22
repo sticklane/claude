@@ -85,7 +85,12 @@ order cannot resolve are surfaced, not guessed.
 - Skills that spawn agents follow the "Dispatch authoring" section of
   `.claude/rules/token-discipline.md` (tier by stage type, capped returns,
   bounded loops, single-call judge) — cite it, don't restate it.
-- `.claude/` is the source of truth; the port chain is `.claude/` →
+- **SUPERSEDED 2026-07-22** (data-portability pivot; ratified addendum in
+  specs/agentic-core-redesign/SPEC.md): do NOT add or update mirror
+  content; the mirror trees and this convention are queued for deletion
+  (core task 10). Portability is data-level — bd queue, ctx index, task
+  files. Historical text follows until the deletion lands:
+  `.claude/` is the source of truth; the port chain is `.claude/` →
   `antigravity/` → `codex/`. `antigravity/` is a full mirrored port (real
   copies: skills near-identical, agents→skills, human-only skills→workflows,
   hooks in Antigravity's JSON shape). `codex/` is a thin overlay on top of

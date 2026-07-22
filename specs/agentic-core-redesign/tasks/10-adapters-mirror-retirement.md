@@ -6,7 +6,7 @@
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
 Status: pending
-Depends on: 09
+Depends on: none
 Priority: P2
 Budget: 30 turns
 Spec: ../SPEC.md (statement 12; component "Runtime adapters"; D5, D11; Migration step 5)
@@ -14,7 +14,13 @@ Touch: antigravity/, codex/, CLAUDE.md, .claude/rules/mirror-procedure-disciplin
 
 ## Goal
 
-antigravity/ and codex/ are thin adapters: per runtime, a small prompt
+PIVOTED SCOPE (2026-07-22 addendum, ../SPEC.md): portability is
+data-level — other runtimes read bd's queue, ctx's index, and task
+files directly; no procedure adapters are maintained. The
+antigravity/ and codex/ trees are DELETED, each replaced by a short
+README.md pointing at the data layer (bd/ctx/specs) and this
+decision. The mirror machinery dies with them. Original adapter
+framing follows for context: per runtime, a small prompt
 folder that frames judgment and shells out to `agentic`, native hook
 wiring, and an onboarding snippet — no ported procedure. The mirror
 machinery is gone: the procedure manifest, its coverage test, the parity
@@ -43,7 +49,7 @@ concepts/commands that must appear), never diff-emptiness.
 
 ## Acceptance
 
-- [ ] `bash -c 'for t in antigravity codex; do grep -rlq "agentic loop\|agentic ready" $t/ || echo "no adapter content: $t"; done'` → no output (each runtime tree invokes the CLI)
+- [ ] `bash -c 'for t in antigravity codex; do [ -d $t ] && [ $(ls $t | wc -l) -gt 1 ] && echo "tree survives: $t"; done; exit 0'` → no output (each tree reduced to a single README.md pointing at the data layer)
 - [ ] `ls tests/mirror-procedure-manifest.txt tests/test_mirror_procedure_coverage.sh tests/test_antigravity_parity.sh tests/test_antigravity_content_parity.sh tests/test_codex_parity.sh .claude/rules/mirror-procedure-discipline.md .claude/rules/mirror-verification.md 2>&1 | grep -c "No such file"` → `7` (the parity gates die with the mirrors they guarded)
 - [ ] `grep -c "port chain" CLAUDE.md` → `0` (conventions rewritten, not orphaned)
 - [ ] `bash scripts/check.sh` → green with the deleted tests removed from the suite, and `claude plugin validate .claude-plugin` (or the repo's documented equivalent) passes
