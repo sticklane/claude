@@ -1,6 +1,6 @@
 # Task 03: `.ctxkeep` escape hatch
 
-Status: in-progress
+Status: deferred
 Depends on: 01
 Priority: P2
 Budget: 12 turns
@@ -46,3 +46,34 @@ subtractive path.
   minified fixture parses (symbols present); `.ctxignore`-excluded path
   named in `.ctxkeep` stays excluded.
 - [ ] `bash context-tree/scripts/check.sh` → exits 0.
+
+## Deferred questions
+
+**Contradicts-premise: true**
+
+- Artifact: this file (`specs/ctx-minified-skip/tasks/03-ctxkeep-escape-hatch.md`)
+- Contradicted clause (verbatim, from `## Touch` above): "Wires the
+  exemption gate into the skip decision in `src/minified.rs` (the seam
+  task 01 left)."
+- Evidence: the dispatched worker traced the actual skip decision to its
+  one callsite — `context-tree/src/sync/mod.rs:186`
+  (`if let Some(reason) = minified::classify(rel, &content)`) — and found
+  task 01's own seam comment sits at `sync/mod.rs:183`, not in
+  `minified.rs`. `classify(rel, content)` takes no `root` parameter, so it
+  cannot load `.ctxkeep` itself; changing its signature would also break
+  the two existing callers (`sync/mod.rs` and `tests/minified.rs`), both
+  outside this task's `Touch`. `../SPEC.md`'s Parallelization line repeats
+  the same wrong location.
+
+**Question:** should this task's `Touch:` be expanded to include
+`context-tree/src/sync/mod.rs` (the actual skip-decision seam), so the
+`.ctxkeep` gate can be wired at the real callsite? The worker's
+ready-to-apply design once expanded: `src/vcs/mod.rs` gets
+`load_ctxkeep(root)` mirroring `load_ctxignore`'s sibling-read, reusing
+`ctxignore_matches`/`glob_match`; `sync/mod.rs:186` gates the skip
+decision itself (a `.ctxkeep`-matched path falls through to the extractor
+even when `classify` returns `Some(reason)`); `tests/ctxkeep.rs` gets an
+end-to-end `run_sync` test plus the `.ctxignore`-wins-over-`.ctxkeep` test.
+This is safe against the sibling task 02 dispatched concurrently in this
+same wave (touches `cmd/tree.rs` + `index/mod.rs` only — no overlap with
+`sync/mod.rs`).
