@@ -152,6 +152,10 @@ impl CtxServer {
         cmd::refs::render(&cmd::refs::Args {
             symbol: p.symbol,
             limit: p.limit.unwrap_or(50),
+            // `--exact` (task 01 / R2) is a CLI-only on-demand trigger; the
+            // MCP wrapper stays read-only over whatever cache already exists,
+            // out of this task's Touch (`context-tree/src/mcp/` untouched).
+            exact: false,
             json: true,
             no_sync: false,
         })

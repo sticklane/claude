@@ -1,13 +1,24 @@
-//! `ctx refs <symbol> [--limit N]` — definitions and references for a symbol
-//! resolved by C3 suffix (R10). Results are labeled `heuristic` by default; when
-//! the optional LSP enrichment cache is present (R11/task 08), a reference the
-//! language server confirmed is upgraded to `precise` and a definition with a
-//! resolved signature is shown as `precise` with that signature appended. With
-//! no enrichment cache, every result stays `heuristic` and the command is
-//! unchanged. Heuristic matching is scope-aware where the grammar has locals
-//! queries: a reference bound to a function-local definition of the same name
-//! is excluded from the cross-file candidate set. Results cap at `--limit`
-//! (default 50) per direction with a truncation line naming the flag.
+//! `ctx refs <symbol> [--limit N] [--exact]` — definitions and references for a
+//! symbol resolved by C3 suffix (R10). Results are labeled `heuristic` by
+//! default; when the optional LSP enrichment cache is present (R11/task 08), a
+//! reference the language server confirmed is upgraded to `precise` and a
+//! definition with a resolved signature is shown as `precise` with that
+//! signature appended. With no enrichment cache, every result stays
+//! `heuristic` and the command is unchanged. Heuristic matching is scope-aware
+//! where the grammar has locals queries: a reference bound to a function-local
+//! definition of the same name is excluded from the cross-file candidate set.
+//! Results cap at `--limit` (default 50) per direction with a truncation line
+//! naming the flag.
+//!
+//! `--exact` (task 01 / R2 / F1(i)) additionally TRIGGERS on-demand
+//! enrichment when no current-generation cache exists: it consults a
+//! per-language language server (`lsp::enrich_exact`) and, for each precise
+//! reference, attributes it to the specific definition the server resolved it
+//! against — disambiguating two definitions that share a name (e.g. the
+//! `main.rodSpecs`-in-two-packages case R2 names) by appending `-> <def
+//! qpath>` to that reference's line. With no server binary available for the
+//! matched symbol's language, `--exact` leaves the cache absent and the
+//! output is byte-identical to plain `ctx refs`.
 
 use crate::cmd::{
     EXIT_AMBIGUOUS, EXIT_NO_MATCH, format_note_marker, load_index, no_match, note_value,
@@ -24,6 +35,7 @@ use std::process::ExitCode;
 pub struct Args {
     pub symbol: String,
     pub limit: usize,
+    pub exact: bool,
     pub json: bool,
     pub no_sync: bool,
 }
@@ -92,7 +104,15 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         Err(code) => return (String::new(), code),
     };
     // Optional LSP enrichment (R11): absent cache => every result stays heuristic.
-    let cache = EnrichmentCache::load(&root);
+    let mut cache = EnrichmentCache::load(&root);
+    // `--exact` (task 01 / R2): no current-generation cache yet => try to
+    // build one now via per-language resolver dispatch. A repo with no
+    // available server for the matched symbol's language leaves this a
+    // no-op (`enrich_exact` writes an empty cache, `load` then sees nothing
+    // precise), so the heuristic path below is unchanged.
+    if args.exact && cache.is_none() && crate::lsp::enrich_exact(&root).is_ok() {
+        cache = EnrichmentCache::load(&root);
+    }
     let all = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
@@ -235,12 +255,25 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     }
     for r in refs.iter().take(ref_shown) {
         let label = ref_label(cache.as_ref(), &r.name, &r.path, r.row + 1);
+        // `--exact` disambiguation (R2): attribute a precise reference to the
+        // specific definition that confirmed it. Gated on `args.exact` so
+        // plain `ctx refs` output is never affected by this suffix.
+        let attribution = if args.exact {
+            cache
+                .as_ref()
+                .and_then(|c| c.precise_def(&r.name, &r.path, r.row + 1))
+                .map(|def| format!(" -> {def}"))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
         out.push_str(&format!(
-            "ref {} {}:{} {}\n",
+            "ref {} {}:{} {}{}\n",
             r.name,
             r.path,
             r.row + 1,
-            label
+            label,
+            attribution,
         ));
     }
     if ref_omitted > 0 {
@@ -291,13 +324,23 @@ fn render_json(
         .iter()
         .take(args.limit)
         .map(|r| {
-            json!({
+            let mut obj = json!({
                 "name": r.name,
                 "file": r.path,
                 "line": r.row + 1,
                 "kind": r.kind,
                 "label": ref_label(cache, &r.name, &r.path, r.row + 1),
-            })
+            });
+            // `--exact` disambiguation (R2): the confirming definition's
+            // qpath, when the cache attributes this reference to one. Only
+            // added under `--exact`, so plain `ctx refs --json` is unchanged.
+            if args.exact {
+                if let Some(def) = cache.and_then(|c| c.precise_def(&r.name, &r.path, r.row + 1))
+                {
+                    obj["def"] = json!(def);
+                }
+            }
+            obj
         })
         .collect();
     let mut payload = json!({
