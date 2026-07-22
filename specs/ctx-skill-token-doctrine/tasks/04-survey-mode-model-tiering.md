@@ -1,6 +1,6 @@
 # Task 04: Codebase survey section + model tiering (R4)
 
-Status: in-progress
+Status: done
 Depends on: 03, 02
 Priority: P1
 Budget: 10 turns
@@ -40,8 +40,8 @@ must not ship ahead of R5 — hence the acceptance re-runs R5's grant check.
 
 ## Acceptance
 
-- [ ] `grep -qi 'Codebase survey' .claude/skills/ctx/SKILL.md` → exit 0
-- [ ] `grep -q 'map --limit' .claude/skills/ctx/SKILL.md && grep -qi 'deps' .claude/skills/ctx/SKILL.md` → exit 0 (recipe present)
-- [ ] `grep -qi 'scout' .claude/skills/ctx/SKILL.md && grep -qi 'inline' .claude/skills/ctx/SKILL.md` → exit 0 (tiering rule + dispatch template)
-- [ ] `grep -q 'Bash(ctx' .claude/agents/scout.md` → exit 0 (R5 grant landed — R4 text must not ship ahead of it)
-- [ ] `grep -qi 'survey' antigravity/.agents/skills/ctx/SKILL.md` → exit 0 (mirror coverage)
+- [x] `grep -qi 'Codebase survey' .claude/skills/ctx/SKILL.md` → exit 0
+- [x] `grep -q 'map --limit' .claude/skills/ctx/SKILL.md && grep -qi 'deps' .claude/skills/ctx/SKILL.md` → exit 0 (recipe present)
+- [x] `grep -qi 'scout' .claude/skills/ctx/SKILL.md && grep -qi 'inline' .claude/skills/ctx/SKILL.md` → exit 0 (tiering rule + dispatch template)
+- [x] `grep -q 'Bash(ctx' .claude/agents/scout.md` → exit 0 (R5 grant landed — R4 text must not ship ahead of it)
+- [x] `grep -qi 'survey' antigravity/.agents/skills/ctx/SKILL.md` → exit 0 (mirror coverage)
