@@ -9,24 +9,95 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"math"
+	"strings"
 	"time"
 
 	commonv1 "go.opentelemetry.io/proto/otlp/common/v1"
+	logsv1 "go.opentelemetry.io/proto/otlp/logs/v1"
 	resourcev1 "go.opentelemetry.io/proto/otlp/resource/v1"
 	tracev1 "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/sticklane/agentprof/internal/pricing"
 	"github.com/sticklane/agentprof/internal/schema"
 )
 
-const unknownService = "(unknown service)"
-
-// Recognized usage-token attribute keys, highest precedence first.
-var (
-	inputTokenKeys  = []string{"gen_ai.usage.input_tokens", "gen_ai.usage.prompt_tokens"}
-	outputTokenKeys = []string{"gen_ai.usage.output_tokens", "gen_ai.usage.completion_tokens"}
+const (
+	unknownService = "(unknown service)"
+	unknownEvent   = "(unknown event)"
 )
+
+// costUSDKeys are the log-record attribute keys carrying an explicit fractional
+// USD cost, highest precedence first. Claude Code emits bare cost_usd; the
+// value converts to integer cost_microusd via round(cost_usd * 1e6).
+var costUSDKeys = []string{"cost_usd", "gen_ai.usage.cost"}
+
+// Recognized usage-token attribute keys, highest precedence first. Claude
+// Code emits bare keys rather than the GenAI semconv's gen_ai.usage.*
+// aliases, so the bare keys lead each list.
+var (
+	inputTokenKeys  = []string{"input_tokens", "gen_ai.usage.input_tokens", "gen_ai.usage.prompt_tokens"}
+	outputTokenKeys = []string{"output_tokens", "gen_ai.usage.output_tokens", "gen_ai.usage.completion_tokens"}
+
+	// cacheReadTokenKeys resolves directly to the canonical cache_read_tokens
+	// sample value. cacheCreationTokenKeys resolves to a value that sample()
+	// renames to the canonical cache_write_tokens key (SCHEMA.md) — passing
+	// the source key through verbatim would silently drop cache-write signal
+	// from pprof token profiles.
+	cacheReadTokenKeys     = []string{"cache_read_tokens"}
+	cacheCreationTokenKeys = []string{"cache_creation_tokens"}
+)
+
+// dialect identifies one CLI's OTel export convention by its span-name
+// prefix and the attribute key(s) carrying its session identifier. Alias
+// lists stay data-driven since the GenAI semconv is pre-stable — adding a
+// dialect is a table row, not a code path.
+type dialect struct {
+	name        string
+	spanPrefix  string
+	sessionKeys []string // session-identifier attribute keys, highest precedence first
+}
+
+// dialects maps each recognized coding-CLI export convention to its session
+// key. Claude Code emits session.id; Codex emits conversation.id; Gemini CLI
+// and Qwen Code mirror the GenAI semconv and emit session.id. Token metrics
+// resolve through the shared alias set (inputTokenKeys, …), so a dialect row
+// only needs its detection prefix and session key.
+var dialects = []dialect{
+	{name: "claude_code", spanPrefix: "claude_code.", sessionKeys: []string{"session.id"}},
+	{name: "codex", spanPrefix: "codex.", sessionKeys: []string{"conversation.id"}},
+	{name: "gemini_cli", spanPrefix: "gemini_cli.", sessionKeys: []string{"session.id"}},
+	{name: "qwen-code", spanPrefix: "qwen-code.", sessionKeys: []string{"session.id"}},
+}
+
+// genericSessionKeys resolve labels["session"] for an unrecognized gen_ai.*
+// service that matches no dialect prefix.
+var genericSessionKeys = []string{"gen_ai.conversation.id", "session.id"}
+
+// detectDialect returns the matched dialect's name for a span, or "" when
+// no span-name prefix matches (the generic gen_ai.* fallback).
+func detectDialect(spanName string) string {
+	for _, d := range dialects {
+		if strings.HasPrefix(spanName, d.spanPrefix) {
+			return d.name
+		}
+	}
+	return ""
+}
+
+// sessionKeysFor returns the session-identifier attribute keys for a detected
+// dialect name, falling back to genericSessionKeys when the name is empty or
+// unrecognized (the generic gen_ai.* path).
+func sessionKeysFor(dialectName string) []string {
+	for _, d := range dialects {
+		if d.name == dialectName {
+			return d.sessionKeys
+		}
+	}
+	return genericSessionKeys
+}
 
 type spanKey struct{ traceID, spanID string }
 
@@ -41,8 +112,12 @@ type spanRec struct {
 	invalid      bool // recognized token key with negative or non-int value
 	input        tokenMetric
 	output       tokenMetric
+	cacheRead    tokenMetric
+	cacheWrite   tokenMetric // sourced from cache_creation_tokens; canonical name applied in sample()
 	model        string
 	system       string
+	dialect      string // detected export dialect, e.g. "claude_code"; "" = generic
+	session      string // session identifier for labels["session"]; "" = absent
 }
 
 type tokenMetric struct {
@@ -50,15 +125,66 @@ type tokenMetric struct {
 	present bool
 }
 
-// Accumulator collects spans from decoded OTLP trace batches.
-type Accumulator struct {
-	spans map[spanKey]*spanRec
-	order []spanKey // first-seen order
+// logRec is a decoded OTLP log record carrying an explicit cost. When its
+// trace_id/span_id match a span, its cost joins onto that span's sample;
+// without trace context it degrades to a flat [service, event-name] sample.
+type logRec struct {
+	traceID     string // lowercase hex ("" = absent)
+	spanID      string // lowercase hex ("" = absent)
+	timestamp   uint64
+	serviceName string
+	eventName   string
+	costMicro   int64
+	hasCost     bool
 }
 
-// NewAccumulator returns an empty span accumulator.
+// UserRate holds per-MTok USD prices for one user-supplied pricing entry,
+// matched by model-id prefix. A dollars-per-MTok figure is numerically
+// identical to micro-USD per token (mirroring internal/pricing's rates). It
+// lets a --pricing config price non-Claude dialects without baking a new
+// vendor table into the binary (SPEC.md design pt 5).
+type UserRate struct {
+	Prefix     string  `json:"prefix"`
+	Input      float64 `json:"input"`
+	Output     float64 `json:"output"`
+	CacheRead  float64 `json:"cache_read"`
+	CacheWrite float64 `json:"cache_write"`
+}
+
+// ParseUserPricing decodes a --pricing config: a JSON object with a "models"
+// array of UserRate entries. Entries are prefix-matched in list order (first
+// match wins), so more specific prefixes should be listed before shorter ones
+// they overlap with.
+func ParseUserPricing(data []byte) ([]UserRate, error) {
+	var cfg struct {
+		Models []UserRate `json:"models"`
+	}
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	return cfg.Models, nil
+}
+
+// Accumulator collects spans and cost-bearing log records from decoded OTLP
+// batches.
+type Accumulator struct {
+	spans   map[spanKey]*spanRec
+	order   []spanKey  // first-seen order
+	logs    []*logRec  // cost/log records in first-seen order
+	pricing []UserRate // user-supplied rate table (--pricing); nil = Claude-table-only
+}
+
+// NewAccumulator returns an empty accumulator.
 func NewAccumulator() *Accumulator {
 	return &Accumulator{spans: make(map[spanKey]*spanRec)}
+}
+
+// SetUserPricing installs a user-supplied rate table, consulted for
+// cost-from-tokens only when the built-in Claude pricing table does not
+// prefix-match a token-only span's model. Nil or empty leaves the
+// Claude-table-only default.
+func (a *Accumulator) SetUserPricing(rates []UserRate) {
+	a.pricing = rates
 }
 
 // AddJSON decodes one OTLP/JSON trace-export object and accumulates its
@@ -88,28 +214,179 @@ func (a *Accumulator) AddProto(data []byte) error {
 	return nil
 }
 
+// AddLogsJSON decodes one OTLP/JSON logs-export object and accumulates its
+// records. Like AddJSON, the hex trace_id/span_id fields are rewritten to the
+// base64 protojson expects before unmarshaling.
+func (a *Accumulator) AddLogsJSON(data []byte) error {
+	fixed, err := hexIDsToBase64(data)
+	if err != nil {
+		return err
+	}
+	var ld logsv1.LogsData
+	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
+	if err := opts.Unmarshal(fixed, &ld); err != nil {
+		return err
+	}
+	a.addLogs(&ld)
+	return nil
+}
+
+// AddLogsProto decodes OTLP protobuf logs data and accumulates its records.
+func (a *Accumulator) AddLogsProto(data []byte) error {
+	var ld logsv1.LogsData
+	if err := proto.Unmarshal(data, &ld); err != nil {
+		return err
+	}
+	a.addLogs(&ld)
+	return nil
+}
+
 // Len reports the number of distinct spans accumulated so far.
 func (a *Accumulator) Len() int {
 	return len(a.order)
 }
 
+// LogLen reports the number of log records accumulated so far.
+func (a *Accumulator) LogLen() int {
+	return len(a.logs)
+}
+
 // Flush resolves parent chains across everything accumulated and returns the
-// samples in first-seen span order, plus the count of invalid skipped spans.
+// samples, plus the count of invalid skipped spans. Cost-bearing log records
+// join onto the span whose (trace_id, span_id) they name directly; when that
+// span is a frames-only ancestor, the cost redistributes to the token-bearing
+// descendant selected by resolveCostTarget. The emit gate is relaxed to
+// hasTokens OR attached cost. Span samples come first in first-seen span
+// order, then flat samples for records without trace context.
 func (a *Accumulator) Flush() ([]schema.Sample, int) {
+	// Index each cost record onto the span it attaches to. Multiple records
+	// targeting one span sum. A record naming no accumulated span attaches
+	// nothing here (it degrades to a flat sample only when it also lacks trace
+	// context).
+	costBySpan := make(map[spanKey]int64)
+	for _, lr := range a.logs {
+		if !lr.hasCost || lr.traceID == "" || lr.spanID == "" {
+			continue
+		}
+		if key, ok := a.resolveCostTarget(lr); ok {
+			costBySpan[key] += lr.costMicro
+		}
+	}
+
 	var samples []schema.Sample
 	skipped := 0
 	for _, key := range a.order {
 		rec := a.spans[key]
-		if !rec.hasTokens {
-			continue // frames-only span: context for descendants
+		cost, hasCost := costBySpan[key]
+		if !rec.hasTokens && !hasCost {
+			continue // frames-only span with no cost: context for descendants
 		}
 		if rec.invalid || rec.end < rec.start {
 			skipped++
 			continue
 		}
-		samples = append(samples, a.sample(rec))
+		// Cost precedence: an emitted (joined) cost wins; otherwise compute
+		// from tokens where a pricing table matches, else stay tokens-only.
+		if !hasCost && rec.hasTokens {
+			if c, ok := a.priceFromTokens(rec); ok {
+				cost, hasCost = c, true
+			}
+		}
+		samples = append(samples, a.sample(rec, cost, hasCost))
+	}
+
+	// A record without trace context degrades to a flat [service, event] sample.
+	for _, lr := range a.logs {
+		if lr.traceID != "" && lr.spanID != "" {
+			continue // had trace context (joined above, or unresolved for Task 03)
+		}
+		if !lr.hasCost {
+			continue
+		}
+		samples = append(samples, flatSample(lr))
 	}
 	return samples, skipped
+}
+
+// resolveCostTarget picks the span a cost record's cost attaches to (SPEC.md
+// design pt 6). A record naming a token-bearing span attaches to it directly
+// (Task 02's fast path). A record naming a frames-only ancestor redistributes
+// to a token-bearing descendant within the same trace: the earliest-start
+// descendant whose time range contains the event timestamp, else the
+// latest-started descendant that began before the event. A frames-only span
+// with no qualifying token-bearing descendant keeps the cost itself. The bool
+// is false when the named span is not accumulated (nothing to attach to).
+func (a *Accumulator) resolveCostTarget(lr *logRec) (spanKey, bool) {
+	key := spanKey{lr.traceID, lr.spanID}
+	target, ok := a.spans[key]
+	if !ok {
+		return spanKey{}, false
+	}
+	if target.hasTokens {
+		return key, true // direct token-bearing match: no descendant walk
+	}
+	descs := a.tokenDescendants(target)
+	if len(descs) == 0 {
+		return key, true // frames-only span, no descendants: cost stays here
+	}
+	// Prefer the earliest-start descendant whose time range contains the event.
+	var best *spanRec
+	for _, d := range descs {
+		if d.start <= lr.timestamp && lr.timestamp <= d.end {
+			if best == nil || d.start < best.start {
+				best = d
+			}
+		}
+	}
+	if best == nil {
+		// None contains the event: fall back to the latest descendant that
+		// started before it.
+		for _, d := range descs {
+			if d.start < lr.timestamp {
+				if best == nil || d.start > best.start {
+					best = d
+				}
+			}
+		}
+	}
+	if best == nil {
+		return key, true // no descendant started before the event: keep here
+	}
+	return spanKey{best.traceID, best.spanID}, true
+}
+
+// tokenDescendants returns the token-bearing spans transitively descended from
+// ancestor within the same trace, in first-seen order.
+func (a *Accumulator) tokenDescendants(ancestor *spanRec) []*spanRec {
+	var out []*spanRec
+	for _, key := range a.order {
+		rec := a.spans[key]
+		if rec.traceID != ancestor.traceID || !rec.hasTokens {
+			continue
+		}
+		if a.isDescendant(rec, ancestor) {
+			out = append(out, rec)
+		}
+	}
+	return out
+}
+
+// isDescendant reports whether ancestor lies on rec's parent chain. A missing
+// parent stops the walk (orphan tolerance); a repeated span ID breaks cycles.
+func (a *Accumulator) isDescendant(rec, ancestor *spanRec) bool {
+	seen := make(map[string]bool)
+	for cur := rec; cur.parentSpanID != "" && !seen[cur.spanID]; {
+		seen[cur.spanID] = true
+		parent, ok := a.spans[spanKey{cur.traceID, cur.parentSpanID}]
+		if !ok {
+			return false
+		}
+		if parent.spanID == ancestor.spanID {
+			return true
+		}
+		cur = parent
+	}
+	return false
 }
 
 func (a *Accumulator) add(td *tracev1.TracesData) {
@@ -127,6 +404,57 @@ func (a *Accumulator) add(td *tracev1.TracesData) {
 			}
 		}
 	}
+}
+
+func (a *Accumulator) addLogs(ld *logsv1.LogsData) {
+	for _, rl := range ld.GetResourceLogs() {
+		service := serviceName(rl.GetResource())
+		for _, sl := range rl.GetScopeLogs() {
+			for _, lr := range sl.GetLogRecords() {
+				a.logs = append(a.logs, newLogRec(lr, service))
+			}
+		}
+	}
+}
+
+func newLogRec(lr *logsv1.LogRecord, service string) *logRec {
+	rec := &logRec{
+		traceID:     hex.EncodeToString(lr.GetTraceId()),
+		spanID:      hex.EncodeToString(lr.GetSpanId()),
+		timestamp:   lr.GetTimeUnixNano(),
+		serviceName: service,
+		eventName:   lr.GetEventName(),
+	}
+	attrs := make(map[string]*commonv1.AnyValue, len(lr.GetAttributes()))
+	for _, kv := range lr.GetAttributes() {
+		if _, ok := attrs[kv.GetKey()]; !ok {
+			attrs[kv.GetKey()] = kv.GetValue()
+		}
+	}
+	if rec.eventName == "" {
+		rec.eventName = firstString(attrs, "event.name")
+	}
+	rec.costMicro, rec.hasCost = costMicroUSD(attrs)
+	return rec
+}
+
+// costMicroUSD resolves a fractional-USD cost attribute (highest-precedence key
+// first) and converts it to integer micro-USD via round(cost * 1e6). Both
+// double and integer USD values are accepted.
+func costMicroUSD(attrs map[string]*commonv1.AnyValue) (int64, bool) {
+	for _, k := range costUSDKeys {
+		v, ok := attrs[k]
+		if !ok {
+			continue
+		}
+		switch val := v.GetValue().(type) {
+		case *commonv1.AnyValue_DoubleValue:
+			return int64(math.Round(val.DoubleValue * 1e6)), true
+		case *commonv1.AnyValue_IntValue:
+			return val.IntValue * 1_000_000, true
+		}
+	}
+	return 0, false
 }
 
 func newSpanRec(sp *tracev1.Span, service string) *spanRec {
@@ -147,8 +475,12 @@ func newSpanRec(sp *tracev1.Span, service string) *spanRec {
 	}
 	rec.input = rec.tokenMetric(attrs, inputTokenKeys)
 	rec.output = rec.tokenMetric(attrs, outputTokenKeys)
+	rec.cacheRead = rec.tokenMetric(attrs, cacheReadTokenKeys)
+	rec.cacheWrite = rec.tokenMetric(attrs, cacheCreationTokenKeys)
 	rec.model = firstString(attrs, "gen_ai.response.model", "gen_ai.request.model")
 	rec.system = firstString(attrs, "gen_ai.system", "gen_ai.provider.name")
+	rec.dialect = detectDialect(rec.name)
+	rec.session = firstString(attrs, sessionKeysFor(rec.dialect)...)
 	return rec
 }
 
@@ -175,30 +507,104 @@ func (r *spanRec) tokenMetric(attrs map[string]*commonv1.AnyValue, keys []string
 	return m
 }
 
-func (a *Accumulator) sample(rec *spanRec) schema.Sample {
-	values := map[string]int64{
-		"calls":   1,
-		"wall_ms": int64((rec.end - rec.start + 500_000) / 1_000_000),
+// priceFromTokens computes a token-only span's cost in micro-USD. It prefers
+// the built-in Claude pricing table (prefix-matched claude-* model IDs) and
+// falls back to the user-supplied rate table for other dialects. Gemini stays
+// tokens-only unless a --pricing entry matches: its baked table is exact-map
+// on Antigravity display strings that OTel API model IDs never hit (SPEC.md
+// Decision 6). Returns ok=false when no table matches the model.
+func (a *Accumulator) priceFromTokens(rec *spanRec) (int64, bool) {
+	if rec.model == "" {
+		return 0, false
+	}
+	u := pricing.Usage{
+		InputTokens:         rec.input.value,
+		OutputTokens:        rec.output.value,
+		CacheReadTokens:     rec.cacheRead.value,
+		CacheCreationTokens: rec.cacheWrite.value,
+	}
+	if c, ok := pricing.Price(rec.model, u); ok {
+		return c, true
+	}
+	return a.userPrice(rec, u)
+}
+
+// userPrice prices a model from the user-supplied rate table (--pricing),
+// matching the first entry whose prefix the model carries. Rates are USD per
+// MTok, numerically micro-USD per token. Returns ok=false when no entry
+// matches (or no config was supplied).
+func (a *Accumulator) userPrice(rec *spanRec, u pricing.Usage) (int64, bool) {
+	for _, r := range a.pricing {
+		if !strings.HasPrefix(rec.model, r.Prefix) {
+			continue
+		}
+		micro := float64(u.InputTokens)*r.Input +
+			float64(u.OutputTokens)*r.Output +
+			float64(u.CacheReadTokens)*r.CacheRead +
+			float64(u.CacheCreationTokens)*r.CacheWrite
+		return int64(math.Round(micro)), true
+	}
+	return 0, false
+}
+
+func (a *Accumulator) sample(rec *spanRec, cost int64, hasCost bool) schema.Sample {
+	s := schema.Sample{
+		Time:  time.Unix(0, int64(rec.start)).UTC(),
+		Stack: a.stack(rec),
+		Values: map[string]int64{
+			"calls":   1,
+			"wall_ms": int64((rec.end - rec.start + 500_000) / 1_000_000),
+		},
+		Labels: map[string]string{"source": "otel", "trace_id": rec.traceID},
+	}
+	if hasCost {
+		s.Values["cost_microusd"] = cost
 	}
 	if rec.input.present {
-		values["input_tokens"] = rec.input.value
+		s.Values["input_tokens"] = rec.input.value
 	}
 	if rec.output.present {
-		values["output_tokens"] = rec.output.value
+		s.Values["output_tokens"] = rec.output.value
 	}
-	labels := map[string]string{"source": "otel", "trace_id": rec.traceID}
+	if rec.cacheRead.present {
+		s.Values["cache_read_tokens"] = rec.cacheRead.value
+	}
+	if rec.cacheWrite.present {
+		s.Values["cache_write_tokens"] = rec.cacheWrite.value
+	}
 	if rec.model != "" {
-		labels["model"] = rec.model
+		s.Labels["model"] = rec.model
 	}
 	if rec.system != "" {
-		labels["system"] = rec.system
+		s.Labels["system"] = rec.system
 	}
-	return schema.Sample{
-		Time:   time.Unix(0, int64(rec.start)).UTC(),
-		Stack:  a.stack(rec),
-		Values: values,
-		Labels: labels,
+	if rec.session != "" {
+		s.Labels["session"] = rec.session
 	}
+	return s
+}
+
+// flatSample renders a cost-bearing log record with no trace context as a
+// two-frame [service, event-name] sample — token/cost intact, hierarchy absent.
+func flatSample(lr *logRec) schema.Sample {
+	svc := lr.serviceName
+	if svc == "" {
+		svc = unknownService
+	}
+	event := lr.eventName
+	if event == "" {
+		event = unknownEvent
+	}
+	s := schema.Sample{
+		Time:   time.Unix(0, int64(lr.timestamp)).UTC(),
+		Stack:  []string{svc, event},
+		Values: map[string]int64{"calls": 1},
+		Labels: map[string]string{"source": "otel"},
+	}
+	if lr.hasCost {
+		s.Values["cost_microusd"] = lr.costMicro
+	}
+	return s
 }
 
 // stack builds the root-first frame list [service, root…leaf] by following

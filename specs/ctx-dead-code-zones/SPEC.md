@@ -86,3 +86,15 @@ boundary, and exits 0.
   specs/ctx-static-analysis-augmentation's tooling tier.
 - Cross-zone rename/impact semantics — IMPACT CUJ handles zones like
   any other path.
+
+## Parallelization
+
+The tasks form a strict serial chain: 01 (config core) → 02 (tagging) →
+03 (filtering) → 04 (docs). 02 and 03 both edit `src/cmd/refs.rs` and
+`src/cmd/map.rs`, so they cannot run concurrently; each task also depends on
+its predecessor's artifact. There are no concurrent-safe groups — every task
+runs solo. Task 04 additionally carries a cross-spec block on
+ctx-skill-token-doctrine R7 (the SKILL.md editor registry, slot 5).
+
+(No `- Group:` lines: no group of tasks is disjoint in `Touch` and free of
+shared undecided design.)

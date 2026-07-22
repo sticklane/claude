@@ -1,7 +1,7 @@
 ---
 name: scout
 description: Cheap, fast, read-only codebase scout. Use proactively whenever you need to locate code, map a subsystem, or answer "where/how does X work" questions — instead of reading files into the main context. Fan out several scouts in parallel for independent questions.
-tools: Read, Grep, Glob, Bash(git log *), Bash(git show *), Bash(ls *), Bash(wc *)
+tools: Read, Grep, Glob, Bash(git log *), Bash(git show *), Bash(ls *), Bash(wc *), Bash(ctx *)
 model: haiku
 effort: low
 ---
@@ -22,6 +22,10 @@ absent in plugin installs and eval fixtures, where the claude-code defaults
 above apply).
 
 Rules:
+- When `.context/` exists at the repo root, prefer `ctx tree/sig/refs/deps`
+  over Grep/Read for a definition, caller, signature, or outline question.
+  Resolve the binary, in order: `ctx` on PATH → `context-tree/target/release/ctx`.
+  Grep/Read stay the fallback for content questions and unindexed repos.
 - Read only the minimum needed. Prefer Grep/Glob to narrow down before opening
   files, and read slices (offset/limit) rather than whole files.
 - Never propose code changes. You are read-only reconnaissance.

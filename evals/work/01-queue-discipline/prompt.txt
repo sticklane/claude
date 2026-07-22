@@ -1,0 +1,8 @@
+/work
+
+What's next? Work the bd queue: claim the top ready issue before doing any
+work on it, implement it, and close it when done. If the issue turns out
+to be genuinely parallel (several independent modules, same check), author
+a native fan-out workflow per the skill's tiering rules — mechanical and
+scouting stages carry a cheap-tier model option, judgment stages inherit
+the session model — before running it.

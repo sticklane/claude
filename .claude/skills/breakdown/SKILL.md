@@ -22,7 +22,16 @@ dispatchers parse it for the over-budget stop and headless `--max-turns`.
 
 1. Read the spec. If anything under Open questions is unresolved, stop and
    say so — decomposing an ambiguous spec multiplies the ambiguity.
-2. If file-level dependencies are unclear, ask `scout` agents — don't read
+2. Gather the structure task files need — signatures, callers, module
+   outlines — before any scout dispatch or file read. When `.context/`
+   exists at the repo root (an indexed repo), the `ctx` index is the
+   cheapest source: run `ctx tree <path>` per module or file for its symbol
+   outline, then `ctx sig <symbol>` / `ctx refs <symbol>` per symbol a task
+   will touch, and author the task files from those outputs (the 2026-07-21
+   budget_analysis pairing wrote three task files from two `ctx tree`
+   outlines with zero source reads). Fall back to `scout` agents only when
+   the repo is unindexed or the question is content-shaped (bodies,
+   literals, patterns the index does not carry) — and even then, don't read
    the codebase into this session.
 3. Write `specs/<slug>/tasks/NN-<slug>.md` for each task:
 
@@ -136,6 +145,10 @@ explicit depth ceiling annotation in the memory file's annotation grammar (a
 `Depth ceiling:` line stating why deeper is infeasible and naming the
 behavioral complement — an eval scenario, a manual-pending human read, or a
 named verifier judgment instruction).
+
+Author each acceptance command anchored-and-bounded per
+`.claude/rules/shell-text-tools.md` (cited, not restated): anchor greps to
+structure over file-wide literals and cap every command's output.
 
 While authoring a task's acceptance commands, classify each for privileged/
 OS-level access: a task whose acceptance commands require `launchctl`, a

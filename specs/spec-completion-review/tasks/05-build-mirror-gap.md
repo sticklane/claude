@@ -4,7 +4,7 @@ Spec: ../SPEC.md
 Blocking: no
 Promotion-ready: true
 Promoted-by-run: e83f34f07094a4fa
-Depends on: 02-build-parity
+Depends on: 02
 Budget: 2 turns
 Touch: antigravity/.agents/workflows/build.md, codex/.agents/skills/build/SKILL.md, .claude-plugin/plugin.json
 

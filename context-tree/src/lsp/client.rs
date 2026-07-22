@@ -1,15 +1,18 @@
 //! A minimal LSP client (JSON-RPC over stdio) sufficient to ask "what are the
-//! references to this symbol", and [`RustAnalyzerResolver`] — a
-//! [`ReferenceResolver`](super::ReferenceResolver) backed by a live
-//! `rust-analyzer`.
+//! references to this symbol", and three [`ReferenceResolver`](super::ReferenceResolver)
+//! implementations backed by a live server: [`RustAnalyzerResolver`]
+//! (`rust-analyzer`), [`GoplsResolver`] (`gopls`), and [`TypeScriptResolver`]
+//! (`typescript-language-server`). [`resolver_for_extension`] picks the right
+//! one for a symbol's file (task 01 / R2's per-language dispatch).
 //!
 //! It is deliberately minimal: enough of the protocol (`initialize`,
 //! `initialized`, `textDocument/didOpen`, `textDocument/references`, `shutdown`,
-//! `exit`) to confirm precise references for one file, and no more. The server
-//! binary defaults to `rust-analyzer` and is overridable via the `CTX_LSP_SERVER`
-//! environment variable. Any protocol or process error surfaces as an
-//! `io::Error`, which the enrichment pass swallows per target so a missing or
-//! flaky server never regresses syntactic results.
+//! `exit`) to confirm precise references for one file, and no more. Each
+//! resolver's server binary is overridable via its own env var
+//! (`CTX_LSP_SERVER`, `CTX_LSP_SERVER_GO`, `CTX_LSP_SERVER_TS`). Any protocol
+//! or process error surfaces as an `io::Error`, which the enrichment pass
+//! swallows per target so a missing or flaky server never regresses syntactic
+//! results.
 
 use super::{PreciseRef, ReferenceResolver, ResolveTarget, Resolved};
 use serde_json::{Value, json};
@@ -17,6 +20,55 @@ use std::io::{self, BufReader, Read, Write};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
+
+/// Whether `bin` answers `--version` successfully — the shared availability
+/// gate every per-language resolver uses to decide whether it can drive the
+/// live path (an absent binary means that language's symbols stay heuristic,
+/// never an error).
+fn binary_available(bin: &str) -> bool {
+    Command::new(bin)
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+/// Run the shared spawn → initialize → open → references → shutdown sequence
+/// against `binary`, advertising `language_id` in `didOpen`. Every per-language
+/// resolver below is a thin wrapper over this — the protocol sequence is
+/// identical across servers, only the binary and the `languageId` differ.
+fn resolve_via_server(
+    binary: &str,
+    language_id: &str,
+    root: &Path,
+    target: &ResolveTarget,
+) -> io::Result<Resolved> {
+    let mut client = LspClient::spawn(root, binary)?;
+    client.initialize(root)?;
+    let file_abs = root.join(&target.file);
+    let text = std::fs::read_to_string(&file_abs)?;
+    client.did_open(&file_abs, &text, language_id)?;
+    let locations = client.references(&file_abs, target.line0, target.col0)?;
+    let _ = client.shutdown();
+
+    let mut refs = Vec::new();
+    for loc in locations {
+        if let Some(pr) = location_to_ref(root, &target.name, &loc) {
+            refs.push(pr);
+        }
+    }
+    // Signature resolution (textDocument/hover) is not yet wired for any live
+    // server — the enrichment cache stores whatever signature a resolver
+    // returns, and none of these do. References are the R11/R2 acceptance
+    // surface; live signatures are a documented follow-up.
+    Ok(Resolved {
+        refs,
+        signature: None,
+    })
+}
 
 /// A [`ReferenceResolver`] that shells out to a live `rust-analyzer` (or the
 /// server named by `CTX_LSP_SERVER`). Spawns a fresh server per target, runs the
@@ -35,47 +87,87 @@ impl RustAnalyzerResolver {
     /// Whether a configured language server is available on `PATH`. Used to gate
     /// the live path (and its test) — absent server => enrichment is a no-op.
     pub fn available() -> bool {
-        let bin = Self::server_binary();
-        Command::new(&bin)
-            .arg("--version")
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false)
+        binary_available(&Self::server_binary())
     }
 }
 
 impl ReferenceResolver for RustAnalyzerResolver {
     fn resolve(&self, root: &Path, target: &ResolveTarget) -> io::Result<Resolved> {
-        let mut client = LspClient::spawn(root)?;
-        client.initialize(root)?;
-        let file_abs = root.join(&target.file);
-        let text = std::fs::read_to_string(&file_abs)?;
-        client.did_open(&file_abs, &text)?;
-        let locations = client.references(&file_abs, target.line0, target.col0)?;
-        let _ = client.shutdown();
-
-        let mut refs = Vec::new();
-        for loc in locations {
-            if let Some(pr) = location_to_ref(root, &target.name, &loc) {
-                refs.push(pr);
-            }
-        }
-        // Signature resolution (textDocument/hover) is not yet wired for the
-        // live server — the enrichment cache stores whatever signature a
-        // resolver returns, and this one returns none. References are the R11
-        // acceptance surface; live signatures are a documented follow-up.
-        Ok(Resolved {
-            refs,
-            signature: None,
-        })
+        resolve_via_server(&Self::server_binary(), "rust", root, target)
     }
 }
 
-/// Map an LSP `Location` to a repo-relative [`PreciseRef`] (1-based line). Drops
-/// locations outside `root` (e.g. references in `std`).
+/// A [`ReferenceResolver`] backed by a live `gopls` (or the server named by
+/// `CTX_LSP_SERVER_GO`) — the Go counterpart to [`RustAnalyzerResolver`],
+/// dispatched by [`resolver_for_extension`] for `.go` symbols.
+pub struct GoplsResolver;
+
+impl GoplsResolver {
+    /// The configured server binary name (`CTX_LSP_SERVER_GO`, default `gopls`).
+    pub fn server_binary() -> String {
+        std::env::var("CTX_LSP_SERVER_GO").unwrap_or_else(|_| "gopls".to_string())
+    }
+
+    /// Whether a configured Go language server is available on `PATH`.
+    pub fn available() -> bool {
+        binary_available(&Self::server_binary())
+    }
+}
+
+impl ReferenceResolver for GoplsResolver {
+    fn resolve(&self, root: &Path, target: &ResolveTarget) -> io::Result<Resolved> {
+        resolve_via_server(&Self::server_binary(), "go", root, target)
+    }
+}
+
+/// A [`ReferenceResolver`] backed by a live `typescript-language-server` (or
+/// the server named by `CTX_LSP_SERVER_TS`) — the TS/JS counterpart to
+/// [`RustAnalyzerResolver`], dispatched by [`resolver_for_extension`] for
+/// `.ts`/`.tsx`/`.js` symbols.
+pub struct TypeScriptResolver;
+
+impl TypeScriptResolver {
+    /// The configured server binary name (`CTX_LSP_SERVER_TS`, default
+    /// `typescript-language-server`).
+    pub fn server_binary() -> String {
+        std::env::var("CTX_LSP_SERVER_TS")
+            .unwrap_or_else(|_| "typescript-language-server".to_string())
+    }
+
+    /// Whether a configured TS/JS language server is available on `PATH`.
+    pub fn available() -> bool {
+        binary_available(&Self::server_binary())
+    }
+}
+
+impl ReferenceResolver for TypeScriptResolver {
+    fn resolve(&self, root: &Path, target: &ResolveTarget) -> io::Result<Resolved> {
+        resolve_via_server(&Self::server_binary(), "typescript", root, target)
+    }
+}
+
+static RUST_ANALYZER: RustAnalyzerResolver = RustAnalyzerResolver;
+static GOPLS: GoplsResolver = GoplsResolver;
+static TYPESCRIPT_SERVER: TypeScriptResolver = TypeScriptResolver;
+
+/// Task 01 / R2 / F1(i)'s per-language resolver selection: the resolver whose
+/// language claims file extension `ext` ("rs", "go", "ts"/"tsx"/"js"), when
+/// that language's server binary is available on `PATH`. `None` for an
+/// unmapped extension or an unavailable server — `enrich_exact` then leaves
+/// symbols in that language heuristic rather than failing the whole pass.
+pub fn resolver_for_extension(ext: &str) -> Option<&'static dyn ReferenceResolver> {
+    match ext {
+        "rs" if RustAnalyzerResolver::available() => Some(&RUST_ANALYZER),
+        "go" if GoplsResolver::available() => Some(&GOPLS),
+        "ts" | "tsx" | "js" if TypeScriptResolver::available() => Some(&TYPESCRIPT_SERVER),
+        _ => None,
+    }
+}
+
+/// Map an LSP `Location` to a repo-relative [`PreciseRef`] (1-based line;
+/// `def_qpath` left empty — the caller, `enrich_with`, always overwrites it
+/// with the resolving definition's qpath). Drops locations outside `root`
+/// (e.g. references in `std`).
 fn location_to_ref(root: &Path, name: &str, loc: &Value) -> Option<PreciseRef> {
     let uri = loc.get("uri")?.as_str()?;
     let path = uri.strip_prefix("file://")?;
@@ -85,6 +177,7 @@ fn location_to_ref(root: &Path, name: &str, loc: &Value) -> Option<PreciseRef> {
         name: name.to_string(),
         path: rel.to_string_lossy().replace('\\', "/"),
         line: line0 as usize + 1,
+        def_qpath: String::new(),
     })
 }
 
@@ -101,8 +194,8 @@ struct LspClient {
 }
 
 impl LspClient {
-    fn spawn(root: &Path) -> io::Result<LspClient> {
-        let mut child = Command::new(RustAnalyzerResolver::server_binary())
+    fn spawn(root: &Path, binary: &str) -> io::Result<LspClient> {
+        let mut child = Command::new(binary)
             .current_dir(root)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -225,13 +318,13 @@ impl LspClient {
         self.notify("initialized", json!({}))
     }
 
-    fn did_open(&mut self, file: &Path, text: &str) -> io::Result<()> {
+    fn did_open(&mut self, file: &Path, text: &str, language_id: &str) -> io::Result<()> {
         self.notify(
             "textDocument/didOpen",
             json!({
                 "textDocument": {
                     "uri": format!("file://{}", file.display()),
-                    "languageId": "rust",
+                    "languageId": language_id,
                     "version": 1,
                     "text": text,
                 },

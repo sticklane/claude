@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,8 @@ import (
 	"testing"
 
 	commonv1 "go.opentelemetry.io/proto/otlp/common/v1"
+	logsv1 "go.opentelemetry.io/proto/otlp/logs/v1"
+	metricsv1 "go.opentelemetry.io/proto/otlp/metrics/v1"
 	tracev1 "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -278,9 +281,9 @@ func TestOtelServeGetOnTracesReturns405(t *testing.T) {
 	}
 }
 
-func TestOtelServeNonTracePathsReturn404(t *testing.T) {
+func TestOtelServeUnregisteredPathsReturn404(t *testing.T) {
 	srv, _, _ := startOtelServer(t)
-	for _, path := range []string{"/v1/metrics", "/v1/logs", "/"} {
+	for _, path := range []string{"/v1/logs/extra", "/"} {
 		resp, err := http.Post(srv.URL+path, "application/json", strings.NewReader("{}"))
 		if err != nil {
 			t.Fatalf("POST %s: %v", path, err)
@@ -382,5 +385,375 @@ func TestOtelServeUnlistenableAddrExitsOne(t *testing.T) {
 	}
 	if stderr == "" {
 		t.Error("stderr is empty, want a listen error")
+	}
+}
+
+// --- /v1/logs ingestion + gzip (R10, cost join) ---
+
+const (
+	logJoinTraceID = "0102030405060708090a0b0c0d0e0f10"
+	logJoinSpanID  = "0102030405060708"
+)
+
+// tokenSpanTraceBody is one OTLP/JSON trace export with a single token-bearing
+// span keyed on logJoinTraceID/logJoinSpanID.
+func tokenSpanTraceBody() string {
+	return `{"resourceSpans":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"claude-code"}}]},` +
+		`"scopeSpans":[{"spans":[{"traceId":"` + logJoinTraceID + `","spanId":"` + logJoinSpanID + `",` +
+		`"name":"claude_code.llm_request","startTimeUnixNano":"1700000000000000000","endTimeUnixNano":"1700000001000000000",` +
+		`"attributes":[{"key":"input_tokens","value":{"intValue":"100"}}]}]}]}]}`
+}
+
+// costLogBody is one OTLP/JSON logs export whose record's trace context matches
+// tokenSpanTraceBody and carries cost_usd 0.041230 (→ 41230 micro-USD).
+func costLogBody() string {
+	return `{"resourceLogs":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"claude-code"}}]},` +
+		`"scopeLogs":[{"logRecords":[{"traceId":"` + logJoinTraceID + `","spanId":"` + logJoinSpanID + `",` +
+		`"eventName":"claude_code.api_request","timeUnixNano":"1700000000500000000",` +
+		`"attributes":[{"key":"cost_usd","value":{"doubleValue":0.041230}}]}]}]}]}`
+}
+
+func postTo(t *testing.T, baseURL, path, contentType string, body []byte) *http.Response {
+	t.Helper()
+	resp, err := http.Post(baseURL+path, contentType, bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("POST %s: %v", path, err)
+	}
+	t.Cleanup(func() { resp.Body.Close() })
+	return resp
+}
+
+// flushToSamples flushes the receiver to a temp JSONL file and returns the
+// decoded sample values, one map per line.
+func flushToSamples(t *testing.T, rcv *otelReceiver) []map[string]int64 {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "out.jsonl")
+	var stdout, stderr bytes.Buffer
+	if code := rcv.flush(path, &stdout, &stderr); code != 0 {
+		t.Fatalf("flush exit code = %d, want 0 (stderr: %q)", code, stderr.String())
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("output not written: %v", err)
+	}
+	var out []map[string]int64
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		var s struct {
+			Values map[string]int64 `json:"values"`
+		}
+		if err := json.Unmarshal([]byte(line), &s); err != nil {
+			t.Fatalf("sample line is not JSON: %v (%q)", err, line)
+		}
+		out = append(out, s.Values)
+	}
+	return out
+}
+
+func TestOtelServePostV1LogsJSONJoinsCostAtFlush(t *testing.T) {
+	srv, rcv, _ := startOtelServer(t)
+	postTraces(t, srv.URL, "application/json", []byte(tokenSpanTraceBody()))
+	resp := postTo(t, srv.URL, "/v1/logs", "application/json", []byte(costLogBody()))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /v1/logs status = %d, want 200", resp.StatusCode)
+	}
+	samples := flushToSamples(t, rcv)
+	if len(samples) != 1 {
+		t.Fatalf("got %d samples, want 1", len(samples))
+	}
+	if samples[0]["cost_microusd"] != 41230 {
+		t.Errorf("cost_microusd = %d, want 41230", samples[0]["cost_microusd"])
+	}
+	if samples[0]["input_tokens"] != 100 {
+		t.Errorf("input_tokens = %d, want 100 (span tokens retained)", samples[0]["input_tokens"])
+	}
+}
+
+func TestOtelServePostV1LogsProtobufDecodes(t *testing.T) {
+	srv, rcv, _ := startOtelServer(t)
+	postTraces(t, srv.URL, "application/json", []byte(tokenSpanTraceBody()))
+	ld := &logsv1.LogsData{
+		ResourceLogs: []*logsv1.ResourceLogs{{
+			ScopeLogs: []*logsv1.ScopeLogs{{
+				LogRecords: []*logsv1.LogRecord{{
+					TraceId:      []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					SpanId:       []byte{1, 2, 3, 4, 5, 6, 7, 8},
+					EventName:    "claude_code.api_request",
+					TimeUnixNano: 1700000000500000000,
+					Attributes: []*commonv1.KeyValue{{
+						Key:   "cost_usd",
+						Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_DoubleValue{DoubleValue: 0.041230}},
+					}},
+				}},
+			}},
+		}},
+	}
+	raw, err := proto.Marshal(ld)
+	if err != nil {
+		t.Fatalf("proto.Marshal: %v", err)
+	}
+	resp := postTo(t, srv.URL, "/v1/logs", "application/x-protobuf", raw)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /v1/logs status = %d, want 200", resp.StatusCode)
+	}
+	samples := flushToSamples(t, rcv)
+	if len(samples) != 1 || samples[0]["cost_microusd"] != 41230 {
+		t.Errorf("samples = %v, want one with cost_microusd 41230", samples)
+	}
+}
+
+func TestOtelServeLogsLogsAcceptedRecordCount(t *testing.T) {
+	srv, _, logs := startOtelServer(t)
+	postTo(t, srv.URL, "/v1/logs", "application/json", []byte(costLogBody()))
+	if want := "accepted 1 log record"; !strings.Contains(logs.String(), want) {
+		t.Errorf("logs = %q, want them to contain %q", logs.String(), want)
+	}
+}
+
+func gzipBytes(t *testing.T, data []byte) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	if _, err := gz.Write(data); err != nil {
+		t.Fatalf("gzip write: %v", err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatalf("gzip close: %v", err)
+	}
+	return buf.Bytes()
+}
+
+func postGzip(t *testing.T, baseURL, path, contentType string, data []byte) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, baseURL+path, bytes.NewReader(gzipBytes(t, data)))
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Content-Encoding", "gzip")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST %s (gzip): %v", path, err)
+	}
+	t.Cleanup(func() { resp.Body.Close() })
+	return resp
+}
+
+func TestOtelServeGzipEncodedTracesBodyDecodes(t *testing.T) {
+	srv, rcv, _ := startOtelServer(t)
+	resp := postGzip(t, srv.URL, "/v1/traces", "application/json", []byte(tokenSpanTraceBody()))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("gzip POST /v1/traces status = %d, want 200", resp.StatusCode)
+	}
+	samples := flushToSamples(t, rcv)
+	if len(samples) != 1 || samples[0]["input_tokens"] != 100 {
+		t.Errorf("samples = %v, want one with input_tokens 100", samples)
+	}
+}
+
+func TestOtelServeGzipEncodedLogsBodyDecodes(t *testing.T) {
+	srv, rcv, _ := startOtelServer(t)
+	postTraces(t, srv.URL, "application/json", []byte(tokenSpanTraceBody()))
+	resp := postGzip(t, srv.URL, "/v1/logs", "application/json", []byte(costLogBody()))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("gzip POST /v1/logs status = %d, want 200", resp.StatusCode)
+	}
+	samples := flushToSamples(t, rcv)
+	if len(samples) != 1 || samples[0]["cost_microusd"] != 41230 {
+		t.Errorf("samples = %v, want one with cost_microusd 41230", samples)
+	}
+}
+
+func TestOtelServeGzipUndecodableBodyReturns400(t *testing.T) {
+	srv, _, _ := startOtelServer(t)
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/v1/traces", bytes.NewReader([]byte("not gzip at all")))
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 (undecodable gzip)", resp.StatusCode)
+	}
+}
+
+// --- /v1/metrics ingestion (coarse cross-check, R10) ---
+
+// metricsBody is one OTLP/JSON metrics export: a claude_code.token.usage
+// counter (input + output) and a claude_code.cost.usage counter — three
+// numeric data points total.
+func metricsBody() string {
+	return `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"claude-code"}}]},` +
+		`"scopeMetrics":[{"metrics":[` +
+		`{"name":"claude_code.token.usage","sum":{"aggregationTemporality":2,"isMonotonic":true,"dataPoints":[` +
+		`{"attributes":[{"key":"type","value":{"stringValue":"input"}}],"asInt":"100"},` +
+		`{"attributes":[{"key":"type","value":{"stringValue":"output"}}],"asInt":"50"}` +
+		`]}},` +
+		`{"name":"claude_code.cost.usage","sum":{"aggregationTemporality":2,"isMonotonic":true,"dataPoints":[` +
+		`{"asDouble":0.041230}` +
+		`]}}` +
+		`]}]}]}`
+}
+
+func TestOtelServeMetricsJSONPostReturnsSuccess(t *testing.T) {
+	srv, _, _ := startOtelServer(t)
+	resp := postTo(t, srv.URL, "/v1/metrics", "application/json", []byte(metricsBody()))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /v1/metrics status = %d, want 200 (route must be registered)", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("reading body: %v", err)
+	}
+	if string(body) != "{}" {
+		t.Errorf("body = %q, want {}", body)
+	}
+}
+
+func TestOtelServeMetricsProtobufPostReturnsSuccess(t *testing.T) {
+	srv, _, _ := startOtelServer(t)
+	md := &metricsv1.MetricsData{
+		ResourceMetrics: []*metricsv1.ResourceMetrics{{
+			ScopeMetrics: []*metricsv1.ScopeMetrics{{
+				Metrics: []*metricsv1.Metric{{
+					Name: "claude_code.token.usage",
+					Data: &metricsv1.Metric_Sum{Sum: &metricsv1.Sum{DataPoints: []*metricsv1.NumberDataPoint{{
+						Attributes: []*commonv1.KeyValue{{
+							Key:   "type",
+							Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "input"}},
+						}},
+						Value: &metricsv1.NumberDataPoint_AsInt{AsInt: 33},
+					}}}},
+				}},
+			}},
+		}},
+	}
+	raw, err := proto.Marshal(md)
+	if err != nil {
+		t.Fatalf("proto.Marshal: %v", err)
+	}
+	resp := postTo(t, srv.URL, "/v1/metrics", "application/x-protobuf", raw)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /v1/metrics (protobuf) status = %d, want 200", resp.StatusCode)
+	}
+}
+
+func TestOtelServeGzipEncodedMetricsBodyDecodes(t *testing.T) {
+	srv, _, _ := startOtelServer(t)
+	resp := postGzip(t, srv.URL, "/v1/metrics", "application/json", []byte(metricsBody()))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("gzip POST /v1/metrics status = %d, want 200", resp.StatusCode)
+	}
+}
+
+func TestOtelServeMetricsUndecodableJSONReturns400(t *testing.T) {
+	srv, _, _ := startOtelServer(t)
+	resp := postTo(t, srv.URL, "/v1/metrics", "application/json", []byte("{not json"))
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 (undecodable metrics body)", resp.StatusCode)
+	}
+}
+
+func TestOtelServeMetricsLogsAcceptedPointCount(t *testing.T) {
+	srv, _, logs := startOtelServer(t)
+	postTo(t, srv.URL, "/v1/metrics", "application/json", []byte(metricsBody()))
+	if want := "accepted 3 metric points"; !strings.Contains(logs.String(), want) {
+		t.Errorf("logs = %q, want them to contain %q", logs.String(), want)
+	}
+}
+
+// Metrics are a coarse cross-check only: they never emit samples, so a
+// receiver fed only metrics has nothing to flush.
+func TestOtelServeMetricsAloneEmitNoSamples(t *testing.T) {
+	srv, rcv, _ := startOtelServer(t)
+	postTo(t, srv.URL, "/v1/metrics", "application/json", []byte(metricsBody()))
+	path := filepath.Join(t.TempDir(), "out.jsonl")
+	var stdout, stderr bytes.Buffer
+	if code := rcv.flush(path, &stdout, &stderr); code != 1 {
+		t.Fatalf("flush exit code = %d, want 1 (metrics produce no samples)", code)
+	}
+}
+
+// --- File mode: mixed trace + logs export objects ---
+
+func TestCmdOtelFileModeAcceptsLogsExportObject(t *testing.T) {
+	// A JSONL file mixing a trace-export object and a cost logs-export object
+	// (as an OTel Collector fileexporter would write) joins the cost at flush.
+	path := filepath.Join(t.TempDir(), "mixed.jsonl")
+	body := tokenSpanTraceBody() + "\n" + costLogBody() + "\n"
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := runOtel(t, path)
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", code, stderr)
+	}
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("got %d samples, want 1 (stdout: %q)", len(lines), stdout)
+	}
+	var s struct {
+		Values map[string]int64 `json:"values"`
+	}
+	if err := json.Unmarshal([]byte(lines[0]), &s); err != nil {
+		t.Fatalf("sample not JSON: %v", err)
+	}
+	if s.Values["cost_microusd"] != 41230 {
+		t.Errorf("cost_microusd = %d, want 41230", s.Values["cost_microusd"])
+	}
+	if strings.Contains(stderr, "invalid") {
+		t.Errorf("stderr = %q, want no invalid-line report for a valid logs object", stderr)
+	}
+}
+
+// TestCmdOtelPricingFlagAppliesUserRates: `otel <trace> --pricing <config>`
+// prices a non-Claude token-only span from the user-supplied rate table,
+// end to end through the CLI.
+func TestCmdOtelPricingFlagAppliesUserRates(t *testing.T) {
+	code, stdout, stderr := runOtel(t,
+		"internal/otel/testdata/pricing_user_model.json",
+		"--pricing", "internal/otel/testdata/pricing_user_config.json")
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", code, stderr)
+	}
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("got %d samples, want 1 (stdout: %q)", len(lines), stdout)
+	}
+	var s struct {
+		Values map[string]int64 `json:"values"`
+	}
+	if err := json.Unmarshal([]byte(lines[0]), &s); err != nil {
+		t.Fatalf("sample not JSON: %v", err)
+	}
+	// gemini-2.5 user rates on 100 input + 50 output = 100*1.25 + 50*10 = 625.
+	if s.Values["cost_microusd"] != 625 {
+		t.Errorf("cost_microusd = %d, want 625 (user pricing config)", s.Values["cost_microusd"])
+	}
+}
+
+// TestCmdOtelPricingFlagAbsentLeavesNonClaudeTokensOnly: with no --pricing
+// flag, a non-Claude token-only span stays tokens-only (Claude-table-only).
+func TestCmdOtelPricingFlagAbsentLeavesNonClaudeTokensOnly(t *testing.T) {
+	code, stdout, stderr := runOtel(t, "internal/otel/testdata/pricing_user_model.json")
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", code, stderr)
+	}
+	var s struct {
+		Values map[string]int64 `json:"values"`
+	}
+	line := strings.TrimSpace(stdout)
+	if err := json.Unmarshal([]byte(line), &s); err != nil {
+		t.Fatalf("sample not JSON: %v", err)
+	}
+	if _, ok := s.Values["cost_microusd"]; ok {
+		t.Errorf("cost_microusd present = %d, want absent without --pricing", s.Values["cost_microusd"])
+	}
+	if s.Values["input_tokens"] != 100 {
+		t.Errorf("input_tokens = %d, want 100", s.Values["input_tokens"])
 	}
 }

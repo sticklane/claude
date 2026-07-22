@@ -1,4 +1,4 @@
-Status: draft
+Status: deferred
 Discovered-from: specs/ctxignore-git-overlay/evidence/spec-review.md
 Spec: ../SPEC.md
 Blocking: no
@@ -41,3 +41,55 @@ README warning that directory exclusions require a trailing slash
 Fix path is inside `context-tree/src/vcs/mod.rs` (the shared,
 pre-existing `ctxignore_matches`) plus `context-tree/README.md` and its
 mirrors, all within ctxignore-git-overlay's original Touch footprint.
+
+## Deferred questions
+
+The task body itself declares this "a genuine design decision, not a
+mechanical bug" and gives two materially different resolutions (A vs B)
+without choosing. No `## Answers` section resolves it, and the task carries
+no runnable acceptance criteria. An unattended worker cannot pick between
+them: the choice sets shipped, user-visible index-membership semantics, and
+neither option is a neutral reversible default — one changes behavior, the
+other ratifies today's behavior via a user-facing "by design" warning. Per
+the drain defer contract ("any ambiguity with no reversible default stops
+the worker with DEFERRED"), this is deferred to a human.
+
+**Question:** For a bare (no-trailing-slash) `.ctxignore` directory pattern
+(e.g. `dist`), which semantics ship under the git overlay?
+
+- **Option A — segment match (align overlay with baseline + gitignore).**
+  Change `ctxignore_matches` so a slash-less pattern matches when ANY path
+  segment equals it (glob-aware), so `dist` excludes `dist/lib.py` under git
+  too. This makes overlay and no-VCS baseline consistent and matches
+  ordinary gitignore expectation. Verified low-risk to R3's
+  "baseline byte-identical" gate: the baseline `walk` already prunes at the
+  `dist` directory entry before descending, so segment-matching leaves
+  baseline output unchanged while only adding matches the git overlay
+  currently misses. Requires updating the README/mirror line that currently
+  reads "a pattern with no `/` matches the basename" to describe segment
+  semantics.
+
+- **Option B — keep basename-only, document the gotcha.** Leave
+  `ctxignore_matches` unchanged and add a README (+ `.claude` /
+  `antigravity` mirror) warning that directory exclusions require a trailing
+  slash (`dist/`), so users don't silently lose the exclusion. Docs-only, no
+  behavior change.
+
+**Analysis for the decider:** The governing `../SPEC.md` leans toward B —
+R2 pins the grammar as "exactly the shipped matcher" with "pattern without
+`/` matches the basename," and Out-of-scope defers "Full gitignore pattern
+semantics (`!`, `**`, anchoring subtleties) — the minimal matcher stays
+as-is; extend only if a real repo need surfaces." Segment-matching is
+exactly such an anchoring subtlety. BUT this task exists *because* that pin
+silently defeats the feature's headline use case (excluding committed
+`dist/`) for any user who writes the common gitignore form without a
+trailing slash — i.e. it argues the "real repo need" threshold is met, which
+is what reopens A. That product judgment (is basename-only intended, or a
+gap worth extending the matcher for?) is the decision to make.
+
+Touch footprint for whichever option is chosen (both within the original
+spec footprint): A → `context-tree/src/vcs/mod.rs` (matcher) +
+`context-tree/README.md` + `.claude/skills/ctx/SKILL.md` +
+`antigravity/.agents/skills/ctx/SKILL.md` + tests under `context-tree/tests`.
+B → `context-tree/README.md` + the two skill mirrors only. Either resolution
+should add a test asserting the chosen bare-`dist`-under-git behavior.

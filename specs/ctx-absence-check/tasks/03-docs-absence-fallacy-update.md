@@ -8,7 +8,7 @@
 Status: blocked
 Unblock: run: grep -q "ABSENCE FALLACY" .claude/skills/ctx/SKILL.md && grep -q "Reading ladder" .claude/skills/ctx/SKILL.md && echo "R7 and R2 both landed — safe to flip to pending" || echo "specs/ctx-skill-token-doctrine R2 (Reading ladder) and/or R7 (ABSENCE FALLACY) has not landed yet"
 Depends on: 01, 02
-Priority: P2
+Priority: P3
 Budget: 10 turns
 Spec: ../SPEC.md (requirements R5)
 Touch: .claude/skills/ctx/SKILL.md, antigravity/.agents/skills/ctx/SKILL.md

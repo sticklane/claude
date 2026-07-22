@@ -1,20 +1,32 @@
-//! `ctx refs <symbol> [--limit N]` — definitions and references for a symbol
-//! resolved by C3 suffix (R10). Results are labeled `heuristic` by default; when
-//! the optional LSP enrichment cache is present (R11/task 08), a reference the
-//! language server confirmed is upgraded to `precise` and a definition with a
-//! resolved signature is shown as `precise` with that signature appended. With
-//! no enrichment cache, every result stays `heuristic` and the command is
-//! unchanged. Heuristic matching is scope-aware where the grammar has locals
-//! queries: a reference bound to a function-local definition of the same name
-//! is excluded from the cross-file candidate set. Results cap at `--limit`
-//! (default 50) per direction with a truncation line naming the flag.
+//! `ctx refs <symbol> [--limit N] [--exact]` — definitions and references for a
+//! symbol resolved by C3 suffix (R10). Results are labeled `heuristic` by
+//! default; when the optional LSP enrichment cache is present (R11/task 08), a
+//! reference the language server confirmed is upgraded to `precise` and a
+//! definition with a resolved signature is shown as `precise` with that
+//! signature appended. With no enrichment cache, every result stays
+//! `heuristic` and the command is unchanged. Heuristic matching is scope-aware
+//! where the grammar has locals queries: a reference bound to a function-local
+//! definition of the same name is excluded from the cross-file candidate set.
+//! Results cap at `--limit` (default 50) per direction with a truncation line
+//! naming the flag.
+//!
+//! `--exact` (task 01 / R2 / F1(i)) additionally TRIGGERS on-demand
+//! enrichment when no current-generation cache exists: it consults a
+//! per-language language server (`lsp::enrich_exact`) and, for each precise
+//! reference, attributes it to the specific definition the server resolved it
+//! against — disambiguating two definitions that share a name (e.g. the
+//! `main.rodSpecs`-in-two-packages case R2 names) by appending `-> <def
+//! qpath>` to that reference's line. With no server binary available for the
+//! matched symbol's language, `--exact` leaves the cache absent and the
+//! output is byte-identical to plain `ctx refs`.
 
 use crate::cmd::{
     EXIT_AMBIGUOUS, EXIT_NO_MATCH, format_note_marker, load_index, no_match, note_value,
 };
 use crate::index::{IndexStore, RefRow, ScopeRow, SymbolRow};
 use crate::lsp::EnrichmentCache;
-use crate::path::resolve_suffix;
+use crate::path::{PathFilter, Selector, resolve_suffix};
+use crate::zones::ZoneConfig;
 use serde_json::json;
 use std::collections::HashSet;
 use std::path::Path;
@@ -24,6 +36,17 @@ use std::process::ExitCode;
 pub struct Args {
     pub symbol: String,
     pub limit: usize,
+    /// `--in <path-prefix>` filters (repeatable); narrows C3 resolution by file
+    /// (task 02) AND narrows the emitted result rows by owning file path (R3).
+    pub in_paths: Vec<String>,
+    /// `--not-in <path-prefix>` filters (repeatable); drops result rows whose
+    /// owning file is under the prefix (R3). Exclusion wins over `--in`.
+    pub not_in_paths: Vec<String>,
+    pub exact: bool,
+    /// `--zone <label>` (R2): keep only results whose file is in that zone.
+    pub zone: Option<String>,
+    /// `--live-only` (R2/R3): exclude every zoned result.
+    pub live_only: bool,
     pub json: bool,
     pub no_sync: bool,
 }
@@ -55,6 +78,44 @@ fn is_shadowed(rf: &RefRow, scopes: &[ScopeRow]) -> bool {
     })
 }
 
+/// The zero-reference diagnostic tail (R1a): a resolved symbol with no
+/// references states the fact using the QUERY argument (never a qpath — one
+/// name may span several def rows), and a module/file-level symbol additionally
+/// points at `ctx deps --reverse <file>` for import-level callers. Shared
+/// verbatim between the stderr tail and the `--json` `note` field.
+fn zero_refs_note(query: &str, module_file: Option<&str>) -> String {
+    match module_file {
+        Some(f) => format!(
+            "0 references to {query}; for import-level callers, try: ctx deps --reverse {f}"
+        ),
+        None => format!("0 references to {query}"),
+    }
+}
+
+/// The R3 zones-only diagnostic tail: `--live-only` filtered away every one of
+/// a resolved symbol's `count` references because they ALL lived in the listed
+/// zones. This is the "only kept alive by dead code" primitive — it states the
+/// filtered fact rather than emitting a bare empty result, and is emphatically
+/// NOT the `no_match` boundary (resolution succeeded). Built once, shared
+/// between the stderr tail and the `--json` `note` field, mirroring
+/// `zero_refs_note`.
+fn zones_only_note(count: usize, labels: &[&str]) -> String {
+    format!(
+        "{count} references exist only in zones: {}",
+        labels.join(", ")
+    )
+}
+
+/// ` [zone:<label>]` when `path` falls in a declared zone, else empty (R1). The
+/// leading space keeps it a suffix on the result line; zero `.ctxzones` →
+/// `zone_of` is always `None` → empty string → output unchanged from today.
+fn zone_suffix(zones: &ZoneConfig, path: &str) -> String {
+    match zones.zone_of(path) {
+        Some(label) => format!(" [zone:{label}]"),
+        None => String::new(),
+    }
+}
+
 /// `precise` when the enrichment cache confirms the reference `name` at
 /// `path:line` (1-based), `heuristic` otherwise (including no cache).
 fn ref_label(cache: Option<&EnrichmentCache>, name: &str, path: &str, line: usize) -> &'static str {
@@ -77,8 +138,23 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         Ok(v) => v,
         Err(code) => return (String::new(), code),
     };
+    // R1: zone tagging — loaded once per render; empty config tags nothing.
+    let zones = ZoneConfig::load(&root);
+    // R2: an undeclared `--zone <label>` is a usage error (exit 2) before any
+    // resolution work; the message lists `.ctxzones`'s declared labels.
+    if let Err(code) = crate::cmd::validate_zone(&zones, args.zone.as_deref(), "refs") {
+        return (String::new(), code);
+    }
     // Optional LSP enrichment (R11): absent cache => every result stays heuristic.
-    let cache = EnrichmentCache::load(&root);
+    let mut cache = EnrichmentCache::load(&root);
+    // `--exact` (task 01 / R2): no current-generation cache yet => try to
+    // build one now via per-language resolver dispatch. A repo with no
+    // available server for the matched symbol's language leaves this a
+    // no-op (`enrich_exact` writes an empty cache, `load` then sees nothing
+    // precise), so the heuristic path below is unchanged.
+    if args.exact && cache.is_none() && crate::lsp::enrich_exact(&root).is_ok() {
+        cache = EnrichmentCache::load(&root);
+    }
     let all = match store.all_symbols() {
         Ok(v) => v,
         Err(e) => {
@@ -87,12 +163,16 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         }
     };
 
-    // Resolve <symbol> per C3: exact/suffix over qualified paths.
+    // Resolve <symbol> per C3, narrowed by any `<path>:<name>` selector or `--in`
+    // path-prefix filters (R1): exact/suffix over qualified paths, then file scope.
+    let selector = Selector::parse(&args.symbol, &args.in_paths);
     let qpaths: Vec<String> = all.iter().map(|s| s.qpath.clone()).collect();
-    let matched: HashSet<&str> = resolve_suffix(&qpaths, &args.symbol).into_iter().collect();
+    let matched: HashSet<&str> = resolve_suffix(&qpaths, &selector.name)
+        .into_iter()
+        .collect();
     let mut defs: Vec<&SymbolRow> = all
         .iter()
-        .filter(|s| matched.contains(s.qpath.as_str()))
+        .filter(|s| matched.contains(s.qpath.as_str()) && selector.accepts_file(&s.path))
         .collect();
     defs.sort_by(|a, b| a.qpath.cmp(&b.qpath));
 
@@ -101,15 +181,20 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     match names.len() {
         0 => {
             if args.json {
-                out.push_str(&format!(
-                    "{}\n",
-                    json!({
-                        "error": "no match",
-                        "symbol": args.symbol,
-                        "boundary_note": no_match::BOUNDARY_NOTE,
-                        "suggested_check": no_match::suggested_check(&args.symbol),
-                    })
-                ));
+                let mut obj = json!({
+                    "error": "no match",
+                    "symbol": args.symbol,
+                    "boundary_note": no_match::BOUNDARY_NOTE,
+                    "suggested_check": no_match::suggested_check(&args.symbol),
+                });
+                // R4 near-miss list, mirrored into JSON (task 05): present only
+                // when candidates exist, so the no-candidate object is unchanged.
+                let candidates =
+                    no_match::did_you_mean(&args.symbol, all.iter().map(|s| s.name.as_str()));
+                if !candidates.is_empty() {
+                    obj["did_you_mean"] = json!(candidates);
+                }
+                out.push_str(&format!("{obj}\n"));
             } else {
                 eprintln!("ctx refs: no symbol matches '{}'", args.symbol);
                 let candidates =
@@ -124,9 +209,13 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         }
         1 => {}
         _ => {
-            // C3: a suffix spanning several distinct symbols is ambiguous.
+            // C3: a suffix spanning several distinct symbols is ambiguous. Each
+            // candidate carries its file-scoped `<path>:<name>` rerun form (R1).
             if args.json {
-                let candidates: Vec<_> = defs.iter().map(|d| json!(d.qpath)).collect();
+                let candidates: Vec<_> = defs
+                    .iter()
+                    .map(|d| json!({ "qpath": d.qpath, "rerun": format!("{}:{}", d.path, d.name) }))
+                    .collect();
                 out.push_str(&format!(
                     "{}\n",
                     json!({ "error": "ambiguous", "symbol": args.symbol, "candidates": candidates })
@@ -134,7 +223,10 @@ pub fn render(args: &Args) -> (String, ExitCode) {
             } else {
                 eprintln!("ctx refs: '{}' is ambiguous — candidates:", args.symbol);
                 for d in &defs {
-                    out.push_str(&format!("{}\n", d.qpath));
+                    out.push_str(&format!(
+                        "{}\n  rerun with: {}:{}\n",
+                        d.qpath, d.path, d.name
+                    ));
                 }
             }
             return (out, ExitCode::from(EXIT_AMBIGUOUS));
@@ -161,10 +253,71 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         .filter(|r| r.name == target_name && !is_shadowed(r, &scopes))
         .collect();
 
+    // R3 (task 03): narrow the EMITTED result rows by owning file path. Applied
+    // after C3 resolution — so task 02's `--in` disambiguation of the candidate
+    // set is intact — and before the truncation/limit counts below, so the
+    // `... more` tails reflect the filtered set.
+    let path_filter = PathFilter::new(&args.in_paths, &args.not_in_paths);
+    let defs: Vec<&SymbolRow> = defs
+        .into_iter()
+        .filter(|d| path_filter.keep(&d.path))
+        .collect();
+    let refs: Vec<&RefRow> = refs
+        .into_iter()
+        .filter(|r| path_filter.keep(&r.path))
+        .collect();
+
+    // R2/R3: apply the `--zone`/`--live-only` display filter to the already
+    // path-filtered result vectors (composing order-independently with the path
+    // filters — spec R2). Capture the pre-filter reference count and the zones
+    // of the references filtered away so the R3 zones-only tail can name them.
+    let orig_ref_count = refs.len();
+    let zone = args.zone.as_deref();
+    let removed_ref_zones: Vec<&str> = refs
+        .iter()
+        .filter(|r| !crate::cmd::zone_filter_keeps(&zones, &r.path, zone, args.live_only))
+        .filter_map(|r| zones.zone_of(&r.path))
+        .collect();
+    let refs: Vec<&RefRow> = refs
+        .into_iter()
+        .filter(|r| crate::cmd::zone_filter_keeps(&zones, &r.path, zone, args.live_only))
+        .collect();
+    let defs: Vec<&SymbolRow> = defs
+        .into_iter()
+        .filter(|d| crate::cmd::zone_filter_keeps(&zones, &d.path, zone, args.live_only))
+        .collect();
+
     let def_shown = defs.len().min(args.limit);
     let ref_shown = refs.len().min(args.limit);
     let def_omitted = defs.len() - def_shown;
     let ref_omitted = refs.len() - ref_shown;
+
+    // Diagnostic tail (built once, shared between stderr and the JSON note):
+    //   * R3 — `--live-only` filtered away a NON-empty ref set whose every
+    //     reference was in-zone: state the zones-only fact (never the no_match
+    //     boundary — resolution succeeded), naming the zones.
+    //   * R1a — a symbol that genuinely resolved to zero references keeps its
+    //     "0 references to <query>" tail.
+    //   * A `--zone <label>` that merely filtered to empty emits no misleading
+    //     "0 references" tail (there ARE references, just none in that zone).
+    let note = if refs.is_empty() {
+        if args.live_only && orig_ref_count > 0 {
+            let mut labels = removed_ref_zones.clone();
+            labels.sort_unstable();
+            labels.dedup();
+            Some(zones_only_note(orig_ref_count, &labels))
+        } else if orig_ref_count == 0 {
+            let module_file = defs
+                .iter()
+                .find(|d| d.kind == "module")
+                .map(|d| d.path.as_str());
+            Some(zero_refs_note(&args.symbol, module_file))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
 
     if args.json {
         return (
@@ -177,6 +330,8 @@ pub fn render(args: &Args) -> (String, ExitCode) {
                 def_omitted,
                 ref_omitted,
                 cache.as_ref(),
+                note.as_deref(),
+                &zones,
             ),
             ExitCode::SUCCESS,
         );
@@ -192,13 +347,14 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         };
         let sig_suffix = signature.map(|s| format!(" {s}")).unwrap_or_default();
         out.push_str(&format!(
-            "def {} {}:{} {}{}{}\n",
+            "def {} {}:{} {}{}{}{}\n",
             d.qpath,
             d.path,
             line_of(&root, &d.path, d.ident_start_byte),
             label,
             sig_suffix,
             marker,
+            zone_suffix(&zones, &d.path),
         ));
     }
     if def_omitted > 0 {
@@ -208,18 +364,36 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     }
     for r in refs.iter().take(ref_shown) {
         let label = ref_label(cache.as_ref(), &r.name, &r.path, r.row + 1);
+        // `--exact` disambiguation (R2): attribute a precise reference to the
+        // specific definition that confirmed it. Gated on `args.exact` so
+        // plain `ctx refs` output is never affected by this suffix.
+        let attribution = if args.exact {
+            cache
+                .as_ref()
+                .and_then(|c| c.precise_def(&r.name, &r.path, r.row + 1))
+                .map(|def| format!(" -> {def}"))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
         out.push_str(&format!(
-            "ref {} {}:{} {}\n",
+            "ref {} {}:{} {}{}{}\n",
             r.name,
             r.path,
             r.row + 1,
-            label
+            label,
+            attribution,
+            zone_suffix(&zones, &r.path),
         ));
     }
     if ref_omitted > 0 {
         out.push_str(&format!(
             "... {ref_omitted} more references (raise --limit)\n"
         ));
+    }
+    // R1a: defs remain on stdout above; the zero-reference fact goes to stderr.
+    if let Some(note) = &note {
+        eprintln!("{note}");
     }
     (out, ExitCode::SUCCESS)
 }
@@ -234,6 +408,8 @@ fn render_json(
     def_omitted: usize,
     ref_omitted: usize,
     cache: Option<&EnrichmentCache>,
+    note: Option<&str>,
+    zones: &ZoneConfig,
 ) -> String {
     let definitions: Vec<_> = defs
         .iter()
@@ -252,6 +428,11 @@ fn render_json(
             if let Some(sig) = signature {
                 obj["signature"] = json!(sig);
             }
+            // R1: extend-never-replace — a `zone` key only when the path is
+            // zoned, so live results keep the pre-zone JSON shape byte-for-byte.
+            if let Some(label) = zones.zone_of(&d.path) {
+                obj["zone"] = json!(label);
+            }
             obj
         })
         .collect();
@@ -259,22 +440,38 @@ fn render_json(
         .iter()
         .take(args.limit)
         .map(|r| {
-            json!({
+            let mut obj = json!({
                 "name": r.name,
                 "file": r.path,
                 "line": r.row + 1,
                 "kind": r.kind,
                 "label": ref_label(cache, &r.name, &r.path, r.row + 1),
-            })
+            });
+            // `--exact` disambiguation (R2): the confirming definition's
+            // qpath, when the cache attributes this reference to one. Only
+            // added under `--exact`, so plain `ctx refs --json` is unchanged.
+            if args.exact
+                && let Some(def) = cache.and_then(|c| c.precise_def(&r.name, &r.path, r.row + 1))
+            {
+                obj["def"] = json!(def);
+            }
+            // R1: same extend-never-replace zone key as the definitions above.
+            if let Some(label) = zones.zone_of(&r.path) {
+                obj["zone"] = json!(label);
+            }
+            obj
         })
         .collect();
-    format!(
-        "{}\n",
-        json!({
-            "symbol": args.symbol,
-            "definitions": definitions,
-            "references": references,
-            "truncated": { "definitions": def_omitted, "references": ref_omitted },
-        })
-    )
+    let mut payload = json!({
+        "symbol": args.symbol,
+        "definitions": definitions,
+        "references": references,
+        "truncated": { "definitions": def_omitted, "references": ref_omitted },
+    });
+    // R1a: extend-never-replace — the note key appears only on a zero-result;
+    // every existing key is left byte-for-byte unchanged.
+    if let Some(note) = note {
+        payload["note"] = json!(note);
+    }
+    format!("{payload}\n")
 }

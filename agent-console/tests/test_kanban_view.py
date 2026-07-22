@@ -6,6 +6,7 @@ test_parsers.py does.
 import importlib.util
 import unittest
 from pathlib import Path
+from unittest import mock
 
 _spec = importlib.util.spec_from_file_location(
     "ac", str(Path(__file__).resolve().parent.parent / "agent-console.py")
@@ -35,6 +36,15 @@ class TestKanbanColumn(unittest.TestCase):
 
     def test_skipped_status_maps_to_skipped_column(self):
         self.assertEqual(ac._kanban_column("skipped"), "Skipped")
+
+    def test_kanban_column_unknown_closed_status(self):
+        # Guard: if workboard.CLOSED_TASK_STATUSES ever grows a status outside
+        # {done, deferred, skipped}, _kanban_column must still return a real
+        # board column — otherwise render_workboard_kanban's buckets[col] raises
+        # KeyError. Assert membership only; the fallback column is free.
+        grown = set(ac.workboard.CLOSED_TASK_STATUSES) | {"archived"}
+        with mock.patch.object(ac.workboard, "CLOSED_TASK_STATUSES", grown):
+            self.assertIn(ac._kanban_column("archived"), ac._KANBAN_COLUMNS)
 
 
 if __name__ == "__main__":

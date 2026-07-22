@@ -31,6 +31,18 @@ if [ ! -f "$COVERAGE" ]; then
   exit 1
 fi
 
+# Guard: the [!_]* enumeration near the end is the ONLY violation-reporting
+# loop, so an absent or entry-less skills dir would make the whole lint pass
+# vacuously — nullglob expands the glob to nothing, the loop never runs, and
+# the script would echo OK / exit 0 having checked no skill (the same silent
+# pass the missing-COVERAGE.md guard above prevents). Fail loudly instead. The
+# glob is captured once here and reused as the enumeration source below.
+skill_dirs=("$SKILLS_DIR"/[!_]*/)
+if [ "${#skill_dirs[@]}" -eq 0 ]; then
+  echo "lint-eval-coverage: FAIL — no skill dirs under $SKILLS_DIR (nothing to check)"
+  exit 1
+fi
+
 # Parse COVERAGE.md's markdown table. A data row is a 4-column table line
 # (| skill | tier | reason | tests |) whose tier cell is exactly A, B, or C;
 # the header and separator rows fail that test and are skipped without
@@ -83,7 +95,7 @@ check_tier_c() {
 
 # Enumerate skill dirs with the spec's [!_]* glob (excludes _shared) and check
 # each against its row.
-for d in "$SKILLS_DIR"/[!_]*/; do
+for d in "${skill_dirs[@]}"; do
   skill="$(basename "$d")"
   if [ -z "${TIER[$skill]+set}" ]; then
     report "no-coverage-row: $skill"

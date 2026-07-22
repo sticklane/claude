@@ -2,9 +2,9 @@
 
 Serves CUJ: IMPACT, and DEDUP / DEAD CODE (docs/guides/ctx-cujs.md).
 
-Breakdown-ready: false — the fork-gated requirements (R2 per F1, R3 per
-F2) need /design before breakdown. R1, R4, and R5 are doctrine-only and
-NOT fork-gated: they become breakable as soon as
+Breakdown-ready: true — F1 and F2 (below) are decided (2026-07-22, human
+call, live /drain session); R2 and R3 are breakable now. R1, R4, and R5
+are doctrine-only and NOT fork-gated: they become breakable as soon as
 ctx-skill-token-doctrine R2 (the reading ladder they amend) has landed;
 a partial breakdown covering only R1/R4/R5 is explicitly authorized
 then. Landing order: any task here that edits the ctx SKILL.md (and its
@@ -61,11 +61,17 @@ structure", and must not creep into ctx.
   CLI) directly, ctx untouched. (i) is one UX and one cache; (ii) is
   zero Rust work but N per-language recipes. Evaluate against
   agent-buildability and maintenance cost.
+  **Decided (2026-07-22): (i) — built-in LSP shell-out.** `ctx refs
+  --exact` shells out to a per-language LSP client helper when a server
+  binary is found, caching results in the index with a generation stamp.
 - F2 — Clone detection home: (i) `ctx dupes` wrapping a bundled
   detector, (ii) a harness-audit stage invoking jscpd/dupl per stack,
   or (iii) a standalone repo-audit skill. Leans (ii): audits are already
   the periodic, read-only reporting surface, and clone output is a
   report, not a query.
+  **Decided (2026-07-22): (iii) — standalone repo-audit skill.** A new
+  dedicated skill for clone/duplicate detection, separate from both `ctx`
+  and `harness-audit`.
 
 ## Requirements
 
@@ -113,3 +119,17 @@ structure", and must not creep into ctx.
 - Tree-sitter knowledge-graph token economics (10× fewer tokens at
   83% vs 92% quality — motivates keeping an exactness escalation path):
   https://arxiv.org/html/2603.27277v1
+
+## Parallelization
+
+Partial breakdown (2026-07-21): only the currently-breakable requirements
+R2 and R3 are decomposed. R1 and R4 remain not-yet-breakable (gated on
+ctx-skill-token-doctrine R2 landing plus the SKILL.md serialization slot);
+R5 is out of scope (owned by ctxignore-git-overlay). A follow-up breakdown
+covering R1/R4 is authorized once that gate lands.
+
+Tasks 01 (R2, ctx crate) and 02 (R3, new clone-audit skill) have disjoint
+`Touch` and no shared undecided design (both F1 and F2 are decided), so they
+are concurrent-safe.
+
+- Group: 01, 02

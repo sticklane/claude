@@ -4,19 +4,14 @@
 # the inline reply asks for are invalid, so the correct /prioritize run makes
 # NO edit and NO commit (see this scenario's assert.sh).
 #
-# Provisions the prioritize scanner's dependency tree the same way the
-# happy-path scenario does (run.sh copies only the skill under test).
+# The prioritize scanner's dependency tree (_shared, runtimes/, and the
+# workboard sibling skill) is provisioned centrally by run.sh — _shared and
+# runtimes/ unconditionally, workboard via this scenario's skill-deps.txt —
+# so this fixture only builds the specs/ tree under test.
 set -eu
-
-SRC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 cd "$EVAL_DIR"
 git init -q
-
-mkdir -p .claude/skills
-cp -R "$SRC_ROOT/.claude/skills/_shared" .claude/skills/_shared
-cp -R "$SRC_ROOT/.claude/skills/workboard" .claude/skills/workboard
-cp -R "$SRC_ROOT/runtimes" runtimes
 
 mkdir -p specs/gamma/tasks
 

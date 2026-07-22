@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P1
 Budget: 16 turns
@@ -68,16 +68,16 @@ SKILL.md loaded).
 
 ## Acceptance
 
-- [ ] `grep -rl 'Structure lookups (ctx)' .claude/skills/drain/ | head -1` → non-empty
-- [ ] `grep -rl 'Structure lookups (ctx)' .claude/skills/build/ | head -1` → non-empty
-- [ ] `grep -l 'Structure lookups (ctx)' antigravity/.agents/workflows/drain.md antigravity/.agents/workflows/build.md codex/.agents/skills/drain/SKILL.md codex/.agents/skills/build/SKILL.md | wc -l` → 4
-- [ ] `grep -c 'Structure lookups (ctx)' tests/mirror-procedure-manifest.txt` → ≥4
-- [ ] `grep -rl '\.context/cache' .claude/skills/drain/ | head -1` → non-empty
-- [ ] `grep -c 'ctx notes add' .claude/skills/build/SKILL.md` → ≥1
-- [ ] `grep -rc 'ctx show' .claude/skills/drain/ .claude/skills/build/ | grep -v ':0' | wc -l` → 0 (no reference to the unlanded verb)
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` → exit 0
-- [ ] `bash evals/lint-ultra-gate.sh` → exit 0
-- [ ] Live worktree check scripted per SPEC R4: from an indexed repo, create a scratch worktree following the amended procedure and `test -f <worktree>/.context/cache/index.sqlite` → exit 0 (clean up the scratch worktree after)
+- [x] `grep -rl 'Structure lookups (ctx)' .claude/skills/drain/ | head -1` → non-empty (`.claude/skills/drain/reference.md`, worker prompt)
+- [x] `grep -rl 'Structure lookups (ctx)' .claude/skills/build/ | head -1` → non-empty (`.claude/skills/build/SKILL.md`, step 0 explore)
+- [x] `grep -l 'Structure lookups (ctx)' antigravity/.agents/workflows/drain.md antigravity/.agents/workflows/build.md codex/.agents/skills/drain/SKILL.md codex/.agents/skills/build/SKILL.md | wc -l` → 4
+- [x] `grep -c 'Structure lookups (ctx)' tests/mirror-procedure-manifest.txt` → 5 (≥4; 4 pinned pairs + 1 seed comment)
+- [x] `grep -rl '\.context/cache' .claude/skills/drain/ | head -1` → non-empty (`.claude/skills/drain/reference.md`, Warm the ctx index step)
+- [x] `grep -c 'ctx notes add' .claude/skills/build/SKILL.md` → 1
+- [x] `grep -rc 'ctx show' .claude/skills/drain/ .claude/skills/build/ | grep -v ':0' | wc -l` → 0 (no `ctx show` reference)
+- [x] `bash tests/test_mirror_procedure_coverage.sh` → exit 0
+- [x] `bash evals/lint-ultra-gate.sh` → exit 0 (all ultra mentions gated in 4 files)
+- [x] Live worktree check per SPEC R4: scratch worktree cut from HEAD had no `.context/cache/` (gitignored/cold); after `cp -R <main>/.context/cache <wt>/.context/cache`, `test -f <wt>/.context/cache/index.sqlite` → PASS; scratch worktree removed after
 
 Depth ceiling: the stanza/nudge criteria are L0/L1 greps on prose — the
 artifact is dispatch-prompt doctrine; the behavioral complement is task

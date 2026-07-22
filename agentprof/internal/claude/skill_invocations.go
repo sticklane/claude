@@ -15,7 +15,7 @@ import (
 // with no new user message since the previous invocation.
 type SkillInvocation struct {
 	// Name is the invoked skill's name, from the Skill tool_use input's
-	// "command" field.
+	// "skill" field.
 	Name string
 	// Args is the args string the Skill tool_use carried (its input "args"
 	// field), "" when none.
@@ -44,10 +44,11 @@ type skillBlock struct {
 }
 
 // skillInput is a Skill tool_use's input payload: the invoked skill's name and
-// any args passed to it.
+// any args passed to it. Real Claude Code Skill tool_use blocks carry the skill
+// name under "skill" (e.g. {"skill":"agentic:ctx"}), not "command".
 type skillInput struct {
-	Command string `json:"command"`
-	Args    string `json:"args"`
+	Skill string `json:"skill"`
+	Args  string `json:"args"`
 }
 
 // SkillInvocations walks one transcript in order and returns every Skill
@@ -119,7 +120,7 @@ func SkillInvocations(path string) ([]SkillInvocation, error) {
 				_ = json.Unmarshal(b.Input, &in)
 				invs = append(invs, pending{
 					inv: SkillInvocation{
-						Name:               in.Command,
+						Name:               in.Skill,
 						Args:               in.Args,
 						CommandTag:         curCommandTag,
 						PrecededByUserTurn: userTurnSinceLastSkill,

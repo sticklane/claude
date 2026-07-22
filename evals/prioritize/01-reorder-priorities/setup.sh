@@ -5,22 +5,15 @@
 # Priority headers per the inline reply and commit; the third task is a
 # distractor that must keep its P2.
 #
-# run.sh provisions ONLY the skill under test, but prioritize_scan.py imports
-# .claude/skills/_shared/headers.py and loads .claude/skills/workboard/
-# workboard.py, which itself imports runtimes/parse_headless.py. So this
-# fixture provisions that dependency tree from the source checkout (reached
-# via BASH_SOURCE, since run.sh invokes setup.sh by its in-repo path).
+# prioritize_scan.py imports .claude/skills/_shared/headers.py and loads
+# .claude/skills/workboard/workboard.py (which imports runtimes/
+# parse_headless.py). run.sh provisions _shared and runtimes/ centrally, and
+# the workboard sibling skill via this scenario's skill-deps.txt, so this
+# fixture only builds the specs/ tree under test.
 set -eu
-
-SRC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 cd "$EVAL_DIR"
 git init -q
-
-mkdir -p .claude/skills
-cp -R "$SRC_ROOT/.claude/skills/_shared" .claude/skills/_shared
-cp -R "$SRC_ROOT/.claude/skills/workboard" .claude/skills/workboard
-cp -R "$SRC_ROOT/runtimes" runtimes
 
 mkdir -p specs/alpha/tasks specs/beta/tasks
 

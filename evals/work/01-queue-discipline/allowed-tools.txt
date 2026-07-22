@@ -1,0 +1,1 @@
+Read,Write,Edit,Glob,Grep,Bash(bd *),Bash(git *),Bash(mkdir *),Bash(chmod *)

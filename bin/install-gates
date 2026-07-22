@@ -6,7 +6,8 @@
 # opaquely (R4), an existing pre-commit hook is archived to
 # pre-commit.pre-gates or the run aborts if that name is occupied (R7a),
 # self-installing hook sources are replaced (R7b), generic-tier repos still
-# get their hook archived and removed (R7c), beads leftovers abort (R9),
+# get their hook archived and removed (R7c), bd-tracked repos additionally
+# get the bd-compliance Stop hook (R9, inverted 2026-07-22),
 # and inventory exclusions are enforced (R6). All generation is
 # deterministic: no timestamps, and the pre-commit typecheck timing decision
 # is recorded as a marker and reused on re-runs (re-measured only under
@@ -101,11 +102,11 @@ case "$REPO" in
     ;;
 esac
 
-# R9: beads leftovers abort — the beads exit must land first.
-if [ -d "$REPO/.beads" ]; then
-  err "$REPO has a .beads/ dir; the beads exit must land first (see ~/specs/beads-full-exit/) — aborting"
-  exit 1
-fi
+# R9 (inverted 2026-07-22, agentic-core-redesign pivot): a .beads/ dir marks
+# a bd-tracked repo — the bd-compliance Stop hook installs alongside the
+# gates. The pre-pivot "beads leftovers abort" is retired.
+BD_PRESENT=0
+[ -d "$REPO/.beads" ] && BD_PRESENT=1
 
 hooks_dir="$(git -C "$REPO" rev-parse --git-path hooks)"
 case "$hooks_dir" in
@@ -113,6 +114,14 @@ case "$hooks_dir" in
   *) hooks_dir="$REPO/$hooks_dir" ;;
 esac
 PRECOMMIT_PATH="$hooks_dir/pre-commit"
+
+# bd owns its hooks path (bd init sets core.hooksPath=.beads/hooks): the
+# gate never archives or installs pre-commit there — bd's sync hooks are
+# working machinery, not a foreign hook to displace.
+BD_OWNED_HOOKS=0
+case "$hooks_dir" in
+  "$REPO/.beads" | "$REPO/.beads/"*) BD_OWNED_HOOKS=1 ;;
+esac
 
 # ---------------------------------------------------------------------------
 # Detection (R2). Sets:
@@ -400,7 +409,9 @@ fi
 # pre-commit.old / pre-commit.backup / non-pre-commit hooks are never touched;
 # legacy chained scripts stay on disk (review chains are simply not carried
 # forward — the deterministic-gates decision).
-if [ "$precommit_state" = none ]; then
+if [ "$BD_OWNED_HOOKS" -eq 1 ]; then
+  HOOK_HANDLING=skip-bd-owned
+elif [ "$precommit_state" = none ]; then
   if [ "$TIER" = generic ]; then HOOK_HANDLING=none; else HOOK_HANDLING=install; fi
 elif [ "$precommit_state" = ours ] && [ "$TIER" != generic ]; then
   HOOK_HANDLING=regenerate
@@ -420,6 +431,7 @@ case "$HOOK_HANDLING" in
   archive-install) printf 'pre-commit handling: archive existing hook to %s, then install gate hook\n' "$ARCHIVE_REL" ;;
   archive-remove)  printf 'pre-commit handling: archive existing hook to %s; no gate pre-commit (generic tier)\n' "$ARCHIVE_REL" ;;
   abort)           printf 'pre-commit handling: abort — archive target %s is occupied\n' "$ARCHIVE_REL" ;;
+  skip-bd-owned)   printf 'pre-commit handling: skip — %s is bd-owned (core.hooksPath); gate pre-commit not installed\n' "$PRECOMMIT_REL" ;;
 esac
 
 SETTINGS_PATH="$REPO/.claude/settings.json"
@@ -613,10 +625,11 @@ if [ "$DRY_RUN" -eq 1 ]; then
   for h in $HOOK_TEMPLATES; do
     plan ".claude/hooks/$h.sh"
   done
+  [ "$BD_PRESENT" -eq 1 ] && plan ".claude/hooks/bd-compliance.sh"
   plan ".claude/settings.json"
   if [ "$TIER" != generic ]; then
     plan "scripts/check.sh"
-    plan "$PRECOMMIT_REL"
+    [ "$BD_OWNED_HOOKS" -eq 0 ] && plan "$PRECOMMIT_REL"
     if [ -n "$SELFHOOK_SRC" ]; then
       plan "scripts/git-hooks/pre-commit (self-installing hook source)"
     fi
@@ -646,6 +659,13 @@ for h in $HOOK_TEMPLATES; do
   chmod 755 "$REPO/.claude/hooks/$h.sh"
   plan ".claude/hooks/$h.sh"
 done
+if [ "$BD_PRESENT" -eq 1 ]; then
+  # The hook source lives outside templates/ because it is also a
+  # first-class toolkit component with its own tests (hooks/bd-compliance/).
+  cp "$TOOLKIT_DIR/hooks/bd-compliance/check.sh" "$REPO/.claude/hooks/bd-compliance.sh"
+  chmod 755 "$REPO/.claude/hooks/bd-compliance.sh"
+  plan ".claude/hooks/bd-compliance.sh"
+fi
 
 if [ ! -e "$SETTINGS_PATH" ]; then
   printf '%s\n' "$SETTINGS_CONTENT" > "$SETTINGS_PATH"
@@ -681,16 +701,36 @@ else
   fi
 fi
 
+# bd-compliance Stop entry (R9 inverted): appended for bd-tracked repos on
+# both the fresh-write and merge paths, same opaque-append rules as above.
+if [ "$BD_PRESENT" -eq 1 ]; then
+  GATE_BD_ENTRY='{"hooks":[{"type":"command","command":"\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/bd-compliance.sh"}]}'
+  merged_bd="$(jq --argjson bd "$GATE_BD_ENTRY" '
+    def ensure($ev; $entry; $needle):
+      ((.hooks // {})[$ev] // []) as $cur
+      | (if ($cur | type) == "array" then $cur else [$cur] end) as $arr
+      | if ($arr | tostring | contains($needle)) then .
+        else .hooks[$ev] = $arr + [$entry] end;
+    ensure("Stop"; $bd; "bd-compliance.sh")
+  ' "$SETTINGS_PATH")"
+  if [ "$merged_bd" != "$(jq . "$SETTINGS_PATH")" ]; then
+    printf '%s\n' "$merged_bd" > "$SETTINGS_PATH"
+    printf 'merged: .claude/settings.json (bd-compliance Stop entry)\n'
+  fi
+fi
+
 if [ "$TIER" != generic ]; then
   mkdir -p "$REPO/scripts"
   render_template "$TEMPLATES/check.sh.tmpl" > "$REPO/scripts/check.sh"
   chmod 755 "$REPO/scripts/check.sh"
   plan "scripts/check.sh"
 
-  mkdir -p "$hooks_dir"
-  render_template "$TEMPLATES/pre-commit.sh.tmpl" > "$PRECOMMIT_PATH"
-  chmod 755 "$PRECOMMIT_PATH"
-  plan "$PRECOMMIT_REL"
+  if [ "$BD_OWNED_HOOKS" -eq 0 ]; then
+    mkdir -p "$hooks_dir"
+    render_template "$TEMPLATES/pre-commit.sh.tmpl" > "$PRECOMMIT_PATH"
+    chmod 755 "$PRECOMMIT_PATH"
+    plan "$PRECOMMIT_REL"
+  fi
 
   if [ -n "$SELFHOOK_SRC" ]; then
     render_template "$TEMPLATES/pre-commit.sh.tmpl" > "$SELFHOOK_SRC"

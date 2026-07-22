@@ -66,6 +66,11 @@ agent lacks.
 ## Containment ladder
 
 1. Worktree: isolates the diff, not the machine. Default for parallel work.
+   When the source repo has a `ctx` index (`.context/` at its root), a fresh
+   worktree lacks the gitignored `.context/cache/`; copy it in from the main
+   checkout (`cp -R <main>/.context/cache "$PWD/.context/cache"`) — copy,
+   never symlink (two writers on one SQLite file is a corruption risk) — so
+   the isolated run starts index-warm rather than paying a cold rebuild.
 2. `/sandbox` (OS-level: Seatbelt/bubblewrap): filesystem writes limited to
    CWD, per-domain network approval.
 3. Network-isolated container (the published devcontainer's default-deny

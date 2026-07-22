@@ -9,10 +9,12 @@ pub mod map;
 pub mod no_match;
 pub mod notes;
 pub mod refs;
+pub mod show;
 pub mod sig;
 pub mod tree;
 
 use crate::index::IndexStore;
+use crate::zones::ZoneConfig;
 use crate::{project, sync};
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -21,6 +23,9 @@ use std::process::ExitCode;
 pub const EXIT_NO_MATCH: u8 = 1;
 /// Exit code for the C4 root guard: no `.context/` ancestor exists.
 pub const EXIT_NO_ROOT: u8 = 2;
+/// Exit code for an undeclared `--zone <label>` on `refs`/`map` (R2): a usage
+/// error, sharing the value-2 slot with the other usage-shaped exits.
+pub const EXIT_UNKNOWN_ZONE: u8 = 2;
 /// Exit code for an ambiguous query (`ctx sig` matching several symbols).
 pub const EXIT_AMBIGUOUS: u8 = 3;
 /// Exit code for `ctx at` on an unresolvable position: an ignored, unsupported,
@@ -73,6 +78,47 @@ pub fn load_index(no_sync: bool) -> Result<(PathBuf, IndexStore), ExitCode> {
 /// shared by every verb), trimmed of surrounding whitespace.
 pub fn first_doc_line(docstring: &str) -> Option<&str> {
     docstring.lines().map(str::trim).find(|l| !l.is_empty())
+}
+
+/// R2 zone-filter predicate shared by `refs` and `map`: does a result whose
+/// defining file is `path` survive the active `--zone`/`--live-only` filter?
+/// `--live-only` keeps only unzoned (live) paths; `--zone <label>` keeps only
+/// paths in that zone; neither flag → every result is kept. The two flags are
+/// mutually exclusive at the CLI (clap `conflicts_with`), so `live_only` is
+/// checked first and a set `zone` is only consulted when it is not.
+pub fn zone_filter_keeps(
+    zones: &ZoneConfig,
+    path: &str,
+    zone: Option<&str>,
+    live_only: bool,
+) -> bool {
+    if live_only {
+        zones.zone_of(path).is_none()
+    } else if let Some(label) = zone {
+        zones.zone_of(path) == Some(label)
+    } else {
+        true
+    }
+}
+
+/// R2 unknown-`--zone` guard: prints the declared labels to stderr and returns
+/// `Err(EXIT_UNKNOWN_ZONE)` when a `--zone <label>` names a label absent from
+/// `.ctxzones`; `Ok(())` when no `--zone` is set or the label is declared.
+/// `cmd` is the verb name for the diagnostic prefix (e.g. `"refs"`).
+pub fn validate_zone(zones: &ZoneConfig, zone: Option<&str>, cmd: &str) -> Result<(), ExitCode> {
+    if let Some(label) = zone {
+        let declared = zones.declared_labels();
+        if !declared.contains(&label) {
+            let listed = if declared.is_empty() {
+                "(none declared)".to_string()
+            } else {
+                declared.join(", ")
+            };
+            eprintln!("ctx {cmd}: unknown zone '{label}'; declared zones: {listed}");
+            return Err(ExitCode::from(EXIT_UNKNOWN_ZONE));
+        }
+    }
+    Ok(())
 }
 
 /// A symbol's C10 note tuple as JSON: `null` until task 09 populates notes,

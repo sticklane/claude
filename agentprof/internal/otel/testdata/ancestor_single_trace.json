@@ -1,0 +1,4 @@
+{"resourceSpans":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"claude-code"}}]},"scopeSpans":[{"spans":[
+{"traceId":"0102030405060708090a0b0c0d0e0f10","spanId":"aaaa000000000001","name":"claude_code.interaction","startTimeUnixNano":"1700000000000000000","endTimeUnixNano":"1700000000005000000","attributes":[]},
+{"traceId":"0102030405060708090a0b0c0d0e0f10","spanId":"bbbb000000000001","parentSpanId":"aaaa000000000001","name":"claude_code.llm_request","startTimeUnixNano":"1700000000001000000","endTimeUnixNano":"1700000000002000000","attributes":[{"key":"input_tokens","value":{"intValue":"200"}},{"key":"output_tokens","value":{"intValue":"80"}}]}
+]}]}]}

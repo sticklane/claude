@@ -5,9 +5,10 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: blocked
+Unblock: run: bash -c 'for m in "Reading ladder" "ABSENCE FALLACY" "ast-grep --pattern" "ctx show <symbol>" ".ctxkeep" "zone dead trees" "now emits the guard itself"; do grep -q "$m" .claude/skills/ctx/SKILL.md || echo "still missing: $m"; done' — empty output means all 6 sibling specs (ctx-skill-token-doctrine, ctx-static-analysis-augmentation, ctx-query-ergonomics, ctx-minified-skip, ctx-dead-code-zones, ctx-absence-check) have landed their SKILL.md edits; flip back to pending and re-dispatch.
 Depends on: 01
-Priority: P2
+Priority: P3
 Budget: 10 turns
 Spec: ../SPEC.md (requirements R3)
 Touch: .claude/skills/ctx/SKILL.md, antigravity/.agents/skills/ctx/SKILL.md, .claude-plugin/plugin.json
@@ -87,3 +88,13 @@ this task will likely park DEFERRED for a while.
     main`) — a real bump, not unrelated drift.
 - [ ] `git diff --stat` for this task's commit touches only the three
       files listed in Touch.
+
+## Progress
+
+- [2026-07-22 /drain] Worker verdict was DEFERRED (Step 2 registry gate:
+  none of the six sibling specs' SKILL.md edits present on
+  `.claude/skills/ctx/SKILL.md` at current main). Reclassified to
+  `blocked` on human instruction — this is a technical prerequisite, not
+  a question needing a human decision. See `Unblock:` above. The
+  `map [--limit` typo this task targets is confirmed present at
+  `.claude/skills/ctx/SKILL.md:26`, awaiting the gate.

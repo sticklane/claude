@@ -104,6 +104,7 @@ impl CtxServer {
     fn tree(&self, Parameters(p): Parameters<TreeParams>) -> String {
         cmd::tree::render(&cmd::tree::Args {
             path: p.path.unwrap_or_else(|| ".".to_string()),
+            files: false,
             depth: p.depth,
             limit: p.limit.unwrap_or(200),
             doc: p.doc.unwrap_or(false),
@@ -118,6 +119,10 @@ impl CtxServer {
         cmd::sig::render(&cmd::sig::Args {
             symbol: p.symbol,
             doc: p.doc.unwrap_or(false),
+            // `--in` is a CLI-only disambiguating flag (task 02 / R1); the MCP
+            // wrapper passes none, and a `<path>:<name>` selector still works
+            // because it rides inside `symbol`.
+            in_paths: Vec::new(),
             json: true,
             no_sync: false,
         })
@@ -129,6 +134,14 @@ impl CtxServer {
         cmd::map::render(&cmd::map::Args {
             tokens: p.tokens.unwrap_or(1000),
             doc: p.doc.unwrap_or(false),
+            // Zone filtering (task 03 / R2) is CLI-only; the MCP wrapper stays
+            // an unfiltered read over the whole ranked set.
+            zone: None,
+            live_only: false,
+            // `--in`/`--not-in` are CLI-only result filters (task 03 / R3); the
+            // MCP wrapper exposes no such parameter, so it keeps every symbol.
+            in_paths: Vec::new(),
+            not_in_paths: Vec::new(),
             json: true,
             no_sync: false,
         })
@@ -151,6 +164,19 @@ impl CtxServer {
         cmd::refs::render(&cmd::refs::Args {
             symbol: p.symbol,
             limit: p.limit.unwrap_or(50),
+            // `--in` is a CLI-only disambiguating flag (task 02 / R1); a
+            // `<path>:<name>` selector still rides inside `symbol`.
+            in_paths: Vec::new(),
+            // `--not-in` is a CLI-only result filter (task 03 / R3); the MCP
+            // wrapper exposes no such parameter, so it drops nothing.
+            not_in_paths: Vec::new(),
+            // `--exact` (task 01 / R2) is a CLI-only on-demand trigger; the
+            // MCP wrapper stays read-only over whatever cache already exists.
+            exact: false,
+            // Zone filtering (task 03 / R2) is CLI-only; the MCP wrapper stays
+            // an unfiltered read.
+            zone: None,
+            live_only: false,
             json: true,
             no_sync: false,
         })
@@ -178,6 +204,9 @@ impl CtxServer {
                 text: p.text,
                 kind: p.kind,
                 file: p.file,
+                // `--in` is CLI-only (task 02 / R1); a `<path>:<name>` anchor
+                // selector still rides inside `symbol`.
+                in_paths: Vec::new(),
             },
             json: true,
             no_sync: false,
@@ -191,7 +220,12 @@ impl CtxServer {
     )]
     fn notes(&self, Parameters(p): Parameters<NotesShowParams>) -> String {
         cmd::notes::render(&cmd::notes::Args {
-            action: cmd::notes::Action::Show { symbol: p.symbol },
+            action: cmd::notes::Action::Show {
+                symbol: p.symbol,
+                // `--in` is CLI-only (task 02 / R1); a `<path>:<name>` selector
+                // still rides inside `symbol`.
+                in_paths: Vec::new(),
+            },
             json: true,
             no_sync: false,
         })

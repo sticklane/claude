@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 20 turns
@@ -55,25 +55,25 @@ landed).
 
 ## Acceptance
 
-- [ ] `bash tests/test_mirror_procedure_coverage.sh` passes.
-- [ ] `grep -n "grep -l.*Status" codex/.agents/skills/build/SKILL.md`
+- [x] `bash tests/test_mirror_procedure_coverage.sh` passes.
+- [x] `grep -n "grep -l.*Status" codex/.agents/skills/build/SKILL.md`
       returns a match.
-- [ ] `grep -n "status.sh" codex/.agents/skills/drain/SKILL.md` returns a
+- [x] `grep -n "status.sh" codex/.agents/skills/drain/SKILL.md` returns a
       match (anchored on `status.sh` alone — confirmed absent there today;
       `drain_frontier` already appears pre-existing 2× in this file and is
       not a safe anchor).
-- [ ] `grep -n "grep -l.*Status" antigravity/.agents/workflows/build.md`
+- [x] `grep -n "grep -l.*Status" antigravity/.agents/workflows/build.md`
       returns a match covering the ported concept (content-coverage check,
       not a byte-diff — this is a paraphrased port per
       `docs/memory/workboard-mirror-verbatim.md`'s distinction between
       byte-identical `.py` mirrors and paraphrased prose mirrors). Anchored
       on `grep -l.*Status` alone — `sibling` already appears pre-existing
       2× in this file and is not a safe anchor.
-- [ ] `grep -n "status.sh" antigravity/.agents/workflows/drain.md` returns
+- [x] `grep -n "status.sh" antigravity/.agents/workflows/drain.md` returns
       a match covering the ported doctrine pointer (anchored on
       `status.sh` alone — confirmed absent there today; `drain_frontier`/
       `header-only` are not safe anchors in this file).
-- [ ] Confirm whether any of `antigravity/.agents/skills/design/reference.md`,
+- [x] Confirm whether any of `antigravity/.agents/skills/design/reference.md`,
       `antigravity/.agents/skills/qa-sweep/SKILL.md`, or
       `antigravity/.agents/skills/harness-audit/SKILL.md` (the antigravity
       files that already cite token-discipline content inline) need task
@@ -83,8 +83,12 @@ landed).
       `## Progress` rather than leaving R5's confirm-step silently
       unassigned; if one does, add the line and list that file in
       `Touch:` before editing it.
-- [ ] The commit modifying `.claude-plugin/plugin.json` shows the version
+- [x] The commit modifying `.claude-plugin/plugin.json` shows the version
       line changed in its own diff (`git show <this-commit> --
       .claude-plugin/plugin.json | grep -q '^+.*"version"'`) — not a
       pinned before/after literal, since a sibling spec may have already
       bumped the same line.
+
+## Progress
+
+- 2026-07-21: DONE. All 6 acceptance criteria verified against merged main (merge commit e3b2126e, worker commit b696240f). R5 confirm-step: neither `antigravity/.agents/skills/design/reference.md` nor `antigravity/.agents/skills/harness-audit/SKILL.md` cite token-discipline's "Delegation defaults" section; `antigravity/.agents/skills/qa-sweep/SKILL.md` does cite it, but generically ("cited, not restated") rather than by enumerating bullets, so task 02's new header-only-check carve-out is already transitively covered — no file needed an added line.

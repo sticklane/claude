@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns
@@ -42,6 +42,6 @@ is byte-unchanged when `--files` is absent — pin with a golden.
 
 ## Acceptance
 
-- [ ] `cd context-tree && cargo test --test tree_files_mode` → exit 0, covering: files-only output, --json array, --depth 1/2 directory-level semantics, membership count equality, default symbol mode unchanged
-- [ ] `cd context-tree && cargo test` → exit 0
-- [ ] `cd context-tree && cargo clippy --tests -- -D warnings` → exit 0
+- [x] `cd context-tree && cargo test --test tree_files_mode` → exit 0, covering: files-only output, --json array, --depth 1/2 directory-level semantics, membership count equality, default symbol mode unchanged — 6 passed; 0 failed
+- [x] `cd context-tree && cargo test` → exit 0 — full suite 32 "test result: ok" blocks, 0 failed
+- [x] `cd context-tree && cargo clippy --tests -- -D warnings` → exit 0 — clean (also `clippy --all-targets` clean per scripts/check.sh)

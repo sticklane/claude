@@ -1,6 +1,7 @@
 # Task 07 (draft): antigravity build.md exceeds documented workflow char cap
 
-Status: draft
+Status: obsolete
+Closed: subsumed by specs/agentic-core-redesign — see specs/agentic-core-redesign/TRIAGE.md
 Depends on: none
 Spec: ../SPEC.md
 

@@ -1,0 +1,38 @@
+# evals/headtohead/tasks.manifest — single source of truth for the planner
+# and the arm-isolation check.
+#
+# Fixture contract (frozen; every task's grader and author cites this):
+#   - assert.sh REQUIRES the target repo dir as $1 and refuses argless
+#     invocation (a default target could silently grade the pristine
+#     snapshot instead of an arm's worktree).
+#   - reference/ is a FULL repo directory (the solved snapshot), not a
+#     patch; calibrate GREEN runs assert.sh against it directly.
+#   - brief.md lives at tasks/<name>/brief.md — it is READ AS THE PROMPT
+#     by the runner; it is never placed inside repo/ (the mount).
+#
+# Format: one task per line, fields separated by "|" (comments and blank
+# lines are skipped):
+#
+#   name|kind|snapshot|assert|reference|brief
+#
+#   name     - task identifier
+#   kind     - "real" (counted in the 18-session default plan: 2 arms x 3
+#              real tasks x 3 seeds) or "selftest" (fixture/crashfixture;
+#              only run via an explicit --task, never in the default plan)
+#   snapshot - repo-relative path to the in-mount fixture repo snapshot
+#              (this is what gets copied into each arm's working directory)
+#   assert   - repo-relative path to the out-of-mount hidden assert.sh
+#   reference- repo-relative path to the out-of-mount reference-solution dir
+#   brief    - repo-relative path to the task brief text (in-mount; read if
+#              present, else the planner uses a placeholder — brief authoring
+#              is bundled with each task's fixture, not this file)
+#
+# assert and reference sit as SIBLINGS of snapshot, never inside it, so a
+# plain path-prefix check proves they resolve outside both arms' mounts
+# without any of these paths needing to exist yet.
+
+ledger|real|evals/headtohead/tasks/ledger/repo|evals/headtohead/tasks/ledger/assert.sh|evals/headtohead/tasks/ledger/reference|evals/headtohead/tasks/ledger/brief.md
+notes-api|real|evals/headtohead/tasks/notes-api/repo|evals/headtohead/tasks/notes-api/assert.sh|evals/headtohead/tasks/notes-api/reference|evals/headtohead/tasks/notes-api/brief.md
+sitegen|real|evals/headtohead/tasks/sitegen/repo|evals/headtohead/tasks/sitegen/assert.sh|evals/headtohead/tasks/sitegen/reference|evals/headtohead/tasks/sitegen/brief.md
+fixture|selftest|evals/headtohead/tasks/fixture/repo|evals/headtohead/tasks/fixture/assert.sh|evals/headtohead/tasks/fixture/reference|evals/headtohead/tasks/fixture/brief.md
+crashfixture|selftest|evals/headtohead/tasks/crashfixture/repo|evals/headtohead/tasks/crashfixture/assert.sh|evals/headtohead/tasks/crashfixture/reference|evals/headtohead/tasks/crashfixture/brief.md

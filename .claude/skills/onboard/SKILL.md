@@ -83,7 +83,43 @@ and keep denies that would annoy attended sessions (like WebFetch) out of
 the shared file — those belong in a personal settings.local.json autonomy
 profile.
 
-## 5. Offer the next layer
+When the target repo is indexed (a `.context/` directory at its root, or
+`ctx` resolving on PATH), also recommend `Bash(ctx *)` in the allowlist so
+agents can run the code-structure index (`ctx tree`/`sig`/`refs`/`deps`)
+index-first instead of grepping for structure. Same gate, one more write:
+add an "Answering structure questions" section to the repo's **CLAUDE.md**
+(conventions, not AGENTS.md orientation) naming `ctx` as the first stop for
+a structure question, ahead of a file read or a scout dispatch — the
+reading ladder's rung order, one rung per question shape: `ctx tree <path>`
+(what a file/module contains), `ctx sig <symbol>` (a symbol's signature),
+`ctx map` (the important symbols), `ctx deps <path>` (imports/dependents),
+`ctx refs <symbol>` (definition and usages), `ctx at <file>:<line>`
+(enclosing symbol), `ctx notes <symbol>` (pinned gotchas) — falling back to
+reading the file or dispatching a scout only when `ctx` can't answer. Model
+the section on `context-tree/README.md`'s "Adoption: route structure
+questions to `ctx`" block when that repo is available; otherwise write the
+ladder above directly.
+
+## 5. bd queue setup
+
+Once per machine, before the per-repo steps below (confirm rather than
+redo if already present): the `agentic@agentic-toolkit` plugin, and `bd`
+pinned 1.1.0 (`brew install beads`).
+
+Per repo:
+
+1. `bd init`, curated: keep the AGENTS.md snippet it writes, gitignore
+   `.beads/interactions.jsonl`, and commit the `issues.jsonl` export.
+2. `/gate` to install the Stop hook — with `.beads/` present from
+   step 1, its installer also copies the bd-compliance check to
+   `.claude/hooks/bd-compliance.sh` and wires it as a second Stop
+   entry — plus format-on-edit if wanted.
+3. Add `Bash(bd *)` to the settings allowlist (§4) — the grant class
+   whose absence measurably killed tool adoption before.
+4. Seed the queue: file the repo's first epics and issues from
+   whatever plan exists, so `bd ready` has answers on day one.
+
+## 6. Offer the next layer
 
 Ask which the user wants now (don't install unasked):
 

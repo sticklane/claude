@@ -14,17 +14,18 @@ use std::time::Duration;
 
 /// Bumped whenever the on-disk schema shape changes; a version-mismatched or
 /// unreadable cache is wiped and rebuilt transparently (C4).
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 const SCHEMA_SQL: &str = "
 CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS sync_meta (id INTEGER PRIMARY KEY CHECK (id = 0), last_sync_ns INTEGER);
 CREATE TABLE IF NOT EXISTS files (
-    id       INTEGER PRIMARY KEY,
-    path     TEXT NOT NULL UNIQUE,
-    hash     TEXT NOT NULL,
-    size     INTEGER NOT NULL,
-    mtime_ns INTEGER NOT NULL
+    id          INTEGER PRIMARY KEY,
+    path        TEXT NOT NULL UNIQUE,
+    hash        TEXT NOT NULL,
+    size        INTEGER NOT NULL,
+    mtime_ns    INTEGER NOT NULL,
+    skip_reason TEXT
 );
 CREATE TABLE IF NOT EXISTS symbols (
     id               INTEGER PRIMARY KEY,
@@ -409,6 +410,45 @@ impl IndexStore {
         Ok(())
     }
 
+    /// Record (or clear, with `None`) a file's minified-skip reason (R1).
+    /// Called on every re-parse of a changed candidate file — whether it
+    /// classifies minified or not — so a file that stops being minified
+    /// (or starts being minified) never carries a stale reason.
+    pub fn set_skip_reason(&self, file_id: i64, reason: Option<&str>) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "UPDATE files SET skip_reason = ?2 WHERE id = ?1",
+            params![file_id, reason],
+        )?;
+        Ok(())
+    }
+
+    /// A file's recorded minified-skip reason, if any (R1). `None` for a
+    /// file that parsed normally, or that isn't indexed at all.
+    pub fn skip_reason_for_path(&self, path: &str) -> rusqlite::Result<Option<String>> {
+        self.conn
+            .query_row(
+                "SELECT skip_reason FROM files WHERE path = ?1",
+                [path],
+                |r| r.get(0),
+            )
+            .optional()
+            .map(|v: Option<Option<String>>| v.flatten())
+    }
+
+    /// Every minified-skipped candidate (R2): its path paired with the recorded
+    /// skip reason, ordered by path. Such a file has a `files` row with a
+    /// non-NULL `skip_reason` and zero symbols; `tree` lists these with a marker
+    /// so a skip never reads as absence. Read-only — `set_skip_reason` owns the
+    /// write path.
+    pub fn skipped_paths(&self) -> rusqlite::Result<Vec<(String, String)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT path, skip_reason FROM files
+             WHERE skip_reason IS NOT NULL ORDER BY path",
+        )?;
+        let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
+        rows.collect()
+    }
+
     /// Purge a removed file's tracking row and all its facts (R2 deletion
     /// detection).
     pub fn delete_file(&self, path: &str) -> rusqlite::Result<()> {
@@ -770,5 +810,21 @@ mod tests {
         let store = IndexStore::open(dir.path()).unwrap();
         assert_eq!(store.note_marker(1), None);
         assert_eq!(store.note_marker(999), None);
+    }
+
+    /// Guard, not a red-first regression test (specs/codebase-context-tree
+    /// task 15): `size as i64` / `size as u64` is a lossless two's-complement
+    /// bit reinterpretation for every `u64`, and SQLite INTEGER stores the
+    /// full signed 64-bit range, so this already passes today. It exists to
+    /// catch a future well-meaning "defensive" saturating/checked cast that
+    /// would silently clamp large sizes and reintroduce real data loss.
+    #[test]
+    fn file_size_above_i64_max_round_trips_losslessly() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = IndexStore::open(dir.path()).unwrap();
+        let big = (i64::MAX as u64) + 1;
+        store.upsert_file("big.bin", "h", big, 0).unwrap();
+        let states = store.file_states().unwrap();
+        assert_eq!(states["big.bin"].size, big);
     }
 }

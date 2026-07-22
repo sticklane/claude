@@ -11,11 +11,13 @@ pub mod index;
 pub mod lang;
 pub mod lsp;
 pub mod mcp;
+pub mod minified;
 pub mod notes;
 pub mod path;
 pub mod project;
 pub mod sync;
 pub mod vcs;
+pub mod zones;
 
 use clap::Parser;
 use std::process::ExitCode;
@@ -97,6 +99,7 @@ pub fn run() -> ExitCode {
         }
         Some(cli::Command::Tree {
             path,
+            files,
             depth,
             limit,
             doc,
@@ -104,6 +107,7 @@ pub fn run() -> ExitCode {
             no_sync,
         }) => cmd::tree::run(cmd::tree::Args {
             path,
+            files,
             depth,
             limit,
             doc,
@@ -113,11 +117,26 @@ pub fn run() -> ExitCode {
         Some(cli::Command::Sig {
             symbol,
             doc,
+            in_paths,
             json,
             no_sync,
         }) => cmd::sig::run(cmd::sig::Args {
             symbol,
             doc,
+            in_paths,
+            json,
+            no_sync,
+        }),
+        Some(cli::Command::Show {
+            symbol,
+            head,
+            in_paths,
+            json,
+            no_sync,
+        }) => cmd::show::run(cmd::show::Args {
+            symbol,
+            head,
+            in_paths,
             json,
             no_sync,
         }),
@@ -135,11 +154,21 @@ pub fn run() -> ExitCode {
         Some(cli::Command::Refs {
             symbol,
             limit,
+            in_paths,
+            not_in_paths,
+            exact,
+            zone,
+            live_only,
             json,
             no_sync,
         }) => cmd::refs::run(cmd::refs::Args {
             symbol,
             limit,
+            in_paths,
+            not_in_paths,
+            exact,
+            zone,
+            live_only,
             json,
             no_sync,
         }),
@@ -155,11 +184,19 @@ pub fn run() -> ExitCode {
         Some(cli::Command::Map {
             tokens,
             doc,
+            zone,
+            live_only,
+            in_paths,
+            not_in_paths,
             json,
             no_sync,
         }) => cmd::map::run(cmd::map::Args {
             tokens,
             doc,
+            zone,
+            live_only,
+            in_paths,
+            not_in_paths,
             json,
             no_sync,
         }),
@@ -167,6 +204,7 @@ pub fn run() -> ExitCode {
             let cli::NotesArgs {
                 action,
                 symbol,
+                in_paths,
                 json,
                 no_sync,
             } = notes;
@@ -176,6 +214,7 @@ pub fn run() -> ExitCode {
                     text,
                     kind,
                     file,
+                    in_paths,
                     json,
                     no_sync,
                 }) => cmd::notes::Args {
@@ -184,6 +223,7 @@ pub fn run() -> ExitCode {
                         text,
                         kind: kind.map(|k| k.as_str().to_string()),
                         file,
+                        in_paths,
                     },
                     json,
                     no_sync,
@@ -205,7 +245,10 @@ pub fn run() -> ExitCode {
                 },
                 None => cmd::notes::Args {
                     action: match symbol {
-                        Some(s) => cmd::notes::Action::Show { symbol: s },
+                        Some(s) => cmd::notes::Action::Show {
+                            symbol: s,
+                            in_paths,
+                        },
                         None => cmd::notes::Action::Usage,
                     },
                     json,

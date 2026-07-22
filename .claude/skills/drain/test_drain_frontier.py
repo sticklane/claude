@@ -298,6 +298,33 @@ class ParseSemanticsTestCase(unittest.TestCase):
             self.assertEqual(rc, 0)
             json.loads(out)  # valid JSON on stdout
 
+    def test_draft_status_is_known_and_not_dispatchable(self):
+        with tempfile.TemporaryDirectory() as td:
+            sd = Path(td) / "s"
+            make_spec(sd)
+            make_task(sd, "01-a.md", status="draft", touch="src/a")
+            fr = drain_frontier.compute_frontier([str(sd)], None, [])
+            self.assertNotIn("01-a.md", paths(fr["dispatchable"]))
+            self.assertNotIn("01-a.md", paths(fr["blocked"]))
+
+    def test_obsolete_status_is_known_and_not_dispatchable(self):
+        with tempfile.TemporaryDirectory() as td:
+            sd = Path(td) / "s"
+            make_spec(sd)
+            make_task(sd, "01-a.md", status="obsolete", touch="src/a")
+            fr = drain_frontier.compute_frontier([str(sd)], None, [])
+            self.assertNotIn("01-a.md", paths(fr["dispatchable"]))
+            self.assertNotIn("01-a.md", paths(fr["blocked"]))
+
+    def test_draft_status_exits_zero_via_cli(self):
+        with tempfile.TemporaryDirectory() as td:
+            sd = Path(td) / "s"
+            make_spec(sd)
+            make_task(sd, "01-a.md", status="draft", touch="src/a")
+            rc, out, err = run_cli(str(sd))
+            self.assertEqual(rc, 0)
+            json.loads(out)  # valid JSON on stdout
+
 
 class WindowTruncationTestCase(unittest.TestCase):
     """--window N truncates admissible only; dispatchable is never truncated."""

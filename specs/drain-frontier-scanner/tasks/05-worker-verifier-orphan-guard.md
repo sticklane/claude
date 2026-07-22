@@ -1,4 +1,5 @@
-Status: draft
+Status: obsolete
+Closed: subsumed by specs/agentic-core-redesign — see specs/agentic-core-redesign/TRIAGE.md
 Discovered-from: 02-drain-consumes-scanner.md
 Spec: ../SPEC.md
 Blocking: no

@@ -1,0 +1,10 @@
+{
+  "name": "sitegen",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tiny static-site generator fixture.",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build.js"
+  }
+}

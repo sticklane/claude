@@ -369,6 +369,87 @@ fn sig_no_match_json_extends_error_object() {
     );
 }
 
+/// specs/ctx-absence-check task 05: a `sig --json` no-match whose query is a
+/// case variant of an indexed symbol carries the near-miss candidate list in a
+/// `did_you_mean` array — JSON/MCP consumers get the same R4 suggestion the
+/// text path prints, alongside the unchanged legacy and boundary keys.
+#[test]
+fn sig_no_match_json_includes_did_you_mean_candidates() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    // Only the camelCase `figureBboxes` is indexed; the query is a case variant.
+    write(root, "app.py", "def figureBboxes():\n    return 1\n");
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["sig", "FigureBboxes", "--json"]);
+    assert_eq!(out.status.code(), Some(1), "case-variant miss exits 1");
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+
+    // Legacy + boundary keys still present (parity gap is additive only).
+    assert_eq!(
+        v["error"].as_str(),
+        Some("no match"),
+        "legacy error key: {v}"
+    );
+    assert!(
+        v["boundary_note"].as_str().is_some(),
+        "boundary_note survives: {v}"
+    );
+
+    let cands = v["did_you_mean"]
+        .as_array()
+        .unwrap_or_else(|| panic!("did_you_mean is a JSON array: {v}"));
+    assert!(
+        cands.iter().any(|c| c.as_str() == Some("figureBboxes")),
+        "the case-variant candidate is listed: {v}"
+    );
+}
+
+/// specs/ctx-absence-check task 05: a `sig --json` no-match with no near-miss
+/// candidate OMITS the `did_you_mean` key entirely — the no-candidate object
+/// stays byte-identical to the task-01 R2 shape.
+#[test]
+fn sig_no_match_json_omits_did_you_mean_when_no_near_miss() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "app.py", "def solo():\n    return 1\n");
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["sig", "Zzzznonexistent", "--json"]);
+    assert_eq!(out.status.code(), Some(1), "no-match exits 1");
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+
+    assert!(
+        v.get("did_you_mean").is_none(),
+        "no did_you_mean key when nothing is close: {v}"
+    );
+}
+
+/// specs/ctx-absence-check task 05: the `refs --json` surface carries the same
+/// `did_you_mean` array as `sig --json` — both share the no-match path.
+#[test]
+fn refs_no_match_json_includes_did_you_mean_candidates() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "app.py", "def figureBboxes():\n    return 1\n");
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["refs", "FigureBboxes", "--json"]);
+    assert_eq!(out.status.code(), Some(1), "case-variant miss exits 1");
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+
+    let cands = v["did_you_mean"]
+        .as_array()
+        .unwrap_or_else(|| panic!("did_you_mean is a JSON array: {v}"));
+    assert!(
+        cands.iter().any(|c| c.as_str() == Some("figureBboxes")),
+        "the case-variant candidate is listed: {v}"
+    );
+}
+
 #[test]
 fn sig_ambiguous_lists_candidates_and_exits_3() {
     let dir = tempfile::tempdir().unwrap();
@@ -439,6 +520,54 @@ fn map_ranking_orders_by_reference_count_not_alphabetical() {
     assert!(
         zi < ai,
         "the referenced symbol ranks above the unreferenced one:\n{text}"
+    );
+}
+
+/// A real-repo pathology (capability-shakedown finding 2026-07-20): a bash
+/// scratch variable reused at top level dedups into `t#1`/`t#2`/`t#3`, and
+/// because reference counts are keyed by bare name, every dedup copy inherits
+/// the full aggregate count of the common name `t` — crowding real functions
+/// out of the top of `ctx map`. Ranking must down-weight `variable`-kind
+/// symbols relative to functions/classes/methods so the API surface leads.
+const BASH_SCRATCH_NOISE: &str = "\
+t=\"a\"
+t=\"b\"
+t=\"c\"
+
+real_api() {
+  echo hi
+}
+
+caller() {
+  t alpha
+  t beta
+  t gamma
+  t delta
+  t epsilon
+  real_api
+}
+";
+
+#[test]
+fn map_ranks_functions_above_high_ref_scratch_variables() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(root, "lib.sh", BASH_SCRATCH_NOISE);
+    sleep(PAST);
+    init(root);
+
+    let out = ctx(root, &["map"]);
+    assert_eq!(out.status.code(), Some(0));
+    let text = stdout(&out);
+    let fi = text
+        .find("real_api")
+        .unwrap_or_else(|| panic!("real_api absent:\n{text}"));
+    let vi = text
+        .find("lib.t#1")
+        .unwrap_or_else(|| panic!("variable lib.t#1 absent:\n{text}"));
+    assert!(
+        fi < vi,
+        "a function must rank above high-ref-count scratch variables:\n{text}"
     );
 }
 
@@ -598,5 +727,414 @@ fn rebuild_equivalence_transparent_rebuild_on_tampered_schema_version() {
         journal_last_parsed(root),
         indexed,
         "the post-tamper sweep re-parsed the full indexed file count"
+    );
+}
+
+// ----------------------------------------------------------------------------
+// file-scoped selector `<path>:<name>` + `--in <path-prefix>` (R1, task 02)
+// ----------------------------------------------------------------------------
+
+/// Two `package main` Go files in different directories both defining a
+/// package-level `rodSpecs` — the collision C1 alone cannot resolve, since the
+/// Go module component is the package name so both symbols carry the qualified
+/// path `main.rodSpecs`.
+const RODSPECS_A: &str = "package main\n\nvar rodSpecs = 1\n";
+const RODSPECS_B: &str = "package main\n\nvar rodSpecs = 2\n";
+
+fn two_rodspecs(root: &Path) {
+    write(root, "go/cmd/mlhybrid/main.go", RODSPECS_A);
+    write(root, "go/cmd/mloverlay/main.go", RODSPECS_B);
+    sleep(PAST);
+    init(root);
+}
+
+#[test]
+fn selector_bare_form_is_ambiguous_but_file_scoped_form_resolves_uniquely_for_sig() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    // The bare qpath suffix cannot pick a file — exit 3.
+    let bare = ctx(root, &["sig", "rodSpecs"]);
+    assert_eq!(
+        bare.status.code(),
+        Some(3),
+        "the bare collision is ambiguous: {}",
+        stdout(&bare)
+    );
+
+    // The file-scoped `<path>:<name>` form narrows to exactly one — exit 0.
+    let scoped = ctx(root, &["sig", "go/cmd/mlhybrid/main.go:rodSpecs"]);
+    assert_eq!(
+        scoped.status.code(),
+        Some(0),
+        "the file-scoped selector resolves uniquely: {} / {}",
+        stdout(&scoped),
+        stderr(&scoped)
+    );
+}
+
+#[test]
+fn selector_in_prefix_flag_disambiguates_the_collision_for_sig() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    let out = ctx(root, &["sig", "rodSpecs", "--in", "go/cmd/mlhybrid"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "--in narrows the candidate set to one file: {} / {}",
+        stdout(&out),
+        stderr(&out)
+    );
+}
+
+#[test]
+fn selector_file_scoped_form_resolves_uniquely_for_show() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    assert_eq!(ctx(root, &["show", "rodSpecs"]).status.code(), Some(3));
+    let out = ctx(root, &["show", "go/cmd/mloverlay/main.go:rodSpecs"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "show resolves the file-scoped selector: {} / {}",
+        stdout(&out),
+        stderr(&out)
+    );
+    assert!(
+        stdout(&out).contains("rodSpecs"),
+        "show prints the selected symbol's span: {}",
+        stdout(&out)
+    );
+}
+
+#[test]
+fn selector_file_scoped_form_resolves_uniquely_for_refs() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    let out = ctx(root, &["refs", "go/cmd/mlhybrid/main.go:rodSpecs"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "refs resolves the file-scoped selector: {} / {}",
+        stdout(&out),
+        stderr(&out)
+    );
+    let def_lines = stdout(&out)
+        .lines()
+        .filter(|l| l.starts_with("def "))
+        .count();
+    assert_eq!(
+        def_lines,
+        1,
+        "exactly one definition survives the file filter: {}",
+        stdout(&out)
+    );
+    assert!(
+        stdout(&out).contains("go/cmd/mlhybrid/main.go"),
+        "the surviving def is from the named file: {}",
+        stdout(&out)
+    );
+}
+
+#[test]
+fn selector_file_scoped_form_resolves_uniquely_for_notes() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    // Bare add is ambiguous (exit 3); the file-scoped anchor resolves.
+    assert_eq!(
+        ctx(root, &["notes", "add", "rodSpecs", "body"])
+            .status
+            .code(),
+        Some(3),
+        "the bare anchor is ambiguous"
+    );
+    let add = ctx(
+        root,
+        &["notes", "add", "go/cmd/mlhybrid/main.go:rodSpecs", "body"],
+    );
+    assert_eq!(
+        add.status.code(),
+        Some(0),
+        "notes add resolves the file-scoped anchor: {} / {}",
+        stdout(&add),
+        stderr(&add)
+    );
+    let show = ctx(root, &["notes", "go/cmd/mlhybrid/main.go:rodSpecs"]);
+    assert_eq!(
+        show.status.code(),
+        Some(0),
+        "notes show resolves the file-scoped selector: {} / {}",
+        stdout(&show),
+        stderr(&show)
+    );
+    assert!(
+        stdout(&show).contains("body"),
+        "notes show prints the note anchored under that file: {}",
+        stdout(&show)
+    );
+}
+
+#[test]
+fn ambiguity_listing_gains_a_per_candidate_file_scoped_rerun_hint() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    let out = ctx(root, &["sig", "rodSpecs"]);
+    assert_eq!(
+        out.status.code(),
+        Some(3),
+        "still ambiguous: {}",
+        stdout(&out)
+    );
+    let text = stdout(&out);
+    // Each candidate now shows the file-scoped form to rerun with. The `:rodSpecs`
+    // suffix distinguishes the hint from the existing `<file>:<line>` locator.
+    assert!(
+        text.contains("go/cmd/mlhybrid/main.go:rodSpecs"),
+        "rerun hint for candidate A: {text}"
+    );
+    assert!(
+        text.contains("go/cmd/mloverlay/main.go:rodSpecs"),
+        "rerun hint for candidate B: {text}"
+    );
+}
+
+#[test]
+fn ambiguity_json_carries_a_per_candidate_rerun_selector() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    two_rodspecs(root);
+
+    let out = ctx(root, &["sig", "rodSpecs", "--json"]);
+    assert_eq!(out.status.code(), Some(3));
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    let candidates = v["candidates"].as_array().expect("candidates array");
+    let reruns: Vec<&str> = candidates
+        .iter()
+        .filter_map(|c| c["rerun"].as_str())
+        .collect();
+    assert!(
+        reruns.contains(&"go/cmd/mlhybrid/main.go:rodSpecs")
+            && reruns.contains(&"go/cmd/mloverlay/main.go:rodSpecs"),
+        "each candidate carries its file-scoped rerun selector: {v}"
+    );
+}
+
+// ----------------------------------------------------------------------------
+// `--in` / `--not-in` path-prefix result filters on refs and map (R3, task 03)
+// ----------------------------------------------------------------------------
+
+/// `shared` is defined once under `go/cmd/` and called from BOTH a `go/cmd/`
+/// file and an `attic/` file, so its references span the two path prefixes the
+/// `--in`/`--not-in` filters select between.
+const SHARED_GO_CMD: &str = "\
+def shared():
+    return 1
+
+
+def caller_a():
+    return shared()
+";
+
+const SHARED_ATTIC: &str = "\
+def caller_b():
+    return shared()
+";
+
+fn shared_across_prefixes(root: &Path) {
+    write(root, "go/cmd/lib.py", SHARED_GO_CMD);
+    write(root, "attic/old.py", SHARED_ATTIC);
+    sleep(PAST);
+    init(root);
+}
+
+#[test]
+fn refs_in_prefix_keeps_only_matching_path_references() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    shared_across_prefixes(root);
+
+    // Baseline: with no filter, a reference is found under BOTH prefixes.
+    let all = ctx(root, &["refs", "shared"]);
+    assert_eq!(
+        all.status.code(),
+        Some(0),
+        "{} / {}",
+        stdout(&all),
+        stderr(&all)
+    );
+    let all_text = stdout(&all);
+    assert!(
+        all_text.contains("go/cmd/lib.py"),
+        "baseline has the go/cmd reference:\n{all_text}"
+    );
+    assert!(
+        all_text.contains("attic/old.py"),
+        "baseline has the attic reference:\n{all_text}"
+    );
+
+    // `--in go/cmd` keeps only references whose owning file is under go/cmd.
+    let out = ctx(root, &["refs", "shared", "--in", "go/cmd"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{} / {}",
+        stdout(&out),
+        stderr(&out)
+    );
+    let text = stdout(&out);
+    let ref_lines: Vec<&str> = text.lines().filter(|l| l.starts_with("ref ")).collect();
+    assert!(!ref_lines.is_empty(), "at least one ref survives:\n{text}");
+    assert!(
+        ref_lines.iter().all(|l| l.contains("go/cmd/")),
+        "every emitted ref row is under go/cmd:\n{text}"
+    );
+    assert!(
+        !text.contains("attic/old.py"),
+        "attic references are filtered out:\n{text}"
+    );
+}
+
+#[test]
+fn refs_not_in_prefix_excludes_matching_path_references() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    shared_across_prefixes(root);
+
+    let out = ctx(root, &["refs", "shared", "--not-in", "attic"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{} / {}",
+        stdout(&out),
+        stderr(&out)
+    );
+    let text = stdout(&out);
+    assert!(
+        !text.contains("attic/old.py"),
+        "attic references are excluded:\n{text}"
+    );
+    assert!(
+        text.contains("go/cmd/lib.py"),
+        "the go/cmd reference survives:\n{text}"
+    );
+}
+
+#[test]
+fn refs_in_and_not_in_compose_and_in_is_repeatable() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    shared_across_prefixes(root);
+
+    // Repeatable `--in` unions the prefixes: references under either survive.
+    let unioned = ctx(root, &["refs", "shared", "--in", "go/cmd", "--in", "attic"]);
+    assert_eq!(unioned.status.code(), Some(0));
+    let ut = stdout(&unioned);
+    assert!(
+        ut.contains("go/cmd/lib.py") && ut.contains("attic/old.py"),
+        "repeatable --in unions both prefixes:\n{ut}"
+    );
+
+    // `--in` admits attic, `--not-in` then removes it — exclusion wins.
+    let composed = ctx(
+        root,
+        &[
+            "refs", "shared", "--in", "go/cmd", "--in", "attic", "--not-in", "attic",
+        ],
+    );
+    assert_eq!(composed.status.code(), Some(0));
+    let ct = stdout(&composed);
+    assert!(
+        !ct.contains("attic/old.py"),
+        "--not-in removes what --in admitted:\n{ct}"
+    );
+    assert!(
+        ct.contains("go/cmd/lib.py"),
+        "the go/cmd reference remains:\n{ct}"
+    );
+}
+
+#[test]
+fn map_in_and_not_in_filter_ranked_output_by_path_prefix() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    shared_across_prefixes(root);
+
+    // Unfiltered map lists symbols from both prefixes.
+    let all = stdout(&ctx(root, &["map"]));
+    assert!(
+        all.contains("caller_a") && all.contains("caller_b"),
+        "baseline map lists symbols from both prefixes:\n{all}"
+    );
+
+    let scoped = stdout(&ctx(root, &["map", "--in", "go/cmd"]));
+    assert!(
+        scoped.contains("caller_a"),
+        "the go/cmd symbol is present:\n{scoped}"
+    );
+    assert!(
+        !scoped.contains("caller_b"),
+        "the attic symbol is filtered out by --in:\n{scoped}"
+    );
+
+    let excluded = stdout(&ctx(root, &["map", "--not-in", "attic"]));
+    assert!(
+        excluded.contains("caller_a"),
+        "the go/cmd symbol is present:\n{excluded}"
+    );
+    assert!(
+        !excluded.contains("caller_b"),
+        "the attic symbol is excluded by --not-in:\n{excluded}"
+    );
+}
+
+#[test]
+fn in_not_in_filters_apply_identically_under_json() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    shared_across_prefixes(root);
+
+    // refs --json: filtered references carry only go/cmd files.
+    let out = ctx(root, &["refs", "shared", "--in", "go/cmd", "--json"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{} / {}",
+        stdout(&out),
+        stderr(&out)
+    );
+    let v: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    let refs = v["references"].as_array().expect("references array");
+    assert!(!refs.is_empty(), "at least one reference survives: {v}");
+    assert!(
+        refs.iter()
+            .all(|r| r["file"].as_str().unwrap_or("").starts_with("go/cmd/")),
+        "every JSON reference is under go/cmd: {v}"
+    );
+
+    // map --json: filtered symbols carry no attic qpath.
+    let mout = ctx(root, &["map", "--not-in", "attic", "--json"]);
+    assert_eq!(mout.status.code(), Some(0));
+    let mv: serde_json::Value = serde_json::from_str(&stdout(&mout)).unwrap();
+    let syms = mv["symbols"].as_array().expect("symbols array");
+    assert!(
+        syms.iter()
+            .all(|s| !s["qpath"].as_str().unwrap_or("").starts_with("attic")),
+        "no attic symbol survives in the filtered map JSON: {mv}"
+    );
+    assert!(
+        syms.iter()
+            .any(|s| s["qpath"].as_str().unwrap_or("").contains("caller_a")),
+        "the go/cmd symbol is present: {mv}"
     );
 }

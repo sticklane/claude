@@ -78,16 +78,21 @@ pub fn render(args: &Args) -> (String, ExitCode) {
         }
     };
 
+    // Path-membership is needed in BOTH directions now (R1c): a typo'd path and
+    // a real leaf must not return byte-identical emptiness. `deps` first checks
+    // whether any indexed file falls in the requested scope.
+    let paths = match store.indexed_paths() {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("ctx deps: {e}");
+            return (String::new(), ExitCode::FAILURE);
+        }
+    };
+    let in_index = paths.iter().any(|p| in_scope(p, &args.path));
+
     // Reverse resolution needs the module identity of every in-scope file, so an
     // import whose (raw) target resolves to one of them counts as an edge in.
     let scope_keys: HashSet<String> = if args.reverse {
-        let paths = match store.indexed_paths() {
-            Ok(v) => v,
-            Err(e) => {
-                eprintln!("ctx deps: {e}");
-                return (String::new(), ExitCode::FAILURE);
-            }
-        };
         paths
             .iter()
             .filter(|p| in_scope(p, &args.path))
@@ -117,8 +122,23 @@ pub fn render(args: &Args) -> (String, ExitCode) {
     // Collapse duplicate (source -> module) edges to one row apiece.
     edges.dedup_by(|a, b| a.source == b.source && a.module == b.module);
 
+    // R1b/R1c diagnostic tail: a not-in-index path is stated distinctly from an
+    // indexed path with zero edges. (c) takes priority over (b) — a typo must
+    // NEVER read as "zero importers". Built once, shared by stderr and JSON.
+    let note = if !in_index {
+        Some(format!("path not in index: {}", args.path))
+    } else if edges.is_empty() {
+        Some(if args.reverse {
+            format!("no indexed importers of {}", args.path)
+        } else {
+            format!("no indexed imports out of {}", args.path)
+        })
+    } else {
+        None
+    };
+
     if args.json {
-        let payload = json!({
+        let mut payload = json!({
             "path": args.path,
             "reverse": args.reverse,
             "edges": edges.iter().map(|e| json!({
@@ -128,11 +148,18 @@ pub fn render(args: &Args) -> (String, ExitCode) {
                 "line": e.row + 1,
             })).collect::<Vec<_>>(),
         });
+        // Extend-never-replace: the note key appears only on a zero-result.
+        if let Some(note) = &note {
+            payload["note"] = json!(note);
+        }
         (format!("{payload}\n"), ExitCode::SUCCESS)
     } else {
         let mut out = String::new();
         for e in &edges {
             out.push_str(&format!("{} -> {}\n", e.source, e.module));
+        }
+        if let Some(note) = &note {
+            eprintln!("{note}");
         }
         (out, ExitCode::SUCCESS)
     }

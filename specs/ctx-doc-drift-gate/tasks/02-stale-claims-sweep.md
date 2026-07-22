@@ -8,7 +8,7 @@
 Status: blocked
 Unblock: run: grep -q 'ctx-doc-drift-gate' specs/ctx-skill-token-doctrine/SPEC.md || echo "BLOCKED: registry slot absent — an attended/breakdown session must land the atomic registry commit (SPEC.md Landing order (a)+(b)+(c)) once the specs/ctx-cujs/DRAIN-OWNER.md lease clears"
 Depends on: 01
-Priority: P2
+Priority: P3
 Budget: 8 turns
 Spec: ../SPEC.md (requirement R2)
 Touch: .claude/skills/ctx/SKILL.md, antigravity/.agents/skills/ctx/SKILL.md, .claude-plugin/plugin.json

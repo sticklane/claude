@@ -91,3 +91,9 @@ commands. No new tooling.
 - SWE-agent ACI findings + Open SWE bounded-output design
   (dev.to/truongpx396/swe-agent-deep-dive-build-your-own-guide-ade;
   langchain.com/blog/open-swe-an-open-source-framework-for-internal-coding-agents)
+
+## Parallelization
+
+All three tasks run solo — the chain is fully serial (01 → 02 → 03).
+02 depends on 01 (cites the rule); 03 depends on 01 and 02 (Touch collision on
+idea/ and breakdown/ SKILL.md). No concurrent-safe groups.

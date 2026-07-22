@@ -43,7 +43,10 @@ it always re-runs). This skip is `SPEC.md`-only: a plan or diff target has no
 4. **Triage the findings** when the verdict is NOT READY or READY WITH NITS.
    Classify each finding as MECHANICAL — an edit with no judgment call: a
    stale path/line reference, a non-deterministic or under-scoped acceptance
-   command, a missing runnable check, a format/header contract violation — or
+   command (an acceptance command that is a file-wide literal grep rather than
+   anchored-and-bounded per `.claude/rules/shell-text-tools.md`, or an
+   in-place shell write, is MECHANICAL), a missing runnable check, a
+   format/header contract violation — or
    JUDGMENT — an ambiguity, a scope question, a missing design decision, a
    contested tradeoff, or a gameability finding: gameable criteria are JUDGMENT-class, never MECHANICAL —
    swapping what a criterion checks changes what the spec verifies (a
