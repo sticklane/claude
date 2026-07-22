@@ -5,7 +5,7 @@
 # a produced worktree black-box: it never imports the solution, it drives the
 # running HTTP server over a socket. Usage:
 #
-#   assert.sh [TARGET_DIR]      TARGET_DIR defaults to this fixture's repo/
+#   assert.sh <target-repo-dir>   REQUIRED — refuses argless invocation
 #
 # Exits 0 only when the full suite is green AND the black-box HTTP behaviour
 # (paginated + tag-filtered GET /notes, 400s in the standard error shape,
@@ -15,7 +15,7 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET="${1:-$HERE/repo}"
+TARGET="${1:?usage: assert.sh <target-repo-dir> — argless invocation refused so a missing arg can never silently grade the pristine snapshot}"
 TARGET="$(cd "$TARGET" && pwd)"
 
 fail() {

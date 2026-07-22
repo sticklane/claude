@@ -35,3 +35,5 @@ any fixture or the runner.
 ## Acceptance
 
 - [ ] `bash evals/headtohead/calibrate.sh` → prints `ledger RED OK`, `ledger GREEN OK`, `notes-api RED OK`, `notes-api GREEN OK`, `sitegen RED OK`, `sitegen GREEN OK`; exits 0 only when all six hold
+- [ ] calibrate also asserts, per task: the manifest brief loads NON-placeholder through the runner's own effective-brief path (a `[brief pending` fallback anywhere fails calibration — a misplaced brief must die here, never in the paid run), printing `<task> BRIEF OK`
+- [ ] calibrate also asserts, per task: `assert.sh` invoked with NO argument exits non-zero with a usage error (the manifest's frozen contract — a grader that defaults its target could silently grade the pristine snapshot), printing `<task> ARGS OK`

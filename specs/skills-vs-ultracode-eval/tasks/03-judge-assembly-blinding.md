@@ -40,3 +40,4 @@ the diff a run produces, or the real fixtures (04-06).
 
 - [ ] `bash evals/headtohead/run.sh --task fixture --arm U --seeds 1 --dump-judge-input` → the assembled judge input contains no word-boundary match for the ultracode keyword, any arm name, or the plugin's name (asserted by the script); exits 0
 - [ ] the same dumped judge input contains the run's diff and the canonical keyword-stripped brief (structural presence check on the dump)
+- [ ] the dump also prints the arm-U AS-RUN brief and asserts it DOES contain the ultracode keyword — absence from the judge input is meaningful only if the source demonstrably carried the keyword; a check that greens on an already-clean source proves nothing
