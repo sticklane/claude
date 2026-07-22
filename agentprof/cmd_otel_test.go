@@ -17,6 +17,7 @@ import (
 
 	commonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	logsv1 "go.opentelemetry.io/proto/otlp/logs/v1"
+	metricsv1 "go.opentelemetry.io/proto/otlp/metrics/v1"
 	tracev1 "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -282,7 +283,7 @@ func TestOtelServeGetOnTracesReturns405(t *testing.T) {
 
 func TestOtelServeUnregisteredPathsReturn404(t *testing.T) {
 	srv, _, _ := startOtelServer(t)
-	for _, path := range []string{"/v1/metrics", "/"} {
+	for _, path := range []string{"/v1/logs/extra", "/"} {
 		resp, err := http.Post(srv.URL+path, "application/json", strings.NewReader("{}"))
 		if err != nil {
 			t.Fatalf("POST %s: %v", path, err)
@@ -577,6 +578,103 @@ func TestOtelServeGzipUndecodableBodyReturns400(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("status = %d, want 400 (undecodable gzip)", resp.StatusCode)
+	}
+}
+
+// --- /v1/metrics ingestion (coarse cross-check, R10) ---
+
+// metricsBody is one OTLP/JSON metrics export: a claude_code.token.usage
+// counter (input + output) and a claude_code.cost.usage counter — three
+// numeric data points total.
+func metricsBody() string {
+	return `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"claude-code"}}]},` +
+		`"scopeMetrics":[{"metrics":[` +
+		`{"name":"claude_code.token.usage","sum":{"aggregationTemporality":2,"isMonotonic":true,"dataPoints":[` +
+		`{"attributes":[{"key":"type","value":{"stringValue":"input"}}],"asInt":"100"},` +
+		`{"attributes":[{"key":"type","value":{"stringValue":"output"}}],"asInt":"50"}` +
+		`]}},` +
+		`{"name":"claude_code.cost.usage","sum":{"aggregationTemporality":2,"isMonotonic":true,"dataPoints":[` +
+		`{"asDouble":0.041230}` +
+		`]}}` +
+		`]}]}]}`
+}
+
+func TestOtelServeMetricsJSONPostReturnsSuccess(t *testing.T) {
+	srv, _, _ := startOtelServer(t)
+	resp := postTo(t, srv.URL, "/v1/metrics", "application/json", []byte(metricsBody()))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /v1/metrics status = %d, want 200 (route must be registered)", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("reading body: %v", err)
+	}
+	if string(body) != "{}" {
+		t.Errorf("body = %q, want {}", body)
+	}
+}
+
+func TestOtelServeMetricsProtobufPostReturnsSuccess(t *testing.T) {
+	srv, _, _ := startOtelServer(t)
+	md := &metricsv1.MetricsData{
+		ResourceMetrics: []*metricsv1.ResourceMetrics{{
+			ScopeMetrics: []*metricsv1.ScopeMetrics{{
+				Metrics: []*metricsv1.Metric{{
+					Name: "claude_code.token.usage",
+					Data: &metricsv1.Metric_Sum{Sum: &metricsv1.Sum{DataPoints: []*metricsv1.NumberDataPoint{{
+						Attributes: []*commonv1.KeyValue{{
+							Key:   "type",
+							Value: &commonv1.AnyValue{Value: &commonv1.AnyValue_StringValue{StringValue: "input"}},
+						}},
+						Value: &metricsv1.NumberDataPoint_AsInt{AsInt: 33},
+					}}}},
+				}},
+			}},
+		}},
+	}
+	raw, err := proto.Marshal(md)
+	if err != nil {
+		t.Fatalf("proto.Marshal: %v", err)
+	}
+	resp := postTo(t, srv.URL, "/v1/metrics", "application/x-protobuf", raw)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /v1/metrics (protobuf) status = %d, want 200", resp.StatusCode)
+	}
+}
+
+func TestOtelServeGzipEncodedMetricsBodyDecodes(t *testing.T) {
+	srv, _, _ := startOtelServer(t)
+	resp := postGzip(t, srv.URL, "/v1/metrics", "application/json", []byte(metricsBody()))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("gzip POST /v1/metrics status = %d, want 200", resp.StatusCode)
+	}
+}
+
+func TestOtelServeMetricsUndecodableJSONReturns400(t *testing.T) {
+	srv, _, _ := startOtelServer(t)
+	resp := postTo(t, srv.URL, "/v1/metrics", "application/json", []byte("{not json"))
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 (undecodable metrics body)", resp.StatusCode)
+	}
+}
+
+func TestOtelServeMetricsLogsAcceptedPointCount(t *testing.T) {
+	srv, _, logs := startOtelServer(t)
+	postTo(t, srv.URL, "/v1/metrics", "application/json", []byte(metricsBody()))
+	if want := "accepted 3 metric points"; !strings.Contains(logs.String(), want) {
+		t.Errorf("logs = %q, want them to contain %q", logs.String(), want)
+	}
+}
+
+// Metrics are a coarse cross-check only: they never emit samples, so a
+// receiver fed only metrics has nothing to flush.
+func TestOtelServeMetricsAloneEmitNoSamples(t *testing.T) {
+	srv, rcv, _ := startOtelServer(t)
+	postTo(t, srv.URL, "/v1/metrics", "application/json", []byte(metricsBody()))
+	path := filepath.Join(t.TempDir(), "out.jsonl")
+	var stdout, stderr bytes.Buffer
+	if code := rcv.flush(path, &stdout, &stderr); code != 1 {
+		t.Fatalf("flush exit code = %d, want 1 (metrics produce no samples)", code)
 	}
 }
 
