@@ -2,12 +2,12 @@
 
 <!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 12 turns
 Spec: ../SPEC.md (requirement R3; fork F2 decided (iii))
-Touch: .claude/skills/clone-audit/, antigravity/.agents/skills/clone-audit/, .claude-plugin/plugin.json, specs/ctx-static-analysis-augmentation/fixtures/, specs/ctx-static-analysis-augmentation/tests/
+Touch: .claude/skills/clone-audit/, antigravity/.agents/skills/clone-audit/, .claude-plugin/plugin.json, specs/ctx-static-analysis-augmentation/fixtures/, specs/ctx-static-analysis-augmentation/tests/, codex/.agents/skills/clone-audit
 
 ## Goal
 
@@ -65,7 +65,7 @@ any `ctx` crate code.
 
 Runnable commands (from repo root):
 
-- [ ] `bash specs/ctx-static-analysis-augmentation/tests/clone-audit.sh`
+- [x] `bash specs/ctx-static-analysis-augmentation/tests/clone-audit.sh`
   (or the committed check) → passes: the documented recipe rediscovers the
   duplicated function in BOTH the committed TS fixture pair and the Go
   fixture pair. (L2/L3 — behavioral; runs the detector against real
@@ -74,16 +74,40 @@ Runnable commands (from repo root):
   that reason and provide an `npx`/`go run` form the worker can execute as
   the primary path; do not point the assertion at another repo's drifting
   contents.
-- [ ] `test -f .claude/skills/clone-audit/SKILL.md && test -f .claude/skills/clone-audit/reference.md`
+  Evidence: `npx jscpd` fetched cleanly over network; script prints `PASS:
+  clone-audit recipe rediscovered both the TS and Go fixture clones`, exit
+  0. Red confirmed first: with the TS clone fixture temporarily replaced by
+  an unrelated function, the script correctly failed
+  (`FAIL: TS clone pair ... not reported`, exit 1) before being restored.
+- [x] `test -f .claude/skills/clone-audit/SKILL.md && test -f .claude/skills/clone-audit/reference.md`
   → both exist. (L0 — presence; Depth ceiling: content quality is judged by
   the recipe-rediscovery behavioral check above, which is this criterion's
   complement.)
-- [ ] `grep -q homography .claude/skills/clone-audit/reference.md` → the
+  Evidence: both files present, exit 0.
+- [x] `grep -q homography .claude/skills/clone-audit/reference.md` → the
   fooszone worked example is recorded (non-normative). (L0.)
-- [ ] `test -d antigravity/.agents/skills/clone-audit` and the recipe
+  Evidence: matched (worked-example section header + body), exit 0.
+- [x] `test -d antigravity/.agents/skills/clone-audit` and the recipe
   concepts/identifiers present in the mirror (content-coverage grep, not a
   byte diff — the mirror is a paraphrased port). (L1.)
-- [ ] `python3 -c "import json,sys; json.load(open('.claude-plugin/plugin.json'))"`
+  Evidence: dir exists; mirror is a paraphrased port carrying the same
+  recipe commands, worked example, and `homography`/`jscpd` terms as the
+  source (`grep -c homography`/`grep -c jscpd` both non-zero in the mirror).
+- [x] `python3 -c "import json,sys; json.load(open('.claude-plugin/plugin.json'))"`
   → valid JSON, and its `version` differs from the value at this task's base
   commit (`git show <base-commit>:.claude-plugin/plugin.json`). (L1 —
   compared against base revision, never a pinned literal.)
+  Evidence: valid JSON; version bumped 0.9.31 → 0.9.32 (base commit
+  65352896e0d3dd144984102f653a9c6f68d947ec read 0.9.31).
+
+## Decisions
+
+- Decision: this task's `Touch:` header did not list `codex/.agents/skills/`,
+  but `tests/test_codex_parity.sh` (a project gate) fails for any new
+  top-level `.claude/skills/*` directory with no corresponding
+  `codex/.agents/skills/<name>` entry (real dir, resolving symlink, or a
+  README "Not ported" exemption row). Default taken: added
+  `codex/.agents/skills/clone-audit` as a symlink to
+  `../../../antigravity/.agents/skills/clone-audit`, matching the existing
+  pattern for every other already-working antigravity skill (per CLAUDE.md's
+  port-chain convention). Reversible: `rm codex/.agents/skills/clone-audit`.

@@ -247,7 +247,7 @@ fn walk(root: &Path, dir: &Path, patterns: &[String], out: &mut Vec<String>) -> 
 /// are dropped by the loader; a trailing `/` marks a directory prefix; a
 /// pattern without `/` matches the basename; otherwise the whole path. `*` and
 /// `?` are the supported wildcards.
-fn ctxignore_matches(patterns: &[String], rel: &str) -> bool {
+pub(crate) fn ctxignore_matches(patterns: &[String], rel: &str) -> bool {
     let base = rel.rsplit('/').next().unwrap_or(rel);
     for p in patterns {
         if let Some(dir) = p.strip_suffix('/') {
@@ -267,7 +267,7 @@ fn ctxignore_matches(patterns: &[String], rel: &str) -> bool {
 
 /// Wildcard match supporting `*` (any run) and `?` (one char), with linear
 /// backtracking.
-fn glob_match(pat: &str, text: &str) -> bool {
+pub(crate) fn glob_match(pat: &str, text: &str) -> bool {
     let p: Vec<char> = pat.chars().collect();
     let t: Vec<char> = text.chars().collect();
     let (mut i, mut j) = (0usize, 0usize);

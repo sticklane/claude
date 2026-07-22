@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"strings"
 	"time"
 
 	commonv1 "go.opentelemetry.io/proto/otlp/common/v1"
@@ -22,11 +23,45 @@ import (
 
 const unknownService = "(unknown service)"
 
-// Recognized usage-token attribute keys, highest precedence first.
+// Recognized usage-token attribute keys, highest precedence first. Claude
+// Code emits bare keys rather than the GenAI semconv's gen_ai.usage.*
+// aliases, so the bare keys lead each list.
 var (
-	inputTokenKeys  = []string{"gen_ai.usage.input_tokens", "gen_ai.usage.prompt_tokens"}
-	outputTokenKeys = []string{"gen_ai.usage.output_tokens", "gen_ai.usage.completion_tokens"}
+	inputTokenKeys  = []string{"input_tokens", "gen_ai.usage.input_tokens", "gen_ai.usage.prompt_tokens"}
+	outputTokenKeys = []string{"output_tokens", "gen_ai.usage.output_tokens", "gen_ai.usage.completion_tokens"}
+
+	// cacheReadTokenKeys resolves directly to the canonical cache_read_tokens
+	// sample value. cacheCreationTokenKeys resolves to a value that sample()
+	// renames to the canonical cache_write_tokens key (SCHEMA.md) — passing
+	// the source key through verbatim would silently drop cache-write signal
+	// from pprof token profiles.
+	cacheReadTokenKeys     = []string{"cache_read_tokens"}
+	cacheCreationTokenKeys = []string{"cache_creation_tokens"}
 )
+
+// dialect identifies one CLI's OTel export convention by its span-name
+// prefix. Task 04 appends gemini_cli.*/qwen-code.*/codex.* entries to
+// dialects below without reshaping this type or detectDialect's loop —
+// alias lists stay data-driven since the GenAI semconv is pre-stable.
+type dialect struct {
+	name       string
+	spanPrefix string
+}
+
+var dialects = []dialect{
+	{name: "claude_code", spanPrefix: "claude_code."},
+}
+
+// detectDialect returns the matched dialect's name for a span, or "" when
+// no span-name prefix matches (the generic gen_ai.* fallback).
+func detectDialect(spanName string) string {
+	for _, d := range dialects {
+		if strings.HasPrefix(spanName, d.spanPrefix) {
+			return d.name
+		}
+	}
+	return ""
+}
 
 type spanKey struct{ traceID, spanID string }
 
@@ -41,8 +76,11 @@ type spanRec struct {
 	invalid      bool // recognized token key with negative or non-int value
 	input        tokenMetric
 	output       tokenMetric
+	cacheRead    tokenMetric
+	cacheWrite   tokenMetric // sourced from cache_creation_tokens; canonical name applied in sample()
 	model        string
 	system       string
+	dialect      string // detected export dialect, e.g. "claude_code"; "" = generic
 }
 
 type tokenMetric struct {
@@ -147,8 +185,11 @@ func newSpanRec(sp *tracev1.Span, service string) *spanRec {
 	}
 	rec.input = rec.tokenMetric(attrs, inputTokenKeys)
 	rec.output = rec.tokenMetric(attrs, outputTokenKeys)
+	rec.cacheRead = rec.tokenMetric(attrs, cacheReadTokenKeys)
+	rec.cacheWrite = rec.tokenMetric(attrs, cacheCreationTokenKeys)
 	rec.model = firstString(attrs, "gen_ai.response.model", "gen_ai.request.model")
 	rec.system = firstString(attrs, "gen_ai.system", "gen_ai.provider.name")
+	rec.dialect = detectDialect(rec.name)
 	return rec
 }
 
@@ -176,29 +217,34 @@ func (r *spanRec) tokenMetric(attrs map[string]*commonv1.AnyValue, keys []string
 }
 
 func (a *Accumulator) sample(rec *spanRec) schema.Sample {
-	values := map[string]int64{
-		"calls":   1,
-		"wall_ms": int64((rec.end - rec.start + 500_000) / 1_000_000),
+	s := schema.Sample{
+		Time:  time.Unix(0, int64(rec.start)).UTC(),
+		Stack: a.stack(rec),
+		Values: map[string]int64{
+			"calls":   1,
+			"wall_ms": int64((rec.end - rec.start + 500_000) / 1_000_000),
+		},
+		Labels: map[string]string{"source": "otel", "trace_id": rec.traceID},
 	}
 	if rec.input.present {
-		values["input_tokens"] = rec.input.value
+		s.Values["input_tokens"] = rec.input.value
 	}
 	if rec.output.present {
-		values["output_tokens"] = rec.output.value
+		s.Values["output_tokens"] = rec.output.value
 	}
-	labels := map[string]string{"source": "otel", "trace_id": rec.traceID}
+	if rec.cacheRead.present {
+		s.Values["cache_read_tokens"] = rec.cacheRead.value
+	}
+	if rec.cacheWrite.present {
+		s.Values["cache_write_tokens"] = rec.cacheWrite.value
+	}
 	if rec.model != "" {
-		labels["model"] = rec.model
+		s.Labels["model"] = rec.model
 	}
 	if rec.system != "" {
-		labels["system"] = rec.system
+		s.Labels["system"] = rec.system
 	}
-	return schema.Sample{
-		Time:   time.Unix(0, int64(rec.start)).UTC(),
-		Stack:  a.stack(rec),
-		Values: values,
-		Labels: labels,
-	}
+	return s
 }
 
 // stack builds the root-first frame list [service, root…leaf] by following

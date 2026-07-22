@@ -1,6 +1,6 @@
 # Task 01: Widen the ctx skill trigger surface (R1)
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 8 turns
@@ -38,8 +38,8 @@ enforces that, so port the exact same description text to both.
 
 ## Acceptance
 
-- [ ] `sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md | grep -q 'use ctx'` → exit 0
-- [ ] `sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md | grep -Eq 'with ctx|via ctx'` → exit 0
-- [ ] `sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md | grep -Eq 'understand the codebase|survey the repo'` → exit 0
-- [ ] `sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md | grep -qi 'not for content'` → exit 0 (negative scope retained)
-- [ ] `diff <(sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md) <(sed -n 's/^description: *//p' antigravity/.agents/skills/ctx/SKILL.md)` → empty (mirror parity)
+- [x] `sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md | grep -q 'use ctx'` → exit 0 (PASS)
+- [x] `sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md | grep -Eq 'with ctx|via ctx'` → exit 0 (PASS)
+- [x] `sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md | grep -Eq 'understand the codebase|survey the repo'` → exit 0 (PASS)
+- [x] `sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md | grep -qi 'not for content'` → exit 0 (negative scope retained) (PASS)
+- [x] `diff <(sed -n 's/^description: *//p' .claude/skills/ctx/SKILL.md) <(sed -n 's/^description: *//p' antigravity/.agents/skills/ctx/SKILL.md)` → empty (mirror parity) (PASS, empty diff)

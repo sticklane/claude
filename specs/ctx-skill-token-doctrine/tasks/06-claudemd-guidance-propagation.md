@@ -1,6 +1,6 @@
 # Task 06: Propagate index-first doctrine to onboard + token-discipline (R6)
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns
@@ -46,7 +46,7 @@ scout.md, or plugin.json here.
 
 ## Acceptance
 
-- [ ] `grep -q 'Answering structure questions' .claude/skills/onboard/SKILL.md` → exit 0
-- [ ] `grep -q 'Answering structure questions' .claude/skills/onboard/SKILL.md && grep -qi 'CLAUDE.md' .claude/skills/onboard/SKILL.md && grep -qi '\.context\|indexed' .claude/skills/onboard/SKILL.md` → exit 0 (names CLAUDE.md + the index-presence condition)
-- [ ] `grep -qi 'ctx' .claude/rules/token-discipline.md` → exit 0 (index-first named in structural-question context)
-- [ ] `grep -qi 'structure question\|ctx\|index-first' antigravity/.agents/skills/onboard/SKILL.md` → exit 0 (mirror coverage)
+- [x] `grep -q 'Answering structure questions' .claude/skills/onboard/SKILL.md` → exit 0. Verified.
+- [x] `grep -q 'Answering structure questions' .claude/skills/onboard/SKILL.md && grep -qi 'CLAUDE.md' .claude/skills/onboard/SKILL.md && grep -qi '\.context\|indexed' .claude/skills/onboard/SKILL.md` → exit 0 (names CLAUDE.md + the index-presence condition). Verified.
+- [x] `grep -qi 'ctx' .claude/rules/token-discipline.md` → exit 0 (index-first named in structural-question context). Verified.
+- [x] `grep -qi 'structure question\|ctx\|index-first' antigravity/.agents/skills/onboard/SKILL.md` → exit 0 (mirror coverage). Verified.

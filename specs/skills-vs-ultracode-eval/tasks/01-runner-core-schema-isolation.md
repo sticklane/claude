@@ -1,6 +1,6 @@
 # Task 01: Runner core — results schema, dry-run planner, config-dump arm isolation
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 24 turns
@@ -58,6 +58,6 @@ cover the real fixtures once 04-06 land.
 
 ## Acceptance
 
-- [ ] `bash evals/headtohead/run.sh --dry-run` → prints 18 planned sessions with full command lines, exits 0, launches nothing
-- [ ] `bash evals/headtohead/run.sh --dry-run --dump-config` → prints arm U with no plugin/skills mount and the ultracode keyword in its brief; arm S with the plugin mount and no ultracode keyword; both pinning identical CLI version and plugin commit; and every `assert.sh` and reference-solution path resolving OUTSIDE both arms' mounts; exits 0
-- [ ] `python3 -m json.tool evals/headtohead/result.schema.json >/dev/null` → exits 0 (schema is valid JSON)
+- [x] `bash evals/headtohead/run.sh --dry-run` → prints 18 planned sessions with full command lines, exits 0, launches nothing — verified: prints `[1/18]`..`[18/18]` (3 real tasks × 2 arms × 3 seeds), exit 0.
+- [x] `bash evals/headtohead/run.sh --dry-run --dump-config` → prints arm U with no plugin/skills mount and the ultracode keyword in its brief; arm S with the plugin mount and no ultracode keyword; both pinning identical CLI version and plugin commit; and every `assert.sh` and reference-solution path resolving OUTSIDE both arms' mounts; exits 0 — verified: all 16 in-script assertions print `PASS`, exit 0.
+- [x] `python3 -m json.tool evals/headtohead/result.schema.json >/dev/null` → exits 0 (schema is valid JSON) — verified exit 0.

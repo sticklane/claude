@@ -11,11 +11,13 @@ pub mod index;
 pub mod lang;
 pub mod lsp;
 pub mod mcp;
+pub mod minified;
 pub mod notes;
 pub mod path;
 pub mod project;
 pub mod sync;
 pub mod vcs;
+pub mod zones;
 
 use clap::Parser;
 use std::process::ExitCode;
@@ -120,6 +122,17 @@ pub fn run() -> ExitCode {
         }) => cmd::sig::run(cmd::sig::Args {
             symbol,
             doc,
+            json,
+            no_sync,
+        }),
+        Some(cli::Command::Show {
+            symbol,
+            head,
+            json,
+            no_sync,
+        }) => cmd::show::run(cmd::show::Args {
+            symbol,
+            head,
             json,
             no_sync,
         }),
