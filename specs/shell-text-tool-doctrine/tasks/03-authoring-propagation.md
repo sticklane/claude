@@ -1,6 +1,6 @@
 # Task 03: Point authoring skills at the shell-text-tools rule
 
-Status: in-progress
+Status: done
 Depends on: 01, 02
 Priority: P2
 Budget: 6 turns
@@ -28,5 +28,5 @@ breakdown/SKILL.md — serialize to avoid a same-file collision.
 
 ## Acceptance
 
-- [ ] `grep -l 'shell-text-tools' .claude/skills/idea/SKILL.md .claude/skills/breakdown/SKILL.md` → matches both files
-- [ ] `grep -c 'shell-text-tools' .claude/skills/critique/SKILL.md` → ≥1
+- [x] `grep -l 'shell-text-tools' .claude/skills/idea/SKILL.md .claude/skills/breakdown/SKILL.md` → matches both files
+- [x] `grep -c 'shell-text-tools' .claude/skills/critique/SKILL.md` → ≥1
