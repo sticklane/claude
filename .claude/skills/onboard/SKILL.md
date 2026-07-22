@@ -100,7 +100,25 @@ the section on `context-tree/README.md`'s "Adoption: route structure
 questions to `ctx`" block when that repo is available; otherwise write the
 ladder above directly.
 
-## 5. Offer the next layer
+## 5. bd queue setup
+
+Once per machine, before the per-repo steps below (confirm rather than
+redo if already present): the `agentic@agentic-toolkit` plugin, and `bd`
+pinned 1.1.0 (`brew install beads`).
+
+Per repo:
+
+1. `bd init`, curated: keep the AGENTS.md snippet it writes, gitignore
+   `.beads/interactions.jsonl`, and commit the `issues.jsonl` export.
+2. `/gate` to install the Stop hook with the bd-compliance check
+   included (`hooks/bd-compliance/check.sh`), plus format-on-edit if
+   wanted.
+3. Add `Bash(bd *)` to the settings allowlist (§4) — the grant class
+   whose absence measurably killed tool adoption before.
+4. Seed the queue: file the repo's first epics and issues from
+   whatever plan exists, so `bd ready` has answers on day one.
+
+## 6. Offer the next layer
 
 Ask which the user wants now (don't install unasked):
 
