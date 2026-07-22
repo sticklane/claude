@@ -1,6 +1,6 @@
 # Task 06: Propagate index-first doctrine to onboard + token-discipline (R6)
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P2
 Budget: 10 turns
