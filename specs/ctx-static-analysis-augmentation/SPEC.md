@@ -119,3 +119,17 @@ structure", and must not creep into ctx.
 - Tree-sitter knowledge-graph token economics (10× fewer tokens at
   83% vs 92% quality — motivates keeping an exactness escalation path):
   https://arxiv.org/html/2603.27277v1
+
+## Parallelization
+
+Partial breakdown (2026-07-21): only the currently-breakable requirements
+R2 and R3 are decomposed. R1 and R4 remain not-yet-breakable (gated on
+ctx-skill-token-doctrine R2 landing plus the SKILL.md serialization slot);
+R5 is out of scope (owned by ctxignore-git-overlay). A follow-up breakdown
+covering R1/R4 is authorized once that gate lands.
+
+Tasks 01 (R2, ctx crate) and 02 (R3, new clone-audit skill) have disjoint
+`Touch` and no shared undecided design (both F1 and F2 are decided), so they
+are concurrent-safe.
+
+- Group: 01, 02
