@@ -10,9 +10,11 @@ observe the behaviors this spec replicates. Run ID wf_1d11b4bc-c7b;
 - **budget object**: `total=null` with no user directive;
   `spent()=8,422` at workflow start — the pool had already accumulated
   the MAIN conversation's output this turn, proving one shared pool;
-  `spent()=10,771` after 7 agents → ~2,349 output tokens for the whole
-  probe fleet. The pool meters OUTPUT tokens; totalTokens (253,672)
-  counts full I/O including per-agent system-prompt input.
+  `spent()=10,771` after 7 agents → ~2,349 output-scale tokens for the
+  whole probe fleet. The unit appears to be output tokens — an
+  INFERENCE from one run's deltas, recorded as such; totalTokens
+  (253,672) counts full I/O including per-agent system-prompt input.
+  Not load-bearing for the design: the agentic meter is independent.
 - **Per-agent floor**: ~36,2xx tokens each for trivial one-line
   answers — the subagent bootstrap cost; fan-out is never free.
 - **Schema enforcement**: agents with `schema` show

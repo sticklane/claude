@@ -40,7 +40,10 @@ ultracode's full functionality on any agent runtime:
 7. Every run files a tracker issue (script hash, budget, actuals);
    findings a workflow keeps become tracker tasks linked
    `discovered-from` the run issue. Ultracode results evaporate;
-   ours land in the queue with provenance.
+   ours land in the queue with provenance. Because a run writes the
+   tracker, `agentic run` executes from the primary checkout and
+   refuses to start anywhere else; `dispatch`'s worktree option
+   scopes the dispatched agent only, never the run.
 8. Workflows may read the queue (`ready`) and, from the primary
    checkout only, execute it (`claim`/`verdict`) — the drain loop is
    ultimately just the first saved workflow, though core task 08
@@ -53,6 +56,11 @@ ultracode's full functionality on any agent runtime:
     the model may author a bespoke script per problem — the model
     owns decomposition, the script owns the loop (decision D2's
     division, which is ultracode's own split).
+11. The operator controls live runs: `agentic runs` lists running
+    and recent runs; `agentic stop <run-id>` signals a run to halt
+    after in-flight dispatches settle (the TaskStop equivalent
+    ultracode parity requires); a stopped run resumes later by
+    prefix replay, losing nothing journaled.
 
 Why: the queue loop covers pipeline work, but ad hoc orchestration
 graphs — fan out N finders, adversarially verify each finding, dedup,
@@ -74,8 +82,10 @@ Two real ultracode runs were executed and inspected for this design
 - Every workflow agent is a BLANK context: a probe agent flatly
   denied being in a workflow. Prompts must be self-contained — which
   is the composer's existing principle.
-- The budget pool meters output tokens and is shared with the main
-  conversation; `budget.total` is null unless a directive sets it.
+- The budget pool is shared with the main conversation and its unit
+  is output-scale (inferred from one run's spent() deltas — recorded
+  as inference, not load-bearing: the agentic meter is independent);
+  `budget.total` is null unless a directive sets it.
 - The per-agent floor was ~36k input tokens even for trivial probes —
   fan-out is never free; caps and tiering matter at the floor, not
   just at the frontier.
@@ -98,10 +108,13 @@ Two real ultracode runs were executed and inspected for this design
   runtime has a shell; shipping an interpreter re-creates ultracode's
   lock-in in our own binary. Cost: scripts must keep their own
   determinism discipline for replay to help (DW3).
-- **DW2 — dispatch is tracker-silent.** It meters and journals but
-  never writes bd, so concurrency needs no lock and D8's single
-  writer holds. Only `run` start/finish/checkpoint and `verdict`
-  touch the tracker, through the existing write path.
+- **DW2 — dispatch is tracker-silent, and that invariant is
+  tested.** It meters and journals but never writes bd, so
+  concurrency needs no lock and D8's single writer holds. Only `run`
+  start/finish/checkpoint and `verdict` touch the tracker, through
+  the existing write path from the primary checkout. RW-N exists
+  because this is the load-bearing concurrency invariant — a future
+  "just log it to bd" convenience must fail a test, not a review.
 - **DW3 — Prefix replay, exactly as observed.** Content-hash keys
   identify calls; validity is positional — a changed call
   invalidates everything after it. Why: conservative against
@@ -118,7 +131,11 @@ Two real ultracode runs were executed and inspected for this design
   records output tokens plus the estimate where telemetry is absent
   (R-M unchanged), and the cap binds on the recorded measure. The
   13 merged core tasks keep their turn headers — the shadow sync
-  maps them; no retroactive edits.
+  maps them; no retroactive edits. The tokens-per-turn factor is
+  calibrated from measured session telemetry (agentprof's per-turn
+  token distribution), recorded in the profile with its source, and
+  re-measured by the audit job — a factor nobody measures is a fudge
+  factor.
 - **DW5 — Structural caps replace prose fleet doctrine.** Enforced
   in the CLI, configured in the profile: per-run concurrency
   (default 10), dispatch depth (AGENTIC_RUN_DEPTH, max 2), per-run
@@ -126,7 +143,10 @@ Two real ultracode runs were executed and inspected for this design
   windows and nesting bans become config the rules-shrinkage task
   deletes as prose. Ultracode's own caps (16-concurrent, 1000
   lifetime, one nesting level) are the precedent that enforced
-  beats advised.
+  beats advised; our defaults sit deliberately below them — a
+  solo-operator repo with an observed ~36k-token floor per agent
+  has no business at 1000 — and they are provisional profile
+  values, tunable without touching this spec.
 - **DW6 — No batons, stated as a closed question.** Batons existed
   because a model orchestrator ages — context accumulates, caches
   re-prime, generations cap at 10. A script orchestrator does not
@@ -146,25 +166,34 @@ Two real ultracode runs were executed and inspected for this design
   from structure queries; dispatch prompts carry Touch-scoped code
   maps via the composer's existing injection. ctx queries are not
   metered — reading the index must never compete with the budget
-  for doing work.
+  for doing work — and RW-B's acceptance asserts a ctx query leaves
+  the meter unchanged.
 - **DW9 — Tier aliases only.** `--tier scout|session|deep|frontier`
   maps to model+effort in the runtime profile; a profile without a
   pin inherits the session default. Matches the existing
   tier-language convention and the observed alias resolution.
-- **DW10 — The progress stream is part of the contract.** Typed
-  events with the observed field set, appended beside the journal;
-  `watch` is a file-tailing renderer, so it works over SSH, in any
-  terminal, and in workboard, with no coupling to any harness UI.
+- **DW10 — The progress stream is part of the contract; the
+  terminal renderer is the deliverable.** Typed events with the
+  observed field set, appended beside the journal; `watch` is a
+  file-tailing renderer with no coupling to any harness UI.
+  Workboard consuming the same stream is a named later consumer, not
+  a criterion here — this spec's acceptance covers the terminal path
+  only.
 - **DW11 — Caps, not opt-in keywords.** A dynamic run needs no
   ultracode-style keyword: it is allowed by default under its pool
   (D1 extended), and the injection screen applies to any
   tracker-sourced text entering a dispatch prompt (R-S at this
   boundary too).
-- **DW12 — Native ultracode is an adapter accelerator only.** On
-  Claude Code, tracker-free research fan-outs MAY use the native
-  Workflow tool; anything that files tasks, claims work, or must be
-  cost-attributed runs through `agentic` so there is exactly one
-  ledger and one provenance chain (D11 applied).
+- **DW12 — Native ultracode is an adapter accelerator only, with a
+  crisp boundary.** On Claude Code, a fan-out MAY use the native
+  Workflow tool only when it is tracker-free in this exact sense: it
+  files no issues, claims no tasks, and keeps no findings. The
+  moment a result is worth keeping, it enters through `agentic`
+  (typically a follow-up `dispatch` or a manually filed issue) — so
+  the native path can never quietly become a second ledger or an
+  unprovenanced work source (D11 applied; yes, such runs are
+  separately metered, which is exactly why they may not touch the
+  tracker).
 
 ## Requirements
 
@@ -179,10 +208,23 @@ Two real ultracode runs were executed and inspected for this design
   task-scoped dispatch also refuses when the task's budget_tokens is
   exhausted; both units recorded per dispatch.
 - **RW-C:** depth, per-run concurrency, and per-run agent caps are
-  enforced with clean errors, values from the profile.
+  enforced with clean errors, values from the profile; the queueing
+  assertion uses controlled-sleep stub workers and the journal's
+  queuedAt/startedAt fields, never wall-clock racing.
+- **RW-N:** dispatch is tracker-silent — concurrent dispatches
+  produce zero tracker writes, proven on the store, not assumed.
+- **RW-O:** `agentic runs` lists live/recent runs; `agentic stop`
+  halts a run after in-flight dispatches settle; the stopped run
+  resumes by prefix replay.
+- **RW-F:** a `Budget: N turns` task header resolves through the
+  profile's calibrated tokens-per-turn factor to the expected
+  `budget_tokens`, verified against a fixture profile.
 - **RW-V:** `watch` renders a recorded fixture stream to a stable
-  golden output (phases, rows, states); live mode is the same
-  renderer tailing the file.
+  golden output. Determinism is specified, not hoped for: the
+  fixture carries frozen timestamps plus a pinned stream-end clock
+  (elapsed is computed against it, never against now), and the
+  renderer runs under pinned `COLUMNS` and `NO_COLOR` for the test.
+  Live mode is the same renderer tailing the file.
 - **RW-T:** tier aliases resolve from the profile; unknown tier or
   bare profile falls back to the session default with a warning.
 - **RW-D:** every run files its tracker issue and final actuals;
@@ -197,7 +239,8 @@ exists (the core package itself is still landing), and no
 
 - [ ] RW-G: `tests/test_agentic_dynamic_generic.sh` runs a 3-dispatch
       fixture workflow (stub workers) end-to-end in a bare shell;
-      exit 0.
+      exit 0 AND all three result files exist and validate against
+      their schemas — an exit code alone is not the behavior.
 - [ ] RW-P: `tests/test_agentic_dispatch.py` — schema pass, schema
       fail with 2 re-prompts then typed failure, journal records the
       failure; asserted on the journal file.
@@ -208,10 +251,24 @@ exists (the core package itself is still landing), and no
       behavior).
 - [ ] RW-B: `tests/test_agentic_run_budget.py` — a pool sized for 2
       of 3 dispatches refuses the third with the typed cap error;
-      task-scoped dispatch refuses on exhausted budget_tokens.
+      task-scoped dispatch refuses on exhausted budget_tokens; an
+      `agentic ctx` query between dispatches leaves the meter
+      reading unchanged (DW8).
 - [ ] RW-C: `tests/test_agentic_run_caps.sh` — depth-3 nesting
-      refused; concurrency above the profile cap queues, not
-      launches; agent-cap crossing refuses.
+      refused; with controlled-sleep stub workers, dispatches above
+      the profile concurrency cap show journal queuedAt strictly
+      before startedAt (queued, not launched); agent-cap crossing
+      refuses.
+- [ ] RW-N: `tests/test_agentic_dispatch_silent.sh` — export the
+      tracker, run 8 concurrent dispatches, re-export; the diff is
+      empty and no write-lock acquisition is recorded.
+- [ ] RW-O: `tests/test_agentic_run_stop.sh` — stop a running
+      fixture mid-run: in-flight dispatches settle, the journal is
+      clean, `agentic runs` shows the stopped state, and a resume
+      replays the completed prefix.
+- [ ] RW-F: unit test — a fixture task with `Budget: 6 turns` and a
+      fixture profile factor of 9000 tokens/turn resolves to
+      `budget_tokens: 54000` in the shadow-synced metadata.
 - [ ] RW-V: `tests/test_agentic_watch.sh` — renders the committed
       fixture progress stream; diff against golden output is empty.
 - [ ] RW-T: unit test — tier alias resolves per fixture profile;
@@ -227,6 +284,11 @@ Depends on core tasks 04 (verdict machinery, write path) and 07
 are done or in flight. Convergence noted: this feature IS arm S′
 from specs/skills-vs-ultracode-eval — once `run` exists under caps,
 the follow-up measurement compares like with like.
+
+Breakdown obligation, carried forward from the base spec's
+breakdown-requirements contract: the coverage table must map every
+plain statement (1–11), every DW decision cost, and every RW
+requirement to at least one task.
 
 Next stage: /critique specs/agentic-dynamic-workflows/SPEC.md, then
 /breakdown (human-launched, after core tasks 04 and 07 land).
