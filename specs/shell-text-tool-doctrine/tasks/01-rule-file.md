@@ -1,6 +1,6 @@
 # Task 01: Author the shell-text-tools rule file
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P0
 Budget: 8 turns
@@ -39,11 +39,11 @@ and no mirror is created.
 
 ## Acceptance
 
-- [ ] `test -f .claude/rules/shell-text-tools.md` → exit 0
-- [ ] `test "$(wc -l < .claude/rules/shell-text-tools.md)" -le 60` → exit 0
-- [ ] `grep -c 'sed -i' .claude/rules/shell-text-tools.md` → ≥1 (point a)
-- [ ] `grep -ci 'read' .claude/rules/shell-text-tools.md` → ≥1 (point b)
-- [ ] `grep -ci 'head\|-m\|-c\|sed -n\|awk' .claude/rules/shell-text-tools.md` → ≥1 (point c bounded output)
-- [ ] `grep -c '\^## ' .claude/rules/shell-text-tools.md` → ≥1 (point d anchoring)
-- [ ] `grep -ci 'gate\|token-discipline' .claude/rules/shell-text-tools.md` → ≥1 (point e)
-- [ ] `test -f specs/shell-text-tool-doctrine/evidence/r4-mirror-parity.md` → exit 0
+- [x] `test -f .claude/rules/shell-text-tools.md` → exit 0
+- [x] `test "$(wc -l < .claude/rules/shell-text-tools.md)" -le 60` → exit 0 (53 lines)
+- [x] `grep -c 'sed -i' .claude/rules/shell-text-tools.md` → ≥1 (point a) — 3
+- [x] `grep -ci 'read' .claude/rules/shell-text-tools.md` → ≥1 (point b) — 8
+- [x] `grep -ci 'head\|-m\|-c\|sed -n\|awk' .claude/rules/shell-text-tools.md` → ≥1 (point c bounded output) — 13
+- [x] `grep -c '\^## ' .claude/rules/shell-text-tools.md` → ≥1 (point d anchoring) — 1
+- [x] `grep -ci 'gate\|token-discipline' .claude/rules/shell-text-tools.md` → ≥1 (point e) — 5
+- [x] `test -f specs/shell-text-tool-doctrine/evidence/r4-mirror-parity.md` → exit 0
