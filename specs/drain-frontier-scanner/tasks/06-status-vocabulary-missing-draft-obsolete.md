@@ -1,4 +1,5 @@
-Status: draft
+Status: obsolete
+Closed: subsumed by specs/agentic-core-redesign — see specs/agentic-core-redesign/TRIAGE.md
 Discovered-from: drain inventory (orchestrator, this session, 2026-07-21)
 Spec: ../SPEC.md
 Blocking: no
