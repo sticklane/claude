@@ -409,6 +409,12 @@ fn compute_reverse_coverage(
             out.push(path.join(" "));
         }
         for flag in flags {
+            // `--help`/`--version` are clap's universal built-ins, attached to
+            // every subcommand and never a documentable capability; listing
+            // them would dilute the real under-claimed flags.
+            if flag == "--help" || flag == "--version" {
+                continue;
+            }
             if !documented_flags.contains(&(path.clone(), flag.clone())) {
                 out.push(format!("{} {}", path.join(" "), flag));
             }
@@ -606,4 +612,26 @@ fn reverse_coverage_lists_undocumented_capabilities() {
         "the docs omit some binary capabilities, so the report is populated"
     );
     assert!(render_report(&report).contains("reverse-coverage"));
+}
+
+/// R3: clap's universal built-in flags (`--help`, `--version`) attach to every
+/// subcommand and are never a documentable capability, so the reverse-coverage
+/// report must not list them as undocumented — they'd dilute the real
+/// under-claimed flags (e.g. `refs --limit`, `map --doc`).
+#[test]
+fn reverse_coverage_excludes_clap_universal_builtins() {
+    let model = build_cli_model();
+    let docs = load_real_docs();
+    let report = analyze(&docs, &model, WAIVERS);
+
+    let builtin_noise: Vec<&String> = report
+        .reverse_coverage
+        .iter()
+        .filter(|cap| cap.ends_with(" --help") || cap.ends_with(" --version"))
+        .collect();
+
+    assert!(
+        builtin_noise.is_empty(),
+        "reverse coverage must not report clap's universal built-ins; got {builtin_noise:?}"
+    );
 }
