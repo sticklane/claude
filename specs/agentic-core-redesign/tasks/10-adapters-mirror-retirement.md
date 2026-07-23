@@ -73,6 +73,17 @@ done` plus `claude plugin validate .`) was run — 0 new failures
   RED owned by specs/deterministic-skill-chaining (RED at this task's
   baseline); only its dangling citation to the deleted files was updated,
   behavior unchanged.
+- AC4 fix round (2026-07-22, branch main): a re-verify found
+  `tests/test_eval_coverage_lint.sh` failing on this machine's bash 3.2.57
+  (macOS system bash) — `evals/lint-eval-coverage.sh` used `declare -A`
+  (bash 4+ associative arrays), unavailable here and with no bash 4 installed.
+  Rewrote that script's map mechanism to a bash-3.2-portable TAB-separated
+  row store looked up via a `row_field` helper; logic unchanged (its self-test's
+  conforming + 5 violation classes + 2 empty-dir guards all pass, and the lint
+  runs end-to-end against the real tree). The suite is now green except the one
+  excused pre-existing RED below. `evals/lint-eval-coverage.sh` is out of this
+  task's Touch (a pre-existing environmental failure, not introduced by task 10);
+  the portability fix is disclosed here for orchestrator ratification.
 - Out-of-Touch note (needs orchestrator ratification):
   `tests/test_install_docs.sh` — owned by no task and absent from this
   task's Touch — had its antigravity cp-path check (former R3) removed

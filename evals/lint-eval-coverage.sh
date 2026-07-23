@@ -47,12 +47,15 @@ fi
 # (| skill | tier | reason | tests |) whose tier cell is exactly A, B, or C;
 # the header and separator rows fail that test and are skipped without
 # hard-coding their text.
-declare -A TIER REASON TESTS
-while IFS=$'\t' read -r skill tier reason tests; do
-  [ -n "$skill" ] || continue
-  TIER["$skill"]="$tier"
-  REASON["$skill"]="$reason"
-  TESTS["$skill"]="$tests"
+# bash 3.2 (macOS system bash) lacks associative arrays (declare -A), so the
+# parsed rows are stored TAB-separated in $ROWS — one skill per line,
+# skill<TAB>tier<TAB>reason<TAB>tests — and looked up via row_field, a portable
+# stand-in for a string-keyed map.
+ROWS=""
+while IFS= read -r line; do
+  [ -n "$line" ] || continue
+  ROWS="${ROWS}${line}
+"
 done < <(awk -F'|' '
   NF >= 6 {
     s = $2; t = $3; r = $4; tf = $5
@@ -60,10 +63,17 @@ done < <(awk -F'|' '
     gsub(/^[ \t]+|[ \t]+$/, "", t)
     gsub(/^[ \t]+|[ \t]+$/, "", r)
     gsub(/^[ \t]+|[ \t]+$/, "", tf)
-    if (t == "A" || t == "B" || t == "C")
+    if ((t == "A" || t == "B" || t == "C") && s != "")
       printf "%s\t%s\t%s\t%s\n", s, t, r, tf
   }
 ' "$COVERAGE")
+
+# row_field <skill> <field#> — print one field of a skill's stored row (1=skill,
+# 2=tier, 3=reason, 4=tests), empty if the skill has no row. Field 1 doubles as
+# the presence check the associative array's `+set` test used to provide.
+row_field() {
+  printf '%s' "$ROWS" | awk -F'\t' -v s="$1" -v f="$2" '$1 == s { print $f; exit }'
+}
 
 check_tier_a() {
   local skill="$1" sdir="$EVALS_DIR/$1" count=0 has_adv=0 sc name
@@ -79,7 +89,8 @@ check_tier_a() {
 }
 
 check_tier_b() {
-  local skill="$1" list="${TESTS[$1]}" p found=0
+  local skill="$1" list p found=0
+  list="$(row_field "$1" 4)"
   list="${list//,/ }"
   for p in $list; do
     found=1
@@ -90,18 +101,18 @@ check_tier_b() {
 
 check_tier_c() {
   local skill="$1"
-  [ -n "${REASON[$1]}" ] || report "tier-c-empty-reason: $skill"
+  [ -n "$(row_field "$1" 3)" ] || report "tier-c-empty-reason: $skill"
 }
 
 # Enumerate skill dirs with the spec's [!_]* glob (excludes _shared) and check
 # each against its row.
 for d in "${skill_dirs[@]}"; do
   skill="$(basename "$d")"
-  if [ -z "${TIER[$skill]+set}" ]; then
+  if [ -z "$(row_field "$skill" 1)" ]; then
     report "no-coverage-row: $skill"
     continue
   fi
-  case "${TIER[$skill]}" in
+  case "$(row_field "$skill" 2)" in
     A) check_tier_a "$skill" ;;
     B) check_tier_b "$skill" ;;
     C) check_tier_c "$skill" ;;
