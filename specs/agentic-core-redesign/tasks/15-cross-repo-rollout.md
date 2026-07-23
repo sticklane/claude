@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Rigor: prototype
@@ -67,12 +67,14 @@ section (per `.claude/rules/human-blockers.md`).
 
 ## Acceptance
 
-- [ ] `test -f docs/cross-repo-rollout-2026-07-22.md && echo EXISTS` → `EXISTS`
-- [ ] the rollout doc lists every non-archived repo from `~/REPOS.md` (verify: repo count in the doc's table ≥ the non-archive row count in `~/REPOS.md` at this task's base commit)
-- [ ] `grep -c "^- \[ \] .* · run\|^- \[ \] .* · ask\|^- \[ \] .* · provision\|^- \[ \] .* · decide" HUMAN.md` → increased by exactly the number of repos the rollout doc marked "attended edit needed" (no silent drop, no vague umbrella entry)
-- [ ] every `HUMAN.md` entry this task adds has a non-empty `Blocks:` clause (per `.claude/rules/human-blockers.md`)
-- [ ] `git status --porcelain -- $(git rev-parse --show-toplevel | xargs -I{} echo {}) | grep -v '^ M docs/cross-repo-rollout\|^ M HUMAN.md\|^?? docs/cross-repo-rollout'` confirms no file outside this task's Touch changed (no other repo's tree was written)
-- [ ] `bash scripts/check.sh` → green
+- [x] `test -f docs/cross-repo-rollout-2026-07-22.md && echo EXISTS` → `EXISTS`
+- [x] the rollout doc lists every non-archived repo from `~/REPOS.md` (verify: repo count in the doc's table ≥ the non-archive row count in `~/REPOS.md` at this task's base commit)
+- [x] `grep -c "^- \[ \] .* · run\|^- \[ \] .* · ask\|^- \[ \] .* · provision\|^- \[ \] .* · decide" HUMAN.md` → increased by exactly the number of repos the rollout doc marked "attended edit needed" (no silent drop, no vague umbrella entry)
+- [x] every `HUMAN.md` entry this task adds has a non-empty `Blocks:` clause (per `.claude/rules/human-blockers.md`)
+- [x] `git status --porcelain -- $(git rev-parse --show-toplevel | xargs -I{} echo {}) | grep -v '^ M docs/cross-repo-rollout\|^ M HUMAN.md\|^?? docs/cross-repo-rollout'` confirms no file outside this task's Touch changed (no other repo's tree was written)
+- [x] `bash scripts/check.sh` → green
+
+Evidence (2026-07-22 run): doc docs/cross-repo-rollout-2026-07-22.md — 11-row table = 11 non-archive REPOS.md rows; classified 4 repos (automation, fooszone, interview-prep, portfolio-tracker) as attended-edit → 4 HUMAN.md `decide` entries (count 8→12, each with a Blocks: clause); ynab-mcp-server cross-referenced to beads-daily-skill CUJ-5 (agentic-m22) not re-filed; plugin version dimension no-op (no repo pins an agentic version, machine-global cache auto-refreshes via ~/claude's plugin-autorefresh hook — verified, not assumed). `bash scripts/check.sh` → green (exit 0).
 
 Depth ceiling: L1 — the per-repo classification is editorial judgment
 a human review confirms; the mechanical complement is the acceptance
