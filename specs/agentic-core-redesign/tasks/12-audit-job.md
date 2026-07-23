@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: 09
 Priority: P2
 Budget: 20 turns
@@ -40,6 +40,6 @@ standard write path (lock + sync). No new hook directories.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_audit.py -q` → passes (covers dedup on re-run)
-- [ ] `agentic audit --since 2026-07-01 --dry-run | head -20` → runs against this machine's real transcripts and prints its measures without writing (record output as evidence)
-- [ ] `bash scripts/check.sh` → green
+- [x] `python3 -m pytest tests/test_agentic_audit.py -q` → passes (covers dedup on re-run) — 8 passed (test_second_run_files_nothing_new covers dedup)
+- [x] `agentic audit --since 2026-07-01 --dry-run | head -20` → runs against this machine's real transcripts and prints its measures without writing (record output as evidence) — grep-bypass: 14497, compose-bypass: 6509, verdict-schema-failure: 1, spend-over-cap: 0; no tasks filed
+- [x] `bash scripts/check.sh` → green — 40 agentic pytest + all tests/test_*.sh green, exit 0

@@ -9,7 +9,7 @@ as stubs that exit 2 ("not implemented").
 import argparse
 import sys
 
-from agentic import claim, initialize, ready, resume, verdict
+from agentic import audit, claim, initialize, ready, resume, verdict
 from agentic.bd import BdError
 
 # Verbs whose bodies belong to later tasks (06, 07, 11). Registered now as
@@ -74,6 +74,20 @@ def build_parser():
         "--file", required=True, help="path to the worker's verdict JSON file"
     )
     p_verdict.set_defaults(func=verdict.run)
+
+    p_audit = sub.add_parser(
+        "audit",
+        help="Measure tool-adoption regressions and file each as a task.",
+    )
+    p_audit.add_argument(
+        "--since", default=None, help="only count events on/after this YYYY-MM-DD"
+    )
+    p_audit.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the measures without filing any tasks",
+    )
+    p_audit.set_defaults(func=audit.run)
 
     for name in _STUB_SUBCOMMANDS:
         p = sub.add_parser(name, help=f"({name}) not implemented yet")
