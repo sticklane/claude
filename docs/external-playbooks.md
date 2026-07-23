@@ -183,11 +183,15 @@ the verbatim research stays here.
   by context economics (see token-discipline); kept only as a caution
   against gratuitous parallelism.
 - Beads (Yegge's git-backed issue DAG) as the queue backend — evaluated
-  and specced, then removed by maintainer decision (2026-07): work
-  tracking stays in markdown task files with Status/Depends-on headers,
+  and specced, then removed by maintainer decision (2026-07-03): work
+  tracking stayed in markdown task files with Status/Depends-on headers,
   which every runtime can read and diff; the useful ideas that rode
   with it (discovered-work capture, ready-work dispatch, priority
-  fields) are adopted natively by their own specs instead.
+  fields) were adopted natively by their own specs instead.
+  **Superseded (2026-07-22 core-redesign pivot):** beads was re-adopted
+  as this repo's sole task tracker (`specs/agentic-core-redesign`,
+  CLAUDE.md's "Beads issue tracker" section) — the reasons below are
+  retained as history, not current architecture.
 
 ## Context management
 
@@ -503,6 +507,12 @@ spec). Those artifacts apply the practices; the research stays here.
   that survives the session and travels with the repo.
 
 ## Beads
+
+> **Superseded (2026-07-22 core-redesign pivot).** The "declined" verdict
+> below was reversed: beads (`bd`) is now this repo's sole task tracker
+> (`specs/agentic-core-redesign`, CLAUDE.md's "Beads issue tracker"
+> section). The rest of this section is retained as history — the
+> reasoning behind the 2026-07-03 decision, not the current architecture.
 
 Beads (Steve Yegge's git-backed issue DAG — issues modelled as a dependency
 graph committed to the repo) was evaluated as a queue backend, and its

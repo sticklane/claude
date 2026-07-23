@@ -51,11 +51,10 @@ procedure — this rule states the discipline both assume.
   authored the commit rather than a code-change category.
 - Machinery-contract subjects are regex-pinned — do not reword them to
   satisfy the length rule. `drain: <spec-slug> task NN in-progress`
-  (singular "task") is the canonical case: drain's diff-base recovery greps
-  for that exact shape (`.claude/skills/drain/SKILL.md`), so an agent must
-  reproduce it verbatim even when a longer slug pushes the subject past the
-  ≤72 target — the hard cap 100 and the contract shape both hold, the soft
-  target yields.
+  (singular "task") is the canonical shape for an in-progress checkpoint
+  commit, so an agent must reproduce it verbatim even when a longer slug
+  pushes the subject past the ≤72 target — the hard cap 100 and the contract
+  shape both hold, the soft target yields.
 - Agent-authored commits keep the harness-provided `Co-Authored-By` trailer;
   never strip it.
 
