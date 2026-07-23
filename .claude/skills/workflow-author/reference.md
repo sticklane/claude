@@ -31,6 +31,20 @@ itself only inside opted-in sessions, so do not guess beyond it.
 - SCRIPTS HAVE NO FILESYSTEM ACCESS: all file I/O happens inside agents, so
   any file-derived state enters the script as an agent's schema-validated
   return.
+- `resumeFromRunId` replays a completed `agent()` call from cache whenever
+  its `(prompt, opts)` are unchanged — including a call whose real-world
+  result changed for a reason OUTSIDE the workflow (e.g. a verifier FAILED,
+  something got fixed by hand, then the run was resumed instead of
+  re-launched fresh). Resume is for continuing after an interrupt, not for
+  re-checking a manually-fixed step; when the fix happened outside the
+  script's own agents, launch a fresh run instead (a small follow-up script
+  is fine — see queue-wave.js's task-file `Status: done` fast-exit for how
+  to keep a fresh run cheap over already-finished work).
+- A long sweep can pause itself gracefully and resume on another
+  machine/session: have the last step write its own resume instructions
+  into a commit message or tracker note (e.g. "run `bd import
+  .beads/issues.jsonl` then re-invoke `.claude/workflows/<name>.js`")
+  before ending, rather than leaving an ambiguous partial state.
 
 ## Template: tournament.js
 
