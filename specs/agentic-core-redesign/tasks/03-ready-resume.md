@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: 02
 Priority: P1
 Budget: 24 turns
@@ -42,6 +42,10 @@ registration exists from 02 — fill the module bodies only.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_ready.py -q` → passes
-- [ ] `bash tests/test_agentic_latency.sh` → prints `MEDIAN <n>s OK` with n < 1 at ≥500 seeded issues (R-L)
-- [ ] `bash scripts/check.sh` → green
+- [x] `python3 -m pytest tests/test_agentic_ready.py -q` → passes
+      (8 tests: blocker exclusion, blocker-done inclusion, claim-touch
+      overlap exclusion, priority order, --json documented fields,
+      mutual co-admission, resume frontier+claims, glob-prefix predicate).
+- [x] `bash tests/test_agentic_latency.sh` → prints `MEDIAN <n>s OK` with n < 1 at ≥500 seeded issues (R-L)
+      — measured `MEDIAN 0.457s OK (600 issues seeded)`.
+- [x] `bash scripts/check.sh` → green

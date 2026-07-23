@@ -9,16 +9,15 @@ as stubs that exit 2 ("not implemented").
 import argparse
 import sys
 
-from agentic import initialize
+from agentic import initialize, ready, resume
 from agentic.bd import BdError
 
-# Verbs whose bodies belong to later tasks (03, 04, 06, 07, 11). Registered
-# now as stubs so the subcommand surface is stable and disjoint.
+# Verbs whose bodies belong to later tasks (04, 06, 07, 11). Registered now as
+# stubs so the subcommand surface is stable and disjoint. ready/resume are
+# implemented (task 03) and routed to their modules below.
 _STUB_SUBCOMMANDS = (
-    "ready",
     "claim",
     "verdict",
-    "resume",
     "compose",
     "ctx",
     "inbox",
@@ -46,6 +45,22 @@ def build_parser():
         help="Bootstrap the bd tracker from the committed JSONL (curated).",
     )
     p_init.set_defaults(func=initialize.run)
+
+    p_ready = sub.add_parser(
+        "ready", help="List the dispatch frontier (blockers done, Touch-disjoint)."
+    )
+    p_ready.add_argument(
+        "--json", action="store_true", help="emit a JSON array of ready tasks"
+    )
+    p_ready.set_defaults(func=ready.run)
+
+    p_resume = sub.add_parser(
+        "resume", help="Show the frontier plus in-flight claims (who/what/since)."
+    )
+    p_resume.add_argument(
+        "--json", action="store_true", help="emit the frontier + claims as JSON"
+    )
+    p_resume.set_defaults(func=resume.run)
 
     for name in _STUB_SUBCOMMANDS:
         p = sub.add_parser(name, help=f"({name}) not implemented yet")
