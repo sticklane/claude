@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: blocked
+Status: done
 Unblock: run: test -f .claude/skills/work/SKILL.md && test -f hooks/bd-compliance/check.sh && echo "/work implemented - gate open" || echo "waiting: /work implementation (specs/beads-daily-skill, implemented directly per the 2026-07-22 maintainer direction - no tasks/ breakdown exists)"
 Depends on: 05
 Priority: P1
@@ -55,11 +55,11 @@ drain's own baton/lease/handoff paths are deleted.
 
 ## Acceptance
 
-- [ ] `bash tests/test_status_cutover.sh` → prints `CUTOVER OK` (computed equality between status.sh totals and bd's counts — an assertion, not a recording)
-- [ ] `grep -rn "DRAIN-BATON\|DRAIN-OWNER" .claude/skills/ tests/ | wc -l` → `0` (machinery AND its tests gone)
-- [ ] `bash evals/run.sh drain 2>/dev/null || bash evals/drain/01-rolling-window/assert.sh` → the updated drain eval passes against the bd-backed flow
-- [ ] `bash -c 'base=$(git merge-base HEAD origin/main); git show $base:.claude-plugin/plugin.json | grep version | diff - <(grep version .claude-plugin/plugin.json) >/dev/null && echo UNBUMPED || echo BUMPED'` → `BUMPED`
-- [ ] `bash scripts/check.sh` → green
+- [x] `bash tests/test_status_cutover.sh` → prints `CUTOVER OK` (computed equality between status.sh totals and bd's counts — an assertion, not a recording)
+- [x] `grep -rn "DRAIN-BATON\|DRAIN-OWNER" .claude/skills/ tests/ | wc -l` → `0` (machinery AND its tests gone)
+- [x] `bash evals/run.sh drain 2>/dev/null || bash evals/drain/01-rolling-window/assert.sh` → the updated drain eval passes against the bd-backed flow
+- [x] `bash -c 'base=$(git merge-base HEAD origin/main); git show $base:.claude-plugin/plugin.json | grep version | diff - <(grep version .claude-plugin/plugin.json) >/dev/null && echo UNBUMPED || echo BUMPED'` → `BUMPED`
+- [x] `bash scripts/check.sh` → green
 
 Depth ceiling: L1 for the AGENTS.md/README currency criteria — doc
 accuracy is a human read; the behavioral complement is the verifier
