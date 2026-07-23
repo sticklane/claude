@@ -30,11 +30,11 @@ on: the same step failing twice (a third attempt in a degraded context won't
 do better), and reaching a high-risk action — push, deploy, data deletion,
 publishing, spending — which the run must never take on its own.
 
-For long `/goal`-bounded runs, hand the baton off BEFORE the turn cap — see
-[reference.md](reference.md)'s pre-cap baton boundary section (it reuses
-drain's baton grammar and generations cap). The scoped-permissions template,
-containment ladder, headless template, and failure-recovery doctrine for
-unattended runs also live in [reference.md](reference.md).
+For long `/goal`-bounded runs that grow heavy before finishing, write a
+`/handoff` file and end rather than pressing on in a degraded context. The
+scoped-permissions template, containment ladder, headless template, and
+failure-recovery doctrine for unattended runs live in
+[reference.md](reference.md).
 
 ## 0. Load only the task
 
@@ -79,11 +79,6 @@ hygiene, the task's runnable acceptance criteria, and the untrusted-data
 rules. State in close-out (step 4) that prototype gates applied. This is the
 primary path — it applies to attended /build AND to drain's
 attempt-1/relaunch workers, who run this procedure verbatim.
-
-**Owner warning.** If the task's spec has a `specs/<slug>/DRAIN-OWNER.md`
-showing FRESH liveness (drain reference.md's "Owner liveness" definition,
-cited not restated), warn before editing the task — being attended, ask the
-user whether to proceed rather than risk racing a live drain run.
 
 ## 1. Plan proportionally
 
@@ -164,11 +159,9 @@ to a normal production task, not as done work.
    issue, stop and report — repeated correction in a degraded context is the
    known failure mode; a fresh session with a better task file beats a long
    session of thrashing.
-6. Heavy-context escape: attended /build has no baton (that is drain's
-   degradation response); when the session itself has grown heavy — not just
+6. Heavy-context escape: when the session itself has grown heavy — not just
    one stuck fix — write a `/handoff` file and lead the report with its resume
-   command instead of continuing degraded. This is the escape available to an
-   attended run where the baton cannot apply.
+   command instead of continuing degraded.
 7. Stopping blocked (the **same-edit** rule): when the session must stop on
    an external blocker it cannot clear — missing creds, an undeployed
    dependency, a product decision only the user can make — write

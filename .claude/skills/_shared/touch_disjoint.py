@@ -1,11 +1,12 @@
 """Shared glob-prefix Touch-disjointness predicate for the toolkit's own
-skill scripts (specs/drain-multi-spec-swarm R14).
+skill scripts.
 
-`.claude/skills/drain/admission.py` uses this to compute each candidate
-spec's Touch footprint (the union of its dispatchable tasks' `Touch:`
-headers, read directly from the task files on disk — never from a
-`drain_frontier.py` JSON field, which carries no per-task Touch data) and to
-test pairwise cross-spec disjointness for spec-lease claiming (R1).
+Computes a task or spec's Touch footprint (the union of its dispatchable
+tasks' `Touch:` headers, read directly from the task files on disk — never
+from a `drain_frontier.py` JSON field, which carries no per-task Touch data)
+and tests pairwise disjointness. NOTE: after the agentic-core-redesign
+cutover bd's ready-set computes file-overlap exclusion, so this predicate no
+longer has a live drain consumer; it is retained as a shared helper.
 
 The algorithm is pinned to match `.claude/skills/drain/drain_frontier.py`'s
 own internal Touch-disjointness check exactly

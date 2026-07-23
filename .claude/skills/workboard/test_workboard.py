@@ -287,199 +287,6 @@ class TestScannerPromptBuilders(unittest.TestCase):
         self.assertIn(prompt, inbox[0]["cmd"])
 
 
-BATON_FIXTURE = """# Drain baton: demo
-
-Generation: 3
-
-## Done this generation
-- 01-a: merged (verifier PASS)
-- 02-b: merged (verifier PASS)
-
-## Next
-- 03-c: ready to dispatch
-
-## Relaunch
-```bash
-nohup claude -p "/drain specs/demo (generation 4, baton: specs/demo/DRAIN-BATON.md)" \\
-  --allowedTools "Task,Read,Edit,Write,Glob,Grep,Bash(git *)" \\
-  --permission-mode dontAsk --max-turns 80 \\
-  >> specs/demo/.drain-gen.log 2>&1 &
-```
-
-## Needs attention
-- 05-e deferred: which auth provider should the login flow use?
-"""
-
-
-def write_baton(root, slug="demo", body=BATON_FIXTURE):
-    spec = Path(root) / "specs" / slug
-    spec.mkdir(parents=True)
-    (spec / "DRAIN-BATON.md").write_text(body, encoding="utf-8")
-    return spec / "DRAIN-BATON.md"
-
-
-class TestScanBatons(unittest.TestCase):
-    def test_scan_batons_extracts_generation_command_and_needs_attention(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            write_baton(tmp)
-
-            batons = workboard.scan_batons(Path(tmp))
-
-            self.assertEqual(len(batons), 1)
-            b = batons[0]
-            self.assertEqual(b["path"], "specs/demo/DRAIN-BATON.md")
-            self.assertEqual(b["generation"], 3)
-            self.assertIn("claude -p", b["command"])
-            self.assertIn("/drain specs/demo", b["command"])
-            self.assertIn("auth provider", b["needs_attention"])
-
-    def test_scan_batons_returns_empty_when_no_baton_present(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / "specs" / "demo").mkdir(parents=True)
-
-            self.assertEqual(workboard.scan_batons(Path(tmp)), [])
-
-
-def _baton_with_relaunch(relaunch_cmd):
-    """A DRAIN-BATON.md body whose Relaunch fenced block is `relaunch_cmd`."""
-    return (
-        "# Drain baton: demo\n\nGeneration: 4\n\n"
-        f"## Relaunch\n```bash\n{relaunch_cmd}\n```\n\n"
-        "## Needs attention\n- none\n"
-    )
-
-
-def _write_repo_baton(root, runtime_name, relaunch_cmd, slug="demo"):
-    """Build a scratch repo: .claude/runtime.md naming `runtime_name` (or none
-    when it is None) plus specs/<slug>/DRAIN-BATON.md carrying `relaunch_cmd`."""
-    root = Path(root)
-    if runtime_name is not None:
-        (root / ".claude").mkdir(parents=True, exist_ok=True)
-        (root / ".claude" / "runtime.md").write_text(
-            f"runtime: {runtime_name}\n", encoding="utf-8"
-        )
-    spec = root / "specs" / slug
-    spec.mkdir(parents=True, exist_ok=True)
-    (spec / "DRAIN-BATON.md").write_text(
-        _baton_with_relaunch(relaunch_cmd), encoding="utf-8"
-    )
-    return spec / "DRAIN-BATON.md"
-
-
-class TestRuntimeAgnosticBatonParsing(unittest.TestCase):
-    """R3/R4/R5/R9/R11: scan_batons resolves the repo's active runtime and
-    parses the relaunch command with that runtime's shape, falling back
-    through the other known runtimes."""
-
-    def test_gemini_baton_command_extracted_not_empty(self):
-        # R3/R4: a gemini -p-shaped baton in a gemini-cli repo extracts, where
-        # the old hardcoded claude-only regex would have produced "".
-        cmd = 'gemini -p "/drain specs/demo (generation 5, baton: x)" --approval-mode yolo'
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_repo_baton(tmp, "gemini-cli", cmd)
-
-            batons = workboard.scan_batons(Path(tmp))
-
-            self.assertEqual(len(batons), 1)
-            self.assertIn("gemini -p", batons[0]["command"])
-            self.assertIn("/drain specs/demo", batons[0]["command"])
-            self.assertFalse(batons[0].get("manual_relaunch"))
-            self.assertFalse(batons[0].get("parse_warning"))
-
-    def test_no_headless_runtime_sets_manual_relaunch_not_blank_command(self):
-        # R5: a runtime with no scriptable headless template → manual_relaunch
-        # set, command stays "", no regex attempted. antigravity left this
-        # class 2026-07-12 when `agy -p` proved scriptable (runtimes/
-        # antigravity.md); the synthetic no-headless profile is the fixture.
-        cmd = 'claude -p "/drain specs/demo (generation 5)"'  # ignored: manual runtime
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_repo_baton(tmp, "fake-runtime-no-headless", cmd)
-
-            batons = workboard.scan_batons(Path(tmp))
-
-            self.assertEqual(len(batons), 1)
-            self.assertEqual(batons[0]["command"], "")
-            self.assertTrue(batons[0].get("manual_relaunch"))
-            self.assertIn(
-                "fake-runtime-no-headless", batons[0]["manual_relaunch"].lower()
-            )
-
-    def test_antigravity_baton_command_extracted_since_agy_headless(self):
-        # antigravity gained a real scriptable headless template (agy -p,
-        # confirmed live 2026-07-12) — its batons now extract like any other
-        # scriptable runtime instead of falling to manual_relaunch.
-        cmd = (
-            '/opt/homebrew/bin/agy -p "/drain specs/demo (generation 6, baton: y)" '
-            "--new-project --mode accept-edits --sandbox"
-        )
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_repo_baton(tmp, "antigravity", cmd)
-
-            batons = workboard.scan_batons(Path(tmp))
-
-            self.assertEqual(len(batons), 1)
-            self.assertIn("agy -p", batons[0]["command"])
-            self.assertIn("/drain specs/demo", batons[0]["command"])
-            self.assertFalse(batons[0].get("manual_relaunch"))
-            self.assertFalse(batons[0].get("parse_warning"))
-
-    def test_unrecognized_shape_sets_parse_warning_and_surfaces_in_inbox(self):
-        # R9: a relaunch command matching no known runtime → command "",
-        # parse_warning set, promoted into the needs-attention inbox.
-        cmd = 'someothercli --go "do the thing"'
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_repo_baton(tmp, None, cmd)  # no runtime.md → claude-code
-
-            batons = workboard.scan_batons(Path(tmp))
-            self.assertEqual(len(batons), 1)
-            self.assertEqual(batons[0]["command"], "")
-            self.assertTrue(batons[0].get("parse_warning"))
-
-            repo = make_repo_record(path=tmp)
-            repo["batons"] = batons
-            inbox = workboard.attention_items([repo], [], [], stale_days=7)
-            warn_items = [
-                i
-                for i in inbox
-                if "baton" in i["what"].lower() and "relaunch" in i["what"].lower()
-            ]
-            self.assertEqual(len(warn_items), 1)
-
-    def test_unresolvable_runtime_falls_back_to_claude_code_no_exception(self):
-        # R11: a runtime.md naming a nonexistent profile falls back to
-        # claude-code's regex; a claude -p baton still extracts, no raise.
-        cmd = 'claude -p "/drain specs/demo (generation 5, baton: x)"'
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_repo_baton(tmp, "no-such-runtime-xyz", cmd)
-
-            batons = workboard.scan_batons(Path(tmp))
-
-            self.assertEqual(len(batons), 1)
-            self.assertIn("claude -p", batons[0]["command"])
-            self.assertIn("/drain specs/demo", batons[0]["command"])
-            self.assertFalse(batons[0].get("parse_warning"))
-
-    def test_fake_runtime_extracted_with_no_parsing_logic_changes(self):
-        # R9/R10: a brand-new runtimes/fake-runtime.md profile (a distinct
-        # `fakecli run "..."` shape) parses purely from the profile — this
-        # test adds only a fixture, touching no parsing logic.
-        cmd = 'fakecli run "/drain specs/demo (generation 5, baton: x)"'
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_repo_baton(tmp, "fake-runtime", cmd)
-
-            batons = workboard.scan_batons(Path(tmp))
-
-            self.assertEqual(len(batons), 1)
-            self.assertIn("fakecli run", batons[0]["command"])
-            self.assertIn("/drain specs/demo", batons[0]["command"])
-
-
-
-
-
-
-
-
 def make_session(toplevel, state="active"):
     """A session record as attention_items reads it: state + git toplevel."""
     return {"state": state, "toplevel": toplevel, "cwd": toplevel}
@@ -595,77 +402,10 @@ class TestActiveCoverageReclassification(unittest.TestCase):
 
         self.assertEqual(self._states(inbox), ["needs-review"])
 
-    def test_parked_baton_does_not_suppress_git_state(self):
-        # a baton is a paused generation, not proof of a live drain.
-        repo = make_repo_record(path="/r/demo", dirty=1)
-        repo["batons"] = [
-            {
-                "path": "specs/x/DRAIN-BATON.md",
-                "generation": 2,
-                "command": "",
-                "needs_attention": "",
-                "mtime": 1.0,
-            }
-        ]
-        inbox = workboard.attention_items([repo], [], [], stale_days=7)
-
-        self.assertEqual(self._states(inbox), ["needs-review"])
-
     def test_attention_total_excludes_in_progress(self):
         active = {"state": "in-progress", "category": "active", "age_ts": 1.0}
         review = {"state": "needs-review", "age_ts": 1.0}
         self.assertEqual(workboard.attention_total([active, review, active]), 1)
-
-
-class TestBatonNeedsAttentionInbox(unittest.TestCase):
-    """oc-06: a baton carrying a needs-attention section is promoted into the
-    attention inbox so it ranks among blocked work, not just as a repo card."""
-
-    def _baton(self, needs_attention, command='claude -p "/drain specs/x (gen 4)"'):
-        return {
-            "path": "specs/x/DRAIN-BATON.md",
-            "generation": 3,
-            "command": command,
-            "needs_attention": needs_attention,
-            "mtime": 5.0,
-        }
-
-    def test_needs_attention_baton_becomes_blocked_inbox_item(self):
-        repo = make_repo_record(path="/r/demo")
-        repo["batons"] = [self._baton("05-e deferred: which auth provider?")]
-        inbox = workboard.attention_items([repo], [], [], stale_days=7)
-
-        baton_items = [i for i in inbox if "baton" in i["what"].lower()]
-        self.assertEqual(len(baton_items), 1)
-        self.assertEqual(baton_items[0]["state"], "blocked")
-        self.assertEqual(baton_items[0]["severity"], "serious")
-        self.assertIn("auth provider", baton_items[0]["why"])
-
-    def test_needs_attention_baton_carries_relaunch_command(self):
-        repo = make_repo_record(path="/r/demo")
-        repo["batons"] = [self._baton("which provider?")]
-        inbox = workboard.attention_items([repo], [], [], stale_days=7)
-
-        baton_items = [i for i in inbox if "baton" in i["what"].lower()]
-        self.assertIn("/drain specs/x", baton_items[0].get("cmd", ""))
-
-    def test_baton_without_needs_attention_adds_no_inbox_item(self):
-        repo = make_repo_record(path="/r/demo")
-        repo["batons"] = [self._baton("")]
-        inbox = workboard.attention_items([repo], [], [], stale_days=7)
-
-        self.assertEqual([i for i in inbox if "baton" in i["what"].lower()], [])
-
-    def test_needs_attention_baton_ranks_among_blocked_before_warnings(self):
-        # a repo with both a needs-attention baton (serious) and dirty state
-        # (warning): the baton sorts ahead in the flat, severity-ranked list.
-        repo = make_repo_record(path="/r/demo", dirty=1)
-        repo["batons"] = [self._baton("blocking question")]
-        inbox = workboard.attention_items([repo], [], [], stale_days=7)
-
-        self.assertIn("baton", inbox[0]["what"].lower())
-
-
 
 
 def write_session(projects_dir, proj="proj1", sid="sess1", records=None):
@@ -728,14 +468,6 @@ class TestSessionStartTs(unittest.TestCase):
             s = sessions[0]
             self.assertIsNotNone(s["start_ts"])
             self.assertLessEqual(s["start_ts"], s["end_ts"])
-
-
-
-
-
-
-
-
 
 
 class TestLiveSessionIdsCliAndFallback(unittest.TestCase):
@@ -918,8 +650,6 @@ class TestScanToolkitSpecsUnparseableCount(unittest.TestCase):
 
             self.assertEqual(spec["tasks_total"], 2)
             self.assertEqual(spec["tasks_unparseable"], 1)
-
-
 
 
 def make_agentprof_stub(tmpdir, stdout_payload, argv_out=None, exit_code=0):
@@ -1363,8 +1093,6 @@ class TestMergeSpend(unittest.TestCase):
             tmpdir.cleanup()
 
 
-
-
 # ---- Unblock lines + Deferred questions (unblock-next-steps task 01) -------
 
 
@@ -1475,8 +1203,6 @@ def _unblock_spec(tasks, status=None, unblock=None):
     if unblock:
         s["unblock"] = unblock
     return s
-
-
 
 
 class TestNeedsAnswerInbox(unittest.TestCase):
@@ -1625,7 +1351,6 @@ class TestStructuredUnblockForwarded(unittest.TestCase):
         self.assertEqual(
             blocked[0]["why"], "no unblock step recorded — add an Unblock: line"
         )
-
 
 
 def _agent_tool_use(tool_use_id, subagent_type="scout", desc="do the thing", ts=OLD_TS):
