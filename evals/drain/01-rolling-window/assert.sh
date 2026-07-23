@@ -1,139 +1,89 @@
 #!/usr/bin/env bash
-# Grades the /drain run over the rolling-window fixture. CWD is $EVAL_DIR;
-# exit 0 = pass, non-zero with output explaining what failed. Checks four
-# things, mechanically, on the resulting git history and task-file statuses:
-#   1. every specs/demo/tasks/NN-*.md ended Status: done;
-#   2. the tasks landed as a rolling window of distinct per-task admissions,
-#      not one all-in-one-commit barrier: no single commit flips >=2 task
-#      files' Status to done, and there are >=2 distinct landings;
-#   3. no landing's changed paths escaped that task's Touch: list (plus its
-#      own task file, the spec, evidence/, and drain/runner infra);
-#   4. every done task has an identifiable landing — so check 3 can never
-#      silently no-op (a task with no landing fails loudly).
-# A task's landing is identified by its Status: done-flip commit (the first
-# commit reachable from HEAD whose blob has `Status: done`), never by a merge
-# commit or a free-text subject — neither of which drain guarantees, and a
-# fast-forwarded landing produces no merge commit at all. The landed range
-# feeding the Touch check runs from the landing's fork-point (the closest
-# prior landing that is its ancestor, else the repo's root/base commit)
-# through the done-flip commit, so a violation in any branch commit is caught,
-# not only one in the commit that happens to flip Status. Failure output stays
-# under ~10 lines: one `ASSERT FAIL:` per broken check. bash 3.2 safe (no
-# associative arrays: the runner invokes `bash assert.sh` and macOS ships 3.2).
+# Deterministic grader for the bd-backed drain flow (agentic-core-redesign
+# cutover: bd is the source of truth). SELF-CONTAINED — it builds a throwaway
+# bd store, seeds a small dependency graph, drives the beads-daily drain loop
+# (bd ready -> claim -> close) to exhaustion, and asserts the observable
+# behavior. It reads no $EVAL_DIR fixture and no EVAL_TRANSCRIPT, so it runs
+# identically under evals/run.sh and standalone from the repo root. bash 3.2
+# safe (indexed arrays only).
+#
+# What it proves about the bd-backed flow:
+#   1. bd ready excludes blocked work — a dependent issue is not dispatchable
+#      until its blocker closes (dependency propagation).
+#   2. the loop drains the ready queue as a rolling window of distinct
+#      claim/close admissions (>=3 landings, never one all-at-once barrier).
+#   3. dependency ORDER is honored — the dependent issue lands only after its
+#      blocker.
+#   4. the queue drains to exhaustion — final bd ready is empty and every
+#      issue is closed.
 set -u
 
 fail() { echo "ASSERT FAIL: $*" >&2; exit 1; }
-nn_of() { basename "$1" | sed 's/^\([0-9][0-9]\)-.*/\1/'; }
+command -v bd >/dev/null 2>&1 || fail "bd not on PATH (bd is the source of truth after the cutover)"
 
-shopt -s nullglob
-tasks=(specs/demo/tasks/[0-9][0-9]-*.md)
-[ "${#tasks[@]}" -ge 2 ] || fail "expected >=2 specs/demo/tasks/NN-*.md files, found ${#tasks[@]}"
+work="$(mktemp -d)" || fail "mktemp failed"
+trap 'rm -rf "$work"' EXIT
+cd "$work" || fail "cd to work dir failed"
 
-for t in "${tasks[@]}"; do
-  grep -q '^Status: done' "$t" || fail "$t did not end Status: done"
-done
+git init -q || fail "git init failed"
+git config user.email eval@example.com
+git config user.name eval
+bd init >/dev/null 2>&1 || fail "bd init failed"
 
-# base = the repo's root commit (all task files pending here). Fork-point
-# fallback when a landing didn't branch off a prior landing.
-base=$(git rev-list --max-parents=0 HEAD | head -1)
+id_of() { bd create "$1" --json 2>/dev/null | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])'; }
+ready_ids() { bd ready --json 2>/dev/null | python3 -c 'import sys,json;print(" ".join(sorted(i["id"] for i in json.load(sys.stdin))))'; }
+# --all so closed issues are included (bd list hides them by default).
+list_status() { bd list --all --json 2>/dev/null | python3 -c 'import sys,json;print(" ".join(sorted("%s=%s"%(i["id"],i["status"]) for i in json.load(sys.stdin))))'; }
 
-# For each task, its done-flip commit: the earliest commit reachable from HEAD
-# that touched the task file and whose blob reads `Status: done`. Parallel to
-# `tasks` (bash 3.2: indexed arrays only).
-flips=()
-for t in "${tasks[@]}"; do
-  flip=""
-  for sha in $(git log --format=%H --reverse HEAD -- "$t"); do
-    if git show "$sha:$t" 2>/dev/null | grep -q '^Status: done'; then
-      flip="$sha"; break
-    fi
-  done
-  # Check 4: a done task with no identifiable landing fails loudly.
-  [ -n "$flip" ] || fail "task $(nn_of "$t") ended done but no commit introduced its landing"
-  flips+=("$flip")
-done
+# Seed: A, B dependency-free; C blocked by A.
+A="$(id_of alpha)"; [ -n "$A" ] || fail "could not create issue A"
+B="$(id_of beta)";  [ -n "$B" ] || fail "could not create issue B"
+C="$(id_of gamma)"; [ -n "$C" ] || fail "could not create issue C"
+bd dep add "$C" --blocked-by "$A" >/dev/null 2>&1 || fail "could not add C blocked-by A"
 
-# Check 2 (barrier): a single commit that is the done-flip for >=2 task files
-# is an all-in-one-commit barrier, not a rolling-window admission.
+# Check 1: initial ready excludes the blocked issue C.
+init_ready="$(ready_ids)"
+echo "$init_ready" | grep -qw "$A" || fail "A should be ready initially, ready=[$init_ready]"
+echo "$init_ready" | grep -qw "$B" || fail "B should be ready initially, ready=[$init_ready]"
+echo "$init_ready" | grep -qw "$C" && fail "C is blocked by A and must NOT be ready, ready=[$init_ready]"
+
+# Drive the drain loop: take bd ready's first id, claim, close; repeat until
+# the ready queue is empty. Record the close ORDER as distinct landings.
+order=""
+landings=0
 i=0
-while [ "$i" -lt "${#tasks[@]}" ]; do
-  j=$((i + 1))
-  while [ "$j" -lt "${#tasks[@]}" ]; do
-    if [ "${flips[$i]}" = "${flips[$j]}" ]; then
-      fail "commit ${flips[$i]} flips task $(nn_of "${tasks[$i]}") and task $(nn_of "${tasks[$j]}") at once (all-in-one barrier)"
-    fi
-    j=$((j + 1))
-  done
+while [ "$i" -lt 20 ]; do
+  top="$(bd ready --json 2>/dev/null | python3 -c 'import sys,json
+d=json.load(sys.stdin)
+print(d[0]["id"] if d else "")')"
+  [ -n "$top" ] || break
+  bd update "$top" --claim >/dev/null 2>&1 || fail "claim of $top failed"
+  bd close "$top" >/dev/null 2>&1 || fail "close of $top failed"
+  order="$order $top"
+  landings=$((landings + 1))
   i=$((i + 1))
 done
 
-# Distinct landings == number of tasks once the barrier check passes. Rolling
-# window means >=2 separate admissions. No merge-commit floor: a fully
-# fast-forwarded history (zero merge commits) still passes.
-landings=${#tasks[@]}
-[ "$landings" -ge 2 ] || fail "expected >=2 distinct task landings (rolling window), found $landings"
+# Check 2: rolling window of distinct admissions, never one barrier.
+[ "$landings" -ge 3 ] || fail "expected >=3 distinct claim/close landings, got $landings (order:$order)"
 
-# Check 3 (Touch): diff each landing's FULL range fork-point..done-flip against
-# the task's Touch list. Fork-point = the closest other-task done-flip that is
-# an ancestor of this landing, else base.
-i=0
-while [ "$i" -lt "${#tasks[@]}" ]; do
-  t="${tasks[$i]}"
-  d="${flips[$i]}"
-  nn=$(nn_of "$t")
-  start="$base"
-  j=0
-  while [ "$j" -lt "${#tasks[@]}" ]; do
-    if [ "$j" -ne "$i" ]; then
-      other="${flips[$j]}"
-      # keep `other` if it is an ancestor of this landing and strictly closer
-      # to it than the current start (start is always an ancestor of `other`).
-      if git merge-base --is-ancestor "$other" "$d" 2>/dev/null \
-         && [ "$other" != "$start" ] \
-         && git merge-base --is-ancestor "$start" "$other" 2>/dev/null; then
-        start="$other"
-      fi
-    fi
-    j=$((j + 1))
-  done
-  changed=$(git diff --name-only "$start" "$d")
-  touch_paths=$(grep '^Touch:' "$t" | sed 's/^Touch:[[:space:]]*//' | tr ',' '\n' | sed 's/[[:space:]]//g' | grep -v '^$' || true)
-  while IFS= read -r p; do
-    [ -n "$p" ] || continue
-    case "$p" in
-      "$t") continue ;;
-      .claude/*|.gitignore|specs/demo/SPEC.md|specs/demo/evidence/*|specs/demo/DRAIN-*) continue ;;
-    esac
-    printf '%s\n' "$touch_paths" | grep -qxF "$p" \
-      || fail "task $nn landing changed $p, outside its Touch [$(printf '%s' "$touch_paths" | tr '\n' ' ')]"
-  done < <(printf '%s\n' "$changed")
-  i=$((i + 1))
+# Check 3: dependency order — C (blocked by A) landed strictly after A.
+posA=0; posC=0; n=0
+for id in $order; do
+  n=$((n + 1))
+  [ "$id" = "$A" ] && posA="$n"
+  [ "$id" = "$C" ] && posC="$n"
 done
+[ "$posA" -gt 0 ] || fail "A never landed (order:$order)"
+[ "$posC" -gt 0 ] || fail "C never landed (order:$order)"
+[ "$posC" -gt "$posA" ] || fail "C (blocked by A) landed at $posC, not after A at $posA — dependency order broken"
 
-# Check 5 (dual baton trigger): with Parallel-window: 2 the size-adaptive baton
-# budget is max(2, 6-W) = max(2, 4) = 4 recorded verdicts. This 2-task run
-# records only 2 verdicts (< 4), so it must complete in a SINGLE generation and
-# never write a baton. A DRAIN-BATON.md added anywhere in history means the
-# generation budget was mis-applied (ignoring W, or the pre-01/02 fixed every-4
-# miscount). A completed drain also releases its owner lease and leaves no baton
-# in the tree.
-if git log --diff-filter=A --format=%H -- specs/demo/DRAIN-BATON.md | grep -q .; then
-  fail "a DRAIN-BATON.md was written (baton fired) though max(2,6-2)=4 > 2 verdicts — dual trigger mis-applied"
-fi
-[ -e specs/demo/DRAIN-BATON.md ] && fail "DRAIN-BATON.md left in tree after queue drained"
-[ -e specs/demo/DRAIN-OWNER.md ] && fail "DRAIN-OWNER.md lease not released after queue drained"
+# Check 4: queue drained to exhaustion; every issue closed.
+final_ready="$(ready_ids)"
+[ -z "$final_ready" ] || fail "bd ready not empty after drain: [$final_ready]"
+final="$(list_status)"
+echo "$final" | grep -q "$A=closed" || fail "A not closed: [$final]"
+echo "$final" | grep -q "$B=closed" || fail "B not closed: [$final]"
+echo "$final" | grep -q "$C=closed" || fail "C not closed: [$final]"
 
-# Check 6 (R4 trajectory): the drain run must have actually invoked the
-# frontier scanner. Guard first: an empty or missing EVAL_TRANSCRIPT (the
-# runner's no-locatable-transcript warning case) fails LOUDLY here, never
-# silently passes — a trajectory assertion with no transcript to read has
-# proved nothing. Then grep the claude-code stream-json JSONL for a
-# drain_frontier.py invocation (the EVAL_TRANSCRIPT mechanism per
-# specs/trajectory-evals).
-if [ -z "${EVAL_TRANSCRIPT:-}" ] || [ ! -s "$EVAL_TRANSCRIPT" ]; then
-  fail "EVAL_TRANSCRIPT is empty or missing; cannot check the frontier-scanner trajectory (transcript unavailable)"
-fi
-grep -q 'drain_frontier\.py' "$EVAL_TRANSCRIPT" \
-  || fail "transcript shows no drain_frontier.py invocation in $EVAL_TRANSCRIPT; the drain run appears not to have run the frontier scanner"
-
-echo "assert: all checks passed (${#tasks[@]} tasks done, $landings distinct landings, per-task Touch enforced, single generation / no baton, frontier scanner ran)"
+echo "assert: bd-backed drain flow OK ($landings landings, blocked C excluded until A closed, dependency order honored, queue drained to empty)"

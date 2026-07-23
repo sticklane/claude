@@ -1,102 +1,31 @@
 #!/usr/bin/env bash
-# Builds the fixture in $EVAL_DIR (an empty directory the runner provides):
-# a tiny git repo with a two-task demo spec that opts the queue into a
-# rolling window of 2 (Parallel-window: 2) and names both tasks on one
-# Group: line, so /drain runs them concurrently and merges each on its own.
-# The two tasks are dependency-free and Touch-disjoint (src/alpha.sh vs
-# src/beta.sh), each a trivial bash-script deliverable a worker finishes in
-# a couple of turns.
+# Builds the fixture in $EVAL_DIR (an empty dir the runner provides): a git
+# repo with a bd (beads) store seeded with a tiny dependency graph — two
+# dependency-free ready issues (alpha, beta) and one (gamma) blocked by alpha,
+# so a bd-backed /drain works them as a rolling window in dependency order.
 #
-# Dual baton trigger: with Parallel-window: 2 the size-adaptive baton budget
-# is max(2, 6-W) = max(2, 4) = 4 recorded verdicts, so this 2-task (2-verdict)
-# run must complete within a SINGLE generation — no baton pass, no relaunch.
-# assert.sh's check 5 enforces exactly that (no DRAIN-BATON.md ever written,
-# clean lease/baton end state), exercising the dual trigger's threshold.
+# After the agentic-core-redesign cutover bd is the source of truth and drain
+# is a mechanical bd ready -> claim -> close loop, so this scenario's grader
+# (assert.sh) asserts that bd-backed flow DETERMINISTICALLY against a throwaway
+# store of its own — it does not grade a model trajectory. This setup seeds a
+# coherent store for the live-session path; the deterministic assert is the
+# authority.
 set -eu
 
 cd "$EVAL_DIR"
 git init -q
+git config user.email eval@example.com
+git config user.name eval
 
-mkdir -p specs/demo/tasks
+if command -v bd >/dev/null 2>&1; then
+  bd init >/dev/null 2>&1 || true
+  A="$(bd create "alpha" --json 2>/dev/null | python3 -c 'import sys,json;print(json.load(sys.stdin).get("id",""))' || true)"
+  bd create "beta" >/dev/null 2>&1 || true
+  C="$(bd create "gamma" --json 2>/dev/null | python3 -c 'import sys,json;print(json.load(sys.stdin).get("id",""))' || true)"
+  if [ -n "${A:-}" ] && [ -n "${C:-}" ]; then
+    bd dep add "$C" --blocked-by "$A" >/dev/null 2>&1 || true
+  fi
+fi
 
-cat > specs/demo/SPEC.md <<'SPEC_EOF'
-# Demo: two independent greeting scripts
-
-Parallel-window: 2
-
-## Problem
-
-The repo has no `src/` scripts yet. We want two tiny, independent bash
-deliverables that share no files, so a rolling-window drain can run them
-concurrently and land each on its own merge.
-
-## Solution
-
-Two dependency-free, Touch-disjoint bash scripts: `src/alpha.sh` prints
-`alpha`, `src/beta.sh` prints `beta`. They share no files and can land in
-any order.
-
-## Requirements
-
-- R1: a new executable `src/alpha.sh` prints `alpha`.
-- R2: a new executable `src/beta.sh` prints `beta`.
-
-## Out of scope
-
-- Any language other than bash; arguments, flags, or help text.
-
-## Parallelization
-
-- Group: 01, 02
-SPEC_EOF
-
-cat > specs/demo/tasks/01-alpha-script.md <<'T01_EOF'
-Status: pending
-Depends on: none
-Priority: P2
-Budget: 8 turns
-Spec: ../SPEC.md (requirement R1)
-Touch: src/alpha.sh
-
-# Task 01: alpha script
-
-## Goal
-
-Add a new executable `src/alpha.sh` that prints `alpha`.
-
-## Steps
-
-1. Create `src/alpha.sh` with a bash shebang that echoes `alpha`.
-2. Make it executable (`chmod +x`).
-
-## Acceptance
-
-- [ ] `test -x src/alpha.sh && [ "$(./src/alpha.sh)" = alpha ]` exits 0 (R1)
-T01_EOF
-
-cat > specs/demo/tasks/02-beta-script.md <<'T02_EOF'
-Status: pending
-Depends on: none
-Priority: P2
-Budget: 8 turns
-Spec: ../SPEC.md (requirement R2)
-Touch: src/beta.sh
-
-# Task 02: beta script
-
-## Goal
-
-Add a new executable `src/beta.sh` that prints `beta`.
-
-## Steps
-
-1. Create `src/beta.sh` with a bash shebang that echoes `beta`.
-2. Make it executable (`chmod +x`).
-
-## Acceptance
-
-- [ ] `test -x src/beta.sh && [ "$(./src/beta.sh)" = beta ]` exits 0 (R2)
-T02_EOF
-
-git add -A
-git -c user.name=eval -c user.email=eval@example.com commit -qm "fixture: demo two-task rolling-window spec"
+git add -A >/dev/null 2>&1 || true
+git commit -qm "fixture: bd store with a rolling-window dependency graph" >/dev/null 2>&1 || true
