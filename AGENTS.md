@@ -26,9 +26,9 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 
 ## State
 
-- Task-file `Status:` headers (in `specs/*/tasks/*.md`) are the canonical live state.
+- **bd (beads) is the canonical live state** for task status, dependencies, and ready-work (agentic-core-redesign cutover). Task-file `Status:` headers in `specs/*/tasks/*.md` are frozen display, no longer scanned.
 - `specs/QUEUE.md` is the wave plan—dispatch order, not live state.
-- `./specs/status.sh` renders the live dashboard from the headers on demand.
+- `./specs/status.sh` renders the live dashboard from bd on demand (`bd ready` + `bd list`).
 - In-flight session handoffs land as `HANDOFF.md` next to the active task/spec file (or `.claude/HANDOFF.md`).
 
 `/work` is the attended daily default: it answers "what's next" by running
@@ -41,7 +41,8 @@ headless.
 All re-verified 2026-07-11 (each run green); run from the repo root.
 
 - `bash scripts/check.sh`—the canonical check: runs every `tests/test_*.sh` plus the `tests/test_agentic_*.py` pytest suite (both by glob), with two other-spec-owned tests quarantined known-red.
-- `./specs/status.sh`—proves the queue parses; prints per-task status rows and totals.
+- `./specs/status.sh`—renders the live dashboard from bd; prints one row per issue and a TOTAL of the ready count plus each non-ready bd status.
+- `bash tests/test_status_cutover.sh`—proves `status.sh`'s totals equal bd's counts (`CUTOVER OK`).
 - `claude plugin validate .`—proves the plugin + marketplace manifests are valid.
 - `for t in tests/test_*.sh; do bash "$t"; done`—proves installers and hook templates work.
 - `./bin/check-agent-model-pins`—proves every `.claude/agents/*.md` pins a model alias in {haiku, sonnet, opus}.
@@ -106,9 +107,9 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 - If a required sync or push is blocked, stop and report the exact command and error.
 <!-- END BEADS INTEGRATION -->
 
-Transition note (2026-07-22): the Beads block above is bd-managed
-generic guidance. In this repo, until core task 09's cutover
-(specs/agentic-core-redesign), the markdown task queue under specs/
-remains the source of truth for spec work; bd tracks session-level
-and newly discovered work. The block's "do not use markdown TODO
-lists" rule applies after cutover.
+Cutover complete (2026-07-22, core task 09, specs/agentic-core-redesign):
+**bd is now the source of truth** for spec-task state, dependencies, and
+ready-work. The markdown task headers under `specs/` are frozen display;
+`specs/status.sh` and the work loop read bd, not the headers. The Beads
+block above (including its "do not use markdown TODO lists" rule) is fully
+in force.

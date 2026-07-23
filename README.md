@@ -34,8 +34,8 @@ Each arrow crosses a **file on disk**, not conversation memory—every stage
 can (and should) run in a fresh, cheap session. Small single-session specs
 may skip `/breakdown` and go straight to `/build specs/<slug>/SPEC.md`.
 To run the whole queue without relaunching each step, `/drain` dispatches a
-fresh worker per unblocked task in dependency order and defers human
-questions into the task files instead of stopping on them.
+fresh worker per ready issue in the bd queue in dependency order and defers
+human questions into bd instead of stopping on them.
 
 ## What's in the box
 
@@ -46,7 +46,7 @@ questions into the task files instead of stopping on them.
 | `/design`                   | Resolves open tech/architecture choices: parallel agents investigate candidates, judged on agent-buildability; decision recorded in the spec and CLAUDE.md                                                                                    |
 | `/breakdown`                | Splits a spec into one-session task files with dependencies and a parallelization map                                                                                                                                                         |
 | `/build`                    | Executes one task: scout-explore → proportional plan → test-first implement → independent verify → simplification pass → commit                                                                                                               |
-| `/drain`                    | Works the whole task queue unattended: one fresh worker per unblocked task (or an independent group concurrently on request), questions deferred into the task files and batched at the end, resumable from `Status` lines after any `/clear` |
+| `/drain`                    | Works the whole bd ready queue unattended: one fresh worker per ready issue (or an independent group concurrently on request), questions deferred into bd and batched at the end, resumable from `bd ready` after any `/clear` |
 | `/gate`                     | Installs deterministic quality gates: a Stop hook that blocks "done" until checks pass, auto-format on edit, protected-file denies                                                                                                            |
 | `/evals`                    | Scaffolds and runs stored skill evals (`evals/run.sh`): fresh fixture, headless run of the skill under test, artifact assertions—the repeatable complement to fresh-session testing                                                         |
 | `/critique`                 | Adversarial review of any spec, plan, or diff                                                                                                                                                                                                 |
