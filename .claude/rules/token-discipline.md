@@ -290,6 +290,20 @@ Three points govern the shape:
   re-prime median deliberately — the median is the behavior being changed —
   and 250k sits between the context p50 and p90 so the flag marks the heavy
   tail, not normal sessions.
+- **This budget is the main session's own context size, not total token
+  spend.** `hooks/session-refresh/refresh-check.sh` reads the p90 context
+  size of THIS session's own turns; it says nothing about how many tokens
+  ran in dispatched subagents or a Workflow run, whose transcripts are
+  discarded on return — only their small returned result lands in the main
+  session's context. A session that fans out heavily but keeps its own
+  context lean is the token-efficient pattern this file recommends, not a
+  budget violation; the fix for a real warning is trimming what the MAIN
+  session itself accumulated (long inline command output, pasted results,
+  a long back-and-forth), never dispatching less work to subagents. This is
+  also a distinct concept from the Workflow tool's own `budget.total` —
+  a user-set hard ceiling on total output tokens across one turn including
+  every subagent, described where `Workflow` is documented — the two
+  "budget" words name different things.
 
 The drain-specific verdict-count baton stays owned by specs/drain-wake-cost
 (cited, not restated); this doctrine covers the freehand and watch-then-act
