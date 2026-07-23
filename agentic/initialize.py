@@ -43,17 +43,41 @@ def _ensure_gitignore(root):
         handle.write(INTERACTIONS_PATH + "\n")
 
 
+# bd's own auto-commit always carries this exact subject line (verified
+# against bd 1.1.0's `bd init`).
+_BD_INIT_SUBJECT = "bd init: initialize beads issue tracking"
+
+
 def _controlled_bd_init(root):
     """Run ``bd init`` then undo its auto-commit, keeping the working tree.
 
     bd init writes and auto-commits AGENTS.md/CLAUDE.md/settings into the host
     repo; we reset that single commit so those files are curated, never
-    force-committed.
+    force-committed. A re-init over an already-committed ``.beads`` (e.g.
+    rebuilding a deleted Dolt store) is idempotent and legitimately creates
+    no new commit -- that's a no-op, not an error. Only a genuine advance of
+    HEAD gets reset, and only after verifying it's actually bd's own commit
+    sitting directly on the pre-init HEAD -- abort loudly instead of
+    resetting blind if something else committed in the same window (a
+    concurrent process, a hook), since a blind reset would silently
+    un-commit that other work too (agentic-vtp).
     """
     prior = _git(["rev-parse", "HEAD"], root)
     had_head = prior.returncode == 0
     bd.bd_init(str(root))
+    after = _git(["rev-parse", "HEAD"], root)
     if had_head:
+        if after.returncode != 0 or after.stdout.strip() == prior.stdout.strip():
+            return  # bd init committed nothing new -- nothing to undo.
+        subject = _git(["log", "-1", "--format=%s"], root).stdout.strip()
+        parent = _git(["rev-parse", "HEAD~1"], root)
+        if subject != _BD_INIT_SUBJECT or parent.stdout.strip() != prior.stdout.strip():
+            raise BdError(
+                f"agentic init: HEAD after bd init ({after.stdout.strip()[:12]}, "
+                f"subject {subject!r}) is not bd's own commit landing directly "
+                "on the pre-init HEAD; refusing to reset HEAD~1 blind -- "
+                "resolve manually before retrying"
+            )
         _git(["reset", "-q", "HEAD~1"], root)
     else:
         # bd's commit is the root commit: drop the ref and clear the index.
