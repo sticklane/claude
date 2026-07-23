@@ -1,6 +1,6 @@
 ---
 name: distill
-description: Captures this session's corrections, surprises, and repeated procedures into CLAUDE.md, rules, or new skills so the next session doesn't repay for them. Use proactively at the end of a task, after the user corrects a mistake, or whenever the same instructions have been given twice.
+description: Captures this session's corrections, surprises, and repeated procedures into CLAUDE.md, rules, or new skills so the next session doesn't repay for them. Use proactively at the end of a task, after the user corrects a mistake, or whenever the same instructions have been given twice. Trigger phrases - "/distill", "distill this session", "capture what we learned".
 model: opus
 ---
 

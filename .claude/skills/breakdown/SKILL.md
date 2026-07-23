@@ -1,6 +1,6 @@
 ---
 name: breakdown
-description: Decomposes a SPEC.md into independent task files sized for one clean agent session each, with per-task acceptance commands and a parallelization map. Use after a spec is written, when the user wants a spec split into tasks, or asks how to divide work across sessions or agents.
+description: Decomposes a SPEC.md into independent task files sized for one clean agent session each, with per-task acceptance commands and a parallelization map. Use after a spec is written, when the user wants a spec split into tasks, or asks how to divide work across sessions or agents. Trigger phrases - "/breakdown", "break this spec down", "split this into tasks".
 argument-hint: "[path/to/SPEC.md]"
 ---
 
