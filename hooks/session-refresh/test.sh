@@ -1,29 +1,28 @@
 #!/usr/bin/env bash
 # Unit tests for refresh-check.sh — the session-refresh prompt-submit hook.
-# Drives the hook against synthetic agentprof summary fixtures via a fake
-# agentprof double, asserting the over-budget directive appears on exactly
-# the over-budget path and nowhere else. Never touches real session data.
+# Drives the hook against synthetic transcript JSONL fixtures (fixtures/),
+# asserting the over-budget directive appears on exactly the over-budget
+# path and nowhere else. Never touches real session data.
 set -u
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOOK="$DIR/refresh-check.sh"
 FIX="$DIR/fixtures"
-FAKE="$FIX/fake-agentprof.sh"
 
 pass=0
 fail=0
 
-# stdin_for <session-id> — a synthetic UserPromptSubmit hook payload.
+# stdin_for <transcript-path> — a synthetic UserPromptSubmit hook payload.
 stdin_for() {
-  printf '{"session_id":"%s","hook_event_name":"UserPromptSubmit","prompt":"go"}' "$1"
+  printf '{"session_id":"test-session","transcript_path":"%s","hook_event_name":"UserPromptSubmit","prompt":"go"}' "$1"
 }
 
-# run_with_fake <fixture-basename> <session-id> — invoke the hook with the
-# fake agentprof wired in, capturing stdout. Sets OUT and RC.
-run_with_fake() {
-  local fixture="$FIX/$1" sid="$2"
-  OUT="$(stdin_for "$sid" | AGENTPROF_BIN="$FAKE" FAKE_SUMMARY_SRC="$fixture" \
-    bash "$HOOK")"
+# run_hook <transcript-path> [env assignments...] — invoke the hook,
+# capturing stdout. Sets OUT and RC.
+run_hook() {
+  local transcript="$1"
+  shift
+  OUT="$(stdin_for "$transcript" | env "$@" bash "$HOOK")"
   RC=$?
 }
 
@@ -37,57 +36,60 @@ check() { # check <description> <condition-result 0/1>
   fi
 }
 
-# 1. Over budget on the re-prime arm → directive naming /handoff, exit 0.
-run_with_fake over-reprime.json test-session
-check "over-budget (re-prime arm) emits /handoff directive" \
-  "$([ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '/handoff' && echo 0 || echo 1)"
+# 1. Under budget on both arms → empty stdout, exit 0.
+run_hook "$FIX/under.jsonl"
+check "under-budget produces empty stdout" "$([ -z "$OUT" ] && echo 0 || echo 1)"
+check "under-budget exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
 
-# 2. Over budget on the context arm → directive naming /handoff, exit 0.
-run_with_fake over-ctx.json test-session
+# 2. Over budget on the context-size arm → directive naming /handoff, exit 0.
+run_hook "$FIX/over-ctx.jsonl"
 check "over-budget (context arm) emits /handoff directive" \
   "$([ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '/handoff' && echo 0 || echo 1)"
 
-# 3. Under budget → zero bytes on stdout, exit 0. (The fixture also holds a
-#    separate over-budget session, proving the hook reads only its own id.)
-run_with_fake under.json test-session
-check "under-budget produces empty stdout" \
-  "$([ -z "$OUT" ] && echo 0 || echo 1)"
-check "under-budget exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
+# 3. Over budget on the re-prime arm (3 cache-creation spikes past the first
+#    call) → directive naming /handoff, exit 0.
+run_hook "$FIX/over-reprime.jsonl"
+check "over-budget (re-prime arm) emits /handoff directive" \
+  "$([ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '/handoff' && echo 0 || echo 1)"
 
-# 4. Session id absent from the summary → treated as under budget (empty).
-run_with_fake under.json ghost-session
-check "session absent from summary produces empty stdout" \
+# 4. Sidechain (subagent) usage is excluded from both arms — a huge
+#    isSidechain:true entry after the real last main-loop call must not
+#    surface in the computed context size or re-prime count.
+run_hook "$FIX/sidechain-ignored.jsonl"
+check "sidechain usage excluded produces empty stdout" \
   "$([ -z "$OUT" ] && echo 0 || echo 1)"
-check "session absent from summary exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
+check "sidechain usage excluded exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
 
-# 5. agentprof binary absent from PATH → empty stdout, exit 0. A committed
-#    fake-jq fixture stands in as `jq` (first on the restricted PATH) so the
-#    hook clears its `command -v jq` guard on ANY machine — real jq may live
-#    outside /usr/bin:/bin (e.g. homebrew's /opt/homebrew/bin) — and so
-#    reaches the intended agentprof-binary-absent branch instead of
-#    short-circuiting at the jq guard. agentprof itself stays unresolvable on
-#    the restricted PATH. The setup (fixture present + executable) is gated
-#    into the assertion, so a missing/unusable fixture fails test 5 rather
-#    than silently falling through to a system jq.
-JQBIN="$(mktemp -d)"
-cp "$FIX/fake-jq.sh" "$JQBIN/jq" && chmod +x "$JQBIN/jq"
-JQ_SETUP=$?
-OUT="$(stdin_for test-session | env -u AGENTPROF_BIN PATH="$JQBIN:/usr/bin:/bin" \
-  bash "$HOOK")"
+# 5. A malformed/truncated trailing line (the transcript mid-write when the
+#    hook fires) must not blank out the whole read — the valid lines before
+#    it still drive the over-ctx directive.
+run_hook "$FIX/truncated-tail.jsonl"
+check "truncated trailing line still emits /handoff directive from prior valid lines" \
+  "$([ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '/handoff' && echo 0 || echo 1)"
+
+# 6. transcript_path absent from the stdin payload → silent no-op.
+OUT="$(printf '{"session_id":"test-session","hook_event_name":"UserPromptSubmit","prompt":"go"}' | bash "$HOOK")"
 RC=$?
-rm -rf "$JQBIN"
-check "missing agentprof binary produces empty stdout" \
-  "$([ "$JQ_SETUP" -eq 0 ] && [ -z "$OUT" ] && echo 0 || echo 1)"
-check "missing agentprof binary exits 0" \
-  "$([ "$JQ_SETUP" -eq 0 ] && [ "$RC" -eq 0 ] && echo 0 || echo 1)"
+check "missing transcript_path produces empty stdout" "$([ -z "$OUT" ] && echo 0 || echo 1)"
+check "missing transcript_path exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
 
-# 6. agentprof present but erroring → empty stdout, exit 0.
-OUT="$(stdin_for test-session | AGENTPROF_BIN="$FAKE" FAKE_AGENTPROF_FAIL=1 \
-  bash "$HOOK")"
+# 7. transcript_path points at a nonexistent file → silent no-op.
+run_hook "/no/such/transcript-$$.jsonl"
+check "unreadable transcript produces empty stdout" "$([ -z "$OUT" ] && echo 0 || echo 1)"
+check "unreadable transcript exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
+
+# 8. jq absent from PATH → silent no-op. Uses an absolute bash path since a
+#    restricted PATH must not block resolving the interpreter itself.
+OUT="$(stdin_for "$FIX/under.jsonl" | PATH="/nonexistent" /bin/bash "$HOOK")"
 RC=$?
-check "agentprof error produces empty stdout" \
-  "$([ -z "$OUT" ] && echo 0 || echo 1)"
-check "agentprof error exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
+check "missing jq produces empty stdout" "$([ -z "$OUT" ] && echo 0 || echo 1)"
+check "missing jq exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
+
+# 9. Custom budgets are honored: a session under the default 250000-token
+#    ctx budget trips a lowered REFRESH_CTX_BUDGET.
+run_hook "$FIX/under.jsonl" REFRESH_CTX_BUDGET=1000
+check "lowered ctx budget trips the directive on an otherwise under-budget session" \
+  "$([ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '/handoff' && echo 0 || echo 1)"
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

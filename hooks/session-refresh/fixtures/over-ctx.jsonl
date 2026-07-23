@@ -1,0 +1,4 @@
+{"type":"user","isSidechain":false,"timestamp":"2026-07-22T10:00:00.000Z","message":{"content":"go"}}
+{"type":"assistant","isSidechain":false,"timestamp":"2026-07-22T10:00:01.000Z","message":{"id":"msg_1","model":"claude-sonnet-5","usage":{"input_tokens":1000,"output_tokens":40,"cache_read_input_tokens":2000,"cache_creation_input_tokens":1000}}}
+{"type":"assistant","isSidechain":false,"timestamp":"2026-07-22T10:00:05.000Z","message":{"id":"msg_2","model":"claude-sonnet-5","usage":{"input_tokens":1000,"output_tokens":40,"cache_read_input_tokens":2000,"cache_creation_input_tokens":1000}}}
+{"type":"assistant","isSidechain":false,"timestamp":"2026-07-22T10:00:09.000Z","message":{"id":"msg_3","model":"claude-sonnet-5","usage":{"input_tokens":100000,"output_tokens":60,"cache_read_input_tokens":200000,"cache_creation_input_tokens":1000}}}

@@ -1,33 +1,46 @@
 # session-refresh hook
 
 A `UserPromptSubmit` hook that flags a session running over its wake budget.
-On every prompt submit it reads the session id from the hook's stdin payload,
-asks `agentprof` for that session's re-prime count and p90 main-loop context,
-and — past either arm of the wake budget — injects a directive telling the
-session to write a `/handoff` and end rather than carrying its accumulated
-context into another cache-re-priming wake.
+On every prompt submit it reads `transcript_path` from the hook's own stdin
+payload and computes the budget directly from that one transcript file — no
+`agentprof` dependency, no shelling out to a separate process, no windowed
+re-parse of transcript history (2026-07-23 decoupling: `agentprof` stays the
+tool for general cost-attribution digging; this guardrail only needs to be
+cheap and always available).
 
 The budget arms and their rationale live in `.claude/rules/token-discipline.md`
-under "Session refresh"; agentprof owns the re-prime definition (this hook
-never re-implements it). Defaults: **3 re-primes** or a **250k-token p90
-context**.
+under "Session refresh". Defaults: **250k-token context size** or **3
+re-primes**.
 
 ## What it does
 
-- Silent (empty stdout, exit 0) under budget, on any agentprof error, and when
-  the `agentprof` binary or `jq` is absent — a missing profiler must never
-  break a prompt.
-- Injects the directive only when `reprime_count >= 3` **or** `p90_ctx >=
-  250000` for the current session.
-- Injects text only; it never ends the session or kills work. The session (or
-  its human) acts on the directive.
+- Silent (empty stdout, exit 0) under budget, on any parse error, and when
+  `jq` is absent or `transcript_path` is missing/unreadable — a broken
+  guardrail must never break a prompt.
+- Reads the session's own transcript (a JSONL file, one line per turn) and
+  scans its main-loop (`isSidechain` false) assistant lines that carry a
+  `usage` object, in file order:
+  - **Context-size arm** — the most recent such line's
+    `input_tokens + cache_read_input_tokens` is this turn's live context
+    size. This is exactly `agentprof`'s own "ctx" definition
+    (`agentprof/internal/costsummary/costsummary.go`), mirrored rather than
+    reinvented so the two tools stay conceptually consistent — but it is a
+    single live reading of the current turn, not a percentile over a
+    window like `agentprof`'s `p90_ctx`.
+  - **Re-prime arm** — counts how many main-loop calls past the first show a
+    `cache_creation_input_tokens` spike past `REFRESH_REPRIME_THRESHOLD`, the
+    same labeling rule and default `agentprof` uses for its `reprime_count`
+    (`agentprof/internal/claude/claude.go`).
+- Injects the directive when either arm is past budget. Injects text only;
+  it never ends the session or kills work. The session (or its human) acts
+  on the directive.
+- A malformed or truncated trailing transcript line (the file mid-write when
+  the hook fires) does not blank out the read — lines before it still drive
+  the computation.
 
 ## Requirements
 
-- `jq` on `PATH`.
-- The `agentprof` binary on `PATH` (or its path in `AGENTPROF_BIN`). Build it
-  with `cd agentprof && go build -o agentprof .` and put it on `PATH`, or
-  point `AGENTPROF_BIN` at the built binary. Without it the hook is a no-op.
+- `jq` on `PATH`. That's it — no external binary, no build step.
 
 ## Wiring (one user-run step)
 
@@ -62,12 +75,11 @@ Restart or reload sessions for the setting to take effect.
 
 Override the defaults in the hook's environment:
 
-| Variable                 | Default  | Meaning                              |
-| ------------------------ | -------- | ------------------------------------ |
-| `REFRESH_REPRIME_BUDGET` | `3`      | re-prime count arm                   |
-| `REFRESH_CTX_BUDGET`     | `250000` | p90 context-token arm                |
-| `REFRESH_SINCE_DAYS`     | `2`      | agentprof `--since` look-back window |
-| `AGENTPROF_BIN`          | —        | explicit agentprof path              |
+| Variable                    | Default  | Meaning                              |
+| --------------------------- | -------- | ------------------------------------ |
+| `REFRESH_CTX_BUDGET`        | `250000` | context-size arm (tokens)            |
+| `REFRESH_REPRIME_BUDGET`    | `3`      | re-prime count arm                   |
+| `REFRESH_REPRIME_THRESHOLD` | `50000`  | cache-creation spike ceiling that labels one call a re-prime |
 
 ## Tests
 
@@ -75,7 +87,7 @@ Override the defaults in the hook's environment:
 bash hooks/session-refresh/test.sh
 ```
 
-The tests drive the hook against synthetic summary fixtures via a fake
-`agentprof` double (`fixtures/`), covering both over-budget arms, the
-under-budget and session-absent no-ops, and the missing/erroring-binary
-no-ops. They never read real session data.
+The tests drive the hook against synthetic transcript JSONL fixtures
+(`fixtures/`), covering both over-budget arms, sidechain-usage exclusion, a
+malformed trailing line, the under-budget and missing-transcript-path
+no-ops, and the missing-`jq` no-op. They never read real session data.

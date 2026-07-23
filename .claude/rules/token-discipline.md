@@ -291,9 +291,19 @@ Three points govern the shape:
   and 250k sits between the context p50 and p90 so the flag marks the heavy
   tail, not normal sessions.
 - **This budget is the main session's own context size, not total token
-  spend.** `hooks/session-refresh/refresh-check.sh` reads the p90 context
-  size of THIS session's own turns; it says nothing about how many tokens
-  ran in dispatched subagents or a Workflow run, whose transcripts are
+  spend.** `hooks/session-refresh/refresh-check.sh` reads THIS session's own
+  transcript directly (`transcript_path` off the hook's own stdin payload) —
+  no `agentprof` dependency, no shelled-out process, no windowed re-parse
+  (2026-07-23 decoupling: `agentprof` stays the tool for general
+  cost-attribution digging, not this guardrail's dependency). The context-size
+  arm is this turn's live `input_tokens + cache_read_input_tokens` off the
+  most recent main-loop assistant usage entry — mirroring `agentprof`'s own
+  "ctx" definition (`agentprof/internal/costsummary/costsummary.go`) so the
+  two stay conceptually consistent, but a single current reading, not a
+  window percentile. The re-prime arm counts this session's own
+  `cache_creation_input_tokens` spikes past `REFRESH_REPRIME_THRESHOLD`, the
+  same labeling rule `agentprof` uses. Either arm says nothing about how many
+  tokens ran in dispatched subagents or a Workflow run, whose transcripts are
   discarded on return — only their small returned result lands in the main
   session's context. A session that fans out heavily but keeps its own
   context lean is the token-efficient pattern this file recommends, not a
