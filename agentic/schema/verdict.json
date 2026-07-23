@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sticklane.dev/agentic/verdict.json",
+  "title": "agentic worker verdict",
+  "description": "The one JSON result a worker run writes to the compose-named verdict file. `agentic verdict` validates it against this schema before updating the tracker.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary"],
+  "properties": {
+    "status": {
+      "description": "Terminal disposition of the task attempt.",
+      "enum": ["DONE", "BLOCKED", "DEFERRED"]
+    },
+    "summary": {
+      "description": "One-paragraph plain-language summary of what happened.",
+      "type": "string",
+      "minLength": 1
+    },
+    "commits": {
+      "description": "Commit subjects this attempt produced, if any.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "unblock": {
+      "description": "The typed action needed to unblock the task. Required when status is BLOCKED. Types mirror the human-blocker vocabulary.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "detail"],
+      "properties": {
+        "type": { "enum": ["ask", "run", "provision", "decide"] },
+        "detail": { "type": "string", "minLength": 1 }
+      }
+    },
+    "deferred_questions": {
+      "description": "Open questions surfaced instead of guessing. Required (non-empty) when status is DEFERRED.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "discovered": {
+      "description": "Work discovered during the attempt; filed as new issues linked discovered-from the origin task.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "priority": { "type": "integer", "minimum": 0, "maximum": 4 }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["status"],
+        "properties": { "status": { "const": "BLOCKED" } }
+      },
+      "then": { "required": ["unblock"] }
+    },
+    {
+      "if": {
+        "required": ["status"],
+        "properties": { "status": { "const": "DEFERRED" } }
+      },
+      "then": {
+        "required": ["deferred_questions"],
+        "properties": { "deferred_questions": { "minItems": 1 } }
+      }
+    }
+  ]
+}

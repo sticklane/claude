@@ -9,15 +9,13 @@ as stubs that exit 2 ("not implemented").
 import argparse
 import sys
 
-from agentic import initialize, ready, resume
+from agentic import claim, initialize, ready, resume, verdict
 from agentic.bd import BdError
 
-# Verbs whose bodies belong to later tasks (04, 06, 07, 11). Registered now as
-# stubs so the subcommand surface is stable and disjoint. ready/resume are
-# implemented (task 03) and routed to their modules below.
+# Verbs whose bodies belong to later tasks (06, 07, 11). Registered now as
+# stubs so the subcommand surface is stable and disjoint. ready/resume (03)
+# and claim/verdict (04) are implemented and routed to their modules below.
 _STUB_SUBCOMMANDS = (
-    "claim",
-    "verdict",
     "compose",
     "ctx",
     "inbox",
@@ -61,6 +59,21 @@ def build_parser():
         "--json", action="store_true", help="emit the frontier + claims as JSON"
     )
     p_resume.set_defaults(func=resume.run)
+
+    p_claim = sub.add_parser(
+        "claim", help="Atomically claim one task (assignee=you, in_progress)."
+    )
+    p_claim.add_argument("id", help="the task id to claim")
+    p_claim.set_defaults(func=claim.run)
+
+    p_verdict = sub.add_parser(
+        "verdict", help="Validate a worker's JSON result and record it on the task."
+    )
+    p_verdict.add_argument("id", help="the task id the verdict is for")
+    p_verdict.add_argument(
+        "--file", required=True, help="path to the worker's verdict JSON file"
+    )
+    p_verdict.set_defaults(func=verdict.run)
 
     for name in _STUB_SUBCOMMANDS:
         p = sub.add_parser(name, help=f"({name}) not implemented yet")
