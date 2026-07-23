@@ -54,8 +54,8 @@ actionable part; don't re-narrate the repo cards.
 The inbox is **human-bounded work only**: agent-bounded work (drafts,
 `Unblock: run:/agent:` rechecks, all-tasks-done specs awaiting the
 verifier) proceeds via dispatch and never appears as an attention item —
-the one exception is generation/relaunch limits (parked handoffs, drain
-batons), which surface because relaunch is human-gated.
+the one exception is a parked `HANDOFF.md`, which surfaces because
+resuming it needs a human to restart the session.
 
 - No ROOTS → it scans `~/code ~/src ~/projects ~/dev ~/repos ~/work`, the
   cwd, **plus every repo any Claude Code session has touched** (from session

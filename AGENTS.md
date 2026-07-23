@@ -13,8 +13,7 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 - `agentprof/`—pprof profiler for AI-agent token & spend attribution (Claude Code transcripts, GCP billing, OTel; cache re-prime + skill/project attribution metrics—flags and labels in its README/SCHEMA).
 - `agent-console/`—local zero-LLM dashboard (workboard view, `/workboard-kanban` board view grouping every repo's spec tasks into status columns, cost panel incl. re-prime line) for this machine's Claude Code setup.
 - `context-tree/`—Rust CLI `ctx` + MCP server: tree-sitter symbol index (12 languages), structural queries (tree/sig/map/deps/refs/at), refactor-surviving symbol notes; the `/ctx` skill teaches agents to use it.
-- `antigravity/`—mirrored port of `.claude/` for the Antigravity runtime.
-- `codex/`—thin overlay on `antigravity/` for the Codex runtime: symlinked skills plus three real-content wrappers (drain/build/evals); port chain is `.claude/` → `antigravity/` → `codex/` (CLAUDE.md's port-chain bullet).
+- `antigravity/`, `codex/`—one-page READMEs pointing at the data layer (bd's queue, ctx's index, `specs/`); the former mirrored-port trees were deleted in the 2026-07-22 portability pivot (CLAUDE.md's "Authoring conventions").
 - `bin/`—installer scripts (quality gates, skill sync).
 - `docs/`—research and doctrine (anthropic-playbook, external-playbooks, memory index).
 - `evals/`—skill eval scenarios plus the headless runner.

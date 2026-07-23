@@ -37,8 +37,7 @@ their runtime's vocabulary.
 | verifier (acceptance evidence; advisory reviewer lane)               | `sonnet`                                                                                                                       |
 | `critic` (spec/plan/diff critique)                                   | `opus` — deep-tier per token-discipline ("architecture critique"); a critic pass costs ~1% of a wrong implementation           |
 | `/distill` (skill frontmatter)                                       | `opus`                                                                                                                         |
-| retry escalation (attempt 2, verifier evidence in prompt)            | `fable` — a retry after a deep-tier (`opus`) attempt failed, the frontier-tier sanction in `.claude/rules/token-discipline.md` |
-| tournament escalation (attempts 3+, after the `fable` retry failed)  | `fable` — same frontier-tier alias as the retry above, now run as 3 concurrent angle-variant attempts instead of 1             |
+| retry escalation (one relaunch, one tier up, verifier evidence in prompt) | `fable` — a retry after a deep-tier (`opus`) attempt failed, the frontier-tier sanction in `.claude/rules/token-discipline.md` |
 
 Frontier stays sparing beyond that one active rung: security-critical
 review and novel-architecture sessions are the other two sanctioned
@@ -69,7 +68,7 @@ test/lint/build cmds>),Bash(git add *),Bash(git commit *)"`.
 - `<turn cap>` — the task's `Budget:` turn count when present, else 80;
   the hard cap behind the prompt's soft stop.
 - `<tier alias>` — the Role pins ladder, same rungs as Task-tool
-  dispatch: `opus` attempt 1, `fable` relaunch, `fable` tournament.
+  dispatch: `opus` attempt 1, `fable` relaunch (one tier up, one retry).
 
 `dontAsk` makes unapproved tools abort instead of hanging — the CI
 baseline from the playbook's mechanism ladder.
