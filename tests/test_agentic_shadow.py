@@ -288,3 +288,13 @@ def test_differential_task_ids_are_stable_across_syncs(tmp_path):
     expected = "md-" + hashlib.sha1(rel.encode()).hexdigest()[:8]
     assert shadow.task_id(rel) == expected
     assert shadow.task_id(rel) == shadow.task_id(rel)
+
+
+def test_cli_registers_shadow_sync_subcommand():
+    """shadow-sync is invocable via the agentic CLI, not only as a module —
+    the pipeline's programmatic entry (breakdown's post-authoring sync) needs
+    a runnable command, not knowledge of the package layout."""
+    from agentic.cli import build_parser
+
+    args = build_parser().parse_args(["shadow-sync"])
+    assert args.func is shadow.run

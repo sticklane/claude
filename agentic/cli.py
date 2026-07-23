@@ -9,7 +9,7 @@ as stubs that exit 2 ("not implemented").
 import argparse
 import sys
 
-from agentic import audit, claim, initialize, ready, resume, verdict
+from agentic import audit, claim, initialize, ready, resume, shadow, verdict
 from agentic.bd import BdError
 
 # Verbs whose bodies belong to later tasks (06, 07, 11). Registered now as
@@ -74,6 +74,12 @@ def build_parser():
         "--file", required=True, help="path to the worker's verdict JSON file"
     )
     p_verdict.set_defaults(func=verdict.run)
+
+    p_shadow = sub.add_parser(
+        "shadow-sync",
+        help="Mirror specs/*/tasks/*.md headers into bd (one-way, markdown-authoritative).",
+    )
+    p_shadow.set_defaults(func=shadow.run)
 
     p_audit = sub.add_parser(
         "audit",
