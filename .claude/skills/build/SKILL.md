@@ -302,10 +302,12 @@ specs/<slug>/tasks/*.md` (a header-only match, never a full `Read` of each
 
 ## Ultra path
 
-When the active runtime profile documents an orchestration section AND
-ultracode is opted in, build's verification runs as a workflow instead of one
-verifier; with the profile silent, the single-verifier step 3 above is the
-only path. The profile holds the template — this skill only names the shape.
+When ultracode is opted in and build runs top-level (an attended `/build`,
+not a drain worker), build's verification runs as a workflow instead of one
+verifier. A build worker dispatched by drain always uses the single-verifier
+step 3 above — `Workflow` nesting is one level only, so a worker inside
+drain's workflow cannot compile its own; this is not a gate, it's the nesting
+rule. This skill only names the shape.
 
 Acceptance commands run FIRST as the deterministic gate. Each criterion with
 no runnable command then gets a refute-majority vote — 3 verifiers on distinct

@@ -88,11 +88,9 @@ findings` or similar), and re-run the critic — this apply→recheck loop is
 
 ## Ultra path
 
-When the active runtime profile documents an orchestration section AND
-ultracode is opted in (keyword, session flag, or explicit ask), critique may
-run a panel instead of one critic; otherwise, and always when the profile is
-silent, the single-critic path above is the only path. The active runtime
-profile carries the workflow-script template — this skill only points at it.
+When ultracode is opted in (keyword, session flag, or explicit ask),
+critique may run a panel instead of one critic; otherwise the single-critic
+path above is the only path. This skill only names the shape.
 
 Panel: 3–5 lens-diverse critics (correctness, security, verification-gaps,
 scope, cost-if-missed) run in parallel over the same artifact POINTER.

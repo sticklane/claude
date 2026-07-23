@@ -14,13 +14,9 @@ set -u
 
 cd "$(dirname "$0")/.."
 
-# tests/test_skill_chain_determinism.sh — retired by core task 10 (mirror
-#   machinery); its owning spec (deterministic-skill-chaining) is obsolete
-#   under the redesign, which subsumes it.
 # tests/test_eval_coverage_lint.sh — owner: specs/eval-coverage-tiers; the
 #   lint it runs needs bash 4+ (declare -A) and this host has 3.2.
 QUARANTINE=(
-  "tests/test_skill_chain_determinism.sh"
   "tests/test_eval_coverage_lint.sh"
 )
 

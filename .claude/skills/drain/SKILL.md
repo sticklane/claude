@@ -1,6 +1,6 @@
 ---
 name: drain
-description: Works the remaining bd (beads) ready queue unattended - dispatches one fresh worker per ready issue in dependency order (or an independent group concurrently when the user asks for throughput), verifies each, closes it in bd, defers clarification questions instead of stopping, and batches them for the human when the queue runs dry. At lowest priority, also auto-breaks-down critic-READY specs that have no tasks yet. Runs until bd ready is empty or only blocked work remains. Trigger phrases - "/drain", "drain the queue", "drain specs/<slug>", "work the queue unattended", or a pipeline chain the user's live message requested ("critique, breakdown, and drain").
+description: Works the remaining bd (beads) ready queue by compiling it into a Workflow - Claude groups the ready issues into dependency-ordered, Touch-disjoint waves, then runs one fresh worktree worker per issue (concurrent within a wave), verifies each, closes it in bd, defers clarification questions instead of stopping, and batches them for the human when the queue runs dry. At lowest priority, also auto-breaks-down critic-READY specs that have no tasks yet. Runs until bd ready is empty or only blocked work remains; requires the Workflow tool. Trigger phrases - "/drain", "drain the queue", "drain specs/<slug>", "work the queue unattended", or a pipeline chain the user's live message requested ("critique, breakdown, and drain").
 argument-hint: "[bd label/query or specs/<slug>]"
 ---
 
@@ -46,9 +46,12 @@ record why on the issue and leave it for the batch interview.
 ## The loop
 
 1. **Read the ready queue.** `bd ready --json` — the unblocked, priority-
-   sorted issues whose dependencies are closed and whose declared file paths
-   do not overlap another claimed issue (bd computes this; no owner lease is
-   needed). Empty, or only blocked issues remain → go to the batch interview.
+   sorted issues whose dependencies are closed. bd does NOT compute file
+   overlap for hand-filed issues (only `python3 -m agentic ready` applies the
+   Touch-disjoint frontier), so Claude checks Touch disjointness itself when
+   grouping issues into concurrent waves (a hand-filed issue with no Touch
+   metadata is treated as overlapping everything — it runs solo). Empty, or
+   only blocked issues remain → go to the batch interview.
 
 2. **Claim, then dispatch a fresh worker.** For each issue to run this pass,
    claim it atomically (`bd update <id> --claim`, or `bd ready --claim`),
@@ -96,18 +99,38 @@ under `HUMAN.md` per `.claude/rules/human-blockers.md` (cite it, don't
 restate). Human-clearable blockers stay in bd as blocked issues with their
 typed `Unblock:` recorded.
 
-## Ultra path
+## Execution model — compile the queue into a workflow
 
-When the active runtime profile documents an orchestration section AND
-ultracode is opted in, drain may compile the ready queue into a native
-workflow script instead of dispatching each worker by hand; with the profile
-silent (plugin and eval installs), the sequential loop above is the only
-path. The active runtime profile holds the script template — this skill only
-names the shape: a pipeline over bd dependency groups, one script-awaited
-worker per issue (`isolation: worktree`, the reference.md worker prompt plus
-effort-tier language), a verifier per completed issue, and drain's `bd close`
-after each verdict as above. bd remains the checkpoint: interrupting loses
-nothing — re-running drain picks up from `bd ready`.
+Drain compiles the ready queue into a native `Workflow` script and runs it;
+"The loop" above is the per-issue semantics that compilation implements, not
+a hand-dispatched fallback. There is no gate and no runtime-profile
+condition: invoking `/drain` is itself the `Workflow` opt-in (a slash command
+whose instructions call the tool), and a live `/drain` is the launch
+authorization. Claude still does the planning — it reads `bd ready`, groups
+the issues by dependency order and Touch-disjointness into concurrent-safe
+waves, and emits the script; bd holds the state, the workflow executes it
+deterministically.
+
+The compiled shape:
+
+- a `pipeline`/`parallel` over the bd dependency groups (Touch-disjoint
+  issues in a group run concurrently; groups serialize on their edges);
+- one script-awaited `isolation: worktree` worker per issue, running the
+  build skill's procedure via the reference.md worker prompt plus
+  effort-tier language. **These workers run build's single-verifier path,
+  never build's own workflow verification** — `Workflow` nesting is one
+  level only (`workflow()` inside a child throws), so a drain worker cannot
+  compile its own sub-workflow;
+- a `verifier` per completed issue, then drain's `bd close` (or the typed
+  `Unblock:`/deferred record) after each verdict, exactly as "The loop"
+  step 3 specifies;
+- discovered work filed with `bd create --deps discovered-from:<id>`.
+
+bd remains the checkpoint: interrupting loses nothing — re-running `/drain`
+recompiles from the current `bd ready`. **Precondition:** the `Workflow`
+tool must be available this session; in an environment without it (a headless
+or gated install), drain stops and says so rather than silently dispatching
+nothing — there is no sequential fallback.
 
 Next stage: none — drain runs until the queue drains, then batches blockers
 for the human (human-launched).
