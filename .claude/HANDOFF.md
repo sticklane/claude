@@ -1,39 +1,140 @@
-Task: cross-repo beads adoption + skill retirement + skill health-check (all substantially complete)
-Status: done, with 5 real follow-up items open in bd
-Next step: triage the 5 open bd items below by priority (agentic-vtp is P0/critical)
-Resume with: bd ready (or bd show <id> on each item below)
-Blocking on: nothing technical — these are judgment/priority calls
+Task: plugin updates + fix cross-repo-cutover follow-up items + critical repo audit ("with fable")
+Status: done, pending two user decisions (not blocking, just unanswered)
+Next step: re-ask the two open questions below and act on the answer
+Resume with: read this file in full, then just talk to the user — no skill needed
+Blocking on: nothing technical — these are the user's calls to make
 
-## What this session did (all pushed to origin/main, all verified)
+## What this session did (all committed and pushed to origin/main, verified green)
 
-1. **Resumed and completed the 2026-07-22 architecture pivot** (`specs/agentic-core-redesign`): all 15 tasks done/obsolete, epic `agentic-4t2` closed at 11/11 children. bd is now `~/claude`'s own source of truth.
-2. **Full bd cutover across every other repo on this machine** — automation, fooszone, interview-prep, portfolio-tracker, ynab-mcp-server, hub, budget_analysis, `~/specs`, and the life-vault. Each got: `agentic init`, a verified non-lossy import of existing task/checkbox state into bd, CLAUDE.md/AGENTS.md rewritten to make bd the sole tracker with the discovered-work convention, and a push. Real merge conflicts in portfolio-tracker/ynab-mcp-server (genuine unrelated upstream commits) were resolved without data loss.
-3. **Retired `/list-specs` and `/prioritize`** (never re-pointed onto bd per core task 09's own stated goal) — deleted, all references swept, critic-reviewed, 3 critic-found nits fixed, plugin bumped to 0.13.0.
-4. **Redesigned `hooks/session-refresh/refresh-check.sh`** to read `transcript_path` directly off its own hook payload instead of shelling out to `agentprof` — same budget defaults, same underlying "ctx" formula (mirrored from `agentprof/internal/costsummary/costsummary.go`, not reinvented), re-prime detection now fully self-contained too. `agentprof` stays the tool for general cost-attribution digging, decoupled from this guardrail.
-5. **Fixed a real eval-wiring bug**: `evals/work/01-queue-discipline` was failing not because `/work` misbehaves (forensic evidence from real transcripts confirms it claims before implementing, correctly) but because its stub runner wasn't being auto-applied on the plain invocation. Fixed with a `runner-cmd.txt` convention in `evals/run.sh`; now passes deterministically.
-6. **Removed dead code**: `.claude/skills/_shared/touch_disjoint.py` + its test (orphaned since `admission.py`'s deletion).
-7. Added trigger phrases to `breakdown`/`distill` skill descriptions (health-check finding).
-8. Clarified `.claude/rules/token-discipline.md`'s wake-budget doctrine: it gates main-session context only, not subagent/workflow token totals — a genuinely different concept from the Workflow tool's own `budget.total`.
+1. Checked all 4 installed plugins for updates (`claude plugin update <name>`
+   for each): `frontend-design` pulled an update (needs a Claude Code
+   restart to apply), `agentic`/`cloudflare`/`prompt-improver` were current.
+2. Consumed the prior session's `.claude/HANDOFF.md` (cross-repo beads
+   adoption + skill retirement) and fixed/closed all 5 of its open
+   follow-up bd items:
+   - `agentic-vtp` (P0): `agentic init`'s `_controlled_bd_init` could
+     silently un-commit unrelated real work if bd's own init didn't
+     cleanly advance HEAD. Fixed with TDD (commit `dd95890f`,
+     `tests/test_agentic_initialize.py`, 3 tests) — now verifies the
+     commit it's about to reset is actually bd's own (subject + parent-SHA
+     check) before resetting; aborts loudly otherwise.
+   - `agentic-d3x`, `agentic-bsd`, `agentic-ml6`: stale references to
+     deleted mirror/baton machinery in breakdown/workboard/drain
+     SKILL.md — cleaned up (commit `5d614c02`).
+   - `agentic-49u`: swept `docs/TASKS.md` (5 pivot-moot entries removed,
+     14 real ones filed as bd issues with `discovered-from:agentic-49u`),
+     then retired the file itself — replaced with a pointer to bd
+     (commit `47da8276`).
+   - Also found and committed 2 workflow scripts
+     (`.claude/workflows/cross-repo-beads-adoption.js`,
+     `full-cutover-and-health-check.js`) that the old handoff claimed were
+     committed but actually weren't (commit `7d209f9b`).
+3. Mid-session the user asked for a much bigger ask: "critically evaluate
+   the end state of this repo with fable [model]... are we meeting our
+   objectives/CUJs? aligned with research? leveraging beads properly? do
+   our CLAUDE.md instructions work?" then "make changes based on
+   findings." Ran 4 parallel Fable-tier general-purpose agents (CUJ/
+   objectives, research-doctrine alignment, beads usage, CLAUDE.md
+   consistency) — full findings are in each agent's final message in this
+   session's transcript, not re-derivable from disk except via the bd
+   issues they produced (see below).
+4. Personally re-verified the highest-severity claims before acting (did
+   NOT trust subagent claims blind): fetched the actual Claude Docs
+   prompt-caching page (a cited quote was fabricated), ran `ctx map
+   --help` (confirmed a taught flag doesn't exist), read `agentic/
+   shadow.py` directly (confirmed the shadow-sync direction bug).
+5. Fixed and committed the clearly-safe, mechanical findings:
+   - Fabricated citation + false mechanism claim + broken specs/ paths in
+     `token-discipline.md`/`quality-discipline.md` (commit `0e76f964`).
+   - `docs/external-playbooks.md`'s stale "beads declined" verdict —
+     added superseded-notice headers matching the `docs/human-gates.md`
+     precedent rather than rewriting history (same commit `0e76f964`,
+     folded with the machinery sweep — check `git log -p` if the exact
+     split matters).
+   - `ctx/SKILL.md` taught a nonexistent `ctx map --limit N` flag; fixed
+     to `--tokens` (commit `dd09fcc7`).
+6. Filed everything too large/judgment-heavy/cross-repo to fix blind as
+   bd issues instead:
+   - **`agentic-uz1` (P0, the big one)**: `shadow.py` actually makes
+     markdown win over bd (`allow_stale=True` force-import), the OPPOSITE
+     of CLAUDE.md's claim that "bd is this repo's source of truth."
+     Re-running the cross-repo cutover workflow scripts would silently
+     reopen closed bd issues. Needs a real design decision (is markdown
+     still authoritative for spec-originated tasks, or should bd fully
+     win now?), not a quick patch. Full repro/evidence is in the issue
+     description — read `bd show agentic-uz1` before touching this.
+   - ~5 more local findings: this repo's own Stop hook doesn't run
+     `scripts/check.sh` (dogfooding gap, `agentic-43j`); stale CUJ
+     evidence/docs (`agentic-p3x`); missing regression test for the
+     claimed-issue Stop-hook block (`agentic-0fq`); incomplete
+     `ynab-mcp-server` install (`agentic-hty`).
+   - 19 general tech-debt items swept out of the old `docs/TASKS.md`
+     (all tagged `discovered-from:agentic-49u`, all P3/P4).
+   - Also closed `agentic-5ge` (the /work epic, 11/11 children done,
+     eligible for close).
 
-`bash scripts/check.sh` is green (40 pytest + all shell tests; only the 2 pre-existing documented quarantine entries are non-green, as expected).
+## Two things NOT done — genuinely the user's call, asked and unanswered
 
-## Open follow-up items in bd (not yet fixed — this is the actual remaining work)
-
-- **`agentic-vtp` (P0, CRITICAL)** — `agentic/initialize.py`'s `_controlled_bd_init()` blindly runs `git reset HEAD~1` to undo bd init's auto-commit, assuming that commit is always exactly HEAD. In the `~/automation` cutover this was false: it silently un-committed an unrelated, already-pushed commit (recovered via reflog this time, not lost — but the mechanism is a live landmine for any repo where something else commits in the same window). Needs a real fix: verify the commit being reset is actually bd's own before resetting, abort loudly otherwise.
-- **`agentic-49u`** — `docs/TASKS.md` (a dated tech-debt journal, not checkbox-based) was never swept for pivot-mooted entries or converted to bd; at least 2 entries are already stale (a drain/SKILL.md line-count entry, a since-deleted dual-implementation entry).
-- **`agentic-d3x`** — `breakdown/SKILL.md` still has a stale mirror-check reference (antigravity trees, deleted by task 10) and a stale drain-baton generation-budget mention (deleted by task 09). Distinct from the list-specs/prioritize retirement nits already fixed this session.
-- **`agentic-bsd`** — `workboard/SKILL.md` line ~58 still mentions drain "batons" (deleted by task 09). Not confirmed whether the retirement track's `workboard.py` edits also touched this SKILL.md prose line — check before assuming it's fixed.
-- **`agentic-ml6`** — `drain/SKILL.md` carries a short "Launch authorization (execution stage)" paragraph that may read as contradicting `CLAUDE.md`'s claim that "the contract blocks are gone from the SKILL.md files" (core task 11). It's a brief citation, not a restated contract — worth a maintainer read to decide whether to trim it or soften CLAUDE.md's claim.
+1. **Other-repo findings.** The CLAUDE.md-consistency and beads-usage
+   audits found real drift in OTHER repos on this machine, not touched:
+   - `~/.claude/CLAUDE.md`, `~/CLAUDE.md`, and this repo's `CLAUDE.md`
+     have real contradictions (4 different answers to "push after
+     commit?"; TDD-rigor scoping mismatch; `~/CLAUDE.md` still directs
+     tech debt to `docs/TASKS.md` machine-wide post-bd-cutover). These
+     are personal global config files — deliberately not rewritten
+     without explicit sign-off.
+   - `fooszone`, `hub`, `portfolio-tracker`, `ynab-mcp-new` CLAUDE.md
+     files are bloated (up to 295 lines) with literal contradictory
+     duplicate sections (two "Session Completion" sections in fooszone's,
+     etc.).
+   - `fooszone`'s bd queue is a 457-issue untriaged near-all-P2 landfill.
+   - `interview-prep`'s bd cutover looks hollow (2/32 issues ever closed).
+   Asked the user: open bd issues in those repos for their specific
+   findings, or take a pass at reconciling the CLAUDE.md stack first?
+   **Not yet answered when this session ended.**
+2. **Stray HANDOFF files.** 3 untracked files sit in `.claude/` from
+   older, unrelated, never-consumed sessions:
+   `.claude/HANDOFF-ctx-review.md`, `.claude/HANDOFF-task-tracking-specs.md`,
+   `.claude/HANDOFF.md.stale-pathspec-commit-hardening`. They don't match
+   the literal `HANDOFF.md` name resume-handoff auto-detects, so they've
+   never surfaced to a session automatically. Asked the user: look at
+   these, or leave them alone? **Not yet answered when this session
+   ended.**
 
 ## Gotchas learned this session
 
-- **`bd init` run bare auto-commits and duplicates content into CLAUDE.md/AGENTS.md.** Always use the curated `agentic init` wrapper (built this session's earlier resume work) instead, or `bd init --non-interactive --remote "" --skip-agents` as a manual fallback. See `agentic-vtp` above for the one real gap even the curated wrapper has.
-- **`python3 -m agentic.shadow`, run with `PYTHONPATH=/Users/sjaconette/claude` and `cd`'d into a target repo, is fully portable** — it scans that repo's own `specs/*/tasks/*.md` and imports into that repo's own bd store. Used successfully across 5+ other repos this session.
-- **Concurrent background agents editing the same shared checkout will detect and self-stop per `.claude/rules/concurrent-sessions.md`** — this happened once this session (harmlessly — the orchestrating session was the undetected "other editor"). If you see an agent report a collision and refuse to push, check whether it's actually you before assuming a stray process.
-- Full per-repo cutover details (exact issue counts, commit hashes) are in this session's transcript / the two workflow journals if ever needed: `.claude/workflows/cross-repo-beads-adoption.js` and `.claude/workflows/full-cutover-and-health-check.js` (both committed as repo workflows for reuse).
+- **`sed -i` on a tracked file is a real violation, not just style** —
+  did it once by habit while fixing `token-discipline.md`'s spec paths,
+  caught it via `.claude/rules/shell-text-tools.md`, switched to Edit for
+  the rest. The rule exists because sed has no read-before-write check
+  and no diff review — worth remembering next time a "just 3 sed
+  patterns" urge hits.
+- **Don't trust a subagent's specific factual claim (a quote, a flag, a
+  behavior) without checking it yourself when you're about to act on it**
+  — one audit agent claimed a fabricated Claude-Docs quote; verified by
+  actually fetching the page. Cheap to check, expensive to propagate a
+  wrong "fix" that hardcodes a fabrication one level deeper.
+- **`_controlled_bd_init`'s correct semantics took two iterations** — my
+  first fix treated "bd_init made no new commit" as an ERROR (wrong: a
+  legitimate re-init over an already-committed `.beads`, e.g. rebuilding
+  a deleted Dolt store, genuinely commits nothing new). `check.sh` caught
+  this immediately via `tests/test_agentic_roundtrip.sh` going red after
+  my first pass — that shell integration test is the one that actually
+  exercises the re-init-with-no-new-commit path; the unit tests alone
+  wouldn't have caught the wrong semantics.
+- Full findings detail for everything filed as a bd issue lives in each
+  issue's own `--description`/`--acceptance` — read `bd show <id>`
+  rather than assuming this file has the detail.
 
 ## Verification
 
-Every claim above has a corresponding verified commit on `origin/main` (independently re-verified per task/repo by a fresh verifier agent, not self-reported) except the 5 open bd items, which are genuinely not yet done.
+`bash scripts/check.sh` is green (ran twice this session, both exit 0;
+second run after all commits). `evals/lint-ultra-gate.sh` and
+`tests/test_check_token_discipline.sh` both pass (checked directly after
+editing `drain/SKILL.md` and `token-discipline.md`). All 6 commits this
+session are on `origin/main` (`dd95890f`, `5d614c02`, `0e76f964`,
+`dd09fcc7`, `47da8276`, plus the earlier `7d209f9b` workflow-scripts
+commit).
 
-Next stage: none — /clear and resume with "Read .claude/HANDOFF.md and continue," which will surface the 5 open items above for triage.
+Next stage: none — /clear and resume with "Read .claude/HANDOFF.md and
+continue," which will surface the two open questions above.
