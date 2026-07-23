@@ -182,6 +182,12 @@ precedent this mirrors.
 
 6. Sanity-check with the `critic` agent if the decomposition has any
    nontrivial dependency structure.
+7. Mirror the new task files into bd: run `python3 -m agentic shadow-sync`
+   so the tracker's queue sees the tasks the moment they exist — task
+   files a later session must remember to sync are how specs/ and the
+   queue drift apart. If bd is unavailable on this machine, say so
+   explicitly in the hand-off message (the tasks exist but are not yet in
+   `bd ready`) instead of skipping silently.
 
 ## Hand off
 

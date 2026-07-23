@@ -1,7 +1,7 @@
 # handoff-resume hook
 
 A `SessionStart` hook that flags a `HANDOFF.md` left by `/handoff`. On every
-session start it searches the project for any file named `HANDOFF.md` and,
+session start it searches the project for any file matching `HANDOFF*.md` and,
 if found, injects a pointer at the `resume-handoff` skill
 (`.claude/skills/resume-handoff/SKILL.md`) — so the only manual step left
 after a heavy session is `/clear` itself. Earlier versions injected raw
@@ -22,13 +22,16 @@ launch alike.
 
 ## What it does
 
-- Silent (empty stdout, exit 0) when no `HANDOFF.md` exists anywhere under
+- Silent (empty stdout, exit 0) when no `HANDOFF*.md` exists anywhere under
   the project root — a repo with no in-flight handoff sees zero behavior
   change.
-- Searches for any file literally named `HANDOFF.md`, not just
-  `.claude/HANDOFF.md` — `/handoff` places it next to the active task/spec
-  file when there is one, falling back to `.claude/HANDOFF.md` only when
-  there isn't (see `.claude/skills/handoff/SKILL.md`).
+- Searches for any file matching `HANDOFF*.md`, not just
+  `.claude/HANDOFF.md` — `/handoff` places `HANDOFF.md` next to the active
+  task/spec file when there is one, falling back to `.claude/HANDOFF.md`
+  only when there isn't, and writes `HANDOFF-<topic>.md` when the default
+  path is occupied by another task's handoff (see
+  `.claude/skills/handoff/SKILL.md`). Matching only the literal name is how
+  alternate-named handoffs used to accumulate as invisible strays.
 - One match → names it and instructs "read it and continue." Multiple
   matches (a repo with more than one stale/in-flight handoff — a known
   real scenario in a heavily concurrent repo, since `.claude/HANDOFF.md`

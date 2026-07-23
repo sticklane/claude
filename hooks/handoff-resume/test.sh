@@ -58,6 +58,22 @@ check "two-handoffs: names the resume-handoff skill" \
 check "two-handoffs: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
 rm -rf "$tmp"
 
+# --- an alternate-named HANDOFF-<topic>.md alone: flagged, not a stray ----
+# /handoff's conflict-avoidance branch writes HANDOFF-<topic>.md when the
+# default path is occupied; a hook matching only the literal HANDOFF.md
+# leaves those invisible forever (the observed stray-accumulation mode).
+tmp="$(mktemp -d)"
+mkdir -p "$tmp/.claude"
+echo "alternate" > "$tmp/.claude/HANDOFF-drain-hub.md"
+out="$(CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" </dev/null)"
+rc=$?
+check "alt-name: mentions the path" \
+  "$(printf '%s' "$out" | grep -qF "$tmp/.claude/HANDOFF-drain-hub.md" && echo 0 || echo 1)"
+check "alt-name: names the resume-handoff skill" \
+  "$(printf '%s' "$out" | grep -qi "resume-handoff" && echo 0 || echo 1)"
+check "alt-name: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
+rm -rf "$tmp"
+
 # --- a HANDOFF.md that only exists inside a worktree copy: ignored -------
 tmp="$(mktemp -d)"
 mkdir -p "$tmp/.claude/worktrees/agent-x"

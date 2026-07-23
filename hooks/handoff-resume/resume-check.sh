@@ -13,10 +13,13 @@
 # Silent (empty stdout, exit 0) when no HANDOFF.md is found — a repo with no
 # in-flight handoff must see zero behavior change.
 #
-# Search: any file literally named HANDOFF.md under the project root
+# Search: any file matching HANDOFF*.md under the project root
 # (CLAUDE_PROJECT_DIR, else cwd), skipping .git and any worktrees directory
-# — /handoff places it next to the active task/spec file or at
-# .claude/HANDOFF.md, so a fixed single path is not enough.
+# — /handoff places HANDOFF.md next to the active task/spec file or at
+# .claude/HANDOFF.md, and its conflict-avoidance branch writes
+# HANDOFF-<topic>.md when the default path is occupied, so neither a fixed
+# single path nor the literal name is enough (literal-only matching is how
+# alternate-named handoffs accumulated as invisible strays).
 set -u
 
 root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
@@ -31,7 +34,7 @@ root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 found="$(find "$root" \
   -type d \( -name .git -o -path '*/.claude/worktrees/*' -o -name node_modules \
              -o -name fixtures -o -name test_fixtures \) -prune -o \
-  -type f -name 'HANDOFF.md' -print 2>/dev/null)"
+  -type f -name 'HANDOFF*.md' -print 2>/dev/null)"
 
 [ -n "$found" ] || exit 0
 
