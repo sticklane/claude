@@ -39,7 +39,7 @@ almost every time" [S10, S18]; the docs still teach plan mode as the default.)
 
 ### 2. Verification-first / closed-loop TDD [S2, S10]
 
-"Claude stops when the work *looks* done. Without a check it can run, 'looks
+"Claude stops when the work _looks_ done. Without a check it can run, 'looks
 done' is the only signal." The escalation ladder:
 
 - In the prompt: "run the tests after implementing".
@@ -321,31 +321,62 @@ before Boris stopped reading permission prompts [S10].
 - Prefer CLI tools over MCP servers where equivalent; plan mode / specs exist
   to avoid the most expensive token sink of all: **implementing the wrong thing**.
 
+## Skill authoring (verified 2026-07-23)
+
+Anthropic's published Agent Skills guidance, quote-verified against
+platform.claude.com's skills overview and best-practices pages and the
+official anthropics/skills repo. This repo's authoring conventions
+(CLAUDE.md) already encode each item; the citations pin them to source.
+
+- **Progressive disclosure is the architecture.** "This filesystem-based
+  architecture enables progressive disclosure: Claude loads information in
+  stages as needed, rather than consuming context upfront" — metadata
+  always, SKILL.md on trigger, bundled files on demand. → the conventions'
+  description/body/reference split.
+- **The description is the trigger surface.** "The description field
+  enables Skill discovery and should include both what the Skill does and
+  when to use it." → the third-person what+when+trigger-phrases rule.
+- **"Keep SKILL.md body under 500 lines for optimal performance."** → the
+  existing ≤500-line convention, verbatim aligned.
+- **Iterate from observed failures, not assumptions.** "Iterate based on
+  these observations rather than assumptions", with evals created before
+  extensive documentation. → the Testing-changes section's
+  run-it-fresh-and-watch rule, /evals, and the writing-examples /
+  code-examples corpus skills (each corpus entry IS an observed failure
+  promoted to teaching material).
+- **"Prefer scripts for deterministic operations"** — bundled executables
+  Claude runs "without loading their code into context". → the bin/ check
+  scripts and hook test.sh pattern.
+- Sources: skills overview and best-practices —
+  https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview,
+  https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices;
+  official repo — https://github.com/anthropics/skills.
+
 ## Source index
 
-| # | Source |
-|---|--------|
-| S1 | How Anthropic teams use Claude Code — https://claude.com/blog/how-anthropic-teams-use-claude-code (full original: https://www-cdn.anthropic.com/58284b19e702b49db9302d5b6f135ad8871e7658.pdf) |
-| S2 | Claude Code best practices — https://code.claude.com/docs/en/best-practices |
-| S3 | Agent Skills engineering post — https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills |
-| S4 | Effective context engineering — https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents |
-| S5 | Latent Space: Claude Code interview (Cherny, Wu) — https://www.latent.space/p/claude-code |
-| S6 | Skills docs — https://code.claude.com/docs/en/skills |
-| S7 | Subagents docs — https://code.claude.com/docs/en/sub-agents |
-| S8 | Costs docs — https://code.claude.com/docs/en/costs |
-| S9 | Skill authoring best practices — https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices |
-| S10 | How Boris uses Claude Code — https://howborisusesclaudecode.com/ |
-| S11 | GitHub Actions docs — https://code.claude.com/docs/en/github-actions |
-| S12 | Fortune, Jan 29 2026 — https://fortune.com/2026/01/29/100-percent-of-code-at-anthropic-and-openai-is-now-ai-written-boris-cherny-roon/ |
-| S13 | VentureBeat — https://venturebeat.com/technology/anthropic-says-80-of-its-new-production-code-is-now-authored-by-claude-how-your-enterprise-can-keep-up |
-| S14 | Hooks guide — https://code.claude.com/docs/en/hooks-guide (reference: /en/hooks) |
-| S15 | /goal docs — https://code.claude.com/docs/en/goal |
-| S16 | Code Review announcement + docs — https://claude.com/blog/code-review ; https://code.claude.com/docs/en/code-review |
+| #   | Source                                                                                                                                                                                                 |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| S1  | How Anthropic teams use Claude Code — https://claude.com/blog/how-anthropic-teams-use-claude-code (full original: https://www-cdn.anthropic.com/58284b19e702b49db9302d5b6f135ad8871e7658.pdf)          |
+| S2  | Claude Code best practices — https://code.claude.com/docs/en/best-practices                                                                                                                            |
+| S3  | Agent Skills engineering post — https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills                                                                            |
+| S4  | Effective context engineering — https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents                                                                                      |
+| S5  | Latent Space: Claude Code interview (Cherny, Wu) — https://www.latent.space/p/claude-code                                                                                                              |
+| S6  | Skills docs — https://code.claude.com/docs/en/skills                                                                                                                                                   |
+| S7  | Subagents docs — https://code.claude.com/docs/en/sub-agents                                                                                                                                            |
+| S8  | Costs docs — https://code.claude.com/docs/en/costs                                                                                                                                                     |
+| S9  | Skill authoring best practices — https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices                                                                                      |
+| S10 | How Boris uses Claude Code — https://howborisusesclaudecode.com/                                                                                                                                       |
+| S11 | GitHub Actions docs — https://code.claude.com/docs/en/github-actions                                                                                                                                   |
+| S12 | Fortune, Jan 29 2026 — https://fortune.com/2026/01/29/100-percent-of-code-at-anthropic-and-openai-is-now-ai-written-boris-cherny-roon/                                                                 |
+| S13 | VentureBeat — https://venturebeat.com/technology/anthropic-says-80-of-its-new-production-code-is-now-authored-by-claude-how-your-enterprise-can-keep-up                                                |
+| S14 | Hooks guide — https://code.claude.com/docs/en/hooks-guide (reference: /en/hooks)                                                                                                                       |
+| S15 | /goal docs — https://code.claude.com/docs/en/goal                                                                                                                                                      |
+| S16 | Code Review announcement + docs — https://claude.com/blog/code-review ; https://code.claude.com/docs/en/code-review                                                                                    |
 | S17 | Boris Cherny @Scale fireside + Lenny's Podcast (Feb 2026) — https://sozai.app/transcript/fireside-chat-boris-cherny-claude-code/ ; https://www.lennysnewsletter.com/p/head-of-claude-code-what-happens |
-| S18 | Pragmatic Engineer: How Claude Code is built / Building Claude Code — https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built ; .../building-claude-code-with-boris-cherny |
-| S19 | code-review plugin (claude-code repo) — https://github.com/anthropics/claude-code/blob/main/plugins/code-review/commands/code-review.md |
-| S20 | code-review plugin (official marketplace variant) — https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-review/commands/code-review.md |
-| S21 | code-simplifier plugin — https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-simplifier/agents/code-simplifier.md |
-| S22 | Building a C compiler with a team of parallel Claudes — https://www.anthropic.com/engineering/building-c-compiler |
-| S23 | Auto mode engineering post — https://www.anthropic.com/engineering/claude-code-auto-mode ; containment: https://www.anthropic.com/engineering/how-we-contain-claude |
-| S24 | Sandboxing / permissions / headless docs — https://code.claude.com/docs/en/sandboxing ; /en/permissions ; /en/headless ; agent teams: /en/agent-teams |
+| S18 | Pragmatic Engineer: How Claude Code is built / Building Claude Code — https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built ; .../building-claude-code-with-boris-cherny                 |
+| S19 | code-review plugin (claude-code repo) — https://github.com/anthropics/claude-code/blob/main/plugins/code-review/commands/code-review.md                                                                |
+| S20 | code-review plugin (official marketplace variant) — https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-review/commands/code-review.md                                        |
+| S21 | code-simplifier plugin — https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-simplifier/agents/code-simplifier.md                                                             |
+| S22 | Building a C compiler with a team of parallel Claudes — https://www.anthropic.com/engineering/building-c-compiler                                                                                      |
+| S23 | Auto mode engineering post — https://www.anthropic.com/engineering/claude-code-auto-mode ; containment: https://www.anthropic.com/engineering/how-we-contain-claude                                    |
+| S24 | Sandboxing / permissions / headless docs — https://code.claude.com/docs/en/sandboxing ; /en/permissions ; /en/headless ; agent teams: /en/agent-teams                                                  |
