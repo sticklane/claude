@@ -1,129 +1,39 @@
-Task: adopt beads (bd) across other repos on this machine — install, update CLAUDE.md/AGENTS.md, convert existing task state to bd issues
-Status: not started (new task; distinct from the just-completed architecture pivot)
-Next step: read docs/cross-repo-rollout-2026-07-22.md and HUMAN.md's "## Agent-filed blockers" section in this repo, then ask the user which repo(s) to start with and confirm per-repo conversion scope before editing any other repo's tree
-Resume with: read this file, then proceed per "Next step" above
-Blocking on: nothing technical — needs a scope/order confirmation from the user before cross-repo edits begin (see Gotchas)
+Task: cross-repo beads adoption + skill retirement + skill health-check (all substantially complete)
+Status: done, with 5 real follow-up items open in bd
+Next step: triage the 5 open bd items below by priority (agentic-vtp is P0/critical)
+Resume with: bd ready (or bd show <id> on each item below)
+Blocking on: nothing technical — these are judgment/priority calls
 
-## Task
+## What this session did (all pushed to origin/main, all verified)
 
-The user asked, in this same conversation: "I want to adopt beads: do
-the other repos, update, convert their specs, etc." This is a NEW,
-separate task from the architecture pivot this session just finished
-(that work — `specs/agentic-core-redesign`, all 15 tasks done/obsolete,
-epic `agentic-4t2` closed, pushed to `origin/main` — needs no further
-action; do not re-open it).
+1. **Resumed and completed the 2026-07-22 architecture pivot** (`specs/agentic-core-redesign`): all 15 tasks done/obsolete, epic `agentic-4t2` closed at 11/11 children. bd is now `~/claude`'s own source of truth.
+2. **Full bd cutover across every other repo on this machine** — automation, fooszone, interview-prep, portfolio-tracker, ynab-mcp-server, hub, budget_analysis, `~/specs`, and the life-vault. Each got: `agentic init`, a verified non-lossy import of existing task/checkbox state into bd, CLAUDE.md/AGENTS.md rewritten to make bd the sole tracker with the discovered-work convention, and a push. Real merge conflicts in portfolio-tracker/ynab-mcp-server (genuine unrelated upstream commits) were resolved without data loss.
+3. **Retired `/list-specs` and `/prioritize`** (never re-pointed onto bd per core task 09's own stated goal) — deleted, all references swept, critic-reviewed, 3 critic-found nits fixed, plugin bumped to 0.13.0.
+4. **Redesigned `hooks/session-refresh/refresh-check.sh`** to read `transcript_path` directly off its own hook payload instead of shelling out to `agentprof` — same budget defaults, same underlying "ctx" formula (mirrored from `agentprof/internal/costsummary/costsummary.go`, not reinvented), re-prime detection now fully self-contained too. `agentprof` stays the tool for general cost-attribution digging, decoupled from this guardrail.
+5. **Fixed a real eval-wiring bug**: `evals/work/01-queue-discipline` was failing not because `/work` misbehaves (forensic evidence from real transcripts confirms it claims before implementing, correctly) but because its stub runner wasn't being auto-applied on the plain invocation. Fixed with a `runner-cmd.txt` convention in `evals/run.sh`; now passes deterministically.
+6. **Removed dead code**: `.claude/skills/_shared/touch_disjoint.py` + its test (orphaned since `admission.py`'s deletion).
+7. Added trigger phrases to `breakdown`/`distill` skill descriptions (health-check finding).
+8. Clarified `.claude/rules/token-discipline.md`'s wake-budget doctrine: it gates main-session context only, not subagent/workflow token totals — a genuinely different concept from the Workflow tool's own `budget.total`.
 
-The new task, concretely: for each other repo on this machine that
-should adopt bd —
-1. Install bd (once-per-machine: `agentic@agentic-toolkit` plugin +
-   `bd` 1.1.0 pinned via `brew install beads`; per-repo: curated
-   `bd init`, `/gate` installs the bd-compliance Stop hook,
-   `Bash(bd *)` allowlisted) per
-   `specs/beads-daily-skill/SPEC.md`'s "Installation in other repos"
-   section (this repo, `~/claude`).
-2. Update that repo's own `CLAUDE.md`/`AGENTS.md` — many currently
-   echo the 2026-07-03 "beads fully retired, use docs/TASKS.md
-   everywhere" decision recorded in
-   `~/claude/docs/decisions/work-tracking.md`, which this pivot
-   reverses for `~/claude` itself but never told other repos to
-   revert. **Also add the "record discovered work in bd as you find
-   it" convention** (maintainer directive, 2026-07-23) to each
-   adopting repo's `CLAUDE.md` — see `~/claude/CLAUDE.md`'s "Beads
-   issue tracker" section for the exact wording/command examples to
-   adapt (cite `/work`'s SKILL.md there for the runnable commands
-   rather than re-deriving them).
-3. **Convert** — not just install — each repo's existing
-   `docs/TASKS.md` checkboxes / `specs/*/tasks/*.md` markdown task
-   state into real bd issues, analogous to what core-redesign task 05
-   did for `~/claude` itself (a live import, `python3 -m
-   agentic.shadow` there — check whether that tool is reusable
-   as-is against another repo's markdown, or needs adapting per-repo).
+`bash scripts/check.sh` is green (40 pytest + all shell tests; only the 2 pre-existing documented quarantine entries are non-green, as expected).
 
-## State
+## Open follow-up items in bd (not yet fixed — this is the actual remaining work)
 
-Nothing done yet on this task. What exists to start from:
+- **`agentic-vtp` (P0, CRITICAL)** — `agentic/initialize.py`'s `_controlled_bd_init()` blindly runs `git reset HEAD~1` to undo bd init's auto-commit, assuming that commit is always exactly HEAD. In the `~/automation` cutover this was false: it silently un-committed an unrelated, already-pushed commit (recovered via reflog this time, not lost — but the mechanism is a live landmine for any repo where something else commits in the same window). Needs a real fix: verify the commit being reset is actually bd's own before resetting, abort loudly otherwise.
+- **`agentic-49u`** — `docs/TASKS.md` (a dated tech-debt journal, not checkbox-based) was never swept for pivot-mooted entries or converted to bd; at least 2 entries are already stale (a drain/SKILL.md line-count entry, a since-deleted dual-implementation entry).
+- **`agentic-d3x`** — `breakdown/SKILL.md` still has a stale mirror-check reference (antigravity trees, deleted by task 10) and a stale drain-baton generation-budget mention (deleted by task 09). Distinct from the list-specs/prioritize retirement nits already fixed this session.
+- **`agentic-bsd`** — `workboard/SKILL.md` line ~58 still mentions drain "batons" (deleted by task 09). Not confirmed whether the retirement track's `workboard.py` edits also touched this SKILL.md prose line — check before assuming it's fixed.
+- **`agentic-ml6`** — `drain/SKILL.md` carries a short "Launch authorization (execution stage)" paragraph that may read as contradicting `CLAUDE.md`'s claim that "the contract blocks are gone from the SKILL.md files" (core task 11). It's a brief citation, not a restated contract — worth a maintainer read to decide whether to trim it or soften CLAUDE.md's claim.
 
-- **`docs/cross-repo-rollout-2026-07-22.md`** (this repo) — the audit
-  from core-redesign task 15: every repo in `~/REPOS.md` (excluding
-  `~/archive/*`), classified with the specific stale phrase or version
-  gap found and a recommended action. **Read this first** — it is the
-  starting map, not something to redo.
-- **`HUMAN.md`**'s `## Agent-filed blockers` section (this repo) —
-  per-repo entries task 15 filed for repos needing an attended
-  decision. Check what's already there before filing more.
-- **bd issue `agentic-m22`** (`specs/beads-daily-skill`, CUJ-5) already
-  earmarks `ynab-mcp-server` (`~/ynab-mcp-new` per `~/REPOS.md`) as the
-  first live consuming-repo validation target for the install
-  procedure — a natural first repo, but confirm against what
-  `docs/cross-repo-rollout-2026-07-22.md` actually recommends rather
-  than assuming this is still the priority order.
-- Candidate repos from `~/REPOS.md` (2026-07-22 snapshot, re-check
-  currency — it regenerates daily): `~/automation`, `~/budget_analysis`,
-  `~/fooszone`, `~/hub`, `~/interview-prep`, `~/portfolio-tracker`,
-  `~/specs`, `~/vaults/life`, `~/ynab-mcp-new`. `~/archive/*` entries
-  are already retired — skip them. This list is a pointer to check
-  against the rollout doc's real classifications, not an authoritative
-  work list on its own.
+## Gotchas learned this session
 
-## Gotchas
-
-- **This is real cross-repo, multi-repo work** — editing other git
-  repos' `CLAUDE.md`/`AGENTS.md` and converting their task state is a
-  meaningfully larger blast radius than anything scoped to this repo.
-  Confirm which repo(s) and what order with the user before mass-
-  editing many repos, even though the user has expressed clear intent
-  to do all of them — "do the other repos" doesn't specify order,
-  simultaneity, or whether each repo's maintainer-judgment call (adopt
-  or not) has actually been made yet. `docs/cross-repo-rollout-2026-07-22.md`
-  marks some repos "no action needed" — don't force bd onto those.
-- **`bd init` has an auto-commit side effect** discovered this
-  session: run bare it duplicates a "Beads Integration" block into
-  `CLAUDE.md`/`AGENTS.md` and auto-commits without asking. Use
-  `--skip-agents` (and curate the AGENTS.md/CLAUDE.md snippet by hand
-  afterward) rather than trusting raw `bd init` in any of these other
-  repos either.
-- **`bd init` also refuses non-interactively if `sync.remote` in a
-  committed `.beads/config.yaml` points at an unreachable host** — pass
-  `--remote ""` to force a fresh local database when that happens.
-- Each of these repos is a **separate git remote/tree** — normal
-  cross-session-collision care applies per repo
-  (`.claude/rules/concurrent-sessions.md`), and pushing to another
-  repo's remote is exactly the kind of action that needs a stated
-  go-ahead per this session's general "confirm before pushing"
-  practice, not a blanket one-time approval.
-- `specs/beads-daily-skill/SPEC.md`'s own CUJ-5 (the ynab-mcp-server
-  live run) is still open/manual-pending as of this handoff — it may
-  turn out to BE the first step of this larger rollout, or a separate
-  narrower validation that should land before doing the rest. Check its
-  current status before assuming it's still todo.
+- **`bd init` run bare auto-commits and duplicates content into CLAUDE.md/AGENTS.md.** Always use the curated `agentic init` wrapper (built this session's earlier resume work) instead, or `bd init --non-interactive --remote "" --skip-agents` as a manual fallback. See `agentic-vtp` above for the one real gap even the curated wrapper has.
+- **`python3 -m agentic.shadow`, run with `PYTHONPATH=/Users/sjaconette/claude` and `cd`'d into a target repo, is fully portable** — it scans that repo's own `specs/*/tasks/*.md` and imports into that repo's own bd store. Used successfully across 5+ other repos this session.
+- **Concurrent background agents editing the same shared checkout will detect and self-stop per `.claude/rules/concurrent-sessions.md`** — this happened once this session (harmlessly — the orchestrating session was the undetected "other editor"). If you see an agent report a collision and refuse to push, check whether it's actually you before assuming a stray process.
+- Full per-repo cutover details (exact issue counts, commit hashes) are in this session's transcript / the two workflow journals if ever needed: `.claude/workflows/cross-repo-beads-adoption.js` and `.claude/workflows/full-cutover-and-health-check.js` (both committed as repo workflows for reuse).
 
 ## Verification
 
-Nothing from this new task has been attempted yet, so nothing to
-verify. The prior architecture-pivot work (a separate, now-closed unit)
-was independently verified per-task during this session (verifier
-agents re-ran every task's acceptance commands; `bash scripts/check.sh`
-green with only the pre-existing documented quarantine) — that
-verification stands and does not need repeating.
+Every claim above has a corresponding verified commit on `origin/main` (independently re-verified per task/repo by a fresh verifier agent, not self-reported) except the 5 open bd items, which are genuinely not yet done.
 
-## Standing convention (maintainer directive, 2026-07-23)
-
-When this task's own work uncovers issues, needs a breakdown, or spots
-new work — record it in bd immediately (`bd create`, with a
-`discovered-from` link to whatever surfaced it), not just in prose or
-a chat reply. Two small examples filed this session, still open and
-unrelated to this handoff's own task (fix opportunistically or leave
-for a small follow-up): `agentic-d3x` (breakdown/SKILL.md has two
-stale post-pivot references — a deleted mirror-check and a deleted
-drain-baton generation-budget mention) and `agentic-bsd`
-(workboard/SKILL.md line 58 still mentions drain batons). Both are
-`~/claude`-local doc drift, not part of the cross-repo task itself.
-
-## Files touched (prior, pivot work — for reference, already committed/pushed)
-
-Not part of this handoff's open task; listed only so a fresh session
-doesn't mistake pivot artifacts for something still in flight. See
-`git log --oneline eba3640a..4fb3f8c0` in `~/claude` for the full list;
-epic `agentic-4t2` is closed at 11/11 children.
-
-Next stage: none — /clear and resume from this handoff file
+Next stage: none — /clear and resume with "Read .claude/HANDOFF.md and continue," which will surface the 5 open items above for triage.
