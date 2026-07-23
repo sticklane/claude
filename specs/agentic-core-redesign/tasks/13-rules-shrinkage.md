@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: 10, 11
 Priority: P3
 Budget: 20 turns
@@ -38,10 +38,10 @@ classified `mechanized` with the enforcing path named — classifying it
 
 ## Acceptance
 
-- [ ] `bash -c 'bad=$(grep -c "· mechanized ·.*<none>" docs/rules-triage.md); echo $bad'` → `0` (every mechanized row names its enforcing path)
-- [ ] `bash -c 'for p in $(grep "· mechanized ·" docs/rules-triage.md | sed "s/.*· mechanized · //" | cut -d" " -f1); do [ -e "$p" ] || echo "missing: $p"; done'` → no output (named enforcers exist)
-- [ ] `test -f .claude/rules/untrusted-data.md && echo KEPT` → `KEPT`
-- [ ] `bash tests/test_doc_links.sh && bash scripts/check.sh` → green after the deletions
+- [x] `bash -c 'bad=$(grep -c "· mechanized ·.*<none>" docs/rules-triage.md); echo $bad'` → `0` (every mechanized row names its enforcing path)
+- [x] `bash -c 'for p in $(grep "· mechanized ·" docs/rules-triage.md | sed "s/.*· mechanized · //" | cut -d" " -f1); do [ -e "$p" ] || echo "missing: $p"; done'` → no output (named enforcers exist)
+- [x] `test -f .claude/rules/untrusted-data.md && echo KEPT` → `KEPT`
+- [x] `bash tests/test_doc_links.sh && bash scripts/check.sh` → green after the deletions
 
 Depth ceiling: L1 — the keep/delete judgments are editorial; the
 behavioral complement is a maintainer read of docs/rules-triage.md, plus
