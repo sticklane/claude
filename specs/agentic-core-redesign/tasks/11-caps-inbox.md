@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: 10
 Priority: P2
 Budget: 24 turns
@@ -30,6 +30,6 @@ caps decision supersedes its framework, kept as history.
 
 ## Acceptance
 
-- [ ] `grep -rn "launch-authorization\|launch authorization contract" .claude/skills/build/ .claude/skills/drain/ .claude/skills/prioritize/ | wc -l` → `0`
-- [ ] `grep -c "superseded" docs/human-gates.md` → ≥ 1 (history annotated, not deleted)
-- [ ] `bash scripts/check.sh` → green
+- [x] `grep -rn "launch-authorization\|launch authorization contract" .claude/skills/build/ .claude/skills/drain/ .claude/skills/prioritize/ | wc -l` → `0`
+- [x] `grep -c "superseded" docs/human-gates.md` → ≥ 1 (history annotated, not deleted)
+- [x] `bash scripts/check.sh` → green

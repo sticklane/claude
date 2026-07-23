@@ -1,5 +1,16 @@
 # Why launches are user-authorized (and how the gate moved)
 
+> **Superseded (2026-07-22 core-redesign pivot).** The
+> launch-authorization contract this file defends has been superseded by
+> the pivot to skill-augmented native orchestration: `/build`, `/drain`,
+> and `/prioritize` no longer carry the contract block in their SKILL.md
+> files, and native caps plus advisory guards replace the gating
+> framework (specs/agentic-core-redesign/SPEC.md, 2026-07-22 addendum).
+> The untrusted-data rule (`.claude/rules/untrusted-data.md`) still
+> governs injected-instruction defense. The rest of this document is
+> retained as history — the rationale for why a human decision gated
+> launches, not a live contract.
+
 One skill carries `disable-model-invocation: true` — /evals (paid
 headless sessions; only a human types it). The other execution stages —
 /build, /drain, /prioritize — are model-invocable since
