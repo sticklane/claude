@@ -50,6 +50,13 @@ Gate every CLAUDE.md addition with: "would removing this line cause a future
 agent to make a mistake?" If no, it's bloat — bloated CLAUDE.md files get
 ignored and cost tokens every single session.
 
+Work-shaped findings — a bug spotted, doc drift, a scoped follow-up — are
+not learnings and don't route through the table above: file each in bd the
+moment it surfaces (CLAUDE.md's Beads section, cited not restated), with a
+`discovered-from` link where a current issue exists. A distill that ends
+with unfiled work-shaped findings has captured the lesson and dropped the
+work.
+
 ## 3. Write
 
 - CLAUDE.md: append the terse line under the right heading; if the file

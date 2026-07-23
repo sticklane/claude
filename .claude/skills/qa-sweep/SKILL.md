@@ -69,9 +69,14 @@ behavior (cited, not restated — see the closing note below).
 
 For each _confirmed_ piece of breakage found in step b or c — reproduced, not
 a one-off flake — file a `specs/<slug>/SPEC.md` capturing the symptom, the
-reproduction, and the affected surface. Do not file specs for unconfirmed or
-flaky findings; note those in the report instead so they don't manufacture
-queue work that can't be verified.
+reproduction, and the affected surface, AND file a matching bd issue in the
+same step (CLAUDE.md's Beads section owns the commands — cite it, don't
+restate it), so the breakage is on the tracker's queue the moment it's
+confirmed rather than only when a later breakdown/sync runs. When bd is
+unavailable on this machine, say so in the report instead of skipping
+silently. Do not file specs or issues for unconfirmed or flaky findings;
+note those in the report instead so they don't manufacture queue work that
+can't be verified.
 
 ### e. Self-chain into /critique on each filed spec
 

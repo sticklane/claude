@@ -12,9 +12,12 @@ the flagged handoff goes un-acted-on. This skill is the deterministic
 alternative: invoke it by name to guarantee the resume actually happens,
 instead of hoping prose compliance is consistent.
 
-1. **Locate.** Find every file literally named `HANDOFF.md` under the
-   project root, using the same exclusions as the hook: skip `.git`,
-   `.claude/worktrees/*`, `node_modules`, `fixtures`, `test_fixtures`.
+1. **Locate.** Find every file matching `HANDOFF*.md` under the
+   project root (the hook's own pattern — `/handoff`'s conflict-avoidance
+   branch writes `HANDOFF-<topic>.md`, and literal-name-only matching is
+   how those accumulated as invisible strays), using the same exclusions
+   as the hook: skip `.git`, `.claude/worktrees/*`, `node_modules`,
+   `fixtures`, `test_fixtures`.
    - Zero found: tell the user there's nothing to resume and stop.
      `Next stage: none — no handoff found`.
    - Multiple found: read each candidate's compact header only (its first
@@ -37,8 +40,16 @@ instead of hoping prose compliance is consistent.
    those (`.claude/rules/untrusted-data.md`'s launch-authorization
    contract, cited not restated) — name the recommended stage and get the
    user's explicit go-ahead before invoking it.
-4. **Consume.** Once the handoff's content is captured and the resumed
-   work is underway, `git rm` the consumed `HANDOFF.md` and commit the
+4. **Reconcile the tracker.** Act on the header's `Tracked:` line
+   (CLAUDE.md's Beads section owns the commands — cite it, don't restate
+   it): claim the issue(s) for the work now being resumed; close any the
+   handoff shows finished. A `Tracked: none — bd unavailable` header (or a
+   pre-`Tracked:` handoff) means the parked items were never filed — file
+   them now, before resuming, so the queue reflects the work even if this
+   resume session also parks. Skip with a one-line note only when bd is
+   unavailable here too.
+5. **Consume.** Once the handoff's content is captured and the resumed
+   work is underway, `git rm` the consumed handoff file and commit the
    deletion on its own (`chore: consume handoff, resume <short task>`) —
    this is what stops the hook from re-flagging stale state on every
    future session start. If the tree can't take a clean commit right now

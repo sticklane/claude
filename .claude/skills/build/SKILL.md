@@ -51,6 +51,13 @@ session, a "sweep unavailable" line on failure, never blocking.
 Read the task file (and its spec's Requirements section if referenced). Mark
 the task's Status as `in-progress` (a bare SPEC.md has no Status field — skip
 the bookkeeping steps for it and work from its acceptance criteria directly).
+Claim the task in bd as well: its issue's title is the task file's
+repo-relative path (shadow-sync's upsert key), and `/work`'s SKILL.md owns
+the claim commands and the `.beads/session-claims` bookkeeping — cite it,
+don't restate it. Skip the claim only when the issue is already claimed (a
+drain dispatch claims before launching its worker) or bd is unavailable on
+this machine; note either case in one line rather than silently working
+untracked.
 Record the current revision identifier now — the base the verifier's
 append-only task-file diff runs against in step 3 (e.g., under git: `git rev-parse HEAD`). Do NOT preload the codebase: for anything
 unclear about existing code, fan out `scout` agents and work from their
@@ -239,12 +246,16 @@ line every time you enter it.
   meets the code-comment bar — a gotcha, invariant, rationale, or todo tied
   to a specific symbol, not a restatement of what the code plainly shows —
   offer to record it with `ctx notes add <symbol> "<text>" --kind
-  gotcha|invariant|rationale|todo` before finishing (the note is committed;
+gotcha|invariant|rationale|todo` before finishing (the note is committed;
   it survives refactors the code comment would not).
 - Update the task file: Status `done`, tick acceptance boxes, one line of
   evidence each (from the verifier's report, not your own claim) rather
   than duplicating output — citing the `evidence/` file when an evidence
   path was passed in step 3; delete the plan comment block from step 1.
+  Close the task's bd issue and clear its `.beads/session-claims` line in
+  the same breath (`/work`'s close flow, cited not restated) — unless the
+  claim was the dispatching orchestrator's (drain closes what it claimed)
+  or bd is unavailable, noted in one line either way.
 - Commit code + task file with a message referencing the task, following
   quality-discipline.md's `## Commits` doctrine — a type-prefixed subject
   (≤72 target, hard cap 100) with detail in the body — plus the
@@ -260,7 +271,12 @@ line every time you enter it.
   with a fixed `Discovered:` section — zero or more single-line items, each
   "what + where + why it matters", for work found but out of the task's scope
   (an empty section means none; never create or edit task files for
-  discoveries as part of the report). For non-DONE outcomes it also carries
+  discoveries as part of the report). Each `Discovered:` item is ALSO filed
+  in bd the moment it's reported — `bd create` with a `discovered-from`
+  link to this task's issue (CLAUDE.md's Beads section, cited not
+  restated); a bd issue is a tracker record, not a task file, so this
+  doesn't touch the no-queue-writes rule. Skip with a one-line note when
+  bd is unavailable. For non-DONE outcomes the report also carries
   one fixed `Done vs remaining:` line summarizing partial progress.
 - For items in `Discovered:`, offer to write each as a header-only
   `Status: draft` stub in the owning spec's tasks/ dir (the format in drain's
@@ -269,7 +285,7 @@ line every time you enter it.
   the just-completed task file resolves to a `specs/<slug>/tasks/*.md` path
   AND at least one sibling `tasks/*.md` in that same directory has a
   `Status: pending` header line — checked with `grep -l '^Status: pending'
-  specs/<slug>/tasks/*.md` (a header-only match, never a full `Read` of each
+specs/<slug>/tasks/*.md` (a header-only match, never a full `Read` of each
   sibling file) — print one additional line pointing the user
   at `/drain specs/<slug>` for continuous work across the remaining tasks
   (alongside, not replacing, the `/clear` line). If the path is not under a

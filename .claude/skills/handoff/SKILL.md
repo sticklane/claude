@@ -24,9 +24,10 @@ to a fresh context, never seeding this session's own successor.
    in-flight parking file — read it far enough to tell if its Task section
    describes different work than yours); if so, do not overwrite it — pick a
    distinctly-named file instead (e.g. `.claude/HANDOFF-<short-topic>.md`) and
-   name that path explicitly in your final message, since the default
-   single-path convention assumes only one handoff is ever parked at a time.
-   **The file opens with a fixed compact header block** — these five
+   name that path explicitly in your final message. Alternate names are still
+   found: the handoff-resume hook and `/resume-handoff` match `HANDOFF*.md`,
+   not only the literal default name.
+   **The file opens with a fixed compact header block** — these six
    `Key: value` lines are the first lines of every `HANDOFF.md`, ahead of
    the free-form prose sections below (which are unchanged):
    - `Task:` — a one-line name for the work (the spec/task path or a short
@@ -37,8 +38,10 @@ to a fresh context, never seeding this session's own successor.
    - `Next step:` — the exact immediate next action.
    - `Resume with:` — the skill or command to run to continue.
    - `Blocking on:` — what's blocking, or `nothing`.
+   - `Tracked:` — the bd issue id(s) covering the parked work (filed in
+     step 2), or `none — <reason>` (e.g. `none — bd unavailable`).
 
-   So every `HANDOFF.md` opens with these five lines, verbatim shape:
+   So every `HANDOFF.md` opens with these six lines, verbatim shape:
 
 ```
 Task: <spec/task path or one-line description of the work>
@@ -46,18 +49,32 @@ Status: <in-progress | needs-verification | blocked | ...>
 Next step: <the exact immediate next action>
 Resume with: <the skill or command to run, e.g. /build or /resume-handoff>
 Blocking on: <what's blocking, or nothing>
+Tracked: <bd id[, bd id...] | none — <reason>>
 ```
 
-   After that header block, contain only what a fresh agent needs:
-   - **Task**: what we're doing and the task/spec file path.
-   - **State**: what's done (with evidence), what's in flight, exact next step.
-   - **Files touched**: paths, one line each on what changed and why.
-   - **Gotchas**: everything learned the hard way this session — wrong
-     assumptions, commands that need flags, tests that are slow/flaky.
-   - **Verification**: which acceptance criteria pass right now, which don't.
-     Facts and paths only — no narrative, no conversation history. If it
-     exceeds a page, it's carrying dead weight.
-2. Run the `verifier` agent on any work COMPLETED this session (a task
+After that header block, contain only what a fresh agent needs:
+
+- **Task**: what we're doing and the task/spec file path.
+- **State**: what's done (with evidence), what's in flight, exact next step.
+- **Files touched**: paths, one line each on what changed and why.
+- **Gotchas**: everything learned the hard way this session — wrong
+  assumptions, commands that need flags, tests that are slow/flaky.
+- **Verification**: which acceptance criteria pass right now, which don't.
+  Facts and paths only — no narrative, no conversation history. If it
+  exceeds a page, it's carrying dead weight.
+
+2. File the parked state in bd before the prose is final (CLAUDE.md's
+   Beads section owns the commands — cite it, don't restate it): the
+   in-flight task keeps (or gets) an open issue, and each open question,
+   pending decision, or unfinished item the handoff records is filed as an
+   issue too — with a `discovered-from` link where a current issue exists —
+   rather than living only in this file. Put the resulting id(s) on the
+   header's `Tracked:` line. The handoff file is the narrative pointer;
+   `bd ready` is where the next session discovers the work — markdown-only
+   handoffs are how parked work went invisible to the queue. When bd is
+   unavailable on this machine, write `Tracked: none — bd unavailable` so
+   `/resume-handoff` files the issues at resume time instead.
+3. Run the `verifier` agent on any work COMPLETED this session (a task
    whose Status flipped to done, a spec whose criteria you're claiming
    met) before parking — completed work leaves the session verified, not
    self-reported. Record the verdict in the handoff's Verification
@@ -68,10 +85,10 @@ Blocking on: <what's blocking, or nothing>
    the scanners treat it as open agent-bounded work and the verifier
    flips it to `done` later. Skip only when the session completed nothing
    (pure exploration, or all work is still in flight).
-3. Commit work-in-progress to the working branch if the tree is dirty (a
+4. Commit work-in-progress to the working branch if the tree is dirty (a
    handoff pointing at an uncommitted tree is fragile).
-4. Run /distill first if there were corrections worth keeping — handoff
+5. Run /distill first if there were corrections worth keeping — handoff
    preserves state, distill preserves lessons; they're different.
-5. Tell the user: `/clear`, then resume with
+6. Tell the user: `/clear`, then resume with
    "Read <path>/HANDOFF.md and continue." Close with:
    `Next stage: none — /clear and resume from the handoff file`.
