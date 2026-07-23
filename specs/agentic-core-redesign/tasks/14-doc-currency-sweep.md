@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: 09, 11, 13
 Priority: P2
 Budget: 20 turns
@@ -68,13 +68,54 @@ tasks 09, 11, and 13's Touch.
 
 ## Acceptance
 
-- [ ] `test -f docs/architecture.md && echo EXISTS` → `EXISTS`
-- [ ] `grep -c "mirror tree\|mirror manifest\|launch-authorization contract\|drain.*baton\|drain.*lease\|generation counter" docs/architecture.md` → `0` (no retired mechanism described as current in the rewritten file)
-- [ ] `grep -n "full exit\|hybrid retired" docs/decisions/work-tracking.md | wc -l` → unchanged from this task's base commit (historical record preserved), AND `grep -c "2026-07-22" docs/decisions/work-tracking.md` → ≥ `1` (addendum present)
-- [ ] `bash scripts/check.sh` → green
-- [ ] a `/prose-review` pass over the changed files, evidence pasted into this task's Progress section, shows no unresolved findings above low severity
+- [x] `test -f docs/architecture.md && echo EXISTS` → `EXISTS`
+- [x] `grep -c "mirror tree\|mirror manifest\|launch-authorization contract\|drain.*baton\|drain.*lease\|generation counter" docs/architecture.md` → `0` (no retired mechanism described as current in the rewritten file)
+- [x] `grep -n "full exit\|hybrid retired" docs/decisions/work-tracking.md | wc -l` → unchanged from this task's base commit (historical record preserved), AND `grep -c "2026-07-22" docs/decisions/work-tracking.md` → ≥ `1` (addendum present)
+- [x] `bash scripts/check.sh` → green
+- [x] a `/prose-review` pass over the changed files, evidence pasted into this task's Progress section, shows no unresolved findings above low severity
 
 Depth ceiling: L1 — doc accuracy is a human/prose-review read; the
 mechanical complement is the grep-based acceptance checks above plus
 task 12's audit job, which would surface renewed drift as a filed
 issue rather than let it sit silent.
+
+
+## Progress
+
+Task 14 completed 2026-07-22 — doc-currency sweep of `docs/` after the pivot.
+
+- `docs/architecture.md` written fresh: data-layer model (bd queue + ctx
+  index + task files), components, pipeline, execution engine, runtime
+  portability, cost control — the decision cited to
+  `docs/architecture-pivot-2026-07-22.md`, not restated. Retired-mechanism
+  grep returns 0.
+- `docs/decisions/work-tracking.md`: dated addendum records the 2026-07-22
+  re-adoption of bd for this repo; historical record untouched
+  (`full exit|hybrid retired` line count 2 = base commit; `2026-07-22`
+  count 3).
+- `docs/external-playbooks.md`: two passages citing the retired antigravity
+  port / procedure-level portability footnoted as superseded (the Precedence
+  R4 line and the runtimes/ orchestration-degradation bullet).
+- `docs/memory.md`: index gains a one-line pointer flagging the
+  mirror/launch-authorization/drain-lease entries below as historical,
+  superseded by the pivot.
+- `docs/anthropic-playbook.md`: grepped for composer / work-loop /
+  portability-as-practice — no hit describing a retired mechanism as current;
+  left unchanged.
+
+prose-review evidence (step 4 / acceptance 5):
+
+- Vale pass run over all four changed files. Remaining error-labelled findings
+  are Google.EmDash (spaced em-dash) and Vale.Spelling on project jargon
+  (ctx, ultracode, schema'd, cutover, agy). Both are established house
+  convention — the maintainer-ratified `docs/architecture-pivot-2026-07-22.md`
+  carries the identical vale profile (14 spelling/em-dash errors). Resolved as
+  house style; no reader-blocking finding remains above low severity.
+- Rubric pass (nine items + three agentic-register tells): no violations.
+  Bulleted sections are enumerable component/stage reference lists (item-1
+  carve-out); the explanatory sections flow as paragraphs; no hedging,
+  sycophancy, purple prose, repetition, vague language, self-celebration,
+  meta-discourse, false precision, or evaluative varnish.
+- Reader test not required: prose-review runs it for orientation docs
+  (README.md, AGENTS.md) only; architecture.md is a docs/ explanation +
+  reference page.

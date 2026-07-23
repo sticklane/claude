@@ -4,6 +4,12 @@ Narrow, load-on-demand lessons. Read the topic file when a task matches its
 trigger; this index is not loaded at session start. One line per topic:
 path — when to read.
 
+Post-2026-07-22 pivot: entries below that turn on the retired mirror trees,
+launch-authorization contracts, or drain's baton/lease/generation machinery
+record historical incident lessons, not live guidance — those mechanisms were
+superseded by the move to data-level portability
+([architecture-pivot-2026-07-22.md](architecture-pivot-2026-07-22.md)).
+
 - [worktree-base-tracking-ref](memory/worktree-base-tracking-ref.md) — worktree agents see stale files / miss merged deps / conflict on merge (cut from `origin/main`, not HEAD).
 - [unattended-worker-tool-limits](memory/unattended-worker-tool-limits.md) — authoring a drainable task, a worker DEFERRED because it "couldn't run" a criterion (no Workflow tool; `/evals` flag-blocked; execution-stage skills launch-contract-blocked — worker contexts carry no live-user authorization, post-2026-07-11 migration).
 - [live-drain-reconciliation](memory/live-drain-reconciliation.md) — asked to reconcile in-progress tasks or clear stale/needs-review/unpushed git flags: check for a LIVE drain first (task/\* worktrees, advancing `drain:` commits, Status flipping) — it owns that cleanup; manual edits collide.

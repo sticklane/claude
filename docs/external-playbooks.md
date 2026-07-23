@@ -331,8 +331,10 @@ entry is the research record.
    Model Spec resolves instruction conflicts with an explicit
    chain of command rather than leaving the model to guess; this
    toolkit stacks CLAUDE.md, rules, skills, and task files with the same
-   exposure. → guarded by CLAUDE.md's `## Precedence` block, mirrored in
-   the antigravity port (R4).
+   exposure. → guarded by CLAUDE.md's `## Precedence` block (R4). (The
+   antigravity port that once also mirrored this block was retired in the
+   2026-07-22 pivot to data-level portability —
+   [architecture-pivot-2026-07-22.md](architecture-pivot-2026-07-22.md).)
    [Model Spec](https://model-spec.openai.com/2025-04-11.html)
 5. **Overlapping trigger surfaces.** Anthropic's tool-writing guidance:
    near-duplicate tool descriptions make selection ambiguous and waste
@@ -446,6 +448,10 @@ Those artifacts apply the practices; the research stays here.
   `runtimes/` profiles' `## Orchestration` sections (per the
   model-agnostic spec, `specs/model-agnostic/SPEC.md`) — e.g.
   Antigravity degrades to human-dispatched launch-list workflows.
+  (Superseded 2026-07-22: portability dropped from procedure-level to
+  data-level — other runtimes now read the bd queue, ctx index, and task
+  files rather than receiving ported orchestration procedures;
+  [architecture-pivot-2026-07-22.md](architecture-pivot-2026-07-22.md).)
 
 ## Work tracking
 

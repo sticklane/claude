@@ -73,3 +73,15 @@ keeper repos, **fooszone** and **interview-prep**, were decommissioned under
 small work, `specs/` + `/breakdown` for larger work — everywhere. The "Revisit
 trigger" above is obsolete; beads would be a fresh adoption decision, not a
 revert.
+
+## Addendum 2026-07-22: reversed for this repo — bd re-adopted
+
+On 2026-07-22 the toolkit repo (`~/claude`) re-adopted bd as its canonical
+live state, reversing the decision above for this repo. The maintainer
+ratified a move to skill-augmented native orchestration in which bd's queue
+is the state layer that carries task status, dependencies, and provenance
+across runtimes. The historical record above is unchanged: it documents what
+was decided on 2026-07-03 and stays the account of that day.
+
+- Re-adoption spec: `specs/beads-daily-skill/SPEC.md`
+- Decision rationale: `docs/architecture-pivot-2026-07-22.md`
