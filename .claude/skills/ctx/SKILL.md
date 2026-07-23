@@ -141,8 +141,9 @@ and gitignored; only notes are committed.
   (checked-in `dist/`, vendored code, generated artifacts) the VCS itself
   can't ignore.
 
-Scope cautions: extractors cover python, go, js, ts, bash, c, cpp, zig,
-kotlin, java, ocaml, haskell — NOT rust; `map` ranking currently
+Scope cautions: extractors cover python, go, js, ts, rust, bash, c, cpp,
+zig, kotlin, java, ocaml, haskell (registry:
+`context-tree/src/lang/`); `map` ranking currently
 over-weights bash locals on mixed repos (spec stub 16). Capability
 evidence: `specs/codebase-context-tree/evidence/capability-shakedown-2026-07-20.md`.
 

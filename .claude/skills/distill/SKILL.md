@@ -57,6 +57,10 @@ moment it surfaces (CLAUDE.md's Beads section, cited not restated), with a
 with unfiled work-shaped findings has captured the lesson and dropped the
 work.
 
+A concrete bad-vs-better EXAMPLE PAIR (a caught piece of bad prose or bad
+code with an agreed fix) routes to /example-corpus, not to the table above
+— the corpus stores calibration pairs; this skill stores rules.
+
 ## 3. Write
 
 - CLAUDE.md: append the terse line under the right heading; if the file

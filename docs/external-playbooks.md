@@ -29,6 +29,10 @@ rather than restating it. Verified against primary sources, July 2026.
   traces, re-run on every change. → the /evals skill (with Google's
   trajectory framing below).
   [Langfuse agent evals](https://cookbook.openai.com/examples/agents_sdk/evaluate_agents)
+- **State each rule once.** "Keep the policy in one place and state each
+  rule once. Repeating instructions... can cause unnecessary approval
+  requests." → CLAUDE.md's cite-it-don't-restate-it convention.
+  [Prompt guidance](https://developers.openai.com/api/docs/guides/prompt-guidance)
 
 ## Adopted from Google / DeepMind
 
@@ -540,3 +544,118 @@ graph committed to the repo) was evaluated as a queue backend, and its
 - Sources: `specs/beads-integration` (closed) and `~/specs/beads-full-exit/`
   (the 2026-07-03 decline record); the native adoption is
   `specs/discovered-work-capture/SPEC.md`.
+
+## Handoffs (beads + frontier labs, verified 2026-07-23)
+
+How beads and the frontier labs hand work between sessions/agents, and what
+this repo aligns to. Every quote verified against the primary source via
+/factcheck; the handoff and resume-handoff skills cite this section rather
+than restating it.
+
+- **The tracker is the handoff (beads).** "Work survives the agent; the
+  next session picks up where the last one died"
+  ([core-concepts](https://github.com/steveyegge/beads/blob/main/docs/core-concepts/index.md)),
+  and markdown plans are the antipattern: "The core problem with markdown
+  plans: They're write-only memory for agents"
+  ([Yegge, Introducing Beads](https://steve-yegge.medium.com/introducing-beads-a-coding-agent-memory-system-637d7d92514a)).
+  His Gas Town fleet routes work through per-agent pinned beads plus a
+  `gt handoff` command — handoffs as tracker objects, not files
+  ([Welcome to Gas Town](https://steve-yegge.medium.com/welcome-to-gas-town-4f25ee16dd04)).
+  → /handoff's step 2 (file parked work in bd) and the `Tracked:` header:
+  `bd ready` is the discovery surface; the HANDOFF file never carries state
+  the tracker doesn't.
+- **Markdown survives as notes, not tracking (Anthropic).** "Structured
+  note-taking, or agentic memory, is a technique where the agent regularly
+  writes notes persisted to memory outside of the context window" — with a
+  NOTES.md named as the example
+  ([effective context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)).
+  The research lead agent saves "its plan to Memory to persist the context,
+  since if the context window exceeds 200,000 tokens it will be truncated"
+  ([multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)).
+  This is the reconciliation with the beads bullet above: _tracking_ belongs
+  in the tracker, _narrative and decision context_ belongs in notes — the
+  HANDOFF file is this repo's structured note, not its queue.
+- **Session-close protocol (beads).** "Landing the plane": file issues for
+  remaining work, update issue status, then push
+  ([beads AGENTS.md](https://github.com/steveyegge/beads/blob/main/AGENTS.md#landing-the-plane-session-completion)).
+  → /handoff steps 2–4 implement file-and-update. **Deliberate divergence:**
+  beads' "PUSH TO REMOTE - This is MANDATORY" is not adopted — the managed
+  Beads block's Conservative profile (no unasked push) wins in this repo.
+- **Decisions are the payload compression loses (Cognition).** "Actions
+  carry implicit decisions, and conflicting decisions carry bad results";
+  "Share context, and share full agent traces, not just individual
+  messages"; a dedicated compressor model "is hard to get right"
+  ([Don't Build Multi-Agents](https://cognition.com/blog/dont-build-multi-agents)).
+  → the handoff header/content records decisions explicitly (the Decisions
+  line in /handoff's content list; build's `## Decisions` section) and
+  points at full artifacts — task files, `evidence/`, commits — instead of
+  re-summarizing them.
+- **Full-context transfer as the default (OpenAI).** On an Agents SDK
+  handoff "the new agent takes over the conversation, and gets to see the
+  entire previous conversation history", shapeable via input filters
+  ([SDK handoffs](https://openai.github.io/openai-agents-python/handoffs/)).
+  → this repo's equivalent transfer surface is the self-contained task file
+  plus the artifacts it names; a dispatch prompt is the input filter —
+  authored deliberately, never an accidental summary.
+- **Native continuity mechanisms exist below the file layer (Anthropic).**
+  Auto-compaction "summarizes what matters most, including code patterns,
+  file states, and key decisions"
+  ([best practices](https://code.claude.com/docs/en/best-practices#manage-context-aggressively));
+  sessions can "Resume sessions later, or fork them"
+  ([Agent SDK overview](https://code.claude.com/docs/en/agent-sdk/overview)).
+  → /handoff is for what compaction can't guarantee: cross-machine,
+  cross-session, human-readable state with tracker linkage. Don't reach for
+  a handoff file when `--resume` or compaction suffices within one machine's
+  session history.
+
+## Verification of agent work (frontier labs, verified 2026-07-23)
+
+Same sourcing bar as above. This section is confirmation-heavy: the audit
+found the toolkit already implements each practice — the value is the
+citation trail. The build/drain/critique/evals skills cite this section.
+
+- **A runnable target beats inspection (Anthropic).** "Give Claude a check
+  it can run: tests, a build, a screenshot to compare. It's the difference
+  between a session you watch and one you walk away from"
+  ([best practices](https://code.claude.com/docs/en/best-practices#give-claude-a-way-to-verify-its-work));
+  "write a failing test that reproduces the issue, then fix it" (same page).
+  → runnable acceptance criteria (breakdown), TDD red-first
+  (quality-discipline.md).
+- **Ground truth from the environment, humans at checkpoints (Anthropic).**
+  "crucial for the agents to gain 'ground truth' from the environment at
+  each step (such as tool call results or code execution)… pause for human
+  feedback at checkpoints"
+  ([building effective agents](https://www.anthropic.com/engineering/building-effective-agents)).
+  → acceptance commands as the gate; drain's deferred-questions batch and
+  /build's escalation triggers as the checkpoints.
+- **Evaluator-optimizer, bounded (Anthropic).** "one LLM call generates a
+  response while another provides evaluation and feedback in a loop…
+  particularly effective when we have clear evaluation criteria" (same
+  page). → the verifier agent + fix-reverify loop, bounded at 2–4 cycles
+  (token-discipline.md) with build's two-failed-attempts stop.
+- **Rubric LLM-judge on end state (Anthropic).** "We used an LLM judge that
+  evaluated each output against criteria in a rubric"
+  ([multi-agent research system](https://www.anthropic.com/engineering/built-multi-agent-research-system)).
+  → the single-call rubric judge default (token-discipline.md).
+- **Deterministic gates over model goodwill (Anthropic).** Hooks "provide
+  deterministic control over Claude Code's behavior, ensuring certain
+  actions always happen rather than relying on the LLM to choose to run
+  them" ([hooks guide](https://code.claude.com/docs/en/hooks-guide)).
+  → the gate skill's Stop hook, bd-compliance, and the pre-commit layer.
+- **Layered guardrails + escalation thresholds (OpenAI).** "Guardrails
+  enable you to do checks and validations of user input and agent output"
+  ([SDK guardrails](https://openai.github.io/openai-agents-python/guardrails/));
+  "Think of guardrails as a layered defense mechanism… If the agent exceeds
+  these limits… escalate to human intervention"
+  ([practical guide PDF](https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf)).
+  → the two-layer gate (fast pre-commit + full Stop-hook check) and
+  /build's escalation triggers (also cited under "Adopted from OpenAI").
+- **Evals on every change; traces for debugging (OpenAI).** "Writing evals
+  to understand how your LLM applications are performing against your
+  expectations… is an essential component"
+  ([evals guide](https://developers.openai.com/api/docs/guides/evals));
+  the Traces dashboard exists to "debug, visualize, and monitor your
+  workflows"
+  ([SDK tracing](https://openai.github.io/openai-agents-python/tracing/)).
+  → /evals before committing skill changes; agentprof over transcripts as
+  the trace layer.

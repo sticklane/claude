@@ -30,6 +30,27 @@ procedure — this rule states the discipline both assume.
 - Names describe scenario and expectation:
   `test_detector_returns_none_when_no_ball_in_frame`.
 
+## Self-documenting code
+
+Applies at every rigor tier (unlike the rigor-scoped TDD mandate above).
+
+- Comments belong on PUBLIC SURFACE AREA only — exported/package-public
+  API documentation. A comment anywhere else is a defect signal: restructure
+  the code (a better name, an extracted function, a clearer type) until the
+  comment is unnecessary. Maintainer doctrine, 2026-07-23: "if you find
+  yourself ever writing a comment elsewhere, it is probably a sign the code
+  is bad."
+- A would-be private comment has a routed home instead of an inline line:
+  a gotcha, invariant, or rationale tied to a symbol goes to `ctx notes add`
+  (indexed repos — /build's close-out already routes these); a TODO goes to
+  bd as an issue, never a code comment.
+- Narrow escape, reached rarely: a constraint the code cannot express (an
+  external system's quirk, a spec-mandated oddity) may stay inline — and
+  wanting it is itself a cue to look again at the structure first.
+- Calibration pairs live in
+  `.claude/skills/example-corpus/code-examples.md` (E01 is the
+  comment-smell seed example).
+
 ## Commits
 
 - Small, focused, atomic: commit at each TDD step (test → feat → refactor)

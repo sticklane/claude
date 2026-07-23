@@ -35,7 +35,10 @@ per-part test that justifies the escalation.
 
 For a real contest (2–4 viable options), launch one agent per candidate in
 parallel — on the session model (they weigh trade-offs), or `Explore` /
-scout-tier (Haiku, `effort: low`) for pure research. Each returns a report
+scout-tier (Haiku, `effort: low`) for pure research. Dispatch mechanics —
+tier by stage type, capped returns, bounded loops — follow the "Dispatch
+authoring" section of `.claude/rules/token-discipline.md` (cited, not
+restated). Each returns a report
 capped at ~200 words:
 
 - Fit: which spec requirements it satisfies, which it strains.
