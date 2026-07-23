@@ -100,12 +100,11 @@ Commit your work, then STOP without self-reviewing — an independent critic rev
 Return status DONE with a summary and commit list, or BLOCKED with the exact reason.`;
 
 function healthCheckPrompt() {
-  return `Health-check this repo's (~/claude) own skill set — three checks, all read-mostly:
+  return `Health-check this repo's (~/claude) own skill set — two checks, all read-mostly:
 
-1. Deterministic ultra-gate: run "bash evals/lint-ultra-gate.sh" and report its exact pass/fail output (it verifies every case-insensitive "ultra" mention in critique/drain/build/idea's SKILL.md stays within +/-3 lines of the literal "active runtime profile" marker).
-2. Live smoke test: run "bash evals/run.sh work" and "bash evals/run.sh drain" (the two skills most rewritten by the 2026-07-22/23 pivot session) and report each scenario's pass/fail line and the summary. If either command errors out structurally (missing fixture, script crash) rather than reporting a graded pass/fail, say so plainly rather than guessing at a result.
-3. Static sweep: for every .claude/skills/*/SKILL.md, read its frontmatter description. Flag any skill whose description lacks concrete trigger phrases UNLESS its frontmatter sets "disable-model-invocation: true" (per CLAUDE.md's authoring-conventions bullet — those skills are exempt). Also flag any skill description that still names a skill CLAUDE.md/the pivot retired (list-specs, prioritize, or anything else no longer present as a directory) as a next-stage pointer.
-Do not fix anything — this is a report. Return a structured summary: ultra_gate_result, work_eval_result, drain_eval_result, skills_missing_trigger_phrases (list), stale_next_stage_pointers (list).`;
+1. Live smoke test: run "bash evals/run.sh work" and "bash evals/run.sh drain" (the two skills most rewritten by the 2026-07-22/23 pivot session) and report each scenario's pass/fail line and the summary. If either command errors out structurally (missing fixture, script crash) rather than reporting a graded pass/fail, say so plainly rather than guessing at a result.
+2. Static sweep: for every .claude/skills/*/SKILL.md, read its frontmatter description. Flag any skill whose description lacks concrete trigger phrases UNLESS its frontmatter sets "disable-model-invocation: true" (per CLAUDE.md's authoring-conventions bullet — those skills are exempt). Also flag any skill description that still names a skill CLAUDE.md/the pivot retired (list-specs, prioritize, or anything else no longer present as a directory) as a next-stage pointer.
+Do not fix anything — this is a report. Return a structured summary: work_eval_result, drain_eval_result, skills_missing_trigger_phrases (list), stale_next_stage_pointers (list).`;
 }
 
 const HEALTH_SCHEMA = {
@@ -114,7 +113,10 @@ const HEALTH_SCHEMA = {
     ultra_gate_result: { type: "string" },
     work_eval_result: { type: "string" },
     drain_eval_result: { type: "string" },
-    skills_missing_trigger_phrases: { type: "array", items: { type: "string" } },
+    skills_missing_trigger_phrases: {
+      type: "array",
+      items: { type: "string" },
+    },
     stale_next_stage_pointers: { type: "array", items: { type: "string" } },
   },
   required: ["ultra_gate_result"],
@@ -146,10 +148,15 @@ const [repoResults, retireResult, healthResult] = await parallel([
       agentType: "implementation-worker",
       schema: RESULT_SCHEMA,
     }).then(async (implResult) => {
-      if (!implResult || implResult.status !== "DONE") return { implResult, critic: null };
+      if (!implResult || implResult.status !== "DONE")
+        return { implResult, critic: null };
       const critic = await agent(
         `Review the just-committed diff retiring /list-specs and /prioritize in this repo (~/claude). Check the retirement checklist's five failure classes (docs/memory/skill-retirement-checklist.md): bare-name mentions missed, behaviors not ported, dispatch paths not all updated, absorbed text not reconciled with the host's invariants, and anything else a clean grep + green gate would miss. Report findings ranked by severity.`,
-        { label: "critic:list-specs-prioritize-retirement", phase: "Retire skills", agentType: "critic" },
+        {
+          label: "critic:list-specs-prioritize-retirement",
+          phase: "Retire skills",
+          agentType: "critic",
+        },
       );
       return { implResult, critic };
     }),
