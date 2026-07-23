@@ -5,7 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P0
 Budget: 24 turns
@@ -57,13 +57,20 @@ tasks 03, 04, 06, 07, 11 in their own modules.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_pin.py -q` → passes; committed test shown failing before implementation (red commit precedes green in this task's history)
-- [ ] `bash tests/test_agentic_roundtrip.sh` → prints `ROUNDTRIP OK` after a zero-record diff (R-E)
-- [ ] `bash tests/test_agentic_bootstrap.sh` → prints `BOOTSTRAP OK` with the imported count; only `git clone` + `agentic init` are executed against the fixture remote (R-B)
-- [ ] `bash -c 'cd "$(mktemp -d)" && git init -q . && agentic init >/dev/null 2>&1; git -C . status --porcelain | grep -c interactions'` → `0` (telemetry never dirties status)
-- [ ] `bash scripts/check.sh` → green, and its output lists both the pre-existing `tests/test_*.sh` names and the new agentic tests (proves glob discovery, not a hand-listed subset)
-- [ ] `python3 -m pytest tests/test_agentic_pin.py -q -k missing` → passes (bd absent from PATH → clean install-command error)
-- [ ] `grep -c "scripts/check.sh" AGENTS.md` → ≥ 1 (canonical check documented)
+- [x] `python3 -m pytest tests/test_agentic_pin.py -q` → passes; committed test shown failing before implementation (red commit precedes green in this task's history)
+      Evidence: `python3 -m pytest tests/test_agentic_pin.py -q` -> 2 passed; red commit 8da32860 precedes green 1bff1c34.
+- [x] `bash tests/test_agentic_roundtrip.sh` → prints `ROUNDTRIP OK` after a zero-record diff (R-E)
+      Evidence: `bash tests/test_agentic_roundtrip.sh` -> ROUNDTRIP OK (wipe embeddeddolt, agentic init rebuilds from committed JSONL, re-export diff of *_at-filtered records is empty).
+- [x] `bash tests/test_agentic_bootstrap.sh` → prints `BOOTSTRAP OK` with the imported count; only `git clone` + `agentic init` are executed against the fixture remote (R-B)
+      Evidence: `bash tests/test_agentic_bootstrap.sh` -> BOOTSTRAP OK (5 issues imported); only git clone + agentic init run against the bare fixture remote.
+- [x] `bash -c 'cd "$(mktemp -d)" && git init -q . && agentic init >/dev/null 2>&1; git -C . status --porcelain | grep -c interactions'` → `0` (telemetry never dirties status)
+      Evidence: fresh-repo `agentic init` then `git status --porcelain | grep -c interactions` -> 0 (interactions.jsonl gitignored by init).
+- [x] `bash scripts/check.sh` → green, and its output lists both the pre-existing `tests/test_*.sh` names and the new agentic tests (proves glob discovery, not a hand-listed subset)
+      Evidence: `bash scripts/check.sh` -> `check.sh: green`; output lists pre-existing tests/test_*.sh and the new agentic tests (bootstrap.sh, roundtrip.sh, pin.py) via glob; two known-red tests quarantined per Answers.
+- [x] `python3 -m pytest tests/test_agentic_pin.py -q -k missing` → passes (bd absent from PATH → clean install-command error)
+      Evidence: `python3 -m pytest tests/test_agentic_pin.py -q -k missing` -> 1 passed (bd absent -> `brew install beads` error, no pin-mismatch text).
+- [x] `grep -c "scripts/check.sh" AGENTS.md` → ≥ 1 (canonical check documented)
+      Evidence: `grep -c "scripts/check.sh" AGENTS.md` -> 4.
 
 ## Answers
 
