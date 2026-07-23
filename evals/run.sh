@@ -13,7 +13,14 @@
 # them: .claude/skills/_shared and the top-level runtimes/ land in every
 # fixture. A scenario may add an optional skill-deps.txt (one sibling skill
 # dir name per line; blanks and #-comments ignored) to also provision skills
-# its script loads as a library (e.g. a scanner that loads workboard.py).
+# its script loads as a library (e.g. a scanner that loads workboard.py). A
+# scenario may also add an optional runner-cmd.txt naming its own default
+# RUNNER_CMD (e.g. a permanent stub-CLI-tier scenario's fixture-local stub
+# script) — read only when the caller hasn't already set RUNNER_CMD in the
+# environment, so an explicit override always wins. This makes the
+# documented `evals/run.sh <skill>` invocation run such a scenario
+# deterministically without the caller needing to know its stub convention
+# out of band.
 #
 # Env knobs: EVALS_ROOT (scenario dir), SKILLS_ROOT (skill provisioning
 # source, for external repos' evals), AGENTS_ROOT (agents provisioning
@@ -169,7 +176,14 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     # argument. The resolved allowlist is exported as ALLOWED_TOOLS;
     # custom runners may consume or ignore it. Execution happens inside
     # the fixture dir, so RUNNER_CMD's first word must be absolute or
-    # PATH-resolvable.
+    # PATH-resolvable. A scenario's own runner-cmd.txt (see header comment)
+    # supplies the default when the caller left RUNNER_CMD unset — computed
+    # fresh each loop iteration so one scenario's default never leaks into
+    # the next.
+    scenario_runner_cmd="${RUNNER_CMD:-}"
+    if [ -z "$scenario_runner_cmd" ] && [ -f "$scenario/runner-cmd.txt" ]; then
+      scenario_runner_cmd="$(head -n 1 "$scenario/runner-cmd.txt")"
+    fi
     session_rc=0
     # EVAL_TRANSCRIPT: absolute path to this run's JSONL transcript, exposed
     # to assert.sh for trajectory assertions. Only the claude-code runner
@@ -178,8 +192,8 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     # have no stream-json mechanism, so they leave it empty and warn. Resolved
     # and exported centrally after the runner branches, below.
     EVAL_TRANSCRIPT=""
-    if [ -n "${RUNNER_CMD:-}" ]; then
-      read -r -a runner <<<"$RUNNER_CMD"
+    if [ -n "$scenario_runner_cmd" ]; then
+      read -r -a runner <<<"$scenario_runner_cmd"
       (cd "$EVAL_DIR" && ALLOWED_TOOLS="$allowed" timeout 900 "${runner[@]}" \
           "$(cat "$scenario/prompt.txt")" 2>&1 \
           | tee "$EVAL_DIR/session.log") || session_rc=$?

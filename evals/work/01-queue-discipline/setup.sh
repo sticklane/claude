@@ -6,9 +6,14 @@
 #
 # This scenario runs stub-CLI tier (AGENTS.md line 46: "stub CLI, no model
 # calls"), same convention evals/stub-cli.sh and evals/runner-selftest.sh
-# use, applied here as a permanent scenario instead of a throwaway one:
+# use, applied here as a permanent scenario instead of a throwaway one. Its
+# sibling runner-cmd.txt names this stub as the default RUNNER_CMD, so the
+# plain documented invocation already runs it deterministically:
 #
-#   RUNNER_CMD="./stub-worker.sh" bash evals/run.sh work
+#   bash evals/run.sh work
+#
+# (an explicit RUNNER_CMD env var still overrides runner-cmd.txt, per
+# evals/run.sh's header comment, e.g. to promote this to a live-model run.)
 #
 # stub-worker.sh (not a live model) plays the RUNNER_CMD role and performs
 # the mechanical contract .claude/skills/work/SKILL.md describes — claim
