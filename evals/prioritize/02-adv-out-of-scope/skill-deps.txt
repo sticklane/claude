@@ -1,2 +1,0 @@
-# prioritize_scan.py loads workboard.py as a library
-workboard

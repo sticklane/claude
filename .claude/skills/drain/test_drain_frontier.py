@@ -3,7 +3,7 @@
 Run: python3 .claude/skills/drain/test_drain_frontier.py
 or:  python3 -m unittest discover -s .claude/skills/drain
 
-Stdlib-only, like list_specs.py. Each test builds a real spec dir under a
+Stdlib-only, like workboard.py. Each test builds a real spec dir under a
 tmp dir (tempfile.TemporaryDirectory) and either calls the module's
 functions directly or invokes the script as a subprocess to pin exit codes.
 No mocking. One test class per R2 incident class.

@@ -13,7 +13,7 @@
 # them: .claude/skills/_shared and the top-level runtimes/ land in every
 # fixture. A scenario may add an optional skill-deps.txt (one sibling skill
 # dir name per line; blanks and #-comments ignored) to also provision skills
-# its script loads as a library (e.g. prioritize_scan.py loads workboard.py).
+# its script loads as a library (e.g. a scanner that loads workboard.py).
 #
 # Env knobs: EVALS_ROOT (scenario dir), SKILLS_ROOT (skill provisioning
 # source, for external repos' evals), AGENTS_ROOT (agents provisioning
@@ -126,7 +126,7 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     [ -d "$ROOT/runtimes" ] && cp -rL "$ROOT/runtimes" "$EVAL_DIR/runtimes"
 
     # Optional skill-deps.txt: a scenario naming sibling *skills* its script
-    # loads as a library (e.g. prioritize_scan.py loads workboard.py). One
+    # loads as a library (e.g. a scanner that loads workboard.py). One
     # skill dir name per line; blank lines and #-comments ignored. Declared
     # explicitly rather than provisioning all skills, so the sandbox keeps
     # only the skill under test plus its named deps — no blanket pollution.

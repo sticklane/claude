@@ -30,7 +30,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Bootstrap the shared header regexes the list_specs.py way: put _shared/ on
+# Bootstrap the shared header regexes the workboard.py way: put _shared/ on
 # sys.path, then a regular ``import headers`` (path-loading the loader would
 # need a loader to load the loader).
 _SHARED = Path(__file__).resolve().parents[1] / ".claude" / "skills" / "_shared"

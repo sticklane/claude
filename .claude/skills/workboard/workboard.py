@@ -3,7 +3,7 @@
 
 Scans local git repos and Claude Code state on this machine and emits a
 JSON snapshot of all open work (with --json; consumed by agent-console's
-live dashboard and /list-specs). With no --json flag it prints a one-line
+live dashboard). With no --json flag it prints a one-line
 summary. It covers:
 
   - toolkit specs   specs/<slug>/SPEC.md + specs/<slug>/tasks/NN-*.md (Status: lines)
@@ -277,8 +277,8 @@ def git_info(repo):
 # ---------------------------------------------------------------- specs
 
 # STATUS_RE, DEPENDS_RE, PRIORITY_RE now live in _shared/headers.py (imported
-# at the top of this module) so /workboard and /prioritize parse the same
-# header one way. PRIORITY_RE there is range-restricted to P0-P3.
+# at the top of this module) so every consumer parses the same header one
+# way. PRIORITY_RE there is range-restricted to P0-P3.
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 UNBLOCK_RE = re.compile(r"^Unblock:\s*(run|agent|ask):\s*(\S.*?)\s*$", re.MULTILINE)
 DEFERRED_RE = re.compile(

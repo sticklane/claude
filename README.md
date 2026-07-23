@@ -82,7 +82,7 @@ human questions into bd instead of stopping on them.
   synchronous supervision for core logic; unattended runs get scoped
   permissions, bounded goals, branch isolation, and a discard-and-relaunch
   recovery rule (the "slot machine"). The execution stages (`/build`,
-  `/drain`, `/prioritize`) launch only on explicit user
+  `/drain`) launch only on explicit user
   authorization in the live conversation—a launch contract in each
   skill's opening lines replaced the old `disable-model-invocation` flag
   in 2026-07; `/evals` alone stays human-typed. Why the boundary sits

@@ -191,7 +191,7 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
 class TestPriorityRegexRange(unittest.TestCase):
     """The shared PRIORITY_RE reads `Priority: [P1]` as P1 (bracket-tolerant)
     and rejects out-of-range values like P7 (falls through to no match),
-    pinning the same reading /prioritize uses (specs/codequality-shared-header-parsing)."""
+    pinning the same reading every shared-header consumer uses (specs/codequality-shared-header-parsing)."""
 
     def test_bracketed_priority_reads_as_that_value(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1766,8 +1766,11 @@ def _git(repo, *args):
         capture_output=True,
         text=True,
         check=True,
-        env={**os.environ, "GIT_CONFIG_GLOBAL": "/dev/null",
-             "GIT_CONFIG_SYSTEM": "/dev/null"},
+        env={
+            **os.environ,
+            "GIT_CONFIG_GLOBAL": "/dev/null",
+            "GIT_CONFIG_SYSTEM": "/dev/null",
+        },
     )
 
 

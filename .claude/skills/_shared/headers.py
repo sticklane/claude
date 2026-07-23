@@ -1,10 +1,10 @@
 """Shared task-header parsing for the toolkit's own skill scripts.
 
 One home for the `Key: value` task-header regexes and the importlib bootstrap
-helper that `workboard.py`, `list_specs.py`, and `prioritize_scan.py` each
+helper that `workboard.py`, `drain_frontier.py`, and `shadow.py` each
 otherwise defined or duplicated locally. Consolidating them here means the
 same header reads one way everywhere — the `Priority:` divergence this module
-closes had `/workboard` and `/prioritize` parsing `Priority: [P1]` two ways.
+closes had the toolkit's consumers parsing `Priority: [P1]` two ways.
 
 Reached the same way workboard reaches `viz`/`spec_readiness`:
 `sys.path.insert(0, <.../_shared>)` then `import headers` — a regular import,
@@ -30,7 +30,7 @@ PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P[0-3])\]?", re.MULTILINE)
 def _load_module(name, path):
     """Load a Python file at `path` as a module named `name`, executing it.
 
-    The importlib bootstrap `list_specs.py` and `prioritize_scan.py` each used
+    The importlib bootstrap the toolkit's scanner scripts each used
     to define byte-identically, now defined once here. Callers reach this via
     a regular `import headers` (see the module docstring), then call it to
     load `workboard.py` (which is not itself in `_shared/`)."""

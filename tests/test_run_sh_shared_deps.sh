@@ -4,7 +4,7 @@
 # run.sh copies the skill under test into the fixture, but several skills'
 # scripts import sibling shared assets — .claude/skills/_shared and the
 # top-level runtimes/ — and some load a sibling *skill* as a library
-# (prioritize_scan.py loads workboard.py). This test proves run.sh
+# (a scanner loading workboard.py). This test proves run.sh
 # provisions those centrally so scenarios no longer hand-copy them:
 #
 #   - _shared and runtimes/ land in every fixture unconditionally.
