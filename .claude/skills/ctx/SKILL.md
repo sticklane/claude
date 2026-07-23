@@ -23,7 +23,7 @@ when you are about to edit it.
 | -------------------------------------- | ------------------------- |
 | What's in this dir/file, structurally? | `ctx tree <path>`         |
 | Signature + doc of a symbol?           | `ctx sig <name-or-qpath>` |
-| Most-referenced symbols overall?       | `ctx map [--limit N]`     |
+| Most-referenced symbols overall?       | `ctx map [--tokens N]`    |
 | What does this file import?            | `ctx deps <file>`         |
 | Who references this symbol?            | `ctx refs <name>`         |
 | What encloses this line?               | `ctx at <file>:<line>`    |
@@ -64,9 +64,10 @@ Escalate off rung 1 on exactly these triggers:
 ctx output is for a decision, not for the transcript — keep it bounded:
 
 - **Cap wide output.** Pipe `map`/`tree`/`refs` through `head`, or slice with
-  `--limit` / `--json | jq`. Worked example:
-  `ctx map --limit 30 | head` (top refs only);
-  `ctx refs Foo --json | jq -r '.[].file'` (just the files).
+  `tree`/`refs`'s own `--limit`, `map`'s `--tokens`, or `--json | jq`. Worked
+  example: `ctx map | head` (top refs only, `map`'s own default 1000-token
+  budget already bounds it); `ctx refs Foo --json | jq -r '.[].file'` (just
+  the files).
 - **Batch independent queries** into one shell invocation
   (`ctx sig Foo; ctx refs Foo; ctx deps bar.py`) rather than one round-trip
   each.
@@ -80,7 +81,8 @@ Whole-repo understanding requests ("understand this codebase", "survey the
 structure", "how is this organized") run a fixed recipe of deterministic ctx
 calls:
 
-1. `ctx map --limit N` — the most-referenced symbols, the load-bearing core.
+1. `ctx map` (`--tokens N` to widen/narrow the budget) — the most-referenced
+   symbols, the load-bearing core.
 2. `ctx tree <module>` per top-level module — the structural outline of each.
 3. `ctx deps <entry-point>` on the entry points — what the mains pull in.
 
@@ -101,16 +103,16 @@ Survey <repo/subtree> using the `ctx` code-structure index — do NOT read
 whole files. Run these deterministic queries and return a distilled
 structure report (≤300 words), never raw dumps:
 
-  ctx map --limit 30            most-referenced symbols (the core)
+  ctx map                       most-referenced symbols (the core)
   ctx tree <path>               structural outline of a dir/file
   ctx deps <file>               what a file imports
   ctx sig <name>                signature + doc of a symbol
   ctx refs <name>               who references a symbol
   ctx at <file>:<line>          what encloses a line
 
-Recipe: map --limit 30 first; then `tree` each top-level module; then
-`deps` on the entry points. Cap every wide output (`| head`, `--limit`,
-`--json | jq`). Report: the core symbols, each module's role in one line,
+Recipe: `map` first; then `tree` each top-level module; then `deps` on the
+entry points. Cap every wide output (`| head`, `--limit` on `tree`/`refs`,
+`--tokens` on `map`, `--json | jq`). Report: the core symbols, each module's role in one line,
 and the entry-point dependency shape. Summarize — do not paste full trees.
 ```
 
