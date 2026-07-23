@@ -155,12 +155,22 @@ read as today's skills. It is invoked directly, never wired into
   Prefer `ctx tree|sig|refs|deps|map|at` over reading files for structure;
   leave durable symbol notes via `ctx notes add` (committed; DB gitignored).
 
-## Beads issue tracker (transition scope)
+## Beads issue tracker
 
-bd (beads) tracks session-level and newly discovered work: `bd prime`
+bd (beads) is this repo's source of truth for task state: `bd prime`
 at session start, `bd ready` for the queue, claim before working,
-close on done — the `/work` skill owns the flow. Transition boundary,
-until core task 09 (specs/agentic-core-redesign) cuts over: the
-markdown task headers under specs/ remain the source of truth for
-spec work; bd's managed guidance in AGENTS.md ("do not use markdown
-TODO lists") binds only after that cutover.
+close on done — the `/work` skill owns the flow. Markdown task files
+under `specs/*/tasks/` carry the human-readable Goal/Steps/Acceptance
+text; their `Status:` headers are shadow-synced into bd, not the other
+way around.
+
+Record discovered work in bd immediately, not just in prose — a bug
+found, doc drift spotted, or new work scoped while doing something
+else gets filed the moment you find it:
+
+```
+bd create "<title>" --deps discovered-from:<current-id>   # file + link in one step
+bd dep add <new-id> <current-id> -t discovered-from        # link after the fact
+```
+
+Full command reference: `/work`'s SKILL.md.

@@ -26,7 +26,12 @@ should adopt bd —
    everywhere" decision recorded in
    `~/claude/docs/decisions/work-tracking.md`, which this pivot
    reverses for `~/claude` itself but never told other repos to
-   revert.
+   revert. **Also add the "record discovered work in bd as you find
+   it" convention** (maintainer directive, 2026-07-23) to each
+   adopting repo's `CLAUDE.md` — see `~/claude/CLAUDE.md`'s "Beads
+   issue tracker" section for the exact wording/command examples to
+   adapt (cite `/work`'s SKILL.md there for the runnable commands
+   rather than re-deriving them).
 3. **Convert** — not just install — each repo's existing
    `docs/TASKS.md` checkboxes / `specs/*/tasks/*.md` markdown task
    state into real bd issues, analogous to what core-redesign task 05
@@ -100,6 +105,19 @@ was independently verified per-task during this session (verifier
 agents re-ran every task's acceptance commands; `bash scripts/check.sh`
 green with only the pre-existing documented quarantine) — that
 verification stands and does not need repeating.
+
+## Standing convention (maintainer directive, 2026-07-23)
+
+When this task's own work uncovers issues, needs a breakdown, or spots
+new work — record it in bd immediately (`bd create`, with a
+`discovered-from` link to whatever surfaced it), not just in prose or
+a chat reply. Two small examples filed this session, still open and
+unrelated to this handoff's own task (fix opportunistically or leave
+for a small follow-up): `agentic-d3x` (breakdown/SKILL.md has two
+stale post-pivot references — a deleted mirror-check and a deleted
+drain-baton generation-budget mention) and `agentic-bsd`
+(workboard/SKILL.md line 58 still mentions drain batons). Both are
+`~/claude`-local doc drift, not part of the cross-repo task itself.
 
 ## Files touched (prior, pivot work — for reference, already committed/pushed)
 
