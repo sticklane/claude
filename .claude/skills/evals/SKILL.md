@@ -47,7 +47,8 @@ failure messages respect the same ~10-line budget as artifact ones (below).
 Which skills need an evalset — and to what bar — is set by the tier table in
 [evals/COVERAGE.md](../../../evals/COVERAGE.md), enforced model-free by
 `bash evals/lint-eval-coverage.sh` (invoked directly, never wired into
-`run.sh`, which spawns paid sessions). Read that table rather than restating
+`run.sh`, which spawns paid sessions at the runtime profile's session model).
+Read that table rather than restating
 it here: Tier A skills require ≥2 scenarios including at least one
 adversarial — a scenario whose correct outcome is to refuse, flag, or not act,
 named with the `NN-adv-*` directory convention so the lint can spot it without

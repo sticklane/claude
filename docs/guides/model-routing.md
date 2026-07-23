@@ -25,7 +25,7 @@ jumping to a deep tier.
 
 ## Where dispatch actually pins a tier
 
-Skills that spawn agents consult `.claude/runtime.md` tier pins at their
+Skills that spawn agents consult `runtimes/claude-code.md`'s `## Tiers` section for tier pins at their
 actual spawn points and pass the mapped model through the harness's model
 parameter — the same alias flows through both interactive Agent-tool
 dispatch and the headless fallback templates' `--model` flag. Named spawn
@@ -78,8 +78,8 @@ The tier ladder above is grounded in Anthropic's published guidance. The
 same "match model capability to task complexity" principle appears in the
 primary docs of other frontier labs — cited below with verbatim quotes and
 the exact page each came from. This section is citation-only; it changes no
-tier mapping (see the `runtimes/` profiles and `.claude/runtime.md` for the
-actual defaults).
+tier mapping (see the `runtimes/` profiles — `runtimes/claude-code.md`'s
+`## Tiers` section — for the actual defaults).
 
 ### OpenAI
 

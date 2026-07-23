@@ -1,6 +1,6 @@
 # Task 01: Add the empty-diff pre-check as verifier.md's new step 0
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns

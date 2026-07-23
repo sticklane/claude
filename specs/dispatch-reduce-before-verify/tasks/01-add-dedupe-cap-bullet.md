@@ -1,6 +1,6 @@
 # Task 01: Add the reduce/dedupe/cap-before-verify bullet to token-discipline.md
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 6 turns

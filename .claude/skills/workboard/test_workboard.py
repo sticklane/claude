@@ -287,6 +287,24 @@ class TestScannerPromptBuilders(unittest.TestCase):
         self.assertIn(prompt, inbox[0]["cmd"])
 
 
+class TestScanHandoffs(unittest.TestCase):
+    def test_alternate_named_handoff_is_found(self):
+        # /handoff's conflict-avoidance branch writes HANDOFF-<topic>.md; the
+        # glob is HANDOFF*.md so it surfaces alongside a plain HANDOFF.md.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "HANDOFF.md").write_text("# Plain\n", encoding="utf-8")
+            (root / ".claude").mkdir()
+            (root / ".claude" / "HANDOFF-drain-hub.md").write_text(
+                "# Drain hub\n", encoding="utf-8"
+            )
+
+            paths = {h["path"] for h in workboard.scan_handoffs(root)}
+
+            self.assertIn("HANDOFF.md", paths)
+            self.assertIn(".claude/HANDOFF-drain-hub.md", paths)
+
+
 def make_session(toplevel, state="active"):
     """A session record as attention_items reads it: state + git toplevel."""
     return {"state": state, "toplevel": toplevel, "cwd": toplevel}

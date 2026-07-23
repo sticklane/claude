@@ -94,6 +94,30 @@ for f in "${guide_files[@]}"; do
   fi
 done
 
+# --- phantom-ref guard: doctrine files (.claude/rules/*.md, docs/guides/*.md)
+# must not cite a nonexistent `.claude/...` or `runtimes/...` path in backticks.
+# A doctrine clause that hinges on a missing file (the .claude/runtime.md
+# phantom that dead-ended tier routing) has to fail here, so future repoints
+# stay honest. Tokens carrying a glob/placeholder metachar (* < > $) are not
+# literal paths and are skipped.
+shopt -s nullglob
+doctrine_files=("$repo_root"/.claude/rules/*.md "$repo_root"/docs/guides/*.md)
+shopt -u nullglob
+
+for f in "${doctrine_files[@]}"; do
+  while IFS= read -r ref; do
+    [ -z "$ref" ] && continue
+    case "$ref" in
+      *'*'* | *'<'* | *'>'* | *'$'*) continue ;;
+    esac
+    if [ -e "$repo_root/$ref" ]; then
+      assert "$f: cited path '$ref' resolves" 0
+    else
+      assert "$f: cited path '$ref' resolves (missing: $repo_root/$ref)" 1
+    fi
+  done < <(grep -oE '`(\.claude|runtimes)/[^`]*`' "$f" | tr -d '`')
+done
+
 echo "pass: $pass fail: $fail"
 [ "$fail" -eq 0 ] || exit 1
 exit 0

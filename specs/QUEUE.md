@@ -1,5 +1,9 @@
 # Combined queue — wave plan (canonical, single copy)
 
+> **Historical wave plan, not live state.** The live queue is bd (`bd ready`);
+> this file records past drain waves for reference only. Do not treat its
+> entries as the current queue.
+
 **Queue 6 (drained 2026-07-12)** — the three overnight-review specs:
 agentprof-scrub-hex-tokens (shx), session-refresh-automation (sra),
 untyped-agent-fanout (uaf). 11 tasks, one repo-wide drain. Contention
@@ -10,15 +14,15 @@ per-spec as always: sra 01+02, sra 04+05, uaf 03+04. plugin.json bumps
 never co-run (sra 04 is the only bump in its group; uaf 03 in its; uaf
 02's is conditional and solo-ordered behind uaf 01).
 
-| Wave | Tasks (parallel within a wave) |
-|---|---|
-| 1 | shx 01; uaf 01 runs solo whenever admitted (read-only trace) |
-| 2 | shx 02 |
-| 3 | sra 01; sra 02 |
-| 4 | sra 04; sra 05 |
-| 5 | sra 03 |
-| 6 | uaf 02 |
-| 7 | uaf 03; uaf 04 |
+| Wave | Tasks (parallel within a wave)                               |
+| ---- | ------------------------------------------------------------ |
+| 1    | shx 01; uaf 01 runs solo whenever admitted (read-only trace) |
+| 2    | shx 02                                                       |
+| 3    | sra 01; sra 02                                               |
+| 4    | sra 04; sra 05                                               |
+| 5    | sra 03                                                       |
+| 6    | uaf 02                                                       |
+| 7    | uaf 03; uaf 04                                               |
 
 All 11 tasks `Status: done`, one repo-wide sequential drain (W=1), each
 merged + pushed individually with gates green (`specs/status.sh`,
@@ -68,7 +72,6 @@ remain under `specs/`** — the queue is empty. Queue 2's follow-ups and the
 onboard-split-default tail landed earlier; the wave plan below is retained as
 historical record.
 
-
 Drain reads each task's `Depends on:` header (numbers within a spec,
 across specs, paths relative to the task file
 (../../<spec>/tasks/...)); this file is the human view of the same
@@ -85,17 +88,17 @@ sections, then wte 03 retrofits tiers — one serial chain
 that chain parallelizes on disjoint Touch.
 
 | Wave | Tasks (parallel within a wave) |
-|---|---|
-| 1 | dls 01; wte 01; wte 02 |
-| 2 | oc 01; um 01 |
-| 3 | oc 02; wte 04 |
-| 4 | oc 03; oc 04 |
-| 5 | um 02 |
-| 6 | oc 05 |
-| 7 | um 03 |
-| 8 | wte 03 |
-| 9 | wte 05 |
-| 10 | osd 01 |
+| ---- | ------------------------------ |
+| 1    | dls 01; wte 01; wte 02         |
+| 2    | oc 01; um 01                   |
+| 3    | oc 02; wte 04                  |
+| 4    | oc 03; oc 04                   |
+| 5    | um 02                          |
+| 6    | oc 05                          |
+| 7    | um 03                          |
+| 8    | wte 03                         |
+| 9    | wte 05                         |
+| 10   | osd 01                         |
 
 15 tasks. onboard-split-default (osd) joined 2026-07-03: one fused task
 (skill + antigravity mirror + bump, per the same-commit mirror

@@ -1,6 +1,6 @@
 # Task 01: Add the Workflow-vs-Agent-dispatch decision rule to workflow-author's Qualify step
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 10 turns

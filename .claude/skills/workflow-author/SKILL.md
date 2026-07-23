@@ -21,7 +21,31 @@ annotated templates (`tournament.js`, `queue-wave.js`).
 1. **Qualify.** Confirm the orchestration is genuinely deterministic control
    flow over subagents — loops, fan-out, staged verification. A procedure
    that is judgment all the way down stays a skill; a single linear sequence
-   stays prose. If it doesn't qualify, decline with that explanation.
+   stays prose. If it doesn't qualify, decline with that explanation. Then
+   apply the two-part Workflow-vs-`Agent`-dispatch test:
+   - **Primary — invocation context.** An orchestration meant to be its own
+     standalone artifact — invoked by name, or repeatable across sessions
+     under the ultracode opt-in, independent of any one skill's run — is
+     authored as a Workflow. An orchestration that is control flow already
+     embedded inside another skill's own procedure, dispatched as one
+     internal step of that skill's own already-active, single-writer loop
+     (drain's tournament dispatch is the canonical case), stays plain
+     `Agent`-tool dispatch inside that skill's own procedure — regardless of
+     its internal fan-out/barrier/verify shape. `reference.md`'s
+     `tournament.js` and drain's own tournament dispatch share the identical
+     fan-out-then-reduce shape (the same `parallel()` build, per-item verify,
+     and cross-item `rank` barrier and schema), yet land on opposite sides of
+     this test: they are separated by invocation context, not by any
+     structural or barrier-count difference — `tournament.js` is a standalone
+     named script, drain's tournament is control flow inside drain's own
+     step 3. A reader should be able to explain why the two differ without
+     re-deriving it.
+   - **Secondary — genuine orchestration shape.** Even a standalone,
+     human-named routine earns a Workflow's authoring overhead only when it
+     has at least one real data-dependent barrier — a stage that cannot start
+     without the merged or reduced output of a prior fan-out, not merely one
+     that "runs after" it. A single linear one-shot task stays prose or
+     direct dispatch even when the user asks to "save it as a workflow."
 2. **Write the script** at `.claude/workflows/<kebab-name>.js` in the target
    repo: open with `export const meta = {name, description, phases}` as a
    pure literal, then a body using `agent()` / `parallel()` / `pipeline()` /
