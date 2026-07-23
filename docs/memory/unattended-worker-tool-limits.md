@@ -13,7 +13,7 @@ don't assume `disable-model-invocation` frontmatter explains all three:
 - `/evals` (and the `Workflow` tool, and `/deep-research`) are still
   genuinely removed from the model's reach — `disable-model-invocation`
   blocks the tool-call layer regardless of who's asking.
-- `/build`, `/drain`, `/prioritize` dropped
+- `/build`, `/drain` dropped
   `disable-model-invocation` — they're model-invocable, but ONLY when the
   human's live message names the stage (CLAUDE.md's authoring
   conventions). A dispatched worker's prompt is synthesized by the
@@ -21,7 +21,7 @@ don't assume `disable-model-invocation` frontmatter explains all three:
   conclusion is unchanged: **a worker still can't launch these**, but the
   reason is now "no live-user authorization in this context," not "the
   skill isn't in my toolset." Don't grep a worker's tool list to explain a
-  DEFERRED on one of these four; check whether the dispatch prompt could
+  DEFERRED on one of these three; check whether the dispatch prompt could
   ever satisfy the launch-authorization contract instead.
 
 So any acceptance criterion that requires _observing a live Workflow run_ or
@@ -52,7 +52,7 @@ instructed by a human-directed request to call `Skill(skill: "drain")` —
 hit a hard `InputValidationError`-style block, not a soft refusal. That
 was `disable-model-invocation` enforced at the tool-call layer.
 
-**Unverified post-migration:** `/drain`/`/build`/`/prioritize`
+**Unverified post-migration:** `/drain`/`/build`
 no longer carry that flag, so it's an open question whether an
 `Agent`-dispatched worker instructed to call `Skill(skill: "drain")` now
 hits a hard block, a soft model-level refusal (the model reading its own
@@ -60,7 +60,7 @@ SKILL.md's launch-authorization paragraph and declining), or actually
 succeeds — the mechanism moved from "tool-call-layer removal" to
 "documented convention in the skill body," which is a different
 enforcement shape. Don't assume the pre-migration hard-block result still
-holds for these four without testing it directly; `/evals` (still
+holds for these three without testing it directly; `/evals` (still
 `disable-model-invocation: true`) should still hard-block the same way.
 
 Consequence either way: an in-session `Agent` dispatch is not a reliable

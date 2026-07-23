@@ -76,7 +76,7 @@ queue work that can't be verified.
 ### e. Self-chain into /critique on each filed spec
 
 Run `/critique` on each spec filed in step d. This self-chain is permitted
-unconditionally: `/critique` is not one of the four gated execution-stage
+unconditionally: `/critique` is not one of the three gated execution-stage
 skills, so the self-chaining conditions in root CLAUDE.md's "Authoring
 conventions" (the canonical gating bullet) are met without a live-request
 naming it. Cite that bullet rather than restating the gating logic.
