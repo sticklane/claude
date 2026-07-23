@@ -103,3 +103,6 @@ verdict that step 3 acts on.
 
 Worth the 10×+ token cost only for pre-implementation specs, security-
 sensitive diffs, or an explicit "be thorough" ask. Never auto-triggered.
+
+`Next stage: /breakdown specs/<slug>/SPEC.md on a READY spec
+(human-launched)`.

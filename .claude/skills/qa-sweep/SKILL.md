@@ -81,10 +81,11 @@ can't be verified.
 ### e. Self-chain into /critique on each filed spec
 
 Run `/critique` on each spec filed in step d. This self-chain is permitted
-unconditionally: `/critique` is not one of the three gated execution-stage
-skills, so the self-chaining conditions in root CLAUDE.md's "Authoring
-conventions" (the canonical gating bullet) are met without a live-request
-naming it. Cite that bullet rather than restating the gating logic.
+unconditionally: `/critique` is not an execution-stage skill — root
+CLAUDE.md's canonical gating bullet names `/build` and `/drain` as the
+launch-gated stages — so the self-chaining conditions in that bullet are
+met without a live-request naming it. Cite the bullet rather than
+restating the gating logic.
 
 ### f. Hand off to /drain (do not auto-invoke it)
 

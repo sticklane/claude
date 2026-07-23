@@ -321,6 +321,29 @@ before Boris stopped reading permission prompts [S10].
 - Prefer CLI tools over MCP servers where equivalent; plan mode / specs exist
   to avoid the most expensive token sink of all: **implementing the wrong thing**.
 
+## Harness lessons from the C-compiler experiment (verified 2026-07-23)
+
+Anthropic's 16-agent, ~2000-session C-compiler build (Carlini —
+anthropic.com/engineering/building-c-compiler;
+github.com/anthropics/claudes-c-compiler). Each lesson lands on a
+convention this repo already carries; the citations pin them to a
+first-party stress test at scale.
+
+- **Quiet harness.** "The test harness should not print thousands of
+  useless bytes... log all important information to a file so Claude can
+  find it" → token-discipline's externalize-large-artifacts and
+  capped-returns bullets.
+- **Near-perfect verifiers.** "the task verifier is nearly perfect,
+  otherwise Claude will solve the wrong problem" → runnable acceptance
+  commands and docs/memory/anchored-acceptance-criteria.md.
+- **Time-blindness needs budgets.** "Claude can't tell time and, left
+  alone, will happily spend hours running tests" → the `Budget:` header
+  and the wake-budget doctrine.
+- **Author for the agent.** "I had to constantly remind myself that I was
+  writing this test harness for Claude and not for myself" → the
+  agent-readability bar CLAUDE.md's conventions apply to every skill and
+  task file.
+
 ## Skill authoring (verified 2026-07-23)
 
 Anthropic's published Agent Skills guidance, quote-verified against

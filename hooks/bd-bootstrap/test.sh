@@ -83,6 +83,29 @@ check "missing: exactly one line" "$([ "$lines" -eq 1 ] && echo 0 || echo 1)"
 check "missing: names bd" "$(printf '%s' "$out" | grep -qi 'bd' && echo 0 || echo 1)"
 rm -rf "$tmp"
 
+# --- hydrate failure (garbage metadata, init errors): one advisory line ----
+tmp="$(mktemp -d)"
+mkdir -p "$tmp/.beads" "$tmp/bin"
+printf '{"id":"demo-abc","title":"x"}\n' > "$tmp/.beads/issues.jsonl"
+printf 'not json at all\n' > "$tmp/.beads/metadata.json"
+log="$tmp/calls.log"
+cat > "$tmp/bin/bd" <<EOF
+#!/usr/bin/env bash
+echo "bd \$*" >> "$log"
+case "\$1" in
+  where|init|import) exit 1 ;;
+esac
+exit 0
+EOF
+chmod +x "$tmp/bin/bd"
+out="$(CLAUDE_PROJECT_DIR="$tmp" BD_BOOTSTRAP_NO_INSTALL=1 PATH="$tmp/bin:$PATH" bash "$HOOK" </dev/null 2>&1)"
+rc=$?
+check "hydrate-fail: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
+check "hydrate-fail: advisory names the failure" \
+  "$(printf '%s' "$out" | grep -qi 'hydrate' && echo 0 || echo 1)"
+check "hydrate-fail: still primes" "$(grep -q '^bd prime' "$log" && echo 0 || echo 1)"
+rm -rf "$tmp"
+
 # --- bd off PATH but in a known install dir: found via extra dirs ----------
 tmp="$(mktemp -d)"
 mkdir -p "$tmp/.beads/embeddeddolt" "$tmp/gobin" "$tmp/emptybin"

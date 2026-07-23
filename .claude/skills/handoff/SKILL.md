@@ -59,9 +59,14 @@ After that header block, contain only what a fresh agent needs:
 - **Files touched**: paths, one line each on what changed and why.
 - **Gotchas**: everything learned the hard way this session — wrong
   assumptions, commands that need flags, tests that are slow/flaky.
+- **Decisions**: each decision taken this session with why and how to
+  reverse it — decisions are what a compressed summary silently loses, and
+  a resumer who can't see them re-makes them differently
+  (docs/external-playbooks.md, "Handoffs", the Cognition bullet).
 - **Verification**: which acceptance criteria pass right now, which don't.
-  Facts and paths only — no narrative, no conversation history. If it
-  exceeds a page, it's carrying dead weight.
+  Point at full artifacts — the task file, `evidence/` paths, commits —
+  rather than re-summarizing them. Facts and paths only — no narrative, no
+  conversation history. If it exceeds a page, it's carrying dead weight.
 
 2. File the parked state in bd before the prose is final (CLAUDE.md's
    Beads section owns the commands — cite it, don't restate it): the
@@ -86,9 +91,15 @@ After that header block, contain only what a fresh agent needs:
    flips it to `done` later. Skip only when the session completed nothing
    (pure exploration, or all work is still in flight).
 4. Commit work-in-progress to the working branch if the tree is dirty (a
-   handoff pointing at an uncommitted tree is fragile).
+   handoff pointing at an uncommitted tree is fragile), and commit the
+   handoff file itself in the same pass — an untracked handoff is invisible
+   to other machines and breaks /resume-handoff's `git rm` consumption.
 5. Run /distill first if there were corrections worth keeping — handoff
    preserves state, distill preserves lessons; they're different.
-6. Tell the user: `/clear`, then resume with
-   "Read <path>/HANDOFF.md and continue." Close with:
-   `Next stage: none — /clear and resume from the handoff file`.
+6. Tell the user: `/clear`, then resume with `/resume-handoff` — naming
+   the handoff's path in the message when the conflict-avoidance branch
+   used an alternate name. Never instruct an ad hoc "read the file and
+   continue": that bypasses the tracker reconciliation and consumption
+   steps the resume skill exists to guarantee (its own doctrine, and the
+   handoff-resume hook says the same). Close with:
+   `Next stage: none — /clear, then /resume-handoff picks the work up`.

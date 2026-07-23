@@ -29,6 +29,10 @@ rather than restating it. Verified against primary sources, July 2026.
   traces, re-run on every change. → the /evals skill (with Google's
   trajectory framing below).
   [Langfuse agent evals](https://cookbook.openai.com/examples/agents_sdk/evaluate_agents)
+- **State each rule once.** "Keep the policy in one place and state each
+  rule once. Repeating instructions... can cause unnecessary approval
+  requests." → CLAUDE.md's cite-it-don't-restate-it convention.
+  [Prompt guidance](https://developers.openai.com/api/docs/guides/prompt-guidance)
 
 ## Adopted from Google / DeepMind
 

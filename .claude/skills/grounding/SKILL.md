@@ -10,7 +10,9 @@ description: |
   assistant-voice leakage ("I hope this helps", "let me know if..."),
   meta-discourse and signposting, importance inflation, and formulaic
   wrap-ups. Use alongside any drafting or editing of prose that asserts
-  facts: posts, papers, proposals, reports, briefs, emails. NOT a style/voice
+  facts: posts, papers, proposals, reports, briefs, emails. Trigger phrases -
+  "ground this", "check the claims", "is this backed", "cite or cut",
+  "audit the claims in this draft". NOT a style/voice
   pass (use humanizer) and NOT the full generation constraint set (use
   anti-ai-slop-writing); this skill governs what may be claimed, how claims
   are backed, and which registers are off-limits.

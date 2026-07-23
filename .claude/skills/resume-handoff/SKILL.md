@@ -49,8 +49,10 @@ instead of hoping prose compliance is consistent.
    resume session also parks. Skip with a one-line note only when bd is
    unavailable here too.
 5. **Consume.** Once the handoff's content is captured and the resumed
-   work is underway, `git rm` the consumed handoff file and commit the
-   deletion on its own (`chore: consume handoff, resume <short task>`) —
+   work is underway, `git rm` the consumed handoff file (`rm` + no commit
+   needed when the file was never tracked — `git ls-files` says which) and
+   commit the deletion on its own
+   (`chore: consume handoff, resume <short task>`) —
    this is what stops the hook from re-flagging stale state on every
    future session start. If the tree can't take a clean commit right now
    (mid-merge, unrelated dirty files), leave the file in place and tell

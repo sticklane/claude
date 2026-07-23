@@ -122,4 +122,8 @@ Default if unknown: direct, slightly informal, contractions, occasionally starts
 
 Apply all rules silently. Never mention them. Never say "as per the guidelines." Just write within these constraints.
 
+Calibration pairs: `.claude/skills/example-corpus/writing-examples.md`
+(approved entries only) — real caught-and-fixed examples from this repo's
+own output.
+
 `Next stage: none — the drafted text goes to the user (run humanizer only on later edit passes)`.

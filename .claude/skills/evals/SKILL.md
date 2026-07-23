@@ -11,7 +11,7 @@ consumes ship in the toolkit repo, not with installs — /evals is not
 usable from plugin installs. Grading has two layers: v1 artifact
 assertions (what a run produced) stay primary, and v2 adds opt-in
 trajectory assertions (how the run got there) via `EVAL_TRANSCRIPT`
-(specs/skill-evals/SPEC.md, specs/trajectory-evals/SPEC.md). A
+(specs/archive/skill-evals/SPEC.md, specs/trajectory-evals/SPEC.md). A
 scenario is a directory
 `evals/<skill>/<NN-name>/` containing exactly:
 
@@ -70,9 +70,10 @@ verbatim). `chmod +x` both scripts.
 
 `./evals/run.sh <skill>` (no argument runs every evalset). Per scenario
 the runner builds a fresh fixture, copies `.claude/skills/<skill>/` and
-`.claude/agents/` from this checkout into `$EVAL_DIR/.claude/` (plus the
-`.agents/skills/<skill>/` layout Antigravity/Codex discover from, so the
-same fixture is runtime-portable — see `runtimes/README.md`), and runs
+`.claude/agents/` from this checkout into `$EVAL_DIR/.claude/` (it also
+still provisions a legacy `.agents/skills/<skill>/` copy; the mirrored
+runtime trees that consumed it were deleted in the 2026-07-22 portability
+pivot, so that copy is inert), and runs
 the prompt there under `timeout 900` with a fixed allowlist — a
 deliberate, documented exception to the toolkit's self-contained-prompt
 rule, because exercising the real skill text is the entire point.

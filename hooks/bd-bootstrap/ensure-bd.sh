@@ -67,18 +67,24 @@ if ! command -v bd >/dev/null 2>&1; then
 fi
 
 # Hydrate a fresh clone: binary present, no database, committed JSONL there.
+# A failed hydrate must say so — priming an empty tracker silently is the
+# exact quiet-drift mode this hook exists to close.
 if ! "$bd_bin" where >/dev/null 2>&1 && [ -f "$root/.beads/issues.jsonl" ]; then
   prefix=""
   if [ -f "$root/.beads/metadata.json" ]; then
     prefix="$(sed -n 's/.*"dolt_database"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
       "$root/.beads/metadata.json" | head -1)"
   fi
+  hydrate_ok=1
   if [ -n "$prefix" ]; then
-    (cd "$root" && "$bd_bin" init --prefix "$prefix" >/dev/null 2>&1)
+    (cd "$root" && "$bd_bin" init --prefix "$prefix" >/dev/null 2>&1) || hydrate_ok=0
   else
-    (cd "$root" && "$bd_bin" init >/dev/null 2>&1)
+    (cd "$root" && "$bd_bin" init >/dev/null 2>&1) || hydrate_ok=0
   fi
-  (cd "$root" && "$bd_bin" import >/dev/null 2>&1) || true
+  (cd "$root" && "$bd_bin" import >/dev/null 2>&1) || hydrate_ok=0
+  if [ "$hydrate_ok" -eq 0 ]; then
+    echo "bd-bootstrap: hydrate from .beads/issues.jsonl failed (init or import errored) — the tracker may be empty or partial this session; treat bd query results accordingly and note bd-bound work in your final message."
+  fi
 fi
 
 cd "$root" 2>/dev/null || true

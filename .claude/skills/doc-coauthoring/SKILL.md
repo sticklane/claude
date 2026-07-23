@@ -1,6 +1,6 @@
 ---
 name: doc-coauthoring
-description: Structured co-authoring workflow for standalone prose documents — position papers, proposals, decision docs, belief statements. The default for position-paper work. Guides context transfer, iterative refinement, and reader testing. Do NOT use for feature or system design that ends in code or product specs (use /idea — the spec pipeline), product documentation pages (use writing-user-docs), or this repo's own orientation docs (README, AGENTS.md, docs/, specs/ — /prose-review's charter).
+description: Structured co-authoring workflow for standalone prose documents — position papers, proposals, decision docs, belief statements. The default for position-paper work. Guides context transfer, iterative refinement, and reader testing. Trigger phrases - "draft a proposal", "write a position paper", "co-author this doc", "decision doc", "write up my thinking". Do NOT use for feature or system design that ends in code or product specs (use /idea — the spec pipeline), product documentation pages (use writing-user-docs), or this repo's own orientation docs (README, AGENTS.md, docs/, specs/ — /prose-review's charter).
 ---
 
 # Doc Co-Authoring Workflow
@@ -11,9 +11,8 @@ This skill provides a structured workflow for guiding users through collaborativ
 
 **Trigger conditions:**
 
-- User mentions writing documentation: "write a doc", "draft a proposal", "create a spec", "write up"
-- User mentions specific doc types: "PRD", "design doc", "decision doc", "RFC"
-- User seems to be starting a substantial writing task
+- User mentions standalone prose documents: "draft a proposal", "write a position paper", "decision doc", "write up my thinking"
+- User seems to be starting a substantial writing task that will NOT end in code or a product spec — specs, PRDs, and design docs that feed implementation route to /idea (the description's carve-out), and this repo's own orientation docs route to /prose-review
 
 **Initial offer:**
 Offer the user a structured workflow for co-authoring the document. Explain the three stages:

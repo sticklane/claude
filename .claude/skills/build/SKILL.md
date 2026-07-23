@@ -43,10 +43,11 @@ every time you enter it — agentprof reads it from this session's transcript
 to attribute cost/tokens/time to this stage until the next stage marker.
 
 **Startup session sweep (advisory).** Before reading the task, list other
-live sessions whose cwd resolves into this repo — drain's mechanism
-(`claude agents --json`, pid-record fallback; drain/SKILL.md's "Startup
-session sweep (advisory)", cited not restated): one line per foreign live
-session, a "sweep unavailable" line on failure, never blocking.
+live sessions whose cwd resolves into this repo (the pre-flight in
+`.claude/rules/concurrent-sessions.md`, cited not restated: `claude agents
+--json`, worktree list, unexplained working-tree changes): one line per
+foreign live session, a "sweep unavailable" line on failure, never
+blocking.
 
 Read the task file (and its spec's Requirements section if referenced). Mark
 the task's Status as `in-progress` (a bare SPEC.md has no Status field — skip
@@ -199,7 +200,10 @@ line every time you enter it.
   `/simplify` if available, otherwise apply its principles yourself — never
   change what the code does, only how; remove comments that describe obvious
   code, redundant abstractions, and defensive handling for cases that can't
-  happen. Re-run the acceptance commands after.
+  happen. Hold comments to quality-discipline.md's self-documenting-code
+  section (public surface only; calibration pairs in
+  `.claude/skills/example-corpus/code-examples.md`). Re-run the acceptance
+  commands after.
 - Pre-commit review (one pass, no re-review after fixes): compute the skip
   gate first — stage all changes and diff against the step-0 base revision
   for per-path line counts; staging first surfaces brand-new untracked
@@ -275,7 +279,10 @@ gotcha|invariant|rationale|todo` before finishing (the note is committed;
   in bd the moment it's reported — `bd create` with a `discovered-from`
   link to this task's issue (CLAUDE.md's Beads section, cited not
   restated); a bd issue is a tracker record, not a task file, so this
-  doesn't touch the no-queue-writes rule. Skip with a one-line note when
+  doesn't touch the no-queue-writes rule. Same dispatch carve-out as the
+  claim and close bullets: a drain-dispatched worker only REPORTS
+  `Discovered:` lines and never runs `bd create` — drain files them
+  (drain reference.md's worker prompt). Skip with a one-line note when
   bd is unavailable. For non-DONE outcomes the report also carries
   one fixed `Done vs remaining:` line summarizing partial progress.
 - For items in `Discovered:`, offer to write each as a header-only
