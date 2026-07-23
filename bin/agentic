@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# agentic CLI shim: run the repo-root `agentic` Python package via python3.
+# Resolves symlinks (e.g. ~/.local/bin/agentic -> <repo>/bin/agentic) so the
+# package is found regardless of where the command is invoked from.
+set -euo pipefail
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  case "$SOURCE" in
+    /*) ;;
+    *) SOURCE="$DIR/$SOURCE" ;;
+  esac
+done
+REPO_ROOT="$(cd -P "$(dirname "$SOURCE")/.." >/dev/null 2>&1 && pwd)"
+
+exec env PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -m agentic "$@"
