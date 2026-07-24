@@ -826,12 +826,10 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
                 "tasks": None,  # docs/TASKS.md tracking retired with scan_tasks
                 "handoffs": [
                     {
+                        "id": h["id"],
                         "title": h["title"],
-                        "path": h["path"],
-                        "mtime": h["mtime"],
-                        "id": _entity_id("file", _abs_under(r["path"], h["path"]))
-                        if h.get("path")
-                        else "",
+                        "tracked_ids": h["tracked_ids"],
+                        "updated_ts": h["updated_ts"],
                     }
                     for h in r["handoffs"]
                 ],
@@ -940,9 +938,10 @@ def _entity_id(kind: str, target_path: str) -> str:
 
 def build_entity_registry(assembled: dict) -> dict:
     """Map id -> {id, kind, path, title} for every file the board references:
-    each repo CLAUDE.md, each SPEC.md, each task file, each handoff, plus a
-    targeted listing of every spec's evidence/ dir. Built from assemble() data
-    so it costs no extra scan; keyed by id, so one file yields exactly one id."""
+    each repo CLAUDE.md, each SPEC.md, each task file, plus a targeted listing
+    of every spec's evidence/ dir. Built from assemble() data so it costs no
+    extra scan; keyed by id, so one file yields exactly one id. Handoffs are bd
+    issues with no file of their own, so they register nothing here."""
     registry: dict = {}
 
     def add(kind: str, path: str, title: str = "") -> None:
@@ -976,12 +975,6 @@ def build_entity_registry(assembled: dict) -> dict:
             for name in names:
                 if name.endswith(".md"):
                     add("file", os.path.join(evidence_dir, name), name)
-        for handoff in repo.get("handoffs", []):
-            hpath = handoff.get("path") or ""
-            if not hpath:
-                continue
-            habs = hpath if os.path.isabs(hpath) else os.path.join(root, hpath)
-            add("file", habs, handoff.get("title", ""))
     return registry
 
 
@@ -1096,9 +1089,16 @@ def _is_git_root(path: str) -> bool:
         return False
 
 
+def _handoff_target(repo_path: str, issue_id: str) -> str:
+    """The action-id target for a parked handoff. bd issue ids are unique only
+    within their own repo, so the repo path scopes them into a key no other
+    repo's handoff can collide with."""
+    return f"{repo_path}#{issue_id}"
+
+
 def _scanner_dispatch_prompts(board: dict) -> tuple[dict, dict]:
     """Build the verify/resume dispatch prompts from the structured board,
-    keyed by (repo-name, spec-slug) and (repo-name, handoff-title). Each prompt
+    keyed by (repo-name, spec-slug) and (repo-name, handoff-issue-id). Each prompt
     is workboard's own builder output (scanner_verify_prompt /
     scanner_resume_prompt), so a dispatch reuses the scanner's exact wording
     rather than re-parsing an attention item's text — one source, contract-
@@ -1113,9 +1113,9 @@ def _scanner_dispatch_prompts(board: dict) -> tuple[dict, dict]:
             if slug and total and done >= total:
                 verify[(name, slug)] = workboard.scanner_verify_prompt(slug)
         for h in repo.get("handoffs", []):
-            title, hpath = h.get("title") or "", h.get("path") or ""
-            if title and hpath:
-                resume[(name, title)] = workboard.scanner_resume_prompt(hpath)
+            issue_id = h.get("id") or ""
+            if issue_id:
+                resume[(name, issue_id)] = workboard.scanner_resume_prompt(issue_id)
     return verify, resume
 
 
@@ -1180,10 +1180,11 @@ def build_action_registry(board: dict) -> dict:
     (`git.ahead > 0`); and, for specs/handoffs in git-repo roots (R5b), the
     detached-`claude` dispatches — `dispatch-drain` (a spec with pending
     tasks), `dispatch-verify` (a spec whose tasks are all done), and
-    `dispatch-resume-handoff` (a parked handoff). Every argv is built here from
-    scanned facts — never client input — and each id is content-derived
-    (_entity_id, kind + canonical path), so it is stable across rescans of
-    unchanged state and validates a later POST against the TTL-window board."""
+    `dispatch-resume-handoff` (a parked handoff's bd issue). Every argv is built
+    here from scanned facts — never client input — and each id is content-derived
+    (_entity_id, kind + canonical path, or repo-scoped issue id for a handoff),
+    so it is stable across rescans of unchanged state and validates a later POST
+    against the TTL-window board."""
     actions: dict = {}
     verify_prompts, resume_prompts = _scanner_dispatch_prompts(board)
 
@@ -1235,15 +1236,15 @@ def build_action_registry(board: dict) -> dict:
                         "dispatch-verify", spec_path, path, prompt, f"verify {slug}"
                     )
         for h in repo.get("handoffs", []):
-            title, hpath = h.get("title") or "", h.get("path") or ""
-            prompt = resume_prompts.get((name, title))
-            if hpath and prompt:
+            issue_id, title = h.get("id") or "", h.get("title") or ""
+            prompt = resume_prompts.get((name, issue_id))
+            if issue_id and prompt:
                 add_dispatch(
                     "dispatch-resume-handoff",
-                    hpath,
+                    _handoff_target(path, issue_id),
                     path,
                     prompt,
-                    f"resume handoff: {title}",
+                    f"resume handoff: {title or issue_id}",
                 )
         # unblock/recheck (unblock-next-steps R7): a waiting-spec header and each
         # blocked task file in this git root gets both agent-dispatch kinds
@@ -2229,6 +2230,14 @@ def _row(trunc: str, *metas: str) -> str:
     return f'<div class="line"><span class="trunc">{trunc}</span>{cells}</div>'
 
 
+def _handoff_meta(h: dict) -> str:
+    """The trailing meta text for a parked-handoff row: the bd issue to resume,
+    the issues it tracks, and how long it has been sitting."""
+    tracked = ", ".join(h.get("tracked_ids") or [])
+    tracks = f" · tracks {tracked}" if tracked else ""
+    return f"{h['id']}{tracks} · {_ago(h['updated_ts'])}"
+
+
 def render_workboard(
     b: dict, cost: dict | None = None, summary_mtime: float | None = None
 ) -> str:
@@ -2541,21 +2550,17 @@ def render_workboard(
         if r["handoffs"]:
             lines = "".join(
                 f'<div class="line evt">{chip("blocked")}'
-                + (
-                    f'<a class="trunc" href="/file/{esc(h["id"])}">{esc(h["title"])}</a>'
-                    if h.get("id")
-                    else f'<span class="trunc">{esc(h["title"])}</span>'
-                )
-                + f'<span class="meta">{_ago(h["mtime"])}</span>'
+                + f'<span class="trunc">{esc(h["title"])}</span>'
+                + f'<span class="meta">{esc(_handoff_meta(h))}</span>'
                 + (
                     _dispatch_btn(
                         "dispatch-resume-handoff",
-                        h["path"],
+                        _handoff_target(r["path"], h["id"]),
                         "resume",
                         f'Resume the handoff "{h["title"]}" in {r["name"]}? Launches a '
                         "Claude session to finish it (costs tokens).",
                     )
-                    if git_root and h.get("path")
+                    if git_root and h.get("id")
                     else ""
                 )
                 + "</div>"
