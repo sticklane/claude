@@ -3,6 +3,14 @@
 Status: open
 Breakdown-ready: true
 
+> **Superseded (2026-07-24, bd-native-handoffs).** The compact `Key: value`
+> header this spec added has no file to attach to: `specs/bd-native-handoffs`
+> retired the free-standing handoff file, so `/handoff` now parks session
+> state as bd comments plus one `handoff`-labeled bd issue, and
+> `/resume-handoff` disambiguates candidates from a bounded `bd show` read
+> instead of a file header. The rest of this spec is retained as history —
+> the reasoning behind the 2026-07-21 decision, not the current mechanism.
+
 ## Problem
 
 `HANDOFF.md` files are prose-narrative with no structured header:
