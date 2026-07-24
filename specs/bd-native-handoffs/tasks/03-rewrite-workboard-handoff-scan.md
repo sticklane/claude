@@ -1,22 +1,11 @@
 # Task 03: workboard.py scans bd for open handoff issues instead of HANDOFF*.md
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P1
 Budget: 35 turns
 Spec: ../SPEC.md (requirements R5, R7)
 Touch: .claude/skills/workboard/workboard.py, .claude/skills/workboard/reference.md, .claude/skills/workboard/test_workboard.py
-
-<!-- PLAN (delete at close-out)
-1. Tests first in test_workboard.py: TestScanHandoffs rewritten around a
-   patched workboard.subprocess.run (no .beads → no bd call; timeout /
-   non-zero exit / bad JSON → []; happy path → id/title/tracked_ids/mtime),
-   pinned resume-prompt string, inbox-item field shape.
-2. workboard.py: scan_handoffs() → bd query; scanner_resume_prompt(issue_id);
-   attention_items() reads h["id"]/h["title"]/h["mtime"]; module docstring.
-3. reference.md rows 19/38/56 → bd-issue-shaped handoffs[] schema.
-Risk: field names are task 04's contract — id/title/tracked_ids/mtime, fixed.
--->
 
 ## Goal
 
@@ -83,7 +72,16 @@ them from this task's actual landed code, not guess.
 
 ## Acceptance
 
-- [ ] `grep -c "HANDOFF" .claude/skills/workboard/workboard.py` → 0
-- [ ] `grep -c "bd list --label handoff\|--label.*handoff" .claude/skills/workboard/workboard.py` → ≥ 1
-- [ ] `cd .claude/skills/workboard && python3 -m pytest test_workboard.py -q` → all pass, exit 0
-- [ ] A new test exercises: a scanned repo with no `.beads/` → `scan_handoffs()` returns `[]` without invoking `bd`; a repo with `.beads/` but a failing/timing-out `bd` call → `scan_handoffs()` returns `[]` without raising.
+- [x] `grep -c "HANDOFF" .claude/skills/workboard/workboard.py` → 0
+- [x] `grep -c "bd list --label handoff\|--label.*handoff" .claude/skills/workboard/workboard.py` → 1
+- [x] `cd .claude/skills/workboard && python3 -m pytest test_workboard.py -q` → 104 passed, 5 subtests passed, exit 0
+- [x] `TestScanHandoffs` covers all three: `test_repo_without_beads_dir_yields_nothing_and_never_runs_bd` (patched `subprocess.run` raises if called), `test_bd_exceptions_yield_no_handoffs_instead_of_raising` (TimeoutExpired, OSError), `test_bd_bad_output_yields_no_handoffs_instead_of_raising` (non-zero exit, malformed JSON, non-list JSON).
+
+## Decisions
+
+- Handoff-record timestamp field named `updated_ts`, not the task's example
+  `mtime` — a bd issue has no file mtime, and the value is the issue's
+  `updated_at`. Reverse by renaming the key in `scan_handoffs`,
+  `attention_items`'s `age_ts`, and the tests.
+- Record shape is `{id, title, tracked_ids, updated_ts}`; `tracked_ids` reads
+  the issue's `tracks`-typed dependency edges. This is task 04's contract.
