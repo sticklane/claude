@@ -147,6 +147,78 @@ ActionableToApplied rate of 19.7% — and an instructive UX finding: showing
 AI patches to _reviewers_ made reviews slower, fixed by showing patches only
 to authors (arxiv.org/abs/2507.13499).
 
+## The comments debate
+
+The "comments outside the public surface signal bad code" position is
+contested, and the strongest counter-arguments sharpen rather than overturn
+the review guidance (second research pass, 2026-07-24, same factcheck
+discipline).
+
+The self-documenting camp's canon: Martin's Clean Code — "The proper use of
+comments is to compensate for our failure to express ourself in code. Note
+that I used the word failure. I meant it. Comments are always failures" —
+and Fowler/Beck's Refactoring, where comments are a smell: "comments often
+are used as a deodorant … the comments are there because the code is bad";
+"When you feel the need to write a comment, first try to refactor the code
+so that any comment becomes superfluous." Kernighan & Pike supply the
+maintenance rules ("Don't belabor the obvious", "Don't comment bad code,
+rewrite it", "Don't contradict the code"), and Fowler the mechanical move:
+"If you have to spend effort looking at a fragment of code and figuring out
+what it's doing, then you should extract it into a function and name the
+function after the 'what'."
+
+The pro-comment camp's strongest case is Ousterhout (A Philosophy of
+Software Design): "The overall idea behind comments is to capture
+information that was in the mind of the designer but couldn't be
+represented in the code"; in his written debate with Martin
+(github.com/johnousterhout/aposd-vs-clean-code): "Without comments there is
+no way to have abstraction or modularity", and on the staleness objection:
+"The cost of missing comments is easily 10-100x the cost of incorrect
+comments." antirez (antirez.com/news/124) taxonomizes nine comment types —
+six he defends (function, design, why, teacher, checklist, guide) and three
+he rejects (trivial, debt, backup) — and rebuts the maxim directly: "Many
+comments don't explain what the code is doing. They explain what you can't
+understand just from what the code does." Hillel Wayne attacks the
+extraction move itself: after Clean-Code-style decomposition, "now there's
+six other methods you have to read to understand how the class works … Is
+that really so much better than using comments?"
+
+Read closely, the camps converge more than they fight, and the convergence
+IS the toolkit's doctrine:
+
+- **What/how comments on private code** — both camps condemn them (antirez's
+  "trivial", Martin's failures, Kernighan & Pike's "obvious"). Restructure
+  is the agreed fix. This is the defect-signal core of the rule.
+- **Interface documentation** — both camps mandate it. Even Martin concedes
+  comments help public-API abstraction; Go requires it ("Every exported
+  (capitalized) name should have a doc comment"); Ousterhout's abstraction
+  argument is strongest exactly here — the signature alone is not the whole
+  abstraction, the interface comment completes it. The doctrine's
+  "comments belong on PUBLIC SURFACE AREA" is not a fewer-comments rule:
+  on the public surface it demands MORE than most code carries, which is
+  also what makes the signature no-surprise rule achievable.
+- **Why/rationale** — even the deodorant camp keeps it ("A comment is a good
+  place to say why you did something" — Fowler/Beck). The toolkit's answer
+  routes it out of the body: `ctx notes add` anchors rationale to the
+  symbol and survives refactors, answering Ousterhout's discoverability
+  objection to external docs better than a rotting inline line does.
+- **Irreducibly dense code** (regexes, algorithms — Google's own named
+  exceptions; antirez's "teacher" comments; Wayne's context-switch
+  objection to extracting six half-line methods) — this is precisely the
+  narrow escape the rule already carries, and why it exists. A reviewer
+  should not flag a comment sitting on genuinely irreducible density.
+- **Checklist/warning comments about non-local coupling** (antirez) —
+  colocate the coupled code where possible (Ousterhout: "If two pieces of
+  code are tightly related, the solution is to bring them together");
+  when the coupling spans files, that is a routed `ctx notes add` gotcha,
+  not an inline comment.
+
+The reviewer consequence: naming the comment's CATEGORY picks the right
+reported fix — restructure for what/how, promote-to-interface-doc for
+contract information that leaked into a body comment, route-to-notes for
+why/rationale and cross-file warnings, and no finding at all for the
+narrow escape. A blanket "delete the comment" is wrong in every category.
+
 ## Distilled design principles
 
 1. Precision over recall — optimize signal-to-noise first; accept missed
@@ -197,3 +269,14 @@ cites it, and this file holds the external evidence.
   search-result synthesis of the alignment post, not a verbatim quote.
 - Meta's RADAR/MetaMateCR figures are from the papers' own claims; no
   independent replication was checked.
+- Ousterhout's book-exact sentences were verified via his Stanford lecture
+  notes and the aposd-vs-clean-code debate transcript; several exact-page
+  book quotes (e.g. "the comment is part of the abstraction") remain
+  UNVERIFIED verbatim.
+- "A comment is a lie waiting to happen" is UNVERIFIED as a Clean Code
+  sentence — the nearest verified statement is Martin's "I look at every
+  comment as potential misinformation" (debate transcript).
+- Empirical evidence on comments and comprehension is weak and mixed: a
+  2025 eye-tracking study (20 students) found effects "ranging from a 30%
+  decrease to a 34% increase in performance"; the older classics (Woodfield
+  1981, Tenny 1988) were not verified beyond existence.

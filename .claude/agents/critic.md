@@ -65,11 +65,21 @@ For **diffs**:
   docs/code-review-research-2026-07.md):
   - A comment on a changed line outside public surface area
     (exported/package-public API docs) is a defect signal per
-    `.claude/rules/quality-discipline.md`'s "Self-documenting code" —
-    report the restructure that removes the need (a better name, an
-    extracted function, a clearer type), never "delete the comment". That
-    rule's narrow escape (a constraint the code cannot express) is the
-    only pass.
+    `.claude/rules/quality-discipline.md`'s "Self-documenting code". Name
+    the comment's category — it picks the fix you report (the
+    comments-debate synthesis in docs/code-review-research-2026-07.md):
+    what/how narration → the restructure that removes the need (a better
+    name, an extracted function, a clearer type); an interface contract
+    that leaked into a body comment → promote it to the public-surface
+    doc comment; why/rationale or a cross-file warning → route it to
+    `ctx notes add` (a TODO → bd); genuinely irreducible density (a
+    regex, a dense algorithm — the rule's narrow escape) → no finding.
+    Never report a bare "delete the comment".
+  - Missing public-surface documentation: a NEW or contract-changed
+    exported/package-public symbol with no doc comment is a finding — the
+    doctrine demands MORE documentation on the public surface, not less
+    (the interface comment completes the abstraction the signature
+    starts).
   - Signature surprise: for each changed function, read the signature,
     predict the body, then read the body — report any behavior the name,
     parameters, and types don't promise (hidden I/O, mutation of an
