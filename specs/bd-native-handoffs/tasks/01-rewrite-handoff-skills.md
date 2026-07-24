@@ -1,6 +1,6 @@
 # Task 01: Rewrite handoff and resume-handoff skills to be bd-native
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 25 turns
@@ -50,10 +50,16 @@ notice.
 
 ## Acceptance
 
-- [ ] `grep -ci "HANDOFF.md" .claude/skills/handoff/SKILL.md` → 0
-- [ ] `grep -c "bd comment\|bd create.*--labels handoff\|bd dep add.*-t tracks" .claude/skills/handoff/SKILL.md` → ≥ 3
-- [ ] `grep -c "agentic init\|bd init" .claude/skills/handoff/SKILL.md` → ≥ 1
-- [ ] `grep -ci "HANDOFF.md" .claude/skills/resume-handoff/SKILL.md` → 0
-- [ ] `grep -c "bd list --label handoff\|bd show.*--include-comments\|bd close.*resumed and consumed" .claude/skills/resume-handoff/SKILL.md` → ≥ 3
-- [ ] `grep -c "^Superseded\|Superseded (" specs/structured-handoff-headers/SPEC.md` → ≥ 1
-- [ ] `find /Users/sjaconette/claude -iname "HANDOFF*.md" -not -path "*/.git/*"` → empty
+- [x] `grep -ci "HANDOFF.md" .claude/skills/handoff/SKILL.md` → 0 — returned 0 (was 3)
+- [x] `grep -c "bd comment\|bd create.*--labels handoff\|bd dep add.*-t tracks" .claude/skills/handoff/SKILL.md` → ≥ 3 — returned 3 (was 0)
+- [x] `grep -c "agentic init\|bd init" .claude/skills/handoff/SKILL.md` → ≥ 1 — returned 3 (was 0)
+- [x] `grep -ci "HANDOFF.md" .claude/skills/resume-handoff/SKILL.md` → 0 — returned 0 (was 2)
+- [x] `grep -c "bd list --label handoff\|bd show.*--include-comments\|bd close.*resumed and consumed" .claude/skills/resume-handoff/SKILL.md` → ≥ 3 — returned 4 (was 0)
+- [x] `grep -c "^Superseded\|Superseded (" specs/structured-handoff-headers/SPEC.md` → ≥ 1 — returned 1 (was 0)
+- [x] `find /Users/sjaconette/claude -iname "HANDOFF*.md" -not -path "*/.git/*"` → empty — returned empty
+
+Gates: `bash scripts/check.sh` → `check.sh: green` (44 pytest passed, all shell
+tests ok, one pre-existing quarantined test). Verifier agent not spawned — this
+worker's tool grant carries no Agent/Task tool
+(docs/memory/unattended-worker-tool-limits.md); the acceptance commands above
+and the gate run are the reported signal.
