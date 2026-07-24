@@ -203,7 +203,10 @@ line every time you enter it.
   code, redundant abstractions, and defensive handling for cases that can't
   happen. Hold comments to quality-discipline.md's self-documenting-code
   section (public surface only; calibration pairs in
-  `.claude/skills/example-corpus/code-examples.md`). Re-run the acceptance
+  `.claude/skills/example-corpus/code-examples.md`) and to the critic's
+  code-health rubric — signature no-surprise, context-aware naming
+  (`.claude/agents/critic.md`, evidence in
+  docs/code-review-research-2026-07.md). Re-run the acceptance
   commands after.
 - Pre-commit review (one pass, no re-review after fixes): compute the skip
   gate first — stage all changes and diff against the step-0 base revision
@@ -219,7 +222,9 @@ line every time you enter it.
   the Skill tool with args `low` when the runtime can pass them (bare
   invocation when it can't); where the Skill tool or plugin is unavailable,
   fall back to ONE subagent on the diff, prompted for high-confidence
-  correctness/behavior findings only, capped at ≤1k tokens returned — run
+  correctness/behavior findings plus the doctrine-backed code-health
+  checks (the critic's diff rubric, `.claude/agents/critic.md` — cited in
+  the prompt, not restated), capped at ≤1k tokens returned — run
   it as an AWAITED child (synchronous dispatch, per token-discipline's
   awaited-children rule): spawn it, wait for its result, collect it before
   close-out; never fire-and-forget, never leave a child running past your
@@ -231,7 +236,10 @@ line every time you enter it.
   findings needing out-of-Touch edits, or judged uncertain, are never fixed
   here: surface to the user when attended, or add to `Discovered:` when
   unattended. Style findings are dropped (the simplification pass already
-  ran). This is one pass — no re-review after fixes. Record the outcome as
+  ran) — but doctrine-backed code-health findings (comment placement,
+  signature surprise, context-blind naming) are not style: they follow the
+  same fix-iff-in-Touch rule as correctness findings. This is one pass — no
+  re-review after fixes. Record the outcome as
   evidence: `review: N findings, M fixed, K discovered` or
   `review skipped: <reason>`. When this /build run's target was a bare
   SPEC.md (no `tasks/`), additionally run the spec-completion review

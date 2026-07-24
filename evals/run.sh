@@ -75,13 +75,19 @@ MAX_TURNS="${MAX_TURNS:-40}"
 # Isolate git from the user's global config (signing, hooks, templates)
 # for every setup.sh and claude invocation: null the global config and
 # inject commit.gpgsign=false via GIT_CONFIG_COUNT so git commands run
-# inside the claude session never try to sign. Live-service evalsets set
-# EVAL_GIT_ISOLATION=0 to keep the user's real config — their sessions
-# and teardowns push to real remotes, which needs the credential helper
-# the isolation would strip.
+# inside the claude session never try to sign. The isolation also strips
+# the user's identity, so inject the fixture identity setup.sh scripts
+# use inline (eval/eval@example.com) — without it, a worker's commit
+# inside the fixture dies with "Author identity unknown" on any machine
+# whose identity lives in the nulled global config. Live-service evalsets
+# set EVAL_GIT_ISOLATION=0 to keep the user's real config — their
+# sessions and teardowns push to real remotes, which needs the credential
+# helper the isolation would strip.
 if [ "${EVAL_GIT_ISOLATION:-1}" != "0" ]; then
   export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
-  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+  export GIT_CONFIG_COUNT=3 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+  export GIT_CONFIG_KEY_1=user.name GIT_CONFIG_VALUE_1=eval
+  export GIT_CONFIG_KEY_2=user.email GIT_CONFIG_VALUE_2=eval@example.com
 fi
 
 filter="${1:-}"
