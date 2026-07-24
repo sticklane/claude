@@ -113,6 +113,20 @@ out="$(run_sync)"
 assert_eq "wrong-target toolkit symlink corrected" "$SRC/beta.js" "$(readlink "$DEST/beta.js")"
 assert_eq "correction counted as linked" "linked 1, removed 0, kept 2 local" "$out"
 
+# --- Unset SRC resolves from the script's own location, not $HOME/claude ------
+# A copy of the script placed outside ~/claude must still find its own sibling
+# .claude/workflows when SYNC_WORKFLOWS_SRC is left unset.
+OTHER="$TMP/other-checkout"
+OTHER_DEST="$TMP/other-dest"
+mkdir -p "$OTHER/bin" "$OTHER/.claude/workflows" "$OTHER_DEST"
+cp "$SYNC" "$OTHER/bin/sync-workflows"
+echo "// delta" > "$OTHER/.claude/workflows/delta.js"
+out="$(SYNC_WORKFLOWS_DEST="$OTHER_DEST" "$OTHER/bin/sync-workflows" 2>&1)"
+assert "relocated copy links its own sibling workflow" test -L "$OTHER_DEST/delta.js"
+assert_eq "relocated copy links into its own checkout" \
+  "$(cd "$OTHER/.claude/workflows" && pwd)/delta.js" "$(readlink "$OTHER_DEST/delta.js")"
+assert_eq "relocated copy reports linked 1" "linked 1, removed 0, kept 0 local" "$out"
+
 # --- Missing source dir is a hard error --------------------------------------
 out="$(SYNC_WORKFLOWS_SRC="$TMP/nonexistent" SYNC_WORKFLOWS_DEST="$DEST" "$SYNC" 2>&1)"; rc=$?
 assert "missing source dir exits nonzero" test "$rc" -ne 0
