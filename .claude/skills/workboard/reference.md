@@ -16,7 +16,7 @@ metadata) are never modified; undo = delete the marker. Tests:
 |---|---|---|
 | Toolkit specs | `<repo>/specs/<slug>/SPEC.md` + `tasks/*.md` | spec title; per-task `Status:` line (`pending`/`in-progress`/`claimed`/`needs-verification` open — the last is completed-but-unverified, the verifier flips it to `done`; `done`/`deferred`/`skipped` closed; anything else = blocked-ish, flagged only when no `Unblock:` step is recorded) |
 | Kiro specs | `<repo>/.kiro/specs/<name>/tasks.md` | checkbox states — `[ ]` todo, `[-]` doing, `[x]` done; phase = which of requirements/design/tasks files exist |
-| Handoffs | `HANDOFF.md` (repo root, `.claude/`, `specs/*/`, ≤2 dirs deep) | parked work waiting on a human — always an inbox item |
+| Handoffs | `bd list --label handoff --status=open --json`, per scanned repo with a `.beads/` dir | parked work waiting on a human — always an inbox item. One bounded `bd` call per repo; a repo without `.beads/` is skipped without invoking `bd`, and a missing binary, timeout, non-zero exit, or unparseable output yields no handoffs rather than failing the scan |
 | Sessions | `~/.claude/projects/<escaped-cwd>/<sessionId>.jsonl` | first user prompt (head read), `cwd`, `gitBranch`, last-record timestamp (64 KB tail read — transcripts are never read wholesale) |
 | Live sessions | `~/.claude/sessions/<pid>.json` | sessionId → pid; `active` iff the pid is alive (`kill -0`) |
 | Todos | `~/.claude/todos/*.json` (when the install has them) | open in-session todo lists |
@@ -35,7 +35,7 @@ Two axes, following Antigravity (decision-oriented status) and Kiro
 
 - **Session states**: `active` (live pid) → `recent` (<48 h) → `idle` →
   `stale` (> `--stale-days`, default 7).
-- **Work states** (inbox): `blocked` (handoff parked, or a task whose
+- **Work states** (inbox): `blocked` (an open `handoff`-labeled bd issue, or a task whose
   `Status:` is neither open nor closed), `needs-review` (all tasks done but
   spec not archived; dirty repo with no live session; unpushed commits),
   `stale` (open tasks untouched past the threshold).
@@ -55,7 +55,9 @@ Top-level keys: `generated_at`, `stale_days`, `totals` (`repos`,
 runnable shell command — on items with a one-command fix), `repos[]` (`path`,
 `name`, `git`, `specs[]`, `handoffs[]`, `sessions[]`), `sessions[]`,
 `orphan_sessions[]` (sessions whose cwd is outside every scanned repo),
-`antigravity[]`, `todos[]`. Each session record also carries `spawn_tree` —
+`antigravity[]`, `todos[]`. Each `handoffs[]` record is one open
+`handoff`-labeled bd issue: `id`, `title`, `tracked_ids` (the ids it
+`tracks`), `updated_ts`. Each session record also carries `spawn_tree` —
 the nested agent-spawn tree for that session (see `scan_session_spawns` under
 Extending); `[]` for a session that spawned no sub-agents.
 

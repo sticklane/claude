@@ -9,7 +9,7 @@ summary. It covers:
   - toolkit specs   specs/<slug>/SPEC.md + specs/<slug>/tasks/NN-*.md (Status: lines)
   - Kiro specs      .kiro/specs/<name>/tasks.md checkbox state ([ ] [-] [x])
   - Antigravity     ~/.gemini/antigravity*/brain/<id>/ artifacts (task.md + metadata)
-  - handoffs        HANDOFF.md files (blocked-on-human, resumable)
+  - handoffs        open bd issues labeled `handoff` (blocked-on-human, resumable)
   - sessions        ~/.claude/projects/<escaped>/<sessionId>.jsonl transcripts
                     (repo, branch, first prompt, last activity, live PID)
   - git             branch, dirty files, unpushed commits, worktrees
@@ -79,12 +79,12 @@ def scanner_verify_prompt(spec_slug):
     )
 
 
-def scanner_resume_prompt(handoff_path):
+def scanner_resume_prompt(handoff_issue_id):
     """The detached-`claude` prompt for resuming a parked handoff. Shared by
     the parked-handoff attention item's cmd and agent-console's dispatch."""
     return (
-        f"Resume the parked handoff in {handoff_path}; "
-        "delete the file once fully resumed"
+        f"Run /resume-handoff on bd issue {handoff_issue_id}; "
+        "close it with bd close once fully resumed"
     )
 
 
@@ -595,38 +595,62 @@ def scan_kiro_specs(repo):
     return specs
 
 
+def _open_handoff_issues(repo):
+    """`bd list --label handoff --status=open --json` for one repo, `[]` for
+    every way that can fail — a repo with no `.beads/`, bd missing from PATH,
+    a timeout, a non-zero exit, or output that isn't a JSON list. One bd
+    subprocess runs per scanned repo, so the timeout is deliberately short."""
+    if not (repo / ".beads").is_dir():
+        return []
+    try:
+        out = subprocess.run(
+            [
+                "bd",
+                "-C",
+                str(repo),
+                "list",
+                "--label",
+                "handoff",
+                "--status=open",
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if out.returncode != 0:
+        return []
+    try:
+        issues = json.loads(out.stdout)
+    except json.JSONDecodeError:
+        return []
+    return issues if isinstance(issues, list) else []
+
+
 def scan_handoffs(repo):
-    """HANDOFF*.md anywhere shallow in the repo = work parked for a human/next
-    session. The glob is `HANDOFF*.md`, not literal `HANDOFF.md`, so
-    alternate-named handoffs (e.g. `/handoff`'s conflict-avoidance
-    `HANDOFF-<topic>.md`) surface too — matching the widened hook/skill."""
+    """Open bd issues labeled `handoff` = work parked for a human/next
+    session, one record each: issue id, title, the ids it `tracks`, and the
+    issue's own last-update timestamp. Comment bodies are deliberately not
+    fetched — reading a parked session's narrative is `/resume-handoff`'s job,
+    not a dashboard listing's."""
     handoffs = []
-    for pattern in (
-        "HANDOFF*.md",
-        "*/HANDOFF*.md",
-        "*/*/HANDOFF*.md",
-        ".claude/HANDOFF*.md",
-        "specs/*/HANDOFF*.md",
-    ):
-        for f in repo.glob(pattern):
-            if any(part in SKIP_DIRS for part in f.parts):
-                continue
-            text = read_text(f, 4_000)
-            m = TITLE_RE.search(text)
-            handoffs.append(
-                {
-                    "path": str(f.relative_to(repo)),
-                    "title": m.group(1).strip() if m else "Handoff",
-                    "mtime": f.stat().st_mtime,
-                }
-            )
-    # de-dup (patterns can overlap)
-    seen, out = set(), []
-    for h in handoffs:
-        if h["path"] not in seen:
-            seen.add(h["path"])
-            out.append(h)
-    return out
+    for issue in _open_handoff_issues(repo):
+        tracked = [
+            d.get("depends_on_id")
+            for d in issue.get("dependencies") or []
+            if d.get("type") == "tracks" and d.get("depends_on_id")
+        ]
+        handoffs.append(
+            {
+                "id": issue.get("id", ""),
+                "title": issue.get("title") or "Handoff",
+                "tracked_ids": tracked,
+                "updated_ts": iso_to_ts(issue.get("updated_at")) or 0.0,
+            }
+        )
+    return handoffs
 
 
 def _section_body(text, *heading_patterns):
@@ -1274,16 +1298,17 @@ def attention_items(
         rp = r["path"]
         covered_by_active = _actively_covered(rp, r, active_toplevels, drain_window)
         for h in r["handoffs"]:
-            resume_prompt = scanner_resume_prompt(h["path"])
+            resume_prompt = scanner_resume_prompt(h["id"])
+            tracked = ", ".join(h["tracked_ids"]) or "no tracked issues"
             items.append(
                 {
                     "severity": "serious",
                     "state": "blocked",
                     "repo": r["name"],
                     "what": f"Handoff parked: {h['title']}",
-                    "why": f"{h['path']} — resume it in a fresh session, then delete the file (/handoff wrote it):",
+                    "why": f"bd issue {h['id']} (tracks {tracked}) — resume it in a fresh session, then close the issue:",
                     "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(resume_prompt)}",
-                    "age_ts": h["mtime"],
+                    "age_ts": h["updated_ts"],
                 }
             )
         # Human-filed blockers (HUMAN.md) rank above spec/task rows: a person
