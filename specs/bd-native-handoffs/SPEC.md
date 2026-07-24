@@ -106,11 +106,18 @@ R2. `.claude/skills/resume-handoff/SKILL.md` locates open handoff work via
 R3. `hooks/handoff-resume/resume-check.sh` detects an open
     `handoff`-labeled bd issue (`bd list --label handoff --status=open
     --json`) instead of globbing `HANDOFF*.md`, and injects a pointer to
-    `/resume-handoff` when one exists. When `bd` is unavailable on `PATH`,
-    it degrades silently (exit 0, no injected text) — matching
-    `.claude/hooks/bd-compliance.sh`'s existing tolerance convention
-    ("bd missing from PATH is tolerated... never brick a repo without
-    bd").
+    `/resume-handoff` when one exists. It tolerates both cases where this
+    would otherwise error: `bd` unavailable on `PATH`, and `bd` present
+    but the repo has no `.beads/` (this hook is wired globally per-user
+    and fires on every session start in every repo, most without
+    `.beads/`) — both degrade silently (exit 0, no injected text), matching
+    `.claude/hooks/bd-compliance.sh`'s existing tolerance convention ("bd
+    missing from PATH is tolerated... never brick a repo without bd").
+    Verified 2026-07-24: `bd list --label handoff --status=open --json`
+    run outside any `.beads/`-containing directory already exits 0 with
+    the error on stderr and empty stdout, so a straightforward
+    implementation gets this case free — no special-case branch required,
+    just don't treat stderr output as a failure to inject nothing.
 
 R4. `specs/structured-handoff-headers/SPEC.md` gets a superseded-notice
     blockquote in the same style as `docs/external-playbooks.md:515-519`
@@ -160,9 +167,18 @@ R8. Doctrine and doc references updated to describe the bd-based
     handoff file" to "park state via `/handoff`" without naming a file
     format), `docs/guides/context-management.md` (3 mentions), `AGENTS.md`
     (3 mentions — hooks section, in-flight-handoff placement, any
-    `Tracked:`-header reference), `docs/external-playbooks.md`'s handoff
-    section (~line 548-596, already frames the file as "not authoritative
-    state" — light edit, not a rewrite, since there's no file at all now).
+    `Tracked:`-header reference). `docs/external-playbooks.md`'s
+    "## Handoffs" section (lines 548-610, not 548-596 — the third
+    HANDOFF-file mention sits at line 608, outside the narrower range).
+    This is a `/factcheck`-cited section quoting external primary sources
+    verbatim (the URLs and quoted text): those quotes are never edited.
+    Only the "→" reconciliation lines pointing at this repo's mechanism —
+    specifically the ones asserting "the HANDOFF file is this repo's
+    structured note, not its queue" (~line 577) and "the HANDOFF file
+    never carries state the tracker doesn't" (~line 565) — are reworded to
+    describe the bd-native mechanism, since their premise (a file exists)
+    no longer holds. This is a genuine content change to what those two
+    bullets teach, not a cosmetic phrase-swap.
 
 R9. No backward-compatibility fallback for legacy `HANDOFF.md` files is
     added anywhere in this change. Confirmed at spec-authoring time: zero
@@ -233,7 +249,12 @@ R9. No backward-compatibility fallback for legacy `HANDOFF.md` files is
       check: after implementation, run `/handoff` for real in a scratch
       task, confirm the resulting bd issue and comments look right via
       `bd show`, then start a fresh session and confirm `/resume-handoff`
-      picks it up and closes it correctly.
+      picks it up and closes it correctly. Also run `/handoff` in a
+      directory with no `.beads/` (or with `bd` temporarily off `PATH`)
+      and confirm it stops with the `agentic init`/`bd init` pointer from
+      R1 and writes no file — AC1's grep for that pointer's presence in
+      the SKILL.md prose is not itself proof the stop behavior is wired
+      correctly, only that the prose exists.
 - [ ] AC8 (R8): `grep -ci "HANDOFF\.md\|handoff file" .claude/rules/token-discipline.md AGENTS.md docs/external-playbooks.md`
       → 0 in each (today: mentions exist per R8's counts; the literal
       phrases "HANDOFF.md" and "handoff file" are the ones to retire —
