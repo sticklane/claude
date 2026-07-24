@@ -173,9 +173,11 @@ R8. Doctrine and doc references updated to describe the bd-based
     This is a `/factcheck`-cited section quoting external primary sources
     verbatim (the URLs and quoted text): those quotes are never edited.
     Only the "→" reconciliation lines pointing at this repo's mechanism —
-    specifically the ones asserting "the HANDOFF file is this repo's
-    structured note, not its queue" (~line 577) and "the HANDOFF file
-    never carries state the tracker doesn't" (~line 565) — are reworded to
+    the ones asserting "the HANDOFF file is this repo's structured note,
+    not its queue" (~line 577), "the HANDOFF file never carries state the
+    tracker doesn't" (~line 565), and "Don't reach for a handoff file when
+    `--resume` or compaction suffices" (~line 608) — are reworded (the
+    third to "the `/handoff` skill", which AC8 explicitly allows) to
     describe the bd-native mechanism, since their premise (a file exists)
     no longer holds. This is a genuine content change to what those two
     bullets teach, not a cosmetic phrase-swap.
