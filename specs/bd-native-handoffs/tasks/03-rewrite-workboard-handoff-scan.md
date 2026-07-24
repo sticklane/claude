@@ -1,11 +1,22 @@
 # Task 03: workboard.py scans bd for open handoff issues instead of HANDOFF*.md
 
-Status: pending
+Status: in-progress
 Depends on: none
 Priority: P1
 Budget: 35 turns
 Spec: ../SPEC.md (requirements R5, R7)
 Touch: .claude/skills/workboard/workboard.py, .claude/skills/workboard/reference.md, .claude/skills/workboard/test_workboard.py
+
+<!-- PLAN (delete at close-out)
+1. Tests first in test_workboard.py: TestScanHandoffs rewritten around a
+   patched workboard.subprocess.run (no .beads → no bd call; timeout /
+   non-zero exit / bad JSON → []; happy path → id/title/tracked_ids/mtime),
+   pinned resume-prompt string, inbox-item field shape.
+2. workboard.py: scan_handoffs() → bd query; scanner_resume_prompt(issue_id);
+   attention_items() reads h["id"]/h["title"]/h["mtime"]; module docstring.
+3. reference.md rows 19/38/56 → bd-issue-shaped handoffs[] schema.
+Risk: field names are task 04's contract — id/title/tracked_ids/mtime, fixed.
+-->
 
 ## Goal
 

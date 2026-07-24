@@ -5,6 +5,7 @@ Stdlib-only, like the scanner. Each test builds a throwaway HOME with a
 fake ~/.gemini/antigravity/brain store — the real one is never touched.
 """
 
+import contextlib
 import json
 import os
 import re
@@ -13,6 +14,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import workboard  # noqa: E402
@@ -144,6 +146,18 @@ def make_repo_record(path="/r/demo", **git):
     }
 
 
+def make_handoff_record(issue_id="md-abc123", **fields):
+    """A handoff record shaped as scan_handoffs returns it (bd issue, not file)."""
+    record = {
+        "id": issue_id,
+        "title": "Session handoff: drain hub",
+        "tracked_ids": ["md-tracked1"],
+        "updated_ts": 1.0,
+    }
+    record.update(fields)
+    return record
+
+
 class TestOpenStatusNotBlocked(unittest.TestCase):
     def test_status_open_counts_as_open_not_blocked(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -226,12 +240,12 @@ class TestSimpleCommandsInInbox(unittest.TestCase):
 
     def test_parked_handoff_item_carries_resume_command(self):
         repo = make_repo_record()
-        repo["handoffs"] = [{"path": "docs/HANDOFF.md", "title": "t", "mtime": 1.0}]
+        repo["handoffs"] = [make_handoff_record()]
 
         inbox = workboard.attention_items([repo], [], [], stale_days=7)
 
         self.assertIn("claude", inbox[0].get("cmd", ""))
-        self.assertIn("docs/HANDOFF.md", inbox[0]["cmd"])
+        self.assertIn("md-abc123", inbox[0]["cmd"])
 
     def test_all_tasks_done_spec_is_not_an_inbox_item(self):
         # Agent-bounded: verification proceeds (verifier agent / card button),
@@ -272,37 +286,105 @@ class TestScannerPromptBuilders(unittest.TestCase):
 
     def test_resume_prompt_builder_is_pinned(self):
         self.assertEqual(
-            workboard.scanner_resume_prompt("docs/HANDOFF.md"),
-            "Resume the parked handoff in docs/HANDOFF.md; "
-            "delete the file once fully resumed",
+            workboard.scanner_resume_prompt("md-abc123"),
+            "Run /resume-handoff on bd issue md-abc123; "
+            "close it with bd close once fully resumed",
         )
 
     def test_resume_inbox_cmd_embeds_the_builder_output(self):
         repo = make_repo_record()
-        repo["handoffs"] = [{"path": "docs/HANDOFF.md", "title": "t", "mtime": 1.0}]
+        repo["handoffs"] = [make_handoff_record()]
 
         inbox = workboard.attention_items([repo], [], [], stale_days=7)
 
-        prompt = workboard.scanner_resume_prompt("docs/HANDOFF.md")
+        prompt = workboard.scanner_resume_prompt("md-abc123")
         self.assertIn(prompt, inbox[0]["cmd"])
 
 
+@contextlib.contextmanager
+def beads_repo():
+    """A throwaway repo root carrying a `.beads/` dir, so scan_handoffs
+    reaches its bd query instead of short-circuiting."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / ".beads").mkdir()
+        yield root
+
+
+def bd_result(stdout="[]", returncode=0):
+    return subprocess.CompletedProcess(
+        args=["bd"], returncode=returncode, stdout=stdout, stderr=""
+    )
+
+
 class TestScanHandoffs(unittest.TestCase):
-    def test_alternate_named_handoff_is_found(self):
-        # /handoff's conflict-avoidance branch writes HANDOFF-<topic>.md; the
-        # glob is HANDOFF*.md so it surfaces alongside a plain HANDOFF.md.
+    """bd-native handoffs: open `handoff`-labeled issues, one bd call per
+    scanned repo that has `.beads/`, and never an exception that aborts the
+    whole workboard scan."""
+
+    def test_repo_without_beads_dir_yields_nothing_and_never_runs_bd(self):
+        def explode(*args, **kwargs):
+            raise AssertionError("bd must not be invoked without .beads/")
+
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "HANDOFF.md").write_text("# Plain\n", encoding="utf-8")
-            (root / ".claude").mkdir()
-            (root / ".claude" / "HANDOFF-drain-hub.md").write_text(
-                "# Drain hub\n", encoding="utf-8"
-            )
+            with mock.patch.object(workboard.subprocess, "run", explode):
+                self.assertEqual(workboard.scan_handoffs(Path(tmp)), [])
 
-            paths = {h["path"] for h in workboard.scan_handoffs(root)}
+    def test_open_handoff_issue_becomes_a_record_with_its_tracked_ids(self):
+        issues = [
+            {
+                "id": "md-abc123",
+                "title": "Session handoff: drain hub",
+                "updated_at": "2026-07-24T14:09:58Z",
+                "dependencies": [
+                    {"depends_on_id": "md-tracked1", "type": "tracks"},
+                    {"depends_on_id": "md-blocker", "type": "blocks"},
+                ],
+            }
+        ]
 
-            self.assertIn("HANDOFF.md", paths)
-            self.assertIn(".claude/HANDOFF-drain-hub.md", paths)
+        with beads_repo() as root:
+            with mock.patch.object(
+                workboard.subprocess, "run", return_value=bd_result(json.dumps(issues))
+            ) as run:
+                records = workboard.scan_handoffs(root)
+
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record["id"], "md-abc123")
+        self.assertEqual(record["title"], "Session handoff: drain hub")
+        self.assertEqual(record["tracked_ids"], ["md-tracked1"])
+        self.assertEqual(
+            record["updated_ts"], workboard.iso_to_ts("2026-07-24T14:09:58Z")
+        )
+        argv = run.call_args[0][0]
+        self.assertEqual(argv[0], "bd")
+        self.assertIn("handoff", argv)
+
+    def test_bd_exceptions_yield_no_handoffs_instead_of_raising(self):
+        for label, exc in (
+            ("timeout", subprocess.TimeoutExpired(cmd="bd", timeout=5)),
+            ("bd missing from PATH", OSError("no such binary")),
+        ):
+            with self.subTest(label):
+                with beads_repo() as root:
+                    with mock.patch.object(
+                        workboard.subprocess, "run", side_effect=exc
+                    ):
+                        self.assertEqual(workboard.scan_handoffs(root), [])
+
+    def test_bd_bad_output_yields_no_handoffs_instead_of_raising(self):
+        for label, result in (
+            ("non-zero exit", bd_result(stdout="", returncode=1)),
+            ("malformed json", bd_result(stdout="not json at all")),
+            ("json that is not a list", bd_result(stdout='{"id": "md-x"}')),
+        ):
+            with self.subTest(label):
+                with beads_repo() as root:
+                    with mock.patch.object(
+                        workboard.subprocess, "run", return_value=result
+                    ):
+                        self.assertEqual(workboard.scan_handoffs(root), [])
 
 
 def make_session(toplevel, state="active"):
