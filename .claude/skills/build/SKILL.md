@@ -324,3 +324,6 @@ lenses, the criterion failing on a majority refute. The fix-reverify loop is
 script-owned and bounded at 4 cycles; on the 4th unresolved cycle build flips
 to blocked with the failure evidence rather than thrashing. Everything else —
 scouts, test-first implementation, close-out — is unchanged.
+
+Next stage: none — /clear and start the next task, or run `/drain
+specs/<slug>` when sibling tasks remain pending (human-launched).

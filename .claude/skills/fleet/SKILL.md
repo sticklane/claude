@@ -48,6 +48,7 @@ Then end with one summary line counting each status, e.g.:
 > /fleet to refresh.
 
 The table is a point-in-time snapshot; refreshing means re-running
-/fleet. Next pipeline step: none — when the fleet drains, return to
-the dispatching skill's collection step (drain step 3 for queue and
-group dispatches).
+/fleet.
+
+Next stage: none — when the fleet drains, return to the dispatching
+skill's collection step (drain step 3 for queue and group dispatches).
