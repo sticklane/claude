@@ -29,20 +29,20 @@ func cmdOtel(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "serve" {
 		return cmdOtelServe(args[1:], stdout, stderr)
 	}
-	fs := flag.NewFlagSet("otel", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (default stdout)")
-	pricingPath := fs.String("pricing", "", "path to a user pricing config (JSON) for cost-from-tokens on non-Claude models")
-	inputs, ok := parsePositionals(fs, args)
+	var pricingPath *string
+	out, input, code, ok := singleFileCmd(
+		"otel", "OTLP trace file",
+		"agentprof otel <trace.json> [-o out] [--pricing config.json]",
+		args, stderr,
+		func(fs *flag.FlagSet) {
+			pricingPath = fs.String("pricing", "", "path to a user pricing config (JSON) for cost-from-tokens on non-Claude models")
+		},
+	)
 	if !ok {
-		return 2
-	}
-	if len(inputs) != 1 {
-		fmt.Fprintln(stderr, "agentprof otel: expected exactly one OTLP trace file\nusage: agentprof otel <trace.json> [-o out] [--pricing config.json]")
-		return 2
+		return code
 	}
 
-	data, err := os.ReadFile(inputs[0])
+	data, err := os.ReadFile(input)
 	if err != nil {
 		fmt.Fprintf(stderr, "agentprof otel: %v\n", err)
 		return 1

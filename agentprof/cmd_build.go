@@ -14,7 +14,7 @@ import (
 func cmdBuild(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("build", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (default stdout)")
+	out := fs.String("o", "", oFlagUsage)
 	inputs, ok := parsePositionals(fs, args)
 	if !ok {
 		return 2

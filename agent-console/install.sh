@@ -6,8 +6,8 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LABEL="com.agent-console"
-PORT="${AGENT_CONSOLE_PORT:-8899}"
-HOST="${AGENT_CONSOLE_HOST:-127.0.0.1}"
+PORT="${SKILLS_DASHBOARD_PORT:-8899}"
+HOST="${SKILLS_DASHBOARD_HOST:-127.0.0.1}"
 PY="$(command -v python3)"
 BIN="$HOME/.local/bin/agent-console"
 LOGDIR="$HOME/Library/Logs/agent-console"

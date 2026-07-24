@@ -64,10 +64,12 @@ class TestWorkboardProfileLinks(unittest.TestCase):
 
     def test_page_carries_header_profile_link(self):
         # Distinct from the per-row flamegraph href (which also embeds
-        # 127.0.0.1:8901 but with a longer path) — match the header anchor's
+        # AGENTPROF_URL but with a longer path) — match the header anchor's
         # exact href attribute so this doesn't pass on the row link alone.
+        # Reads AGENTPROF_URL (env-configurable, default 127.0.0.1:8901) rather
+        # than pinning the literal, so an install that overrides it still passes.
         html_out = ac.render_workboard(self._board("sess-abc123"))
-        self.assertIn('href="http://127.0.0.1:8901/"', html_out)
+        self.assertIn(f'href="{ac.AGENTPROF_URL}/"', html_out)
 
 
 class TestRefreshProfileHandler(unittest.TestCase):

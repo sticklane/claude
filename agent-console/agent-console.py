@@ -11,7 +11,7 @@ Claude or anything else, so it costs nothing to run):
                           needs-attention inbox up top.
 
 Each request re-scans on demand (workboard git state is cached briefly), so the
-views are always current. Run:  skills-dashboard.py
+views are always current. Run:  agent-console.py
 Env: SKILLS_DASHBOARD_PORT (8899), SKILLS_DASHBOARD_HOST (127.0.0.1)
 """
 
@@ -27,6 +27,7 @@ import secrets
 import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 from datetime import datetime, timezone
@@ -37,6 +38,10 @@ from urllib.parse import quote
 HOME = Path.home()
 PORT = int(os.environ.get("SKILLS_DASHBOARD_PORT", "8899"))
 HOST = os.environ.get("SKILLS_DASHBOARD_HOST", "127.0.0.1")
+# Base URL of the sibling agentprof pprof UI the workboard links to. Configurable
+# like PORT/HOST, defaulting to the value the service ships with; trailing slash
+# trimmed so callers can append their own path.
+AGENTPROF_URL = os.environ.get("AGENTPROF_URL", "http://127.0.0.1:8901").rstrip("/")
 
 
 def _skills_root() -> Path:
@@ -97,6 +102,28 @@ def project_roots() -> list[Path]:
 
 STALE_DAYS = 7
 GIT_ENV = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0"}
+
+# Named rendering/scan limits (previously inlined literals). Kept as plain
+# module constants — not env-configurable, since there's no operational reason
+# to tune them per install, unlike the stop-grace/port/host knobs.
+PROMPT_TRUNC = 90  # chars of a session prompt shown in a row or page title
+PANEL_TOP_N = 5  # rows kept in each cost-panel "By model/skill/project" breakdown
+TAIL_EVENTS_DEFAULT = 50  # transcript events read tail-first by default
+TAIL_WINDOW_BYTES = 65_536  # byte window tail_events scans (never the whole file)
+GIT_TIMEOUT_SEC = 4  # per-invocation `git` subprocess timeout
+
+
+def _debug(msg: str) -> None:
+    """Best-effort stderr line for otherwise-silent broad excepts, enabled via
+    AGENT_CONSOLE_DEBUG. Off by default so it never adds noise to the launchd
+    log; on, it turns a vanished lookup/scan failure into something diagnosable.
+    Never raises (a logging failure must not break the caller's fallback path)."""
+    if not os.environ.get("AGENT_CONSOLE_DEBUG"):
+        return
+    try:
+        print(f"[agent-console] {msg}", file=sys.stderr, flush=True)
+    except Exception:
+        pass
 
 
 # --------------------------------------------------------------------------- #
@@ -170,6 +197,37 @@ def _claude_json(*args):
     except (OSError, subprocess.SubprocessError, json.JSONDecodeError, ValueError):
         pass
     return None
+
+
+# A single board rebuild used to spawn `claude agents --json` twice — once inside
+# workboard.assemble() (its session-liveness scan) and once in agents_view(). This
+# short-TTL memo collapses that burst into one subprocess: it far outlives the
+# few milliseconds between the two calls in one rebuild, yet expires long before
+# the next rebuild (BOARD_TTL = 45s) so liveness never goes stale.
+_AGENTS_JSON_TTL = 5  # seconds
+_agents_json_cache: dict = {"ts": 0.0, "data": None}
+
+
+def _agents_json_cached():
+    """Memoized `claude agents --json` (plain, no --all), normalized to a list
+    or None — matching both _claude_json and workboard._claude_agents_json's
+    contract. Shared by agents_view(), live_sessions(), and (via the wiring
+    below) workboard.assemble(), so one rebuild spawns `claude agents` once."""
+    now = time.time()
+    if _agents_json_cache["ts"] and now - _agents_json_cache["ts"] < _AGENTS_JSON_TTL:
+        return _agents_json_cache["data"]
+    data = _claude_json("agents")
+    if not isinstance(data, list):
+        data = None
+    _agents_json_cache.update(ts=now, data=data)
+    return data
+
+
+# Route workboard's own `claude agents --json` fetch through the same memo, so
+# assemble()'s liveness scan shares this process's single spawn per rebuild
+# rather than launching its own duplicate. Contract matches: both return a
+# JSON list or None.
+workboard._claude_agents_json = _agents_json_cached
 
 
 def plugin_paths_from_cli(data) -> list[tuple[str, Path]] | None:
@@ -319,19 +377,27 @@ _board_lock = threading.Lock()
 # GitHub repo visibility (public/private), fetched once via `gh` and cached long
 # — this is the only part of the tool that touches the network.
 _GH_TTL = 1800
-_gh_cache: dict = {"ts": 0.0, "map": None}
+# Negative-cache TTL: a missing/failing gh (absent binary, non-zero exit,
+# 12s timeout, bad JSON) is remembered for this long before retrying, so a
+# persistently-broken gh stops re-running its slow `repo list` on every
+# post-TTL board rebuild. Shorter than _GH_TTL so a transient failure still
+# re-checks soon, but long enough to keep it off the hot path.
+_GH_FAIL_TTL = 300
+_gh_cache: dict = {"ts": 0.0, "map": None, "ok": False}
 
 
 def gh_visibility() -> dict:
     """{ 'owner/repo'(lower): 'public'|'private' } from one `gh repo list` call.
     Best-effort: returns the last-known map (possibly empty) if gh is missing,
-    unauthenticated, or offline. Never raises."""
-    fresh = _gh_cache["map"] is not None and time.time() - _gh_cache["ts"] < _GH_TTL
+    unauthenticated, or offline. Never raises. Failures are negative-cached
+    with a shorter TTL so a broken gh isn't re-queried every rebuild."""
+    ttl = _GH_TTL if _gh_cache["ok"] else _GH_FAIL_TTL
+    fresh = _gh_cache["map"] is not None and time.time() - _gh_cache["ts"] < ttl
     if fresh:
         return _gh_cache["map"]
     gh = shutil.which("gh")
     if not gh:
-        _gh_cache.update(ts=time.time(), map=_gh_cache["map"] or {})
+        _gh_cache.update(ts=time.time(), map=_gh_cache["map"] or {}, ok=False)
         return _gh_cache["map"]
     m = dict(_gh_cache["map"] or {})
     try:
@@ -354,13 +420,18 @@ def gh_visibility() -> dict:
             for e in json.loads(r.stdout):
                 if isinstance(e, dict) and e.get("nameWithOwner"):
                     m[e["nameWithOwner"].lower()] = (e.get("visibility") or "").lower()
-            _gh_cache.update(ts=time.time(), map=m)  # only advance TTL on success
+            _gh_cache.update(ts=time.time(), map=m, ok=True)  # full TTL on success
+            return m
     except (OSError, subprocess.SubprocessError, json.JSONDecodeError, ValueError):
         pass
+    # present-but-failing gh (non-zero exit, timeout, or unparseable output):
+    # negative-cache so the next rebuild within _GH_FAIL_TTL serves this map
+    # instead of re-running the 12s call.
+    _gh_cache.update(ts=time.time(), map=m, ok=False)
     return m
 
 
-def _git(repo: Path, *args, timeout=4) -> str | None:
+def _git(repo: Path, *args, timeout=GIT_TIMEOUT_SEC) -> str | None:
     try:
         r = subprocess.run(
             ["git", "-C", str(repo), *args],
@@ -493,7 +564,7 @@ def _live_sessions_from_pids() -> list[dict]:
 def live_sessions() -> list[dict]:
     """Currently-running sessions. Prefers `claude agents --json` (supported,
     stable surface); falls back to scraping the internal PID records."""
-    out = live_sessions_from_cli(_claude_json("agents"))
+    out = live_sessions_from_cli(_agents_json_cached())
     if out is None:
         out = _live_sessions_from_pids()
     return out
@@ -537,7 +608,7 @@ def agents_view():
             "started": _iso(e.get("startedAt")),
         }
 
-    active = _claude_json("agents")
+    active = _agents_json_cached()
     allrec = _claude_json("agents", "--all")
     if not isinstance(active, list):
         return [], []
@@ -563,7 +634,8 @@ def _running_pid_for(sid: str):
         return None
     try:
         running, _ = agents_view()
-    except Exception:
+    except Exception as e:
+        _debug(f"_running_pid_for({sid}): agents_view failed: {e!r}")
         return None
     for a in running:
         if a.get("sid") == sid and a.get("pid"):
@@ -998,7 +1070,7 @@ def build_page_registry(assembled: dict) -> dict:
                 {
                     "id": seid,
                     "kind": "session",
-                    "title": (s.get("prompt") or "session")[:90],
+                    "title": (s.get("prompt") or "session")[:PROMPT_TRUNC],
                     "session": s,
                     "root": root,
                 },
@@ -1372,7 +1444,7 @@ def render_repo_page(entry: dict) -> str:
 
     sess_rows = []
     for s in repo.get("sessions") or []:
-        label = esc((s.get("prompt") or "")[:90] or "session")
+        label = esc((s.get("prompt") or "")[:PROMPT_TRUNC] or "session")
         state = esc(s.get("state") or "")
         sid = s.get("id") or ""
         if sid:
@@ -1418,7 +1490,7 @@ def _transcript_path(sid: str, root: Path | None = None):
     return matches[0] if matches else None
 
 
-def tail_events(path, n: int = 50, window: int = 65_536):
+def tail_events(path, n: int = TAIL_EVENTS_DEFAULT, window: int = TAIL_WINDOW_BYTES):
     """Last ~n parsed JSONL events read tail-first from a bounded byte window
     (never the whole file). Returns (events, approx_total): approx_total is the
     exact count when the window spans the file, else a byte-ratio estimate
@@ -1576,7 +1648,7 @@ def render_session_page(entry: dict) -> str:
             f'<div class="transcript">{body}</div>'
         )
 
-    title = (session.get("prompt") or "session")[:90]
+    title = (session.get("prompt") or "session")[:PROMPT_TRUNC]
     page = render_detail_page(title, "".join(meta))
     # inject the shared CSRF token + client JS so the resume/stop data-act
     # buttons work from this page too (render_detail_page ships neither).
@@ -1954,7 +2026,7 @@ def page(active: str, readout: str, body: str, with_filter: bool) -> str:
     # Profile link — pprof web UI over the rolling agentprof profile. Plain
     # anchor, no health gating: renders even when the pprof server is down.
     profile_link = (
-        '<a class="tab" href="http://127.0.0.1:8901/" target="_blank" '
+        f'<a class="tab" href="{AGENTPROF_URL}/" target="_blank" '
         'rel="noopener">Profile</a>'
         if active == "workboard"
         else ""
@@ -2148,6 +2220,15 @@ def _reprime_flags(
     return flags
 
 
+def _row(trunc: str, *metas: str) -> str:
+    """One `class="line"` panel row: a truncated primary cell plus zero or more
+    trailing `class="meta"` cells. Callers pass already-escaped/formatted text
+    (this helper adds no escaping), so the emitted markup is byte-identical to
+    the hand-built rows it replaces."""
+    cells = "".join(f'<span class="meta">{m}</span>' for m in metas)
+    return f'<div class="line"><span class="trunc">{trunc}</span>{cells}</div>'
+
+
 def render_workboard(
     b: dict, cost: dict | None = None, summary_mtime: float | None = None
 ) -> str:
@@ -2176,11 +2257,10 @@ def render_workboard(
             (dim or {}).items(),
             key=lambda kv: (kv[1] or {}).get("cost_microusd", 0),
             reverse=True,
-        )[:5]
+        )[:PANEL_TOP_N]
         return (
             "".join(
-                f'<div class="line"><span class="trunc">{esc(name)}</span>'
-                f'<span class="meta">{_usd((v or {}).get("cost_microusd", 0))}</span></div>'
+                _row(esc(name), _usd((v or {}).get("cost_microusd", 0)))
                 for name, v in top
             )
             or '<div class="zero">None.</div>'
@@ -2209,10 +2289,9 @@ def render_workboard(
         reprime = cost.get("reprime")
         if reprime:
             n = reprime.get("count", 0)
-            cost_body += (
-                '<div class="sub">Re-prime (7d)</div>'
-                f'<div class="line"><span class="trunc">{esc(str(n))} re-primes</span>'
-                f'<span class="meta">{_usd(reprime.get("cost_microusd", 0))}</span></div>'
+            cost_body += '<div class="sub">Re-prime (7d)</div>' + _row(
+                f"{esc(str(n))} re-primes",
+                _usd(reprime.get("cost_microusd", 0)),
             )
         # One untyped-fanout guard line: calls (+ deepest nesting) and cost of
         # dispatch through untyped catch-all agent frames (spec R4). Absent from
@@ -2222,11 +2301,9 @@ def render_workboard(
         if fanout:
             calls = fanout.get("calls", 0)
             depth = fanout.get("max_depth", 0)
-            cost_body += (
-                '<div class="sub">Untyped fan-out (7d)</div>'
-                f'<div class="line"><span class="trunc">{esc(str(calls))} calls · '
-                f"depth {esc(str(depth))}</span>"
-                f'<span class="meta">{_usd(fanout.get("cost_microusd", 0))}</span></div>'
+            cost_body += '<div class="sub">Untyped fan-out (7d)</div>' + _row(
+                f"{esc(str(calls))} calls · depth {esc(str(depth))}",
+                _usd(fanout.get("cost_microusd", 0)),
             )
     cost_panel = (
         f'<div class="panel" id="panel-cost"><div class="sub">Cost (7d) · '
@@ -2255,26 +2332,26 @@ def render_workboard(
 
     specs_panel = panel_rows(
         b["open_specs"],
-        lambda s: (
-            f'<div class="line"><span class="trunc">{esc(s["title"])}</span>'
-            f'<span class="meta">{s["done"]}/{s["total"]}</span>'
-            f'<span class="meta">{esc(s["repo"])} · {_ago(s["mtime"])}</span></div>'
+        lambda s: _row(
+            esc(s["title"]),
+            f"{s['done']}/{s['total']}",
+            f"{esc(s['repo'])} · {_ago(s['mtime'])}",
         ),
     )
     tasks_panel = panel_rows(
         b["task_repos"],
-        lambda t: (
-            f'<div class="line"><span class="trunc">{esc(t["next"] or "—")}</span>'
-            f'<span class="meta">{t["open"]}/{t["total"]}</span>'
-            f'<span class="meta">{esc(t["repo"])}</span></div>'
+        lambda t: _row(
+            esc(t["next"] or "—"),
+            f"{t['open']}/{t['total']}",
+            esc(t["repo"]),
         ),
     )
     active_panel = panel_rows(
         b["actives"],
-        lambda a: (
-            f'<div class="line"><span class="trunc">{esc(a["prompt"][:90] or "—")}</span>'
-            f'<span class="meta">{esc(a["branch"])}</span>'
-            f'<span class="meta">{esc(a["repo"])} · {_ago(a["last"])}</span></div>'
+        lambda a: _row(
+            esc(a["prompt"][:PROMPT_TRUNC] or "—"),
+            esc(a["branch"]),
+            f"{esc(a['repo'])} · {_ago(a['last'])}",
         ),
     )
     panels = (
@@ -2443,14 +2520,14 @@ def render_workboard(
         if vis:
             rows = [
                 {
-                    "label": s["prompt"][:90] or "—",
+                    "label": s["prompt"][:PROMPT_TRUNC] or "—",
                     "status": s["state"],
                     "start_ts": s["start_ts"],
                     "end_ts": s["last"],
                     "tooltip": f"{s['branch']} · {_ago(s['last'])}"
                     if s["branch"]
                     else _ago(s["last"]),
-                    "href": f"http://127.0.0.1:8901/ui/flamegraph?tf=session={quote(s['sid'], safe='')}",
+                    "href": f"{AGENTPROF_URL}/ui/flamegraph?tf=session={quote(s['sid'], safe='')}",
                 }
                 for s in vis[:6]
             ]
@@ -2532,7 +2609,7 @@ def render_workboard(
     if b["orphans"]:
         lines = "".join(
             f'<div class="line evt">{chip(s["state"])}'
-            f'<span class="trunc">{esc(s["prompt"][:90] or "—")}</span>'
+            f'<span class="trunc">{esc(s["prompt"][:PROMPT_TRUNC] or "—")}</span>'
             f'<span class="meta">{esc(s["repo"])} · {_ago(s["last"])}</span></div>'
             for s in b["orphans"][:12]
         )
@@ -2719,8 +2796,8 @@ def _tracked_repo_reals() -> set[str]:
             os.path.realpath(str(r))
             for r in workboard.find_repos(workboard.default_roots(), max_depth=3)
         }
-    except Exception:
-        pass
+    except Exception as e:
+        _debug(f"_tracked_repo_reals: workboard repo walk failed: {e!r}")
     return reals
 
 
@@ -3266,8 +3343,7 @@ def set_priority(spec_path: str, value: str) -> tuple[bool, str]:
         "--",
         real,
     )
-    _plugins_cache["ts"] = 0  # (no-op for board, but force next board rebuild)
-    _board_cache["ts"] = 0
+    _board_cache["ts"] = 0  # priority edits the board, not the plugin list
     return True, "ok"
 
 

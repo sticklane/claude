@@ -6,7 +6,9 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/sticklane/agentprof/internal/pricing"
 	"github.com/sticklane/agentprof/internal/schema"
 )
 
@@ -77,8 +79,13 @@ func isMarkerLeaf(f string) bool {
 	return strings.HasPrefix(f, "tool:") || strings.HasPrefix(f, "role:") || strings.HasPrefix(f, "stage:")
 }
 
-// writeSummary marshals the aggregated rows as a JSON array to stdout (R1).
-func writeSummary(samples []schema.Sample, stdout io.Writer) error {
+// writeSummary marshals the aggregated rows as a JSON array to stdout, first
+// warning on stderr when the built-in pricing table is past its staleness
+// threshold so drift from real prices is surfaced at report time (R1).
+func writeSummary(samples []schema.Sample, stdout, stderr io.Writer) error {
+	if w := pricing.StalenessWarning(time.Now()); w != "" {
+		fmt.Fprintf(stderr, "agentprof: %s\n", w)
+	}
 	b, err := json.Marshal(summarize(samples))
 	if err != nil {
 		return err
