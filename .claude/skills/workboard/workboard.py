@@ -400,13 +400,39 @@ def scan_toolkit_specs(repo):
             "tasks_unparseable": unparseable,
             "last_touched": max(mtimes),
         }
-        if spec_status == "waiting":
+        if spec_status in ("waiting", "deferred"):
             spec_rec["status"] = spec_status
             ub = parse_unblock(text)
             if ub:
                 spec_rec["unblock"] = ub
         specs.append(spec_rec)
     return specs
+
+
+def defer_spec(repo, slug):
+    """Park `specs/<slug>` with a `Status: deferred` SPEC.md header.
+
+    The specs-side twin of the Antigravity abandon marker, and the second
+    deliberate write in an otherwise read-only scanner. Rewrites an existing
+    `Status:` line in place, else inserts one after the title. Idempotent.
+    Returns whether the spec was found.
+    """
+    spec_md = Path(repo) / "specs" / slug / "SPEC.md"
+    if not spec_md.is_file():
+        return False
+    text = spec_md.read_text(encoding="utf-8")
+    header = "Status: deferred"
+    status = STATUS_RE.search(text)
+    title = TITLE_RE.search(text)
+    if status:
+        updated = text[: status.start()] + header + text[status.end() :]
+    elif title:
+        updated = text[: title.end()] + "\n" + header + text[title.end() :]
+    else:
+        updated = header + "\n" + text
+    if updated != text:
+        spec_md.write_text(updated, encoding="utf-8")
+    return True
 
 
 # ---------------------------------------------------------------- readiness
@@ -1326,6 +1352,11 @@ def attention_items(
                 }
             )
         for s in r["specs"]:
+            # A `Status: deferred` spec is the specs-side twin of an abandoned
+            # Antigravity conversation: parked on purpose, so it leaves the
+            # inbox entirely (it still appears in the spec listing and totals).
+            if s.get("status") == "deferred":
+                continue
             open_tasks = s["tasks_total"] - s["tasks_done"]
             # Needs-your-answer surfaces: ask-typed unblocks + deferred questions.
             # No dispatch cmd — these are human decisions only (R6).
@@ -1823,6 +1854,14 @@ def main():
         help="abandon every stale Antigravity conversation, then rescan",
     )
     ap.add_argument(
+        "--defer",
+        nargs="+",
+        metavar="SLUG",
+        default=[],
+        help="park specs/<slug> in the current repo with a Status: deferred "
+        "header (leaves the needs-attention inbox), then rescan",
+    )
+    ap.add_argument(
         "--prune-stale-sessions",
         action="store_true",
         help="delete ~/.claude/sessions/*.json records whose pid is dead, then rescan",
@@ -1840,6 +1879,17 @@ def main():
     if args.abandon_stale:
         for cid in abandon_stale(args.stale_days):
             print(f"abandoned (stale): {cid}", file=sys.stderr)
+    if args.defer:
+        missing = []
+        for slug in args.defer:
+            if defer_spec(Path.cwd(), slug):
+                print(f"deferred: specs/{slug}", file=sys.stderr)
+            else:
+                missing.append(slug)
+        for slug in missing:
+            print(f"not found: specs/{slug}/SPEC.md", file=sys.stderr)
+        if missing:
+            sys.exit(1)
     if args.prune_stale_sessions:
         removed, kept = prune_stale_session_pids(default_claude_home())
         for sid in removed:
