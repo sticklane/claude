@@ -179,7 +179,14 @@ class TestAdaptBoard(unittest.TestCase):
                             "last_touched": 100.0,
                         }
                     ],
-                    "handoffs": [{"title": "H", "path": "HANDOFF.md", "mtime": 5.0}],
+                    "handoffs": [
+                        {
+                            "id": "md-4c1a",
+                            "title": "H",
+                            "tracked_ids": ["md-9f2"],
+                            "updated_ts": 5.0,
+                        }
+                    ],
                     "sessions": [
                         {
                             "id": "sid1",
@@ -240,6 +247,9 @@ class TestAdaptBoard(unittest.TestCase):
         self.assertEqual(r1["specs"][0]["slug"], "s1")
         self.assertEqual(r1["specs"][0]["done"], 1)
         self.assertEqual(r1["handoffs"][0]["title"], "H")
+        self.assertEqual(r1["handoffs"][0]["id"], "md-4c1a")
+        self.assertEqual(r1["handoffs"][0]["tracked_ids"], ["md-9f2"])
+        self.assertEqual(r1["handoffs"][0]["updated_ts"], 5.0)
         self.assertEqual(r1["sessions"][0]["sid"], "sid1")
 
         inbox = board["inbox"][0]

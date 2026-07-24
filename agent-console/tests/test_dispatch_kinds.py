@@ -61,8 +61,28 @@ def _spec_entry(slug, path, done, total):
     }
 
 
-def _handoff_entry(title, path):
-    return {"title": title, "path": path, "mtime": 0, "id": ""}
+def _handoff_entry(issue_id, title, tracked_ids=()):
+    return {
+        "id": issue_id,
+        "title": title,
+        "tracked_ids": list(tracked_ids),
+        "updated_ts": 0.0,
+    }
+
+
+def _handoffs_from_workboard(issue_id="md-4c1a", title="Ship it", tracks=("md-9f2",)):
+    """Handoff records produced by workboard.scan_handoffs itself, so this
+    fixture tracks the scanner's real field names instead of restating them."""
+    issues = [
+        {
+            "id": issue_id,
+            "title": title,
+            "updated_at": "2026-07-24T10:00:00Z",
+            "dependencies": [{"type": "tracks", "depends_on_id": t} for t in tracks],
+        }
+    ]
+    with patch.object(ac.workboard, "_open_handoff_issues", return_value=issues):
+        return ac.workboard.scan_handoffs(Path(tempfile.gettempdir()))
 
 
 def _repo_entry(path, name, specs=(), handoffs=(), ahead=0):
@@ -150,28 +170,49 @@ class TestVerifyGeneration(unittest.TestCase):
 class TestResumeHandoffGeneration(unittest.TestCase):
     def test_parked_handoff_yields_resume(self):
         repo = _git_root()
-        hp = os.path.join(repo, "HANDOFF.md")
         reg = ac.build_action_registry(
             _board(
-                [_repo_entry(repo, "alpha", handoffs=[_handoff_entry("Ship it", hp)])]
+                [
+                    _repo_entry(
+                        repo, "alpha", handoffs=[_handoff_entry("md-4c1a", "Ship it")]
+                    )
+                ]
             )
         )
         resumes = _of_kind(reg, "dispatch-resume-handoff")
         self.assertEqual(len(resumes), 1)
         self.assertEqual(resumes[0]["cwd"], repo)
-        self.assertIn("Resume the parked handoff", resumes[0]["prompt"])
-        self.assertIn(hp, resumes[0]["prompt"])
+        self.assertIn("/resume-handoff", resumes[0]["prompt"])
+        self.assertIn("md-4c1a", resumes[0]["prompt"])
 
     def test_resume_prompt_comes_from_builder(self):
         repo = _git_root()
-        hp = os.path.join(repo, "HANDOFF.md")
         reg = ac.build_action_registry(
             _board(
-                [_repo_entry(repo, "alpha", handoffs=[_handoff_entry("Ship it", hp)])]
+                [
+                    _repo_entry(
+                        repo, "alpha", handoffs=[_handoff_entry("md-4c1a", "Ship it")]
+                    )
+                ]
             )
         )
         (r,) = _of_kind(reg, "dispatch-resume-handoff")
-        self.assertEqual(r["prompt"], ac.workboard.scanner_resume_prompt(hp))
+        self.assertEqual(r["prompt"], ac.workboard.scanner_resume_prompt("md-4c1a"))
+
+    def test_scanner_shaped_handoff_yields_resume(self):
+        # Forcing check: the record comes from workboard.scan_handoffs itself,
+        # so it carries only the bd-native fields — no `path`, no `mtime`.
+        repo = _git_root()
+        handoffs = _handoffs_from_workboard()
+        self.assertNotIn("path", handoffs[0])
+        self.assertNotIn("mtime", handoffs[0])
+        reg = ac.build_action_registry(
+            _board([_repo_entry(repo, "alpha", handoffs=handoffs)])
+        )
+        (r,) = _of_kind(reg, "dispatch-resume-handoff")
+        self.assertEqual(r["cwd"], repo)
+        self.assertEqual(r["prompt"], ac.workboard.scanner_resume_prompt("md-4c1a"))
+        self.assertIn("Ship it", r["label"])
 
 
 class TestGitRootGate(unittest.TestCase):
@@ -180,7 +221,6 @@ class TestGitRootGate(unittest.TestCase):
         # NO dispatch actions — there is no repo cwd for a dispatch to run in.
         home = _non_git_dir()
         sp = os.path.join(home, "specs", "widget", "SPEC.md")
-        hp = os.path.join(home, "HANDOFF.md")
         reg = ac.build_action_registry(
             _board(
                 [
@@ -188,7 +228,7 @@ class TestGitRootGate(unittest.TestCase):
                         home,
                         "specs",
                         specs=[_spec_entry("widget", sp, 1, 3)],
-                        handoffs=[_handoff_entry("h", hp)],
+                        handoffs=[_handoff_entry("md-77b", "h")],
                     )
                 ]
             )
@@ -346,6 +386,25 @@ class TestDispatchExecution(_DispatchExecTest):
         self.assertIn("--permission-mode", argv)
         self.assertIn("--allowedTools", argv)
         self.assertIn("--max-turns", argv)
+
+    def test_resume_handoff_argv_carries_the_bd_issue_id(self):
+        # The end of the bd-native path: a scan_handoffs-shaped record reaches
+        # the launched argv as an issue id, with no file path anywhere in it.
+        repo = _git_root()
+        reg = ac.build_action_registry(
+            _board([_repo_entry(repo, "alpha", handoffs=_handoffs_from_workboard())])
+        )
+        (resume,) = _of_kind(reg, "dispatch-resume-handoff")
+        with patch.object(ac, "get_actions", return_value=reg):
+            result = self._track(ac.run_action(resume["id"]))
+        self.assertEqual(result["code"], 200)
+
+        cwd, argv = self._recorded_argv()
+        self.assertEqual(cwd, os.path.realpath(repo))
+        self.assertIn("-p", argv)
+        prompt = argv[argv.index("-p") + 1]
+        self.assertIn("md-4c1a", prompt)
+        self.assertNotIn("HANDOFF.md", prompt)
 
     def test_second_dispatch_same_repo_is_409(self):
         reg, aid, repo = self._drain_registry()

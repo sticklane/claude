@@ -1,11 +1,29 @@
 # Task 04: agent-console.py dispatch-resume-handoff consumes bd-native handoff data
 
-Status: pending
+Status: in-progress
 Depends on: 03
 Priority: P1
 Budget: 40 turns
 Spec: ../SPEC.md (requirements R6, R7)
 Touch: agent-console/agent-console.py, agent-console/tests/test_dispatch_kinds.py, agent-console/tests/test_drilldown_registry.py, agent-console/tests/test_parsers.py
+
+<!-- PLAN (delete at close-out)
+Landed task-03 shape: scan_handoffs() -> {id, title, tracked_ids, updated_ts};
+scanner_resume_prompt(handoff_issue_id) -> "Run /resume-handoff on bd issue <id>; ...".
+Sites in agent-console.py, in order:
+1. _adapt_board (~827): project the four bd fields; drop the _entity_id("file", ...)
+   drill-down id — a bd issue is not a file.
+2. build_entity_registry (~979): drop the handoff loop + docstring mention.
+3. _scanner_dispatch_prompts (~1115): key resume prompts by (repo-name, issue-id).
+4. build_action_registry (~1237): dispatch target = issue id, not a path.
+5. render_board handoff lines (~2541): _ago(updated_ts), no /file/ link, button
+   target = issue id, show issue id + tracked ids as meta.
+Tests: rewrite _handoff_entry + the two drilldown/parser fixtures to the bd shape;
+add a forcing test that feeds a real scan_handoffs-shaped record (no path/mtime keys)
+through build_action_registry.
+Risk: acceptance grep '\["mtime"\]' is file-wide and also matches spec/task mtime
+reads (lines 872/2487/2517) that are out of this task's scope.
+-->
 
 ## Goal
 
