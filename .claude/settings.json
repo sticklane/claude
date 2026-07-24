@@ -59,6 +59,14 @@
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/bd-compliance.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-gate.sh"
+          }
+        ]
       }
     ]
   },
