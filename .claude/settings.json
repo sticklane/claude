@@ -64,6 +64,19 @@
   },
   "model": "opusplan",
   "permissions": {
-    "allow": ["Bash(bd *)"]
+    "allow": [
+      "Bash(bd *)"
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "agentic-toolkit": {
+      "source": {
+        "source": "github",
+        "repo": "sticklane/claude"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "agentic@agentic-toolkit": true
   }
 }
