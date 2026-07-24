@@ -716,12 +716,26 @@ def _kanban_column(status: str) -> str:
     return "Pending"
 
 
+def _spend_by_session(assembled: dict) -> dict:
+    """workboard.assemble()'s per-session spend records, keyed by session id.
+    Empty for an assembled dict whose spend scan found nothing or never ran."""
+    return (assembled.get("spend") or {}).get("by_session") or {}
+
+
+def _usd(microusd) -> str:
+    try:
+        return f"${(microusd or 0) / 1_000_000:,.2f}"
+    except (TypeError, ValueError):
+        return "$0.00"
+
+
 def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) -> dict:
     """Map workboard.assemble()'s result (`{repos, sessions, inbox, ready,
     totals, ...}` — workboard.py is the single source of scan/inbox logic
     per R4) to the board dict render_workboard consumes. The only translation
     layer this migration adds; render_workboard itself is unchanged."""
     vis = gh_visibility()
+    spend_by_session = _spend_by_session(assembled)
     board_repos: list[dict] = []
     open_spec_list: list[dict] = []
     active_list: list[dict] = []
@@ -802,6 +816,9 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
                 "last": s["last_ts"],
                 "start_ts": s["start_ts"],
                 "sid": s["id"],
+                "cost_microusd": (spend_by_session.get(s["id"]) or {}).get(
+                    "cost_microusd", 0
+                ),
             }
             for s in r.get("sessions", [])
         ]
@@ -1004,6 +1021,7 @@ def build_page_registry(assembled: dict) -> dict:
     for the same path get distinct ids and distinct routes. Entries carry the
     assemble() source dict the renderer needs, so no rescan is required."""
     pages: dict = {}
+    spend_by_session = _spend_by_session(assembled)
     for repo in assembled.get("repos", []):
         root = repo.get("path") or ""
         if not root:
@@ -1017,6 +1035,11 @@ def build_page_registry(assembled: dict) -> dict:
                 "path": os.path.realpath(root),
                 "title": repo.get("name") or root,
                 "repo": repo,
+                "session_spend": {
+                    s["id"]: spend_by_session[s["id"]]
+                    for s in repo.get("sessions", [])
+                    if s.get("id") in spend_by_session
+                },
             },
         )
         for spec in repo.get("specs", []):
@@ -1065,6 +1088,7 @@ def build_page_registry(assembled: dict) -> dict:
                     "kind": "session",
                     "title": (s.get("prompt") or "session")[:PROMPT_TRUNC],
                     "session": s,
+                    "spend": spend_by_session.get(ssid) or {},
                     "root": root,
                 },
             )
@@ -1443,19 +1467,23 @@ def render_repo_page(entry: dict) -> str:
     if spec_rows:
         parts.append(f'<div class="sub">Specs</div><ul>{"".join(spec_rows)}</ul>')
 
+    session_spend = entry.get("session_spend") or {}
     sess_rows = []
     for s in repo.get("sessions") or []:
         label = esc((s.get("prompt") or "")[:PROMPT_TRUNC] or "session")
         state = esc(s.get("state") or "")
         sid = s.get("id") or ""
+        cost = _usd((session_spend.get(sid) or {}).get("cost_microusd", 0))
         if sid:
             link = _entity_id("session", sid)
             sess_rows.append(
                 f'<li><a href="/session/{esc(link)}">{label}</a> '
-                f'<span class="meta">{state}</span></li>'
+                f'<span class="meta">{state} · {esc(cost)}</span></li>'
             )
         else:
-            sess_rows.append(f'<li>{label} <span class="meta">{state}</span></li>')
+            sess_rows.append(
+                f'<li>{label} <span class="meta">{state} · {esc(cost)}</span></li>'
+            )
     if sess_rows:
         parts.append(f'<div class="sub">Sessions</div><ul>{"".join(sess_rows)}</ul>')
 
@@ -1607,6 +1635,7 @@ def render_session_page(entry: dict) -> str:
     started = _dt(session.get("start_ts") or 0)
     last = _dt(session.get("last_ts") or session.get("end_ts") or 0)
     pid = _running_pid_for(sid) if state == "active" else None
+    cost = _usd((entry.get("spend") or {}).get("cost_microusd", 0))
 
     meta = [
         f'<p class="mono">{esc(cwd or "—")}</p>',
@@ -1616,6 +1645,7 @@ def render_session_page(entry: dict) -> str:
         f"<tr><td>state</td><td>{esc(state)}</td></tr>"
         f"<tr><td>started</td><td>{esc(started)}</td></tr>"
         f"<tr><td>last active</td><td>{esc(last)}</td></tr>"
+        f"<tr><td>cost</td><td>{esc(cost)}</td></tr>"
         + (f'<tr><td>pid</td><td class="mono">{esc(pid)}</td></tr>' if pid else "")
         + "</table>",
     ]
@@ -2255,12 +2285,6 @@ def render_workboard(
     # Cost (7d): the summary dict is read+passed by the HTTP handler (R6);
     # this function stays pure. A missing summary (cost is None) renders an
     # explicit pending state, never an error (R7).
-    def _usd(microusd):
-        try:
-            return f"${(microusd or 0) / 1_000_000:,.2f}"
-        except (TypeError, ValueError):
-            return "$0.00"
-
     def _cost_rows(dim):
         top = sorted(
             (dim or {}).items(),
