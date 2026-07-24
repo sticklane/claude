@@ -65,7 +65,8 @@ Do, in order:
 8. Commit in THIS repo (small, focused commits; conventional "<type>: <subject>"; keep the Co-Authored-By trailer) and push: git -C ${repo.path} push. If push fails (no upstream, auth, diverged), do not force anything — report it in deferred_questions, set pushed:false.
 
 Do NOT touch ~/claude or any repo besides ${repo.path}. Do NOT force-push. Do NOT delete docs/TASKS.md or specs/ content — they stay on disk as historical record; only their role as a LIVE, agent-consulted tracker is retired, in favor of bd.
-Return status DONE only if: bd is initialized, EVERY existing task/checkbox is verifiably accounted for in bd (counts matched, not estimated), CLAUDE.md/AGENTS.md now say bd is sole source of truth (not just "also has bd"), and everything is committed. Return BLOCKED with the exact error if something structural prevents this. Return DEFERRED with deferred_questions for anything deliberately skipped (e.g. no gate to extend).`;
+Return status DONE only if: bd is initialized, EVERY existing task/checkbox is verifiably accounted for in bd (counts matched, not estimated), CLAUDE.md/AGENTS.md now say bd is sole source of truth (not just "also has bd"), and everything is committed. Return BLOCKED with the exact error if something structural prevents this. Return DEFERRED with deferred_questions for anything deliberately skipped (e.g. no gate to extend).
+Return the structured schema fields only, and keep the whole return under 2k tokens — counts and a one-paragraph summary, never a transcript or pasted command output.`;
 }
 
 function verifyPrompt(repo, implResult) {
@@ -80,7 +81,8 @@ Check, from ${repo.path}:
 3. CLAUDE.md states bd is the SOLE/primary tracker (not merely "also available") and explicitly retires specs/docs/TASKS.md as a live reference; it also includes a "record discovered work in bd" convention with runnable bd command examples, not just prose.
 4. git log shows a recent commit in this repo matching the claimed work, and \`git -C ${repo.path} status --porcelain\` is clean (or only has files outside this task's scope).
 5. If the worker claimed pushed:true, confirm \`git -C ${repo.path} log origin/<branch>..HEAD\` is empty (nothing unpushed).
-Report pass:true only if all five hold. List concrete failures (with the actual numbers from check 2) otherwise — do not fix anything yourself.`;
+Report pass:true only if all five hold. List concrete failures (with the actual numbers from check 2) otherwise — do not fix anything yourself.
+Keep the return under 500 words: the pass flag plus one line per concrete failure, never a transcript.`;
 }
 
 const VERIFY_SCHEMA = {
