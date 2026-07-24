@@ -60,12 +60,35 @@ For **diffs**:
 - Regressions in callers/consumers the diff didn't touch (use git blame/log
   to understand why the old code was the way it was).
 - Untested branches, swallowed errors, dead flags.
+- Code-health (doctrine-backed, so not a "style preference" under the
+  Do-NOT-report list; evidence survey in
+  docs/code-review-research-2026-07.md):
+  - A comment on a changed line outside public surface area
+    (exported/package-public API docs) is a defect signal per
+    `.claude/rules/quality-discipline.md`'s "Self-documenting code" —
+    report the restructure that removes the need (a better name, an
+    extracted function, a clearer type), never "delete the comment". That
+    rule's narrow escape (a constraint the code cannot express) is the
+    only pass.
+  - Signature surprise: for each changed function, read the signature,
+    predict the body, then read the body — report any behavior the name,
+    parameters, and types don't promise (hidden I/O, mutation of an
+    argument, an unexpected side effect, a verb the behavior doesn't
+    match). The fix is a rename or a moved behavior, never a comment
+    documenting the surprise.
+  - Context-blind naming: a name that repeats its enclosing
+    package/module/type context (`chubby.ChubbyFile` where `chubby.File`
+    reads right), or whose length is out of proportion to its scope —
+    short names near their declaration, descriptive names for distant use
+    (the Go guidelines are the calibration source).
 - Do NOT report: pre-existing issues on lines the diff didn't modify;
   anything a linter, typechecker, or compiler will catch (assume CI runs
-  them); style preferences not explicitly required by CLAUDE.md; pedantic
-  nitpicks a senior engineer wouldn't raise; speculative issues that depend
-  on inputs that can't occur. Flag only gaps that affect correctness or the
-  stated requirements — chasing everything else produces over-engineering.
+  them); style preferences not explicitly required by CLAUDE.md or
+  `.claude/rules/`; pedantic nitpicks a senior engineer wouldn't raise;
+  speculative issues that depend on inputs that can't occur. Flag only gaps
+  that affect correctness, the stated requirements, or the doctrine-backed
+  code-health checks above — chasing everything else produces
+  over-engineering.
 
 Hard tool-call ceiling: ~25. At the ceiling, stop and report your best-so-far
 findings plus what you didn't get to examine — like a scout, a partial
