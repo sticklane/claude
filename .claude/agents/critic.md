@@ -76,10 +76,13 @@ For **diffs**:
     regex, a dense algorithm — the rule's narrow escape) → no finding.
     Never report a bare "delete the comment".
   - Missing public-surface documentation: a NEW or contract-changed
-    exported/package-public symbol with no doc comment is a finding — the
-    doctrine demands MORE documentation on the public surface, not less
-    (the interface comment completes the abstraction the signature
-    starts).
+    exported/package-public symbol with no doc comment — reported ONLY
+    when no doc linter in the repo's CI already enforces one (the Do-NOT
+    list's linter clause applies first) AND the signature alone leaves
+    the contract genuinely ambiguous, so the gap would surprise a caller.
+    The mandate here is convention (Go's exported-name rule) plus the
+    comments-debate synthesis in docs/code-review-research-2026-07.md,
+    not a repo rule — weigh that in the confidence score.
   - Signature surprise: for each changed function, read the signature,
     predict the body, then read the body — report any behavior the name,
     parameters, and types don't promise (hidden I/O, mutation of an
