@@ -53,6 +53,10 @@ launchctl kickstart -k gui/$(id -u)/com.agent-console
   `procStart`. A recycled pid/pgid fails these and is never signaled.
   Destructive actions require a `confirm` flag in the POST body (server-side
   mirror of the UI's two-step confirm) on top of the CSRF token + Host check.
+- Profile refresh (`/api/profile/refresh`) regenerates the agentprof profile,
+  then kickstarts the pprof launchd service named by `AGENT_CONSOLE_PPROF_SERVICE`.
+  That label is install-specific and has no default: unset means the kickstart
+  is skipped and the refresh still reports success.
 - Reads use `git` (per-repo, 4s timeout), `gh` (one cached `repo list`),
   `claude … --json` (plugins/sessions; falls back to `~/.claude` scraping).
   Writes: rewrite+commit a spec's `Priority:` line; spawn/kill `claude` agents.

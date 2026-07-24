@@ -6,6 +6,7 @@ subprocess execution — the refresh handler's subprocess calls are stubbed.
 """
 
 import importlib.util
+import os
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -75,21 +76,37 @@ class TestWorkboardProfileLinks(unittest.TestCase):
 class TestRefreshProfileHandler(unittest.TestCase):
     """R5: refresh_profile() is the function registered under
     /api/profile/refresh in the POST handlers dict. subprocess is stubbed —
-    this never executes the real refresh-profile.sh or launchctl."""
+    this never executes the real refresh-profile.sh or launchctl. The pprof
+    launchd label is install-specific, so every kickstart-path test supplies
+    its own AGENT_CONSOLE_PPROF_SERVICE rather than relying on the ambient env.
+    """
+
+    SERVICE = "com.example.agent-console-test-pprof"
+
+    def _with_service(self, value):
+        return patch.dict(os.environ, {"AGENT_CONSOLE_PPROF_SERVICE": value})
+
+    def _without_service(self):
+        env = {
+            k: v for k, v in os.environ.items() if k != "AGENT_CONSOLE_PPROF_SERVICE"
+        }
+        return patch.dict(os.environ, env, clear=True)
 
     def test_ok_wrapper_shape_on_success(self):
         regen = MagicMock(returncode=0, stdout="regenerated\n", stderr="")
         kick = MagicMock(returncode=0, stdout="", stderr="")
-        with patch.object(ac.subprocess, "run", side_effect=[regen, kick]):
-            ok, msg = ac.refresh_profile()
+        with self._with_service(self.SERVICE):
+            with patch.object(ac.subprocess, "run", side_effect=[regen, kick]):
+                ok, msg = ac.refresh_profile()
         self.assertTrue(ok)
         self.assertIsInstance(msg, str)
 
     def test_ok_true_when_regen_succeeds_but_kickstart_fails(self):
         regen = MagicMock(returncode=0, stdout="regenerated\n", stderr="")
         kick = MagicMock(returncode=1, stdout="", stderr="No such service")
-        with patch.object(ac.subprocess, "run", side_effect=[regen, kick]):
-            ok, msg = ac.refresh_profile()
+        with self._with_service(self.SERVICE):
+            with patch.object(ac.subprocess, "run", side_effect=[regen, kick]):
+                ok, msg = ac.refresh_profile()
         self.assertTrue(ok, "kickstart failure alone must not fail the call")
         self.assertIn("kickstart", msg.lower())
 
@@ -99,6 +116,31 @@ class TestRefreshProfileHandler(unittest.TestCase):
             ok, msg = ac.refresh_profile()
         self.assertFalse(ok)
         self.assertIn("boom", msg)
+
+    def test_kickstart_targets_the_configured_service_label(self):
+        regen = MagicMock(returncode=0, stdout="regenerated\n", stderr="")
+        kick = MagicMock(returncode=0, stdout="", stderr="")
+        with self._with_service(self.SERVICE):
+            with patch.object(ac.subprocess, "run", side_effect=[regen, kick]) as run:
+                ok, _ = ac.refresh_profile()
+        self.assertTrue(ok)
+        argv = run.call_args_list[1].args[0]
+        self.assertIn("launchctl", argv)
+        self.assertTrue(
+            any(a.endswith("/" + self.SERVICE) for a in argv),
+            f"kickstart target must name the configured label, got {argv}",
+        )
+
+    def test_kickstart_skipped_when_service_unconfigured(self):
+        regen = MagicMock(returncode=0, stdout="regenerated\n", stderr="")
+        with self._without_service():
+            with patch.object(ac.subprocess, "run", return_value=regen) as run:
+                ok, msg = ac.refresh_profile()
+        self.assertTrue(ok, "regeneration alone still succeeds")
+        self.assertEqual(
+            run.call_count, 1, "no launchctl call without a configured service label"
+        )
+        self.assertIn("AGENT_CONSOLE_PPROF_SERVICE", msg)
 
 
 if __name__ == "__main__":
