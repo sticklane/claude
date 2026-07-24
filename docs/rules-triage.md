@@ -90,7 +90,7 @@ they ARE the judgment/context guidance the end-state is supposed to be.
 - CLAUDE.md#authoring-conventions-drain-tool-limits · kept · convention (no acceptance gate on Workflow/evals/execution-stage skills for drained tasks).
 - CLAUDE.md#authoring-conventions-anchored-acceptance · kept · convention (verify criteria against current file state).
 - CLAUDE.md#authoring-conventions-human-blockers-ref · kept · pointer to human-blockers.md.
-- CLAUDE.md#testing-changes-evals · mechanized · evals/lint-ultra-gate.sh — the ultra-gate lint (plus evals/run.sh) is the model-free check the "Testing changes" section names.
+- CLAUDE.md#testing-changes-evals · kept · procedure (evals/run.sh model sessions; the former evals/lint-ultra-gate.sh was removed when drain became always-workflow and the ultra gate was retired).
 - CLAUDE.md#testing-changes-skill-retirement · kept · procedure (retirement checklist + critic on the diff).
 - CLAUDE.md#code-navigation-ctx · kept · convention (prefer `ctx` over reading files).
 - CLAUDE.md#beads-transition-scope · kept · transition guidance (markdown headers remain source of truth until task 09 cutover) — live, not dead.
@@ -98,7 +98,7 @@ they ARE the judgment/context guidance the end-state is supposed to be.
 
 ## Summary
 
-- mechanized: 10 rows, each naming an in-tree enforcer (runtimes/claude-code.md, bin/check-token-discipline, hooks/session-refresh, scripts/check.sh, agentic/lock.py, .claude/skills/gate, .claude/skills/drain/SKILL.md, evals/lint-ultra-gate.sh).
+- mechanized: 9 rows, each naming an in-tree enforcer (runtimes/claude-code.md, bin/check-token-discipline, hooks/session-refresh, scripts/check.sh, agentic/lock.py, .claude/skills/gate, .claude/skills/drain/SKILL.md).
 - deleted: 2 rows — the launch-authorization references task 11 orphaned (token-discipline drain-freehand clause; CLAUDE.md execution-stage bullet).
 - kept: the remainder — instruction-injection defense (untrusted-data, verbatim) plus context-management and authoring judgment no check can express.
 

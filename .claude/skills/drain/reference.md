@@ -23,7 +23,9 @@ file path, branch name, budget, any task-specific `## Answers` notes) in the
 `Agent` dispatch call. Never paste this section's body into the prompt — the
 path-pointer keeps every dispatch call small and single-sources the contract.
 
-For worker agents dispatched as awaited children with `isolation: worktree`.
+For worker agents dispatched as awaited children with `isolation: worktree`,
+each at the `implementation-worker` deep-tier pin (its own frontmatter tier
+pin, independent of the calling session's model).
 The worktree SHOULD be cut from the commit drain just made; because some
 harnesses instead pin it to a tracking ref that can lag, the prompt's first
 step force-syncs the worktree to the default branch so the worker always
@@ -121,8 +123,9 @@ fi
 ```
 
 Workers cannot invoke launch-gated execution skills (their context carries no
-live-user authorization — CLAUDE.md's execution-stage bullet), so the prompt
-carries a readable path resolved at dispatch, never a skill invocation.
+live-user authorization — CLAUDE.md's execution-stage bullet), so the prompt —
+dispatched at the worker's own frontmatter tier pin — carries a readable path
+resolved at dispatch, never a skill invocation.
 
 ## Deferred questions (format)
 

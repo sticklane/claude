@@ -1,11 +1,15 @@
 """Shadow mode: one-way markdown task headers -> bd tracker sync.
 
-Markdown stays the source of truth; bd mirrors the queue. ``shadow-sync``
-reads every ``specs/*/tasks/*.md`` header (Status, Depends on, Priority,
-Budget, Touch, Rigor) via the shared ``_shared/headers.py`` regexes, maps each
-task to a bd issue with a deterministic id, and force-imports the whole set so
-bd reflects the current markdown. It NEVER writes markdown, and it takes the
-D8 write lock like any other writer.
+bd is the live source of truth for task state; markdown headers are the
+human-editable display that seeds and advances it. ``shadow-sync`` reads every
+``specs/*/tasks/*.md`` header (Status, Depends on, Priority, Budget, Touch,
+Rigor) via the shared ``_shared/headers.py`` regexes, maps each task to a bd
+issue with a deterministic id, and imports the set so bd reflects new and
+advanced tasks. It is NOT symmetric: **bd is authoritative for the closed
+state** — a row whose markdown says open/pending is dropped before import when
+bd already has that issue closed, so a re-sync can advance a task toward
+closed but can never reopen one bd closed (specs/.../agentic-uz1). It NEVER
+writes markdown, and it takes the D8 write lock like any other writer.
 
 Status is mapped into bd's frontier equivalence classes rather than preserved
 verbatim, so ``agentic ready`` over the imported queue classifies each task
@@ -223,8 +227,10 @@ def sync(store_cwd=None, spec_dirs=None, *, take_lock=True, acquire_timeout=None
     """One-way sync of markdown task headers into the bd store at ``store_cwd``.
 
     Reads ``spec_dirs`` (default: every ``specs/*/`` with a ``tasks/`` under
-    ``store_cwd``) and force-imports the mirrored rows into bd, so markdown
-    always wins. Returns the number of rows synced. Never writes markdown.
+    ``store_cwd``) and imports the mirrored rows into bd, except rows that
+    would reopen an issue bd already closed (bd is authoritative for the closed
+    state — agentic-uz1). Returns the number of rows synced. Never writes
+    markdown.
 
     ``acquire_timeout`` (seconds) is forwarded to the write lock when
     ``take_lock`` is set; ``None`` uses the lock's default.
@@ -234,6 +240,17 @@ def sync(store_cwd=None, spec_dirs=None, *, take_lock=True, acquire_timeout=None
         spec_dirs = discover_spec_dirs(root)
     rows = build_rows(spec_dirs, root)
 
+    # bd is authoritative for the closed state (specs/.../agentic-uz1): a
+    # markdown 'open'/'pending' row must never reopen an issue bd has already
+    # closed. Drop those rows before the import so the mirror can advance a
+    # task toward done/closed but can never revive one bd closed.
+    closed_ids = bd.bd_closed_ids(cwd=root)
+    rows = [
+        r
+        for r in rows
+        if not (r["id"] in closed_ids and str(r.get("status", "")).lower() != "closed")
+    ]
+
     def _do_import():
         with tempfile.NamedTemporaryFile(
             "w", suffix=".jsonl", dir=root, delete=False
@@ -242,8 +259,8 @@ def sync(store_cwd=None, spec_dirs=None, *, take_lock=True, acquire_timeout=None
             for r in rows:
                 fh.write(json.dumps(r) + "\n")
         try:
-            # Markdown is the source of truth: force every row in, even over a
-            # newer bd row (one-way, last-writer-is-markdown).
+            # Force each surviving row in (the closed-reopen rows were already
+            # filtered above); bd stays authoritative for the closed state.
             bd.bd_import(tmp, cwd=root, allow_stale=True)
         finally:
             os.unlink(tmp)

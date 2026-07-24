@@ -22,7 +22,7 @@ func cmdAntigravity(args []string, stdout, stderr io.Writer) int {
 	dir := fs.String("antigravity-dir", defaultAntigravityDir(), "Antigravity CLI data directory")
 	days := fs.Int("days", 30, "include sessions active within the last N days")
 	since := fs.String("since", "", "absolute RFC3339 cutoff (mutually exclusive with an explicit --days)")
-	out := fs.String("o", "", "output path: .pb.gz writes a pprof profile, anything else JSONL (default stdout)")
+	out := fs.String("o", "", oFlagUsage)
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -63,7 +63,7 @@ func cmdAntigravity(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	if *out == "summary" {
-		if err := writeSummary(samples, stdout); err != nil {
+		if err := writeSummary(samples, stdout, stderr); err != nil {
 			fmt.Fprintf(stderr, "agentprof antigravity: %v\n", err)
 			return 1
 		}

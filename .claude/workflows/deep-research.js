@@ -375,7 +375,8 @@ let report = await agent(SYNTHESIZE_PROMPT, { label: "synthesize", schema: REPOR
 
 // Grounding check, bounded to one retry (token-discipline's 2-4-cycle cap for
 // evaluator-optimizer loops) — a synthesis stage that returns a stub or
-// hallucinated report should not silently pass as a completed run.
+// hallucinated report should not silently pass as a completed run. The retry
+// runs at the session model, same as the initial synthesize (judgment stage).
 if (report && looksUngrounded(report, confirmed)) {
   log("Synthesis result cites no verified source — retrying once")
   report = await agent(

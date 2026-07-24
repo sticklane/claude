@@ -596,14 +596,17 @@ def scan_kiro_specs(repo):
 
 
 def scan_handoffs(repo):
-    """HANDOFF.md anywhere shallow in the repo = work parked for a human/next session."""
+    """HANDOFF*.md anywhere shallow in the repo = work parked for a human/next
+    session. The glob is `HANDOFF*.md`, not literal `HANDOFF.md`, so
+    alternate-named handoffs (e.g. `/handoff`'s conflict-avoidance
+    `HANDOFF-<topic>.md`) surface too — matching the widened hook/skill."""
     handoffs = []
     for pattern in (
-        "HANDOFF.md",
-        "*/HANDOFF.md",
-        "*/*/HANDOFF.md",
-        ".claude/HANDOFF.md",
-        "specs/*/HANDOFF.md",
+        "HANDOFF*.md",
+        "*/HANDOFF*.md",
+        "*/*/HANDOFF*.md",
+        ".claude/HANDOFF*.md",
+        "specs/*/HANDOFF*.md",
     ):
         for f in repo.glob(pattern):
             if any(part in SKIP_DIRS for part in f.parts):

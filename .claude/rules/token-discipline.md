@@ -108,7 +108,7 @@ Four rungs, cheapest first — don't pay frontier-model rates to run `grep`:
 Skills that spawn agents — at their actual spawn points: drain's attempt-1
 implementation-worker dispatch, its one-tier-up relaunch on failure, its
 per-candidate verifier runs, /design's candidate investigators, an
-on-demand verifier escalation — consult `.claude/runtime.md` tier pins (or,
+on-demand verifier escalation — consult `runtimes/claude-code.md`'s `## Tiers` section for tier pins (or,
 where one exists, an agent definition's own frontmatter pin) and pass the
 mapped model through the harness's model parameter. No config, or no pin
 for the tier in question — and no agent-frontmatter pin either — → inherit
@@ -212,6 +212,13 @@ false` on the Agent tool is advisory, not guaranteed — the harness may
 - **Bound evaluator-optimizer loops to 2–4 cycles**, and skip the
   generate/critique loop entirely when a deterministic check can decide
   the outcome (docs/orchestration-research-2026-07.md:58).
+- **Reduce, dedupe, and cap a fan-out's results before any per-item
+  verify/judge stage runs.** When a fan-out's per-item outputs feed a
+  subsequent per-item verify or judge stage, first merge them into one
+  keyed map or list, dedupe, sort by whatever ranking the task uses, and
+  cap the set at a stated number — so verify-tier spend scales with the
+  capped set, not the raw fan-out width. The reduce/dedupe/cap happens
+  *before* the verify/judge stage is dispatched, never after.
 - **Default to a single-call rubric judge** — one prompt emitting scores
   and a pass/fail grade — over multi-judge voting
   (docs/orchestration-research-2026-07.md:58).

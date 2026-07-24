@@ -46,10 +46,18 @@ instead of hoping prose compliance is consistent.
    handoff shows finished. A `Tracked: none — bd unavailable` header (or a
    pre-`Tracked:` handoff) means the parked items were never filed — file
    them now, before resuming, so the queue reflects the work even if this
-   resume session also parks. Skip with a one-line note only when bd is
-   unavailable here too.
-5. **Consume.** Once the handoff's content is captured and the resumed
-   work is underway, `git rm` the consumed handoff file (`rm` + no commit
+   resume session also parks. If bd is unavailable here too, do NOT
+   skip-filing-and-consume — that silently loses the parked items. Instead
+   either DEFER consumption (leave the handoff file in place and tell the
+   user why: its unfiled `Tracked:` items would be lost if deleted before
+   bd is reachable), or carry every unfiled item forward into this
+   session's first report as an explicit `pending-filing: <item>` line so
+   the linkage survives until someone with bd files it. Never both skip
+   filing and delete the file.
+5. **Consume.** Once the handoff's content is captured, the resumed
+   work is underway, and its `Tracked:` items are filed or carried forward
+   per step 4 (never consume a handoff whose parked items are still both
+   unfiled and uncarried), `git rm` the consumed handoff file (`rm` + no commit
    needed when the file was never tracked — `git ls-files` says which) and
    commit the deletion on its own
    (`chore: consume handoff, resume <short task>`) —

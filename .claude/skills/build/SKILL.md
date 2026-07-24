@@ -7,6 +7,59 @@ argument-hint: "[path/to/task.md or SPEC.md]"
 Execute the task at $ARGUMENTS. This skill assumes an agent-ready task/spec
 with runnable acceptance criteria and is designed to run in a fresh session.
 
+## 0. Load only the task
+
+Emit `<!-- agentprof:stage=load -->` verbatim as this step's opening line
+every time you enter it — agentprof reads it from this session's transcript
+to attribute cost/tokens/time to this stage until the next stage marker.
+
+Read the task file (and its spec's Requirements section if referenced). Mark
+the task's Status as `in-progress` (a bare SPEC.md has no Status field — skip
+the bookkeeping steps for it and work from its acceptance criteria directly).
+Claim the task in bd as well: its issue's title is the task file's
+repo-relative path (shadow-sync's upsert key), and `/work`'s SKILL.md owns
+the claim commands and the `.beads/session-claims` bookkeeping — cite it,
+don't restate it. Skip the claim only when the issue is already claimed (a
+drain dispatch claims before launching its worker) or bd is unavailable on
+this machine; note either case in one line rather than silently working
+untracked.
+
+If the task file has no runnable acceptance criteria, stop and say the task
+isn't agent-ready — improvising weaker criteria silently is how "looks done"
+replaces "is done".
+
+**Rigor tier (gate scaling).** Read the task's effective `Rigor:` header (the
+task's own, else its spec's; absent = `production`). `production` (or absent)
+is today's full procedure below, unchanged. `Rigor: prototype` scales the
+gates at steps 2–3: skip TDD red-first (step 2) and skip this run's own
+`verifier` spawn (step 3), substituting a mechanical run of the task's
+acceptance commands as the reported signal. Never scaled at any tier: commit
+hygiene, the task's runnable acceptance criteria, and the untrusted-data
+rules. State in close-out (step 4) that prototype gates applied. This is the
+primary path — it applies to attended /build AND to drain's
+attempt-1/relaunch workers, who run this procedure verbatim.
+
+**Startup session sweep (advisory).** Before editing anything, list other
+live sessions whose cwd resolves into this repo (the pre-flight in
+`.claude/rules/concurrent-sessions.md`, cited not restated: `claude agents
+--json`, worktree list, unexplained working-tree changes): one line per
+foreign live session, a "sweep unavailable" line on failure, never
+blocking.
+
+Record the current revision identifier now — the base the verifier's
+append-only task-file diff runs against in step 3 (e.g., under git: `git rev-parse HEAD`). Do NOT preload the codebase: for anything
+unclear about existing code, fan out `scout` agents and work from their
+reports. Read a file directly only when you're about to edit it.
+
+**Structure lookups (ctx).** When `.context/` exists at the repo root, this
+repo carries a `ctx` structure index. For a definition, caller, signature,
+or outline question, run the ctx query BEFORE any Grep/Read: `ctx tree
+<path>` (a file's or module's symbol outline), `ctx sig <symbol>` (a
+symbol's signature), `ctx refs <symbol>` (its callers/references), `ctx deps
+<path>` (a file's import graph). Fall back to Grep for content/text
+questions (bodies, literals, patterns) and Read a file only when about to
+edit it. Brief every scout you dispatch the same way.
+
 ## Bounded, walk-away runs (/goal)
 
 `/build`'s default is unbounded and attended. To run it unattended — the
@@ -35,58 +88,6 @@ For long `/goal`-bounded runs that grow heavy before finishing, write a
 scoped-permissions template, containment ladder, headless template, and
 failure-recovery doctrine for unattended runs live in
 [reference.md](reference.md).
-
-## 0. Load only the task
-
-Emit `<!-- agentprof:stage=load -->` verbatim as this step's opening line
-every time you enter it — agentprof reads it from this session's transcript
-to attribute cost/tokens/time to this stage until the next stage marker.
-
-**Startup session sweep (advisory).** Before reading the task, list other
-live sessions whose cwd resolves into this repo (the pre-flight in
-`.claude/rules/concurrent-sessions.md`, cited not restated: `claude agents
---json`, worktree list, unexplained working-tree changes): one line per
-foreign live session, a "sweep unavailable" line on failure, never
-blocking.
-
-Read the task file (and its spec's Requirements section if referenced). Mark
-the task's Status as `in-progress` (a bare SPEC.md has no Status field — skip
-the bookkeeping steps for it and work from its acceptance criteria directly).
-Claim the task in bd as well: its issue's title is the task file's
-repo-relative path (shadow-sync's upsert key), and `/work`'s SKILL.md owns
-the claim commands and the `.beads/session-claims` bookkeeping — cite it,
-don't restate it. Skip the claim only when the issue is already claimed (a
-drain dispatch claims before launching its worker) or bd is unavailable on
-this machine; note either case in one line rather than silently working
-untracked.
-Record the current revision identifier now — the base the verifier's
-append-only task-file diff runs against in step 3 (e.g., under git: `git rev-parse HEAD`). Do NOT preload the codebase: for anything
-unclear about existing code, fan out `scout` agents and work from their
-reports. Read a file directly only when you're about to edit it.
-
-**Structure lookups (ctx).** When `.context/` exists at the repo root, this
-repo carries a `ctx` structure index. For a definition, caller, signature,
-or outline question, run the ctx query BEFORE any Grep/Read: `ctx tree
-<path>` (a file's or module's symbol outline), `ctx sig <symbol>` (a
-symbol's signature), `ctx refs <symbol>` (its callers/references), `ctx deps
-<path>` (a file's import graph). Fall back to Grep for content/text
-questions (bodies, literals, patterns) and Read a file only when about to
-edit it. Brief every scout you dispatch the same way.
-
-If the task file has no runnable acceptance criteria, stop and say the task
-isn't agent-ready — improvising weaker criteria silently is how "looks done"
-replaces "is done".
-
-**Rigor tier (gate scaling).** Read the task's effective `Rigor:` header (the
-task's own, else its spec's; absent = `production`). `production` (or absent)
-is today's full procedure below, unchanged. `Rigor: prototype` scales the
-gates at steps 2–3: skip TDD red-first (step 2) and skip this run's own
-`verifier` spawn (step 3), substituting a mechanical run of the task's
-acceptance commands as the reported signal. Never scaled at any tier: commit
-hygiene, the task's runnable acceptance criteria, and the untrusted-data
-rules. State in close-out (step 4) that prototype gates applied. This is the
-primary path — it applies to attended /build AND to drain's
-attempt-1/relaunch workers, who run this procedure verbatim.
 
 ## 1. Plan proportionally
 
@@ -302,10 +303,12 @@ specs/<slug>/tasks/*.md` (a header-only match, never a full `Read` of each
 
 ## Ultra path
 
-When the active runtime profile documents an orchestration section AND
-ultracode is opted in, build's verification runs as a workflow instead of one
-verifier; with the profile silent, the single-verifier step 3 above is the
-only path. The profile holds the template — this skill only names the shape.
+When ultracode is opted in and build runs top-level (an attended `/build`,
+not a drain worker), build's verification runs as a workflow instead of one
+verifier. A build worker dispatched by drain always uses the single-verifier
+step 3 above — `Workflow` nesting is one level only, so a worker inside
+drain's workflow cannot compile its own; this is not a gate, it's the nesting
+rule. This skill only names the shape.
 
 Acceptance commands run FIRST as the deterministic gate. Each criterion with
 no runnable command then gets a refute-majority vote — 3 verifiers on distinct

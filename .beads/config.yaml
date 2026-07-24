@@ -65,6 +65,11 @@
 # - linear.api_key  → use LINEAR_API_KEY env var instead
 # - github.token    → use GITHUB_TOKEN env var instead
 
-sync.remote: "git+http://local_proxy@127.0.0.1:41729/git/sticklane/claude"
+# sync.remote is per-MACHINE, not committed — a URL that works in one
+# environment (e.g. a container-local proxy) is a dead address in every other
+# clone (agentic-m2e; docs/memory/agentic-init-remote-override.md). Set it
+# locally instead, either of:
+#   bd config set sync.remote <url>     # writes here; leave the line uncommitted
+#   BEADS_SYNC_REMOTE=<url>             # env var, nothing on disk
 export:
-    auto: true
+  auto: true

@@ -13,7 +13,8 @@ type rates struct {
 }
 
 // table maps model-id prefixes to rates. Source of truth:
-// https://docs.claude.com/en/docs/about-claude/pricing (fetched 2026-07-02).
+// https://docs.claude.com/en/docs/about-claude/pricing; the verification date
+// and refresh procedure live on the Fetched constant (staleness.go).
 //
 // Match order: entries are scanned top to bottom and the first matching
 // prefix wins, so longer / more specific prefixes MUST be listed before

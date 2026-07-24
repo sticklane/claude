@@ -22,8 +22,16 @@ new skill names. Each ultra path is gated on two conditions, both required: the
 ultracode opt-in is active AND the active runtime profile documents an
 orchestration section (`runtimes/claude-code.md`). With the gate closed (plugin
 installs, eval fixtures — no `runtimes/`) the skills behave byte-for-byte as
-today. File artifacts (SPEC.md, task files, `Status:` flips) stay the interface
-on both paths, so an interrupted ultra run resumes from disk.
+today.
+
+> **Superseded 2026-07-23 (agentic-30p).** The runtime-profile-presence gate
+> was retired. `/drain` now compiles the ready queue into a `Workflow`
+> **always** — it is drain's execution model, not an opt-in path (precondition:
+> the `Workflow` tool is available, else drain stops). `/critique`, `/build`,
+> and `/idea` keep only the ultracode-opt-in condition. `evals/lint-ultra-gate.sh`
+> and the ±3-line marker convention were deleted. See CLAUDE.md and
+> `runtimes/claude-code.md`. File artifacts (SPEC.md, task files, `Status:` flips) stay the interface
+> on both paths, so an interrupted ultra run resumes from disk.
 
 ### The adopt / leave-model-driven split
 

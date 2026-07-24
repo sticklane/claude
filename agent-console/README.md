@@ -6,12 +6,12 @@ else, so it costs nothing to run. Auto-starts at login via launchd.
 
 **http://127.0.0.1:8899**
 
-| View | Path | Shows |
-|------|------|-------|
-| **Skills** | `/` | Every installed agent skill & subagent — personal, project, and plugin (skills, commands, and agents), grouped by source, with a live filter. |
+| View          | Path         | Shows                                                                                                                                                     |
+| ------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Skills**    | `/`          | Every installed agent skill & subagent — personal, project, and plugin (skills, commands, and agents), grouped by source, with a live filter.             |
 | **Workboard** | `/workboard` | Open work across every repo in `~/REPOS.md`: specs, `docs/TASKS.md`, handoffs, git state, and Claude Code sessions — with a needs-attention inbox up top. |
 
-Each request re-scans on demand (workboard git state is cached ~20s), and the
+Each request re-scans on demand (workboard git state is cached ~45s), and the
 page **auto-refreshes in place every 25s** — it re-fetches and swaps the data
 while preserving your scroll position, expanded specs, and open drill-down
 panel (it pauses while a tab is hidden or you're typing in the filter).
@@ -27,8 +27,8 @@ each task file's `Depends on:` line and colored by status.
   the spec's `Priority:` line and **auto-commits** it (one file, one commit).
   Specs are sorted by priority. Only specs inside a `~/REPOS.md`-tracked repo are
   editable.
-- **Agents** — the *Agents* section lists running background agents (`claude
-  agents --json`). **Kick off** a new one (prompt + repo → `claude --bg -p …`;
+- **Agents** — the _Agents_ section lists running background agents (`claude
+agents --json`). **Kick off** a new one (prompt + repo → `claude --bg -p …`;
   this costs tokens), **stop** a running one (SIGTERM — resumable), or **resume**
   a recent one (`claude --bg --resume`). Every costly/destructive action needs a
   confirm click.
@@ -74,7 +74,7 @@ SKILLS_DASHBOARD_PORT=9001 ./agent-console.py
   `worktrees/` or `node_modules/`.
 - Built-in harness skills (dataviz, code-review, …) have no on-disk `SKILL.md`,
   so they can't be enumerated without the harness — scope is personal + project
-  + plugin.
+  - plugin.
 - GitHub public/private badges use one cached `gh repo list --json` call (the
   only network touch); everything else is local.
 

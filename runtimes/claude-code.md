@@ -29,14 +29,14 @@ enforces the agent pins. Aliases only, never dated model ids, so pins
 survive model releases. The other profiles carry the same table in
 their runtime's vocabulary.
 
-| Role                                                                 | Claude default                                                                                                                 |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| session default                                                      | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution                                           |
-| implementation workers (drain dispatch, incl. group throughput mode) | `opus` — deep-tier adopted default; the alias always resolves to the current Opus release, never a dated snapshot              |
-| explore / codebase-search (`scout`)                                  | `haiku`                                                                                                                        |
-| verifier (acceptance evidence; advisory reviewer lane)               | `sonnet`                                                                                                                       |
-| `critic` (spec/plan/diff critique)                                   | `opus` — deep-tier per token-discipline ("architecture critique"); a critic pass costs ~1% of a wrong implementation           |
-| `/distill` (skill frontmatter)                                       | `opus`                                                                                                                         |
+| Role                                                                      | Claude default                                                                                                                 |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| session default                                                           | `opusplan` (`.claude/settings.json`) — Opus reasoning in plan mode, Sonnet execution                                           |
+| implementation workers (drain dispatch, incl. group throughput mode)      | `opus` — deep-tier adopted default; the alias always resolves to the current Opus release, never a dated snapshot              |
+| explore / codebase-search (`scout`)                                       | `haiku`                                                                                                                        |
+| verifier (acceptance evidence; advisory reviewer lane)                    | `sonnet`                                                                                                                       |
+| `critic` (spec/plan/diff critique)                                        | `opus` — deep-tier per token-discipline ("architecture critique"); a critic pass costs ~1% of a wrong implementation           |
+| `/distill` (skill frontmatter)                                            | `opus`                                                                                                                         |
 | retry escalation (one relaunch, one tier up, verifier evidence in prompt) | `fable` — a retry after a deep-tier (`opus`) attempt failed, the frontier-tier sanction in `.claude/rules/token-discipline.md` |
 
 Frontier stays sparing beyond that one active rung: security-critical
@@ -112,22 +112,25 @@ default gets it added before dispatch.
 > this one carries the opt-in gate, effort tiers, resume rules, and the
 > per-variant script templates.)
 
-Ultra mode is the Workflow-tool orchestration path shared by `/critique`,
-`/drain`, `/build`, and `/idea`. It is **off by default** and
-fires only when BOTH conditions hold:
+Ultra mode is the Workflow-tool orchestration path. The former
+runtime-profile-presence gate (the `evals/lint-ultra-gate.sh` marker check)
+was retired 2026-07-23; there is no longer a "profile must be present"
+condition.
 
-1. **the ultracode opt-in is active.** The opt-in rules belong to the
-   Workflow tool's own tool description; restated here, the opt-in forms are
-   the **`ultracode` keyword**, a **session flag**, or the **user's own
-   explicit ask**. No opt-in → the skills run their non-ultra path verbatim.
-2. **the active runtime profile documents this section** — i.e. this
-   `runtimes/claude-code.md` is present in the checkout. Plugin installs and
-   eval fixtures ship without `runtimes/`, so the gate reads permanently
-   closed there and the skills behave exactly as today.
+- **`/drain` runs it always.** `/drain` compiles the ready queue into a
+  Workflow as its execution model — invoking the skill is itself the
+  Workflow opt-in — with no sequential fallback. Precondition: the
+  `Workflow` tool must be available this session, else drain stops and says
+  so.
+- **`/critique`, `/build`, and `/idea` use it when the ultracode opt-in is
+  active** — the **`ultracode` keyword**, a **session flag**, or the
+  **user's own explicit ask** (rules belong to the Workflow tool's own
+  description). No opt-in → those skills run their non-ultra path verbatim;
+  a drain-dispatched `/build` worker always runs its single-verifier path
+  (Workflow nesting is one level only).
 
-Both are required; the ~10–15× token multiple of a fanned-out run is never
-spent on an auto-trigger. Ultra is for breadth-first or verification-critical
-work only.
+The ~10–15× token multiple of a fanned-out run is never spent on an
+auto-trigger. Ultra is for breadth-first or verification-critical work only.
 
 ### Effort tiers (dispatch-prompt language)
 

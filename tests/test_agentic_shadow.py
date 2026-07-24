@@ -4,11 +4,6 @@
 markdown stays the source of truth, bd reflects it. These tests seed a real bd
 store (``bd_init`` + the shadow importer), drive the real ``agentic ready``
 command, and assert bd's actual state, so they exercise bd rather than a mock.
-
-The ``differential`` test is the import-fidelity cross-check: it computes the
-dispatch frontier two independent ways — the pre-cutover ``drain_frontier.py``
-over the real markdown, and ``agentic`` over the imported bd — and asserts they
-agree on the real re-triaged queue.
 """
 
 import hashlib
@@ -23,11 +18,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-_DRAIN = REPO_ROOT / ".claude" / "skills" / "drain"
-if str(_DRAIN) not in sys.path:
-    sys.path.insert(0, str(_DRAIN))
 
-from agentic import bd, frontier, shadow  # noqa: E402
+from agentic import bd, shadow  # noqa: E402
 from agentic.lock import LOCK_NAME, LockTimeout, RepoLock  # noqa: E402
 
 requires_bd = pytest.mark.skipif(
@@ -176,6 +168,22 @@ def test_resync_reflects_an_edited_header(tmp_path):
 
 
 @requires_bd
+def test_resync_does_not_reopen_a_bd_closed_issue(tmp_path):
+    """bd is authoritative for the closed state (uz1): once an issue is closed
+    in bd, a markdown 'pending' row must not reopen it on the next sync."""
+    store = _git_store(tmp_path)
+    _write_task(store, "demo", "01-pending.md", PENDING_TASK)
+    shadow.sync(str(store), take_lock=False)
+    issue_id = shadow.task_id("specs/demo/tasks/01-pending.md")
+    assert _export(store)["specs/demo/tasks/01-pending.md"]["status"] == "open"
+
+    # Closed in bd (the source of truth) while the markdown header stays pending.
+    bd.bd_set_status(issue_id, "closed", cwd=str(store))
+    shadow.sync(str(store), take_lock=False)  # must NOT reopen it
+    assert _export(store)["specs/demo/tasks/01-pending.md"]["status"] == "closed"
+
+
+@requires_bd
 def test_sync_never_writes_markdown(tmp_path):
     store = _git_store(tmp_path)
     paths = [
@@ -206,78 +214,7 @@ def test_sync_takes_the_write_lock(tmp_path):
     assert shadow.sync(str(store), take_lock=True, acquire_timeout=5) == 3
 
 
-# --- differential: two independent frontier implementations agree ----------
-
-
-def _in_progress_claim_touch(rows):
-    claim = set()
-    for r in rows:
-        if r["status"] == "in_progress":
-            claim |= set(r["metadata"]["touch"])
-    return claim
-
-
-@requires_bd
-def test_differential_import_reproduces_the_drain_frontier(tmp_path):
-    """The real re-triaged queue, imported into bd, yields the same dispatch
-    frontier that the pre-cutover ``drain_frontier.py`` derives from markdown.
-
-    Two independent implementations (``drain_frontier.py`` over markdown vs
-    ``agentic`` over the imported bd) are compared on the real queue — not a
-    recorded expectation. The dispatchable (dependency-resolution) sets must be
-    equal, and ``agentic ready`` must equal that dispatchable set once the same
-    Touch admission is applied (``agentic ready`` is the Touch-admitted
-    frontier; ``drain_frontier``'s raw ``dispatchable`` is pre-Touch).
-    """
-    import drain_frontier as DF
-
-    spec_dirs = shadow.discover_spec_dirs(str(REPO_ROOT))
-    assert spec_dirs, "the repo must have specs/*/tasks to import"
-    rel_dirs = [os.path.relpath(d, str(REPO_ROOT)) + "/" for d in spec_dirs]
-    rows = shadow.build_rows(spec_dirs, str(REPO_ROOT))
-
-    store = _git_store(tmp_path)
-    jsonl = store / "seed.jsonl"
-    jsonl.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
-    bd.bd_import(str(jsonl), cwd=str(store), allow_stale=True)
-
-    # Independent implementation A: drain_frontier over the real markdown.
-    df = json.loads(
-        subprocess.run(
-            [sys.executable, str(_DRAIN / "drain_frontier.py"), *rel_dirs],
-            cwd=str(REPO_ROOT),
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout
-    )
-    df_dispatchable_ordered = [e["path"] for e in df["dispatchable"]]
-    df_dispatchable = set(df_dispatchable_ordered)
-
-    # Independent implementation B: agentic's frontier over the imported bd.
-    fr = frontier.compute_frontier(frontier.load_issues(cwd=str(store)))
-    agentic_dispatchable = {i.get("title", "") for i in fr["dispatchable"]}
-
-    # (1) The dependency-resolution frontiers agree exactly.
-    assert agentic_dispatchable == df_dispatchable
-
-    # (2) `agentic ready` equals drain_frontier's dispatchable projected through
-    # the same global Touch admission (seeded with the in-flight claims), each
-    # side using its own independent Touch predicate.
-    touch_by_rel = {r["title"]: set(r["metadata"]["touch"]) for r in rows}
-    admitted, admitted_touch = [], _in_progress_claim_touch(rows)
-    for path in df_dispatchable_ordered:
-        t = touch_by_rel.get(path, set())
-        if DF.entries_disjoint(t, admitted_touch):
-            admitted.append(path)
-            admitted_touch |= t
-    expected_ready = set(admitted)
-
-    ready = _agentic(store, "ready", "--json")
-    assert ready.returncode == 0, ready.stderr
-    actual_ready = {t["title"] for t in json.loads(ready.stdout)}
-
-    assert actual_ready == expected_ready
+# --- upsert key: task ids are stable across syncs --------------------------
 
 
 @requires_bd

@@ -154,31 +154,24 @@ precedent this mirrors.
    - P2 — the default.
    - P3 — cleanup / nice-to-have.
      The human may re-prioritize at any time by editing the headers.
-5. Append a **Parallelization** section to SPEC.md, then emit each
-   concurrent-safe group as a machine-readable `- Group:` line under it.
-   Apply the **decision-coupling** test before grouping: tasks are
-   parallel-safe only if they are disjoint in `Touch` AND free of shared
-   undecided design — naming, schema, interface, or architectural choices
-   the spec leaves open. If two tasks would each make the same open
-   choice, either the choice moves into the spec or the tasks serialize.
-   Only groups passing both checks may run concurrently — this step fixes
-   the output format, not that judgment call.
+5. Append a **Parallelization** section to SPEC.md as human rationale —
+   which task groups are concurrency-safe and why. Apply the
+   **decision-coupling** test: tasks are parallel-safe only if they are
+   disjoint in `Touch` AND free of shared undecided design — naming, schema,
+   interface, or architectural choices the spec leaves open. If two tasks
+   would each make the same open choice, either the choice moves into the
+   spec or the tasks serialize.
 
-   Emit each surviving group as its own line, format
-   `- Group: NN, NN[, NN...]` — comma-and-space-separated two-digit task
-   numbers matching each task file's `NN-` prefix; a task named on no
-   `- Group:` line runs solo. Plain-prose rationale may precede the lines,
-   but the lines themselves are the parseable contract: drain parses group
-   membership from them rather than re-deriving independence from prose.
-   This is the grammar pinned in `specs/drain-rolling-window/SPEC.md`'s
-   `## Parallelization` section — cite that paragraph rather than
-   re-deriving the format. Example — one line per concurrent-safe group,
-   flush-left under the Parallelization heading:
-
-```
-- Group: 02, 03
-- Group: 05, 06
-```
+   This section is prose for a human reader, not a parsed contract. The
+   machine contract for concurrency is each task's `Touch:` header, which
+   shadow-syncs into bd: post-cutover drain derives file-disjointness from
+   `Touch` and `Depends on` (concurrency = the user's throughput ask ∩ Touch
+   disjointness), and nothing reads a `- Group:` line. So write the safe
+   groups as plain prose if it helps the reader; do not emit a
+   machine-readable group grammar and do not claim a line opts a queue into
+   parallelism. The historical `- Group:`/`Parallel-window:` grammar is
+   archived in `specs/archive/drain-rolling-window/SPEC.md`'s
+   `## Parallelization` section — cite it as history, not as a live format.
 
 6. Sanity-check with the `critic` agent if the decomposition has any
    nontrivial dependency structure.
@@ -193,8 +186,8 @@ precedent this mirrors.
 
 Tell the user: run `/build specs/<slug>/tasks/01-*.md` in a fresh session per
 task, `/drain specs/<slug>` to work the queue unattended (its rolling window
-keeps a concurrent-writer window continuously topped up; a
-`Parallel-window:`/`Group:` line opts a queue in), or a `/goal`-bounded
+keeps a concurrent-writer window continuously topped up from `bd ready`, sized
+by `Touch`-disjointness), or a `/goal`-bounded
 `/build specs/<slug>/tasks/NN-*.md` for an unattended single task (once
 `/gate` is installed). These next stages are all
 launch-gated per the self-chain bullet in CLAUDE.md's authoring conventions,

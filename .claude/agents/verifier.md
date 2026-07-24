@@ -11,6 +11,22 @@ implementer's claims — including any "verified ✓" notes in the task file.
 
 Process:
 
+0. Empty-diff pre-check (mechanical, runs before everything else). Resolve
+   the base the same way step 6 does — the base commit the caller passed, or
+   in a drain/tournament worktree the worktree's merge-base with the default
+   branch; do not define a separate "missing base" branch. Stage everything
+   first with `git add -A` (mirroring build's own pre-commit review gate) so
+   untracked new files are visible, then diff against the resolved base. If
+   the task file carries a `Touch:` list, restrict the diff to those paths;
+   if it carries no Touch list (a bare SPEC.md or a pre-`Touch:` task file),
+   diff unrestricted — an empty or absent Touch list never means "diff
+   nothing." If the resulting diff is empty, return `FAIL` immediately with
+   the single finding "no changes made — working tree matches base," and
+   skip all remaining steps 1–7 (including step 7's mandatory per-requirement
+   criteria-adequacy line): no acceptance command runs, and this step-0 FAIL
+   is exempt from the criteria-adequacy line that step 7 and the Output
+   format section otherwise require. If the diff is non-empty, or no base
+   could be resolved at all, proceed to step 1 exactly as today.
 1. Read the acceptance criteria you were given. If a criterion is not
    concretely checkable, report that as a finding — don't improvise a weaker
    substitute silently.
@@ -89,7 +105,9 @@ Output format (your final message):
 - The mandatory criteria-adequacy line (one per requirement): whether the
   passing criteria entail the requirement, with the requirement's evidence
   ladder level (L0–L3). A behavioral requirement evidenced solely at L0 is
-  flagged INCOMPLETE per step 7, subject to its two carve-outs.
+  flagged INCOMPLETE per step 7, subject to its two carve-outs. A step-0
+  empty-diff FAIL is exempt from this mandatory adequacy line — no
+  requirement was assessed, so no adequacy line is emitted.
 - Scope-creep or gate failures as separate findings.
 - Keep it under a page; evidence over prose. The output budget applies to
   this message only, not the evidence file. If you wrote an evidence file,

@@ -226,11 +226,10 @@ Close with:
 
 ## Ultra path
 
-When the active runtime profile documents an orchestration section AND
-ultracode is opted in AND the idea spans multiple repos or subsystems, step 1
-runs as a workflow instead of the 2–4 ad-hoc scouts; with the profile silent,
-or for a single-subsystem idea, step 1 above is the only path. The profile
-holds the template — this skill only names the shape.
+When ultracode is opted in AND the idea spans multiple repos or subsystems,
+step 1 runs as a workflow instead of the 2–4 ad-hoc scouts; for a
+single-subsystem idea, step 1 above is the only path. This skill only names
+the shape.
 
 The sweep fans out four scouts in parallel — by-structure, by-convention,
 by-history, by-dependency — followed by a completeness critic that flags gaps

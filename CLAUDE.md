@@ -115,11 +115,14 @@ order cannot resolve are surfaced, not guessed.
   enumerated in plugin.json by schema requirement, so a new agent DOES need
   a manifest edit; only skills stay manifest-free. Bump `version` in
   `plugin.json` whenever skill behavior changes.
-- A task that will be drained/parallelized must not gate acceptance on the
-  `Workflow` tool, `/evals`, or an execution-stage skill — unattended
-  workers have neither the ultracode opt-in nor live-user launch
-  authorization. Make such a check orchestrator-resolvable or give the
-  criterion an explicit manual-pending path (docs/memory/unattended-worker-tool-limits.md).
+- `/drain` now requires the `Workflow` tool (it compiles the queue into a
+  workflow — no sequential fallback), so it runs only in a session that has
+  `Workflow`: an interactive `/drain`, never a headless/gated environment
+  without the tool, where it stops and says so. A drain WORKER is still a
+  one-level subagent that must not itself require `Workflow` (nesting is one
+  level) — keep a task's acceptance criteria orchestrator-resolvable or
+  give the criterion an explicit manual-pending path, so a build-worker can
+  satisfy it with its single-verifier path (docs/memory/unattended-worker-tool-limits.md).
 - Verify acceptance criteria against CURRENT file state at authoring time:
   a grep criterion anchors on a NEW literal phrase confirmed absent
   (`grep -c` → 0) from every target file, and a numeric bound (line count,
@@ -145,13 +148,13 @@ not prove the merge is semantically complete — follow
 docs/memory/skill-retirement-checklist.md and run the critic on the diff
 before calling the sweep done.
 
-The four ultra-path skills (critique, drain, build, idea) also
-carry a standalone, model-free gate check: run `bash evals/lint-ultra-gate.sh`
-before committing changes to them. It verifies every case-insensitive "ultra"
-mention stays within ±3 lines of the literal "active runtime profile" marker,
-so gate-closed installs (plugin caches, eval fixtures with no `runtimes/`)
-read as today's skills. It is invoked directly, never wired into
-`evals/run.sh` (which runs model sessions).
+Ultra behavior is no longer gated on a runtime-profile marker: `/drain`
+always compiles the ready queue into a `Workflow` (its execution model, not
+an opt-in path), and `/critique`, `/build`, and `/idea` name their workflow
+shape directly, used when ultracode is opted in. The former
+`evals/lint-ultra-gate.sh` marker-proximity gate was removed with that
+change — there is no gate-closed install to preserve now that the sequential
+drain fallback is gone.
 
 ## Code navigation (ctx)
 
@@ -166,7 +169,11 @@ at session start, `bd ready` for the queue, claim before working,
 close on done — the `/work` skill owns the flow. Markdown task files
 under `specs/*/tasks/` carry the human-readable Goal/Steps/Acceptance
 text; their `Status:` headers are shadow-synced into bd, not the other
-way around.
+way around — and the sync is **bd-authoritative for the closed state**: it
+can seed a new task or advance one toward closed, but never reopens an issue
+bd has closed (a stale markdown `pending` can't revive closed bd work —
+agentic-uz1). So close work in bd; a markdown header is display that seeds
+and advances, never the live authority.
 
 Record discovered work in bd immediately, not just in prose — a bug
 found, doc drift spotted, or new work scoped while doing something
