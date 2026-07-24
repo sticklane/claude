@@ -261,6 +261,26 @@ class TestAdaptBoard(unittest.TestCase):
         self.assertEqual(len(board["orphans"]), 1)
         self.assertEqual(board["orphans"][0]["prompt"], "orphaned")
 
+    def test_carries_session_cost_from_spend(self):
+        assembled = self._assembled()
+        assembled["spend"] = {"by_session": {"sid1": {"cost_microusd": 420000}}}
+        with (
+            patch.object(ac, "gh_visibility", return_value={}),
+            patch.object(ac, "_git", return_value=None),
+        ):
+            board = ac._adapt_board(assembled, [], [])
+
+        self.assertEqual(board["repos"][0]["sessions"][0]["cost_microusd"], 420000)
+
+    def test_session_cost_defaults_to_zero_without_spend(self):
+        with (
+            patch.object(ac, "gh_visibility", return_value={}),
+            patch.object(ac, "_git", return_value=None),
+        ):
+            board = ac._adapt_board(self._assembled(), [], [])
+
+        self.assertEqual(board["repos"][0]["sessions"][0]["cost_microusd"], 0)
+
     def test_forwards_dag_tasks_and_blocked_tasks_from_spec(self):
         # Safety net for the single-pass refactor: _adapt_board must forward
         # both the full dag-task list (num/deps/status/title) and the
@@ -329,6 +349,74 @@ class TestAdaptBoard(unittest.TestCase):
                 }
             ],
         )
+
+
+class TestSessionCostSurfaces(unittest.TestCase):
+    """Per-session spend reaches the repo and session detail pages: the page
+    registry carries each session's spend record, and both renderers show it."""
+
+    def _assembled(self):
+        return {
+            "repos": [
+                {
+                    "path": "/tmp/nonexistent-repo-xyz",
+                    "name": "r1",
+                    "specs": [],
+                    "sessions": [
+                        {
+                            "id": "sid1",
+                            "cwd": "/tmp/nonexistent-repo-xyz",
+                            "prompt": "do x",
+                            "state": "recent",
+                            "start_ts": 1.0,
+                            "last_ts": 2.0,
+                        }
+                    ],
+                }
+            ],
+            "spend": {"by_session": {"sid1": {"cost_microusd": 420000}}},
+        }
+
+    def test_page_registry_attaches_session_spend(self):
+        pages = ac.build_page_registry(self._assembled())
+        repo_entry = next(e for e in pages.values() if e["kind"] == "repo")
+        session_entry = next(e for e in pages.values() if e["kind"] == "session")
+
+        self.assertEqual(session_entry["spend"]["cost_microusd"], 420000)
+        self.assertEqual(repo_entry["session_spend"]["sid1"]["cost_microusd"], 420000)
+
+    def test_page_registry_tolerates_missing_spend(self):
+        assembled = self._assembled()
+        del assembled["spend"]
+        pages = ac.build_page_registry(assembled)
+        session_entry = next(e for e in pages.values() if e["kind"] == "session")
+
+        self.assertEqual(session_entry["spend"], {})
+
+    def test_repo_page_renders_session_cost(self):
+        entry = {
+            "path": "/tmp/nonexistent-repo-xyz",
+            "kind": "repo",
+            "title": "r1",
+            "repo": self._assembled()["repos"][0],
+            "session_spend": {"sid1": {"cost_microusd": 420000}},
+        }
+        with patch.object(ac, "_git", return_value=None):
+            html = ac.render_repo_page(entry)
+
+        self.assertIn("$0.42", html)
+
+    def test_session_page_renders_cost_row(self):
+        entry = {
+            "kind": "session",
+            "session": self._assembled()["repos"][0]["sessions"][0],
+            "spend": {"cost_microusd": 420000},
+        }
+        with patch.object(ac, "_transcript_path", return_value=None):
+            html = ac.render_session_page(entry)
+
+        self.assertIn("<td>cost</td>", html)
+        self.assertIn("$0.42", html)
 
 
 class TestPriority(unittest.TestCase):
