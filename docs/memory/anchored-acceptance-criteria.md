@@ -87,3 +87,18 @@ purpose). Done or archived work is exempt unconditionally: a pre-ladder
 "verified <date>" note predates the ladder and must not re-bind it — such
 specs get their ladder levels reported informationally, without flipping the
 verdict.
+
+**`pytest -k` across multiple file args deselects, it doesn't scope.** A
+command like `pytest -k Foo file_a.py file_b.py file_c.py` applies the `-k`
+filter globally across all three files, not just to `file_a.py` — any test
+in `file_b.py`/`file_c.py` not matching `Foo` is silently deselected, not
+run. An acceptance criterion combining a name filter with multiple file
+targets this way looks like it verifies all three files' relevant coverage
+but actually only exercises the filtered subset — a change that breaks
+`file_b.py`'s untouched-by-the-filter tests passes the criterion anyway.
+Independently rediscovered twice in one session (2026-07-24,
+`specs/bd-native-handoffs`: once in the spec's own critique, once again as
+a breakdown sanity-check finding on a task file). Write separate `pytest`
+invocations per distinct target instead of one combined command with a
+narrowing `-k`, whenever the targets don't all share the same filterable
+naming convention.
