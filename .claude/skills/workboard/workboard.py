@@ -15,8 +15,9 @@ summary. It covers:
   - git             branch, dirty files, unpushed commits, worktrees
 
 Stdlib only. Read-only: it never mutates any of the state it reports on,
-except two explicit, --flag-gated actions: `--abandon`/`--abandon-stale`
-(Antigravity skip-marker) and `--prune-stale-sessions` (deletes dead-pid
+except three explicit, --flag-gated actions: `--abandon`/`--abandon-stale`
+(Antigravity skip-marker), `--defer` (writes a `Status: deferred` header into
+a spec) and `--prune-stale-sessions` (deletes dead-pid
 ~/.claude/sessions/*.json records).
 
 Usage:
@@ -412,10 +413,10 @@ def scan_toolkit_specs(repo):
 def defer_spec(repo, slug):
     """Park `specs/<slug>` with a `Status: deferred` SPEC.md header.
 
-    The specs-side twin of the Antigravity abandon marker, and the second
-    deliberate write in an otherwise read-only scanner. Rewrites an existing
-    `Status:` line in place, else inserts one after the title. Idempotent.
-    Returns whether the spec was found.
+    The specs-side twin of the Antigravity abandon marker: a deliberate write
+    in an otherwise read-only scanner. Rewrites an existing `Status:` line in
+    place, else inserts one after the title. Idempotent. Returns whether the
+    spec was found.
     """
     spec_md = Path(repo) / "specs" / slug / "SPEC.md"
     if not spec_md.is_file():
@@ -1178,7 +1179,7 @@ def scan_todos(claude_home):
 
 # ---------------------------------------------------------------- antigravity
 
-# The one deliberate exception to "read-only": --abandon/--abandon-stale drop
+# A deliberate exception to "read-only": --abandon/--abandon-stale drop
 # this marker file into a conversation dir. The scanner then skips it forever.
 # Nothing of Antigravity's own state (task.md, metadata) is ever modified.
 ABANDON_MARKER = ".workboard-abandoned"
@@ -1887,8 +1888,7 @@ def main():
                 print(f"deferred: specs/{slug}", file=sys.stderr)
             else:
                 missing.append(slug)
-        for slug in missing:
-            print(f"not found: specs/{slug}/SPEC.md", file=sys.stderr)
+                print(f"not found: specs/{slug}/SPEC.md", file=sys.stderr)
         if missing:
             sys.exit(1)
     if args.prune_stale_sessions:

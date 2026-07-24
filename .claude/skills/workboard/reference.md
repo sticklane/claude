@@ -6,10 +6,14 @@ reverse-engineer it.
 
 ## Data sources (all read-only)
 
-One deliberate write exists: `--abandon <conv-id>` / `--abandon-stale` drop
-a `.workboard-abandoned` marker file into an Antigravity conversation dir so
-the scanner skips it permanently. Antigravity's own artifacts (`task.md`,
-metadata) are never modified; undo = delete the marker. Tests:
+Two deliberate writes exist, one per park-it surface. `--abandon <conv-id>` /
+`--abandon-stale` drop a `.workboard-abandoned` marker file into an
+Antigravity conversation dir so the scanner skips it permanently;
+Antigravity's own artifacts (`task.md`, metadata) are never modified, and
+undo = delete the marker. `--defer <slug>` writes (or rewrites) a
+`Status: deferred` header in the current repo's `specs/<slug>/SPEC.md` so the
+spec leaves the needs-attention inbox while still appearing in the spec
+listing and totals; undo = change the header back. Tests:
 `python3 -m unittest discover -s .claude/skills/workboard`.
 
 | Source | Path | What it yields |
