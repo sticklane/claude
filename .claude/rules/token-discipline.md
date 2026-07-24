@@ -4,6 +4,17 @@ Context is the scarce resource. Every token in the main conversation is
 re-sent on every subsequent turn, so pollution compounds. Spend main-context
 tokens on decisions; delegate consumption of raw material to subagents.
 
+## Table of contents
+
+- Delegation defaults
+- Model and effort matching
+- Dispatch authoring
+- Session hygiene
+- Session refresh
+- Cache economics
+- Cheap before expensive
+- Match the research tool to the question
+
 ## Delegation defaults
 
 - **Index-first, before scout dispatch, when the repo is indexed.** When
@@ -39,13 +50,9 @@ tokens on decisions; delegate consumption of raw material to subagents.
   scattered ones; >5 is reserved for read-only breadth-first fan-outs) and
   let /drain's rolling top-up keep it full — refilling on each collected
   verdict, not at a wave barrier — rather than launching a fixed batch and
-  idling finished workers behind the slowest. Drain's multi-spec swarm mode
-  (`specs/drain-multi-spec-swarm`) was superseded by the agentic-core-redesign
-  cutover — the old baton/lease/generation/tournament/swarm apparatus is
-  deleted (`.claude/skills/drain/reference.md`) — so the 3–5 ceiling above has
-  no active carve-out. The cross-vendor evidence for the window and the
-  rolling claim-next design is in docs/external-playbooks.md (cited, not
-  restated).
+  idling finished workers behind the slowest. The 3–5 ceiling has no
+  carve-out. The cross-vendor evidence for the window and the rolling
+  claim-next design is in docs/external-playbooks.md (cited, not restated).
 - **Drain-shaped freehand requests → route into `/drain`.** When the
   human's live message is drain-shaped ("drain the …", "work through the
   remaining tasks in specs/…"), invoke the `/drain` skill rather than
@@ -168,13 +175,8 @@ authoring guide behind that check, not the enforcer.
   orphaned children outliving the step that spawned them, no detached
   orchestrator generations where an attended parent can supervise
   instead. A worker that spawns its own verifier awaits it inline the
-  same way. The 2026-07-11 carve-out for drain's generation-boundary
-  self-relaunch (a detached headless generation spawned at its own baton
-  pass) no longer applies: the agentic-core-redesign cutover deleted
-  drain's baton/generation apparatus entirely (`.claude/skills/drain/
-  reference.md`) — drain now runs to `bd ready` exhaustion within a single
-  session, so there is no self-relaunch left to carve out. This rule's
-  plain form binds without exception.
+  same way. This rule binds without exception: no self-relaunch or
+  detached generation is carved out of it.
 - **Background-dispatched agents can't interactively interview a human.**
   `AskUserQuestion` isn't available to an `Agent`-tool-spawned background
   worker (confirmed 2026-07-11: an `/idea`-invoking dispatch fell back to
@@ -313,9 +315,9 @@ Three points govern the shape:
   "budget" words name different things.
 
 Drain has no baton or generation-counter mechanism of its own to carve out
-here (deleted in the agentic-core-redesign cutover — drain now runs to
-`bd ready` exhaustion instead); this doctrine covers the freehand and
-watch-then-act sessions it wasn't scoped for either way.
+here — it runs to `bd ready` exhaustion within a single session. This
+doctrine covers the freehand and watch-then-act sessions it wasn't scoped
+for either way.
 
 ## Cache economics
 
