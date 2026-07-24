@@ -283,9 +283,10 @@ research stays here.
   reads to auto-invoke itself," with no explicit self-chain imperative of
   its own; a live session read the ambiguity and invented a permission
   gate that doesn't exist in this repo's doctrine, stalling a pipeline
-  that should have auto-continued (specs/critique-breakdown-self-chain-gap;
-  mining this repo's own session logs found one further, generalizable
-  instance of the same failure — specs/deterministic-skill-chaining).
+  that should have auto-continued
+  (specs/archive/critique-breakdown-self-chain-gap; mining this repo's own
+  session logs found one further, generalizable instance of the same
+  failure — specs/archive/deterministic-skill-chaining).
   Cross-framework research converges on one answer: LangGraph's routing
   is always code — "Edges... are functions that determine which Node to
   execute next," and even LLM-decided hand-offs go through a `Command`
