@@ -8,7 +8,9 @@ human decision, on the **live agent-console dashboard** — do not write a
 static HTML snapshot. Read-only: nothing here mutates the state it reports —
 the explicit exceptions are the scanner's `--abandon` / `--abandon-stale`,
 which write a `.workboard-abandoned` skip-marker into an Antigravity
-conversation dir (Antigravity's own artifacts are never touched), and
+conversation dir (Antigravity's own artifacts are never touched), `--defer
+<slug>`, which writes a `Status: deferred` header into the current repo's
+`specs/<slug>/SPEC.md` so a parked spec leaves the inbox, and
 `--prune-stale-sessions`, which deletes dead-pid `~/.claude/sessions/*.json`
 records (step 4).
 Design rationale and sources: [docs/agent-dashboards.md](../../../docs/agent-dashboards.md).
