@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Unit tests for resume-check.sh — the handoff-resume SessionStart hook.
-# Builds throwaway project trees under mktemp -d, never touches real
-# session data or a real HANDOFF.md.
+# Builds a scratch git repo + real bd store under mktemp -d and files real
+# handoff-labeled issues there, the same way hooks/bd-compliance/test.sh
+# does. Never touches this toolkit's own .beads store.
 set -u
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,80 +20,88 @@ check() { # check <description> <condition-result 0/1>
   fi
 }
 
-# --- no HANDOFF.md anywhere: silent no-op ---------------------------------
-tmp="$(mktemp -d)"
-out="$(CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" </dev/null)"
-rc=$?
-check "no-handoff: empty stdout" "$([ -z "$out" ] && echo 0 || echo 1)"
-check "no-handoff: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
-rm -rf "$tmp"
+new_issue() { # new_issue <repo> <title> [label] — prints the created id
+  local repo="$1" title="$2" label="${3:-}"
+  if [ -n "$label" ]; then
+    BD_NON_INTERACTIVE=1 bd -C "$repo" create "$title" --labels "$label" \
+      --type=task --json 2>/dev/null | jq -r '.id // empty'
+  else
+    BD_NON_INTERACTIVE=1 bd -C "$repo" create "$title" --type=task --json \
+      2>/dev/null | jq -r '.id // empty'
+  fi
+}
 
-# --- one HANDOFF.md at .claude/HANDOFF.md: names it, instructs resume ----
-tmp="$(mktemp -d)"
-mkdir -p "$tmp/.claude"
-echo "fixture handoff" > "$tmp/.claude/HANDOFF.md"
-out="$(CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" </dev/null)"
-rc=$?
-check "one-handoff: mentions the path" \
-  "$(printf '%s' "$out" | grep -qF "$tmp/.claude/HANDOFF.md" && echo 0 || echo 1)"
-check "one-handoff: instructs to continue" \
-  "$(printf '%s' "$out" | grep -qi "continue" && echo 0 || echo 1)"
-check "one-handoff: names the resume-handoff skill" \
-  "$(printf '%s' "$out" | grep -qi "resume-handoff" && echo 0 || echo 1)"
-check "one-handoff: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
-rm -rf "$tmp"
+if command -v bd >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  repo="$(mktemp -d)"
+  ( cd "$repo" && git init -q . )
+  ( cd "$repo" && BD_NON_INTERACTIVE=1 bd init -q . >/dev/null 2>&1 )
 
-# --- two HANDOFF.md files: lists both, asks the session to pick ----------
-tmp="$(mktemp -d)"
-mkdir -p "$tmp/.claude" "$tmp/specs/demo"
-echo "a" > "$tmp/.claude/HANDOFF.md"
-echo "b" > "$tmp/specs/demo/HANDOFF.md"
-out="$(CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" </dev/null)"
-rc=$?
-check "two-handoffs: mentions both paths" \
-  "$(printf '%s' "$out" | grep -qF "$tmp/.claude/HANDOFF.md" \
-     && printf '%s' "$out" | grep -qF "$tmp/specs/demo/HANDOFF.md" \
-     && echo 0 || echo 1)"
-check "two-handoffs: names the resume-handoff skill" \
-  "$(printf '%s' "$out" | grep -qi "resume-handoff" && echo 0 || echo 1)"
-check "two-handoffs: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
-rm -rf "$tmp"
+  # --- open issues but none labeled handoff: silent no-op ------------------
+  new_issue "$repo" "unrelated open work" >/dev/null
+  out="$(CLAUDE_PROJECT_DIR="$repo" bash "$HOOK" </dev/null)"
+  rc=$?
+  check "no-handoff-label: empty stdout" "$([ -z "$out" ] && echo 0 || echo 1)"
+  check "no-handoff-label: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
 
-# --- an alternate-named HANDOFF-<topic>.md alone: flagged, not a stray ----
-# /handoff's conflict-avoidance branch writes HANDOFF-<topic>.md when the
-# default path is occupied; a hook matching only the literal HANDOFF.md
-# leaves those invisible forever (the observed stray-accumulation mode).
-tmp="$(mktemp -d)"
-mkdir -p "$tmp/.claude"
-echo "alternate" > "$tmp/.claude/HANDOFF-drain-hub.md"
-out="$(CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" </dev/null)"
-rc=$?
-check "alt-name: mentions the path" \
-  "$(printf '%s' "$out" | grep -qF "$tmp/.claude/HANDOFF-drain-hub.md" && echo 0 || echo 1)"
-check "alt-name: names the resume-handoff skill" \
-  "$(printf '%s' "$out" | grep -qi "resume-handoff" && echo 0 || echo 1)"
-check "alt-name: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
-rm -rf "$tmp"
+  # --- one open handoff issue: names it, instructs resume ------------------
+  first="$(new_issue "$repo" "Session handoff: drain hub" handoff)"
+  out="$(CLAUDE_PROJECT_DIR="$repo" bash "$HOOK" </dev/null)"
+  rc=$?
+  check "one-handoff: mentions the issue id" \
+    "$(printf '%s' "$out" | grep -qF "$first" && echo 0 || echo 1)"
+  check "one-handoff: mentions the issue title" \
+    "$(printf '%s' "$out" | grep -qF "Session handoff: drain hub" && echo 0 || echo 1)"
+  check "one-handoff: instructs to continue" \
+    "$(printf '%s' "$out" | grep -qi "continue" && echo 0 || echo 1)"
+  check "one-handoff: names the resume-handoff skill" \
+    "$(printf '%s' "$out" | grep -qi "resume-handoff" && echo 0 || echo 1)"
+  check "one-handoff: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
 
-# --- a HANDOFF.md that only exists inside a worktree copy: ignored -------
-tmp="$(mktemp -d)"
-mkdir -p "$tmp/.claude/worktrees/agent-x"
-echo "throwaway" > "$tmp/.claude/worktrees/agent-x/HANDOFF.md"
-out="$(CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" </dev/null)"
-rc=$?
-check "worktree-only: empty stdout (excluded)" "$([ -z "$out" ] && echo 0 || echo 1)"
-check "worktree-only: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
-rm -rf "$tmp"
+  # --- two open handoff issues: lists both, asks the session to pick -------
+  second="$(new_issue "$repo" "Session handoff: eval sandbox" handoff)"
+  out="$(CLAUDE_PROJECT_DIR="$repo" bash "$HOOK" </dev/null)"
+  rc=$?
+  check "two-handoffs: mentions both issue ids" \
+    "$(printf '%s' "$out" | grep -qF "$first" \
+       && printf '%s' "$out" | grep -qF "$second" \
+       && echo 0 || echo 1)"
+  check "two-handoffs: names the resume-handoff skill" \
+    "$(printf '%s' "$out" | grep -qi "resume-handoff" && echo 0 || echo 1)"
+  check "two-handoffs: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
 
-# --- a HANDOFF.md that only exists inside a fixtures dir: ignored --------
-tmp="$(mktemp -d)"
-mkdir -p "$tmp/tests/fixtures/demo-repo"
-echo "fixture double" > "$tmp/tests/fixtures/demo-repo/HANDOFF.md"
-out="$(CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" </dev/null)"
+  # --- every handoff issue closed: silent again ----------------------------
+  BD_NON_INTERACTIVE=1 bd -C "$repo" close "$first" --reason "resumed" >/dev/null 2>&1
+  BD_NON_INTERACTIVE=1 bd -C "$repo" close "$second" --reason "resumed" >/dev/null 2>&1
+  out="$(CLAUDE_PROJECT_DIR="$repo" bash "$HOOK" </dev/null)"
+  rc=$?
+  check "closed-handoffs: empty stdout" "$([ -z "$out" ] && echo 0 || echo 1)"
+  check "closed-handoffs: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
+
+  # --- bd absent from PATH while a handoff issue is open: silent no-op -----
+  live="$(new_issue "$repo" "Session handoff: path check" handoff)"
+  check "path-check fixture: issue created" \
+    "$([ -n "$live" ] && echo 0 || echo 1)"
+  restricted="$(mktemp -d)"
+  out="$(CLAUDE_PROJECT_DIR="$repo" env PATH="$restricted:/usr/bin:/bin" \
+    bash "$HOOK" </dev/null 2>/dev/null)"
+  rc=$?
+  check "bd-absent: empty stdout" "$([ -z "$out" ] && echo 0 || echo 1)"
+  check "bd-absent: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
+  rm -rf "$restricted"
+
+  rm -rf "$repo"
+else
+  check "scratch-repo tests skipped (bd or jq absent)" 1
+fi
+
+# --- bd present but the project has no .beads store: silent no-op ---------
+bare="$(mktemp -d)"
+( cd "$bare" && git init -q . )
+out="$(CLAUDE_PROJECT_DIR="$bare" bash "$HOOK" </dev/null 2>/dev/null)"
 rc=$?
-check "fixtures-only: empty stdout (excluded)" "$([ -z "$out" ] && echo 0 || echo 1)"
-check "fixtures-only: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
-rm -rf "$tmp"
+check "no-beads-store: empty stdout" "$([ -z "$out" ] && echo 0 || echo 1)"
+check "no-beads-store: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
+rm -rf "$bare"
 
 echo "----"
 echo "pass: $pass fail: $fail"
