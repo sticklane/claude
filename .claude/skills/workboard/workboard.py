@@ -1528,11 +1528,14 @@ _SPEND_TOKEN_FIELDS = (
 
 def _locate_agentprof():
     """agentprof binary lookup order (R5): $AGENTPROF_BIN, then `agentprof`
-    on PATH, then the committed toolkit binary."""
+    on PATH, then the committed binary of the toolkit checkout this module
+    lives in — SCRIPT is `<checkout>/.claude/skills/workboard/workboard.py`,
+    so the checkout root is its fourth parent."""
+    checkout_root = SCRIPT.parents[3]
     return (
         os.environ.get("AGENTPROF_BIN")
         or shutil.which("agentprof")
-        or str(Path.home() / "claude/agentprof/agentprof")
+        or str(checkout_root / "agentprof/agentprof")
     )
 
 

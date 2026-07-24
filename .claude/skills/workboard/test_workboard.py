@@ -770,6 +770,30 @@ def make_agentprof_stub(tmpdir, stdout_payload, argv_out=None, exit_code=0):
     return str(p)
 
 
+class TestLocateAgentprof(unittest.TestCase):
+    """R5 fallback: the committed-binary path resolves from this module's own
+    location, so a toolkit checked out anywhere still finds its binary."""
+
+    def test_locate_agentprof_fallback_derives_from_script_location(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name) / "elsewhere-checkout"
+        script = root / ".claude" / "skills" / "workboard" / "workboard.py"
+        home = Path(tmp.name) / "unrelated-home"
+
+        env = {k: v for k, v in os.environ.items() if k != "AGENTPROF_BIN"}
+        with (
+            mock.patch.object(workboard, "SCRIPT", script),
+            mock.patch.object(workboard.shutil, "which", return_value=None),
+            mock.patch.object(Path, "home", return_value=home),
+            mock.patch.dict(os.environ, env, clear=True),
+        ):
+            resolved = workboard._locate_agentprof()
+
+        self.assertEqual(resolved, str(root / "agentprof" / "agentprof"))
+        self.assertNotIn(str(home), resolved)
+
+
 class TestSpend(unittest.TestCase):
     """R5/R8/R9: shell out to agentprof, join summary rows to assembled
     sessions, expose under a `spend` key. Failures never raise."""

@@ -15,7 +15,8 @@
 #   - prints a one-line summary: linked N, removed M, kept K local[, conflicts: ...]
 set -euo pipefail
 
-SRC="${SYNC_WORKFLOWS_SRC:-$HOME/claude/.claude/workflows}"
+TOOLKIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SRC="${SYNC_WORKFLOWS_SRC:-$TOOLKIT_ROOT/.claude/workflows}"
 DEST="${SYNC_WORKFLOWS_DEST:-$HOME/.claude/workflows}"
 
 if [ ! -d "$SRC" ]; then
