@@ -280,3 +280,22 @@ R9. No backward-compatibility fallback for legacy `HANDOFF.md` files is
 ## Open questions
 
 (none)
+
+## Parallelization
+
+Five tasks, disjoint in `Touch` except one real dependency:
+
+- **Task 01** (handoff/resume-handoff skills + structured-handoff-headers
+  notice), **Task 02** (the SessionStart hook), **Task 03** (workboard.py),
+  and **Task 05** (doctrine docs) touch four entirely separate file sets
+  and share no undecided design — the bd command syntax, label name, and
+  relation type are all fixed in this spec. Safe to run concurrently.
+- **Task 04** (agent-console.py) depends on Task 03: it dynamically loads
+  `workboard.py` as a module and consumes `scan_handoffs()`'s output shape
+  directly (confirmed via `ctx refs` during breakdown — not a Touch
+  collision, a real import/data-shape dependency). Task 04 must start
+  after Task 03 lands, reading the actual committed field names rather
+  than guessing them ahead of time.
+
+So the safe concurrency window is {01, 02, 03, 05} together, with 04
+trailing behind 03.
