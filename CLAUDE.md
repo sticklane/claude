@@ -33,9 +33,11 @@ order cannot resolve are surfaced, not guessed.
   charter: review edits to it with `/prose-review`, and load that skill's
   doctrine before drafting such a doc. Machine-parsed prose (task files,
   specs/, SKILL.md bodies) is out of its scope. External-audience
-  deliverable prose (posts, papers, proposals, product-doc pages) is the
+  deliverable prose (posts, papers, product-doc pages) is the
   writing pack's: draft under anti-ai-slop-writing + grounding, edit
-  existing text with humanizer — and all agent-authored prose, either
+  existing text with humanizer; a standalone position-paper or
+  decision-doc co-authoring session is /doc-coauthoring's instead — and
+  all agent-authored prose, either
   audience, obeys grounding's claims-and-register rules.
 - Agent-authored user-facing status/reports (drain/build progress, task
   summaries) extend that charter: lead with the result, not narrated intent — but keep terse factual status lines —
