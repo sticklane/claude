@@ -91,8 +91,8 @@ as a stand-in for a query ctx should answer directly.
   follow-up suggestion — not silence.
 - **Failure modes:** a bare empty result read as "gone" when the index
   simply did not cover the reference (the figureBboxes miss, 2026-07-20);
-  the boundary-stating output is specced, not yet shipped
-  (specs/ctx-absence-check).
+  the boundary-stating output has shipped
+  (context-tree/src/cmd/no_match.rs, specs/ctx-absence-check).
 
 ## 5. IMPACT — "what breaks if I change X?"
 
@@ -116,8 +116,9 @@ as a stand-in for a query ctx should answer directly.
 - **Token shape:** one scout-distilled summary in the main context; the raw
   multi-query output stays in the scout's discarded transcript.
 - **Failure modes:** running the batch inline blows the main context with
-  raw output — the delegation recipe is the fix, and it is specced
-  (specs/ctx-skill-token-doctrine R4/R5).
+  raw output — the delegation recipe is the fix, and it has shipped
+  (.claude/skills/ctx/SKILL.md's "Codebase survey" section plus scout's
+  `Bash(ctx *)` grant, specs/ctx-skill-token-doctrine R4/R5).
 
 ## 7. DEDUP / DEAD CODE — "what's duplicated; what's only alive in dead zones?"
 
@@ -129,9 +130,10 @@ as a stand-in for a query ctx should answer directly.
 - **Token shape:** a zone-annotated ref list and a clone-cluster report —
   structural, not full-file.
 - **Failure modes:** blanket-excluding dead trees hides real signal —
-  dead-code FINDS are the point (Steven directive, 2026-07-21); both the
-  zone tagging (specs/ctx-dead-code-zones) and clone detection
-  (specs/ctx-static-analysis-augmentation F2) are specced, not shipped.
+  dead-code FINDS are the point (Steven directive, 2026-07-21); the zone
+  tagging has shipped (`--zone`/`--live-only` on `refs`/`map`,
+  context-tree/src/cli.rs; specs/ctx-dead-code-zones), while clone detection
+  (specs/ctx-static-analysis-augmentation F2) is still specced.
 
 ## 8. KNOWLEDGE — "what do we know about this symbol?"
 
@@ -151,10 +153,10 @@ as a stand-in for a query ctx should answer directly.
 | CUJ                  | Serving spec(s)                                                                                                        | Status                                                                                                                                           |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1. ORIENT            | map/tree in context-tree/src/cli.rs; specs/ctxignore-git-overlay; specs/ctx-minified-skip; specs/codebase-context-tree | shipped (context-tree/src/cli.rs; overlay context-tree/src/vcs/mod.rs) + specced (specs/ctx-minified-skip, specs/codebase-context-tree tasks/16) |
-| 2. LOCATE            | refs/sig in context-tree/src/cli.rs; specs/ctx-query-ergonomics                                                        | shipped (context-tree/src/cli.rs) + specced (specs/ctx-query-ergonomics R1)                                                                      |
-| 3. DIG IN            | specs/ctx-query-ergonomics                                                                                             | specced (specs/ctx-query-ergonomics R2 — `show` not yet shipped)                                                                                 |
-| 4. VERIFY ABSENCE    | specs/ctx-absence-check                                                                                                | specced (specs/ctx-absence-check)                                                                                                                |
+| 2. LOCATE            | refs/sig in context-tree/src/cli.rs; specs/ctx-query-ergonomics                                                        | shipped (refs/sig, context-tree/src/cli.rs) + shipped (`<path>:<name>` file-scoped selector, context-tree/src/cli.rs:58/75; specs/ctx-query-ergonomics R1) |
+| 3. DIG IN            | show/at in context-tree/src/cli.rs; specs/ctx-query-ergonomics                                                         | shipped (`show`, context-tree/src/cli.rs:74; specs/ctx-query-ergonomics R2)                                                                       |
+| 4. VERIFY ABSENCE    | boundary-stating no-match in context-tree/src/cmd/no_match.rs; specs/ctx-absence-check                                 | shipped (context-tree/src/cmd/no_match.rs; specs/ctx-absence-check)                                                                              |
 | 5. IMPACT            | refs/deps --reverse in context-tree/src/cli.rs; specs/ctx-static-analysis-augmentation                                 | shipped (context-tree/src/cli.rs) + specced (specs/ctx-static-analysis-augmentation F1)                                                          |
-| 6. SURVEY            | specs/ctx-skill-token-doctrine                                                                                         | specced (specs/ctx-skill-token-doctrine R4/R5)                                                                                                   |
-| 7. DEDUP / DEAD CODE | specs/ctx-dead-code-zones; specs/ctx-static-analysis-augmentation                                                      | specced (specs/ctx-dead-code-zones; specs/ctx-static-analysis-augmentation F2)                                                                   |
+| 6. SURVEY            | .claude/skills/ctx/SKILL.md "Codebase survey"; .claude/agents/scout.md; specs/ctx-skill-token-doctrine                 | shipped (.claude/skills/ctx/SKILL.md "Codebase survey" + scout's `Bash(ctx *)` grant in .claude/agents/scout.md; specs/ctx-skill-token-doctrine R4/R5) |
+| 7. DEDUP / DEAD CODE | refs/map --zone/--live-only in context-tree/src/cli.rs; specs/ctx-dead-code-zones; specs/ctx-static-analysis-augmentation | shipped (`--zone`/`--live-only` on `refs`/`map`, context-tree/src/cli.rs; specs/ctx-dead-code-zones) + specced (clone detection, specs/ctx-static-analysis-augmentation F2) |
 | 8. KNOWLEDGE         | notes in context-tree/src/cli.rs                                                                                       | shipped (context-tree/src/cli.rs; context-tree/src/notes)                                                                                        |

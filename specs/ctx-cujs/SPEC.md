@@ -68,15 +68,14 @@ The eight CUJs (to be refined, not restated, in the doc):
   every "specced" cell cites the spec path — a status without its
   citation fails R2 (anti-gaming: statuses are evidence-backed, not
   claimed). Any "gap" cell has a one-line proposed next step.
-- R3 — The ctx skill's body (`.claude/skills/ctx/SKILL.md` + the
-  antigravity mirror, same-commit) links the doc once ("CUJ playbook:
-  docs/guides/ctx-cujs.md") and fixes the command-table error `map
-[--limit N]` → `map [--tokens N]`. This holds SLOT 7 (always last)
-  of the SKILL.md editor registry in
+- R3 — The ctx skill's body (`.claude/skills/ctx/SKILL.md`) links the
+  doc once ("CUJ playbook: docs/guides/ctx-cujs.md") and fixes the
+  command-table error `map [--limit N]` → `map [--tokens N]`. This
+  holds SLOT 7 (always last) of the SKILL.md editor registry in
   specs/ctx-skill-token-doctrine's Landing order section. Acceptance:
   `grep -q 'docs/guides/ctx-cujs.md' .claude/skills/ctx/SKILL.md`
-  and the same grep on the antigravity mirror both succeed;
-  `grep -c 'map \[--limit' .claude/skills/ctx/SKILL.md` returns 0.
+  succeeds; `grep -c 'map \[--limit' .claude/skills/ctx/SKILL.md`
+  returns 0.
 - R4 — The three in-flight sibling specs — EXACTLY
   specs/ctx-skill-token-doctrine, specs/ctx-query-ergonomics,
   specs/ctx-static-analysis-augmentation — each gain a one-line
