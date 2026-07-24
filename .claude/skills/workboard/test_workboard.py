@@ -2037,6 +2037,21 @@ class TestDeferSpec(unittest.TestCase):
         items = workboard.attention_items([repo], [], [], stale_days=7)
         self.assertEqual([i for i in items if i["state"] in ("stale", "blocked")], [])
 
+    def test_stale_spec_inbox_item_carries_runnable_defer_command(self):
+        spec = _unblock_spec([_unblock_task(status="pending")])
+        spec["last_touched"] = workboard.now_ts() - 30 * 86400
+        repo = make_repo_record(path="/r/demo")
+        repo["specs"] = [spec]
+        stale = [
+            i
+            for i in workboard.attention_items([repo], [], [], stale_days=7)
+            if i["state"] == "stale"
+        ]
+        self.assertEqual(len(stale), 1)
+        cmd = stale[0].get("cmd", "")
+        self.assertIn("--defer demo", cmd)
+        self.assertIn("/r/demo", cmd)
+
     def test_defer_flag_is_registered_on_the_cli(self):
         with mock.patch.object(sys, "argv", ["workboard.py", "--help"]):
             with contextlib.redirect_stdout(io.StringIO()) as out:

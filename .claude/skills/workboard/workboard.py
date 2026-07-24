@@ -1455,7 +1455,8 @@ def attention_items(
                         "state": "stale",
                         "repo": r["name"],
                         "what": f"Spec {s['slug']}: {open_tasks} open task(s), idle {age_str(s['last_touched'])}",
-                        "why": "resume it, defer it (Status: deferred), or delete it — open work decays; deciding is the point",
+                        "why": "resume it or delete it — open work decays; deciding is the point. To park it:",
+                        "cmd": f"cd {shlex.quote(rp)} && python3 {shlex.quote(str(SCRIPT))} --defer {shlex.quote(s['slug'])}",
                         "age_ts": s["last_touched"],
                     }
                 )
