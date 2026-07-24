@@ -93,7 +93,13 @@ order cannot resolve are surfaced, not guessed.
 - Concrete model names and CLI command templates appear in core files only
   as the inline Claude default; the mappings for other runtimes live in
   `runtimes/` profiles — new skills use tier language plus the inline
-  default, never a bare model name.
+  default, never a bare model name. A skill's or agent's own YAML
+  frontmatter `model:` pins are exempt: that field is a mechanical config
+  value the harness loads, not the tier-language prose this convention
+  governs — `.claude/agents/`'s verifier.md, critic.md, scout.md, and
+  implementation-worker.md already pin bare model names there, and
+  `.claude/skills/distill/SKILL.md`'s `model: opus` is that same
+  sanctioned shape.
 - Skills that spawn agents follow the "Dispatch authoring" section of
   `.claude/rules/token-discipline.md` (tier by stage type, capped returns,
   bounded loops, single-call judge) — cite it, don't restate it.
