@@ -73,14 +73,16 @@ Do, in order:
 8. Commit (conventional "<type>: <subject>", Co-Authored-By trailer kept) and push: git -C ${repo.path} push. Report pushed:true/false honestly; never force-push.
 
 Do NOT touch ~/claude or any repo besides ${repo.path}. Do NOT delete existing markdown files.
-Return DONE only if bd is initialized, every existing task/checkbox is verifiably in bd (or you confirmed there was none), the orientation doc is updated, and everything is committed. BLOCKED for structural failures. DEFERRED with deferred_questions for anything skipped.`;
+Return DONE only if bd is initialized, every existing task/checkbox is verifiably in bd (or you confirmed there was none), the orientation doc is updated, and everything is committed. BLOCKED for structural failures. DEFERRED with deferred_questions for anything skipped.
+Return the structured schema fields only, capped at 2k tokens — counts and a one-paragraph summary, never a transcript or pasted command output.`;
 }
 
 function verifyPrompt(repo, implResult) {
   return `Fresh-eyes verification of a bd cutover in ${repo.path} (operate only against this path).
 Worker reported: ${JSON.stringify(implResult)}
 Check: (1) bd ready runs clean; (2) independently recount any source task/checkbox material yourself and compare to bd's count — do not trust the worker's number, flag any mismatch with exact numbers; (3) the orientation doc states bd as sole/primary tracker with a discovered-work convention and runnable command examples; (4) git status is clean and a matching commit exists; (5) if pushed:true was claimed, confirm nothing remains unpushed (git log origin/<branch>..HEAD empty).
-pass:true only if all five hold (an honest "there was no source material to convert" counts as satisfying #2). List concrete failures otherwise.`;
+pass:true only if all five hold (an honest "there was no source material to convert" counts as satisfying #2). List concrete failures otherwise.
+Keep the return under 500 words: the pass flag plus one line per concrete failure, never a transcript.`;
 }
 
 const CRITIC_PROMPT = `Read docs/memory/skill-retirement-checklist.md in this repo (~/claude) FIRST — it exists precisely because clean greps and green gates have missed real gaps before (five gaps survived a clean sweep on 2026-07-04's /parallel retirement).
@@ -97,14 +99,14 @@ Do, following the checklist:
 7. Close bd issue agentic-0nz with a reason citing what you did, after everything else is committed.
 
 Commit your work, then STOP without self-reviewing — an independent critic reviews your diff next per the checklist's own step 5 ("then run the critic on the diff even with all gates green").
-Return status DONE with a summary and commit list, or BLOCKED with the exact reason.`;
+Return status DONE with a summary and commit list, or BLOCKED with the exact reason — capped at 2k tokens, never a transcript or a pasted diff.`;
 
 function healthCheckPrompt() {
   return `Health-check this repo's (~/claude) own skill set — two checks, all read-mostly:
 
 1. Live smoke test: run "bash evals/run.sh work" and "bash evals/run.sh drain" (the two skills most rewritten by the 2026-07-22/23 pivot session) and report each scenario's pass/fail line and the summary. If either command errors out structurally (missing fixture, script crash) rather than reporting a graded pass/fail, say so plainly rather than guessing at a result.
 2. Static sweep: for every .claude/skills/*/SKILL.md, read its frontmatter description. Flag any skill whose description lacks concrete trigger phrases UNLESS its frontmatter sets "disable-model-invocation: true" (per CLAUDE.md's authoring-conventions bullet — those skills are exempt). Also flag any skill description that still names a skill CLAUDE.md/the pivot retired (list-specs, prioritize, or anything else no longer present as a directory) as a next-stage pointer.
-Do not fix anything — this is a report. Return a structured summary: work_eval_result, drain_eval_result, skills_missing_trigger_phrases (list), stale_next_stage_pointers (list).`;
+Do not fix anything — this is a report. Return a structured summary: work_eval_result, drain_eval_result, skills_missing_trigger_phrases (list), stale_next_stage_pointers (list), capped at 1k tokens — one line per flagged skill, never the eval transcript.`;
 }
 
 const HEALTH_SCHEMA = {
@@ -151,7 +153,7 @@ const [repoResults, retireResult, healthResult] = await parallel([
       if (!implResult || implResult.status !== "DONE")
         return { implResult, critic: null };
       const critic = await agent(
-        `Review the just-committed diff retiring /list-specs and /prioritize in this repo (~/claude). Check the retirement checklist's five failure classes (docs/memory/skill-retirement-checklist.md): bare-name mentions missed, behaviors not ported, dispatch paths not all updated, absorbed text not reconciled with the host's invariants, and anything else a clean grep + green gate would miss. Report findings ranked by severity.`,
+        `Review the just-committed diff retiring /list-specs and /prioritize in this repo (~/claude). Check the retirement checklist's five failure classes (docs/memory/skill-retirement-checklist.md): bare-name mentions missed, behaviors not ported, dispatch paths not all updated, absorbed text not reconciled with the host's invariants, and anything else a clean grep + green gate would miss. Report findings ranked by severity, capped at 1k tokens — one line per finding, never the diff itself.`,
         {
           label: "critic:list-specs-prioritize-retirement",
           phase: "Retire skills",
