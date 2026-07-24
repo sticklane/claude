@@ -1,8 +1,8 @@
 # handoff-resume hook
 
-A `SessionStart` hook that flags a `HANDOFF.md` left by `/handoff`. On every
-session start it searches the project for any file matching `HANDOFF*.md` and,
-if found, injects a pointer at the `resume-handoff` skill
+A `SessionStart` hook that flags an open handoff issue left in bd by
+`/handoff`. On every session start it asks bd for open `handoff`-labeled
+issues and, if any exist, injects a pointer at the `resume-handoff` skill
 (`.claude/skills/resume-handoff/SKILL.md`) — so the only manual step left
 after a heavy session is `/clear` itself. Earlier versions injected raw
 "read it and continue" prose instead of naming a skill; that was advisory
@@ -22,28 +22,28 @@ launch alike.
 
 ## What it does
 
-- Silent (empty stdout, exit 0) when no `HANDOFF*.md` exists anywhere under
-  the project root — a repo with no in-flight handoff sees zero behavior
-  change.
-- Searches for any file matching `HANDOFF*.md`, not just
-  `.claude/HANDOFF.md` — `/handoff` places `HANDOFF.md` next to the active
-  task/spec file when there is one, falling back to `.claude/HANDOFF.md`
-  only when there isn't, and writes `HANDOFF-<topic>.md` when the default
-  path is occupied by another task's handoff (see
-  `.claude/skills/handoff/SKILL.md`). Matching only the literal name is how
-  alternate-named handoffs used to accumulate as invisible strays.
-- One match → names it and instructs "read it and continue." Multiple
-  matches (a repo with more than one stale/in-flight handoff — a known
-  real scenario in a heavily concurrent repo, since `.claude/HANDOFF.md`
-  is a single rolling slot that different sessions' `/handoff` runs
-  overwrite) → lists all of them and asks the resuming session to pick the
-  one matching the task, rather than guessing.
-- Skips `.git` and any worktree/`node_modules` directories, so drain's
-  throwaway worktree copies under `.claude/worktrees/` never produce false
-  matches.
-- Never deletes or archives the handoff file itself — that's the
-  `resume-handoff` skill's job once it has actually resumed the described
-  work, not this hook's.
+- Runs `bd list --label handoff --status=open --json` from the project root
+  (`CLAUDE_PROJECT_DIR`, else the current directory) and reads each open
+  issue's id and title from the result. `/handoff` files exactly one
+  `handoff`-labeled issue per parked session (see
+  `.claude/skills/handoff/SKILL.md`), so an open one is an unresumed
+  session.
+- One open issue → names its id and title and instructs "read it and
+  continue." Several (a repo with more than one stale/in-flight handoff —
+  a known real scenario in a heavily concurrent repo) → lists all of them
+  and asks the resuming session to pick the one matching the task, rather
+  than guessing.
+- Silent (empty stdout, exit 0) whenever no open `handoff`-labeled issue
+  comes back, so a repo with no in-flight handoff sees zero behavior
+  change. That covers three cases the hook must never turn into noise:
+  no such issue, `bd` or `jq` missing from `PATH`, and a project with no
+  `.beads` store — this hook is wired globally per user and fires in every
+  repo, most of which carry no bd store. It is the same tolerance
+  convention `hooks/bd-compliance/check.sh` follows: a missing binary is a
+  reason to skip the check, never a reason to speak up.
+- Never closes the handoff issue itself — that's the `resume-handoff`
+  skill's job once it has actually resumed the described work, not this
+  hook's.
 
 ## Wiring (one user-run step)
 
@@ -75,5 +75,6 @@ the same caveat if you're running both hooks.
 
 ## Testing
 
-`bash hooks/handoff-resume/test.sh` — synthetic fixtures only, never
-touches real session data or a real `HANDOFF.md`.
+`bash hooks/handoff-resume/test.sh` — builds a scratch git repo and bd store
+under `mktemp -d` and files real `handoff`-labeled issues there, never
+touching this toolkit's own `.beads` store. Needs `bd` and `jq` on `PATH`.

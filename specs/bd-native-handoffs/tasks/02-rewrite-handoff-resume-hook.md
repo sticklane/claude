@@ -1,6 +1,6 @@
 # Task 02: Rewrite the handoff-resume SessionStart hook to detect a bd-native handoff
 
-Status: in-progress
+Status: done
 Depends on: none
 Priority: P2
 Budget: 20 turns
@@ -54,6 +54,10 @@ tests.
 
 ## Acceptance
 
-- [ ] `grep -c "HANDOFF" hooks/handoff-resume/resume-check.sh` → 0
-- [ ] `grep -c "bd list --label handoff" hooks/handoff-resume/resume-check.sh` → ≥ 1
-- [ ] `bash hooks/handoff-resume/test.sh` → all pass, exit 0
+- [x] `grep -c "HANDOFF" hooks/handoff-resume/resume-check.sh` → 0
+- [x] `grep -c "bd list --label handoff" hooks/handoff-resume/resume-check.sh` → 1
+- [x] `bash hooks/handoff-resume/test.sh` → `pass: 17 fail: 0`, exit 0
+
+Evidence is inline above, not in `../evidence/`: this dispatch had no Agent
+tool, so no `verifier` ran and no evidence file was written. Acceptance
+commands were run mechanically; `bash scripts/check.sh` → `check.sh: green`.
