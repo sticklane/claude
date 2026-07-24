@@ -1,5 +1,7 @@
 # bd-native session handoffs
 
+Breakdown-ready: true
+
 ## Problem
 
 `/handoff` and `/resume-handoff` park and resume session state as a
