@@ -3469,12 +3469,20 @@ def _agentprof_refresh_script() -> Path:
     )
 
 
+def _pprof_service_label() -> str:
+    """The launchd label of the agentprof pprof service, from
+    `AGENT_CONSOLE_PPROF_SERVICE`. Empty when unset — the label is
+    install-specific, so there is no default to fall back on."""
+    return os.environ.get("AGENT_CONSOLE_PPROF_SERVICE", "").strip()
+
+
 def refresh_profile() -> tuple[bool, str]:
     """Regenerate the agentprof profile via the repo-checked refresh script,
-    then kickstart the pprof service so it serves the new file. A kickstart
-    failure (e.g. the launchd service isn't installed) doesn't fail the
-    call — regeneration succeeding is enough for ok=True, with the kickstart
-    result folded into the message."""
+    then kickstart the pprof service so it serves the new file. Neither a
+    kickstart failure (e.g. the launchd service isn't installed) nor an
+    unconfigured `AGENT_CONSOLE_PPROF_SERVICE` fails the call — regeneration
+    succeeding is enough for ok=True, with the kickstart outcome folded into
+    the message."""
     script = _agentprof_refresh_script()
     try:
         regen = subprocess.run(
@@ -3484,14 +3492,15 @@ def refresh_profile() -> tuple[bool, str]:
         return False, str(e)
     if regen.returncode != 0:
         return False, (regen.stderr or regen.stdout or "refresh failed").strip()
+    service = _pprof_service_label()
+    if not service:
+        return (
+            True,
+            "profile refreshed; kickstart skipped (AGENT_CONSOLE_PPROF_SERVICE unset)",
+        )
     try:
         kick = subprocess.run(
-            [
-                "launchctl",
-                "kickstart",
-                "-k",
-                f"gui/{os.getuid()}/com.sjaconette.agentprof-pprof",
-            ],
+            ["launchctl", "kickstart", "-k", f"gui/{os.getuid()}/{service}"],
             capture_output=True,
             text=True,
         )
