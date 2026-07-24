@@ -32,7 +32,11 @@ IN_SCOPE='.claude/skills/drain/SKILL.md
 .claude/skills/design/SKILL.md
 .claude/skills/evals/SKILL.md
 .claude/skills/evals/reference.md
-.claude/workflows/deep-research.js'
+.claude/workflows/deep-research.js
+.claude/workflows/cross-repo-beads-adoption.js
+.claude/workflows/full-cutover-and-health-check.js
+.claude/workflows/ultracode-queue-sweep.js
+.claude/workflows/ultracode-queue-sweep-phase2.js'
 
 # Build the file list.
 FILES=()
@@ -65,7 +69,7 @@ DADJ_REV="(^|[^a-zA-Z])${DNOUN}[^a-zA-Z].{0,40}[^a-zA-Z]${DVERB}([^a-zA-Z]|\$)"
 # A dispatch verb immediately negated -> a pure prohibition, not a dispatch.
 DPROHIB="(^|[^a-zA-Z])(no|never|not|cannot|don't)[^a-zA-Z]+${DVERB}([^a-zA-Z]|\$)"
 
-TIER_RE='haiku|session model|opts\.model|effort|tier pin|tier up'
+TIER_RE='haiku|session model|opts\.model|effort|tier pin|tier up|agentType'
 
 BUDGET_RE='(≤|under|at most|no more than|cap(ped)?)[[:space:]]?.{0,20}(words|tokens|lines)'
 
