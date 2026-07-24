@@ -92,8 +92,10 @@ When ultracode is opted in (keyword, session flag, or explicit ask),
 critique may run a panel instead of one critic; otherwise the single-critic
 path above is the only path. This skill only names the shape.
 
-Panel: 3–5 lens-diverse critics (correctness, security, verification-gaps,
-scope, cost-if-missed) run in parallel over the same artifact POINTER.
+Panel: 3–5 lens-diverse critics (correctness, security, code-health —
+the critic's doctrine-backed comment/naming/signature checks —
+verification-gaps, scope, cost-if-missed) run in parallel over the same
+artifact POINTER.
 Findings are deduped, then adversarially verified — a finding dies on a
 majority refute — before any relay. Ranking, the marker-write step, and the
 fix-recommendation rule above are unchanged — the panel still resolves to one
