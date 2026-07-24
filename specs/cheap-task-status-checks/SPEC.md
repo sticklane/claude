@@ -130,8 +130,10 @@ already exists and is already trusted by drain's own dispatch loop.
   duplicates/supersedes) — orthogonal to this spec's status-check-cost
   problem; a natural follow-on.
 - Adopting beads/Dolt or any external task-tracker binary.
-- Any change to `HANDOFF.md`'s format or `resume-handoff`'s behavior — that
-  is `specs/structured-handoff-headers/SPEC.md`, a separate spec.
+- Any change to session-handoff format or `resume-handoff`'s behavior — that
+  was `specs/structured-handoff-headers/SPEC.md` (archived, superseded by
+  `specs/archive/bd-native-handoffs` — the free-standing `HANDOFF.md` file
+  this bullet named no longer exists), a separate spec either way.
 - Any change to `DRAIN-OWNER.md`'s format — already cheap (107–127 bytes).
 - Wiring `--strict` into a per-spec or single-spec-dir CI check — see R4;
   it is a whole-`specs/`-tree tool only.
