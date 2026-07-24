@@ -33,6 +33,9 @@ procedure — this rule states the discipline both assume.
 ## Self-documenting code
 
 Applies at every rigor tier (unlike the rigor-scoped TDD mandate above).
+The critic's diff rubric enforces this section as its code-health dimension
+(`.claude/agents/critic.md`); the external evidence for these checks is
+surveyed in docs/code-review-research-2026-07.md.
 
 - Comments belong on PUBLIC SURFACE AREA only — exported/package-public
   API documentation. A comment anywhere else is a defect signal: restructure
@@ -40,6 +43,18 @@ Applies at every rigor tier (unlike the rigor-scoped TDD mandate above).
   comment is unnecessary. Maintainer doctrine, 2026-07-23: "if you find
   yourself ever writing a comment elsewhere, it is probably a sign the code
   is bad."
+- A function body never surprises a reader who has read its signature — the
+  name, parameters, and types state the whole contract. A body that does
+  something the signature doesn't promise (hidden I/O, mutation of an
+  argument, an unexpected side effect, a verb the behavior doesn't match)
+  is a naming/structure defect even when the logic is correct: fix the name
+  or move the behavior, never document the surprise.
+- Names account for their surrounding context — a name is read together
+  with its package, module, type, and scope, so it repeats none of that
+  enclosing context (`chubby.File`, never `chubby.ChubbyFile`) and its
+  length is proportional to its scope: short names near their declaration,
+  descriptive names for distant use. The Go guidelines are the calibration
+  source; verbatim quotes in docs/code-review-research-2026-07.md.
 - A would-be private comment has a routed home instead of an inline line:
   a gotcha, invariant, or rationale tied to a symbol goes to `ctx notes add`
   (indexed repos — /build's close-out already routes these); a TODO goes to

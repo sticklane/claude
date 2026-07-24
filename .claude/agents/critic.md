@@ -60,7 +60,8 @@ For **diffs**:
 - Regressions in callers/consumers the diff didn't touch (use git blame/log
   to understand why the old code was the way it was).
 - Untested branches, swallowed errors, dead flags.
-- Code-health (doctrine-backed, so not a "style preference" under the
+- Code-health (doctrine-backed by `.claude/rules/quality-discipline.md`'s
+  "Self-documenting code" section, so not a "style preference" under the
   Do-NOT-report list; evidence survey in
   docs/code-review-research-2026-07.md):
   - A comment on a changed line outside public surface area

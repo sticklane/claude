@@ -255,12 +255,14 @@ carries — Google's naming and comments items. This run added it to the
 critic's diff rubric as doctrine-backed checks (not style preference):
 comments outside public surface area are defect signals, a function body
 must never surprise a reader of its signature, and names must account for
-their surrounding context. The comments check binds via
-`.claude/rules/quality-discipline.md`'s "Self-documenting code" section —
-that rule carries only the comments leg; the signature-no-surprise and
-context-aware-naming checks are the critic's own rubric
-(`.claude/agents/critic.md`), and this file holds their external evidence
-(the Go guidelines and the comments-debate synthesis above).
+their surrounding context. All three checks bind via
+`.claude/rules/quality-discipline.md`'s "Self-documenting code" section
+(the signature-no-surprise and context-aware-naming legs were added to the
+rule once the comments-debate research above settled their shape); the
+critic's rubric (`.claude/agents/critic.md`) cites the rule, and this file
+holds the external evidence — the Go guidelines and the comments-debate
+synthesis. The missing-doc-comment check stays convention-backed (Go's
+exported-name rule), deliberately not a rule mandate.
 
 ## Caveats
 
