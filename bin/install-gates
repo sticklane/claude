@@ -501,7 +501,7 @@ if [ "$TIER" = generic ]; then
 }
 EOF
 )"
-  HOOK_TEMPLATES="post-tool-format pre-tool-protect"
+  HOOK_TEMPLATES=(post-tool-format pre-tool-protect)
 else
   SETTINGS_CONTENT="$(cat <<'EOF'
 {
@@ -533,7 +533,7 @@ else
 }
 EOF
 )"
-  HOOK_TEMPLATES="post-tool-format pre-tool-protect stop-gate"
+  HOOK_TEMPLATES=(post-tool-format pre-tool-protect stop-gate)
 fi
 
 # Pre-commit typecheck decision (R7): whole-project typecheck is included
@@ -622,7 +622,7 @@ plan() { # plan <relative-path>
 }
 
 if [ "$DRY_RUN" -eq 1 ]; then
-  for h in $HOOK_TEMPLATES; do
+  for h in "${HOOK_TEMPLATES[@]}"; do
     plan ".claude/hooks/$h.sh"
   done
   [ "$BD_PRESENT" -eq 1 ] && plan ".claude/hooks/bd-compliance.sh"
@@ -654,7 +654,7 @@ case "$HOOK_HANDLING" in
 esac
 
 mkdir -p "$REPO/.claude/hooks"
-for h in $HOOK_TEMPLATES; do
+for h in "${HOOK_TEMPLATES[@]}"; do
   cp "$TEMPLATES/$h.sh" "$REPO/.claude/hooks/$h.sh"
   chmod 755 "$REPO/.claude/hooks/$h.sh"
   plan ".claude/hooks/$h.sh"
