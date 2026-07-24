@@ -1,6 +1,6 @@
 ---
 name: doc-coauthoring
-description: Structured co-authoring workflow for standalone prose documents — position papers, proposals, decision docs, belief statements. The default for position-paper work. Guides context transfer, iterative refinement, and reader testing. Trigger phrases - "draft a proposal", "write a position paper", "co-author this doc", "decision doc", "write up my thinking". Do NOT use for feature or system design that ends in code or product specs (use /idea — the spec pipeline), product documentation pages (use writing-user-docs), or this repo's own orientation docs (README, AGENTS.md, docs/, specs/ — /prose-review's charter).
+description: Structured co-authoring workflow for standalone prose documents — position papers, proposals, decision docs, belief statements. The default for position-paper work. Guides context transfer, iterative refinement, and reader testing. Trigger phrases - "draft a proposal", "write a position paper", "co-author this doc", "decision doc", "write up my thinking". Do NOT use for feature or system design that ends in code or product specs (use /idea — the spec pipeline), product documentation pages (use writing-user-docs), a one-shot prose draft wanted without the structured interview (draft under anti-ai-slop-writing + grounding, edit existing text with humanizer), or this repo's own orientation docs (README, AGENTS.md, docs/, specs/ — /prose-review's charter).
 ---
 
 # Doc Co-Authoring Workflow
@@ -13,6 +13,7 @@ This skill provides a structured workflow for guiding users through collaborativ
 
 - User mentions standalone prose documents: "draft a proposal", "write a position paper", "decision doc", "write up my thinking"
 - User seems to be starting a substantial writing task that will NOT end in code or a product spec — specs, PRDs, and design docs that feed implementation route to /idea (the description's carve-out), and this repo's own orientation docs route to /prose-review
+- User wants the interview, not just the text: a user who asks for a draft outright, with no appetite for staged context-gathering, is served by anti-ai-slop-writing + grounding (and humanizer for editing existing text); this skill's value is the three-stage workflow, so offer it and let them decline
 
 **Initial offer:**
 Offer the user a structured workflow for co-authoring the document. Explain the three stages:
