@@ -66,7 +66,12 @@ def _render(*, repo_name, spec_title, spec_slug, handoff_title, inbox_what):
                     }
                 ],
                 "handoffs": [
-                    {"title": handoff_title, "path": "handoffs/h.md", "mtime": 0}
+                    {
+                        "id": "md-4c1a",
+                        "title": handoff_title,
+                        "tracked_ids": [],
+                        "updated_ts": 0,
+                    }
                 ],
                 "sessions": [],
             }

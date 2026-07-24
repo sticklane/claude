@@ -46,9 +46,9 @@ def _handler(path, host="127.0.0.1:8899"):
 
 def _make_repo(root: Path):
     """A toolkit repo with a spec, a task, an evidence file, CLAUDE.md and a
-    handoff — returns the assemble()-shaped dict plus the on-disk file map."""
+    parked handoff — returns the assemble()-shaped dict plus the on-disk file
+    map. Handoffs are bd issues, so they contribute no file entity."""
     (root / "CLAUDE.md").write_text("# repo conventions\n")
-    (root / "HANDOFF.md").write_text("# handoff\ncarry on\n")
     spec_dir = root / "specs" / "s1"
     (spec_dir / "tasks").mkdir(parents=True)
     (spec_dir / "evidence").mkdir(parents=True)
@@ -78,13 +78,19 @@ def _make_repo(root: Path):
                         ],
                     }
                 ],
-                "handoffs": [{"title": "H", "path": "HANDOFF.md", "mtime": 5.0}],
+                "handoffs": [
+                    {
+                        "id": "md-4c1a",
+                        "title": "H",
+                        "tracked_ids": ["md-9f2"],
+                        "updated_ts": 5.0,
+                    }
+                ],
             }
         ],
     }
     expected = {
         os.path.realpath(str(root / "CLAUDE.md")),
-        os.path.realpath(str(root / "HANDOFF.md")),
         os.path.realpath(str(spec_dir / "SPEC.md")),
         os.path.realpath(str(task_abs)),
         os.path.realpath(str(spec_dir / "evidence" / "01-task.md")),
