@@ -168,6 +168,22 @@ def test_resync_reflects_an_edited_header(tmp_path):
 
 
 @requires_bd
+def test_resync_does_not_reopen_a_bd_closed_issue(tmp_path):
+    """bd is authoritative for the closed state (uz1): once an issue is closed
+    in bd, a markdown 'pending' row must not reopen it on the next sync."""
+    store = _git_store(tmp_path)
+    _write_task(store, "demo", "01-pending.md", PENDING_TASK)
+    shadow.sync(str(store), take_lock=False)
+    issue_id = shadow.task_id("specs/demo/tasks/01-pending.md")
+    assert _export(store)["specs/demo/tasks/01-pending.md"]["status"] == "open"
+
+    # Closed in bd (the source of truth) while the markdown header stays pending.
+    bd.bd_set_status(issue_id, "closed", cwd=str(store))
+    shadow.sync(str(store), take_lock=False)  # must NOT reopen it
+    assert _export(store)["specs/demo/tasks/01-pending.md"]["status"] == "closed"
+
+
+@requires_bd
 def test_sync_never_writes_markdown(tmp_path):
     store = _git_store(tmp_path)
     paths = [

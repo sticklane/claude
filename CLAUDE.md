@@ -169,7 +169,11 @@ at session start, `bd ready` for the queue, claim before working,
 close on done — the `/work` skill owns the flow. Markdown task files
 under `specs/*/tasks/` carry the human-readable Goal/Steps/Acceptance
 text; their `Status:` headers are shadow-synced into bd, not the other
-way around.
+way around — and the sync is **bd-authoritative for the closed state**: it
+can seed a new task or advance one toward closed, but never reopens an issue
+bd has closed (a stale markdown `pending` can't revive closed bd work —
+agentic-uz1). So close work in bd; a markdown header is display that seeds
+and advances, never the live authority.
 
 Record discovered work in bd immediately, not just in prose — a bug
 found, doc drift spotted, or new work scoped while doing something

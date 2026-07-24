@@ -113,9 +113,22 @@ def bd_export(path=None, cwd=None):
 
 
 def bd_list(cwd=None):
-    """Return the tracker's issues as a list of dicts (``bd list --json``)."""
+    """Return the tracker's issues as a list of dicts (``bd list --json``).
+
+    Note ``bd list`` excludes closed issues by default; use ``bd_closed_ids``
+    when the closed set is what you need.
+    """
     out = _run(["list", "--json"], cwd=cwd)
     return json.loads(out or "[]")
+
+
+def bd_closed_ids(cwd=None):
+    """The set of issue ids bd currently holds in the closed state.
+
+    ``bd list`` omits closed issues by default, so this asks for them
+    explicitly (``--status closed``)."""
+    out = _run(["list", "--status", "closed", "--json"], cwd=cwd)
+    return {i["id"] for i in json.loads(out or "[]")}
 
 
 def bd_claim(issue_id, cwd=None):

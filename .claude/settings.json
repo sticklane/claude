@@ -34,7 +34,8 @@
       {
         "hooks": [
           {
-            "command": "bd prime --hook-json",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/bd-bootstrap/ensure-bd.sh",
+            "timeout": 300,
             "type": "command"
           }
         ],
@@ -63,8 +64,6 @@
   },
   "model": "opusplan",
   "permissions": {
-    "allow": [
-      "Bash(bd *)"
-    ]
+    "allow": ["Bash(bd *)"]
   }
 }
