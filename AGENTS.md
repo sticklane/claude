@@ -28,7 +28,7 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 - **bd (beads) is the canonical live state** for task status, dependencies, and ready-work (agentic-core-redesign cutover). Task-file `Status:` headers in `specs/*/tasks/*.md` are frozen display, no longer scanned.
 - `specs/QUEUE.md` is the wave plan—dispatch order, not live state.
 - `./specs/status.sh` renders the live dashboard from bd on demand (`bd ready` + `bd list`).
-- In-flight session handoffs land as `HANDOFF.md` next to the active task/spec file (or `.claude/HANDOFF.md`; `HANDOFF-<topic>.md` when that slot is occupied — the resume hook matches `HANDOFF*.md`), each carrying a `Tracked:` header naming the bd issue(s) for the parked work.
+- In-flight session handoffs land in bd, not on disk: `/handoff` opens one `handoff`-labeled issue per parked session, linked by a `tracks` dependency to every issue it leaves open. `bd list --label handoff --status=open` is the discovery surface the resume hook and `/resume-handoff` both read; `/resume-handoff` closes that issue once the work is picked back up.
 
 `/work` is the attended daily default: it answers "what's next" by running
 `bd ready` and works the picked issue, claiming it in bd before starting and

@@ -1,6 +1,6 @@
 # Task 05: Update doctrine and reference docs to describe the bd-native handoff mechanism
 
-Status: pending
+Status: done
 Depends on: none
 Priority: P2
 Budget: 25 turns
@@ -48,6 +48,12 @@ quotes are never edited, only its own reconciliation prose.
 
 ## Acceptance
 
-- [ ] `grep -ci "handoff file\|HANDOFF\.md" .claude/rules/token-discipline.md AGENTS.md docs/external-playbooks.md` → 0 in each
-- [ ] `awk '/^## Handoff artifacts/,/^## [^H]/' docs/guides/context-management.md | grep -c "bd comment\|bd issue\|bd list --label handoff"` → ≥ 1
-- [ ] `grep -c "https://" docs/external-playbooks.md` → unchanged from the value at this task's base commit (confirms no quote/citation URL was touched — compare via `git show <base-commit>:docs/external-playbooks.md | grep -c "https://"`)
+- [x] `grep -ci "handoff file\|HANDOFF\.md" .claude/rules/token-discipline.md AGENTS.md docs/external-playbooks.md` → 0 in each — ran green: token-discipline.md:0, AGENTS.md:0, external-playbooks.md:0 (was 1/1/3 at base)
+- [x] `awk '/^## Handoff artifacts/,/^## [^H]/' docs/guides/context-management.md | grep -c "bd comment\|bd issue\|bd list --label handoff"` → ≥ 1 — ran green: 3 (was 0 at base)
+- [x] `grep -c "https://" docs/external-playbooks.md` → unchanged from the value at this task's base commit (confirms no quote/citation URL was touched — compare via `git show <base-commit>:docs/external-playbooks.md | grep -c "https://"`) — ran green: 77 current == 77 at base 6d6cf28e; additionally, zero changed lines in that file contain a URL or a quotation mark
+
+## Decisions
+
+- token-discipline.md line ~283 also reworded ("writes a `/handoff` artifact" → "parks state via `/handoff`") though it never matched the acceptance grep; default taken because R8 asks for wording that names no file format. Reverse: restore that one hunk.
+- `## Handoff artifacts and session hygiene` heading in context-management.md left unrenamed despite "artifacts"; default taken because acceptance criterion 2 anchors its awk range on `/^## Handoff artifacts/`. Reverse: rename the heading and update that acceptance command together.
+- AGENTS.md lines 20 and 80 left unedited (the `handoff-resume` hook directory name; "At handoff, report changed files"); default taken because neither asserts a file format. Reverse: reword in a follow-up.
