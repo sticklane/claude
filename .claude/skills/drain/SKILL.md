@@ -75,7 +75,9 @@ record why on the issue and leave it for the batch interview.
    dispatch by stage type per `.claude/rules/token-discipline.md` (cite it,
    don't restate). Default **one** worker; scale to a **3–5** concurrent
    window ONLY for genuinely parallel, file-disjoint ready issues the user
-   asked throughput for — `bd ready` already excludes file-overlapping work.
+   asked throughput for — that file-disjointness comes from step 1's own
+   Touch disjointness check, not from `bd ready`, so a hand-filed issue
+   with no Touch metadata runs solo rather than joining a window.
 
 3. **Verify each verdict, then close in bd.** Collect the worker's verdict
    (DONE / BLOCKED / DEFERRED). On DONE, run an independent `verifier` over
