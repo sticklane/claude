@@ -6,7 +6,7 @@
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
 Status: blocked
-Unblock: run: bash -c 'for m in "Reading ladder" "ABSENCE FALLACY" "ast-grep --pattern" "ctx show <symbol>" ".ctxkeep" "zone dead trees" "now emits the guard itself"; do grep -q "$m" .claude/skills/ctx/SKILL.md || echo "still missing: $m"; done' — empty output means all 6 sibling specs (ctx-skill-token-doctrine, ctx-static-analysis-augmentation, ctx-query-ergonomics, ctx-minified-skip, ctx-dead-code-zones, ctx-absence-check) have landed their SKILL.md edits; flip back to pending and re-dispatch.
+Unblock: run: bash -c 'for m in "Reading ladder" "ABSENCE FALLACY" "ast-grep --pattern" "ctx show <symbol>" ".ctxkeep" "zone dead trees" "now emits the guard itself" "## Output-shaping flags" "--files"; do grep -q -e "$m" .claude/skills/ctx/SKILL.md || echo "still missing: $m"; done' — empty output means all 8 sibling specs (ctx-skill-token-doctrine, ctx-static-analysis-augmentation, ctx-query-ergonomics, ctx-minified-skip, ctx-dead-code-zones, ctx-absence-check, ctx-doc-drift-gate, ctx-output-shape-gaps) have landed their SKILL.md edits; flip back to pending and re-dispatch.
 Depends on: 01
 Priority: P3
 Budget: 10 turns
@@ -22,9 +22,9 @@ exists per `cli.rs`).
 
 ## Touch
 
-This is SLOT 7 (always last, confirmed at
-specs/ctx-skill-token-doctrine/SPEC.md:20) of the SKILL.md editor registry
-in that spec's Landing order (../../ctx-skill-token-doctrine/SPEC.md:5-24).
+This is SLOT 9 (always last, confirmed at
+specs/ctx-skill-token-doctrine/SPEC.md:26) of the SKILL.md editor registry
+in that spec's Landing order (../../ctx-skill-token-doctrine/SPEC.md:7-31).
 Do not touch any other section of either SKILL.md beyond the CUJ-doc link
 and the `map` flag correction. Per CLAUDE.md's authoring conventions, a
 task that changes `.claude/skills/` files must carry the plugin.json
@@ -33,11 +33,11 @@ this spec (a later drain generation may also need it for the token-doctrine
 chain's own final slot, but this task owns it for THIS spec's edit).
 
 **This spec cannot reach `done` in isolation.** This task is the tail of
-a 7-spec SKILL.md serialization chain — slots 1-6 belong to SIX OTHER
+a 9-spec SKILL.md serialization chain — slots 1-8 belong to EIGHT OTHER
 specs (ctx-skill-token-doctrine, ctx-static-analysis-augmentation,
 ctx-query-ergonomics, ctx-minified-skip, ctx-dead-code-zones,
-ctx-absence-check), each of which must land its own SKILL.md edit before
-this one may. Tasks 01 and 03 of THIS spec can complete independently;
+ctx-absence-check, ctx-doc-drift-gate, ctx-output-shape-gaps), each of
+which must land its own SKILL.md edit before this one may. Tasks 01 and 03 of THIS spec can complete independently;
 this task will likely park DEFERRED for a while.
 
 ## Steps
@@ -45,9 +45,9 @@ this task will likely park DEFERRED for a while.
 1. Confirm `docs/guides/ctx-cujs.md` exists (task 01's output; this task's
    `Depends on: 01` should already guarantee it, but verify before citing
    it in a link).
-2. Run the registry-landed check below. If ANY of the 6 markers is
+2. Run the registry-landed check below. If ANY of the 8 markers is
    missing, stop DEFERRED with "specs/ctx-skill-token-doctrine's SKILL.md
-   editor registry slots 1-6 have not all landed yet" — do not proceed
+   editor registry slots 1-8 have not all landed yet" — do not proceed
    and do not guess which slot is missing beyond what the check reports.
    ```bash
    grep -q "Reading ladder" .claude/skills/ctx/SKILL.md &&   # slot 1a (token-doctrine R2)
@@ -57,7 +57,9 @@ this task will likely park DEFERRED for a while.
    grep -q "\.ctxkeep" .claude/skills/ctx/SKILL.md &&  # slot 4 (minified-skip R4)
    grep -q "zone dead trees" .claude/skills/ctx/SKILL.md &&  # slot 5 (dead-code-zones R4)
    grep -q "now emits the guard itself" .claude/skills/ctx/SKILL.md &&  # slot 6 (absence-check R5)
-   echo "all 6 slots landed"
+   grep -q "## Output-shaping flags" .claude/skills/ctx/SKILL.md &&  # slot 7 (doc-drift-gate R2)
+   grep -q -e "--files" .claude/skills/ctx/SKILL.md &&  # slot 8 (output-shape-gaps R3)
+   echo "all 8 slots landed"
    ```
    (These markers were the best available at breakdown time from each
    sibling spec's own requirement text — if a marker doesn't match because

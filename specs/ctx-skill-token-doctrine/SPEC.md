@@ -6,7 +6,7 @@ Breakdown-ready: true
 
 ## Landing order (breakdown constraint — the SKILL.md editor registry)
 
-SEVEN specs edit the ctx SKILL.md (and its antigravity mirror). This
+NINE specs edit the ctx SKILL.md (and its antigravity mirror). This
 section is the single serialization registry; a spec that edits the
 skill without a slot here may not be broken down. Order:
 
@@ -19,7 +19,11 @@ skill without a slot here may not be broken down. Order:
    dependency; command table rows)
 6. ctx-absence-check R5 (updates R7's absence-fallacy caution + VERIFY
    ABSENCE ladder guidance)
-7. ctx-cujs R3 (one-line CUJ-playbook link — always last)
+7. ctx-doc-drift-gate R2 (stale-claims sweep — rust scope caution plus
+   the fixed `## Output-shaping flags` section)
+8. ctx-output-shape-gaps R3 (command-table `--files` row + the
+   empty-vs-no-match output note)
+9. ctx-cujs R3 (one-line CUJ-playbook link — always last)
 
 These MUST land serialized in this order — breakdown must never emit
 two SKILL.md-editing tasks as parallel work — and each such task edits

@@ -5,8 +5,7 @@
 <!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
 <!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
 
-Status: blocked
-Unblock: run: grep -q 'ctx-output-shape-gaps' specs/ctx-skill-token-doctrine/SPEC.md || echo "BLOCKED: registry slot absent — an attended/breakdown session must land the atomic registry commit (SPEC.md R3 (a)+(b)+(c)) once the specs/ctx-cujs/DRAIN-OWNER.md lease clears"
+Status: pending
 Depends on: 01, 02
 Priority: P3
 Budget: 6 turns
