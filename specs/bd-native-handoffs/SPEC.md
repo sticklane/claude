@@ -66,7 +66,16 @@ call `bd show` explicitly rather than relying on `bd prime` alone.
 ## Requirements
 
 R1. `.claude/skills/handoff/SKILL.md` no longer writes `HANDOFF.md`.
-    Instead: for every bd issue this session leaves open/touched, it runs
+    First, it checks bd is usable in this repo (e.g. `bd list --json`
+    succeeds); if not, it tells the user plainly that bd is required for
+    this skill and points at `agentic init` (or `bd init --non-interactive
+    --remote "" --skip-agents`) to set it up, then stops — it does not
+    silently fall back to a file, and it does not auto-run `agentic init`
+    on the user's behalf. This applies everywhere the plugin is enabled,
+    since the skill is plugin-distributed to repos this spec doesn't
+    control (Out of scope, bullet 1) — bd-unavailable is a real,
+    reachable state there, not a hypothetical.
+    When bd is usable: for every bd issue this session leaves open/touched, it runs
     `bd comment <id> "..."` with that issue's session-state update; it
     creates exactly one new bd issue labeled `handoff`
     (`bd create "Session handoff: <topic>" --labels handoff --type=task
@@ -115,10 +124,16 @@ R5. `.claude/skills/workboard/workboard.py`'s `scan_handoffs()` (around
     of globbing `HANDOFF*.md`. `.claude/skills/workboard/reference.md`'s
     documented `handoffs[]` schema (lines ~19, 38, 56) is updated to
     describe bd-issue-shaped fields (issue id, title, tracked issue ids,
-    resume command) in place of a file path. Repos without `.beads/` (or
-    without `bd` reachable) are skipped for handoff-scanning the same way
-    they're presumably already skipped for other bd-dependent scans — do
-    not error the whole workboard scan over one repo missing bd.
+    resume command) in place of a file path. `workboard.py` currently has
+    no bd/beads invocations at all (confirmed: 0 matches for `bd |beads|
+    \.beads` today) — this is new subprocess-calling code, not a mirror of
+    an existing pattern. It must: skip a scanned repo with no `.beads/`
+    directory without invoking `bd`; catch a `bd` subprocess failure
+    (missing binary, timeout, non-zero exit, malformed JSON) for a repo
+    that does have `.beads/` and treat that repo's handoff-scan as empty
+    rather than erroring the whole workboard scan; and run with a bounded
+    timeout per repo, since this adds one `bd` subprocess call per scanned
+    repo across every repo workboard walks.
 
 R6. `agent-console/agent-console.py`'s `dispatch-resume-handoff` action
     and related registry/navbar rendering (lines ~1101, 1115, 1237, 1242,
@@ -181,10 +196,12 @@ R9. No backward-compatibility fallback for legacy `HANDOFF.md` files is
 ## Acceptance criteria
 
 - [ ] AC1 (R1): `grep -ci "HANDOFF.md" .claude/skills/handoff/SKILL.md` →
-      0 (today: 5 — verified 2026-07-24). `grep -c "bd comment\|bd create.*--labels handoff\|bd dep add.*-t tracks" .claude/skills/handoff/SKILL.md`
+      0 (today: 3 — verified 2026-07-24). `grep -c "bd comment\|bd create.*--labels handoff\|bd dep add.*-t tracks" .claude/skills/handoff/SKILL.md`
       → ≥ 3 (today: 0 — the three commands don't appear yet).
+      `grep -c "agentic init\|bd init" .claude/skills/handoff/SKILL.md` →
+      ≥ 1 (today: 0 — the bd-unavailable path doesn't exist yet).
 - [ ] AC2 (R2): `grep -ci "HANDOFF.md" .claude/skills/resume-handoff/SKILL.md`
-      → 0 (today: 4). `grep -c "bd list --label handoff\|bd show.*--include-comments\|bd close.*resumed and consumed" .claude/skills/resume-handoff/SKILL.md`
+      → 0 (today: 2 — verified 2026-07-24). `grep -c "bd list --label handoff\|bd show.*--include-comments\|bd close.*resumed and consumed" .claude/skills/resume-handoff/SKILL.md`
       → ≥ 3 (today: 0).
 - [ ] AC3 (R3): `grep -c "HANDOFF" hooks/handoff-resume/resume-check.sh` →
       0 (today: 9). `grep -c "bd list --label handoff" hooks/handoff-resume/resume-check.sh`
@@ -197,10 +214,16 @@ R9. No backward-compatibility fallback for legacy `HANDOFF.md` files is
       → 0 (today: 9). `grep -c "bd list --label handoff\|--label.*handoff" .claude/skills/workboard/workboard.py`
       → ≥ 1 (today: 0). `cd .claude/skills/workboard && python3 -m pytest test_workboard.py -k handoff -q`
       → all pass (today: 2 passed against file fixtures; must still pass
-      2+ after rewriting to bd-mocked fixtures).
-- [ ] AC6 (R6): `cd agent-console && python3 -m pytest tests/test_dispatch_kinds.py -k ResumeHandoff tests/test_drilldown_registry.py tests/test_parsers.py -q`
-      → all pass (baseline: currently passing against file-based mocks;
-      must still pass after rewriting to bd-based mocks).
+      2+ after rewriting to bd-mocked fixtures). A new test exercising the
+      skip behavior (a scanned repo with no `.beads/`, and one where the
+      `bd` subprocess fails) passes and asserts the overall scan still
+      succeeds rather than raising.
+- [ ] AC6 (R6): `cd agent-console && python3 -m pytest tests/test_dispatch_kinds.py -k ResumeHandoff -q && python3 -m pytest tests/test_drilldown_registry.py tests/test_parsers.py -q`
+      → both commands exit 0 (run separately, not combined under one `-k`
+      filter — a single combined `-k ResumeHandoff` invocation collects
+      only 2 of the tests across all three files, verified 2026-07-24,
+      and would leave `test_drilldown_registry.py`/`test_parsers.py`'s
+      handoff coverage unexercised).
 - [ ] AC7 (R7): the four test files listed in R7 all pass as a group:
       `bash hooks/handoff-resume/test.sh && (cd .claude/skills/workboard && python3 -m pytest test_workboard.py -q) && (cd agent-console && python3 -m pytest tests/ -q)`
       → exit 0. Depth ceiling: this verifies the mechanism's unit-level
@@ -211,10 +234,18 @@ R9. No backward-compatibility fallback for legacy `HANDOFF.md` files is
       task, confirm the resulting bd issue and comments look right via
       `bd show`, then start a fresh session and confirm `/resume-handoff`
       picks it up and closes it correctly.
-- [ ] AC8 (R8): `grep -ci "HANDOFF\.md\|handoff file" .claude/rules/token-discipline.md docs/guides/context-management.md AGENTS.md docs/external-playbooks.md`
+- [ ] AC8 (R8): `grep -ci "HANDOFF\.md\|handoff file" .claude/rules/token-discipline.md AGENTS.md docs/external-playbooks.md`
       → 0 in each (today: mentions exist per R8's counts; the literal
       phrases "HANDOFF.md" and "handoff file" are the ones to retire —
       references to the `/handoff` skill by name are fine to keep).
+      For `docs/guides/context-management.md` specifically (whose
+      "## Handoff artifacts and session hygiene" section wraps "self-
+      contained handoff file" across two physical lines, so a single-line
+      grep for that phrase doesn't reliably anchor — verified 2026-07-24,
+      same trap `.claude/rules/shell-text-tools.md` warns about): extract
+      the section by structure and check for the new bd-native language,
+      `awk '/^## Handoff artifacts/,/^## [^H]/' docs/guides/context-management.md | grep -c "bd comment\|bd issue\|bd list --label handoff"`
+      → ≥ 1 (today: 0, confirmed 2026-07-24).
 - [ ] AC9 (R9): `find /Users/sjaconette/claude -iname "HANDOFF*.md" -not -path "*/.git/*"`
       → empty (today: empty — confirms no regression introduces a new
       file-based fallback path).
