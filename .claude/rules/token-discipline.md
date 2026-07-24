@@ -261,7 +261,7 @@ false` on the Agent tool is advisory, not guaranteed — the harness may
   next from its task file rather than carrying dead context forward.
 - Long-running work should be resumable from artifacts on disk (specs, task
   files, notes in `docs/`), never from conversation memory. If a session is
-  getting heavy mid-task, write a handoff file and restart from it.
+  getting heavy mid-task, park state via `/handoff` and restart from it.
 - Don't re-run searches or re-read files already established this session;
   don't paste large command output back into the conversation — summarize it.
 
@@ -280,7 +280,7 @@ Three points govern the shape:
   that re-warms a fat context just to poll.
 - **Every autonomous session carries a wake budget** — refresh-over-carry.
   When observed re-primes or estimated context-rewrite cost crosses the
-  budget, the session refreshes (writes a `/handoff` artifact and ends, or
+  budget, the session refreshes (parks state via `/handoff` and ends, or
   batons where a sanctioned baton exists) instead of sleeping again.
 - **Budget defaults: 3 re-primes or a 250k-token context, tunable.** Pinned
   from the 30-day profile (specs/archive/session-refresh-automation): 3 is the

@@ -561,9 +561,11 @@ than restating it.
   His Gas Town fleet routes work through per-agent pinned beads plus a
   `gt handoff` command — handoffs as tracker objects, not files
   ([Welcome to Gas Town](https://steve-yegge.medium.com/welcome-to-gas-town-4f25ee16dd04)).
-  → /handoff's step 2 (file parked work in bd) and the `Tracked:` header:
-  `bd ready` is the discovery surface; the HANDOFF file never carries state
-  the tracker doesn't.
+  → /handoff takes that shape here: it files parked work in bd, and the
+  handoff itself is one more tracker object — a `handoff`-labeled issue
+  linked by `tracks` to every issue it parks. `bd ready` and `bd list
+  --label handoff --status=open` are the discovery surfaces, and no
+  document sits beside them to drift out of step with the tracker.
 - **Markdown survives as notes, not tracking (Anthropic).** "Structured
   note-taking, or agentic memory, is a technique where the agent regularly
   writes notes persisted to memory outside of the context window" — with a
@@ -573,8 +575,11 @@ than restating it.
   since if the context window exceeds 200,000 tokens it will be truncated"
   ([multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)).
   This is the reconciliation with the beads bullet above: _tracking_ belongs
-  in the tracker, _narrative and decision context_ belongs in notes — the
-  HANDOFF file is this repo's structured note, not its queue.
+  in the tracker, _narrative and decision context_ belongs in notes — and in
+  this repo both live in bd. The handoff issue's `--design`/`--notes` fields
+  and the per-issue comments are the structured note; `bd ready` remains the
+  queue. The note travels with the record it describes instead of in a
+  separate document.
 - **Session-close protocol (beads).** "Landing the plane": file issues for
   remaining work, update issue status, then push
   ([beads AGENTS.md](https://github.com/steveyegge/beads/blob/main/AGENTS.md#landing-the-plane-session-completion)).
@@ -605,8 +610,8 @@ than restating it.
   ([Agent SDK overview](https://code.claude.com/docs/en/agent-sdk/overview)).
   → /handoff is for what compaction can't guarantee: cross-machine,
   cross-session, human-readable state with tracker linkage. Don't reach for
-  a handoff file when `--resume` or compaction suffices within one machine's
-  session history.
+  the `/handoff` skill when `--resume` or compaction suffices within one
+  machine's session history.
 
 ## Verification of agent work (frontier labs, verified 2026-07-23)
 

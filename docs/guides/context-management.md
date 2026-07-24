@@ -66,11 +66,14 @@ flowchart TD
 
 ## Handoff artifacts and session hygiene
 
-Long-running work is resumable from artifacts on disk — specs, task
-files, notes in `docs/` — never from conversation memory. When a session
-is getting heavy mid-task, `/handoff` writes a self-contained handoff
-file (state, next action, pointers to evidence) so the next session can
-pick up cold rather than needing the outgoing conversation replayed.
+Long-running work is resumable from durable records — specs, task files,
+notes in `docs/`, and the bd tracker — never from conversation memory.
+When a session is getting heavy mid-task, `/handoff` parks its state in
+bd: a `bd comment` on every issue the session leaves open, plus one new
+`handoff`-labeled bd issue carrying the state, next action, and pointers
+to evidence, linked to each parked issue. `bd list --label handoff
+--status=open` is what the next session discovers, so it picks up cold
+rather than needing the outgoing conversation replayed.
 `/distill` is the complementary end-of-task step: it captures this
 session's corrections, surprises, and repeated procedures into CLAUDE.md,
 a rule, or a new skill, so the next session doesn't re-pay for the same
@@ -80,8 +83,8 @@ lesson.
 
 - `.claude/agents/scout.md` — the scout agent (scout-tier, read-only,
   hard tool-call ceiling, capped report length).
-- `.claude/skills/handoff/SKILL.md` — writes the resumable handoff
-  artifact for a mid-task session break.
+- `.claude/skills/handoff/SKILL.md` — parks a mid-task session break as a
+  `handoff`-labeled bd issue linked to the work it leaves open.
 - `.claude/skills/distill/SKILL.md` — end-of-session capture of lessons
   into CLAUDE.md / rules / new skills.
 - `.claude/rules/token-discipline.md` — "Delegation defaults", "Session
