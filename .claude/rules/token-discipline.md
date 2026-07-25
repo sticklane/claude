@@ -292,7 +292,12 @@ Three points govern the shape:
   expects to idle past the cache TTL — a watch-then-act poller, a self-paced
   wakeup loop — runs cheap-tier (or launchd), dispatching each event's
   judgment work to an awaited fresh subagent; never a frontier-tier main loop
-  that re-warms a fat context just to poll.
+  that re-warms a fat context just to poll. **Doctrine-only, decided
+  2026-07-25:** a `PreToolUse` warn-hook on the loop-shaped calls was scoped
+  and NOT shipped — there is no model field on PreToolUse hook input (only
+  `SessionStart` can receive `model`, and not guaranteed), so a hook cannot
+  tell a frontier-tier poller from a cheap-tier one. Finding, citations, and
+  the capability that would unblock it: specs/waiting-loop-tier-gate/SPEC.md.
 - **Every autonomous session carries a wake budget** — refresh-over-carry.
   When context size crosses the budget, the session refreshes (parks state via
   `/handoff` and ends, or batons where a sanctioned baton exists) instead of
