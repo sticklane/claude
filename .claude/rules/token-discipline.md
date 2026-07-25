@@ -294,14 +294,13 @@ Three points govern the shape:
   judgment work to an awaited fresh subagent; never a frontier-tier main loop
   that re-warms a fat context just to poll.
 - **Every autonomous session carries a wake budget** — refresh-over-carry.
-  When observed re-primes or estimated context-rewrite cost crosses the
-  budget, the session refreshes (parks state via `/handoff` and ends, or
-  batons where a sanctioned baton exists) instead of sleeping again.
-- **Budget defaults: 3 re-primes or a 250k-token context, tunable.** Pinned
-  from the 30-day profile (specs/archive/session-refresh-automation): 3 is the
-  re-prime median deliberately — the median is the behavior being changed —
-  and 250k sits between the context p50 and p90 so the flag marks the heavy
-  tail, not normal sessions.
+  When context size crosses the budget, the session refreshes (parks state via
+  `/handoff` and ends, or batons where a sanctioned baton exists) instead of
+  sleeping again.
+- **Budget default: a 250k-token context, tunable.** Pinned from the 30-day
+  profile (specs/archive/session-refresh-automation): 250k sits between the
+  context p50 and p90 so the flag marks the heavy tail, not normal sessions.
+  A second arm counting re-primes was removed 2026-07-25 — see below.
 - **This budget is the main session's own context size, not total token
   spend.** `hooks/session-refresh/refresh-check.sh` reads THIS session's own
   transcript directly (`transcript_path` off the hook's own stdin payload) —
@@ -312,12 +311,16 @@ Three points govern the shape:
   most recent main-loop assistant usage entry — mirroring `agentprof`'s own
   "ctx" definition (`agentprof/internal/costsummary/costsummary.go`) so the
   two stay conceptually consistent, but a single current reading, not a
-  window percentile. The re-prime arm counts this session's own
-  `cache_creation_input_tokens` spikes past `REFRESH_REPRIME_THRESHOLD`, the
-  same labeling rule `agentprof` uses. Either arm says nothing about how many
+  window percentile. It is now the ONLY arm: a second arm counting
+  `cache_creation_input_tokens` spikes as TTL-expiry "re-primes" was removed
+  2026-07-25 because it counted transcript ENTRIES rather than logical turns —
+  one turn's several streaming assistant entries each carry the same
+  cache-write, so a single turn scored as several re-primes, and startup cache
+  warming counted too. It fired on every locally-measured session, including
+  one at 113k context. That arm said nothing about how many
   tokens ran in dispatched subagents or a Workflow run, whose transcripts are
   discarded on return — only their small returned result lands in the main
-  session's context. A session that fans out heavily but keeps its own
+  session's context, and the same holds for the surviving context-size arm. A session that fans out heavily but keeps its own
   context lean is the token-efficient pattern this file recommends, not a
   budget violation; the fix for a real warning is trimming what the MAIN
   session itself accumulated (long inline command output, pasted results,

@@ -70,7 +70,6 @@
       }
     ]
   },
-  "model": "opusplan",
   "permissions": {
     "allow": [
       "Bash(bd *)"
