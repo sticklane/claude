@@ -927,6 +927,76 @@ else
   echo "SKIP: git does not honor GIT_CONFIG_GLOBAL; installer assertions skipped" >&2
 fi
 
+# --- severity tiering: only correctness-class findings block -----------------
+
+sev_repo() { # sev_repo <name> — a gated fixture with one staged change
+  local repo="$TMP/$1"
+  new_repo "$repo" >/dev/null
+  printf 'one\n' > "$repo/a.txt"
+  git -C "$repo" add a.txt
+  printf '%s' "$repo"
+}
+
+NIT="$(sev_repo 'severity nits')"
+record_in "$NIT" 'VERDICT: NOT READY
+Nit: rename foo to bar
+[style] prefer a const here
+- structure: this helper belongs in the caller'
+assert_committed "a review carrying only nits does not block" "$NIT" commit -m x
+assert_has "the allowed commit still reports the findings" \
+  "prefer a const here" "$GIT_ERR"
+
+BUG="$(sev_repo 'severity correctness')"
+record_in "$BUG" 'VERDICT: NOT READY
+[correctness] off-by-one in the loop bound
+Nit: rename foo to bar'
+assert_blocked "a correctness finding blocks the commit" "$BUG" commit -m x
+assert_has "the refusal quotes the blocking finding" \
+  "off-by-one in the loop bound" "$GIT_ERR"
+assert "the refusal says which categories block" \
+  grep -Eqi 'correctness' <<<"$GIT_ERR"
+assert_has "the refusal names the REVIEW_GATE=0 bypass" \
+  "REVIEW_GATE=0 git commit" "$GIT_ERR"
+
+SEC="$(sev_repo 'severity security')"
+record_in "$SEC" 'VERDICT: NOT READY
+Severity: security - the query is built by string concatenation'
+assert_blocked "a security finding blocks the commit" "$SEC" commit -m x
+
+LOSS="$(sev_repo 'severity data loss')"
+record_in "$LOSS" 'Category: data-loss - the migration drops the column first'
+assert_blocked "a data-loss finding blocks the commit" "$LOSS" commit -m x
+
+SECRET="$(sev_repo 'severity secret')"
+record_in "$SECRET" '[secrets] an API token is committed in config.yml'
+assert_blocked "a committed-secret finding blocks the commit" "$SECRET" commit -m x
+
+# The tolerant default: anything the parse does not recognize is reported and
+# allowed. A gate that blocks on garbage input trains the operator to bypass it.
+JUNK="$(sev_repo 'severity unparseable')"
+record_in "$JUNK" 'VERDICT ?? {"findings": [{"sev": 7}]} ###'
+assert_committed "an unparseable verdict defaults to non-blocking" \
+  "$JUNK" commit -m x
+
+UNKNOWN="$(sev_repo 'severity unknown label')"
+record_in "$UNKNOWN" 'Severity: frobnicate - nobody knows what this tier means'
+assert_committed "an unrecognized severity defaults to non-blocking" \
+  "$UNKNOWN" commit -m x
+
+# A label whose finding is that there is no finding is not a finding.
+NEGATED="$(sev_repo 'severity negated')"
+record_in "$NEGATED" 'VERDICT: READY
+Security: none
+Correctness: no bugs found
+[data-loss] n/a'
+assert_committed "a blocking label reporting nothing does not block" \
+  "$NEGATED" commit -m x
+
+PROSE="$(sev_repo 'severity prose')"
+record_in "$PROSE" 'VERDICT: READY - I checked correctness and security and found nothing'
+assert_committed "a prose mention of a blocking word does not block" \
+  "$PROSE" commit -m x
+
 # --- the README describes the design that actually ships ---------------------
 
 assert "hooks/review-gate/README.md exists" test -f "$README"
@@ -955,6 +1025,17 @@ assert "the README keeps an Uninstall section" grep -q '^## Uninstall' "$README"
 assert "the README keeps a Known gaps section" grep -q '^## Known gaps' "$README"
 assert "the README keeps the review-bar section" \
   grep -q '^## What the review itself should block on' "$README"
+assert "the README documents severity" grep -qi 'severity' "$README"
+assert "the README names every category that blocks" \
+  bash -c 'tr "\n" " " < "$1" | grep -Eqi "correctness.*security.*data.loss.*secret"' \
+    _ "$README"
+assert "the README says nits are reported rather than blocking" \
+  bash -c 'tr "\n" " " < "$1" | grep -Eqi "nit[^.]*(report|allow|not block)"' _ "$README"
+assert "the README states the unrecognized-severity default" \
+  bash -c 'tr "\n" " " < "$1" | grep -Eqi "unrecogni[sz]ed|unparseable"' _ "$README"
+for source in "eng-practices" "Claude Code Review" "RADAR"; do
+  assert "the README cites $source" grep -qF "$source" "$README"
+done
 for gap in "git merge" "pre-merge-commit" "git rebase" "git am"; do
   assert "the README's Known gaps names $gap" grep -qF "$gap" "$README"
 done
