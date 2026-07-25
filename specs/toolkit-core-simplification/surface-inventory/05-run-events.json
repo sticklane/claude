@@ -1,0 +1,40 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "05-run-events",
+  "frozen_sha256": "b93798a86f5e902a0ef5827c043b8b338d64efcd33b27452c8784cd7805f2b59",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_events.py::test_cli_event_new_run_write_and_read"
+      ],
+      "content_sha256": "f4833eec5d3475e43c72e7c339e82d90944859c4996c7fe5b342ec62b39fde6d",
+      "dependents": [
+        "test:tests/test_agentic_events.py"
+      ],
+      "disposition": "repair",
+      "identity": "cli-command:event",
+      "path": "agentic/cli.py",
+      "rationale": "Narrow native-orchestrator surface for run identity creation and validated event append/read.",
+      "replacement": null,
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_events.py::test_concurrent_cross_process_writers_do_not_interleave"
+      ],
+      "content_sha256": "2b9f9d99d5f4e6a18e048a96ea7c91064d7d2b9f1fdc4b042cb93d2f9c1b4a19",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_events.py",
+      "path": "tests/test_agentic_events.py",
+      "rationale": "Canonical durability, concurrency, validation, and failure-isolation coverage for run events.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
