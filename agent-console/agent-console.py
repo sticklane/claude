@@ -729,6 +729,16 @@ def _usd(microusd) -> str:
         return "$0.00"
 
 
+def _session_timeline_tooltip(session: dict) -> str:
+    """Branch and age, plus the session's spend when it has any — a session
+    with no recorded cost keeps the branch+age form rather than showing $0.00."""
+    age = _ago(session["last"])
+    parts = [session["branch"], age] if session["branch"] else [age]
+    if session.get("cost_microusd"):
+        parts.append(_usd(session["cost_microusd"]))
+    return " · ".join(parts)
+
+
 def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) -> dict:
     """Map workboard.assemble()'s result (`{repos, sessions, inbox, ready,
     totals, ...}` — workboard.py is the single source of scan/inbox logic
@@ -2549,9 +2559,7 @@ def render_workboard(
                     "status": s["state"],
                     "start_ts": s["start_ts"],
                     "end_ts": s["last"],
-                    "tooltip": f"{s['branch']} · {_ago(s['last'])}"
-                    if s["branch"]
-                    else _ago(s["last"]),
+                    "tooltip": _session_timeline_tooltip(s),
                     "href": f"{AGENTPROF_URL}/ui/flamegraph?tf=session={quote(s['sid'], safe='')}",
                 }
                 for s in vis[:6]
