@@ -4,13 +4,11 @@ Migration step 7).
 
 Reads Claude Code session transcripts (JSONL under ``~/.claude/projects`` by
 default; overridable with ``AGENTIC_TRANSCRIPT_ROOT`` for testing and for
-alternate runtimes) plus the bd tracker, and measures four tool-adoption
+alternate runtimes) plus the bd tracker, and measures three tool-adoption
 regression classes:
 
 - ``grep-bypass``          — structure lookups that bypassed ``agentic ctx``
                              for a raw grep.
-- ``compose-bypass``       — worker dispatches that bypassed ``agentic
-                             compose``.
 - ``verdict-schema-failure`` — verdict files that failed schema validation.
 - ``spend-over-cap``       — dispatch spend over the configured cap
                              (best-effort: measured only where a spend signal
@@ -35,10 +33,9 @@ from pathlib import Path
 from agentic import bd
 from agentic.sync import sync_write
 
-# The four regression classes, in report order.
+# The regression classes, in report order.
 REGRESSION_CLASSES = (
     "grep-bypass",
-    "compose-bypass",
     "verdict-schema-failure",
     "spend-over-cap",
 )
@@ -135,14 +132,6 @@ def is_grep_bypass(tool):
     return False
 
 
-def is_compose_bypass(tool):
-    """A worker dispatch whose prompt never went through ``agentic compose``."""
-    if tool.get("name") not in ("Task", "Agent"):
-        return False
-    blob = json.dumps(tool.get("input") or {})
-    return "agentic compose" not in blob
-
-
 def _is_verdict_schema_failure(rec):
     """A tool result recording a rejected (schema-invalid) verdict file.
 
@@ -188,8 +177,6 @@ def measure(transcript_paths, *, since=None, cwd=None):
         for tool in _tool_uses(rec):
             if is_grep_bypass(tool):
                 counts["grep-bypass"] += 1
-            elif is_compose_bypass(tool):
-                counts["compose-bypass"] += 1
         if _is_verdict_schema_failure(rec):
             counts["verdict-schema-failure"] += 1
     counts["spend-over-cap"] = _measure_spend_over_cap()
@@ -263,8 +250,7 @@ def file_findings(cwd, counts):
                 deps=[f"discovered-from:{anchor}"],
                 description=(
                     f"agentic audit measured {counts[cls]} {cls} occurrence(s). "
-                    f"Investigate why the composed default was bypassed and "
-                    f"close the gap."
+                    f"Investigate the regression and close the gap."
                 ),
                 priority=2,
                 cwd=str(root),

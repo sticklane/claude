@@ -2,8 +2,8 @@
 
 Describes how the abstract tiers and surfaces map onto OpenAI's Codex CLI.
 Codex discovers the shared `.claude/skills/*` sources through repository
-symlinks under `.agents/skills/` (`codex/README.md` has the port's account;
-this profile describes it, it does not replace it).
+symlinks under `.agents/skills/`; `codex/README.md` explains that shared-source
+layout.
 
 ## Tiers
 
@@ -118,7 +118,8 @@ codex exec --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>
   mode, `--sandbox workspace-write` ≈ `acceptEdits`,
   `--dangerously-bypass-approvals-and-sandbox` ≈ `bypassPermissions`
   (sandboxed use only, per its own `--help` warning).
-- **Reference port**: `codex/README.md` carries the reuse-vs-copy account.
+- **Runtime guide**: `codex/README.md` explains shared skill discovery and
+  the common bd/ctx/spec data layer.
 - **Verification**: command syntax and flags above were verified against
   `codex exec --help` / `codex --help` output of `codex-cli 0.144.1`
   (installed locally, 2026-07-12). Re-verify against `codex --help` before

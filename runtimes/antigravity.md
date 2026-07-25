@@ -1,9 +1,8 @@
 # Runtime profile: antigravity
 
-Describes how the abstract tiers and surfaces map onto Antigravity. The
-`antigravity/` directory in this repo is the reference port (skills,
-workflows, AGENTS.md, hooks); this profile describes it, it does not
-replace it.
+Describes how the abstract tiers and native orchestration surfaces map onto
+Antigravity. `antigravity/README.md` explains the bd/ctx/spec data layer used
+after the procedure-copy tree was retired.
 
 "Antigravity" always means the `antigravity-cli` package (binary `agy`)
 plus the Agent Manager GUI — never the GUI alone. **Name collision, verify
@@ -48,7 +47,7 @@ exist as a flag; exact value acceptance unverified — see Tiers above).
 | Role                                                                 | Antigravity default                                                                      |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | session default                                                       | the CLI's configured default model (no plan/execution split exists)                          |
-| implementation workers                                                | `Claude Opus 4.6 (Thinking)`, via `--model` — deep-tier adopted default, mirroring claude-code's `opus` pin |
+| implementation workers                                                | `Claude Opus 4.6 (Thinking)`, via `--model` — deep-tier adopted default matching claude-code's `opus` pin |
 | explore / codebase-search                                             | `Gemini 3.5 Flash (Low)`, via `--model`                                                      |
 | verifier (acceptance evidence; advisory reviewer lane)                | `Gemini 3.5 Flash (Low)`, via `--model`                                                      |
 | spec/plan/diff critic                                                 | `Claude Opus 4.6 (Thinking)` — deep-tier work; a critic pass costs ~1% of a wrong implementation |
@@ -59,10 +58,8 @@ exist as a flag; exact value acceptance unverified — see Tiers above).
 ## Headless
 
 Non-interactive mode is `agy -p` / `--print` (confirmed live,
-`antigravity-cli` 1.1.1, 2026-07-12 — both a plain reply and a real
-skill invocation: `list-specs` auto-triggered by description match, ran
-its bundled `specs/status.sh`, and returned an accurate report, from a
-scratch fixture and from this repo's `antigravity/` port root):
+`antigravity-cli` 1.1.1, 2026-07-12 — both a plain reply and an isolated
+file-edit fixture completed successfully):
 
 ```bash
 /opt/homebrew/bin/agy -p "<prompt>" --new-project --mode accept-edits --sandbox
@@ -195,13 +192,12 @@ mode absent an explicit fresh-workspace flag.
   real**: confirmed on this machine (`~/.antigravity/antigravity/bin`
   before `/opt/homebrew/bin` in `$PATH`); verify PATH order or use an
   absolute path before trusting a bare `agy` invocation elsewhere.
-- **Reference port**: `antigravity/README.md` carries the full
-  concept-mapping table; `docs/porting.md` summarizes it alongside the
-  other runtimes.
-- **Verification**: `-p`, model listing, and one real skill auto-trigger
-  (`list-specs`) were confirmed live against `antigravity-cli` 1.1.1
-  (Homebrew cask, installed 2026-07-11) on 2026-07-12. `--new-project`
-  workspace isolation was confirmed live the same way on 2026-07-13 (two
+- **Runtime guide**: `antigravity/README.md` explains the common bd/ctx/spec
+  data layer and records why the copied procedure tree was retired.
+- **Verification**: `-p` and model listing were confirmed live against
+  `antigravity-cli` 1.1.1 (Homebrew cask, installed 2026-07-11) on
+  2026-07-12. `--new-project` workspace isolation was confirmed live on
+  2026-07-13 (two
   back-to-back isolated invocations, no cross-contamination, no stray
   writes to the real checkout — see Headless above). `--model`,
   `--mode`, `--dangerously-skip-permissions`, `--continue`/

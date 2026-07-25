@@ -1,5 +1,10 @@
 # A live drain owns its reconciliation — check before hand-fixing its flags
 
+> **Historical record.** This note describes the pre-2026-07-22 task-header,
+> lease, and shared-checkout drain. Current drain state lives in bd and its
+> workers use isolated branches/worktrees; consult the live drain skill
+> instead. The old incident procedure remains below as historical evidence.
+
 **Trigger:** asked to reconcile "in-progress" tasks, or to clear
 "stale / needs-review / uncommitted / unpushed" git flags, in a repo that
 runs the toolkit's drain.

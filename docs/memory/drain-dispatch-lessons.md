@@ -1,5 +1,10 @@
 # Drain dispatch lessons (queue 5, 2026-07-05)
 
+> **Historical record.** This incident log predates the 2026-07-22 bd and
+> native-orchestration pivot. Its baton, lease, task-header state, shared
+> checkout, and composer-era procedures are not live instructions. It remains
+> readable as evidence for why the current drain contract is narrower.
+
 Three worker-dispatch patterns that earned their keep across 8 dispatches;
 each is a clause the orchestrator adds to the worker prompt (or a procedure
 it follows), not a task-file edit.
