@@ -37,27 +37,47 @@ is a speed bump: it converts an oversight into a deliberate act. It is not
 proof of review and must not be reported as one. Real proof would require the
 gate to run the review itself, outside the committing agent's control.
 
-## Every recorded review is a self-review
+## What the marker says about who reviewed
 
 `review-gate record` refuses to run without a staged diff in its own working
-tree, so whoever records a verdict is whoever wrote the change. Recording is
-therefore always self-review, and the gate marks it rather than leaving it to
-be guessed: `record` stamps each marker with the recording session's identity
-and the line `review-gate-kind: self-review`, and the hook repeats that on
-every gated commit.
+tree, so a verdict is always recorded by whoever staged the change. That, and
+only that, is what the gate stamps above the verdict as the marker's first
+line:
 
-The stamp is what the gate observed, never what the recorder claimed. It comes
-from the harness-set session identity in the environment, it is written above
-the verdict as the marker's first line, and a marker carrying no stamp at all
-reads the same way — an absent stamp is not evidence of independence. There is
-no flag to set and none to leave out.
+```
+review-gate-kind: self-review (recorded from the tree that staged this diff)
+```
 
-This matters because an agent dispatched as a subagent cannot spawn a reviewer
-of its own: agent nesting is one level deep, so a worker that has to satisfy
-the gate satisfies it by reviewing its own diff. Independent review comes from
-outside the gate — `/drain`'s orchestrator runs the critic over each worker
-branch before merging it, and an attended session can hand the diff to a
-separate agent.
+The stamp does not say that nobody independent read the diff. In the attended
+path a critic subagent reads it and the authoring session relays the verdict
+into `record` — the reviewer was independent, the typist was not. A dispatched
+worker signing off on its own diff produces a byte-identical marker, because
+agent nesting is one level deep and a worker has no Agent tool to spawn a
+reviewer with. The gate cannot tell the two apart, so it reports the recording
+relationship and stops there.
+
+Nor does the marker name the agent that recorded it. The environment offers no
+identity that would be true: a dispatched agent inherits its dispatcher's
+`CLAUDE_CODE_SESSION_ID` verbatim, and `CLAUDE_CODE_CHILD_SESSION` is set in
+the dispatching session too (both measured 2026-07-25, in a `/drain`
+orchestrator and one of its workers). A field that looked authoritative while
+naming the wrong agent would be worse than no field.
+
+The hook repeats the stamp on **every gated commit**, never blocking. There is
+no state to make it conditional on — the marker that a critic's verdict
+produces is the same marker a self-sign-off produces — and a recorded verdict
+is the only trace a later reader sees, which on its own reads as proof that a
+review happened. The line rides along so "the gate is satisfied" is never read
+alone. What it asks of the operator: if nobody outside the committing tree has
+read this branch, that read is still owed. `/drain`'s orchestrator pays it by
+running the critic over each worker branch before merging; an attended session
+pays it by handing the diff to a separate agent.
+
+One thing about a marker does vary, and the notice reports it: whether `record`
+wrote the marker at all. A hand-written marker carries no stamp, which is not
+evidence of independence — the notice still prints — only evidence that the
+marker did not come through the tool. A forged stamp buys nothing either, since
+there is no independent state for it to claim.
 
 ## What the review itself should block on
 
