@@ -80,6 +80,14 @@ assert_eq "hook exits 2 while the claimed issue is open" 2 "$RH_EXIT"
 assert "hook names the open issue id on stderr" \
   grep -qF "$issue_id" <<<"$RH_ERR"
 
+# The block message must not hand the policed session the one-line recipe for
+# exempting itself: an abandoned claim is already in_progress, so naming the
+# marker file would turn the escape hatch into a general bypass (agentic-85d
+# review). close / defer / unclaim stay the only advertised remedies.
+assert_eq "block message does not advertise the in-flight marker recipe" \
+  "absent" \
+  "$(grep -qF 'session-inflight' <<<"$RH_ERR" && echo present || echo absent)"
+
 # --- claimed + in_progress + fresh dispatch marker -> not blocked -----------
 # A drain orchestrator awaiting a worker is claimed-and-open on purpose
 # (agentic-85d).

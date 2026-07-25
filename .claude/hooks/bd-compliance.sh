@@ -32,6 +32,10 @@
 # itself reports the id `in_progress` — a marker on an issue nobody claimed
 # in bd exempts nothing.
 #
+# The block message below DELIBERATELY does not mention the marker: a session
+# that abandoned claimed work is already `in_progress`, so telling it the file
+# name would hand it a one-line self-exemption. Do not add it back.
+#
 # Follows the same Stop-hook stdin contract as templates/stop-gate.sh:
 # `.stop_hook_active` (loop protection), `.transcript_path` (sanctioned
 # unattended-worker stop verdicts), `.cwd` (repo-root resolution).
@@ -139,6 +143,6 @@ fi
 {
   printf 'bd-compliance: claimed issue(s) neither closed nor in flight: %s\n' \
     "${open_ids[*]}"
-  printf 'If the work is done: `bd close <id>` and remove the line from .beads/session-claims. If a worker is still running: claim it (`bd update <id> --claim`) and record `<id> $(date +%%s)` in .beads/session-inflight. Otherwise defer/unclaim per the /work skill.\n'
+  printf 'If the work is done: `bd close <id>` and remove the line from .beads/session-claims. Otherwise defer or unclaim it per the /work skill.\n'
 } >&2
 exit 2
