@@ -85,7 +85,10 @@ record why on the issue and leave it for the batch interview.
    worker executes the issue via the build skill's procedure; the verbatim
    dispatch prompt, the skill-path resolution recipe, and the verdict
    format (a structured verdict capped at ≤2k tokens, never a transcript)
-   are in [reference.md](reference.md)'s "Worker prompt". Tier the
+   are in [reference.md](reference.md)'s "Worker prompt". A dispatch that
+   declares external `write-deny-paths` follows reference.md's mechanical
+   write-deny boundary and fails closed before launch if no backend exists.
+   Tier the
    dispatch by stage type per `.claude/rules/token-discipline.md` (cite it,
    don't restate). Default **one** worker; scale to a **3–5** concurrent
    window ONLY for genuinely parallel, file-disjoint ready issues the user

@@ -9,6 +9,7 @@ queue and its atomic claims replace it.
 ## Table of contents
 
 - Worker prompt (verbatim, fill the `<>`)
+- Mechanical write-deny boundary
 - Canonical skill-path resolution recipe
 - Deferred questions (format)
 - Push guard (canonical)
@@ -76,6 +77,32 @@ DEFERRED/BLOCKED (and the verifier's INCOMPLETE) pass the gate hook via its
 sanctioned stop bypass — a final message beginning with the verdict line exits
 the hook 0 even while checks are red, so contractual mid-red stops reach drain
 instead of looping.
+
+### Mechanical write-deny boundary
+
+The orchestrator call accepts a `write-deny-paths` parameter containing zero
+or more existing absolute paths. This is orchestrator-owned dispatch data,
+not a worker instruction. With no entries, use the native worktree worker above.
+With any entry, a boundary-sensitive worker runs headless from the isolated
+worktree through the sibling `write-deny.sh`, using its runtime profile's
+headless command:
+
+```bash
+<resolved-drain-dir>/write-deny.sh \
+  --deny-write /absolute/off-limits-path \
+  -- <runtime-profile-headless-command>
+```
+
+Repeat `--deny-write` for each barred path. The wrapper resolves every path
+before launch and applies an OS write denial inherited by the agent and all
+of its child commands: Seatbelt (`sandbox-exec`) on macOS and bubblewrap
+(`bwrap`) on Linux. Thus Claude Code, Codex, and Antigravity use the same
+boundary; only the wrapped headless command differs. Native subagent APIs
+cannot be used for this case because drain cannot interpose the OS boundary
+around their process. If a path is invalid or the platform backend is
+unavailable, the wrapper exits nonzero before the worker starts and drain
+records BLOCKED. Never retry without the wrapper and never substitute a
+prompt-only prohibition.
 
 ### Canonical skill-path resolution recipe
 
