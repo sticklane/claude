@@ -11,11 +11,30 @@
 #   - .beads/session-claims absent or empty (no non-blank lines) -> exit 0.
 #   - every id listed is closed in bd (checked per id via
 #     `bd show <id> --json`, reading the `status` field) -> exit 0.
-#   - any listed id is not confirmed closed -> exit 2, naming the open
-#     ids, so the Stop hook blocks.
+#   - a listed id that is `in_progress` in bd AND carries a fresh line in
+#     .beads/session-inflight is work in flight, not abandoned work -> it
+#     satisfies the check without being closed. A drain orchestrator ends a
+#     turn every time it awaits a dispatched worker, and closing an issue
+#     whose work has not returned would record a completion that did not
+#     happen (agentic-85d).
+#   - any other listed id -> exit 2, naming the open ids, so the Stop hook
+#     blocks.
 #   - bd itself is not installed on PATH -> exit 0 with a note. This hook
 #     must never brick a repo that doesn't have bd — a missing bd binary
 #     is a reason to skip the check, never a reason to block "done".
+#
+# .beads/session-inflight (runtime-only, gitignored like session-claims) holds
+# one `<id> <dispatched-at-epoch-seconds>` line per issue with a worker in
+# flight; the dispatcher writes it at dispatch and drops it when it collects
+# the verdict. It is not a bypass switch: the exemption is per-id, expires
+# after BD_COMPLIANCE_INFLIGHT_TTL seconds (default 3600) so a session that
+# crashes mid-dispatch leaves no lasting immunity, and holds only while bd
+# itself reports the id `in_progress` — a marker on an issue nobody claimed
+# in bd exempts nothing.
+#
+# The block message below DELIBERATELY does not mention the marker: a session
+# that abandoned claimed work is already `in_progress`, so telling it the file
+# name would hand it a one-line self-exemption. Do not add it back.
 #
 # Follows the same Stop-hook stdin contract as templates/stop-gate.sh:
 # `.stop_hook_active` (loop protection), `.transcript_path` (sanctioned
@@ -84,6 +103,24 @@ if ! command -v bd >/dev/null 2>&1; then
   exit 0
 fi
 
+inflight="$root/.beads/session-inflight"
+ttl="${BD_COMPLIANCE_INFLIGHT_TTL:-3600}"
+case "$ttl" in
+  '' | *[!0-9]*) ttl=3600 ;;
+esac
+now="$(date +%s 2>/dev/null || echo 0)"
+
+has_live_dispatch() { # has_live_dispatch <id>
+  [ -f "$inflight" ] || return 1
+  local stamp age
+  stamp="$(awk -v want="$1" '$1 == want { s = $2 } END { print s }' "$inflight" 2>/dev/null || true)"
+  case "$stamp" in
+    '' | *[!0-9]*) return 1 ;;
+  esac
+  age=$(( now - stamp ))
+  [ "$age" -ge 0 ] && [ "$age" -lt "$ttl" ]
+}
+
 open_ids=()
 for id in "${ids[@]}"; do
   out="$(cd "$root" && bd show "$id" --json 2>/dev/null)"
@@ -92,9 +129,11 @@ for id in "${ids[@]}"; do
   if [ "$rc" -eq 0 ] && [ -n "$out" ]; then
     status="$(printf '%s' "$out" | jq -r '.[0].status // empty' 2>/dev/null || true)"
   fi
-  if [ "$status" != "closed" ]; then
-    open_ids+=("$id")
+  [ "$status" = "closed" ] && continue
+  if [ "$status" = "in_progress" ] && has_live_dispatch "$id"; then
+    continue
   fi
+  open_ids+=("$id")
 done
 
 if [ "${#open_ids[@]}" -eq 0 ]; then
@@ -102,8 +141,8 @@ if [ "${#open_ids[@]}" -eq 0 ]; then
 fi
 
 {
-  printf 'bd-compliance: claimed issue(s) still open — close them before ending the session: %s\n' \
+  printf 'bd-compliance: claimed issue(s) neither closed nor in flight: %s\n' \
     "${open_ids[*]}"
-  printf 'Close with `bd close <id>` and remove the line from .beads/session-claims, or defer/unclaim per the /work skill, then try again.\n'
+  printf 'If the work is done: `bd close <id>` and remove the line from .beads/session-claims. Otherwise defer or unclaim it per the /work skill.\n'
 } >&2
 exit 2

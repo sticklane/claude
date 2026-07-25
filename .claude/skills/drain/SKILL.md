@@ -51,7 +51,9 @@ record why on the issue and leave it for the batch interview.
    session working it (cross-check `claude agents --json` per
    `.claude/rules/concurrent-sessions.md`), unclaim and requeue it
    (`bd update <id> --status open`) and drop its line from
-   `.beads/session-claims` if present — `bd ready` excludes `in_progress`,
+   `.beads/session-claims` and `.beads/session-inflight` if present — a dead
+   session's dispatch marker describes a worker that no longer exists, and
+   `bd ready` excludes `in_progress`,
    so an issue claimed when a session died never resurfaces otherwise. Then
    read the queue.
 
@@ -64,10 +66,22 @@ record why on the issue and leave it for the batch interview.
    only blocked issues remain → go to the batch interview.
 
 2. **Claim, then dispatch a fresh worker.** For each issue to run this pass,
-   claim it atomically (`bd update <id> --claim`, or `bd ready --claim`) and
-   append the claimed `<id>` on its own line to `.beads/session-claims`
-   (`/work`'s claim bookkeeping, cited not restated — the compliance hook
-   reads it), then dispatch one awaited, `isolation: worktree` worker per issue. The
+   do all three claim steps as one unit BEFORE the dispatch call: claim the
+   issue atomically (`bd update <id> --claim`, or `bd ready --claim`), append
+   the claimed `<id>` on its own line to `.beads/session-claims` (`/work`'s
+   claim bookkeeping, cited not restated — the compliance hook reads it), and
+   append `<id> $(date +%s)` on its own line to `.beads/session-inflight`.
+   Only then dispatch one awaited, `isolation: worktree` worker per issue.
+   The marker must be on disk before the dispatch because the orchestrator's
+   turn ends AT the dispatch while it awaits the worker — a marker written
+   afterwards can land after the compliance hook has already fired, or never,
+   and the hook then blocks a claim that is legitimately in flight. Refresh
+   the line (rewrite its timestamp) before every re-dispatch for that id,
+   including verifier runs and fix rounds; the marker's freshness window is
+   `BD_COMPLIANCE_INFLIGHT_TTL` (default 3600s), a deliberate ceiling that
+   cannot be refreshed mid-await, so a single round longer than it costs one
+   false block — raise the env var for workloads with longer rounds
+   (`hooks/bd-compliance/README.md`). The
    worker executes the issue via the build skill's procedure; the verbatim
    dispatch prompt, the skill-path resolution recipe, and the verdict
    format (a structured verdict capped at ≤2k tokens, never a transcript)
@@ -87,8 +101,11 @@ record why on the issue and leave it for the batch interview.
    in the shared checkout and its worktree-integrity precheck halts INCOMPLETE
    instead of verifying.
    On verifier PASS, merge, `bd close <id>`, and remove
-   that `<id>` line from `.beads/session-claims` (one unit — a closed issue
-   still listed trips the compliance hook). On
+   that `<id>` line from `.beads/session-claims` and from
+   `.beads/session-inflight` (one unit — a closed issue
+   still listed trips the compliance hook). Drop the `.beads/session-inflight`
+   line on a BLOCKED or DEFERRED verdict too: nothing is in flight for that id
+   once its verdict is in hand. On
    worker or verifier FAIL, relaunch once one tier up
    (`.claude/rules/token-discipline.md`); a second failure records the cause
    on the issue and leaves it ready-or-blocked rather than thrashing. On

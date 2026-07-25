@@ -57,6 +57,21 @@ if [ "$require_bd" -eq 1 ]; then
   check "open claim: names the id" \
     "$(printf '%s' "$out" | grep -qF "$id" && echo 0 || echo 1)"
 
+  # --- in_progress + fresh dispatch marker: exit 0 -------------------------
+  now="$(date +%s)"
+  ( cd "$tmp" && bd update "$id" --claim >/dev/null 2>&1 )
+  printf '%s %s\n' "$id" "$now" > "$tmp/.beads/session-inflight"
+  out="$(stop_input "$tmp" | bash "$HOOK" 2>&1)"
+  rc=$?
+  check "in-flight claim: exit 0" "$([ "$rc" -eq 0 ] && echo 0 || echo 1)"
+
+  # --- marker aged past its TTL: exit 2 ------------------------------------
+  printf '%s %s\n' "$id" "$((now - 100000))" > "$tmp/.beads/session-inflight"
+  out="$(stop_input "$tmp" | bash "$HOOK" 2>&1)"
+  rc=$?
+  check "stale in-flight marker: exit 2" "$([ "$rc" -eq 2 ] && echo 0 || echo 1)"
+  rm -f "$tmp/.beads/session-inflight"
+
   # --- close the issue: exit 0 ---------------------------------------------
   ( cd "$tmp" && bd close "$id" --reason "test done" >/dev/null 2>&1 )
   out="$(stop_input "$tmp" | bash "$HOOK" 2>&1)"

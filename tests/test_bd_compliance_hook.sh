@@ -80,6 +80,59 @@ assert_eq "hook exits 2 while the claimed issue is open" 2 "$RH_EXIT"
 assert "hook names the open issue id on stderr" \
   grep -qF "$issue_id" <<<"$RH_ERR"
 
+# The block message must not hand the policed session the one-line recipe for
+# exempting itself: an abandoned claim is already in_progress, so naming the
+# marker file would turn the escape hatch into a general bypass (agentic-85d
+# review). close / defer / unclaim stay the only advertised remedies.
+assert_eq "block message does not advertise the in-flight marker recipe" \
+  "absent" \
+  "$(grep -qF 'session-inflight' <<<"$RH_ERR" && echo present || echo absent)"
+
+# --- claimed + in_progress + fresh dispatch marker -> not blocked -----------
+# A drain orchestrator awaiting a worker is claimed-and-open on purpose
+# (agentic-85d).
+
+inflight="$REPO/.beads/session-inflight"
+now="$(date +%s)"
+
+(cd "$REPO" && bd update "$issue_id" --claim) >/dev/null 2>&1
+printf '%s %s\n' "$issue_id" "$now" > "$inflight"
+
+run_hook "$HOOK" "$stop_payload" "$REPO"
+assert_eq "hook exits 0 for an in_progress claim with a fresh dispatch marker" \
+  0 "$RH_EXIT"
+
+# --- stale dispatch marker -> blocked again ---------------------------------
+# A session that crashed mid-dispatch leaves no lasting immunity.
+
+printf '%s %s\n' "$issue_id" "$((now - 100000))" > "$inflight"
+
+run_hook "$HOOK" "$stop_payload" "$REPO"
+assert_eq "hook exits 2 when the dispatch marker has aged past its TTL" \
+  2 "$RH_EXIT"
+
+# --- marker for an unrelated id -> blocked ----------------------------------
+# The exemption is per-id, never a session-wide bypass.
+
+printf '%s %s\n' "some-other-id" "$now" > "$inflight"
+
+run_hook "$HOOK" "$stop_payload" "$REPO"
+assert_eq "hook exits 2 when the dispatch marker names a different id" \
+  2 "$RH_EXIT"
+
+# --- marker without a bd claim -> blocked -----------------------------------
+# bd's own status is the verified half of the signal; the marker alone
+# exempts nothing.
+
+(cd "$REPO" && bd update "$issue_id" --status open) >/dev/null 2>&1
+printf '%s %s\n' "$issue_id" "$now" > "$inflight"
+
+run_hook "$HOOK" "$stop_payload" "$REPO"
+assert_eq "hook exits 2 for a fresh marker on an unclaimed (open) issue" \
+  2 "$RH_EXIT"
+
+rm -f "$inflight"
+
 # --- claimed issue closed -> blocking clears --------------------------------
 
 (cd "$REPO" && bd close "$issue_id") >/dev/null 2>&1
