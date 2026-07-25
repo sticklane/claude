@@ -1,7 +1,27 @@
 # Cheap wakes for drain's rolling window
 
-Status: open
+Status: superseded
+Superseded-by: drain-to-Workflow pivot (2026-07-25)
 Priority: P1
+
+## Supersession
+
+Read everything below as history. Drain compiles the ready queue into a
+Workflow and runs to `bd ready` exhaustion inside one session, so the
+per-verdict orchestrator wake this spec costed no longer exists: its skill
+text states "There are no baton files, no lease files, no generation
+counters", and `.claude/rules/token-discipline.md` states "Drain has no
+baton or generation-counter mechanism of its own to carve out here". The
+unshipped fix below — a size-based baton trigger replacing the count-based
+one (Problem factor 2) — is therefore retired unimplemented; the mechanism
+it would have replaced is gone.
+
+The cost measurements in EVIDENCE.md stay citable as history. One risk
+survives the pivot and is NOT closed by it: the orchestrator's own context
+still grows across collected verdicts within a single run. That residual
+accumulation is governed by the wake budget in
+`.claude/rules/token-discipline.md`'s Session refresh section, not by
+anything in this spec.
 
 ## Problem
 
