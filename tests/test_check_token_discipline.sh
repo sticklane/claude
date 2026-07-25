@@ -344,6 +344,13 @@ assert "violating-file report names the file" \
   sh -c "printf '%s' \"$RC_OUT\" | grep -qF 'violating.md'"
 
 # ---------------------------------------------------------------------------
+# INTEGRATION — the canonical shell-test glob must enforce conformance on the
+# real in-scope skill and workflow files, not only on synthetic fixtures.
+# ---------------------------------------------------------------------------
+assert "real in-scope skill and workflow files pass token discipline" \
+  "$CHECK" "$TOOLKIT_DIR"
+
+# ---------------------------------------------------------------------------
 echo "pass: $pass fail: $fail"
 [ "$fail" -eq 0 ] || exit 1
 exit 0
