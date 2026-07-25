@@ -23,5 +23,7 @@ specs/*/.drain-gen.log
 .beads/proxieddb/
 # Interaction telemetry (local-only, grows unbounded)
 .beads/interactions.jsonl
-# Per-session claim file (bd-compliance hook state, runtime-only)
+# Per-session claim + in-flight-dispatch files (bd-compliance hook state,
+# runtime-only)
 .beads/session-claims
+.beads/session-inflight
