@@ -11,7 +11,11 @@
 #   3. `review-gate check`, against the content this commit will actually
 #      contain — `git diff --cached` inside a pre-commit hook covers plain,
 #      `-a`, and pathspec commits alike.
-#   4. The severity tier of the recorded review: only correctness, security,
+#   4. The recording notice, printed on every gated commit: the verdict was
+#      recorded from the tree that staged the diff, and whether an independent
+#      reviewer produced it is not observable here. Never blocking — it keeps a
+#      satisfied gate from reading as proof that someone independent looked.
+#   5. The severity tier of the recorded review: only correctness, security,
 #      data-loss and committed-secret findings refuse the commit. Everything
 #      else — nits, style, structure, missing tests, pre-existing issues — is
 #      printed and allowed through, as is any severity the parse does not
@@ -131,6 +135,31 @@ recorded_verdict() {
   cat "$marker"
 }
 
+# gate_stamped <key> — true when bin/review-gate wrote this marker. Only the
+# first line counts: the gate writes its stamp there, so a `review-gate-kind`
+# line further down is the reviewer's own text, not an observation.
+gate_stamped() {
+  recorded_verdict "$1" | sed -n 1p | grep -q '^review-gate-kind:'
+}
+
+# report_recording <key> — says what the gate observed about the verdict on
+# every gated commit, so a satisfied gate is never read alone as proof that
+# somebody independent looked. An unstamped marker is not evidence of
+# independence; it only means `record` did not write it.
+report_recording() {
+  local unstamped=''
+  recorded_verdict "$1" >/dev/null || return 0
+  gate_stamped "$1" ||
+    unstamped='
+This marker was written directly rather than by `review-gate record`.'
+  cat >&2 <<MESSAGE
+review-gate: self-review — the verdict was recorded from the tree that staged
+this diff. Whether an independent reviewer produced it is not something the
+gate can tell; if nobody outside this tree has read the branch, that read is
+still owed.$unstamped
+MESSAGE
+}
+
 refuse_blocking() { # refuse_blocking <gate> <findings>
   local gate="$1" findings="$2"
   cat >&2 <<MESSAGE
@@ -188,7 +217,9 @@ GATE="$(find_gate)" || {
 gate_error="$("$GATE" check 2>&1 >/dev/null)"
 gate_status=$?
 if [ "$gate_status" -eq 0 ]; then
-  severity_verdict "$GATE" "$("$GATE" key 2>/dev/null)"
+  KEY="$("$GATE" key 2>/dev/null)"
+  report_recording "$KEY"
+  severity_verdict "$GATE" "$KEY"
   exit $?
 fi
 

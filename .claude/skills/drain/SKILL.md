@@ -100,7 +100,25 @@ record why on the issue and leave it for the batch interview.
    entry whose branch is the one being verified; unlocated, the verifier lands
    in the shared checkout and its worktree-integrity precheck halts INCOMPLETE
    instead of verifying.
-   On verifier PASS, merge, `bd close <id>`, and remove
+   On verifier PASS, run the `critic` over that branch's diff before merging —
+   the independent review the worker structurally cannot run for itself. A
+   dispatched worker has no Agent tool (nesting is one level), so the review
+   gate it satisfies records a verdict stamped `self-review`
+   (`hooks/review-gate/README.md`); the orchestrator has the Agent tool and is
+   the only place an independent read can happen. One awaited `critic` at its
+   own frontmatter tier pin, given the branch and the worktree resolved above,
+   capped at ≤1k tokens returned. Route it by the critic's own verdict line,
+   which is the whole contract it emits — `READY` / `READY WITH NITS` /
+   `NOT READY`, plus findings scored 0–100 for confidence and no severity
+   labels at all (`.claude/agents/critic.md`), so never grep its findings for
+   severity words. `NOT READY` is a FAIL, routed through the same bounded
+   relaunch-once path below — never an open-ended fix loop. `READY` and
+   `READY WITH NITS` both merge, with the findings recorded on the issue
+   first; a `READY WITH NITS` carrying substantive findings is the ordinary
+   outcome, not an exception, and dispatching a review-fix round on those
+   findings before the merge is the normal way to clear them.
+   On verifier PASS and the critic's verdict resolved, merge, `bd close <id>`,
+   and remove
    that `<id>` line from `.beads/session-claims` and from
    `.beads/session-inflight` (one unit — a closed issue
    still listed trips the compliance hook). Drop the `.beads/session-inflight`

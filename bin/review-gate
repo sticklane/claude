@@ -36,6 +36,19 @@
 #
 # Markers live at <git-common-dir>/agentic-review/<key>, inside .git, so they
 # are never committed and are shared by every worktree of the repository.
+#
+# SELF-REVIEW: `record` only runs where the diff is staged, so whoever records a
+# verdict is whoever authored the diff. Every marker is stamped with that one
+# observation and nothing more, and the pre-commit hook repeats it on every
+# gated commit. Whether an independent reviewer produced the verdict is not
+# observable here — an attended session relays a critic's verdict through the
+# same `record` call a worker uses to sign off on its own diff.
+#
+# No recorder identity is stamped, because the environment offers none that is
+# true: the harness hands a dispatched agent its dispatcher's
+# CLAUDE_CODE_SESSION_ID verbatim, and CLAUDE_CODE_CHILD_SESSION is set in the
+# dispatching session too (both measured 2026-07-25). A field naming the wrong
+# agent is worse than no field, because a reader would trust it.
 set -u
 set -o pipefail
 
@@ -137,6 +150,8 @@ cmd_check() {
   return 1
 }
 
+MARKER_STAMP='review-gate-kind: self-review (recorded from the tree that staged this diff)'
+
 cmd_record() {
   local verdict key status marker
   verdict="$(cat)"
@@ -149,7 +164,10 @@ cmd_record() {
   [ "$status" -eq 0 ] || die "$(key_failure_cause)"
   marker="$(marker_path "$key")" || die "not inside a git repository"
   mkdir -p "$(dirname "$marker")" || die "cannot create marker directory"
-  printf '%s\n' "$verdict" > "$marker" || die "cannot write marker $marker"
+  {
+    printf '%s\n\n' "$MARKER_STAMP"
+    printf '%s\n' "$verdict"
+  } > "$marker" || die "cannot write marker $marker"
 }
 
 git rev-parse --git-common-dir >/dev/null 2>&1 ||
