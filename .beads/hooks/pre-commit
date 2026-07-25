@@ -31,6 +31,13 @@ if command -v bd >/dev/null 2>&1; then
   if [ $_bd_exit -ne 0 ]; then exit $_bd_exit; fi
 fi
 # --- END BEADS INTEGRATION v1.1.0 ---
+# --- BEGIN AGENTIC BD-EXPORT-GUARD ---
+# Runs after the beads block, which is what stages the auto-export this checks.
+_bd_guard_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$_bd_guard_root" ] && [ -x "$_bd_guard_root/hooks/bd-export-guard/pre-commit" ]; then
+  "$_bd_guard_root/hooks/bd-export-guard/pre-commit" "$@" || exit $?
+fi
+# --- END AGENTIC BD-EXPORT-GUARD ---
 # --- BEGIN AGENTIC REVIEW-GATE ---
 REVIEW_GATE_CHAINED=1 '/Users/sjaconette/claude/hooks/review-gate/pre-commit' "$@" || exit $?
 # --- END AGENTIC REVIEW-GATE ---
