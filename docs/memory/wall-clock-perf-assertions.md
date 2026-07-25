@@ -48,11 +48,13 @@ So the wall-clock ceiling was demoted from the assertion to a backstop, and
 the invariant it was proxying for is now asserted directly.
 
 - **Primary, deterministic:** count the `bd` process invocations `agentic
-  ready` makes at 600 issues and require a small constant (measured: exactly
-  1, a single `bd export`; bound: 5). Every tracker call in the toolkit goes
-  through `agentic/bd.py`'s `shutil.which("bd")`, so a recording shim named
-  `bd` placed first on `PATH` sees all of them. This is what "guards against a
-  regression to per-issue bd calls" actually means, and it is load-invariant.
+  ready` makes at 600 issues and require a small constant — measured exactly
+  1 (a single `bd export`), asserted as the range 1..2. Every tracker call in
+  the toolkit goes through `agentic/bd.py`'s `shutil.which("bd")`, so a
+  recording shim named `bd` placed first on `PATH` sees all of them. This is
+  what "guards against a regression to per-issue bd calls" actually means, and
+  it is load-invariant. The bound is a range, not a ceiling, for the reason
+  below.
 - **Secondary, wall clock:** the ceiling moved 1s → 60s, about 8x the worst
   loaded median measured here (7.615s at load 92) and comfortably inside
   `check.sh`'s 600s per-test timeout even in the worst case. It is a
@@ -61,6 +63,13 @@ the invariant it was proxying for is now asserted directly.
   tracks host oversubscription roughly linearly, so the margin is sized for a
   host several times busier than any yet observed. The guard itself now lives
   in the call count.
+
+A count assertion needs a floor as well as a ceiling. A one-sided `calls <=
+N` passes at zero — and zero is exactly what a refactor that reads
+`.beads/issues.jsonl` or a cache directly would produce, silently retiring
+the guard while the test still printed OK. The floor of 1 makes that
+regression fail loudly, and the ceiling sits at the measured value plus one so
+a real multiplication cannot hide under slack.
 
 Quarantining the test (the `QUARANTINE` list's route, as used for
 `tests/test_eval_coverage_lint.sh`) was the other candidate. It was rejected
