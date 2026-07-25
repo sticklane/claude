@@ -201,9 +201,17 @@ linked discovered-from.
   serialized by the D8 lock; (b) two clones writing — serialized by
   D9 push order, loser re-applies or fails cleanly. Worker count
   (5–10) is unaffected because workers do not write.
-- **R-L:** per-command tracker latency ceiling 1s. Measured on a
-  ~15-issue store: ~0.3s reads, ~0.5s writes; Dolt latency grows
-  with size, so acceptance re-measures at ≥500 issues.
+- **R-L:** an `agentic` command's tracker cost stays O(1) in `bd`
+  invocations as the store grows — one call per command, never one per
+  issue. Originally written as a 1s per-command wall-clock ceiling,
+  measured on a ~15-issue store (~0.3s reads, ~0.5s writes) and
+  re-measured at ≥500 issues. That ceiling was retired 2026-07-25: a
+  wall-clock median swings 6x with host load, so as a blocking check it
+  reddened `scripts/check.sh` repo-wide whenever anything else ran on the
+  machine. The call count is the load-invariant form of the same
+  requirement; a 60s wall-clock backstop survives only to catch a
+  catastrophic blowup. Measurements and rationale:
+  docs/memory/wall-clock-perf-assertions.md.
 - **R-B:** fresh-clone bootstrap is `git clone <url> && agentic
 init` — ordinary git only, rebuilt from the committed JSONL.
 - **R-E:** all tracker state recoverable from ordinary git alone,
@@ -298,8 +306,9 @@ can pass vacuously.
       clones of one remote; both operations land (or the loser fails
       with a clean "already claimed"), and the final committed JSONL
       contains both. Land with step 4.
-- [ ] R-L: `tests/test_agentic_latency.sh` seeds ≥500 issues; median
-      `agentic ready` over 5 runs < 1s.
+- [ ] R-L: `tests/test_agentic_latency.sh` seeds ≥500 issues; `agentic
+      ready` invokes `bd` a small constant number of times (measured: 1),
+      and its median over 5 runs stays under the 60s blowup backstop.
 - [ ] R-B: `tests/test_agentic_bootstrap.sh` clones to a temp dir,
       runs `agentic init`, asserts `agentic ready` exits 0 with the
       imported issue count.
