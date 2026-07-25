@@ -1,0 +1,161 @@
+{
+  "$defs": {
+    "surface": {
+      "additionalProperties": false,
+      "properties": {
+        "behavioral_tests": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "content_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "dependents": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "disposition": {
+          "enum": [
+            "retain",
+            "repair",
+            "hide-stub",
+            "retire-dead",
+            "measure-before-decision"
+          ]
+        },
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "replacement": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "surface_type": {
+          "enum": [
+            "agent",
+            "cli-command",
+            "hook",
+            "rule",
+            "runtime",
+            "skill",
+            "test",
+            "workflow"
+          ]
+        }
+      },
+      "required": [
+        "behavioral_tests",
+        "content_sha256",
+        "dependents",
+        "disposition",
+        "identity",
+        "path",
+        "rationale",
+        "replacement",
+        "surface_type"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "surface.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "frozen_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "git_blob_pin": {
+          "const": 1
+        },
+        "manifest_type": {
+          "const": "baseline"
+        },
+        "schema_version": {
+          "const": 2
+        },
+        "surfaces": {
+          "items": {
+            "$ref": "#/$defs/surface"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "$schema",
+        "frozen_sha256",
+        "git_blob_pin",
+        "manifest_type",
+        "schema_version",
+        "surfaces"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "fragment": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "frozen_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "git_blob_pin": {
+          "const": 1
+        },
+        "manifest_type": {
+          "const": "fragment"
+        },
+        "schema_version": {
+          "const": 2
+        },
+        "surfaces": {
+          "items": {
+            "$ref": "#/$defs/surface"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "$schema",
+        "fragment",
+        "frozen_sha256",
+        "git_blob_pin",
+        "manifest_type",
+        "schema_version",
+        "surfaces"
+      ],
+      "type": "object"
+    }
+  ]
+}

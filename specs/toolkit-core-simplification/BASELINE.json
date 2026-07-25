@@ -1,0 +1,1532 @@
+{
+  "$schema": "surface.schema.json",
+  "frozen_sha256": "43380743cd9faf221acf6d74757e1182785f96b1461853ff8601ae12aa803ff9",
+  "git_blob_pin": 1,
+  "manifest_type": "baseline",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [],
+      "content_sha256": "7fd62b07024b2a57dcba358554ce8997a8ff3bf8c737fa91c1f058941835f76c",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "agent:critic",
+      "path": ".claude/agents/critic.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "agent"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_implementation_worker_contract.sh#assert:e9170f3c538672a1a512ddb25fd2df0b0d70a7d0c1214611da3d2d88b56f2e74"
+      ],
+      "content_sha256": "3ad70a338c1059fc1140b14718060e63928fbed3da52c92eea1ae916c6edbffd",
+      "dependents": [
+        "test:tests/test_implementation_worker_contract.sh"
+      ],
+      "disposition": "repair",
+      "identity": "agent:implementation-worker",
+      "path": ".claude/agents/implementation-worker.md",
+      "rationale": "Native orchestration contract surface scheduled for repair.",
+      "replacement": null,
+      "surface_type": "agent"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "b269cde7b0528e4f67899f3c5bbaf78e2347a1d8aaf03b2e98aaf367f2aab6fd",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "agent:scout",
+      "path": ".claude/agents/scout.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "agent"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_codex_skill_entrypoints.sh#assert:e47ff81c285fab706ba1c15120e32d5abcf95cf7961f933bb06133e2cc20e11f"
+      ],
+      "content_sha256": "96203d8bb661b54dc0a61184540bb8d654702c20ef8521e2f2320315aaa1f27c",
+      "dependents": [
+        "test:tests/test_codex_skill_entrypoints.sh"
+      ],
+      "disposition": "repair",
+      "identity": "agent:verifier",
+      "path": ".claude/agents/verifier.md",
+      "rationale": "Native orchestration contract surface scheduled for repair.",
+      "replacement": null,
+      "surface_type": "agent"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_audit.py::test_audit_files_exactly_two_typed_tasks_linked_discovered_from"
+      ],
+      "content_sha256": "c4cc76726c02e01bf18e376e90b799adcdb84160070829431da06b0d3f2eb477",
+      "dependents": [
+        "test:tests/test_agentic_audit.py"
+      ],
+      "disposition": "repair",
+      "identity": "cli-command:audit",
+      "path": "agentic/cli.py",
+      "rationale": "Working command shares the registry undergoing compatibility repair.",
+      "replacement": null,
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "7a42da067ea78edc711c878502c4344082388f01d6815c841363a48359bf2acf",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "cli-command:claim",
+      "path": "agentic/cli.py",
+      "rationale": "No assertion-scoped behavioral evidence exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "537642848adc733cca2b415c3cff92bdd503943c8ad1c52bc9a5e1a481311587",
+      "dependents": [],
+      "disposition": "hide-stub",
+      "identity": "cli-command:compose",
+      "path": "agentic/cli.py",
+      "rationale": "Unconditional compatibility stub must be hidden with an exact replacement.",
+      "replacement": "/work, /build, or /drain",
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "f914d1a445cf1fd701d578b6222b944d12a9087e266b59477362eeb852239c7a",
+      "dependents": [],
+      "disposition": "hide-stub",
+      "identity": "cli-command:ctx",
+      "path": "agentic/cli.py",
+      "rationale": "Unconditional compatibility stub must be hidden with an exact replacement.",
+      "replacement": "ctx <args...>",
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "5378c907b3ba3b5a940b605aa707ae5e7b50bbed49217bd89d40abf50de3758f",
+      "dependents": [],
+      "disposition": "hide-stub",
+      "identity": "cli-command:demote",
+      "path": "agentic/cli.py",
+      "rationale": "Unconditional compatibility stub must be hidden with an exact replacement.",
+      "replacement": "bd update <id> --status deferred",
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "825ff67627b98acaff6329645dd8c4f6a9957020ef906225ff1ab4f601f1f68b",
+      "dependents": [],
+      "disposition": "hide-stub",
+      "identity": "cli-command:inbox",
+      "path": "agentic/cli.py",
+      "rationale": "Unconditional compatibility stub must be hidden with an exact replacement.",
+      "replacement": "bd ready and bd human list",
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_bootstrap.sh#assert:5e06ffb9573095a9fba21cc44ab941437a6ef778124dbdd3ca43d107429dfc5d"
+      ],
+      "content_sha256": "cb6f9e06e6a6e63c7472fff09a9e5f667bfee99c88cf3b436ed591e5c2509ed6",
+      "dependents": [
+        "test:tests/test_agentic_bootstrap.sh"
+      ],
+      "disposition": "repair",
+      "identity": "cli-command:init",
+      "path": "agentic/cli.py",
+      "rationale": "Working command shares the registry undergoing compatibility repair.",
+      "replacement": null,
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_latency.sh#assert:6a8f7daa852e4d5c335c654545348213f509a9577d0ee9276fd371c3b986bb21"
+      ],
+      "content_sha256": "fed322f6c4ba1db2a8f3d00605c3fcf49b8e90930049bd63825c4b446f76ecd9",
+      "dependents": [
+        "test:tests/test_agentic_latency.sh"
+      ],
+      "disposition": "repair",
+      "identity": "cli-command:ready",
+      "path": "agentic/cli.py",
+      "rationale": "Working command shares the registry undergoing compatibility repair.",
+      "replacement": null,
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_ready.py::test_resume_shows_frontier_and_in_flight_claims"
+      ],
+      "content_sha256": "02fe78955e74c5e6e3baa2b6a32a04971cb90ea9a558622c3f561233c2117d62",
+      "dependents": [
+        "test:tests/test_agentic_ready.py"
+      ],
+      "disposition": "repair",
+      "identity": "cli-command:resume",
+      "path": "agentic/cli.py",
+      "rationale": "Working command shares the registry undergoing compatibility repair.",
+      "replacement": null,
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "f03e54f7f5732ec9edc673385b6c2262bdca0a9aabc5c085bfe6e32c2bfe1c04",
+      "dependents": [],
+      "disposition": "hide-stub",
+      "identity": "cli-command:shadow-sync",
+      "path": "agentic/cli.py",
+      "rationale": "Unconditional compatibility stub must be hidden with an exact replacement.",
+      "replacement": "agentic register-spec <spec-dir>",
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_verdict.py::test_done_verdict_closes_the_task"
+      ],
+      "content_sha256": "ce2d2f82af865aaadf8020ff7421ec8f317627b738df1ea2b8f4d6a2088ce2b8",
+      "dependents": [
+        "test:tests/test_agentic_verdict.py"
+      ],
+      "disposition": "repair",
+      "identity": "cli-command:verdict",
+      "path": "agentic/cli.py",
+      "rationale": "Working command shares the registry undergoing compatibility repair.",
+      "replacement": null,
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "d2eb9a5bcfa5270f4809e9354d7f174e107b1c009c8c4db4baa0a2137c4662de",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "hook:bd-bootstrap",
+      "path": "hooks/bd-bootstrap/ensure-bd.sh",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "92886bf3bfe985c24d6565cb28fe3c992d63ae1a44e15241f4b4b51ec70d0d8b",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "hook:bd-compliance",
+      "path": "hooks/bd-compliance/check.sh",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_bd_export_guard_hook.sh#assert:05003ffd2043790a712f5425e1fec2bc55338c4c972555ece2367c789ada259a"
+      ],
+      "content_sha256": "0615e963e50377e4b10ad39d44c1ede107e04e14bba81f93cf641e92d333458c",
+      "dependents": [
+        "test:tests/test_bd_export_guard_hook.sh"
+      ],
+      "disposition": "retain",
+      "identity": "hook:bd-export-guard",
+      "path": "hooks/bd-export-guard/pre-commit",
+      "rationale": "Installed hook implementation retained with a behavioral fixture.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "dd08ceead17292e49b40e9435cc3f207f44dc5de4576d498b30e73fcc3e9dd6c",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "hook:handoff-resume",
+      "path": "hooks/handoff-resume/resume-check.sh",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "9f695f9021d1800c01a0048b8fa924424e2856159d9bb4061601911169102222",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "hook:loop-tier-warn",
+      "path": "hooks/loop-tier-warn/tier-check.sh",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "bec225acd146df3736ec13ffea5dcbc5aeea88b9424fe6292185983bc157320e",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "hook:plugin-autorefresh",
+      "path": "hooks/plugin-autorefresh/autorefresh.sh",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "ea3dbd5734242fff194a2f21aaa92d288e2aa3648ad22e5deb902273d4962086",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "hook:plugin-staleness",
+      "path": "hooks/plugin-staleness/staleness-check.sh",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_review_gate.sh#assert:64e0a1d1085a645fc2f054d70f6cd341ce100bd266ef791b782fb522f2eb774b"
+      ],
+      "content_sha256": "44214797953d1c645df9dd45a4c283c906fd3fd0ad033769f39317d4f5bbab36",
+      "dependents": [
+        "test:tests/test_review_gate.sh"
+      ],
+      "disposition": "retain",
+      "identity": "hook:review-gate",
+      "path": "hooks/review-gate/pre-commit",
+      "rationale": "Installed hook implementation retained with a behavioral fixture.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "67fbbde08b1783cef2f09deb877d8470444bb089af55d35e412c0ec777600d64",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "hook:session-refresh",
+      "path": "hooks/session-refresh/refresh-check.sh",
+      "rationale": "No assertion-scoped behavioral evidence exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "61efcbff374bf123c1a79282625b73bdd4c3c2bed62591ccefcdc478fc263fe5",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "hook:tool-output-spill",
+      "path": "hooks/tool-output-spill/spill-check.sh",
+      "rationale": "No assertion-scoped behavioral evidence exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "0c5da7dd1d57ef72377c82d940f839d0e40a28fd10048acc805b2ed32a3ad65d",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "rule:browser-automation-handoffs",
+      "path": ".claude/rules/browser-automation-handoffs.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "rule"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "374e1314e9ea9b7e13e4fe7f0314cda8a7ad93a4a0a7ec1c7bf091307745f26e",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "rule:concurrent-sessions",
+      "path": ".claude/rules/concurrent-sessions.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "rule"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "7459c15b6067adc21c5c84d79f1c23f0f9cc14d8a8eff52c4d42252e00294885",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "rule:human-blockers",
+      "path": ".claude/rules/human-blockers.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "rule"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "cacb74a2488b3585ac732664e8b0a4038c69e862484925e398ddd54f492a1a95",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "rule:quality-discipline",
+      "path": ".claude/rules/quality-discipline.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "rule"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "2afdcfefd02a2c471b2fb9afabafb7228d9d5c128fecb599bce246e31b5790e9",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "rule:shell-text-tools",
+      "path": ".claude/rules/shell-text-tools.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "rule"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_drain_baton_retirement.sh#assert:ef2715e197872b64c8790e01a011f97d4730f759f40d378cd76443b615571021"
+      ],
+      "content_sha256": "6033204698f551a66da74aba062cba35df21d631fa78cd8d7185bbe39135b69f",
+      "dependents": [
+        "test:tests/test_drain_baton_retirement.sh"
+      ],
+      "disposition": "repair",
+      "identity": "rule:token-discipline",
+      "path": ".claude/rules/token-discipline.md",
+      "rationale": "Always-on instruction contains a confirmed contract to repair.",
+      "replacement": null,
+      "surface_type": "rule"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "1cd82b814b1bc0ccbd090128bc845c1bc8a3fe2f6315eb8df2570e38974d3af7",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "rule:untrusted-data",
+      "path": ".claude/rules/untrusted-data.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "rule"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_codex_skill_entrypoints.sh#assert:a28bf10bb0a07127d84c79aadae61d9680e359ab017585743e61622baedb63cd"
+      ],
+      "content_sha256": "f3e7cc1d82bcbfb926462f876e2a5f0a54f298dc95f23a231aeba18a82940ac1",
+      "dependents": [
+        "test:tests/test_codex_skill_entrypoints.sh"
+      ],
+      "disposition": "repair",
+      "identity": "runtime:antigravity",
+      "path": "runtimes/antigravity.md",
+      "rationale": "Shipped runtime profile scheduled for native-contract repair.",
+      "replacement": null,
+      "surface_type": "runtime"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "88e1d90391c298edf6b1f419bd2dec0c6cff25f491331479285393cf6eb47d8e",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "runtime:claude-code",
+      "path": "runtimes/claude-code.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "runtime"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_codex_skill_entrypoints.sh#assert:de327a505de6204e0c8f648cea75747e23fd0d7a95dc9cc04c939e34c253af5f"
+      ],
+      "content_sha256": "a14867a8b628b9d735e99e15da7eb9823e835ee8a11d81095760612b4359235f",
+      "dependents": [
+        "test:tests/test_codex_skill_entrypoints.sh"
+      ],
+      "disposition": "repair",
+      "identity": "runtime:codex",
+      "path": "runtimes/codex.md",
+      "rationale": "Shipped runtime profile scheduled for native-contract repair.",
+      "replacement": null,
+      "surface_type": "runtime"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "5917850dff4dc17f449aea78a8f8f199512bb55e6c08f737f9cbadf24ab9f4b7",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "runtime:fake-runtime",
+      "path": "runtimes/fake-runtime.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "runtime"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "f0e213105036fede6173205eab09de58578f98d9810a2e500f82ea59e2545e79",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "runtime:fake-runtime-no-headless",
+      "path": "runtimes/fake-runtime-no-headless.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "runtime"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "d4972b986497d55cbc432578dba383ad99eee5ac5ff8c262e333ad8eb25da187",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "runtime:gemini-cli",
+      "path": "runtimes/gemini-cli.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "runtime"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "e716016b5fd2d8499362ae4ae918b1b2278aefd3afbc3284868778146b3a6604",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:anti-ai-slop-writing",
+      "path": ".claude/skills/anti-ai-slop-writing/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "070988213fafbc88b7fa26fe7733c9bdb3fc6b0cffd5e8c445c3c020f2807f24",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:beads",
+      "path": ".claude/skills/beads/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "5d64f29a8a2f62c908674cc179570a42cc7e8dbb29a126017bd0bb890bdf9097",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:breakdown",
+      "path": ".claude/skills/breakdown/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_codex_skill_entrypoints.sh#assert:01f863614cd1d6139fb6d8e047217ed90a4227179b19db953048e094bf53b3b4"
+      ],
+      "content_sha256": "643986b5f9ad366c4659269b19bed418edfb31ea8322c193a542ac33ac9dd7fe",
+      "dependents": [
+        "test:tests/test_codex_skill_entrypoints.sh"
+      ],
+      "disposition": "repair",
+      "identity": "skill:build",
+      "path": ".claude/skills/build/SKILL.md",
+      "rationale": "Live skill scheduled for a scoped contract repair.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "c1bd7c906078c03bbdfb14cde976a61fe9f4eedaa71d8d58c4c767b06ae3e390",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:clone-audit",
+      "path": ".claude/skills/clone-audit/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "d2245266e19cea21063d5b7d62a0134b7f21e02730994df870b53f95e0066ce9",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:critique",
+      "path": ".claude/skills/critique/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "99beef3db83f59177e2aa484275119c9d61c84005e27e422c8eb98e4579df88f",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:ctx",
+      "path": ".claude/skills/ctx/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "28c082a06e726847568da5913d5600c935de194427a8aba5cd063e05343df5d2",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:design",
+      "path": ".claude/skills/design/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "0099936b7e9ce063da8ab4d9056a1cd053c601b43333ba0cd91c6218da4010c1",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:distill",
+      "path": ".claude/skills/distill/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "9fdc90a219a215f407b539f98595c4c4fc68d5316b30abb5fe513aeb1581b372",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:doc-coauthoring",
+      "path": ".claude/skills/doc-coauthoring/SKILL.md",
+      "rationale": "No assertion-scoped behavioral evidence exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_codex_skill_entrypoints.sh#assert:851968ed3ea87993d63040cd652bb2227d3fbf7480336e904dbf8a7e49b30831"
+      ],
+      "content_sha256": "0ddfd3ae4edbab8cb21134e9982385361c15fabf7be05ec0fa9ed7d433b411d8",
+      "dependents": [
+        "test:tests/test_codex_skill_entrypoints.sh"
+      ],
+      "disposition": "repair",
+      "identity": "skill:drain",
+      "path": ".claude/skills/drain/SKILL.md",
+      "rationale": "Live skill scheduled for a scoped contract repair.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "b7c5d18a77b8aa6abf748ced3e0e08fac140f8f7b4c34a5daf877f95937e5df5",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:evals",
+      "path": ".claude/skills/evals/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "11995a31bef5535b2c85fab95b1edaedde8126b2eda06f236306aa9a3fa201b3",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:example-corpus",
+      "path": ".claude/skills/example-corpus/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "aa44e3ac73eca6da9c3b5b0f4462c0451fa4d40e76043c99eab3b7f8524c4d6e",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:factcheck",
+      "path": ".claude/skills/factcheck/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "7974e367e8814507547745f295415f0febe05510a63d7fa2230eb449c79ea5a6",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:fleet",
+      "path": ".claude/skills/fleet/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "9b382b3b3571ec68e5853f4939ef790ccc1286c006e8f88368463808f32eec96",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:gate",
+      "path": ".claude/skills/gate/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "0b87ffc01b069f3f09d9deb775544b03fd1a8a1de314acadaa6cd57f39e65c76",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:grounding",
+      "path": ".claude/skills/grounding/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "d65779638a7136c1753e29aa983f7cc34b8cc4296a44754776ee1279b3867352",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:handoff",
+      "path": ".claude/skills/handoff/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "ce929fadc9e74476d13380da7fc1db2d5ad8e416aea8871309d25a1930223180",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:harness-audit",
+      "path": ".claude/skills/harness-audit/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "30cb9c6daafceba6e47b55d32673b1b5c5cd7f3eb4d9292f0fc90c91795e6dd4",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:humanizer",
+      "path": ".claude/skills/humanizer/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "36d32d25adbe5e3bbb1a0f0f3648e044575d78c88ff5130f2c1d9f62e750e22a",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:idea",
+      "path": ".claude/skills/idea/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "52b4965d5588b20e4183b1b322e4a2294f8f013633368e739d0f4e8851d21d7d",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:onboard",
+      "path": ".claude/skills/onboard/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "46753d32980eaff2f3444d575fb27ebb26f83cdcd6693b7f25c1c81382696ad2",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:prose-review",
+      "path": ".claude/skills/prose-review/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "fb2b3deef02d470ccaf1bf7fa152ce1fe172ad9ced64f1a28c2c3ebb030a05b0",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:qa-sweep",
+      "path": ".claude/skills/qa-sweep/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "4ec36b5e38880c11ec95c17026793db93b6d1d46eacecd27a4abb9c0c7caebb4",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:resume-handoff",
+      "path": ".claude/skills/resume-handoff/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "b5462315bab99a02830b25f6d46fdb53aeea2113f74e211d4861a51cc8f25c03",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:work",
+      "path": ".claude/skills/work/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "53841a76aca68eedd87fd40eca7f3aec534be96d85b9b37bbbcb6d1241b6da3c",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:workboard",
+      "path": ".claude/skills/workboard/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "00c7a07c84518109fd095741f3d424e9a02397a3468216f7aab38510e02dcf23",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:workflow-author",
+      "path": ".claude/skills/workflow-author/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "28f5f8280524943d0e7156c0155dcbce1cb29bf8228e7a332b376514b64806e7",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:writing-user-docs",
+      "path": ".claude/skills/writing-user-docs/SKILL.md",
+      "rationale": "No mechanically linked behavioral assertion exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_audit.py::test_measure_counts_one_grep_and_one_compose_bypass"
+      ],
+      "content_sha256": "32638aed27fb02434decc02f4616b06c2d76efa92f0fef31c3312a5b6f3b70fc",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_agentic_audit.py",
+      "path": "tests/test_agentic_audit.py",
+      "rationale": "Canonical test scheduled for a scoped behavioral update.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_bootstrap.sh#assert:b741df5ce270adc29aea8c8a2af72a84e39b70c14d8bc700f8a7751dc88ffe3c"
+      ],
+      "content_sha256": "da4b41b9f3cb8d80041e84059d6c71e7171eb90c61d15becd010e89e76f9d9da",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_bootstrap.sh",
+      "path": "tests/test_agentic_bootstrap.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_clone_race.sh#assert:f5f74b9c3c0b77b6d7dd7eec548ebfb7a937fc2dda6950d565b69a35a3727f74"
+      ],
+      "content_sha256": "eb52cffeb0b3cb1d48f18bd526e3bf11be14c9aabac3dfedb19eebe2ac946686",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_clone_race.sh",
+      "path": "tests/test_agentic_clone_race.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_initialize.py::test_controlled_bd_init_resets_its_own_commit"
+      ],
+      "content_sha256": "f8e945bd1b3c3565b4d045a74d53b6b081ca04c7cd0e7b8fd2d504e35c1a2b86",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_initialize.py",
+      "path": "tests/test_agentic_initialize.py",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_latency.sh#assert:6a8f7daa852e4d5c335c654545348213f509a9577d0ee9276fd371c3b986bb21"
+      ],
+      "content_sha256": "6c6d2823039a33162ba5e5cbef8bc18b2658e9e3a2c3099029f36e35c440784b",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_latency.sh",
+      "path": "tests/test_agentic_latency.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_pin.py::test_wrong_version_refuses_with_pin_and_upgrade_pointer"
+      ],
+      "content_sha256": "cae242921ca340c68ac92b80713e8aa54f1b0aa859ab4616dfe2231d2e1eaba9",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_pin.py",
+      "path": "tests/test_agentic_pin.py",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_ready.py::test_touch_disjointness_matches_the_conservative_glob_prefix_port"
+      ],
+      "content_sha256": "6b7b455c668d9d56f9a8cea534034aedb0086a56c5c576b7f3841288595b56dc",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_ready.py",
+      "path": "tests/test_agentic_ready.py",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_roundtrip.sh#assert:5e06ffb9573095a9fba21cc44ab941437a6ef778124dbdd3ca43d107429dfc5d"
+      ],
+      "content_sha256": "556c0c9982bcf41fe61e471b3e0aa1ccbd1362ab004d15a58033389409151fcf",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_roundtrip.sh",
+      "path": "tests/test_agentic_roundtrip.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_shadow.py::test_sync_maps_markdown_status_to_bd_frontier_classes"
+      ],
+      "content_sha256": "526aa884a955bfa8c44e199b67b5f4aa634257fb6461990e86e6e0c3e4217400",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_agentic_shadow.py",
+      "path": "tests/test_agentic_shadow.py",
+      "rationale": "Canonical test scheduled for a scoped behavioral update.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_verdict.py::test_schema_file_is_valid_json_schema"
+      ],
+      "content_sha256": "405ce927db4b7cb8cf2942e4c61d2006c80e4c5eb90db739635a6aabf8d45411",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_verdict.py",
+      "path": "tests/test_agentic_verdict.py",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_write_lock.sh#assert:f5f74b9c3c0b77b6d7dd7eec548ebfb7a937fc2dda6950d565b69a35a3727f74"
+      ],
+      "content_sha256": "3111ac02534894e60af642ba004e339c87ee01430233c4ee05faca8f4704d641",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_write_lock.sh",
+      "path": "tests/test_agentic_write_lock.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_bd_compliance_hook.sh#assert:382202953cfcfc5e199ad1b183e9da4e1d67fa6b763eb83239b47fa1a8a9ee3d"
+      ],
+      "content_sha256": "181eed116b6506c4c78cadd3137ebb128bc6035c6a9efb2b7caa24ee624bbc5b",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_bd_compliance_hook.sh",
+      "path": "tests/test_bd_compliance_hook.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_bd_export_guard_hook.sh#assert:382202953cfcfc5e199ad1b183e9da4e1d67fa6b763eb83239b47fa1a8a9ee3d"
+      ],
+      "content_sha256": "8fd2c22d18f6ed19d8eb66bfdc313a93525769eaaee6dfeb367d2d02680ec1c4",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_bd_export_guard_hook.sh",
+      "path": "tests/test_bd_export_guard_hook.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_check_inventory.sh#assert:e4b7e6a7e6e51dc7b940584aa28404f3ef7a95ca79f6fddfa01704373a090177"
+      ],
+      "content_sha256": "a3c77596ce7a994b5051a8687294d683072e08e4f1ca3b2b72c10ec8b673ba95",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_check_inventory.sh",
+      "path": "tests/test_check_inventory.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_check_sh_runner.sh#assert:05493a57c20b69648671eb10a0c367a35f600f29bf47b8e17968b7ba285b838f"
+      ],
+      "content_sha256": "555ce2df384bd29ff76c4e03a874813fa397320c0ecf1e21c2ce3e8ba7d6e43e",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_check_sh_runner.sh",
+      "path": "tests/test_check_sh_runner.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_check_token_discipline.sh#assert:2953e6da1005bdf00d45762e77cb45be7bb69a2b4fda6c50ad864dd02859acba"
+      ],
+      "content_sha256": "314f2d01d6e8253e04fe2cb3d92eda1039ca4ef35a9b125ee0f37a1085ceb2f7",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_check_token_discipline.sh",
+      "path": "tests/test_check_token_discipline.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_codex_skill_entrypoints.sh#assert:41539e3f857aebb9264cd79e4461bf4c1023af6008d6cb81d6617ed866879f52"
+      ],
+      "content_sha256": "b635ecd090c681ea58f8b0feeb992a005c075c8f4842d01e09f3f192313faec5",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_codex_skill_entrypoints.sh",
+      "path": "tests/test_codex_skill_entrypoints.sh",
+      "rationale": "Canonical test scheduled for a scoped behavioral update.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_ctx_capabilities.sh#assert:20ddfe999b2161d804edd6f6254b32065f0a6e580b5e7a946c6d893bd9198a8e"
+      ],
+      "content_sha256": "a525627705aa142fe29396c16ea75afb67449222ad67b11fa8846580f02e0f4c",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_ctx_capabilities.sh",
+      "path": "tests/test_ctx_capabilities.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_deep_research_synthesis_guard.sh#assert:81de8f80713817d6b450d199e6a20a2328cf5fe26153df2a44b76033b98c407e"
+      ],
+      "content_sha256": "7ab8f7c1a3c8c3ce6a2fc68b7cd4cfdb92a20908877ed76f1a4c98b5458aae6c",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_deep_research_synthesis_guard.sh",
+      "path": "tests/test_deep_research_synthesis_guard.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_doc_links.sh#assert:27de277adfe61aa6ca166bd78b0937987dcd31e0cb7da82c3623017851f2462f"
+      ],
+      "content_sha256": "ec303d9b031dbcb3e6c9ad782eb4f64794aad6765084af9dae8b3b55bd844581",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_doc_links.sh",
+      "path": "tests/test_doc_links.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_drain_baton_retirement.sh#assert:b274fe5807478f1d5a30a6416eb3a27e4b1e3dde4878fa2903e5eec81f77131a"
+      ],
+      "content_sha256": "436209d6808bd0eac120cd8fb4ba2f130d4d201663dc7aa48dbc321590a20b68",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_drain_baton_retirement.sh",
+      "path": "tests/test_drain_baton_retirement.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_drain_touch_claims.sh#assert:1b6ece2fa1aa696afeaff7e9665c9ca5f44193479506e967de0335605cb1eba7"
+      ],
+      "content_sha256": "d2ca97cc63945a4191479d6fed7014bbc32592ab2e8a9620604ed52ca2a11be1",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_drain_touch_claims.sh",
+      "path": "tests/test_drain_touch_claims.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_drain_write_deny.sh#assert:23b6dcb31d41a563d5b5703125d3e2999c45445e1487704a70f5a8155bde9d3c"
+      ],
+      "content_sha256": "85e236b1dcaef91b29410f90a51c87a9405120324dc9bd3b8130484508fb5a72",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_drain_write_deny.sh",
+      "path": "tests/test_drain_write_deny.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_eval_coverage_lint.sh#assert:8cc5e7bfef567a0eca6280ddea4f9c7a8af270e8d166f0916db8cbd8f4ef6d2b"
+      ],
+      "content_sha256": "33b16b1f96a72aa9753b33973f561161eb9e514ceb0131d800e0d907ef02eee1",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_eval_coverage_lint.sh",
+      "path": "tests/test_eval_coverage_lint.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_hook_templates.sh#assert:382202953cfcfc5e199ad1b183e9da4e1d67fa6b763eb83239b47fa1a8a9ee3d"
+      ],
+      "content_sha256": "bfd1ffcc7d2fae78a23e38bc35ef1eafd8ce16ac10024b01a15b69c94761fc00",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_hook_templates.sh",
+      "path": "tests/test_hook_templates.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_implementation_worker_contract.sh#assert:3602e33d74980192333641fd33b12a28062def3d7863b715a0000b0584f272bf"
+      ],
+      "content_sha256": "c2d633c62669c39e99639af1eddc333f7d77c6d095a8ad32cd25cb7e9e33cb47",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_implementation_worker_contract.sh",
+      "path": "tests/test_implementation_worker_contract.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_install_docs.sh#assert:c4de4fdf1c5e5351f9eee51218e4c9c18fc1f842b43f4bdaa807b2c08a21db56"
+      ],
+      "content_sha256": "8bce880a7beb2699d4e8d4f1beaf53acc92a5c6c0d1dc0910ab2124de839663b",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_install_docs.sh",
+      "path": "tests/test_install_docs.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_install_gates.sh#assert:7854a6ae400e9a89a249584b8b7baa2bef0e6c919e9839308d014a21fbdf1b47"
+      ],
+      "content_sha256": "b6def37d1487712664b0b5f374daf67a987890bf01028a704640254ef3376beb",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_install_gates.sh",
+      "path": "tests/test_install_gates.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "1abb5801e0fde846f142fa409fbf45834df3b43cc3c1c0d9b89beceec05f72f3",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_loop_tier_warn_hook.sh",
+      "path": "tests/test_loop_tier_warn_hook.sh",
+      "rationale": "No assertion-scoped behavioral evidence exists; measure before a later decision.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_next_stage_closers.sh#assert:28ebd3537d39c72ce11c40fbdb48b5b24c75f6346abca118a79d5709196cbb8f"
+      ],
+      "content_sha256": "6fde536b60005958dd7ab6b6b038c87fe3be9332704fa47de5492b9494516968",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_next_stage_closers.sh",
+      "path": "tests/test_next_stage_closers.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_plugin_version_helper.sh#assert:2ab1fe4eca37d1cf71a884abb1ebcac45f13692f062b058e19cf74dd83183749"
+      ],
+      "content_sha256": "195832f79a583b157de7537859267fc329bd295b658b585c456e814ac6a84880",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_plugin_version_helper.sh",
+      "path": "tests/test_plugin_version_helper.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_preflight_fanout.sh#assert:ee78cf92b85b357db6fc035ae740613878a6503ff73d808a70548d5edd4db452"
+      ],
+      "content_sha256": "10b8ec73f8a8c84be6bf035465bb0c28d694f96a44ac6e2c3c9636b90da94d26",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_preflight_fanout.sh",
+      "path": "tests/test_preflight_fanout.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_prose_pack_boundaries.sh#assert:96c3fe828048d32d42bbeaefb4d221ab1f008a062a884dbe4d4c65599a85b559"
+      ],
+      "content_sha256": "e46fdc7b756725e7d5fc227228cc5d6f706b5b139ab2b56ed6a7ecfce6e24927",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_prose_pack_boundaries.sh",
+      "path": "tests/test_prose_pack_boundaries.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_resolve_skill_path.sh#assert:3fd8d436fa4e5dc511ae3d3d465933c4c242ae1e198674292ee486fbef93fd71"
+      ],
+      "content_sha256": "2d502ba80c0c7ef4f3a415607ba560f78dc696dbfd90ecfb6dbbbd93c898c7ae",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_resolve_skill_path.sh",
+      "path": "tests/test_resolve_skill_path.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_review_gate.sh#assert:52be2106ce15a9cd5ed3e2bee315f8d4c7f1ca1dd3383ee209878db081c24ea3"
+      ],
+      "content_sha256": "7db8dd53c9a5549dcbf5b23b28304fbf0f374dcf8ef0db5a4ac520e6ab3e0687",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_review_gate.sh",
+      "path": "tests/test_review_gate.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_review_skip.sh#assert:2e31f86077ee5d6f7ee7160b14460a936226ae09944b1ef2162cb35047bd2e3d"
+      ],
+      "content_sha256": "e5acb1c800734485f6d9812e6a9bd6917af716ac5910ebef1aa1369edad09264",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_review_skip.sh",
+      "path": "tests/test_review_skip.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_run_sh_shared_deps.sh#assert:54146b7646587179571fa8bd1bb8f08eafd647f072f0def70405d5f92af20a7e"
+      ],
+      "content_sha256": "09fe2727a2ff0ce725add7feda886e2b37b99d03bc9fd15c0eacee0bb5c81d62",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_run_sh_shared_deps.sh",
+      "path": "tests/test_run_sh_shared_deps.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_screen_stub.sh#assert:053501e5e58e0d2162f942640bdf7cc9b0b47d6bf3e8d136ed8208e648377232"
+      ],
+      "content_sha256": "d441f4ad337a311fa8a5211beda47364bd8180b2404d10cc6c086fd1e5a82ead",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_screen_stub.sh",
+      "path": "tests/test_screen_stub.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_self_gate_wiring.sh#assert:53221609e52beee72a77ed7f4961c7c938d09091f8fceb372582588d1e96a841"
+      ],
+      "content_sha256": "db62169dc29796731ebc139b9bfe00688ab5b1d7810c276f408d3a2899ec6e40",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_self_gate_wiring.sh",
+      "path": "tests/test_self_gate_wiring.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_session_refresh_hook.sh#assert:7f0164a2124b73c25ac32996eedfb9efd54311e67670b7f4e8554db11960792f"
+      ],
+      "content_sha256": "5acdc37884f41747a142d08c1357a963f4d1f6ac6cd6a45cee04d29555609a93",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_session_refresh_hook.sh",
+      "path": "tests/test_session_refresh_hook.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_status_cutover.sh#assert:185398530722b037aee5878b93f23fce2630e84811100453ca2d0725f53d5dcd"
+      ],
+      "content_sha256": "d153a24cbe0af68ff4922ac9aea9926b55fe68f1f39979eeca0cadb9f061de09",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_status_cutover.sh",
+      "path": "tests/test_status_cutover.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_sync_workflows.sh#assert:cd85a482a1845f4f173319bf371a65472468c3bdc4b0fc0e991a93420a599836"
+      ],
+      "content_sha256": "763b0a11180335cb613f9bffbaa524cb464ac5f5693b447ad291fbefaa5613cb",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_sync_workflows.sh",
+      "path": "tests/test_sync_workflows.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_token_discipline_structure.sh#assert:89a40d9a8f1b6730a2b05fae7b0645f5939db76b57076d6842b9a91ef66a6772"
+      ],
+      "content_sha256": "291d0a363a696f5333d798cb85766a4b72d0b87ec47ece60094dba9b5be796c0",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_token_discipline_structure.sh",
+      "path": "tests/test_token_discipline_structure.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_tool_output_spill_hook.sh#assert:7f0164a2124b73c25ac32996eedfb9efd54311e67670b7f4e8554db11960792f"
+      ],
+      "content_sha256": "e64b34f03c71cc02e39cd8d106128ff582088d490932a08f3f935031af45d95c",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_tool_output_spill_hook.sh",
+      "path": "tests/test_tool_output_spill_hook.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_verifier_worktree_integrity.sh#assert:08d030a4cec7e622fdca5344c2006653a64e97a6237904f181fcb6c1c889a2b9"
+      ],
+      "content_sha256": "d1f4dc65feec3b903068a4585999cf1918696712780b53a8496a5ae7c81b1542",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_verifier_worktree_integrity.sh",
+      "path": "tests/test_verifier_worktree_integrity.sh",
+      "rationale": "Canonical test retained by the versioned runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "d019be13e7690e374c85c3ca964ee78dc6fa10581846584f175f1eab99f269e8",
+      "dependents": [],
+      "disposition": "retire-dead",
+      "identity": "workflow:cross-repo-beads-adoption",
+      "path": ".claude/workflows/cross-repo-beads-adoption.js",
+      "rationale": "Completed one-off workflow is no longer a live execution surface.",
+      "replacement": "agentic init",
+      "surface_type": "workflow"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_deep_research_synthesis_guard.sh#assert:81de8f80713817d6b450d199e6a20a2328cf5fe26153df2a44b76033b98c407e"
+      ],
+      "content_sha256": "5f4ea53a9b0f240d5377ddc143beb755f7748a7bdd0819039bb69be0f0299061",
+      "dependents": [
+        "test:tests/test_deep_research_synthesis_guard.sh"
+      ],
+      "disposition": "retain",
+      "identity": "workflow:deep-research",
+      "path": ".claude/workflows/deep-research.js",
+      "rationale": "Reusable live workflow retained with synthesis coverage.",
+      "replacement": null,
+      "surface_type": "workflow"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "b49bc1ec86c412dda44d5dd3344065343d002d666d91245b18b6271831e6fa5e",
+      "dependents": [],
+      "disposition": "retire-dead",
+      "identity": "workflow:full-cutover-and-health-check",
+      "path": ".claude/workflows/full-cutover-and-health-check.js",
+      "rationale": "Completed one-off workflow is no longer a live execution surface.",
+      "replacement": "maintained repository checks",
+      "surface_type": "workflow"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "6410415dbc76677b315589788c864d37883789663985b4c008b23bc0baafe306",
+      "dependents": [],
+      "disposition": "retire-dead",
+      "identity": "workflow:ultracode-queue-sweep",
+      "path": ".claude/workflows/ultracode-queue-sweep.js",
+      "rationale": "Completed one-off workflow is no longer a live execution surface.",
+      "replacement": "bd ready plus /work or /drain",
+      "surface_type": "workflow"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "2f50ddcbe48d45b1792ae4ff7dd04c16022275315f6d593326c9a0bbcfa257b3",
+      "dependents": [],
+      "disposition": "retire-dead",
+      "identity": "workflow:ultracode-queue-sweep-phase2",
+      "path": ".claude/workflows/ultracode-queue-sweep-phase2.js",
+      "rationale": "Completed one-off workflow is no longer a live execution surface.",
+      "replacement": "bd ready plus /work or /drain",
+      "surface_type": "workflow"
+    }
+  ]
+}

@@ -1,0 +1,278 @@
+{
+  "fragment": "core",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_audit.py",
+      "runner": "pytest",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_bootstrap.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_clone_race.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_initialize.py",
+      "runner": "pytest",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_latency.sh",
+      "runner": "bash",
+      "serial": true,
+      "serial_reason": "Wall-clock ceiling must not share CPU with the concurrent batch."
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_pin.py",
+      "runner": "pytest",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_ready.py",
+      "runner": "pytest",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_roundtrip.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_shadow.py",
+      "runner": "pytest",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_verdict.py",
+      "runner": "pytest",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_write_lock.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_bd_compliance_hook.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_bd_export_guard_hook.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_check_inventory.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_check_sh_runner.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_check_token_discipline.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_codex_skill_entrypoints.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_ctx_capabilities.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_deep_research_synthesis_guard.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_doc_links.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_drain_baton_retirement.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_drain_touch_claims.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_drain_write_deny.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "quarantine",
+      "path": "tests/test_eval_coverage_lint.sh",
+      "reason": "Owned by specs/eval-coverage-tiers; requires Bash 4 associative arrays unavailable on the supported stock macOS Bash.",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_hook_templates.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_implementation_worker_contract.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_install_docs.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_install_gates.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_loop_tier_warn_hook.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_next_stage_closers.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_plugin_version_helper.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_preflight_fanout.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_prose_pack_boundaries.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_resolve_skill_path.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_review_gate.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_review_skip.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_run_sh_shared_deps.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_screen_stub.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_self_gate_wiring.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_session_refresh_hook.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_status_cutover.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_sync_workflows.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_token_discipline_structure.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_tool_output_spill_hook.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_verifier_worktree_integrity.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}
