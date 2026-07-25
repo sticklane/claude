@@ -23,7 +23,9 @@ def _git_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     repo.mkdir()
     subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@example.com"], cwd=repo, check=True
+    )
     subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
     (repo / "tracked").write_text("base\n", encoding="utf-8")
     subprocess.run(["git", "add", "tracked"], cwd=repo, check=True)
@@ -66,14 +68,20 @@ def event_contract_corpus():
     rejected = [
         ("uppercase UUID", changed(event_id=baseline["event_id"].upper())),
         ("compact UUID", changed(run_id=baseline["run_id"].replace("-", ""))),
-        ("wrong UUID version", changed(event_id=str(events.uuid7()).replace("-7", "-4", 1))),
+        (
+            "wrong UUID version",
+            changed(event_id=str(events.uuid7()).replace("-7", "-4", 1)),
+        ),
         ("timestamp offset", changed(timestamp_utc="2026-07-25T12:00:00+00:00")),
         ("timestamp without seconds", changed(timestamp_utc="2026-07-25T12:00Z")),
         ("timestamp leap second", changed(timestamp_utc="2026-07-25T12:00:60Z")),
         ("boolean attempt", changed(attempt=True)),
         ("empty artifacts", changed(artifact_paths=[])),
         ("uppercase fingerprint", changed(finding_fingerprint="A" * 64)),
-        ("missing field", {key: value for key, value in baseline.items() if key != "reason"}),
+        (
+            "missing field",
+            {key: value for key, value in baseline.items() if key != "reason"},
+        ),
         ("extra field", changed(unexpected="value")),
     ]
     return accepted, rejected
@@ -197,9 +205,7 @@ def test_append_uses_one_write_and_fsync_before_unlock(tmp_path, monkeypatch):
 
 def test_reader_rejects_malformed_interior_record(tmp_path):
     repo = _git_repo(tmp_path)
-    path = events.monthly_log_path(
-        repo, datetime(2026, 7, 25, tzinfo=timezone.utc)
-    )
+    path = events.monthly_log_path(repo, datetime(2026, 7, 25, tzinfo=timezone.utc))
     path.parent.mkdir(parents=True)
     valid = json.dumps(_record(timestamp_utc="2026-07-25T12:00:00Z"))
     path.write_text(f"{valid}\n{{bad}}\n{valid}\n", encoding="utf-8")
@@ -210,12 +216,10 @@ def test_reader_rejects_malformed_interior_record(tmp_path):
 
 def test_reader_ignores_only_an_incomplete_final_record(tmp_path):
     repo = _git_repo(tmp_path)
-    path = events.monthly_log_path(
-        repo, datetime(2026, 7, 25, tzinfo=timezone.utc)
-    )
+    path = events.monthly_log_path(repo, datetime(2026, 7, 25, tzinfo=timezone.utc))
     path.parent.mkdir(parents=True)
     record = _record(timestamp_utc="2026-07-25T12:00:00Z")
-    path.write_bytes(json.dumps(record).encode() + b"\n{\"schema_version\":")
+    path.write_bytes(json.dumps(record).encode() + b'\n{"schema_version":')
 
     with pytest.warns(events.IncompleteFinalRecordWarning):
         assert events.read_events(cwd=repo, month="2026-07") == [record]
@@ -227,9 +231,7 @@ def test_reader_ignores_only_an_incomplete_final_record(tmp_path):
 
 def test_reader_ignores_valid_json_final_record_without_terminating_newline(tmp_path):
     repo = _git_repo(tmp_path)
-    path = events.monthly_log_path(
-        repo, datetime(2026, 7, 25, tzinfo=timezone.utc)
-    )
+    path = events.monthly_log_path(repo, datetime(2026, 7, 25, tzinfo=timezone.utc))
     path.parent.mkdir(parents=True)
     record = _record(timestamp_utc="2026-07-25T12:00:00Z")
     path.write_bytes(json.dumps(record).encode())
@@ -242,9 +244,7 @@ def test_reader_validates_schema_and_explicit_unknowns(tmp_path):
     repo = _git_repo(tmp_path)
     record = _record(timestamp_utc="2026-07-25T12:00:00Z")
     record["session_id"] = None
-    path = events.monthly_log_path(
-        repo, datetime(2026, 7, 25, tzinfo=timezone.utc)
-    )
+    path = events.monthly_log_path(repo, datetime(2026, 7, 25, tzinfo=timezone.utc))
     path.parent.mkdir(parents=True)
     path.write_text(json.dumps(record) + "\n", encoding="utf-8")
 
@@ -279,7 +279,9 @@ def test_cli_persistence_failure_is_nonfatal_and_does_not_touch_tracker(tmp_path
     tracker_path.write_text('{"status":"in_progress"}\n', encoding="utf-8")
     tracker_before = tracker_path.read_bytes()
     common_dir = events.git_common_dir(repo)
-    (common_dir / "agentic").write_text("blocks run-event directory\n", encoding="utf-8")
+    (common_dir / "agentic").write_text(
+        "blocks run-event directory\n", encoding="utf-8"
+    )
     record = _record(timestamp_utc="2026-07-25T12:00:00Z")
     env = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
 

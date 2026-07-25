@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import fcntl
+import functools
 import json
 import os
 import secrets
@@ -21,10 +22,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
+import jsonschema
+
 SCHEMA_VERSION = 1
 UNKNOWN = "unknown"
 MAX_RECORD_BYTES = 64 * 1024
 RETENTION_DAYS = 90
+SCHEMA_PATH = Path(__file__).resolve().parent / "schema" / "run-event.json"
 EVENT_FIELDS = (
     "schema_version",
     "event_id",
@@ -46,11 +50,6 @@ EVENT_FIELDS = (
     "disposition",
     "reason",
 )
-_STRING_FIELDS = frozenset(EVENT_FIELDS) - {
-    "schema_version",
-    "attempt",
-    "artifact_paths",
-}
 
 
 class EventError(ValueError):
@@ -127,11 +126,15 @@ def uuid7(now: datetime | None = None) -> str:
 
 
 def is_uuid7(value: object) -> bool:
-    try:
-        parsed = uuid.UUID(str(value))
-    except (ValueError, AttributeError):
+    if not isinstance(value, str):
         return False
-    return parsed.version == 7 and parsed.variant == uuid.RFC_4122
+    try:
+        parsed = uuid.UUID(value)
+    except ValueError:
+        return False
+    return (
+        str(parsed) == value and parsed.version == 7 and parsed.variant == uuid.RFC_4122
+    )
 
 
 def new_run(prior_run_id: str = UNKNOWN) -> RunContext:
@@ -216,49 +219,38 @@ def _parse_timestamp(value: str) -> datetime:
     return parsed
 
 
+def _is_json_datetime(value: object) -> bool:
+    if not isinstance(value, str):
+        return True
+    try:
+        _parse_timestamp(value)
+    except EventValidationError:
+        return False
+    return True
+
+
+@functools.lru_cache(maxsize=1)
+def _event_validator() -> jsonschema.Draft202012Validator:
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    format_checker = jsonschema.FormatChecker()
+    format_checker.checks("date-time")(_is_json_datetime)
+    return jsonschema.Draft202012Validator(schema, format_checker=format_checker)
+
+
 def validate_event(record: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(record, Mapping):
         raise EventValidationError("event must be an object")
-    missing = sorted(set(EVENT_FIELDS) - set(record))
-    extra = sorted(set(record) - set(EVENT_FIELDS))
-    if missing:
-        raise EventValidationError(f"missing fields: {', '.join(missing)}")
-    if extra:
-        raise EventValidationError(f"unknown fields: {', '.join(extra)}")
-    if record["schema_version"] != SCHEMA_VERSION:
-        raise EventValidationError(f"schema_version must be {SCHEMA_VERSION}")
-    if isinstance(record["attempt"], bool) or not isinstance(record["attempt"], int):
-        raise EventValidationError("attempt must be an integer")
-    if record["attempt"] < 1:
-        raise EventValidationError("attempt must be at least 1")
-    for field in _STRING_FIELDS:
-        if not isinstance(record[field], str) or not record[field]:
-            raise EventValidationError(f"{field} must be a non-empty string")
-    for field in ("event_id", "run_id"):
-        if not is_uuid7(record[field]):
-            raise EventValidationError(f"{field} must be UUIDv7")
-    for field in ("prior_run_id", "parent_event_id"):
-        if record[field] != UNKNOWN and not is_uuid7(record[field]):
-            raise EventValidationError(f"{field} must be UUIDv7 or 'unknown'")
-    _parse_timestamp(record["timestamp_utc"])
-    artifacts = record["artifact_paths"]
-    if artifacts != UNKNOWN and (
-        not isinstance(artifacts, list)
-        or not artifacts
-        or any(not isinstance(path, str) or not path for path in artifacts)
-    ):
-        raise EventValidationError(
-            "artifact_paths must be 'unknown' or a non-empty string array"
-        )
-    fingerprint = record["finding_fingerprint"]
-    if fingerprint != UNKNOWN and (
-        len(fingerprint) != 64
-        or any(character not in "0123456789abcdef" for character in fingerprint)
-    ):
-        raise EventValidationError(
-            "finding_fingerprint must be lowercase SHA-256 or 'unknown'"
-        )
-    return dict(record)
+    candidate = dict(record)
+    errors = sorted(
+        _event_validator().iter_errors(candidate),
+        key=lambda error: (list(error.absolute_path), error.message),
+    )
+    if errors:
+        error = errors[0]
+        location = ".".join(str(part) for part in error.absolute_path)
+        prefix = f"{location}: " if location else ""
+        raise EventValidationError(f"{prefix}{error.message}")
+    return candidate
 
 
 def git_common_dir(cwd: str | os.PathLike[str] = ".") -> Path:
@@ -332,6 +324,8 @@ def try_append_event(
 ) -> EventWriteResult:
     try:
         append_event(record, cwd=cwd)
+    except (EventValidationError, EventTooLarge):
+        raise
     except (EventError, OSError, subprocess.SubprocessError) as exc:
         warnings.warn(
             f"run event write failed; run telemetry is unknown: {exc}",
@@ -412,17 +406,17 @@ def read_events(
     lines = data.splitlines(keepends=True)
     records = []
     for index, raw in enumerate(lines, start=1):
-        final_incomplete = index == len(lines) and not raw.endswith(b"\n")
+        final_unterminated = index == len(lines) and not raw.endswith(b"\n")
+        if final_unterminated:
+            warnings.warn(
+                f"ignored incomplete final event record at {path}:{index}",
+                IncompleteFinalRecordWarning,
+                stacklevel=2,
+            )
+            break
         try:
             value = json.loads(raw)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            if final_incomplete:
-                warnings.warn(
-                    f"ignored incomplete final event record at {path}:{index}",
-                    IncompleteFinalRecordWarning,
-                    stacklevel=2,
-                )
-                break
             raise MalformedEventLog(
                 f"{path}: malformed record at line {index}: {exc}"
             ) from exc
@@ -475,9 +469,16 @@ def run_cli(args: argparse.Namespace) -> int:
                 with open(args.file, encoding="utf-8") as handle:
                     record = json.load(handle)
             result = try_append_event(record, cwd=args.cwd)
-            if not result.written:
-                return 1
-            print(record["event_id"])
+            print(
+                json.dumps(
+                    {
+                        **dataclasses.asdict(result),
+                        "event_id": record["event_id"],
+                        "result": "written" if result.written else UNKNOWN,
+                    },
+                    sort_keys=True,
+                )
+            )
         elif args.event_action == "read":
             print(
                 json.dumps(read_events(cwd=args.cwd, month=args.month), sort_keys=True)
