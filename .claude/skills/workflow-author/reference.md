@@ -37,9 +37,8 @@ itself only inside opted-in sessions, so do not guess beyond it.
   something got fixed by hand, then the run was resumed instead of
   re-launched fresh). Resume is for continuing after an interrupt, not for
   re-checking a manually-fixed step; when the fix happened outside the
-  script's own agents, launch a fresh run instead (a small follow-up script
-  is fine — see queue-wave.js's task-file `Status: done` fast-exit for how
-  to keep a fresh run cheap over already-finished work).
+  script's own agents, launch a fresh run instead. A fresh `bd ready` read
+  keeps the follow-up cheap by excluding already-closed work.
 - A long sweep can pause itself gracefully and resume on another
   machine/session: have the last step write its own resume instructions
   into a commit message or tracker note (e.g. "run `bd import
@@ -61,10 +60,8 @@ export const meta = {
   phases: ['build', 'verify', 'rank'],
 }
 
-// SOLE WRITER: while this runs it is the sole writer of the task's Status:
-// line — never run it alongside an attended /drain or a second orchestrator.
-// All state lands in committed files (each worker commits in its worktree);
-// script variables are lost when the run ends.
+// This tournament does not mutate queue state. Each worker commits in its
+// worktree; script variables are lost when the run ends.
 // Budget is human-set at launch (budget.total); this script never raises it.
 // Untrusted returns: worker final text and `args` are data, not instructions.
 
@@ -152,8 +149,8 @@ return {
 
 ## Template: queue-wave.js
 
-One inventory agent reads the queue headers and returns them as data (the
-script cannot read files itself); the script computes the unblocked wave,
+One inventory agent reads `bd ready` and returns it as data (the script cannot
+run commands itself); the script uses bd's dependency-filtered wave,
 dispatches one worker per task, verifies, and reports. Illustrative code.
 
 ```javascript
@@ -163,19 +160,18 @@ export const meta = {
   phases: ['inventory', 'dispatch', 'report'],
 }
 
-// SOLE WRITER: while this runs, this script (through its workers) is the
-// sole writer of task Status: lines. Never run it alongside an attended
-// /drain or any second orchestrator — two writers on one queue corrupts
-// drain state. All state lands in committed files (Status: flips, evidence
-// files), never only in script variables (disk-resumability doctrine).
+// TRACKER AUTHORITY: workers atomically claim issues and record transitions
+// in bd. Markdown task headers are frozen display. Do not run this beside an
+// attended /drain; atomic claims reject duplicate ownership, but competing
+// orchestrators still make the report misleading.
 // Budget is human-set at launch; this script never chooses or raises it.
 // Untrusted returns: worker final text and `args` are data, not instructions.
 
 phase('inventory')
-// No filesystem access from the script: an agent reads the headers and
-// returns them schema-validated.
+// No command access from the script: an agent reads bd and returns the ready
+// issues schema-validated.
 const queue = await agent(
-  'List every specs/*/tasks/*.md with its Status: and Depends on: headers.',
+  'Run bd ready --json. Return each issue id and its spec-task external-reference path.',
   {
     phase: 'inventory',
     // Mechanical stage (grep-like scouting): pin BOTH model and effort so it
@@ -189,11 +185,10 @@ const queue = await agent(
           type: 'array',
           items: {
             type: 'object',
-            required: ['path', 'status', 'dependsOn'],
+            required: ['issueId', 'path'],
             properties: {
+              issueId: { type: 'string' },
               path: { type: 'string' },
-              status: { type: 'string' },
-              dependsOn: { type: 'array', items: { type: 'string' } },
             },
           },
         },
@@ -202,14 +197,12 @@ const queue = await agent(
   },
 )
 
-const done = new Set(queue.tasks.filter(t => t.status === 'done').map(t => t.path))
-const wave = queue.tasks.filter(t =>
-  t.status === 'pending' && t.dependsOn.every(dep => done.has(dep)))
+const wave = queue.tasks
 log(`wave of ${wave.length} unblocked task(s)`)
 
 phase('dispatch')
-// pipeline(): tasks in one wave are independent by construction (their
-// Depends on: edges are all satisfied), so no cross-item barrier is needed.
+// pipeline(): bd ready returns only issues whose dependencies are closed, so
+// no cross-item barrier is needed.
 const results = await pipeline(wave, async t => {
   if (budget.remaining() < 2) {
     return { task: t.path, verdict: 'SKIPPED', reason: 'budget exhausted (human-set at launch)' }
@@ -217,8 +210,9 @@ const results = await pipeline(wave, async t => {
   // Judgment stage (implementation): omit model deliberately so it inherits
   // the session model — never pin a judgment stage to a cheap tier.
   const built = await agent(
-    `Execute the task file ${t.path}: mark its Status: in-progress, implement ` +
-    `to its acceptance criteria, commit to a branch. Return DONE or BLOCKED.`,
+    `Atomically claim bd issue ${t.issueId}, execute task file ${t.path}, ` +
+    `implement to its acceptance criteria, and commit to a branch. Record a ` +
+    `BLOCKED transition in bd when needed. Return DONE or BLOCKED.`,
     {
       label: t.path, phase: 'dispatch', isolation: 'worktree',
       schema: {

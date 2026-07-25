@@ -33,15 +33,13 @@ to a fresh context, never seeding this session's own successor.
    plugin-distributed, so an unconfigured repo is a real state to land in,
    not a hypothetical.
 2. **Verify completed work before parking.** Run the `verifier` agent on any
-   work COMPLETED this session (a task whose Status flipped to done, a spec
+   work COMPLETED this session (an issue now closed in bd, a spec
    whose criteria you're claiming met) — completed work leaves the session
    verified, not self-reported. The verdict is recorded on the handoff
-   issue's `--notes` in step 4. A FAIL flips the task back to
-   `Status: in-progress` and becomes the parked next step. If the verifier
-   genuinely cannot run before parking, flip the task to
-   `Status: needs-verification` instead of leaving an unverified `done` —
-   the scanners treat it as open agent-bounded work and the verifier flips
-   it to `done` later. Skip only when the session completed nothing (pure
+   issue's `--notes` in step 4. A FAIL reopens the issue in bd and becomes
+   the parked next step. If the verifier genuinely cannot run before parking,
+   set the issue to the repository's needs-verification bd state instead of
+   leaving it closed. Skip only when the session completed nothing (pure
    exploration, or all work is still in flight).
 3. **Comment the session state onto every touched issue.** For each bd issue
    this session leaves open or touched:

@@ -1463,6 +1463,13 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         self.assertEqual(len(blocked), 1)
         self.assertIn("no unblock step recorded", blocked[0]["why"])
 
+    def test_unregistered_task_points_to_create_only_registration(self):
+        spec = _unblock_spec([_unblock_task(status="unregistered")])
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("missing bd issue", blocked[0]["why"])
+        self.assertIn("agentic register-spec specs/demo", blocked[0]["cmd"])
+
     def test_ask_unblock_task_does_not_duplicate_spec_blocked_row(self):
         # The ask task already has its own needs-answer row; the spec-level
         # blocked row must not repeat it.
@@ -1472,14 +1479,11 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         inbox = self._inbox(spec)
         self.assertEqual([i["state"] for i in inbox], ["needs-answer"])
 
-    def test_waiting_spec_ask_unblock_becomes_needs_answer(self):
+    def test_waiting_spec_ask_unblock_is_frozen_and_ignored(self):
         spec = _unblock_spec(
             [], status="waiting", unblock={"type": "ask", "step": "sign in at URL?"}
         )
-        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
-        self.assertEqual(len(answer), 1)
-        self.assertIn("sign in at URL?", answer[0]["why"])
-        self.assertNotIn("cmd", answer[0])
+        self.assertEqual(self._inbox(spec), [])
 
     def test_waiting_spec_agent_unblock_is_not_an_inbox_item(self):
         # Agent-bounded: the recheck step proceeds; not an attention item.
@@ -1488,11 +1492,9 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         )
         self.assertEqual(self._inbox(spec), [])
 
-    def test_waiting_spec_without_unblock_still_flags(self):
+    def test_waiting_spec_without_unblock_is_frozen_and_ignored(self):
         spec = _unblock_spec([], status="waiting")
-        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
-        self.assertEqual(len(blocked), 1)
-        self.assertIn("no unblock step recorded", blocked[0]["why"])
+        self.assertEqual(self._inbox(spec), [])
 
 
 class TestStructuredUnblockForwarded(unittest.TestCase):
@@ -1518,18 +1520,6 @@ class TestStructuredUnblockForwarded(unittest.TestCase):
         answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
         self.assertEqual(answer[0].get("deferred_questions"), ["which provider?"])
 
-    def test_waiting_spec_ask_item_forwards_structured_unblock_dict(self):
-        ub = {"type": "ask", "step": "sign in at URL?"}
-        spec = _unblock_spec([], status="waiting", unblock=ub)
-        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
-        self.assertEqual(answer[0].get("unblock"), ub)
-
-    def test_waiting_spec_blocked_item_marks_unblock_missing_when_absent(self):
-        spec = _unblock_spec([], status="waiting")
-        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
-        self.assertIs(blocked[0].get("unblock"), None)
-        self.assertIs(blocked[0].get("unblock_missing"), True)
-
     def test_blocked_task_item_marks_unblock_missing_when_absent(self):
         spec = _unblock_spec([_unblock_task()])
         blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
@@ -1543,15 +1533,6 @@ class TestStructuredUnblockForwarded(unittest.TestCase):
         )
         answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
         self.assertNotEqual(answer[0].get("unblock_missing"), True)
-
-    def test_why_text_unchanged_on_blocked_waiting_spec(self):
-        # Display prose stays as-is for backward compatibility.
-        spec = _unblock_spec([], status="waiting")
-        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
-        self.assertEqual(
-            blocked[0]["why"], "no unblock step recorded — add an Unblock: line"
-        )
-
 
 def _agent_tool_use(tool_use_id, subagent_type="scout", desc="do the thing", ts=OLD_TS):
     """An assistant record spawning a sub-agent (real transcript shape:
@@ -2089,16 +2070,13 @@ class TestFrozenSpecStatus(unittest.TestCase):
         ]
         self.assertEqual(len(stale), 1)
         self.assertNotIn("--defer", stale[0].get("cmd", ""))
-        cmd = stale[0].get("cmd", "")
-        self.assertIn("--defer demo", cmd)
-        self.assertIn("/r/demo", cmd)
 
-    def test_defer_flag_is_registered_on_the_cli(self):
+    def test_defer_flag_is_absent_from_the_cli(self):
         with mock.patch.object(sys, "argv", ["workboard.py", "--help"]):
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 with self.assertRaises(SystemExit):
                     workboard.main()
-        self.assertIn("--defer", out.getvalue())
+        self.assertNotIn("--defer", out.getvalue())
 
 
 if __name__ == "__main__":

@@ -45,9 +45,9 @@ code" platitudes. If a section is becoming a procedure, it should be a skill.
   what lives there; mark generated/vendored dirs "generated — don't read".
   Pointers only; the file-by-file exclusion still applies.
 - `## Commands`: the verified commands from §2 (with their quirks).
-- `## State`: where open work lives — `specs/` and task `Status:` headers and
-  the status script if the repo uses the spec pipeline, else `docs/TASKS.md`,
-  else "no task tracking".
+- `## State`: where open work lives — bd plus its status command if the repo
+  uses the spec pipeline (`specs/` holds definitions and evidence only), else
+  `docs/TASKS.md`, else "no task tracking".
 
 **CLAUDE.md — conventions, gotchas, checks.** Its first 10 lines carry the
 `@AGENTS.md` bridge line (Claude Code imports AGENTS.md through it) so

@@ -6,7 +6,7 @@ JSON snapshot of all open work (with --json; consumed by agent-console's
 live dashboard). With no --json flag it prints a one-line
 summary. It covers:
 
-  - toolkit specs   specs/<slug>/SPEC.md + specs/<slug>/tasks/NN-*.md (Status: lines)
+  - toolkit specs   authored task definitions plus live bd issue state
   - Kiro specs      .kiro/specs/<name>/tasks.md checkbox state ([ ] [-] [x])
   - Antigravity     ~/.gemini/antigravity*/brain/<id>/ artifacts (task.md + metadata)
   - handoffs        open bd issues labeled `handoff` (blocked-on-human, resumable)
@@ -15,9 +15,8 @@ summary. It covers:
   - git             branch, dirty files, unpushed commits, worktrees
 
 Stdlib only. Read-only: it never mutates any of the state it reports on,
-except three explicit, --flag-gated actions: `--abandon`/`--abandon-stale`
-(Antigravity skip-marker), `--defer` (writes a `Status: deferred` header into
-a spec) and `--prune-stale-sessions` (deletes dead-pid
+except two explicit, --flag-gated actions: `--abandon`/`--abandon-stale`
+(Antigravity skip-marker) and `--prune-stale-sessions` (deletes dead-pid
 ~/.claude/sessions/*.json records).
 
 Usage:
@@ -43,7 +42,7 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parent.parent / "_shared"))
-from headers import DEPENDS_RE, PRIORITY_RE, STATUS_RE  # noqa: E402
+from headers import PRIORITY_RE  # noqa: E402
 
 STALE_DAYS_DEFAULT = 7
 # A `task/*` worktree counts as a live drain only if its newest activity is
@@ -277,9 +276,6 @@ def git_info(repo):
 
 # ---------------------------------------------------------------- specs
 
-# STATUS_RE, DEPENDS_RE, PRIORITY_RE now live in _shared/headers.py (imported
-# at the top of this module) so every consumer parses the same header one
-# way. PRIORITY_RE there is range-restricted to P0-P3.
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 UNBLOCK_RE = re.compile(r"^Unblock:\s*(run|agent|ask):\s*(\S.*?)\s*$", re.MULTILINE)
 DEFERRED_RE = re.compile(
@@ -334,12 +330,76 @@ def parse_deferred_questions(text):
 _TASK_NUM_RE = re.compile(r"^(\d+)-")
 
 
-def scan_toolkit_specs(repo):
-    """specs/<slug>/SPEC.md + tasks/NN-*.md with 'Status: <value>' lines."""
+def _bd_task_status(status):
+    return {
+        "closed": "done",
+        "open": "pending",
+        "in_progress": "in-progress",
+    }.get((status or "").lower(), (status or "unregistered").lower())
+
+
+def _list_bd_issues(repo):
+    if not (repo / ".beads").is_dir():
+        return []
+    try:
+        out = subprocess.run(
+            ["bd", "-C", str(repo), "list", "--all", "--limit", "0", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if out.returncode != 0:
+        return []
+    try:
+        issues = json.loads(out.stdout)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(issues, list):
+        return []
+    return issues
+
+
+def _bd_task_record(issue, issues_by_id):
+    deps = []
+    unresolved = []
+    satisfied = True
+    for edge in issue.get("dependencies") or []:
+        if edge.get("type") != "blocks":
+            continue
+        dep_id = edge.get("depends_on_id")
+        dep_issue = issues_by_id.get(dep_id)
+        if dep_issue is None:
+            unresolved.append(dep_id or "unknown")
+            satisfied = False
+            continue
+        ref = str(dep_issue.get("external_ref") or "")
+        deps.append(ref.removeprefix("spec-task:") if ref else dep_id)
+        if _bd_task_status(dep_issue.get("status")) != "done":
+            satisfied = False
+    return {
+        "status": _bd_task_status(issue.get("status")),
+        "deps": deps,
+        "deps_satisfied": satisfied,
+        "deps_unresolved": unresolved,
+    }
+
+
+def scan_toolkit_specs(repo, bd_issues=None):
+    """Read authored task definitions from markdown and live state from bd."""
     specs = []
     specs_dir = repo / "specs"
     if not specs_dir.is_dir():
         return specs
+    if bd_issues is None:
+        bd_issues = _list_bd_issues(repo)
+    issues_by_id = {issue.get("id"): issue for issue in bd_issues if issue.get("id")}
+    issues_by_path = {
+        str(issue.get("external_ref"))[len("spec-task:") :]: issue
+        for issue in bd_issues
+        if str(issue.get("external_ref") or "").startswith("spec-task:")
+    }
     for spec_dir in sorted(specs_dir.iterdir()):
         spec_md = spec_dir / "SPEC.md"
         if not spec_dir.is_dir() or not spec_md.is_file():
@@ -354,17 +414,26 @@ def scan_toolkit_specs(repo):
         if tasks_dir.is_dir():
             for tf in sorted(tasks_dir.glob("*.md")):
                 t_text = read_text(tf, 10_000)
-                sm = STATUS_RE.search(t_text)
-                status = sm.group(1).lower() if sm else "pending"
                 tm = TITLE_RE.search(t_text)
+                rel = str(tf.relative_to(repo))
+                issue = issues_by_path.get(rel)
+                state = (
+                    _bd_task_record(issue, issues_by_id)
+                    if issue
+                    else {
+                        "status": "unregistered",
+                        "deps": [],
+                        "deps_satisfied": False,
+                        "deps_unresolved": ["missing bd issue"],
+                    }
+                )
                 task = {
-                    "file": str(tf.relative_to(repo)),
+                    "file": rel,
                     "abs": str(tf),
                     "title": tm.group(1).strip() if tm else tf.stem,
-                    "status": status,
-                    "deps": parse_deps(t_text),
+                    **state,
                 }
-                if _task_is_blocked(status):
+                if _task_is_blocked(task["status"]):
                     ub = parse_unblock(t_text)
                     if ub:
                         task["unblock"] = ub
@@ -375,8 +444,6 @@ def scan_toolkit_specs(repo):
                 mtimes.append(tf.stat().st_mtime)
                 if not _TASK_NUM_RE.match(tf.name):
                     unparseable += 1
-        spec_sm = STATUS_RE.search(text)
-        spec_status = spec_sm.group(1).lower() if spec_sm else None
         done = sum(1 for t in tasks if t["status"] in CLOSED_TASK_STATUSES)
         doing = sum(
             1 for t in tasks if t["status"] in ("in-progress", "in_progress", "claimed")
@@ -401,106 +468,12 @@ def scan_toolkit_specs(repo):
             "tasks_unparseable": unparseable,
             "last_touched": max(mtimes),
         }
-        if spec_status in ("waiting", "deferred"):
-            spec_rec["status"] = spec_status
-            ub = parse_unblock(text)
-            if ub:
-                spec_rec["unblock"] = ub
         specs.append(spec_rec)
     return specs
 
 
-def defer_spec(repo, slug):
-    """Park `specs/<slug>` with a `Status: deferred` SPEC.md header.
-
-    The specs-side twin of the Antigravity abandon marker: a deliberate write
-    in an otherwise read-only scanner. Rewrites an existing `Status:` line in
-    place, else inserts one after the title. Idempotent. Returns whether the
-    spec was found.
-    """
-    spec_md = Path(repo) / "specs" / slug / "SPEC.md"
-    if not spec_md.is_file():
-        return False
-    text = spec_md.read_text(encoding="utf-8")
-    header = "Status: deferred"
-    status = STATUS_RE.search(text)
-    title = TITLE_RE.search(text)
-    if status:
-        updated = text[: status.start()] + header + text[status.end() :]
-    elif title:
-        updated = text[: title.end()] + "\n" + header + text[title.end() :]
-    else:
-        updated = header + "\n" + text
-    if updated != text:
-        spec_md.write_text(updated, encoding="utf-8")
-    return True
-
-
-# ---------------------------------------------------------------- readiness
-
-
-def parse_deps(text):
-    """The `Depends on:` header as a list of raw entries; none/empty ⇒ []."""
-    m = DEPENDS_RE.search(text)
-    if not m:
-        return []
-    raw = m.group(1).strip()
-    if not raw or raw.lower() == "none":
-        return []
-    return [e.strip() for e in raw.split(",") if e.strip()]
-
-
-def _glob_task(tasks_dir, num):
-    """First `NN-*.md` in tasks_dir matching the (possibly unpadded) prefix."""
-    if not tasks_dir.is_dir():
-        return None
-    for pat in dict.fromkeys((f"{num}-*.md", f"{int(num):02d}-*.md")):
-        matches = sorted(tasks_dir.glob(pat))
-        if matches:
-            return matches[0]
-    return None
-
-
-def resolve_dep(entry, task_dir, repo_root):
-    """Resolve one `Depends on:` entry to a task file the way /drain does.
-
-    - bare numeric (`01`)        → sibling `NN-*.md` in the same spec's tasks/
-    - `<slug>/NN` shorthand      → `../<slug>/tasks/NN-*.md` (another spec)
-    - task-file-relative path    → resolved against the current task dir
-    - `specs/...`-rooted path    → also tried against the repo root
-    Returns the resolved Path (existing file) or None if unresolvable.
-    """
-    entry = entry.strip()
-    if not entry:
-        return None
-    if re.fullmatch(r"\d+", entry):
-        return _glob_task(task_dir, entry)
-    m = re.fullmatch(r"([A-Za-z0-9_.-]+)/(\d+)", entry)
-    if m:
-        return _glob_task(task_dir.parent.parent / m.group(1) / "tasks", m.group(2))
-    # path form: try task-dir-relative first, then repo-root for specs/ roots
-    bases = [task_dir]
-    if entry.startswith("specs/") or entry.startswith("/"):
-        bases.append(repo_root)
-    for base in bases:
-        cand = base / entry
-        if any(ch in entry for ch in "*?["):
-            parent = cand.parent
-            matches = sorted(parent.glob(cand.name)) if parent.is_dir() else []
-            if matches:
-                return matches[0]
-        elif cand.is_file():
-            return cand
-    return None
-
-
-def _dep_is_done(path):
-    m = STATUS_RE.search(read_text(path, 10_000))
-    return bool(m) and m.group(1).lower() == "done"
-
-
 def ready_items(repos):
-    """Dispatchable toolkit-spec tasks (Status: pending, all deps done).
+    """Dispatchable toolkit-spec tasks whose bd state is open and unblocked.
 
     Per spec: one ready task ⇒ a `/build <file>` item; two or more ready in a
     spec ⇒ a single `/drain specs/<slug>` item. A task with an unresolvable
@@ -508,7 +481,6 @@ def ready_items(repos):
     items, blocked = [], []
     for r in repos:
         repo_path = r["path"]
-        repo_root = Path(repo_path)
         for s in r["specs"]:
             if s.get("kind") != "toolkit":
                 continue
@@ -516,27 +488,17 @@ def ready_items(repos):
             for t in s["tasks"]:
                 if t["status"] != "pending":
                     continue
-                task_dir = Path(t["abs"]).parent
-                # Scan every dep so an unresolvable id is always surfaced (R1),
-                # even when a resolvable-but-unfinished dep precedes it.
-                satisfied, unresolved = True, None
-                for dep in t.get("deps", []):
-                    resolved = resolve_dep(dep, task_dir, repo_root)
-                    if resolved is None:
-                        unresolved = dep
-                        break
-                    if not _dep_is_done(resolved):
-                        satisfied = False
-                if unresolved is not None:
+                unresolved = t.get("deps_unresolved", [])
+                if unresolved:
                     blocked.append(
                         {
                             "repo": r["name"],
                             "slug": s["slug"],
                             "task": t["file"],
-                            "dep": unresolved,
+                            "dep": unresolved[0],
                         }
                     )
-                elif satisfied:
+                elif t.get("deps_satisfied"):
                     spec_ready.append(t)
             if len(spec_ready) >= 2:
                 cmd = (
@@ -1353,11 +1315,6 @@ def attention_items(
                 }
             )
         for s in r["specs"]:
-            # A `Status: deferred` spec is the specs-side twin of an abandoned
-            # Antigravity conversation: parked on purpose, so it leaves the
-            # inbox entirely (it still appears in the spec listing and totals).
-            if s.get("status") == "deferred":
-                continue
             open_tasks = s["tasks_total"] - s["tasks_done"]
             # Needs-your-answer surfaces: ask-typed unblocks + deferred questions.
             # No dispatch cmd — these are human decisions only (R6).
@@ -1387,54 +1344,44 @@ def attention_items(
                             "age_ts": s["last_touched"],
                         }
                     )
-            # A spec-level `Status: waiting` header (spec-only status): ask →
-            # needs-answer; run/agent → agent-bounded, proceeds (R7 recheck owns
-            # it), NOT an attention item; missing → unknown-bounded, surface.
-            if s.get("status") == "waiting":
-                ub = s.get("unblock")
-                if ub and ub["type"] == "ask":
-                    items.append(
-                        {
-                            "severity": "serious",
-                            "state": "needs-answer",
-                            "repo": r["name"],
-                            "what": f"Answer needed: spec {s['slug']}",
-                            "why": ub["step"],
-                            "unblock": ub,
-                            "age_ts": s["last_touched"],
-                        }
-                    )
-                elif not ub:
-                    items.append(
-                        {
-                            "severity": "serious",
-                            "state": "blocked",
-                            "repo": r["name"],
-                            "what": f"Spec {s['slug']}: waiting",
-                            "why": "no unblock step recorded — add an Unblock: line",
-                            "unblock": None,
-                            "unblock_missing": True,
-                            "age_ts": s["last_touched"],
-                        }
-                    )
             # Inbox principle: agent-bounded work proceeds (drafts → intake,
             # run:/agent: unblocks → recheck/dispatch, done specs → verifier);
             # only human-bounded or unknown-bounded blockage is the human's
             # attention item. Ask-typed unblocks already have their own
             # needs-answer row above; the spec-level row covers only blocked
             # tasks with NO recorded unblock step.
+            unregistered = [
+                t for t in s.get("tasks", []) if t["status"] == "unregistered"
+            ]
+            if unregistered:
+                items.append(
+                    {
+                        "severity": "serious",
+                        "state": "blocked",
+                        "repo": r["name"],
+                        "what": f"Spec {s['slug']}: task(s) missing bd issue",
+                        "why": "missing bd issue — register authored definitions create-only",
+                        "cmd": (
+                            f"cd {shlex.quote(rp)} && "
+                            f"python3 -m agentic register-spec "
+                            f"{shlex.quote('specs/' + s['slug'])}"
+                        ),
+                        "age_ts": s["last_touched"],
+                    }
+                )
             needs_human = [
                 t
                 for t in s.get("tasks", [])
                 if _task_is_blocked(t["status"])
                 and t["status"] != "draft"
+                and t["status"] != "unregistered"
                 and not t.get("unblock")
             ]
             if needs_human:
                 why = (
                     ", ".join(t["file"] for t in needs_human[:3])
                     + " — no unblock step recorded: answer its open question or"
-                    " add an Unblock: line, flip its Status:, re-dispatch via"
+                    " add an Unblock: line, update bd, re-dispatch via"
                     " /build or /drain"
                 )
                 items.append(
@@ -1456,8 +1403,7 @@ def attention_items(
                         "state": "stale",
                         "repo": r["name"],
                         "what": f"Spec {s['slug']}: {open_tasks} open task(s), idle {age_str(s['last_touched'])}",
-                        "why": "resume it or delete it — open work decays; deciding is the point. To park it:",
-                        "cmd": f"cd {shlex.quote(rp)} && python3 {shlex.quote(str(SCRIPT))} --defer {shlex.quote(s['slug'])}",
+                        "why": "resume it or close/defer its task issues in bd — open work decays; deciding is the point.",
                         "age_ts": s["last_touched"],
                     }
                 )
@@ -1856,14 +1802,6 @@ def main():
         help="abandon every stale Antigravity conversation, then rescan",
     )
     ap.add_argument(
-        "--defer",
-        nargs="+",
-        metavar="SLUG",
-        default=[],
-        help="park specs/<slug> in the current repo with a Status: deferred "
-        "header (leaves the needs-attention inbox), then rescan",
-    )
-    ap.add_argument(
         "--prune-stale-sessions",
         action="store_true",
         help="delete ~/.claude/sessions/*.json records whose pid is dead, then rescan",
@@ -1881,16 +1819,6 @@ def main():
     if args.abandon_stale:
         for cid in abandon_stale(args.stale_days):
             print(f"abandoned (stale): {cid}", file=sys.stderr)
-    if args.defer:
-        missing = []
-        for slug in args.defer:
-            if defer_spec(Path.cwd(), slug):
-                print(f"deferred: specs/{slug}", file=sys.stderr)
-            else:
-                missing.append(slug)
-                print(f"not found: specs/{slug}/SPEC.md", file=sys.stderr)
-        if missing:
-            sys.exit(1)
     if args.prune_stale_sessions:
         removed, kept = prune_stale_session_pids(default_claude_home())
         for sid in removed:

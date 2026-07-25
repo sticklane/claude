@@ -6,7 +6,8 @@ argument-hint: "[bd label/query or specs/<slug>]"
 
 Work through every remaining ready issue in the bd queue without a human
 restarting it at each step. After the agentic-core-redesign cutover **bd is
-the source of truth**: the ready set, dependencies, atomic claims, and
+the source of truth**; bd is the only live authority. The ready set,
+dependencies, atomic claims, and
 discovered-from links all live in bd (`bd ready`, `bd update --claim`, `bd
 close`, `bd create --deps`). There are no baton files, no lease files, no
 generation counters, and no drain-owned handoff files — the queue itself is
@@ -165,9 +166,9 @@ every dispatchable issue.
 
 ## Archive on completion
 
-When closing an issue empties its spec — every task under
-`specs/<slug>/tasks/*.md` reads `Status: done` and the spec has no open bd
-issues left — move the finished spec out of live `specs/` in the same pass:
+When closing an issue empties its spec — bd reports no open issues whose
+external reference belongs to `specs/<slug>/tasks/` — move the finished spec
+out of live `specs/` in the same pass:
 `git mv specs/<slug> specs/archive/<slug>`, committed path-scoped on its own
 (`drain:` prefix), so later scans walk only live work rather than the done
 pile. A spec with any pending/blocked/deferred task stays put. This is the

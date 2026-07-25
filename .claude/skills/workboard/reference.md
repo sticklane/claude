@@ -4,21 +4,19 @@ Loaded on demand. The scanner (`workboard.py`) is the source of truth; this
 documents what it reads and why, so a debugging session doesn't have to
 reverse-engineer it.
 
-## Data sources (all read-only)
+## Data sources
 
-Two deliberate writes exist, one per park-it surface. `--abandon <conv-id>` /
+One deliberate work-state write exists. `--abandon <conv-id>` /
 `--abandon-stale` drop a `.workboard-abandoned` marker file into an
 Antigravity conversation dir so the scanner skips it permanently;
 Antigravity's own artifacts (`task.md`, metadata) are never modified, and
-undo = delete the marker. `--defer <slug>` writes (or rewrites) a
-`Status: deferred` header in the current repo's `specs/<slug>/SPEC.md` so the
-spec leaves the needs-attention inbox while still appearing in the spec
-listing and totals; undo = change the header back. Tests:
+undo = delete the marker. Toolkit task state is read-only and comes from bd.
+Tests:
 `python3 -m unittest discover -s .claude/skills/workboard`.
 
 | Source | Path | What it yields |
 |---|---|---|
-| Toolkit specs | `<repo>/specs/<slug>/SPEC.md` + `tasks/*.md` | spec title; per-task `Status:` line (`pending`/`in-progress`/`claimed`/`needs-verification` open — the last is completed-but-unverified, the verifier flips it to `done`; `done`/`deferred`/`skipped` closed; anything else = blocked-ish, flagged only when no `Unblock:` step is recorded) |
+| Toolkit specs | authored definitions under `<repo>/specs/<slug>/` plus `bd list --all --json` | titles, evidence/unblock prose, and filenames from markdown; live status and typed `blocks` dependencies from issues whose external reference is `spec-task:<path>`. Frozen markdown status/dependency headers never drive the dashboard |
 | Kiro specs | `<repo>/.kiro/specs/<name>/tasks.md` | checkbox states — `[ ]` todo, `[-]` doing, `[x]` done; phase = which of requirements/design/tasks files exist |
 | Handoffs | `bd list --label handoff --status=open --json`, per scanned repo with a `.beads/` dir | parked work waiting on a human — always an inbox item. One bounded `bd` call per repo; a repo without `.beads/` is skipped without invoking `bd`, and a missing binary, timeout, non-zero exit, or unparseable output yields no handoffs rather than failing the scan |
 | Sessions | `~/.claude/projects/<escaped-cwd>/<sessionId>.jsonl` | first user prompt (head read), `cwd`, `gitBranch`, last-record timestamp (64 KB tail read — transcripts are never read wholesale) |
@@ -39,8 +37,8 @@ Two axes, following Antigravity (decision-oriented status) and Kiro
 
 - **Session states**: `active` (live pid) → `recent` (<48 h) → `idle` →
   `stale` (> `--stale-days`, default 7).
-- **Work states** (inbox): `blocked` (an open `handoff`-labeled bd issue, or a task whose
-  `Status:` is neither open nor closed), `needs-review` (all tasks done but
+- **Work states** (inbox): `blocked` (an open `handoff`-labeled bd issue, or a
+  task whose bd status is neither open nor closed), `needs-review` (all tasks done but
   spec not archived; dirty repo with no live session; unpushed commits),
   `stale` (open tasks untouched past the threshold).
 
