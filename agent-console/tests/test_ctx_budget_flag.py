@@ -1,12 +1,12 @@
-"""Tests for the workboard needs-attention re-prime/context budget flag
-(spec session-refresh-automation, task 05; requirement R4).
+"""Tests for the workboard needs-attention context-budget flag.
 
-A live (active) session is flagged when it crosses either budget arm —
-`sessions.<id>.reprime_count` >= 3 OR `sessions.<id>.p90_ctx` >= 250k — where
-the join is the live-session ids against the summary's `sessions` keys, exactly.
-A live session absent from the summary is never flagged. The flag names the
-session, which arm tripped, the re-prime count + cost, and the summary file's
-mtime (the freshness bound).
+A live (active) session is flagged when its `sessions.<id>.p90_ctx` crosses
+250k — the single arm the session-refresh hook still carries after it dropped
+its re-prime arm on 2026-07-25. A session over the old re-prime count alone is
+NOT flagged, so the board and the hook agree on which sessions are heavy. The
+join is the live-session ids against the summary's `sessions` keys, exactly; a
+live session absent from the summary is never flagged. The flag names the
+session, the context size, and the summary file's mtime (the freshness bound).
 """
 
 import importlib.util
@@ -64,34 +64,45 @@ def _summary(sessions):
     return {"totals": {"cost_microusd": 0}, "sessions": sessions}
 
 
-class ReprimeFlag(unittest.TestCase):
-    def test_over_reprime_budget_live_session_is_flagged_with_arm_and_mtime(self):
-        board = _board_with_session("S1")
-        summary = _summary(
-            {
-                "S1": {
-                    "reprime_count": 5,
-                    "p90_ctx": 1000,
-                    "reprime_cost_microusd": 2_540_000,
-                }
-            }
-        )
-        html = ac.render_workboard(board, summary, summary_mtime=MTIME)
-        # names the session, which arm, the count, the cost
-        self.assertIn("S1", html)
-        self.assertIn("re-prime", html.lower())
-        self.assertIn("$2.54", html)  # 2_540_000 microusd
-        # the summary file's mtime is visible in the flag line (staleness)
-        self.assertIn(ac._dt(MTIME), html)
-        # it registers as needs-attention, not "Nothing needs you"
-        self.assertNotIn("Nothing needs you", html)
-
-    def test_over_ctx_budget_arm_named_context(self):
+class CtxBudgetFlag(unittest.TestCase):
+    def test_over_ctx_budget_live_session_is_flagged_with_size_and_mtime(self):
         board = _board_with_session("S1")
         summary = _summary({"S1": {"reprime_count": 0, "p90_ctx": 300_000}})
         html = ac.render_workboard(board, summary, summary_mtime=MTIME)
         self.assertIn("S1", html)
         self.assertIn("context", html.lower())
+        self.assertIn("300,000", html)  # the measured context size
+        # the summary file's mtime is visible in the flag line (staleness)
+        self.assertIn(ac._dt(MTIME), html)
+        # it registers as needs-attention, not "Nothing needs you"
+        self.assertNotIn("Nothing needs you", html)
+
+    def test_high_reprime_count_alone_is_not_flagged(self):
+        # Mirrors the session-refresh hook, whose re-prime arm was removed
+        # 2026-07-25: a session under the context budget is silent no matter
+        # how many re-primes agentprof attributed to it.
+        board = _board_with_session("S1")
+        summary = _summary(
+            {
+                "S1": {
+                    "reprime_count": 5,
+                    "p90_ctx": 100_000,
+                    "reprime_cost_microusd": 2_540_000,
+                }
+            }
+        )
+        html = ac.render_workboard(board, summary, summary_mtime=MTIME)
+        self.assertIn("Nothing needs you", html)
+        self.assertNotIn("budget", html.lower())
+
+    def test_flagged_session_line_does_not_report_reprimes(self):
+        board = _board_with_session("S1")
+        summary = _summary(
+            {"S1": {"reprime_count": 5, "p90_ctx": 300_000, "reprime_cost_microusd": 1}}
+        )
+        html = ac.render_workboard(board, summary, summary_mtime=MTIME)
+        self.assertIn("S1", html)
+        self.assertNotIn("re-prime", html.lower())
 
     def test_under_budget_live_session_is_not_flagged(self):
         board = _board_with_session("S1")
@@ -103,25 +114,22 @@ class ReprimeFlag(unittest.TestCase):
     def test_live_session_absent_from_summary_is_not_flagged(self):
         board = _board_with_session("S1")
         # the over-budget entry belongs to a different, non-live session id
-        summary = _summary({"OTHER": {"reprime_count": 9, "p90_ctx": 400_000}})
+        summary = _summary({"OTHER": {"p90_ctx": 400_000}})
         html = ac.render_workboard(board, summary, summary_mtime=MTIME)
         self.assertIn("Nothing needs you", html)
 
     def test_non_live_session_over_budget_is_not_flagged(self):
         board = _board_with_session("S1", state="recent")
-        summary = _summary({"S1": {"reprime_count": 9, "p90_ctx": 400_000}})
+        summary = _summary({"S1": {"p90_ctx": 400_000}})
         html = ac.render_workboard(board, summary, summary_mtime=MTIME)
         self.assertIn("Nothing needs you", html)
 
-    def test_older_summary_without_reprime_count_still_evaluates_ctx_arm(self):
-        # older cache: session entry omits reprime_count -> treated as 0 on that
-        # arm, but the p90_ctx arm still trips (Step 3).
+    def test_summary_entry_without_ctx_field_is_not_flagged(self):
+        # older cache: session entry omits p90_ctx -> treated as 0, no crash.
         board = _board_with_session("S1")
-        summary = _summary({"S1": {"p90_ctx": 300_000}})
+        summary = _summary({"S1": {"reprime_count": 9}})
         html = ac.render_workboard(board, summary, summary_mtime=MTIME)
-        self.assertIn("S1", html)
-        self.assertIn("context", html.lower())
-        self.assertIn("$0.00", html)  # no reprime cost -> zero, no crash
+        self.assertIn("Nothing needs you", html)
 
     def test_no_summary_yields_no_flag(self):
         board = _board_with_session("S1")

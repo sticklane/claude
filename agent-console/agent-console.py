@@ -2192,24 +2192,24 @@ def _unblock_missing(i: dict) -> bool:
     return bool(i.get("unblock_missing"))
 
 
-# Session-refresh budget arms (spec session-refresh-automation): a live session
-# is flagged over EITHER arm. Pinned from the 30-day profile — 3 is the re-prime
-# median (the behavior being changed) and 250k sits in the heavy context tail.
-REPRIME_BUDGET = 3
+# The session-refresh context budget, pinned from the 30-day profile: 250k sits
+# in the heavy context tail. It is the only arm the session-refresh hook carries
+# (its re-prime arm was removed 2026-07-25), so it is the only arm the board
+# flags on — a board that flagged more would disagree with the hook about which
+# sessions are heavy.
 CTX_BUDGET = 250_000
 
 
-def _reprime_flags(
+def _ctx_budget_flags(
     b: dict, summary: dict | None, summary_mtime: float | None
 ) -> list[dict]:
-    """Needs-attention inbox items for live sessions over a session-refresh
-    budget arm (R4): `reprime_count` >= REPRIME_BUDGET OR `p90_ctx` >= CTX_BUDGET.
+    """Needs-attention inbox items for live sessions whose `p90_ctx` has reached
+    CTX_BUDGET.
 
     The join is the live-session scan's ids against the summary's `sessions`
     keys, exactly — a live session absent from the summary is not flagged. Each
-    flag names the session, which arm tripped, the re-prime count + cost, and
-    the summary file's mtime (the freshness bound). Older summary JSON without
-    `reprime_count` treats that arm as 0; the p90_ctx arm still evaluates."""
+    flag names the session, its context size, and the summary file's mtime (the
+    freshness bound). A summary entry without `p90_ctx` reads as 0."""
     sessions = (summary or {}).get("sessions") or {}
     if not sessions:
         return []
@@ -2222,16 +2222,9 @@ def _reprime_flags(
             sess = sessions.get(s.get("sid"))
             if not sess:  # not tracked in the summary -> never flagged
                 continue
-            count = sess.get("reprime_count", 0) or 0
             ctx = sess.get("p90_ctx", 0) or 0
-            arms = []
-            if count >= REPRIME_BUDGET:
-                arms.append("re-prime")
-            if ctx >= CTX_BUDGET:
-                arms.append("context")
-            if not arms:
+            if ctx < CTX_BUDGET:
                 continue
-            dollars = (sess.get("reprime_cost_microusd", 0) or 0) / 1_000_000
             flags.append(
                 {
                     "sev": "warning",
@@ -2239,8 +2232,7 @@ def _reprime_flags(
                     "item": f"session {s['sid']} over budget",
                     "repo": r["name"],
                     "why": (
-                        f"{' + '.join(arms)} budget tripped — {count} re-primes, "
-                        f"${dollars:,.2f}; summary {stamp}"
+                        f"context budget tripped — {ctx:,} tokens; summary {stamp}"
                     ),
                     "age": summary_mtime or 0,
                     "cmd": "",
@@ -2271,7 +2263,7 @@ def _handoff_meta(h: dict) -> str:
 def render_workboard(
     b: dict, cost: dict | None = None, summary_mtime: float | None = None
 ) -> str:
-    inbox_items = list(b["inbox"]) + _reprime_flags(b, cost, summary_mtime)
+    inbox_items = list(b["inbox"]) + _ctx_budget_flags(b, cost, summary_mtime)
 
     def chip(state):
         return f'<span class="chip {esc(state)}">{esc(state)}</span>'
