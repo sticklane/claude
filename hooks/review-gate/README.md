@@ -15,10 +15,13 @@ command took, and there is nothing left to parse.
 ## What it does
 
 - Asks `review-gate check` whether a review is on file for the key of
-  `git diff --cached`. If it is, the hook stays silent and the commit proceeds.
-- If it is not, the hook prints the key, the exact `review-gate record` command
-  to run once you have reviewed, and both bypasses; then it exits 1 and the
-  commit does not happen.
+  `git diff --cached`. If it is not, the hook prints the key, the exact
+  `review-gate record` command to run once you have reviewed, and both
+  bypasses; then it exits 1 and the commit does not happen.
+- If a review is on file, reads its severity tiers: a blocking finding refuses
+  the commit and is quoted back, anything else is printed and the commit
+  proceeds. Which findings block is
+  [below](#what-the-review-itself-should-block-on).
 - Runs after the repository's own `pre-commit` checks, never instead of them,
   and exits with their status if they fail (see [Install](#install)).
 - Refuses when it cannot compute the key at all — no `shasum` or `sha256sum` on
@@ -36,32 +39,47 @@ gate to run the review itself, outside the committing agent's control.
 
 ## What the review itself should block on
 
-The gate fires on *whether a review happened*, never on what it found. Deciding
-which findings are worth stopping for stays with the reviewer, and the bar there
-isn't "clean." Published practice converges on approving work that improves the
-codebase even when imperfect, and on reserving a block for defects rather than
-taste:
+A review's findings are not all worth stopping a commit for, so the hook reads
+the severity each finding declares and blocks on four categories only:
 
-- Hard-block on correctness bugs, security vulnerabilities, and defects that
-  would break production.
-- Report but allow style, naming, structure, nits, missing non-critical tests,
-  and pre-existing issues the change didn't introduce.
+| Severity label | Effect |
+| --- | --- |
+| `correctness`, `security`, `data-loss`, `secret` / `secrets` | Refuses the commit; the finding is quoted back |
+| `nit`, `style`, `structure`, `naming`, `test`, `test-coverage`, `docs`, `pre-existing`, `suggestion`, `minor`, `perf` | Reported; the commit proceeds |
+| Anything else, including an unparseable verdict | Printed if recognized, commit proceeds |
 
-Google's standard is to "favor approving a CL once it is in a state where it
-definitely improves the overall code health of the system being worked on, even
-if the CL isn't perfect," and to never "block CLs from being submitted based
-only on personal style preferences"
+A finding declares its severity as the label that *starts* its line, in any of
+three forms, case-insensitively: `[correctness] off-by-one in the bound`,
+`security: the query is concatenated`, or `Severity: data-loss - the migration
+drops the column first`. A leading `-`, `*` or `+` bullet is allowed. One of
+those words elsewhere in a line is prose, not a label — "I checked correctness
+and security" does not block. Neither does a blocking label that reports
+nothing: `Security: none` and `Correctness: no bugs found` name a clean tier,
+not a defect.
+
+**An unrecognized or unparseable severity is non-blocking, deliberately.** The
+gate runs on every commit in the repository, so a refusal it cannot justify
+costs more than a missed one: Google's Tricorder turns off any analyzer that
+produces 10% or more effective false positives
+(<https://abseil.io/resources/swe-book/html/ch20.html>), and an operator who
+learns to reach for `--no-verify` has lost the gate entirely.
+
+Three published practices set that bar. Google's eng-practices standard is to
+"favor approving a CL once it is in a state where it definitely improves the
+overall code health of the system being worked on, even if the CL isn't
+perfect," and to never "block CLs from being submitted based only on personal
+style preferences"; `Nit:` marks a comment the author need not act on
 (<https://google.github.io/eng-practices/review/reviewer/standard.html>).
-Anthropic's own Code Review tags findings Important / Nit / Pre-existing and
-never blocks a merge on them
-(<https://code.claude.com/docs/en/code-review>).
+Anthropic's shipped Claude Code Review tags findings Important / Nit /
+Pre-existing, scopes itself to "bugs that would break production, not
+formatting preferences or missing test coverage", and never blocks a merge —
+its check run always completes neutral
+(<https://code.claude.com/docs/en/code-review>). Meta's RADAR gates
+auto-approval on a percentile risk score rather than blocking the merge
+(<https://arxiv.org/abs/2508.09190>).
 
-That bar applies to this gate too. Google's Tricorder turns off any analyzer
-that produces 10% or more effective false positives
-(<https://abseil.io/resources/swe-book/html/ch20.html>). A wrong refusal here
-blocks real work in every repository on the machine, so a false refusal is a
-more serious defect than a missed commit. If this gate starts refusing
-legitimate commits, turn it off rather than working around it.
+If this gate starts refusing legitimate commits, turn it off rather than
+working around it.
 
 ## The bypasses
 

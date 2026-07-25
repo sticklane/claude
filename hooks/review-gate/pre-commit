@@ -11,6 +11,11 @@
 #   3. `review-gate check`, against the content this commit will actually
 #      contain — `git diff --cached` inside a pre-commit hook covers plain,
 #      `-a`, and pathspec commits alike.
+#   4. The severity tier of the recorded review: only correctness, security,
+#      data-loss and committed-secret findings refuse the commit. Everything
+#      else — nits, style, structure, missing tests, pre-existing issues — is
+#      printed and allowed through, as is any severity the parse does not
+#      recognize.
 #
 # Anything unexpected — no review-gate, no repository — allows the commit. The
 # single exception is a key that cannot be computed at all (no digest tool),
@@ -96,6 +101,78 @@ To commit without the gate:
 MESSAGE
 }
 
+BLOCKING_SEVERITIES='correctness|security|data[ _-]?loss|secrets?'
+REPORTED_SEVERITIES='nits?|style|structure|naming|tests?|test[ _-]?coverage|docs|documentation|pre[ _-]?existing|suggestion|minor|perf|performance'
+
+# severity_re <alternation> — matches a finding line whose LEADING label names
+# one of those severities: `[correctness] …`, `security: …`, `Severity: nit …`.
+# A severity named anywhere else in the line is prose, not a label.
+severity_re() {
+  local words="$1" lead='^[[:space:]]*([-*+][[:space:]]*)?'
+  printf '%s' "$lead(\[?(severity|category)[[:space:]]*[:=][[:space:]]*\[?($words)([^[:alnum:]]|\$)|\[?($words)[]:])"
+}
+
+# A blocking label whose finding is that it found nothing — `Security: none`,
+# `Correctness: no bugs found` — reports a clean tier, not a defect.
+NOTHING_FOUND='(none|no|n/?a|nothing|not applicable|clear|ok|0)([[:space:]]+(issues?|bugs?|findings?|problems?|concerns?|risks?|holes?|found|detected|identified|observed)){0,2}'
+NOTHING_FOUND_RE="[]:=][[:space:]]*$NOTHING_FOUND[[:space:][:punct:]]*\$"
+
+# recorded_verdict <key> — the review text recorded against <key>, or nothing.
+recorded_verdict() {
+  local dir marker
+  [ -n "$1" ] || return 1
+  dir="$(git rev-parse --git-common-dir 2>/dev/null)" || return 1
+  case "$dir" in
+    /*) ;;
+    *) dir="$(cd "$dir" 2>/dev/null && pwd -P)" || return 1 ;;
+  esac
+  marker="$dir/agentic-review/$1"
+  [ -r "$marker" ] || return 1
+  cat "$marker"
+}
+
+refuse_blocking() { # refuse_blocking <gate> <findings>
+  local gate="$1" findings="$2"
+  cat >&2 <<MESSAGE
+review-gate: the recorded review blocks this commit.
+
+$findings
+
+Only correctness, security, data-loss and committed-secret findings block.
+Nits, style, structure, missing tests and pre-existing issues are reported and
+allowed through, so this list is what has to be fixed. Fix it, then record the
+review of the fixed content:
+
+  printf '%s' 'VERDICT: ...' | $gate record
+
+To commit without the gate:
+
+  REVIEW_GATE=0 git commit ...   # this commit only
+  git commit --no-verify ...     # skips every pre-commit hook
+MESSAGE
+}
+
+# severity_verdict <gate> <key> — 1 when the recorded review declares a
+# blocking finding, 0 otherwise. Prints the findings it recognized either way;
+# a review it cannot read or parse allows the commit, because a gate that
+# refuses on garbage input only teaches the operator to bypass it.
+severity_verdict() {
+  local gate="$1" verdict blocking reported
+  verdict="$(recorded_verdict "$2")" || return 0
+  blocking="$(printf '%s\n' "$verdict" |
+    grep -Ei "$(severity_re "$BLOCKING_SEVERITIES")" |
+    grep -Eiv "$NOTHING_FOUND_RE")"
+  if [ -n "$blocking" ]; then
+    refuse_blocking "$gate" "$blocking"
+    return 1
+  fi
+  reported="$(printf '%s\n' "$verdict" | grep -Ei "$(severity_re "$REPORTED_SEVERITIES")")"
+  if [ -n "$reported" ]; then
+    printf 'review-gate: reported by the review, not blocking:\n%s\n' "$reported" >&2
+  fi
+  return 0
+}
+
 [ "${REVIEW_GATE:-1}" != "0" ] || exit 0
 git rev-parse --git-common-dir >/dev/null 2>&1 || exit 0
 
@@ -110,7 +187,10 @@ GATE="$(find_gate)" || {
 
 gate_error="$("$GATE" check 2>&1 >/dev/null)"
 gate_status=$?
-[ "$gate_status" -eq 0 ] && exit 0
+if [ "$gate_status" -eq 0 ]; then
+  severity_verdict "$GATE" "$("$GATE" key 2>/dev/null)"
+  exit $?
+fi
 
 if [ "$gate_status" -ne 1 ]; then
   warn "${gate_error:-cannot see what this commit would contain}"
