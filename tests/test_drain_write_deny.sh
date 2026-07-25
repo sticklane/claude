@@ -4,7 +4,7 @@
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-GUARD="$ROOT/.claude/skills/drain/write-deny.sh"
+DISPATCHER="$ROOT/.claude/skills/drain/dispatch-worker.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -25,24 +25,44 @@ denied="$TMP/external repo"
 allowed="$TMP/worker tree"
 mkdir -p "$denied" "$allowed"
 
-"$GUARD" --deny-write "$denied" -- \
+check "dispatcher exists and is executable" test -x "$DISPATCHER"
+
+"$DISPATCHER" --deny-write "$denied" -- \
   sh -c 'printf violated > "$1"' sh "$denied/marker" \
   >/dev/null 2>&1
 denied_rc=$?
 check "barred write exits nonzero" test "$denied_rc" -ne 0
 check "barred write creates no file" test ! -e "$denied/marker"
 
-"$GUARD" --deny-write "$denied" -- \
+"$DISPATCHER" --deny-write "$denied" -- \
   sh -c 'printf allowed > "$1"' sh "$allowed/marker" \
   >/dev/null 2>&1
 allowed_rc=$?
 check "write outside barred path succeeds" test "$allowed_rc" -eq 0
 check "allowed write creates its file" test -f "$allowed/marker"
 
-check "dispatch contract names the mechanical wrapper" \
-  grep -q 'write-deny.sh' "$ROOT/.claude/skills/drain/reference.md"
-check "dispatch contract routes boundary-sensitive workers through headless mode" \
-  grep -q 'boundary-sensitive worker.*headless' \
+AGENTIC_SANDBOX_EXEC="$TMP/missing-sandbox" \
+AGENTIC_BWRAP="$TMP/missing-bwrap" \
+  "$DISPATCHER" --deny-write "$denied" -- \
+    sh -c 'printf launched > "$1"' sh "$allowed/backend-fallthrough" \
+    >/dev/null 2>&1
+backend_rc=$?
+check "missing sandbox backend exits nonzero" test "$backend_rc" -ne 0
+check "missing backend never launches worker command" \
+  test ! -e "$allowed/backend-fallthrough"
+
+"$DISPATCHER" -- \
+  sh -c 'printf launched > "$1"' sh "$allowed/no-deny-fallthrough" \
+  >/dev/null 2>&1
+no_deny_rc=$?
+check "zero denied paths exits nonzero" test "$no_deny_rc" -ne 0
+check "zero denied paths cannot fall through to direct execution" \
+  test ! -e "$allowed/no-deny-fallthrough"
+
+check "dispatch contract names the mechanical dispatcher" \
+  grep -q 'dispatch-worker.sh' "$ROOT/.claude/skills/drain/reference.md"
+check "dispatch contract forbids native spawn for boundary-sensitive work" \
+  grep -q 'MUST NOT use.*native.*spawn' \
     "$ROOT/.claude/skills/drain/reference.md"
 
 printf '%s passed, %s failed\n' "$pass" "$fail"
