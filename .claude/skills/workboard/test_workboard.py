@@ -159,13 +159,28 @@ def make_handoff_record(issue_id="md-abc123", **fields):
     return record
 
 
-def make_spec_issue(path, status="open", issue_id="tk-1", dependencies=None):
-    return {
+def make_spec_issue(
+    path,
+    status="open",
+    issue_id="tk-1",
+    dependencies=None,
+    metadata=None,
+    notes=None,
+    comments=None,
+):
+    issue = {
         "id": issue_id,
         "external_ref": f"spec-task:{path}",
         "status": status,
         "dependencies": dependencies or [],
     }
+    if metadata is not None:
+        issue["metadata"] = metadata
+    if notes is not None:
+        issue["notes"] = notes
+    if comments is not None:
+        issue["comments"] = comments
+    return issue
 
 
 class TestBdTaskAuthority(unittest.TestCase):
@@ -210,6 +225,134 @@ class TestBdTaskAuthority(unittest.TestCase):
             scanned["tasks"][1]["deps"], ["specs/demo/tasks/01-base.md"]
         )
         self.assertEqual(scanned["tasks_done"], 1)
+
+
+class TestBdBlockerDetailAuthority(unittest.TestCase):
+    def _scan_task(self, markdown, issue):
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_unblock_spec(tmp, tasks={"01-a.md": markdown})
+            return workboard.scan_toolkit_specs(
+                Path(tmp), bd_issues=[issue]
+            )[0]["tasks"][0]
+
+    def test_latest_bd_comment_wins_over_frozen_markdown_unblock(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md",
+            status="blocked",
+            comments=[
+                {
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "text": "Unblock: run: stale tracker step",
+                },
+                {
+                    "created_at": "2026-01-02T00:00:00Z",
+                    "text": "Unblock: ask: which live credential?",
+                },
+            ],
+        )
+
+        task = self._scan_task(
+            "# A\nStatus: blocked\nUnblock: agent: markdown history\n", issue
+        )
+
+        self.assertEqual(
+            task["unblock"], {"type": "ask", "step": "which live credential?"}
+        )
+
+    def test_bd_metadata_supplies_structured_unblock_and_deferred_questions(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md",
+            status="deferred",
+            metadata={
+                "unblock": {"type": "agent", "detail": "recheck deployment"},
+                "deferred_questions": ["which provider?", "which region?"],
+            },
+        )
+
+        task = self._scan_task("# A\nStatus: done\n", issue)
+
+        self.assertEqual(
+            task["unblock"], {"type": "agent", "step": "recheck deployment"}
+        )
+        self.assertEqual(
+            task["deferred_questions"], ["which provider?", "which region?"]
+        )
+
+    def test_bd_notes_supply_blocker_details(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md",
+            status="blocked",
+            notes=(
+                "Unblock: run: make smoke\n\n"
+                "## Deferred questions\n\n- keep the fallback?\n"
+            ),
+        )
+
+        task = self._scan_task("# A\nStatus: blocked\n", issue)
+
+        self.assertEqual(task["unblock"], {"type": "run", "step": "make smoke"})
+        self.assertEqual(task["deferred_questions"], ["keep the fallback?"])
+
+    def test_markdown_blocker_details_are_display_history_only(self):
+        issue = make_spec_issue("specs/demo/tasks/01-a.md", status="blocked")
+
+        task = self._scan_task(
+            (
+                "# A\nStatus: blocked\nUnblock: ask: stale question\n\n"
+                "## Deferred questions\n\n- stale deferred question\n"
+            ),
+            issue,
+        )
+
+        self.assertNotIn("unblock", task)
+        self.assertNotIn("deferred_questions", task)
+
+
+class TestBdTrackerSnapshot(unittest.TestCase):
+    def _repo_with_beads(self, root):
+        repo = Path(root)
+        (repo / ".beads").mkdir()
+        return repo
+
+    def test_absent_tracker_is_explicitly_uninitialized(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            snapshot = workboard._list_bd_issues(Path(tmp))
+
+        self.assertEqual(snapshot["state"], "uninitialized")
+        self.assertEqual(snapshot["issues"], [])
+
+    def test_missing_bd_binary_is_explicitly_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo_with_beads(tmp)
+            with mock.patch.object(
+                workboard.subprocess, "run", side_effect=FileNotFoundError
+            ):
+                snapshot = workboard._list_bd_issues(repo)
+
+        self.assertEqual(snapshot["state"], "unavailable")
+        self.assertIn("not found", snapshot["error"])
+
+    def test_timed_out_bd_read_is_explicit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo_with_beads(tmp)
+            timeout = subprocess.TimeoutExpired(cmd=["bd"], timeout=5)
+            with mock.patch.object(workboard.subprocess, "run", side_effect=timeout):
+                snapshot = workboard._list_bd_issues(repo)
+
+        self.assertEqual(snapshot["state"], "timeout")
+        self.assertIn("timed out", snapshot["error"])
+
+    def test_invalid_bd_json_is_explicit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo_with_beads(tmp)
+            result = subprocess.CompletedProcess(
+                args=["bd"], returncode=0, stdout="{not json", stderr=""
+            )
+            with mock.patch.object(workboard.subprocess, "run", return_value=result):
+                snapshot = workboard._list_bd_issues(repo)
+
+        self.assertEqual(snapshot["state"], "invalid")
+        self.assertIn("JSON", snapshot["error"])
 
 
 class TestOpenStatusNotBlocked(unittest.TestCase):
@@ -1469,6 +1612,30 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         self.assertEqual(len(blocked), 1)
         self.assertIn("missing bd issue", blocked[0]["why"])
         self.assertIn("agentic register-spec specs/demo", blocked[0]["cmd"])
+
+    def test_uninitialized_tracker_points_to_initialization_not_registration(self):
+        spec = _unblock_spec([_unblock_task(status="tracker-unavailable")])
+        spec["tracker_state"] = "uninitialized"
+        spec["tracker_error"] = "tracker directory .beads is absent"
+
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("not initialized", blocked[0]["what"])
+        self.assertIn("agentic init", blocked[0]["cmd"])
+        self.assertNotIn("register-spec", blocked[0]["cmd"])
+
+    def test_tracker_read_error_points_to_retry_not_registration(self):
+        spec = _unblock_spec([_unblock_task(status="tracker-unavailable")])
+        spec["tracker_state"] = "timeout"
+        spec["tracker_error"] = "bd list timed out after 5s"
+
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("tracker read failed", blocked[0]["what"])
+        self.assertIn("bd list", blocked[0]["cmd"])
+        self.assertNotIn("register-spec", blocked[0]["cmd"])
 
     def test_ask_unblock_task_does_not_duplicate_spec_blocked_row(self):
         # The ask task already has its own needs-answer row; the spec-level
