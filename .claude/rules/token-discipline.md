@@ -296,7 +296,15 @@ Three points govern the shape:
   expects to idle past the cache TTL — a watch-then-act poller, a self-paced
   wakeup loop — runs cheap-tier (or launchd), dispatching each event's
   judgment work to an awaited fresh subagent; never a frontier-tier main loop
-  that re-warms a fat context just to poll.
+  that re-warms a fat context just to poll. **Mechanically warned since
+  2026-07-25:** `hooks/loop-tier-warn/` is a `PreToolUse` hook on the
+  loop-shaped calls (`ScheduleWakeup`, `CronCreate`) that reads the
+  session's model off the transcript named in the hook payload's
+  `transcript_path` (the last main-loop assistant entry's `message.model` —
+  the same read as `hooks/session-refresh/`) and injects an advisory when it
+  is frontier-tier. Warn-only, silent otherwise, fail-open; design,
+  citations, and wiring: specs/waiting-loop-tier-gate/SPEC.md and
+  hooks/loop-tier-warn/README.md.
 - **Every autonomous session carries a wake budget** — refresh-over-carry.
   When context size crosses the budget, the session refreshes (parks state via
   `/handoff` and ends, or batons where a sanctioned baton exists) instead of
