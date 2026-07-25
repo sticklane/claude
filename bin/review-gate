@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+# review-gate — record and check adversarial reviews against a staged diff.
+#
+# WHAT THIS GUARANTEES: that recording a review is a deliberate, separate act
+# before a commit lands. Nothing more. `record` accepts any non-blank text and
+# the marker is an ordinary file, so an agent with shell access can satisfy or
+# forge it without reviewing anything. It converts an oversight into a choice;
+# it is not proof that a review happened, and must not be described as one.
+# Establishing that would require the gate to run the review itself, out of the
+# committing agent's control.
+#
+# Usage:
+#   review-gate key [--all] [--amend]
+#                        Print the key for the diff the next commit would
+#                        contain (16 hex chars). Exits 1 and prints nothing
+#                        when that diff is empty.
+#   review-gate check [--all] [--amend]
+#                        Exit 0 when a review is recorded for that key, when
+#                        the diff is empty, or when no marker could ever be
+#                        written here; exit 1 when a review is missing; exit 2
+#                        when the key cannot be computed at all (the cause goes
+#                        to stderr).
+#   review-gate record [--all] [--amend]
+#                        Read a review verdict on stdin and store it against
+#                        that key. Exits 1 on empty stdin.
+#
+# The flags mirror git commit's, so the key always covers what the resulting
+# commit would actually contain: --all adds tracked-but-unstaged changes,
+# --amend measures against the commit being replaced rather than HEAD.
+#
+# REVIEW_GATE=0 in the environment turns the gate off: `check` exits 0 without
+# consulting anything. That is the deliberate escape hatch for a commit you
+# have decided not to gate, and the hook honors it too.
+#
+# Markers live at <git-common-dir>/agentic-review/<key>, inside .git, so they
+# are never committed and are shared by every worktree of the repository.
+set -u
+set -o pipefail
+
+die() {
+  printf 'review-gate: %s\n' "$1" >&2
+  exit 1
+}
+
+warn() {
+  printf 'review-gate: %s\n' "$1" >&2
+}
+
+common_dir() {
+  local dir
+  dir="$(git rev-parse --git-common-dir 2>/dev/null)" || return 1
+  case "$dir" in
+    /*) printf '%s' "$dir" ;;
+    *) printf '%s/%s' "$PWD" "$dir" ;;
+  esac
+}
+
+digest() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum
+  else
+    return 1
+  fi
+}
+
+key_failure_cause() {
+  if command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; then
+    printf 'git could not produce the diff this commit would contain'
+  else
+    printf 'no shasum or sha256sum on PATH'
+  fi
+}
+
+# diff_base prints the revision the next commit is measured against: the commit
+# --amend would replace, HEAD otherwise, and the empty tree when neither exists.
+diff_base() {
+  if [ "$AMEND" -eq 1 ]; then
+    git rev-parse --verify --quiet HEAD^ 2>/dev/null && return 0
+  elif git rev-parse --verify --quiet HEAD 2>/dev/null; then
+    return 0
+  fi
+  git hash-object -t tree /dev/null
+}
+
+# effective_diff prints the diff the next commit would contain: --all widens
+# the base to HEAD because `git commit -a` writes staged and unstaged tracked
+# changes alike, and --amend measures against the commit being replaced.
+effective_diff() {
+  local base
+  base="$(diff_base)" || return 1
+  if [ "$ALL" -eq 1 ]; then
+    git diff "$base" 2>/dev/null
+  elif [ "$AMEND" -eq 1 ]; then
+    git diff --cached "$base" 2>/dev/null
+  else
+    git diff --cached 2>/dev/null
+  fi
+}
+
+# staged_key prints the key, or returns 1 for a genuinely empty diff and 2 when
+# the key cannot be computed. The two must never collapse into one: an
+# uncomputable key means the gate is blind, not that there is nothing to review.
+staged_key() {
+  local diff key
+  diff="$(effective_diff)" || return 2
+  [ -n "$diff" ] || return 1
+  key="$(effective_diff | digest | cut -c1-16)" || return 2
+  case "$key" in '' | *[!0-9a-f]*) return 2 ;; esac
+  printf '%s' "$key"
+}
+
+nearest_existing_dir() {
+  local dir="$1" parent
+  while [ ! -d "$dir" ]; do
+    parent="$(dirname "$dir")"
+    [ "$parent" != "$dir" ] || break
+    dir="$parent"
+  done
+  printf '%s' "$dir"
+}
+
+marker_path() {
+  local key="$1" dir
+  dir="$(common_dir)" || return 1
+  printf '%s/agentic-review/%s' "$dir" "$key"
+}
+
+cmd_key() {
+  local key status
+  key="$(staged_key)"
+  status=$?
+  [ "$status" -eq 0 ] || exit "$status"
+  printf '%s\n' "$key"
+}
+
+cmd_check() {
+  local key status marker probe
+  [ "${REVIEW_GATE:-1}" != "0" ] || exit 0
+  key="$(staged_key)"
+  status=$?
+  [ "$status" -ne 1 ] || exit 0
+  if [ "$status" -ne 0 ]; then
+    warn "$(key_failure_cause); denying, because a gate that cannot see the diff is not a gate"
+    return 2
+  fi
+  marker="$(marker_path "$key")" || exit 0
+  [ -f "$marker" ] && return 0
+  # An unrecordable marker must not become a permanent deny: if a review
+  # could never be written here, allow rather than wedge the repository.
+  probe="$(nearest_existing_dir "$(dirname "$marker")")"
+  [ -w "$probe" ] || exit 0
+  return 1
+}
+
+cmd_record() {
+  local verdict key status marker
+  verdict="$(cat)"
+  [ -n "${verdict//[[:space:]]/}" ] ||
+    die "refusing to record an empty review verdict; pipe the review on stdin"
+  key="$(staged_key)"
+  status=$?
+  [ "$status" -ne 1 ] ||
+    die "nothing staged; stage the change you had reviewed, then record"
+  [ "$status" -eq 0 ] || die "$(key_failure_cause)"
+  marker="$(marker_path "$key")" || die "not inside a git repository"
+  mkdir -p "$(dirname "$marker")" || die "cannot create marker directory"
+  printf '%s\n' "$verdict" > "$marker" || die "cannot write marker $marker"
+}
+
+git rev-parse --git-common-dir >/dev/null 2>&1 ||
+  die "not inside a git repository"
+
+subcommand="${1:-}"
+shift || true
+
+ALL=0
+AMEND=0
+for arg in "$@"; do
+  case "$arg" in
+    '') ;;
+    --all) ALL=1 ;;
+    --amend) AMEND=1 ;;
+    *) die "unknown option: $arg" ;;
+  esac
+done
+
+case "$subcommand" in
+  key) cmd_key ;;
+  check) cmd_check ;;
+  record) cmd_record ;;
+  *) die "usage: review-gate {key|check|record} [--all] [--amend]" ;;
+esac
