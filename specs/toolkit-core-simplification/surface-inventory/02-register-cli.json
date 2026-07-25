@@ -1,0 +1,56 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "02-register-cli",
+  "frozen_sha256": "bbce3467ce0d33e64c4e3ea0aac4347ec71b84d133391eb19bc5549bf0a7bcb8",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_register.py::test_cli_register_spec_dispatches_the_real_registrar"
+      ],
+      "content_sha256": "71485f2a23d1aa720e6cc7721ea0fbc0b08335814827e4f58185c498fe1e8e54",
+      "dependents": [
+        "skill:breakdown",
+        "test:tests/test_agentic_register.py"
+      ],
+      "disposition": "repair",
+      "identity": "cli-command:register-spec",
+      "path": "agentic/cli.py",
+      "rationale": "Create-only replacement for the retired shadow-sync command.",
+      "replacement": null,
+      "surface_type": "cli-command"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_cli_retirement.py::test_retired_aliases_are_hidden_from_help_and_parser_choices"
+      ],
+      "content_sha256": "83427ff815817ab6a0a710253ef55321f7012c07c7fb2fba3a8276bc562aea32",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_cli_retirement.py",
+      "path": "tests/test_agentic_cli_retirement.py",
+      "rationale": "Canonical compatibility-retirement coverage retained by the runner.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_register.py::test_register_spec_runs_two_phase_happy_path_with_exact_edge_direction"
+      ],
+      "content_sha256": "95a1a16154e242999b127e58b01f702d4c56c77c28b5ca7ddcc465db11ce619b",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_register.py",
+      "path": "tests/test_agentic_register.py",
+      "rationale": "Canonical create-only registrar coverage retained by the runner.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
