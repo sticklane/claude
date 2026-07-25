@@ -78,4 +78,6 @@ Use agent-local planning tools only for the current turn's execution checklist. 
 - Prefer `--json` when parsing `bd` output programmatically.
 - If hooks are installed, `bd prime` may already be injected. Run it manually when context is missing.
 - Do not auto-close or mutate tasks unless the work is actually complete.
+
+Next stage: none — continue with the claimed issue or report the ready queue.
 Next stage: none — beads is a task tracking system skill (human-launched).
