@@ -8,9 +8,8 @@ re-parse of transcript history (2026-07-23 decoupling: `agentprof` stays the
 tool for general cost-attribution digging; this guardrail only needs to be
 cheap and always available).
 
-The budget arms and their rationale live in `.claude/rules/token-discipline.md`
-under "Session refresh". Defaults: **250k-token context size** or **3
-re-primes**.
+The budget and its rationale live in `.claude/rules/token-discipline.md`
+under "Session refresh". Default: **250k-token context size**.
 
 ## What it does
 
@@ -27,11 +26,7 @@ re-primes**.
     reinvented so the two tools stay conceptually consistent — but it is a
     single live reading of the current turn, not a percentile over a
     window like `agentprof`'s `p90_ctx`.
-  - **Re-prime arm** — counts how many main-loop calls past the first show a
-    `cache_creation_input_tokens` spike past `REFRESH_REPRIME_THRESHOLD`, the
-    same labeling rule and default `agentprof` uses for its `reprime_count`
-    (`agentprof/internal/claude/claude.go`).
-- Injects the directive when either arm is past budget. Injects text only;
+- Injects the directive when that arm is past budget. Injects text only;
   it never ends the session or kills work. The session (or its human) acts
   on the directive.
 - A malformed or truncated trailing transcript line (the file mid-write when
@@ -78,8 +73,6 @@ Override the defaults in the hook's environment:
 | Variable                    | Default  | Meaning                              |
 | --------------------------- | -------- | ------------------------------------ |
 | `REFRESH_CTX_BUDGET`        | `250000` | context-size arm (tokens)            |
-| `REFRESH_REPRIME_BUDGET`    | `3`      | re-prime count arm                   |
-| `REFRESH_REPRIME_THRESHOLD` | `50000`  | cache-creation spike ceiling that labels one call a re-prime |
 
 ## Tests
 
@@ -88,6 +81,6 @@ bash hooks/session-refresh/test.sh
 ```
 
 The tests drive the hook against synthetic transcript JSONL fixtures
-(`fixtures/`), covering both over-budget arms, sidechain-usage exclusion, a
+(`fixtures/`), covering the over-budget arm, sidechain-usage exclusion, a
 malformed trailing line, the under-budget and missing-transcript-path
 no-ops, and the missing-`jq` no-op. They never read real session data.

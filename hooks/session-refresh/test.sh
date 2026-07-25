@@ -46,13 +46,8 @@ run_hook "$FIX/over-ctx.jsonl"
 check "over-budget (context arm) emits /handoff directive" \
   "$([ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '/handoff' && echo 0 || echo 1)"
 
-# 3. Cache-creation spikes alone NEVER trip the hook. The re-prime arm was
-#    removed (2026-07-25): it counted transcript ENTRIES rather than logical
-#    turns, so one turn's several streaming assistant entries each carrying
-#    the same cache-write scored as several re-primes, and session-startup
-#    cache warming counted too — every locally-measured session tripped it.
-#    Context size is now the only arm; this fixture's 3 spikes sit at a
-#    1000-token context, far under budget, so the hook must stay silent.
+# 3. Cache-creation spikes alone never trip the hook; only context size does.
+#    This fixture's 3 spikes sit at a 1000-token context, far under budget.
 run_hook "$FIX/over-reprime.jsonl"
 check "cache-creation spikes alone produce empty stdout" \
   "$([ -z "$OUT" ] && echo 0 || echo 1)"

@@ -23,18 +23,6 @@
 #   this arm is a single live reading of the CURRENT turn — the guardrail
 #   only needs "over budget right now", not a percentile.
 #
-# REMOVED 2026-07-25 — the re-prime arm. It counted cache-creation spikes
-# (cache_creation_input_tokens past a threshold) on every main-loop assistant
-# entry past the first, intending to measure TTL-expiry cache rewrites. It
-# measured no such thing: a single logical turn emits SEVERAL assistant
-# entries and each carries the same cache-write value, so one turn scored as
-# several re-primes (measured: three entries 11 seconds apart, each
-# cache_write=99992 at ctx=2, content a lone thinking block), and
-# session-startup cache warming counted as well. The count was cumulative and
-# never decayed, so a session that crossed the budget once kept firing on
-# every later prompt. Every local session carrying usage data tripped it,
-# including one at ctx=112812 against a 250000 budget. Counting entries is
-# not counting wakes; the arm is gone rather than retuned.
 #
 # Silent no-op (empty stdout, exit 0) on any missing dependency or parse
 # error — no jq, no transcript_path in the payload, an unreadable or
