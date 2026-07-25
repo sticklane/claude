@@ -26,4 +26,4 @@ if [ "${#staged[@]}" -gt 0 ]; then
 fi
 
 @TYPECHECK_STAGE@
-exit 0
+: # falls through with success, so blocks appended below this one still run

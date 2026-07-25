@@ -818,6 +818,32 @@ assert_not "no-build: no build stage without .scripts.build or marker" \
 
 # ---------------------------------------------------------------------------
 
+
+# --- appended content after the hook must still run (regression) -------------
+# A bare top-level `exit 0` at the end made every later block dead code. That
+# silently killed beads' pre-commit integration in three repos on this machine,
+# and any other tool that appends to the hook.
+APP="$TMP/append-probe"
+mkdir -p "$APP"
+git -C "$APP" init -q
+git -C "$APP" config user.email t@e.com
+git -C "$APP" config user.name t
+printf 'print("x")\n' > "$APP/a.py"
+printf '[project]\nname="x"\n' > "$APP/pyproject.toml"
+git -C "$APP" add -A
+git -C "$APP" commit -qm init
+( cd "$APP" && "$INSTALL" . ) >/dev/null 2>&1
+APP_HOOK="$APP/.git/hooks/pre-commit"
+
+assert_not "generated hook has no unconditional top-level exit" \
+  grep -qE '^exit 0$' "$APP_HOOK"
+
+printf 'touch %s/RAN.marker\n' "$APP" >> "$APP_HOOK"
+rm -f "$APP/RAN.marker"
+( cd "$APP" && git reset -q; bash .git/hooks/pre-commit ) >/dev/null 2>&1
+assert "content appended after the generated hook still executes" \
+  test -f "$APP/RAN.marker"
+
 echo "pass: $pass fail: $fail"
 [ "$fail" -eq 0 ] || exit 1
 exit 0
