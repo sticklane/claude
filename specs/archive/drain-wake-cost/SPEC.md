@@ -1,7 +1,7 @@
 # Cheap wakes for drain's rolling window
 
 Status: superseded
-Superseded-by: drain-to-Workflow pivot (2026-07-25)
+Superseded-by: drain-to-Workflow pivot (2026-07-25) (factor 2 retired; factor 1 survives as residual, governed by the wake budget)
 Priority: P1
 
 ## Supersession

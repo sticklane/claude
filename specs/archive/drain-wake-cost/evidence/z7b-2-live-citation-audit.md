@@ -71,9 +71,12 @@ acceptance-criteria authoring text, unrelated to drain).
 Changed (inside this task's `Touch:` scope): the archived spec's
 `Status: open` → `Status: superseded` plus a `## Supersession` section, and
 the Session refresh paragraph in `.claude/rules/token-discipline.md`.
-Every stale citation resolves to that spec, so the supersession header is
-what a reader following any of them now hits first.
+Six of the stale citations write the pre-archive path `specs/drain-wake-cost`,
+which no longer resolves; a reader following them hits nothing and never
+reaches the supersession header, so they must be redirected by a follow-up.
+That follow-up is filed in bd.
 
 Not changed: the six stale-path citations and the two owner-claim citations
 listed above all live in specs outside this task's `Touch:` list. They are
-reported as discovered work rather than edited here.
+reported as discovered work rather than edited here, and tracked by the bd
+follow-up named above.
