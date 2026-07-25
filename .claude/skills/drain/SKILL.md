@@ -52,7 +52,7 @@ record why on the issue and leave it for the batch interview.
    `.claude/rules/concurrent-sessions.md`), unclaim and requeue it
    (`bd update <id> --status open`) and drop its line from
    `.beads/session-claims` and `.beads/session-inflight` if present — a dead
-   session's dispatch marker describes a worker that no longer exists, and
+   session's in-flight marker describes a worker that no longer exists, and
    `bd ready` excludes `in_progress`,
    so an issue claimed when a session died never resurfaces otherwise. Then
    read the queue.

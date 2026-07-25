@@ -4,8 +4,8 @@
 # unmodified), the four prose lines the check must NOT flag, the two wrapped
 # dispatches that must be SEEN, drain's max-generations paragraph (a named
 # generation cap counts as a bound), plus positive and negative controls.
-# Runs against throwaway fixture files in a temp dir via the CHECK_TD_FILES
-# env override, so it never touches the real tree.
+# Most cases run against throwaway fixture files via CHECK_TD_FILES; the final
+# integration assertion also checks the real in-scope tree.
 set -u
 
 TOOLKIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
