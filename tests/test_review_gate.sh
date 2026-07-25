@@ -597,7 +597,7 @@ assert "bin/review-gate documents the REVIEW_GATE=0 bypass" \
 assert "bin/review-gate documents the --amend caveat" \
   bash -c 'sed -n "1,/^set -u/p" "$1" | grep -q -- "--amend"' _ "$GATE"
 
-# --- bin/install-review-gate -------------------------------------------------
+# --- bin/install-review-gate: per-repository installation --------------------
 # Sandboxed: HOME and the global git config both point into the temp dir, so no
 # assertion here can touch the real machine's configuration. If this git does
 # not honor GIT_CONFIG_GLOBAL, the installer assertions are skipped rather than
@@ -609,84 +609,320 @@ FAKECONFIG="$FAKEHOME/.gitconfig"
 : > "$FAKECONFIG"
 GIT_CONFIG_GLOBAL="$FAKECONFIG" git config --global reviewgate.probe sandboxed 2>/dev/null
 if grep -q sandboxed "$FAKECONFIG" 2>/dev/null; then
-  sandboxed() { # sandboxed <command...>
-    HOME="$FAKEHOME" GIT_CONFIG_GLOBAL="$FAKECONFIG" "$@"
+  inst() { # inst <installer-args...>
+    HOME="$FAKEHOME" GIT_CONFIG_GLOBAL="$FAKECONFIG" "$INSTALLER" "$@"
   }
   global_hookspath() {
     GIT_CONFIG_GLOBAL="$FAKECONFIG" git config --global --get core.hooksPath 2>/dev/null
   }
+  local_hookspath() { # local_hookspath <repo>
+    git -C "$1" config --local --get core.hooksPath 2>/dev/null
+  }
 
-  IDIR="$TMP/installed hooks"
-  INS_OUT="$(sandboxed "$INSTALLER" install "$IDIR" 2>&1)"
-  assert_eq "install exits 0" 0 "$?"
-  assert "install puts an executable pre-commit in the hooks dir" \
-    test -x "$IDIR/pre-commit"
-  assert_eq "install points core.hooksPath at the hooks dir" \
-    "$IDIR" "$(global_hookspath)"
+  # bare_repo <path> — a fixture with no hooks wiring of any kind, so what
+  # gates it can only be what the installer put there.
+  bare_repo() {
+    local repo="$1"
+    mkdir -p "$repo"
+    HOME="$FAKEHOME" GIT_CONFIG_GLOBAL="$FAKECONFIG" git -C "$repo" init -q
+    git -C "$repo" config user.email t@e.com
+    git -C "$repo" config user.name t
+    git -C "$repo" config commit.gpgsign false
+  }
 
-  sandboxed "$INSTALLER" install "$IDIR" >/dev/null 2>&1
-  assert_eq "install is idempotent" 0 "$?"
-  assert_eq "a second install leaves core.hooksPath alone" \
-    "$IDIR" "$(global_hookspath)"
+  sb_git() { # sb_git <repo> <git-args...> -> GIT_EXIT / GIT_ERR
+    local repo="$1"; shift
+    GIT_ERR="$( cd "$repo" &&
+      HOME="$FAKEHOME" GIT_CONFIG_GLOBAL="$FAKECONFIG" bounded git "$@" 2>&1 >/dev/null )"
+    GIT_EXIT=$?
+  }
+  sb_blocked() { # sb_blocked <description> <repo> <git-args...>
+    local desc="$1" repo="$2"; shift 2
+    local before after
+    before="$(commits_in "$repo")"
+    sb_git "$repo" "$@"
+    after="$(commits_in "$repo")"
+    assert_ne "$desc: git exits non-zero" 0 "$GIT_EXIT"
+    assert_eq "$desc: history is unchanged" "$before" "$after"
+  }
+  sb_committed() { # sb_committed <description> <repo> <git-args...>
+    local desc="$1" repo="$2"; shift 2
+    local before after
+    before="$(commits_in "$repo")"
+    sb_git "$repo" "$@"
+    after="$(commits_in "$repo")"
+    assert_eq "$desc: git exits 0" 0 "$GIT_EXIT"
+    assert_eq "$desc: one new commit" "$((before + 1))" "$after"
+  }
 
-  STATUS_OUT="$(sandboxed "$INSTALLER" status 2>&1)"
-  assert_eq "status exits 0 when installed" 0 "$?"
-  assert_has "status reports the hooks dir" "$IDIR" "$STATUS_OUT"
-  assert "status reports that it is installed" \
-    grep -Eqi 'installed: *yes' <<<"$STATUS_OUT"
+  sum_of() { shasum "$1" | cut -d' ' -f1; }
+  prefix_sum() { # prefix_sum <file> <bytes>
+    head -c "$2" "$1" | shasum | cut -d' ' -f1
+  }
+  marker_count() { grep -c 'BEGIN AGENTIC REVIEW-GATE' "$1" | tr -d ' '; }
+  line_of() { grep -n "$1" "$2" | head -n 1 | cut -d: -f1; }
 
-  # An installed hook gates a real commit through the global config alone.
-  GLOBALLY="$TMP/globally gated"
-  mkdir -p "$GLOBALLY"
-  sandboxed git init -q "$GLOBALLY"
-  sandboxed git -C "$GLOBALLY" config user.email t@e.com
-  sandboxed git -C "$GLOBALLY" config user.name t
-  printf 'one\n' > "$GLOBALLY/a.txt"
-  sandboxed git -C "$GLOBALLY" add a.txt
-  ( cd "$GLOBALLY" && sandboxed bounded git commit -m x ) >/dev/null 2>&1
-  assert_ne "an installed hook gates a repo with no local config" 0 "$?"
-  assert_eq "no commit was created under the installed hook" \
-    "0" "$(commits_in "$GLOBALLY")"
+  write_hook() { # write_hook <path> <body-line...>
+    local path="$1"; shift
+    mkdir -p "$(dirname "$path")"
+    { printf '#!/usr/bin/env bash\n'; printf '%s\n' "$@"; } > "$path"
+    chmod 755 "$path"
+  }
 
-  # A foreign core.hooksPath is refused, never clobbered.
-  FOREIGN="$TMP/foreign hooks"
-  mkdir -p "$FOREIGN"
-  GIT_CONFIG_GLOBAL="$FAKECONFIG" git config --global core.hooksPath "$FOREIGN"
-  REFUSE_OUT="$(sandboxed "$INSTALLER" install "$IDIR" 2>&1)"
-  assert_ne "install refuses a foreign core.hooksPath" 0 "$?"
-  assert_has "the refusal names core.hooksPath" "core.hooksPath" "$REFUSE_OUT"
-  assert_eq "the foreign core.hooksPath is left untouched" \
-    "$FOREIGN" "$(global_hookspath)"
+  # A repository with no pre-commit hook of its own.
+  FRESH="$TMP/install fresh"
+  bare_repo "$FRESH"
+  FRESH_OUT="$(inst install "$FRESH" 2>&1)"
+  assert_eq "install into a fresh repo exits 0" 0 "$?"
+  assert "install puts an executable pre-commit in the repo's hooks dir" \
+    test -x "$FRESH/.git/hooks/pre-commit"
+  assert_has "install names the file it wrote" ".git/hooks/pre-commit" "$FRESH_OUT"
+  assert_eq "install sets no global core.hooksPath" "" "$(global_hookspath)"
+  assert_eq "install sets no local core.hooksPath" "" "$(local_hookspath "$FRESH")"
+  printf 'one\n' > "$FRESH/a.txt"
+  git -C "$FRESH" add a.txt
+  sb_blocked "a per-repo install gates a commit" "$FRESH" commit -m x
+  assert_has "the refusal comes from the review gate" \
+    "no review is recorded" "$GIT_ERR"
+  record_in "$FRESH" "VERDICT: READY"
+  sb_committed "the installed repo commits once reviewed" "$FRESH" commit -m x
 
-  sandboxed "$INSTALLER" uninstall >/dev/null 2>&1
-  assert_eq "uninstall leaves a foreign core.hooksPath set" \
-    "$FOREIGN" "$(global_hookspath)"
+  # An existing passing pre-commit hook keeps running, and ours runs after it.
+  ALONG="$TMP/install alongside"
+  bare_repo "$ALONG"
+  ALONG_HOOK="$ALONG/.git/hooks/pre-commit"
+  ALONG_LOG="$TMP/alongside-runs"
+  write_hook "$ALONG_HOOK" "echo ran >> \"$ALONG_LOG\""
+  ALONG_BYTES="$(wc -c < "$ALONG_HOOK" | tr -d ' ')"
+  ALONG_SUM="$(sum_of "$ALONG_HOOK")"
+  inst install "$ALONG" >/dev/null 2>&1
+  assert_eq "install beside an existing hook exits 0" 0 "$?"
+  assert_eq "the existing hook survives byte-for-byte as the file's prefix" \
+    "$ALONG_SUM" "$(prefix_sum "$ALONG_HOOK" "$ALONG_BYTES")"
+  assert_eq "exactly one review-gate block is present" 1 "$(marker_count "$ALONG_HOOK")"
+  assert "the appended block invokes the hook by absolute path" \
+    grep -qF "$HOOK" "$ALONG_HOOK"
+  printf 'one\n' > "$ALONG/a.txt"
+  git -C "$ALONG" add a.txt
+  : > "$ALONG_LOG"
+  sb_blocked "an appended block gates a commit" "$ALONG" commit -m x
+  assert_eq "the repo's own hook ran exactly once" 1 \
+    "$(wc -l < "$ALONG_LOG" | tr -d ' ')"
+  assert_has "the refusal comes from the review gate" \
+    "no review is recorded" "$GIT_ERR"
+  record_in "$ALONG" "VERDICT: READY"
+  : > "$ALONG_LOG"
+  sb_committed "the commit lands once reviewed" "$ALONG" commit -m x
+  assert_eq "the repo's own hook ran once for the passing commit" 1 \
+    "$(wc -l < "$ALONG_LOG" | tr -d ' ')"
 
-  GIT_CONFIG_GLOBAL="$FAKECONFIG" git config --global core.hooksPath "$IDIR"
-  sandboxed "$INSTALLER" uninstall >/dev/null 2>&1
+  # Installing twice adds one block, not two, and runs the repo hook once.
+  inst install "$ALONG" >/dev/null 2>&1
+  assert_eq "a second install exits 0" 0 "$?"
+  assert_eq "a second install leaves exactly one block" 1 \
+    "$(marker_count "$ALONG_HOOK")"
+  assert_eq "a second install leaves the existing hook byte-identical" \
+    "$ALONG_SUM" "$(prefix_sum "$ALONG_HOOK" "$ALONG_BYTES")"
+  printf 'two\n' >> "$ALONG/a.txt"
+  git -C "$ALONG" add a.txt
+  record_in "$ALONG" "VERDICT: READY"
+  : > "$ALONG_LOG"
+  sb_committed "a twice-installed repo still commits once reviewed" \
+    "$ALONG" commit -m x
+  assert_eq "the repo's own hook still ran exactly once" 1 \
+    "$(wc -l < "$ALONG_LOG" | tr -d ' ')"
+
+  # An existing hook that fails still blocks, and our check never runs.
+  FAILS="$TMP/install over failing"
+  bare_repo "$FAILS"
+  FAILS_HOOK="$FAILS/.git/hooks/pre-commit"
+  write_hook "$FAILS_HOOK" 'echo "repo hook says no" >&2' 'exit 1'
+  inst install "$FAILS" >/dev/null 2>&1
+  assert_eq "install over a failing hook exits 0" 0 "$?"
+  printf 'one\n' > "$FAILS/a.txt"
+  git -C "$FAILS" add a.txt
+  record_in "$FAILS" "VERDICT: READY - reviewed, but the repo hook fails"
+  sb_blocked "a failing repo hook blocks even with a review recorded" \
+    "$FAILS" commit -m x
+  assert_has "the repo hook's own message reaches the user" \
+    "repo hook says no" "$GIT_ERR"
+  refute_has "the review check never ran" "no review is recorded" "$GIT_ERR"
+
+  # A hook whose last line is an unconditional `exit 0` would swallow an
+  # appended block, so the installer refuses rather than reporting success.
+  INERT="$TMP/install inert"
+  bare_repo "$INERT"
+  INERT_HOOK="$INERT/.git/hooks/pre-commit"
+  write_hook "$INERT_HOOK" 'echo checking' 'exit 0'
+  INERT_SUM="$(sum_of "$INERT_HOOK")"
+  INERT_OUT="$(inst install "$INERT" 2>&1)"
+  assert_ne "install refuses a hook ending in an unconditional exit" 0 "$?"
+  assert_has "the refusal says the block would not run" \
+    "would never run" "$INERT_OUT"
+  assert_eq "the refused install left the hook untouched" \
+    "$INERT_SUM" "$(sum_of "$INERT_HOOK")"
+
+  # A local core.hooksPath is honored: the hook lands where git will look.
+  LOCALHP="$TMP/local hookspath repo"
+  bare_repo "$LOCALHP"
+  LOCALHP_DIR="$TMP/local hookspath dir"
+  mkdir -p "$LOCALHP_DIR"
+  git -C "$LOCALHP" config core.hooksPath "$LOCALHP_DIR"
+  inst install "$LOCALHP" >/dev/null 2>&1
+  assert_eq "install into a repo with a local hooksPath exits 0" 0 "$?"
+  assert "install lands in the configured hooks directory" \
+    test -x "$LOCALHP_DIR/pre-commit"
+  refute "install does not touch .git/hooks when a hooksPath is set" \
+    test -e "$LOCALHP/.git/hooks/pre-commit"
+  assert_eq "install leaves the local core.hooksPath alone" \
+    "$LOCALHP_DIR" "$(local_hookspath "$LOCALHP")"
+  printf 'one\n' > "$LOCALHP/a.txt"
+  git -C "$LOCALHP" add a.txt
+  sb_blocked "the configured hooks directory is what gates" "$LOCALHP" commit -m x
+
+  # A bd-managed repository: a beads-owned block in .beads/hooks/pre-commit,
+  # pointed at by a local core.hooksPath. Ours goes after the END marker and
+  # the beads block is never written inside.
+  BD="$TMP/beads managed"
+  bare_repo "$BD"
+  BD_HOOK="$BD/.beads/hooks/pre-commit"
+  BD_LOG="$TMP/beads-runs"
+  write_hook "$BD_HOOK" \
+    '# --- BEGIN BEADS INTEGRATION v1.1.0 ---' \
+    "echo beads >> \"$BD_LOG\"" \
+    'if [ -n "${BEADS_FAIL:-}" ]; then exit 9; fi' \
+    '# --- END BEADS INTEGRATION v1.1.0 ---'
+  git -C "$BD" config core.hooksPath "$BD/.beads/hooks"
+  BD_BYTES="$(wc -c < "$BD_HOOK" | tr -d ' ')"
+  BD_SUM="$(sum_of "$BD_HOOK")"
+  BD_BLOCK="$(awk '/BEGIN BEADS/,/END BEADS/' "$BD_HOOK")"
+  inst install "$BD" >/dev/null 2>&1
+  assert_eq "install into a bd-managed repo exits 0" 0 "$?"
+  assert_eq "the beads block is byte-identical afterward" \
+    "$BD_BLOCK" "$(awk '/BEGIN BEADS/,/END BEADS/' "$BD_HOOK")"
+  assert_eq "the whole beads hook survives as the file's prefix" \
+    "$BD_SUM" "$(prefix_sum "$BD_HOOK" "$BD_BYTES")"
+  assert "our block begins after the beads END marker" \
+    test "$(line_of 'BEGIN AGENTIC REVIEW-GATE' "$BD_HOOK")" -gt \
+      "$(line_of 'END BEADS INTEGRATION' "$BD_HOOK")"
+  printf 'one\n' > "$BD/a.txt"
+  git -C "$BD" add a.txt
+  : > "$BD_LOG"
+  sb_blocked "a bd-managed repo is gated by the appended block" "$BD" commit -m x
+  assert_eq "bd's own portion still executes" 1 "$(wc -l < "$BD_LOG" | tr -d ' ')"
+  record_in "$BD" "VERDICT: READY"
+  sb_committed "a bd-managed repo commits once reviewed" "$BD" commit -m x
+
+  # status reports what is actually on disk, in each state.
+  STATUS_OUT="$(inst status "$FRESH" 2>&1)"
+  assert_eq "status exits 0" 0 "$?"
+  assert_has "status names the repo" "$FRESH" "$STATUS_OUT"
+  assert_has "status reports the effective hooks dir" \
+    "$FRESH/.git/hooks" "$STATUS_OUT"
+  assert "status reports our hook as present" \
+    grep -Eqi 'review-gate: *present' <<<"$STATUS_OUT"
+  assert "status reports no other pre-commit content" \
+    grep -Eqi 'other pre-commit content: *no' <<<"$STATUS_OUT"
+  assert "status reports the local core.hooksPath as unset" \
+    grep -Eqi 'local core\.hooksPath: *\(unset\)' <<<"$STATUS_OUT"
+  assert "status reports the global core.hooksPath as unset" \
+    grep -Eqi 'global core\.hooksPath: *\(unset\)' <<<"$STATUS_OUT"
+
+  STATUS_OUT="$(inst status "$BD" 2>&1)"
+  assert_has "status reports the bd hooks dir" "$BD/.beads/hooks" "$STATUS_OUT"
+  assert "status reports our block as present in a bd repo" \
+    grep -Eqi 'review-gate: *present' <<<"$STATUS_OUT"
+  assert "status reports the other content a bd hook carries" \
+    grep -Eqi 'other pre-commit content: *yes' <<<"$STATUS_OUT"
+  assert_has "status reports the local core.hooksPath" \
+    "$BD/.beads/hooks" "$STATUS_OUT"
+
+  STATUS_OUT="$(inst status "$INERT" 2>&1)"
+  assert "status reports our hook as absent where install refused" \
+    grep -Eqi 'review-gate: *absent' <<<"$STATUS_OUT"
+  assert "status still reports the repo's own hook content" \
+    grep -Eqi 'other pre-commit content: *yes' <<<"$STATUS_OUT"
+
+  # uninstall removes only our block.
+  inst uninstall "$ALONG" >/dev/null 2>&1
   assert_eq "uninstall exits 0" 0 "$?"
-  assert_eq "uninstall unsets our core.hooksPath" "" "$(global_hookspath)"
-  refute "uninstall removes the hook" test -e "$IDIR/pre-commit"
+  assert_eq "uninstall restores the existing hook byte-for-byte" \
+    "$ALONG_SUM" "$(sum_of "$ALONG_HOOK")"
+  inst uninstall "$BD" >/dev/null 2>&1
+  assert_eq "uninstall restores a bd-managed hook byte-for-byte" \
+    "$BD_SUM" "$(sum_of "$BD_HOOK")"
+  inst uninstall "$FRESH" >/dev/null 2>&1
+  refute "uninstall removes a file that is only our hook" \
+    test -e "$FRESH/.git/hooks/pre-commit"
+  STATUS_OUT="$(inst status "$FRESH" 2>&1)"
+  assert "status reports our hook as absent after uninstall" \
+    grep -Eqi 'review-gate: *absent' <<<"$STATUS_OUT"
+  inst uninstall "$FRESH" >/dev/null 2>&1
+  assert_eq "uninstall on a repo with no hook exits 0" 0 "$?"
 
-  STATUS_OUT="$(sandboxed "$INSTALLER" status 2>&1)"
-  assert "status reports that it is not installed" \
-    grep -Eqi 'installed: *no' <<<"$STATUS_OUT"
+  # An uninstalled repo commits without a review again.
+  printf 'three\n' >> "$ALONG/a.txt"
+  git -C "$ALONG" add a.txt
+  : > "$ALONG_LOG"
+  sb_committed "an uninstalled repo is no longer gated" "$ALONG" commit -m x
+  assert_eq "the repo's own hook still runs after uninstall" 1 \
+    "$(wc -l < "$ALONG_LOG" | tr -d ' ')"
 
-  # A moved toolkit checkout leaves a dangling symlink. Uninstall must still
-  # clear core.hooksPath, or every repository's own hooks stay disabled with
-  # no supported way back.
-  sandboxed "$INSTALLER" install "$IDIR" >/dev/null 2>&1
-  ln -sfn "$TMP/moved away/hooks/review-gate/pre-commit" "$IDIR/pre-commit"
-  sandboxed "$INSTALLER" uninstall >/dev/null 2>&1
-  assert_eq "uninstall exits 0 with a dangling hook symlink" 0 "$?"
-  assert_eq "uninstall clears core.hooksPath for a dangling symlink" \
-    "" "$(global_hookspath)"
-  refute "uninstall removes the dangling symlink" test -L "$IDIR/pre-commit"
+  # With no repository argument, the current repository is the target.
+  DEFAULTED="$TMP/default target"
+  bare_repo "$DEFAULTED"
+  ( cd "$DEFAULTED" && inst install ) >/dev/null 2>&1
+  assert_eq "install with no argument exits 0" 0 "$?"
+  assert "install with no argument targets the current repo" \
+    test -x "$DEFAULTED/.git/hooks/pre-commit"
+  ( cd "$DEFAULTED" && inst uninstall ) >/dev/null 2>&1
+  refute "uninstall with no argument targets the current repo" \
+    test -e "$DEFAULTED/.git/hooks/pre-commit"
 
-  # Install warns that a global hooks path retires every other hook type.
-  INS_OUT="$(sandboxed "$INSTALLER" install "$IDIR" 2>&1)"
-  assert_has "install warns about non-pre-commit hooks" "commit-msg" "$INS_OUT"
-  sandboxed "$INSTALLER" uninstall >/dev/null 2>&1
+  # Several repositories in one invocation.
+  MULTI_A="$TMP/multi a"; bare_repo "$MULTI_A"
+  MULTI_B="$TMP/multi b"; bare_repo "$MULTI_B"
+  inst install "$MULTI_A" "$MULTI_B" >/dev/null 2>&1
+  assert_eq "install accepts several repositories" 0 "$?"
+  assert "the first named repo is installed" test -x "$MULTI_A/.git/hooks/pre-commit"
+  assert "the second named repo is installed" test -x "$MULTI_B/.git/hooks/pre-commit"
+
+  # Refusals.
+  NOTAREPO="$TMP/plain directory"
+  mkdir -p "$NOTAREPO"
+  REFUSE_OUT="$(inst install "$NOTAREPO" 2>&1)"
+  assert_ne "install refuses a directory that is not a git repo" 0 "$?"
+  assert "the refusal says it is not a git repository" \
+    grep -Eqi 'not a git repositor' <<<"$REFUSE_OUT"
+  refute "nothing was written into the plain directory" \
+    test -e "$NOTAREPO/pre-commit"
+
+  REFUSE_OUT="$(inst install "$TMP/no such path" 2>&1)"
+  assert_ne "install refuses a path that does not exist" 0 "$?"
+
+  UNWRITABLE_REPO="$TMP/unwritable hooks"
+  bare_repo "$UNWRITABLE_REPO"
+  mkdir -p "$UNWRITABLE_REPO/.git/hooks"
+  chmod 500 "$UNWRITABLE_REPO/.git/hooks"
+  REFUSE_OUT="$(inst install "$UNWRITABLE_REPO" 2>&1)"
+  assert_ne "install refuses an unwritable hooks directory" 0 "$?"
+  assert "the refusal says the directory is not writable" \
+    grep -Eqi 'writable' <<<"$REFUSE_OUT"
+  chmod 700 "$UNWRITABLE_REPO/.git/hooks"
+
+  REFUSE_OUT="$(inst frobnicate "$FRESH" 2>&1)"
+  assert_ne "an unknown subcommand exits non-zero" 0 "$?"
+  assert "the usage message names the subcommands" \
+    grep -Eq 'install.*uninstall.*status' <<<"$REFUSE_OUT"
+
+  # Nothing anywhere in this section may have touched core.hooksPath.
+  assert_eq "no global core.hooksPath was ever set" "" "$(global_hookspath)"
+  assert_eq "the fresh repo's local core.hooksPath is still unset" \
+    "" "$(local_hookspath "$FRESH")"
+  refute "the installer never unsets a core.hooksPath" \
+    grep -qF -- '--unset' "$INSTALLER"
+  refute "the installer never writes a core.hooksPath" \
+    grep -Eq 'git config[^|]*core\.hooksPath "' "$INSTALLER"
 else
   echo "SKIP: git does not honor GIT_CONFIG_GLOBAL; installer assertions skipped" >&2
 fi
@@ -702,6 +938,18 @@ assert "the README documents the core.hooksPath chaining caveat" \
   grep -qF 'core.hooksPath' "$README"
 assert "the README names bin/install-review-gate" \
   grep -qF 'bin/install-review-gate' "$README"
+assert "the README describes a per-repository install" \
+  grep -Eqi 'per.repositor' "$README"
+assert "the README keeps a section on not using a global core.hooksPath" \
+  grep -q '^## Why not a global' "$README"
+assert "the README gives the local-override reason" \
+  grep -qi 'overrides the global' "$README"
+assert "the README gives the replaced-hooks reason" \
+  bash -c 'tr "\n" " " < "$1" | grep -Eqi "replaces[^.]*\.git/hooks"' _ "$README"
+assert "the README names the marker block it appends" \
+  grep -qF 'BEGIN AGENTIC REVIEW-GATE' "$README"
+assert "the README names the beads block it must not write inside" \
+  grep -qF 'BEADS INTEGRATION' "$README"
 assert "the README keeps an Install section" grep -q '^## Install' "$README"
 assert "the README keeps an Uninstall section" grep -q '^## Uninstall' "$README"
 assert "the README keeps a Known gaps section" grep -q '^## Known gaps' "$README"

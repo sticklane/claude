@@ -19,8 +19,8 @@ command took, and there is nothing left to parse.
 - If it is not, the hook prints the key, the exact `review-gate record` command
   to run once you have reviewed, and both bypasses; then it exits 1 and the
   commit does not happen.
-- Runs the repository's own `pre-commit` hook first, and exits with that hook's
-  status if it fails (see the `core.hooksPath` caveat below).
+- Runs after the repository's own `pre-commit` checks, never instead of them,
+  and exits with their status if they fail (see [Install](#install)).
 - Refuses when it cannot compute the key at all — no `shasum` or `sha256sum` on
   `PATH`. A gate that cannot see the diff would otherwise switch itself off
   silently.
@@ -107,58 +107,93 @@ git commit -m 'the reviewed change' src/thing.go
 
 ## Install
 
+Installation is per repository. Name the repositories, or omit them for the
+current one:
+
 ```sh
-bin/install-review-gate install            # ~/.git-hooks, or pass a directory
-bin/install-review-gate status
+bin/install-review-gate install            # the current repository
+bin/install-review-gate install ~/hub ~/fooszone
+bin/install-review-gate status ~/hub
 ```
 
-That symlinks the hook into the hooks directory and sets
-`git config --global core.hooksPath` to point at it, which covers every
-repository on the machine. If `core.hooksPath` is already set somewhere else,
-the installer refuses and tells you rather than clobbering it.
+The hook lands in the repository's *effective* hooks directory — what
+`git rev-parse --git-path hooks` answers, which already honors a
+repository-local `core.hooksPath` (bd sets one, pointing at `.beads/hooks`).
+That is exactly where git will look in that repository, and nothing else in it
+changes.
+
+If no `pre-commit` hook is there, the installer symlinks ours in. If one is
+already there, it stays and the installer appends a marked block that runs the
+gate after it:
+
+```sh
+# --- BEGIN AGENTIC REVIEW-GATE ---
+REVIEW_GATE_CHAINED=1 '/path/to/hooks/review-gate/pre-commit' "$@" || exit $?
+# --- END AGENTIC REVIEW-GATE ---
+```
+
+The repository's own checks run first and decide first; the gate runs only once
+they pass. Re-running `install` replaces the block in place, so it never
+appears twice.
+
+In a bd-managed repository the block goes strictly after
+`# --- END BEADS INTEGRATION vN ---`. Everything between bd's markers belongs
+to bd, and the installer never writes inside them; if that block is not the end
+of the file, it refuses rather than guessing where its own belongs.
+
+It also refuses when the target is not a git repository, when the hooks
+directory cannot be created or written, when the existing hook is not a shell
+script, and when the existing hook's last line is an unconditional `exit` —
+a block appended after that would never run, and reporting success while gating
+nothing is the failure this installer exists to avoid.
 
 ## Uninstall
 
 ```sh
-bin/install-review-gate uninstall
+bin/install-review-gate uninstall          # the current repository
+bin/install-review-gate uninstall ~/hub
 ```
 
-That removes the hook and unsets `core.hooksPath` when it still points at the
-hook's directory. Markers are left behind in repositories where a review was
-recorded; delete those per repository:
+That removes the marked block and leaves the rest of the file byte-for-byte as
+it was, or removes the file outright when it holds nothing but our hook. A
+beads block is never touched. Markers are left behind in repositories where a
+review was recorded; delete those per repository:
 
 ```sh
 rm -rf "$(git rev-parse --git-common-dir)/agentic-review"
 ```
 
-## The `core.hooksPath` caveat
+## Why not a global `core.hooksPath`
 
-`core.hooksPath` **replaces** a repository's `.git/hooks` rather than adding to
-it. A global install would therefore silently disable every repository's own
-`pre-commit` hook — on this machine, the staged-file format and lint checks
-that gated repos run there.
+The installer deliberately does not set `core.hooksPath`, globally or locally.
+It is the wrong mechanism here twice over:
 
-So the hook chains: before checking for a review it runs the repository's own
-`hooks/pre-commit` (resolved from the git common dir, since `git rev-parse
---git-path hooks/pre-commit` answers with `core.hooksPath`'s entry once that is
-set), passing along its own arguments and stdin. A non-zero exit from that hook
-is the commit's exit status, and the gate adds nothing to its output. It runs
-the repository's hook exactly once even when that hook is this same file, by
-symlink or by copy.
+- **Inert where it matters.** A local `core.hooksPath` overrides the global
+  one, and every bd-managed repository sets one — on this machine that is every
+  repository in daily use (`~/claude`, `~/hub`, `~/fooszone`,
+  `~/ynab-mcp-new`), each pointing at its own `.beads/hooks`. A global install
+  would report success and gate none of them.
+- **Harmful everywhere else.** Where no local setting exists,
+  `core.hooksPath` **replaces** `.git/hooks` rather than adding to it, so every
+  hook type the new directory does not itself provide stops running.
+  `post-commit`, `pre-push`, `post-merge`, `post-checkout` and a `review-audit`
+  hook are all live in repositories on this machine and would have gone silent,
+  along with anything husky installed.
+
+Installing into the effective hooks directory avoids both.
+
+The hook still chains to a repository's own `pre-commit` when it is installed
+as the whole file, resolving it from the git common dir and passing along its
+arguments and stdin; a non-zero exit from that hook is the commit's exit
+status, and the gate adds nothing to its output. It runs that hook exactly once
+even when the hook is this same file, by symlink or by copy. An appended
+install needs none of that — the repository's checks sit above the block in the
+same file — so the block sets `REVIEW_GATE_CHAINED=1` and they do not run
+twice.
 
 `REVIEW_GATE=0` returns before the chain and therefore runs neither the review
 check nor the repository's own hook; `git commit --no-verify` skips both by
 skipping the hook entirely.
-
-Only `pre-commit` is chained. Every OTHER hook type a repository defines —
-`commit-msg`, `prepare-commit-msg`, `pre-push`, `post-commit`, `pre-rebase`,
-`post-merge`, and the rest, including anything husky installed — stops running
-in every repository for as long as `core.hooksPath` is set, because git looks
-for those names in the hooks directory too and finds nothing there. That is a
-property of `core.hooksPath`, not of this hook. `bin/install-review-gate
-install` says so at install time. If a repository on this machine depends on
-one of those hooks, install per repository (symlink the hook into that
-repository's `.git/hooks/pre-commit`) instead of globally.
 
 ## Requirements
 
@@ -182,8 +217,9 @@ it, and are not gated:
 - `git commit --amend` IS gated, but on what is staged against `HEAD` rather
   than on the whole commit the amend produces. A reword with nothing staged has
   an empty diff and passes.
-- Every non-`pre-commit` hook in every repository, while a global install is
-  in place — see the `core.hooksPath` caveat above.
+- Every repository the hook has not been installed into. Installation is per
+  repository, so a fresh clone commits ungated until you run the installer
+  there.
 
 Treat every gap above as open.
 

@@ -1,153 +1,254 @@
 #!/usr/bin/env bash
 # install-review-gate — install, remove, or report the review-gate pre-commit
-# hook as this machine's global git hook.
+# hook, one repository at a time.
 #
 # Usage:
-#   install-review-gate install [hooks-dir]
-#                        Put the hook in <hooks-dir> (default ~/.git-hooks) and
-#                        point core.hooksPath at it. Refuses, rather than
-#                        clobbering, a core.hooksPath already set elsewhere.
-#   install-review-gate uninstall [hooks-dir]
-#                        Remove the hook this installer put there, and unset
-#                        core.hooksPath when it points at that hook's directory.
-#   install-review-gate status
-#                        Print whether the hook is installed, the hooks
-#                        directory, and the current core.hooksPath.
+#   install-review-gate install [repo...]
+#                        Install the hook in each repository named, or in the
+#                        current one when none are. A repository with no
+#                        pre-commit hook gets ours; one that already has a
+#                        pre-commit hook keeps it, and gains a marked block at
+#                        the end that runs ours after it. Re-running replaces
+#                        that block rather than adding a second.
+#   install-review-gate uninstall [repo...]
+#                        Remove that block and leave the rest of the file
+#                        untouched, or remove the file when it holds nothing
+#                        but our hook.
+#   install-review-gate status [repo...]
+#                        Print, per repository, the effective hooks directory,
+#                        whether our block is installed, whether any other
+#                        pre-commit content is, and both core.hooksPath
+#                        settings.
 #
-# Running it twice is the same as running it once. core.hooksPath REPLACES a
-# repository's own hooks; the installed hook chains to them so that stays
-# invisible.
+# The hook goes into the repository's effective hooks directory — what `git
+# rev-parse --git-path hooks` answers, which already honors a repository-local
+# core.hooksPath. This installer never reads core.hooksPath as an install
+# target and never writes it: that setting REPLACES a repository's .git/hooks
+# rather than adding to it, so setting it globally retires every hook type it
+# does not itself provide, and a repository that already sets it locally would
+# ignore the global one entirely.
 set -u
 set -o pipefail
 
-DEFAULT_DIR="$HOME/.git-hooks"
+BEGIN_MARK='# --- BEGIN AGENTIC REVIEW-GATE ---'
+END_MARK='# --- END AGENTIC REVIEW-GATE ---'
+BEADS_BEGIN='^# --- BEGIN BEADS INTEGRATION'
+BEADS_END='^# --- END BEADS INTEGRATION'
+
 BIN_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd -P)"
 SOURCE="$(cd "$BIN_DIR/../hooks/review-gate" 2>/dev/null && pwd -P)/pre-commit"
+WORK=""
 
 die() {
   printf 'install-review-gate: %s\n' "$1" >&2
   exit 1
 }
 
-expand_home() { # expand_home <path>
-  case "$1" in
-    '~') printf '%s' "$HOME" ;;
-    '~/'*) printf '%s%s' "$HOME" "${1#\~}" ;;
-    *) printf '%s' "$1" ;;
-  esac
+refuse() { # refuse <repo> <message>
+  printf 'install-review-gate: %s: %s\n' "$1" "$2" >&2
+  return 1
 }
 
-absolute() { # absolute <path>
-  case "$1" in
-    /*) printf '%s' "$1" ;;
-    *) printf '%s/%s' "$PWD" "$1" ;;
-  esac
+workfile() {
+  if [ -z "$WORK" ]; then
+    WORK="$(mktemp)" || die "cannot create a temporary file"
+    trap 'rm -f "$WORK"' EXIT
+  fi
+  printf '%s' "$WORK"
 }
 
-physical() { # physical <path>
-  ( cd "$1" 2>/dev/null && pwd -P ) || printf '%s' "$1"
+shquote() { # shquote <string> — single-quoted for embedding in a shell script
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
 }
 
-same_dir() { # same_dir <path> <path>
-  [ "$(physical "$1")" = "$(physical "$2")" ]
+block() {
+  printf '%s\n' "$BEGIN_MARK" \
+    "REVIEW_GATE_CHAINED=1 $(shquote "$SOURCE") \"\$@\" || exit \$?" \
+    "$END_MARK"
 }
 
-is_ours() { # is_ours <path> — a review-gate hook, including a broken symlink
+exists() { [ -e "$1" ] || [ -L "$1" ]; }
+
+has_block() { [ -f "$1" ] && grep -qxF "$BEGIN_MARK" "$1"; }
+
+is_ours() { # is_ours <path> — the whole file is our hook, symlink or copy
   if [ -L "$1" ]; then
     case "$(readlink "$1")" in */hooks/review-gate/pre-commit) return 0 ;; esac
   fi
-  [ -f "$1" ] && head -n 5 "$1" 2>/dev/null | grep -q 'review-gate pre-commit hook'
+  [ -f "$1" ] && ! has_block "$1" &&
+    head -n 5 "$1" 2>/dev/null | grep -q 'review-gate pre-commit hook'
 }
 
-configured_path() {
-  git config --global --get core.hooksPath 2>/dev/null || true
+strip_block() { # strip_block <file>
+  awk -v b="$BEGIN_MARK" -v e="$END_MARK" '
+    $0 == b { skipping = 1; next }
+    $0 == e { skipping = 0; next }
+    !skipping' "$1"
 }
 
-# target_dir prints the hooks directory a subcommand acts on: the argument when
-# given, the configured one when set, the default otherwise.
-target_dir() { # target_dir <argument>
-  local arg="$1" configured
-  if [ -n "$arg" ]; then
-    absolute "$(expand_home "$arg")"
-    return 0
-  fi
-  configured="$(configured_path)"
-  if [ -n "$configured" ]; then
-    absolute "$(expand_home "$configured")"
-  else
-    printf '%s' "$DEFAULT_DIR"
-  fi
+hooks_dir() { # hooks_dir <repo>
+  local repo="$1" path
+  path="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)" || return 1
+  case "$path" in
+    /*) printf '%s' "$path" ;;
+    *) printf '%s/%s' "$(cd "$repo" && pwd -P)" "$path" ;;
+  esac
 }
 
-cmd_install() {
-  local dir="$1" configured
-  [ -f "$SOURCE" ] || die "hook source not found at $SOURCE"
-  configured="$(configured_path)"
-  if [ -n "$configured" ] && ! same_dir "$(expand_home "$configured")" "$dir"; then
-    die "core.hooksPath is already set to '$configured'.
-Installing here would disable that hook path for every repository, so nothing
-was changed. Point this installer at that directory instead:
-    install-review-gate install '$configured'
-or clear the setting yourself with:
-    git config --global --unset core.hooksPath"
-  fi
-  mkdir -p "$dir" || die "cannot create $dir"
-  if ! ln -sfn "$SOURCE" "$dir/pre-commit" 2>/dev/null; then
-    command -v review-gate >/dev/null 2>&1 ||
-      die "cannot symlink into $dir, and a copy there could not find
+hookspath() { # hookspath <repo> <--local|--global>
+  local value
+  value="$(git -C "$1" config "$2" --get core.hooksPath 2>/dev/null)" || value=""
+  printf '%s' "${value:-(unset)}"
+}
+
+is_repo() { git -C "$1" rev-parse --git-dir >/dev/null 2>&1; }
+
+is_shell_script() { # is_shell_script <file>
+  local first interp
+  first="$(head -n 1 "$1")"
+  case "$first" in '#!'*) ;; *) return 0 ;; esac
+  set -- ${first#\#!}
+  interp="${1:-sh}"
+  [ "$(basename "$interp")" = env ] && interp="${2:-sh}"
+  case "$(basename "$interp")" in sh | bash | dash | ksh | zsh) return 0 ;; esac
+  return 1
+}
+
+last_statement() { # last_statement <file> — last line that runs, block aside
+  strip_block "$1" | grep -v '^[[:space:]]*$' | grep -v '^[[:space:]]*#' |
+    tail -n 1 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+swallows_appended_block() { # swallows_appended_block <file>
+  case "$(last_statement "$1")" in exit | 'exit 0') return 0 ;; esac
+  return 1
+}
+
+beads_tail_ok() { # beads_tail_ok <file> — the beads block is the file's end
+  grep -q "$BEADS_BEGIN" "$1" || return 0
+  grep -q "$BEADS_END" "$1" || return 1
+  case "$(grep -v '^[[:space:]]*$' "$1" | tail -n 1)" in
+    '# --- END BEADS INTEGRATION'*) return 0 ;;
+  esac
+  return 1
+}
+
+other_content() { # other_content <hook>
+  exists "$1" || return 1
+  is_ours "$1" && return 1
+  strip_block "$1" | grep -v '^#!' | grep -q '[^[:space:]]'
+}
+
+install_standalone() { # install_standalone <repo> <hook>
+  local repo="$1" hook="$2"
+  ln -sfn "$SOURCE" "$hook" 2>/dev/null && return 0
+  if ! command -v review-gate >/dev/null 2>&1; then
+    refuse "$repo" "cannot symlink $hook, and a copy there could not find
 bin/review-gate: the hook locates that tool through the symlink it was
-installed as, or on PATH, and it is on neither. Put $BIN_DIR on PATH and
-try again."
-    cp "$SOURCE" "$dir/pre-commit" || die "cannot write $dir/pre-commit"
-    chmod 755 "$dir/pre-commit" || die "cannot make $dir/pre-commit executable"
+installed as, or on PATH, and it is on neither. Put $BIN_DIR on PATH and try
+again."
+    return 1
   fi
-  git config --global core.hooksPath "$dir" ||
-    die "cannot set core.hooksPath"
-  printf 'installed %s\ncore.hooksPath: %s\n' "$dir/pre-commit" "$dir"
-  printf '%s\n' "core.hooksPath replaces each repository's .git/hooks. The
-installed hook chains to a repository's own pre-commit hook, but NO other hook
-type does: commit-msg, prepare-commit-msg, pre-push, post-commit and the rest
-stop running in every repository until this is uninstalled."
+  cp "$SOURCE" "$hook" || return 1
+  chmod 755 "$hook"
 }
 
-cmd_uninstall() {
-  local dir="$1" hook="$1/pre-commit" configured
-  configured="$(configured_path)"
-  if ! is_ours "$hook"; then
-    printf 'no review-gate hook at %s; nothing removed\n' "$hook"
-    [ -z "$configured" ] ||
-      printf 'core.hooksPath is still set to: %s\n' "$configured"
+append_block() { # append_block <hook>
+  [ -s "$1" ] && [ -n "$(tail -c 1 "$1")" ] && printf '\n' >> "$1"
+  block >> "$1"
+}
+
+hook_path() { # hook_path <repo>
+  local repo="$1" dir
+  is_repo "$repo" || { refuse "$repo" "not a git repository"; return 1; }
+  dir="$(hooks_dir "$repo")" ||
+    { refuse "$repo" "cannot resolve its hooks directory"; return 1; }
+  printf '%s/pre-commit' "$dir"
+}
+
+cmd_install() { # cmd_install <repo>
+  local repo="$1" hook dir work
+  [ -f "$SOURCE" ] || die "hook source not found at $SOURCE"
+  hook="$(hook_path "$repo")" || return 1
+  dir="$(dirname "$hook")"
+  if [ ! -d "$dir" ] && ! mkdir -p "$dir" 2>/dev/null; then
+    refuse "$repo" "hooks directory does not exist and cannot be created: $dir"
+    return 1
+  fi
+  [ -w "$dir" ] || { refuse "$repo" "hooks directory is not writable: $dir"; return 1; }
+
+  if ! exists "$hook" || is_ours "$hook"; then
+    install_standalone "$repo" "$hook" || return 1
+    printf '%s: installed %s\n' "$repo" "$hook"
     return 0
   fi
-  rm -f "$hook" || die "cannot remove $hook"
-  if [ -n "$configured" ] && same_dir "$(expand_home "$configured")" "$dir"; then
-    git config --global --unset core.hooksPath || true
-    printf 'removed %s and unset core.hooksPath\n' "$hook"
-  else
-    printf 'removed %s; core.hooksPath (%s) was left alone\n' \
-      "$hook" "${configured:-unset}"
+
+  [ -w "$hook" ] || { refuse "$repo" "not writable: $hook"; return 1; }
+  if ! is_shell_script "$hook"; then
+    refuse "$repo" "its pre-commit hook is not a shell script, so a block cannot be appended to it: $hook"
+    return 1
   fi
+  if swallows_appended_block "$hook"; then
+    refuse "$repo" "its pre-commit hook ends in an unconditional \`$(last_statement "$hook")\`, so an appended block would never run. Move that line, or invoke $SOURCE from the hook yourself: $hook"
+    return 1
+  fi
+
+  work="$(workfile)"
+  strip_block "$hook" > "$work" || return 1
+  beads_tail_ok "$work" ||
+    { refuse "$repo" "its beads block is not the end of the file, so nothing can be appended after it safely: $hook"; return 1; }
+  cat "$work" > "$hook" || return 1
+  append_block "$hook"
+  printf '%s: added the review-gate block to %s\n' "$repo" "$hook"
 }
 
-cmd_status() {
-  local dir="$1" configured installed=no
-  configured="$(configured_path)"
-  if is_ours "$dir/pre-commit" && [ -n "$configured" ] &&
-    same_dir "$(expand_home "$configured")" "$dir"; then
-    installed=yes
+cmd_uninstall() { # cmd_uninstall <repo>
+  local repo="$1" hook work
+  hook="$(hook_path "$repo")" || return 1
+  if ! exists "$hook"; then
+    printf '%s: no pre-commit hook at %s; nothing removed\n' "$repo" "$hook"
+    return 0
   fi
-  printf 'installed: %s\n' "$installed"
-  printf 'hooks dir: %s\n' "$dir"
-  printf 'core.hooksPath: %s\n' "${configured:-(unset)}"
+  if is_ours "$hook"; then
+    rm -f "$hook" || { refuse "$repo" "cannot remove $hook"; return 1; }
+    printf '%s: removed %s\n' "$repo" "$hook"
+    return 0
+  fi
+  if ! has_block "$hook"; then
+    printf '%s: no review-gate block in %s; nothing removed\n' "$repo" "$hook"
+    return 0
+  fi
+  [ -w "$hook" ] || { refuse "$repo" "not writable: $hook"; return 1; }
+  work="$(workfile)"
+  strip_block "$hook" > "$work" || return 1
+  cat "$work" > "$hook" || return 1
+  printf '%s: removed the review-gate block from %s\n' "$repo" "$hook"
+}
+
+cmd_status() { # cmd_status <repo>
+  local repo="$1" hook installed=absent others=no
+  hook="$(hook_path "$repo")" || return 1
+  { is_ours "$hook" || has_block "$hook"; } && installed=present
+  other_content "$hook" && others=yes
+  printf 'repo: %s\n' "$repo"
+  printf 'hooks dir: %s\n' "$(dirname "$hook")"
+  printf 'review-gate: %s\n' "$installed"
+  printf 'other pre-commit content: %s\n' "$others"
+  printf 'local core.hooksPath: %s\n' "$(hookspath "$repo" --local)"
+  printf 'global core.hooksPath: %s\n' "$(hookspath "$repo" --global)"
 }
 
 subcommand="${1:-status}"
-shift || true
-argument="${1:-}"
+[ $# -eq 0 ] || shift
+[ $# -gt 0 ] || set -- .
 
 case "$subcommand" in
-  install) cmd_install "$(target_dir "${argument:-$DEFAULT_DIR}")" ;;
-  uninstall) cmd_uninstall "$(target_dir "$argument")" ;;
-  status) cmd_status "$(target_dir "$argument")" ;;
-  *) die "usage: install-review-gate {install|uninstall|status} [hooks-dir]" ;;
+  install | uninstall | status) ;;
+  *) die "usage: install-review-gate {install|uninstall|status} [repo...]" ;;
 esac
+
+status=0
+for repo in "$@"; do
+  "cmd_$subcommand" "$repo" || status=1
+done
+exit "$status"
