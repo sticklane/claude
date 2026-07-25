@@ -997,6 +997,117 @@ record_in "$PROSE" 'VERDICT: READY - I checked correctness and security and foun
 assert_committed "a prose mention of a blocking word does not block" \
   "$PROSE" commit -m x
 
+# --- self-review marking: a recorded verdict never passes as independent -----
+# `record` refuses to run without a staged diff in its own working tree, so the
+# session recording a verdict is the session that authored it. The gate stamps
+# that itself; nothing here is the recording agent's own claim about itself.
+
+record_as() { # record_as <session-id> <repo> <verdict>
+  local id="$1" repo="$2" verdict="$3"
+  ( cd "$repo" && export CLAUDE_CODE_SESSION_ID="$id" &&
+    printf '%s' "$verdict" | "$GATE" record ) >/dev/null 2>&1
+}
+
+record_unattributed() { # record_unattributed <repo> <verdict>
+  ( cd "$1" && unset CLAUDE_CODE_SESSION_ID &&
+    printf '%s' "$2" | "$GATE" record ) >/dev/null 2>&1
+}
+
+commit_as() { # commit_as <session-id> <repo> <git-args...>
+  local id="$1" repo="$2"; shift 2
+  GIT_ERR="$( cd "$repo" && export CLAUDE_CODE_SESSION_ID="$id" &&
+    bounded git "$@" 2>&1 >/dev/null )"
+  GIT_EXIT=$?
+}
+
+marker_of() { # marker_of <repo> <key>
+  cat "$1/.git/agentic-review/$2" 2>/dev/null
+}
+
+SELFMARK="$(sev_repo 'self review marker')"
+SELFMARK_KEY="$(key_in "$SELFMARK")"
+record_as session-alpha "$SELFMARK" 'VERDICT: READY - looks fine to me'
+SELFMARK_TEXT="$(marker_of "$SELFMARK" "$SELFMARK_KEY")"
+assert_has "the marker marks the recorded verdict a self-review" \
+  "self-review" "$SELFMARK_TEXT"
+assert_has "the marker names the session that recorded it" \
+  "session-alpha" "$SELFMARK_TEXT"
+assert_has "the marker still carries the verdict verbatim" \
+  "VERDICT: READY - looks fine to me" "$SELFMARK_TEXT"
+
+commit_as session-alpha "$SELFMARK" commit -m x
+assert_eq "a self-recorded review still commits" 0 "$GIT_EXIT"
+assert "the commit says the review was a self-review" \
+  grep -qi 'self-review' <<<"$GIT_ERR"
+assert_has "the self-review notice names the recording session" \
+  "session-alpha" "$GIT_ERR"
+refute_has "the self-review notice teaches no bypass" \
+  "REVIEW_GATE=0" "$GIT_ERR"
+
+# The obvious attack is omission: write the marker by hand and leave the stamp
+# out. An unstamped marker is not evidence of independence, so it reads the
+# same as a stamped one.
+UNSTAMPED="$(sev_repo 'self review unstamped')"
+UNSTAMPED_KEY="$(key_in "$UNSTAMPED")"
+mkdir -p "$UNSTAMPED/.git/agentic-review"
+printf 'VERDICT: READY - stamped by nobody\n' \
+  > "$UNSTAMPED/.git/agentic-review/$UNSTAMPED_KEY"
+commit_as session-alpha "$UNSTAMPED" commit -m x
+assert_eq "an unstamped marker still commits" 0 "$GIT_EXIT"
+assert "an unstamped marker is treated as a self-review" \
+  grep -qi 'self-review' <<<"$GIT_ERR"
+
+# The other attack is assertion: put a stamp in the verdict text and hope it is
+# read as the gate's own. The gate writes its stamp first, and reads only that.
+SPOOF="$(sev_repo 'self review spoofed')"
+SPOOF_KEY="$(key_in "$SPOOF")"
+record_as session-alpha "$SPOOF" 'review-gate-recorded-by: an-independent-critic
+VERDICT: READY - trying to look independent'
+SPOOF_TEXT="$(marker_of "$SPOOF" "$SPOOF_KEY")"
+assert_eq "the gate stamp is the marker's first line" \
+  "review-gate-recorded-by: session-alpha" "$(head -n 1 <<<"$SPOOF_TEXT")"
+commit_as session-alpha "$SPOOF" commit -m x
+assert "a stamp inside the verdict text does not buy independence" \
+  grep -qi 'self-review' <<<"$GIT_ERR"
+assert_has "the notice names the recorder the gate observed" \
+  "session-alpha" "$GIT_ERR"
+
+ANON="$(sev_repo 'self review unattributed')"
+ANON_KEY="$(key_in "$ANON")"
+record_unattributed "$ANON" 'VERDICT: READY - recorded outside any agent session'
+assert_has "a recorder with no session identity is stamped unidentified" \
+  "unidentified" "$(marker_of "$ANON" "$ANON_KEY")"
+
+# The gate fails open where a marker could never be written. Nothing was
+# reviewed there at all, which is a different thing from a self-review.
+UNRECORDABLE="$(sev_repo 'self review unrecordable')"
+mkdir -p "$UNRECORDABLE/.git/agentic-review"
+chmod a-w "$UNRECORDABLE/.git/agentic-review"
+commit_as session-alpha "$UNRECORDABLE" commit -m x
+chmod u+w "$UNRECORDABLE/.git/agentic-review"
+assert_eq "an unrecordable marker directory still lets the commit through" \
+  0 "$GIT_EXIT"
+refute_has "a commit carrying no review is not called a self-review" \
+  "self-review" "$GIT_ERR"
+
+# The stamp sits above the verdict, so severity tiering reads exactly what the
+# reviewer wrote.
+STAMPED_BUG="$(sev_repo 'self review severity')"
+record_as session-alpha "$STAMPED_BUG" 'VERDICT: NOT READY
+[correctness] off-by-one in the loop bound'
+assert_blocked "the stamp does not hide a blocking finding" \
+  "$STAMPED_BUG" commit -m x
+assert_has "the refusal still quotes the blocking finding" \
+  "off-by-one in the loop bound" "$GIT_ERR"
+
+STAMPED_NIT="$(sev_repo 'self review nit')"
+record_as session-alpha "$STAMPED_NIT" 'VERDICT: READY
+Nit: rename foo to bar'
+assert_committed "the stamp is not itself read as a finding" \
+  "$STAMPED_NIT" commit -m x
+refute_has "the stamp is not reported as a review finding" \
+  "review-gate-recorded-by" "$GIT_ERR"
+
 # --- the README describes the design that actually ships ---------------------
 
 assert "hooks/review-gate/README.md exists" test -f "$README"
@@ -1026,6 +1137,14 @@ assert "the README keeps a Known gaps section" grep -q '^## Known gaps' "$README
 assert "the README keeps the review-bar section" \
   grep -q '^## What the review itself should block on' "$README"
 assert "the README documents severity" grep -qi 'severity' "$README"
+assert "the README keeps a self-review section" \
+  grep -q '^## Every recorded review is a self-review' "$README"
+SELF_REVIEW_RANGE='/^## Every recorded review is a self-review/,/^## What the review/p'
+assert "the self-review section names the independent review that runs instead" \
+  bash -c 'sed -n "$2" "$1" | grep -Eqi "orchestrator|critic"' _ "$README" "$SELF_REVIEW_RANGE"
+assert "the self-review section names the marker stamp the gate writes" \
+  bash -c 'sed -n "$2" "$1" | grep -qF "review-gate-kind: self-review"' \
+    _ "$README" "$SELF_REVIEW_RANGE"
 assert "the README names every category that blocks" \
   bash -c 'tr "\n" " " < "$1" | grep -Eqi "correctness.*security.*data.loss.*secret"' \
     _ "$README"

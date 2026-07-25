@@ -11,7 +11,11 @@
 #   3. `review-gate check`, against the content this commit will actually
 #      contain — `git diff --cached` inside a pre-commit hook covers plain,
 #      `-a`, and pathspec commits alike.
-#   4. The severity tier of the recorded review: only correctness, security,
+#   4. The self-review notice, printed on every gated commit: a verdict is
+#      recorded from the tree that staged the diff, so its author reviewed it.
+#      Never blocking — it says what the recorded review is, so it cannot pass
+#      as an independent one.
+#   5. The severity tier of the recorded review: only correctness, security,
 #      data-loss and committed-secret findings refuse the commit. Everything
 #      else — nits, style, structure, missing tests, pre-existing issues — is
 #      printed and allowed through, as is any severity the parse does not
@@ -131,6 +135,32 @@ recorded_verdict() {
   cat "$marker"
 }
 
+# recorded_by <key> — the session bin/review-gate stamped on the marker as it
+# recorded the verdict. Only the stamp the gate wrote counts, which is the first
+# line; a line further down is the reviewer's own text, not an observation.
+recorded_by() {
+  recorded_verdict "$1" |
+    sed -n '1s/^review-gate-recorded-by:[[:space:]]*//p'
+}
+
+# report_self_review <key> — names the recorded review for what it is. An
+# unstamped marker is not evidence of independence, so it reads the same as a
+# stamped one.
+report_self_review() {
+  local recorder
+  recorded_verdict "$1" >/dev/null || return 0
+  recorder="$(recorded_by "$1")"
+  [ -n "$recorder" ] || recorder="unidentified"
+  cat >&2 <<MESSAGE
+review-gate: self-review — the recorded verdict was written by the session that
+staged this diff, not by an independent reviewer. \`record\` runs only in the
+tree holding the diff, so no review recorded here is an independent one. The
+gate is satisfied; have a separate agent or person read the branch for that.
+
+  recorded-by: $recorder
+MESSAGE
+}
+
 refuse_blocking() { # refuse_blocking <gate> <findings>
   local gate="$1" findings="$2"
   cat >&2 <<MESSAGE
@@ -188,7 +218,9 @@ GATE="$(find_gate)" || {
 gate_error="$("$GATE" check 2>&1 >/dev/null)"
 gate_status=$?
 if [ "$gate_status" -eq 0 ]; then
-  severity_verdict "$GATE" "$("$GATE" key 2>/dev/null)"
+  KEY="$("$GATE" key 2>/dev/null)"
+  report_self_review "$KEY"
+  severity_verdict "$GATE" "$KEY"
   exit $?
 fi
 

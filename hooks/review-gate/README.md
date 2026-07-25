@@ -37,6 +37,28 @@ is a speed bump: it converts an oversight into a deliberate act. It is not
 proof of review and must not be reported as one. Real proof would require the
 gate to run the review itself, outside the committing agent's control.
 
+## Every recorded review is a self-review
+
+`review-gate record` refuses to run without a staged diff in its own working
+tree, so whoever records a verdict is whoever wrote the change. Recording is
+therefore always self-review, and the gate marks it rather than leaving it to
+be guessed: `record` stamps each marker with the recording session's identity
+and the line `review-gate-kind: self-review`, and the hook repeats that on
+every gated commit.
+
+The stamp is what the gate observed, never what the recorder claimed. It comes
+from the harness-set session identity in the environment, it is written above
+the verdict as the marker's first line, and a marker carrying no stamp at all
+reads the same way — an absent stamp is not evidence of independence. There is
+no flag to set and none to leave out.
+
+This matters because an agent dispatched as a subagent cannot spawn a reviewer
+of its own: agent nesting is one level deep, so a worker that has to satisfy
+the gate satisfies it by reviewing its own diff. Independent review comes from
+outside the gate — `/drain`'s orchestrator runs the critic over each worker
+branch before merging it, and an attended session can hand the diff to a
+separate agent.
+
 ## What the review itself should block on
 
 A review's findings are not all worth stopping a commit for, so the hook reads

@@ -100,7 +100,18 @@ record why on the issue and leave it for the batch interview.
    entry whose branch is the one being verified; unlocated, the verifier lands
    in the shared checkout and its worktree-integrity precheck halts INCOMPLETE
    instead of verifying.
-   On verifier PASS, merge, `bd close <id>`, and remove
+   On verifier PASS, run the `critic` over that branch's diff before merging —
+   the independent review the worker structurally cannot run for itself. A
+   dispatched worker has no Agent tool (nesting is one level), so the review
+   gate it satisfies records a verdict stamped `self-review`
+   (`hooks/review-gate/README.md`); the orchestrator has the Agent tool and is
+   the only place an independent read can happen. One awaited `critic` at its
+   own frontmatter tier pin, given the branch and the worktree resolved above,
+   capped at ≤1k tokens returned. Treat a blocking finding (correctness,
+   security, data-loss, secrets) as a FAIL verdict routed through the same
+   bounded relaunch-once path below — never an open-ended fix loop; record the
+   rest on the issue and merge.
+   On verifier PASS and critic clear, merge, `bd close <id>`, and remove
    that `<id>` line from `.beads/session-claims` and from
    `.beads/session-inflight` (one unit — a closed issue
    still listed trips the compliance hook). Drop the `.beads/session-inflight`

@@ -36,6 +36,13 @@
 #
 # Markers live at <git-common-dir>/agentic-review/<key>, inside .git, so they
 # are never committed and are shared by every worktree of the repository.
+#
+# SELF-REVIEW: `record` only runs where the diff is staged, so whoever records a
+# verdict is whoever authored the diff. Every marker is therefore stamped
+# `self-review` with the recording session's identity, taken from the
+# environment rather than from anything the recorder says about itself, and the
+# pre-commit hook says so on every gated commit. Independent review has to come
+# from outside this tool — a separate agent or person reading the branch.
 set -u
 set -o pipefail
 
@@ -137,6 +144,17 @@ cmd_check() {
   return 1
 }
 
+# recording_session prints the identity the harness gave the session running
+# `record`, or `unidentified`. A blank or multi-line value is unusable as an
+# identity, so it reads as absent rather than being trusted.
+recording_session() {
+  local id="${CLAUDE_CODE_SESSION_ID:-}"
+  case "$id" in
+    '' | *[[:space:]]*) printf 'unidentified' ;;
+    *) printf '%s' "$id" ;;
+  esac
+}
+
 cmd_record() {
   local verdict key status marker
   verdict="$(cat)"
@@ -149,7 +167,12 @@ cmd_record() {
   [ "$status" -eq 0 ] || die "$(key_failure_cause)"
   marker="$(marker_path "$key")" || die "not inside a git repository"
   mkdir -p "$(dirname "$marker")" || die "cannot create marker directory"
-  printf '%s\n' "$verdict" > "$marker" || die "cannot write marker $marker"
+  {
+    printf 'review-gate-recorded-by: %s\n' "$(recording_session)"
+    printf 'review-gate-kind: self-review\n'
+    printf '\n'
+    printf '%s\n' "$verdict"
+  } > "$marker" || die "cannot write marker $marker"
 }
 
 git rev-parse --git-common-dir >/dev/null 2>&1 ||
