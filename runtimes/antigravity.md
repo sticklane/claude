@@ -152,15 +152,20 @@ mode absent an explicit fresh-workspace flag.
 
 ## Orchestration
 
-- **Primitive**: none scripted — sequential markdown workflows
-  (`.agents/workflows/`) executed inside one conversation, same as
-  before this correction; `agy -p` (above) is a way to *drive* one
-  headlessly, not a different orchestration primitive.
-- **Invocation surface**: `agy -p "<prompt>"` per worker (confirmed
-  live), same shape as the gemini-cli and codex profiles — shell scripts
-  wrapping one call per parallel task; no native fan-out primitive to
-  hand a multi-stage script to. The Agent Manager GUI remains available
-  for human-dispatched parallelism when a human wants to watch.
+- **Primitive**: Native subagents (`invoke_subagent` / `define_subagent` with
+  `Workspace: 'branch'` or `'share'`) represent the **Gemini Ultracode equivalent**
+  for staged fan-out, independent verification, and parallel panel runs;
+  unattended / headless runs can also execute via `agy -p` scripts.
+- **Invocation surface**: `invoke_subagent` (interactive / in-harness) or `agy -p "<prompt>"`
+  per worker (headless CLI, confirmed live). Shell scripts and subagent dispatches
+  wrap parallel tasks; the Agent Manager GUI remains available for human-dispatched
+  parallelism when a human wants to watch.
+- **Ultra-equivalent shape**: stage role, not Ultra itself, selects the model.
+  Pass compact self-contained prompts rather than the parent transcript.
+  Use `Workspace: 'branch'` for writers and serialize any `Workspace: 'share'`
+  writer; read-only panels may run in parallel. Workers and bounded fix rounds
+  run acceptance plus targeted tests, then the orchestrator runs the canonical
+  project gate once after the verifier/critic barrier.
 - **Structured output**: none — no `--json` flag; responses are
   free-text/markdown, sometimes with a linked artifact file (see
   Headless). No schema validation.

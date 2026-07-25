@@ -105,17 +105,13 @@ order cannot resolve are surfaced, not guessed.
 - Skills that spawn agents follow the "Dispatch authoring" section of
   `.claude/rules/token-discipline.md` (tier by stage type, capped returns,
   bounded loops, single-call judge) — cite it, don't restate it.
-- Portability is data-level, not procedure-level (2026-07-22 pivot;
-  ratified addendum in specs/agentic-core-redesign/SPEC.md). `.claude/` is
-  the single source of truth for the pipeline; other agent runtimes consume
-  the DATA layer directly — bd's queue, ctx's index, and the task files
-  under specs/ — rather than a mirrored copy of the procedures. No
-  per-runtime procedure trees or mirror machinery are maintained: the former
-  `antigravity/` and `codex/` mirror trees, their parity gates, and both
-  mirror rules files were deleted in that pivot (core task 10), each tree
-  left as a one-page README pointing at the data layer. A skill change
-  therefore needs no mirror edit — it still bumps `plugin.json` per the
-  `.claude-plugin/` convention below when skill behavior changes.
+- `.claude/skills/` is the single source of truth for pipeline procedures.
+  Codex discovers the same directories through `.agents/skills/` symlinks;
+  never copy or hand-port a skill body. `tests/test_codex_skill_entrypoints.sh`
+  enforces complete, non-orphaned entrypoints. Runtime-specific execution
+  uses capability adapters inside the shared skill (for example, Workflow in
+  Claude Code and collaboration subagents in Codex), while bd, ctx, and
+  specs remain the portable data layer.
 - `.claude-plugin/` distributes the toolkit as plugin `agentic` (marketplace
   `agentic-toolkit`); its skills manifest points at the `.claude/skills/`
   directory, so adding a skill needs no manifest edit (keep both manifest
@@ -123,14 +119,12 @@ order cannot resolve are surfaced, not guessed.
   enumerated in plugin.json by schema requirement, so a new agent DOES need
   a manifest edit; only skills stay manifest-free. Bump `version` in
   `plugin.json` whenever skill behavior changes.
-- `/drain` now requires the `Workflow` tool (it compiles the queue into a
-  workflow — no sequential fallback), so it runs only in a session that has
-  `Workflow`: an interactive `/drain`, never a headless/gated environment
-  without the tool, where it stops and says so. A drain WORKER is still a
-  one-level subagent that must not itself require `Workflow` (nesting is one
-  level) — keep a task's acceptance criteria orchestrator-resolvable or
-  give the criterion an explicit manual-pending path, so a build-worker can
-  satisfy it with its single-verifier path (docs/memory/unattended-worker-tool-limits.md).
+- `/drain` requires an awaited-agent orchestrator: Workflow in Claude Code or
+  collaboration subagents in Codex. Codex subagents share a workspace, so
+  its adapter serializes writing workers unless isolation is available. A
+  drain worker must not launch nested orchestration; keep acceptance criteria
+  orchestrator-resolvable or give them an explicit manual-pending path
+  (docs/memory/unattended-worker-tool-limits.md).
 - Verify acceptance criteria against CURRENT file state at authoring time:
   a grep criterion anchors on a NEW literal phrase confirmed absent
   (`grep -c` → 0) from every target file, and a numeric bound (line count,
@@ -156,13 +150,22 @@ not prove the merge is semantically complete — follow
 docs/memory/skill-retirement-checklist.md and run the critic on the diff
 before calling the sweep done.
 
-Ultra behavior is no longer gated on a runtime-profile marker: `/drain`
-always compiles the ready queue into a `Workflow` (its execution model, not
-an opt-in path), and `/critique`, `/build`, and `/idea` name their workflow
-shape directly, used when ultracode is opted in. The former
+Ultra means the orchestration shape, not a particular model: staged agent
+fan-out, explicit barriers, bounded loops, structured returns, independent
+verification, and a durable checkpoint. Claude Code implements that shape
+with `Workflow`; Antigravity implements it with native subagents (`invoke_subagent` /
+`agy -p`; the Gemini Ultracode equivalent); Codex implements it with collaboration
+subagents, parallel read-only panels, serialized isolated-worktree writers,
+compact self-contained child prompts, and bd/files as the checkpoint. Ultra
+does not override stage tiering: scouts stay cheap, ordinary implementation
+and judgment keep their role pins, and frontier is reserved for a sanctioned
+escalation. Drain workers and fix rounds run targeted evidence; the
+orchestrator runs the canonical project gate once at the final merge barrier.
+`/drain` always uses the runtime's Ultra-equivalent
+orchestration, and `/critique`, `/build`, and `/idea` use it when ultracode (or its
+Gemini / Codex runtime equivalent) is opted in. The former
 `evals/lint-ultra-gate.sh` marker-proximity gate was removed with that
-change — there is no gate-closed install to preserve now that the sequential
-drain fallback is gone.
+change.
 
 ## Code navigation (ctx)
 

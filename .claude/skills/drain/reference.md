@@ -40,7 +40,10 @@ the **canonical skill-path resolution recipe** below, and substitute it for
 > canonical skill-path resolution recipe). Work on branch `<branch>` in your
 > isolated worktree; first force-sync it to the default branch so you build on
 > current state. Write failing tests first, then code until every acceptance
-> command passes; run each acceptance command and show its output. Commit
+> command passes; run each acceptance command and directly relevant targeted
+> tests, but do NOT run the repository-wide canonical gate — drain runs it
+> once after the independent review barrier. This is drain-worker mode: do
+> NOT spawn build's verifier or any other subagent. Commit
 > path-scoped to your branch. Do NOT push. Do NOT write tracker (bd) state —
 > you return a verdict and drain records it; nothing you do calls `bd`.
 >

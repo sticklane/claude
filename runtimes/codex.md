@@ -1,10 +1,9 @@
 # Runtime profile: codex
 
 Describes how the abstract tiers and surfaces map onto OpenAI's Codex CLI.
-`codex/` in this repo is the reference port — a thin overlay reusing
-`antigravity/.agents/skills/*` via symlinks, not a third full mirror
-(`codex/README.md` has the port's own account; this profile describes it,
-it does not replace it).
+Codex discovers the shared `.claude/skills/*` sources through repository
+symlinks under `.agents/skills/` (`codex/README.md` has the port's account;
+this profile describes it, it does not replace it).
 
 ## Tiers
 
@@ -12,15 +11,13 @@ it does not replace it).
 | ------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
 | scout-tier    | the CLI's cheapest/mini model, via `-m <model>`               | Cheap, fast reconnaissance. Model ids move fast — check `codex -m <TAB>` / release notes for the current mini variant before pinning. |
 | session-tier  | the CLI's configured default model (no flag)                  | Whatever the interactive session runs.                                              |
-| deep-tier     | the CLI's flagship coding model, via `-m <model>`              | Recommended pin value — opt-in, not an active default. Same id caveat as scout-tier. |
-| frontier-tier | the flagship model at raised reasoning effort (`-c model_reasoning_effort=high`) | No distinct model rung above deep-tier; recommended pin value — opt-in, not an active default. |
+| deep-tier     | `gpt-5.6-sol` at high reasoning effort                        | Current flagship coding model for implementation and criticism.                     |
+| frontier-tier | `gpt-5.6-sol` at ultra reasoning effort                       | Reserved for sanctioned escalation, not automatically selected by Ultra orchestration. |
 
-The two deep-tier rows are recommended pin values, not active defaults
-(selection and override convention in [README.md](README.md)). Verify
-current model ids against `codex --help` / `-m` completions on the
-installed CLI version before pinning — confirmed live here against
-`codex-cli 0.144.1`, but ids are not recorded since they change often
-(same caution `gemini-cli.md` takes).
+Ultracode maps to the orchestration section below, independently of model
+tiering. A stage selects `gpt-5.6-sol` with `model_reasoning_effort=ultra`
+only when token discipline calls for frontier-tier escalation. Re-verify the
+model id when the installed Codex model catalog changes.
 
 ## Role pins
 
@@ -33,13 +30,13 @@ the effort axis).
 | Role                                                                 | Codex default                                                                          |
 | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | session default                                                       | the CLI's configured default model (no plan/execution split exists)                     |
-| implementation workers                                                | flagship model, via `-m` — deep-tier adopted default, mirroring claude-code's `opus` pin |
+| implementation workers                                                | `gpt-5.6-sol` at high reasoning effort                                                  |
 | explore / codebase-search                                             | mini/cheap model, via `-m`                                                              |
 | verifier (acceptance evidence; advisory reviewer lane)                 | mini/cheap model, via `-m`                                                              |
-| spec/plan/diff critic                                                 | flagship model — deep-tier work; a critic pass costs ~1% of a wrong implementation      |
-| distill workflow                                                      | flagship model                                                                          |
-| retry escalation (attempt 2, verifier evidence in prompt)             | flagship model at raised reasoning effort — a retry after a deep-tier attempt failed    |
-| tournament escalation (attempts 3+, after the retry failed)           | flagship model at raised reasoning effort — Codex's frontier rung                       |
+| spec/plan/diff critic                                                 | `gpt-5.6-sol` at high reasoning effort                                                   |
+| distill workflow                                                      | `gpt-5.6-sol` at high reasoning effort                                                   |
+| retry escalation (attempt 2, verifier evidence in prompt)             | `gpt-5.6-sol` at ultra reasoning effort                                                  |
+| tournament escalation (attempts 3+, after the retry failed)           | `gpt-5.6-sol` at ultra reasoning effort                                                  |
 
 ## Headless
 
@@ -63,17 +60,16 @@ codex exec --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>
   [README.md](README.md) requires only `<prompt>`).
 - `<turn cap>` — no CLI flag; Codex has its own internal step budget, not a
   turn-count flag.
-- `<tier alias>` — `-m <model>` for the Role pins ladder above; add `-c
-  model_reasoning_effort=high` for the frontier rung.
+- `<tier alias>` — `-m gpt-5.6-sol -c model_reasoning_effort=high` for
+  deep-tier; change the effort value to `ultra` only for frontier-tier or a
+  sanctioned escalation.
 - `--skip-git-repo-check` lets the invocation run outside a git repo (eval
   fixtures always init one, but this keeps the template robust either way).
 - `--ephemeral` skips persisting session files — appropriate for one-shot
   relaunches and evals; drop it for a resumable headless session.
 - **Discovery is cwd/`--cd`-relative, not git-root-relative**: Codex reads
   skills from `.agents/skills/` under the directory it is invoked in (or
-  `--cd <dir>`), confirmed live in `codex/verify-live.sh`. A caller must run
-  this template from (or `--cd` into) a directory whose `.agents/skills/`
-  holds the skill under test — in this repo, `codex/`.
+  `--cd <dir>`). Run from, or `--cd` into, the repository root.
 - **No custom slash commands.** `/breakdown`-style invocation does not
   exist; skills are reached by natural-language description match (15
   reused skills) or by typing the skill's name — see "What degrades on
@@ -90,33 +86,39 @@ codex exec --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>
 
 ## Orchestration
 
-- **Primitive**: Codex Subagents (`.codex/agents/` TOML, `/agent`) — a
-  delegation/parallelism primitive, not a workflow launcher (see "What
-  degrades on Codex" in [../codex/README.md](../codex/README.md)).
-- **Invocation surface**: shell scripts wrapping `codex exec …` per worker,
-  same shape as the gemini-cli profile; no native fan-out primitive to hand
-  a multi-stage script to.
+- **Primitive**: Codex collaboration subagents (`spawn_agent`,
+  `wait_agent`, `followup_task`) managed by the main session.
+- **Ultra-equivalent shape**: the main session compiles the same logical
+  stages as Claude Workflow—fan-out, barrier/reduction, verification, and a
+  bounded fix round—into subagent calls. Read-only stages may run in
+  parallel. Codex drain provisions an explicit git worktree for each writing
+  subagent and passes its absolute path to the worker and reviewers; writing
+  stages run serially, then the orchestrator merges and removes the worktree.
+- **Context and tiering**: dispatch compact self-contained prompts with
+  `fork_turns: "none"`. Keep each stage's role pin; Ultra orchestration does
+  not promote every child to frontier-tier.
+- **Gate placement**: workers and bounded fix rounds run acceptance plus
+  targeted tests. After the parallel verifier/critic barrier resolves, the
+  main session runs the canonical project gate once before merge.
 - **Structured output**: `--json` on each call for machine-readable JSONL
   events; `-o <file>` / `--output-last-message` for the final agent message;
   `--output-schema <file>` constrains the final response shape.
-- **Resume**: `codex resume` / `codex fork` reattach or branch a previous
-  session by id; a wrapper owns any cross-worker resume logic.
-- **Parallelism cap**: whatever the wrapper imposes; nothing built in.
+- **Resume**: bd and committed artifacts are the durable checkpoint. A
+  restarted orchestrator re-reads them before dispatch. Individual Codex
+  sessions may also use `codex resume` / `codex fork`.
+- **Parallelism cap**: four live agents including the main session in the
+  current Codex collaboration runtime; the orchestrator must honor the
+  smaller limit if the runtime reports one.
 
 ## Notes
 
-- **Config locations**: `codex/.agents/skills/` (this repo's port root,
-  `.agents/` at a subdirectory — always invoke with `--cd codex` or from
-  that cwd); global — `~/.codex/config.toml`. `AGENTS.md` is the CLAUDE.md
-  equivalent (always-on context), same as Antigravity.
+- **Config locations**: repository `.agents/skills/`; global —
+  `~/.codex/config.toml`. `AGENTS.md` is the always-on context surface.
 - **Permission-mode equivalents**: `--sandbox read-only` ≈ plan/read-only
   mode, `--sandbox workspace-write` ≈ `acceptEdits`,
   `--dangerously-bypass-approvals-and-sandbox` ≈ `bypassPermissions`
   (sandboxed use only, per its own `--help` warning).
-- **Reference port**: `codex/README.md` carries the full reuse-vs-copy
-  account and the live-verification results;
-  [`codex/verify-live.sh`](../codex/verify-live.sh) is the re-runnable R5
-  check this profile's Headless caveats are drawn from.
+- **Reference port**: `codex/README.md` carries the reuse-vs-copy account.
 - **Verification**: command syntax and flags above were verified against
   `codex exec --help` / `codex --help` output of `codex-cli 0.144.1`
   (installed locally, 2026-07-12). Re-verify against `codex --help` before

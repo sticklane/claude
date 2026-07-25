@@ -146,11 +146,15 @@ flipping the `Rigor:` header and treating the existing code as untested input
 to a normal production task, not as done work.
 
 1. Run every acceptance command yourself; fix until all pass.
-2. Run the project's standard gates. Run `scripts/check.sh`, the
-   sole required check entrypoint — never a hand-derived list of steps read
-   out of CLAUDE.md prose (repos without it fall back to their own
-   build/lint/test commands).
-3. Spawn the `verifier` agent with the task file path and instruct it to
+2. Run the project's standard gates. Run `scripts/check.sh`, the sole required
+   check entrypoint — never a hand-derived list of steps read out of CLAUDE.md
+   prose (repos without it fall back to their own build/lint/test commands).
+   **Drain-worker exception:** a worker or fix round dispatched inside drain
+   runs acceptance commands and directly relevant targeted tests only; drain's
+   orchestrator runs the canonical gate once after its final verifier/critic
+   barrier. Top-level `/build` still runs the canonical gate here.
+3. Unless this is drain-worker mode, spawn the `verifier` agent with the task
+   file path and instruct it to
    verify the working tree against the acceptance criteria. It has no memory
    of your implementation and won't rationalize shortcuts. Pass it the base
    commit recorded in step 0 for its append-only task-file diff, alongside an
@@ -158,7 +162,9 @@ to a normal production task, not as done work.
    `specs/<slug>/tasks/<name>.md` → `specs/<slug>/evidence/<name>.md`; a
    bare `specs/<slug>/SPEC.md` → `specs/<slug>/evidence/spec.md`; any other
    layout → pass no path (the verifier then writes nothing; note at
-   close-out that evidence was not persisted). The verifier writes its full
+   close-out that evidence was not persisted). In drain-worker mode, stop
+   after step 2's targeted evidence and return the worker verdict; the drain
+   orchestrator owns verification. The verifier writes its full
    report there; a re-verify overwrites it.
 4. Collect every subagent's result within your current turn — ending a
    turn while a verifier or monitor is still pending orphans its report
@@ -311,12 +317,15 @@ specs/<slug>/tasks/*.md` (a header-only match, never a full `Read` of each
 
 ## Ultra path
 
-When ultracode is opted in and build runs top-level (an attended `/build`,
-not a drain worker), build's verification runs as a workflow instead of one
-verifier. A build worker dispatched by drain always uses the single-verifier
-step 3 above — `Workflow` nesting is one level only, so a worker inside
-drain's workflow cannot compile its own; this is not a gate, it's the nesting
-rule. This skill only names the shape.
+When ultracode is opted in (or the Gemini / Codex Ultracode equivalent on
+non-Claude runtimes) and build runs top-level (an attended `/build`, not a drain worker),
+build's verification uses the runtime's Ultra-equivalent orchestrator: Workflow in Claude
+Code, native subagents in Antigravity (the Gemini Ultracode equivalent), or parallel
+read-only collaboration subagents in Codex. Children receive compact,
+self-contained prompts without the caller's transcript and retain
+stage-appropriate tier routing. A build worker dispatched by drain stops
+before step 3 because the drain orchestrator owns the verifier/critic barrier.
+This skill names the orchestration shape, not a particular model.
 
 Acceptance commands run FIRST as the deterministic gate. Each criterion with
 no runnable command then gets a refute-majority vote — 3 verifiers on distinct

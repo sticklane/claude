@@ -88,9 +88,14 @@ findings` or similar), and re-run the critic — this apply→recheck loop is
 
 ## Ultra path
 
-When ultracode is opted in (keyword, session flag, or explicit ask),
-critique may run a panel instead of one critic; otherwise the single-critic
-path above is the only path. This skill only names the shape.
+When ultracode is opted in (keyword, session flag, or explicit ask; or the Gemini /
+Codex Ultracode equivalent on non-Claude runtimes), critique uses the runtime's
+Ultra-equivalent orchestrator: Workflow in Claude Code, native subagents in
+Antigravity (the Gemini Ultracode equivalent), or parallel read-only collaboration
+subagents in Codex. Otherwise the single-critic path above is the only path. This
+skill names the orchestration shape, not a particular model. Each panel child
+gets only the artifact pointer, its lens, and the fixed return contract — no
+inherited conversation transcript — and keeps the critic role's normal tier.
 
 Panel: 3–5 lens-diverse critics (correctness, security, code-health —
 the critic's doctrine-backed comment/naming/signature checks —

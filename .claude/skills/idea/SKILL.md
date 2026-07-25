@@ -226,10 +226,14 @@ Close with:
 
 ## Ultra path
 
-When ultracode is opted in AND the idea spans multiple repos or subsystems,
-step 1 runs as a workflow instead of the 2–4 ad-hoc scouts; for a
-single-subsystem idea, step 1 above is the only path. This skill only names
-the shape.
+When ultracode is opted in (or the Gemini / Codex Ultracode equivalent on non-Claude
+runtimes) AND the idea spans multiple repos or subsystems, step 1 uses the runtime's
+Ultra-equivalent orchestrator: Workflow in Claude Code, native subagents in
+Antigravity (the Gemini Ultracode equivalent), or parallel read-only collaboration
+subagents in Codex. For a single-subsystem idea, step 1 above is the only path.
+This skill names the orchestration shape, not a particular model. Each scout
+gets a compact self-contained lens prompt without the caller's transcript and
+keeps scout-tier routing; only the completeness critic uses its judgment tier.
 
 The sweep fans out four scouts in parallel — by-structure, by-convention,
 by-history, by-dependency — followed by a completeness critic that flags gaps

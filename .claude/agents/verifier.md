@@ -88,7 +88,11 @@ restore <file>`): /build routinely verifies before the work is committed,
    committed state, silently discarding the uncommitted implementation along
    with your test edit.
 3. Also run the project's standard gates if they exist (build, lint, tests) —
-   check CLAUDE.md or package/build files for the commands.
+   check CLAUDE.md or package/build files for the commands. **Drain-mode
+   exception:** when the orchestrator explicitly marks the dispatch
+   `Drain-mode: true`, do not run the repository-wide canonical gate; verify
+   the acceptance commands and targeted evidence only. Drain runs that gate
+   once after the verifier/critic barrier.
 4. Check the diff for scope creep: changes not required by any criterion.
    The task file's Touch list is binding — convention-driven edits outside
    it (version bumps, formatting sweeps) are scope creep even when a repo

@@ -1,6 +1,6 @@
 ---
 name: drain
-description: Works the remaining bd (beads) ready queue by compiling it into a Workflow - Claude groups the ready issues into dependency-ordered, Touch-disjoint waves, then runs one fresh worktree worker per issue (concurrent within a wave), verifies each, closes it in bd, defers clarification questions instead of stopping, and batches them for the human when the queue runs dry. At lowest priority, also auto-breaks-down critic-READY specs that have no tasks yet. Runs until bd ready is empty or only blocked work remains; requires the Workflow tool. Trigger phrases - "/drain", "drain the queue", "drain specs/<slug>", "work the queue unattended", or a pipeline chain the user's live message requested ("critique, breakdown, and drain").
+description: Works the remaining bd (beads) ready queue with the runtime's native orchestration - dependency-ordered, Touch-disjoint workers, independent verification, bd closure, and a batched human interview when only blocked work remains. Claude compiles a Workflow; Antigravity and Codex use native subagents (`invoke_subagent` / `spawn_agent`). Trigger phrases - "/drain", "drain the queue", "drain specs/<slug>", "work the queue unattended", or a pipeline chain the user's live message requested ("critique, breakdown, and drain").
 argument-hint: "[bd label/query or specs/<slug>]"
 ---
 
@@ -93,15 +93,16 @@ record why on the issue and leave it for the batch interview.
    Touch disjointness check, not from `bd ready`, so a hand-filed issue
    with no Touch metadata runs solo rather than joining a window.
 
-3. **Verify each verdict, then close in bd.** Collect the worker's verdict
-   (DONE / BLOCKED / DEFERRED). On DONE, run an independent `verifier` over
-   the worker's branch, naming in the dispatch both that branch and the
+3. **Verify each verdict, run the final gate once, then close in bd.** Collect
+   the worker's verdict (DONE / BLOCKED / DEFERRED). On DONE, launch an
+   independent `verifier` and `critic` as one parallel read-only barrier over
+   the worker's branch, naming in each dispatch both that branch and the
+   literal `Drain-mode: true` (so the verifier skips its own full-gate step) and the
    worktree to run in — resolve that path from `git worktree list`, taking the
    entry whose branch is the one being verified; unlocated, the verifier lands
    in the shared checkout and its worktree-integrity precheck halts INCOMPLETE
    instead of verifying.
-   On verifier PASS, run the `critic` over that branch's diff before merging —
-   the independent review the worker structurally cannot run for itself. A
+   The critic reviews the same diff independently. A
    dispatched worker has no Agent tool (nesting is one level), so the review
    gate it satisfies records a verdict stamped `self-review`
    (`hooks/review-gate/README.md`); the orchestrator has the Agent tool and is
@@ -117,8 +118,13 @@ record why on the issue and leave it for the batch interview.
    first; a `READY WITH NITS` carrying substantive findings is the ordinary
    outcome, not an exception, and dispatching a review-fix round on those
    findings before the merge is the normal way to clear them.
-   On verifier PASS and the critic's verdict resolved, merge, `bd close <id>`,
-   and remove
+   On verifier PASS and a resolved critic verdict, run the repository's
+   canonical project gate exactly once on the reviewed branch. Worker and fix
+   rounds run acceptance commands plus directly relevant targeted tests, never
+   this full gate; repeating a multi-minute suite inside every round is not
+   additional evidence. If the final gate fails, route its evidence through
+   the same single bounded fix round, then repeat the review barrier and final
+   gate once. On final-gate PASS, merge, `bd close <id>`, and remove
    that `<id>` line from `.beads/session-claims` and from
    `.beads/session-inflight` (one unit — a closed issue
    still listed trips the compliance hook). Drop the `.beads/session-inflight`
@@ -174,38 +180,53 @@ under `HUMAN.md` per `.claude/rules/human-blockers.md` (cite it, don't
 restate). Human-clearable blockers stay in bd as blocked issues with their
 typed `Unblock:` recorded.
 
-## Execution model — compile the queue into a workflow
+## Execution model — use the runtime's native orchestrator
 
-Drain compiles the ready queue into a native `Workflow` script and runs it;
-"The loop" above is the per-issue semantics that compilation implements, not
-a hand-dispatched fallback. There is no gate and no runtime-profile
-condition: invoking `/drain` is itself the `Workflow` opt-in (a slash command
-whose instructions call the tool), and a live `/drain` is the launch
-authorization. Claude still does the planning — it reads `bd ready`, groups
-the issues by dependency order and Touch-disjointness into concurrent-safe
-waves, and emits the script; bd holds the state, the workflow executes it
-deterministically.
+Drain uses the native awaited-agent orchestrator exposed by the current
+runtime. Invoking `/drain` is the launch authorization. The orchestrator reads
+`bd ready`, groups issues by dependency order and Touch-disjointness, and
+executes the loop above; bd remains the durable checkpoint.
 
-The compiled shape:
+In Claude Code, compile and run a native `Workflow` script. In Antigravity,
+use native subagents (`invoke_subagent` with `Workspace: 'branch'` for writers
+and `'share'` for read-only panels). In Codex, use collaboration subagents
+through `spawn_agent`, `wait_agent`, and follow-ups. For both runtimes,
+Ultra-equivalent means the orchestration shape; tier each child by its stage
+role per token discipline instead of upgrading every child to the frontier
+model. Give each child a compact, self-contained prompt and no inherited
+conversation transcript (Codex: `fork_turns: "none"`). Before each Codex
+worker dispatch, the orchestrator creates a
+dedicated branch and worktree with `git worktree add -b <branch> <path>
+<base-revision>`, then gives the worker that absolute path and requires every
+command to run there. Codex dispatches writing workers serially; never let a
+worker edit the shared checkout. Pass the same worktree path and branch to
+fresh read-only verifier and critic subagents, merge only after their verdicts,
+then remove the worktree. The worker returns the reference.md verdict contract
+and leaves tracker writes to the orchestrator. This is a capability adapter,
+not a weaker claim/work/verify/close fallback.
 
-- a `pipeline`/`parallel` over the bd dependency groups (Touch-disjoint
-  issues in a group run concurrently; groups serialize on their edges);
+The orchestration shape:
+
+- a pipeline over bd dependency groups; Claude and branch-isolated Antigravity may run
+  Touch-disjoint issues concurrently, while Codex serializes isolated
+  worktree writers;
 - one script-awaited `isolation: worktree` worker per issue, running the
   build skill's procedure via the reference.md worker prompt plus
-  effort-tier language. **These workers run build's single-verifier path,
-  never build's own workflow verification** — `Workflow` nesting is one
-  level only (`workflow()` inside a child throws), so a drain worker cannot
-  compile its own sub-workflow;
-- a `verifier` per completed issue, then drain's `bd close` (or the typed
+  effort-tier language. **These workers stop after acceptance commands and
+  targeted tests; they never spawn build's verifier or workflow
+  verification.** The drain orchestrator owns the only verifier/critic
+  barrier, so nested orchestration and duplicate gates cannot occur;
+- a parallel read-only verifier/critic barrier per completed issue, one final
+  canonical project gate, then drain's `bd close` (or the typed
   `Unblock:`/deferred record) after each verdict, exactly as "The loop"
   step 3 specifies;
 - discovered work filed with `bd create --deps discovered-from:<id>`.
 
 bd remains the checkpoint: interrupting loses nothing — re-running `/drain`
-recompiles from the current `bd ready`. **Precondition:** the `Workflow`
-tool must be available this session; in an environment without it (a headless
-or gated install), drain stops and says so rather than silently dispatching
-nothing — there is no sequential fallback.
+resumes from the current `bd ready`. **Precondition:** the runtime must expose
+either `Workflow` or native/collaboration subagents (`invoke_subagent` /
+`spawn_agent`). If none is available, drain stops and names the missing
+capability.
 
 Next stage: none — drain runs until the queue drains, then batches blockers
 for the human (human-launched).
