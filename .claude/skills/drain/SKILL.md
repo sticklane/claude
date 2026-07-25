@@ -66,16 +66,22 @@ record why on the issue and leave it for the batch interview.
    only blocked issues remain → go to the batch interview.
 
 2. **Claim, then dispatch a fresh worker.** For each issue to run this pass,
-   claim it atomically (`bd update <id> --claim`, or `bd ready --claim`) and
-   append the claimed `<id>` on its own line to `.beads/session-claims`
-   (`/work`'s claim bookkeeping, cited not restated — the compliance hook
-   reads it), then dispatch one awaited, `isolation: worktree` worker per issue.
-   Record the dispatch by appending `<id> $(date +%s)` on its own line to
-   `.beads/session-inflight` — the orchestrator ends a turn every time it
-   awaits a worker, and that marker is what tells the compliance hook the
-   claim is in flight rather than abandoned. Refresh the line (rewrite its
-   timestamp) on every re-dispatch for that id, including verifier runs and
-   fix rounds. The
+   do all three claim steps as one unit BEFORE the dispatch call: claim the
+   issue atomically (`bd update <id> --claim`, or `bd ready --claim`), append
+   the claimed `<id>` on its own line to `.beads/session-claims` (`/work`'s
+   claim bookkeeping, cited not restated — the compliance hook reads it), and
+   append `<id> $(date +%s)` on its own line to `.beads/session-inflight`.
+   Only then dispatch one awaited, `isolation: worktree` worker per issue.
+   The marker must be on disk before the dispatch because the orchestrator's
+   turn ends AT the dispatch while it awaits the worker — a marker written
+   afterwards can land after the compliance hook has already fired, or never,
+   and the hook then blocks a claim that is legitimately in flight. Refresh
+   the line (rewrite its timestamp) before every re-dispatch for that id,
+   including verifier runs and fix rounds; the marker's freshness window is
+   `BD_COMPLIANCE_INFLIGHT_TTL` (default 3600s), a deliberate ceiling that
+   cannot be refreshed mid-await, so a single round longer than it costs one
+   false block — raise the env var for workloads with longer rounds
+   (`hooks/bd-compliance/README.md`). The
    worker executes the issue via the build skill's procedure; the verbatim
    dispatch prompt, the skill-path resolution recipe, and the verdict
    format (a structured verdict capped at ≤2k tokens, never a transcript)
