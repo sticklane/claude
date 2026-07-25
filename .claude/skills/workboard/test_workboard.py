@@ -159,6 +159,59 @@ def make_handoff_record(issue_id="md-abc123", **fields):
     return record
 
 
+def make_spec_issue(path, status="open", issue_id="tk-1", dependencies=None):
+    return {
+        "id": issue_id,
+        "external_ref": f"spec-task:{path}",
+        "status": status,
+        "dependencies": dependencies or [],
+    }
+
+
+class TestBdTaskAuthority(unittest.TestCase):
+    def test_bd_status_and_dependencies_win_over_frozen_markdown_headers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = root / "specs" / "demo"
+            (spec / "tasks").mkdir(parents=True)
+            (spec / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+            (spec / "tasks" / "01-base.md").write_text(
+                "# Base\nStatus: pending\nDepends on: none\n", encoding="utf-8"
+            )
+            (spec / "tasks" / "02-next.md").write_text(
+                "# Next\nStatus: done\nDepends on: none\n", encoding="utf-8"
+            )
+            issues = [
+                make_spec_issue(
+                    "specs/demo/tasks/01-base.md",
+                    status="closed",
+                    issue_id="tk-base",
+                ),
+                make_spec_issue(
+                    "specs/demo/tasks/02-next.md",
+                    status="open",
+                    issue_id="tk-next",
+                    dependencies=[
+                        {
+                            "issue_id": "tk-next",
+                            "depends_on_id": "tk-base",
+                            "type": "blocks",
+                        }
+                    ],
+                ),
+            ]
+
+            scanned = workboard.scan_toolkit_specs(root, bd_issues=issues)[0]
+
+        self.assertEqual(
+            [task["status"] for task in scanned["tasks"]], ["done", "pending"]
+        )
+        self.assertEqual(
+            scanned["tasks"][1]["deps"], ["specs/demo/tasks/01-base.md"]
+        )
+        self.assertEqual(scanned["tasks_done"], 1)
+
+
 class TestOpenStatusNotBlocked(unittest.TestCase):
     def test_status_open_counts_as_open_not_blocked(self):
         with tempfile.TemporaryDirectory() as tmp:

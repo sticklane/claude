@@ -1,0 +1,12 @@
+{
+  "fragment": "03-bd-authority",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_bd_authority_contract.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}
