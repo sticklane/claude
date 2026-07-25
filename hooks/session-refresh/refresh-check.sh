@@ -46,7 +46,11 @@ transcript="$(printf '%s' "$payload" | jq -r '.transcript_path // empty' 2>/dev/
 # One jq pass over the transcript: emit tab-separated
 # (input_tokens, cache_read_input_tokens) for every main-loop assistant line
 # carrying a usage object, in file order. isSidechain lines are subagent
-# activity, excluded to match agentprof's main-loop-only ctx definition. A
+# activity, excluded to match agentprof's main-loop-only ctx definition. That
+# exclusion is inert on today's transcript layout — subagents write to their
+# own files, and no file among 9418 local transcripts (2026-07-24) carries
+# both isSidechain values — so it is kept as the guard that keeps this reading
+# main-loop-only if that layout ever changes, not as a live filter. A
 # malformed/truncated transcript makes jq exit non-zero; whatever complete
 # lines it already emitted before the failure are still used (2>/dev/null
 # discards only the stderr noise).
