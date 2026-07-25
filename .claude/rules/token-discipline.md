@@ -331,9 +331,13 @@ Three points govern the shape:
   "budget" words name different things.
 
 Drain has no baton or generation-counter mechanism of its own to carve out
-here — it runs to `bd ready` exhaustion within a single session. This
-doctrine covers the freehand and watch-then-act sessions it wasn't scoped
-for either way.
+here — it runs to `bd ready` exhaustion within a single session. That
+retired the per-verdict wake `specs/archive/drain-wake-cost` costed (read
+that spec as history, not open work), but it did not close the underlying
+risk: a drain orchestrator's own context still grows across every verdict
+it collects within the run, and this budget is the only thing bounding that
+residual accumulation. This doctrine covers the freehand and
+watch-then-act sessions it wasn't scoped for either way.
 
 ## Cache economics
 
