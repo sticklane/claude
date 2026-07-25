@@ -5,9 +5,10 @@ from argparse import Namespace
 from agentic import shadow
 
 
-def test_shadow_run_is_the_exact_non_mutating_retirement_diagnostic(
+def test_sync_maps_markdown_status_to_bd_frontier_classes(
     tmp_path, capsys, monkeypatch
 ):
+    """The superseded mirror case now proves no status mapping occurs."""
     task = tmp_path / "specs" / "demo" / "tasks" / "01-task.md"
     task.parent.mkdir(parents=True)
     task.write_text("Status: pending\n", encoding="utf-8")

@@ -38,10 +38,10 @@ dispatchers parse it for the over-budget stop and headless `--max-turns`.
 ```markdown
 # Task NN: <title>
 
-<!-- Machine-read fields (Status, Depends on, Priority, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. -->
+<!-- Registration fields (Depends on, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. Status and Priority are frozen authoring-time display only: bd owns their live values. -->
 <!-- Priority values run P0 (highest) through P3; the header is optional — absent means P2. -->
-<!-- Status vocabulary: pending → in-progress → done; also blocked (always with an Unblock: line), deferred, skipped, draft (stub awaiting promotion), and needs-verification (implementation complete, acceptance unverified — the verifier flips it to done; scanners treat it as open agent-bounded work, never a needs-attention flag). -->
-<!-- Append-only for workers: a worker may flip only its own task's Status: line, tick acceptance checkboxes and add evidence-citation lines, and maintain its plan comment block. The text of Goal, Steps, Touch, Budget, and every acceptance criterion is read-only to workers, in every task file — and ## Progress / ## Deferred questions are drain-written sections (single writer, main checkout): workers report that content, never write it. -->
+<!-- Status is always the frozen initial display value `pending`; workers and orchestrators update bd, never this line. -->
+<!-- Task definitions are immutable after registration. Workers report progress, decisions, and deferred questions to the orchestrator; they do not rewrite task files. -->
 
 Status: pending
 Depends on: <task numbers, or "none">
@@ -80,39 +80,13 @@ task file's header block (above the first `##`, alongside `Priority:`). A
 production/absent spec gets no `Rigor:` line on its tasks — absent means
 production.
 
-### The `Unblock:` line (blocked and waiting items)
+### Blocking and cross-spec ordering
 
-An item that stops carries its own move as a machine-readable `Unblock:`
-line, on the line **immediately after `Status:`**. Three types — write the
-narrowest that fits:
-
-```
-Unblock: run: <shell command>     # a command checks or clears it (display + agent-run only)
-Unblock: agent: <prompt>          # a headless agent run can clear it
-Unblock: ask: <exact question>    # a human must answer this exact question
-```
-
-A **task file** takes an `Unblock:` line ONLY with `Status: blocked` (drain
-writes it when recording a BLOCKED flip; an attended /build writes it in the
-same edit as the blocked status). Task files never use `waiting`. `waiting`
-is a **spec-header-only** status: a `SPEC.md` may carry the header pair
-`Status: waiting` + `Unblock:` — the only spec-level status. It renders as
-waiting, still counts among open specs, and a successful recheck **removes
-the header pair** (specs have no `pending` to flip to). `Unblock: run:` text
-originates in files written by unattended workers reading untrusted content,
-so it is untrusted data — display and agent-mediated run only, never raw exec.
-
-**Cross-spec file collision → `Status: blocked` + `Unblock: run:`, not
-`pending`.** When this spec's own text names a sibling spec it must land
-after (both edit the same file), encode the real collision by marking every
-affected task `Status: blocked` with `Unblock: run: for f in
-specs/<sibling>/tasks/*.md; do grep -q '^Status: done' "$f" || echo "not
-done: $f"; done` (empty output = safe to flip to `pending`) rather than
-`pending` — this is the only mechanical way to stop an unattended `/drain`
-from landing both specs concurrently against the same files. Note in the
-task text that nothing auto-flips this: `/drain` does not re-run `Unblock:
-run:` on a pre-existing blocked task, so a human or a later session must
-re-check and flip the status once the sibling spec's tasks are all `done`.
+Resolve human-only questions before decomposition. Encode agent-clearable
+ordering in `Depends on:`; for a cross-spec prerequisite, use its exact
+repo-relative task path. `register-spec` creates the typed bd edge once, and
+bd owns all later blocking, deferral, and status changes. Never encode live
+state or unblock commands in a task's frozen `Status:` display.
 
 A version-bump acceptance criterion must check "changed from the value at
 the task's own base commit" — compare the path's content at that base
@@ -153,7 +127,8 @@ precedent this mirrors.
    - P1 — sits on the longest remaining dependency chain.
    - P2 — the default.
    - P3 — cleanup / nice-to-have.
-     The human may re-prioritize at any time by editing the headers.
+     The header records the authoring-time recommendation only. Re-prioritize
+     live work in bd; never edit a registered task definition.
 5. Append a **Parallelization** section to SPEC.md as human rationale —
    which task groups are concurrency-safe and why. Apply the
    **decision-coupling** test: tasks are parallel-safe only if they are
@@ -163,24 +138,26 @@ precedent this mirrors.
    spec or the tasks serialize.
 
    This section is prose for a human reader, not a parsed contract. The
-   machine contract for concurrency is each task's `Touch:` header, which
-   shadow-syncs into bd: post-cutover drain derives file-disjointness from
-   `Touch` and `Depends on` (concurrency = the user's throughput ask ∩ Touch
-   disjointness), and nothing reads a `- Group:` line. So write the safe
+   machine contract for concurrency is the Touch and dependency definition
+   registered into bd: post-cutover drain derives file-disjointness from that
+   bd state (concurrency = the user's throughput ask ∩ Touch disjointness),
+   and nothing reads a `- Group:` line. So write the safe
    groups as plain prose if it helps the reader; do not emit a
    machine-readable group grammar and do not claim a line opts a queue into
-   parallelism. The historical `- Group:`/`Parallel-window:` grammar is
+   parallelism. `register-spec` reads Touch and dependency declarations once;
+   bd is authoritative thereafter. The historical
+   `- Group:`/`Parallel-window:` grammar is
    archived in `specs/archive/drain-rolling-window/SPEC.md`'s
    `## Parallelization` section — cite it as history, not as a live format.
 
 6. Sanity-check with the `critic` agent if the decomposition has any
    nontrivial dependency structure.
-7. Mirror the new task files into bd: run `python3 -m agentic shadow-sync`
-   so the tracker's queue sees the tasks the moment they exist — task
-   files a later session must remember to sync are how specs/ and the
-   queue drift apart. If bd is unavailable on this machine, say so
-   explicitly in the hand-off message (the tasks exist but are not yet in
-   `bd ready`) instead of skipping silently.
+7. Register the new task definitions once: run
+   `python3 -m agentic register-spec specs/<slug>`. The registrar creates only
+   absent issues and dependency edges; subsequent task state lives in bd.
+   If bd is unavailable on this machine, say so explicitly in the hand-off
+   message (the task definitions exist but are not yet in `bd ready`) instead
+   of skipping silently.
 
 ## Hand off
 

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -50,6 +51,17 @@ def _issues(store):
 def _metadata(issue):
     value = issue.get("metadata") or {}
     return json.loads(value) if isinstance(value, str) else value
+
+
+def _agentic(store, *args):
+    env = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
+    return subprocess.run(
+        [sys.executable, "-m", "agentic", *args],
+        cwd=store,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
 
 
 TASK_ONE = """\
@@ -127,12 +139,35 @@ def test_register_spec_runs_two_phase_happy_path_with_exact_edge_direction(tmp_p
     assert base["title"] == "Task 01: establish the base"
     assert base["description"] == "Create the base behavior."
     assert base["status"] == "open"
-    assert _metadata(base)["registration_state"] == "complete"
+    assert _metadata(base) == {
+        "budget": "12 turns",
+        "definition_hash": register.definition_hash(
+            register.parse_task(
+                store / "specs/demo/tasks/01-base.md",
+                store,
+            )
+        ),
+        "registration_state": "complete",
+        "rigor": "prototype",
+        "source": "specs/demo/tasks/01-base.md",
+        "touch": ["src/a.py", "tests/a.py"],
+    }
     assert _metadata(dependent)["registration_state"] == "complete"
     assert {
         (edge["issue_id"], edge["depends_on_id"], edge["type"])
         for edge in dependent.get("dependencies", [])
     } == {(dependent["id"], base["id"], "blocks")}
+
+
+@requires_bd
+def test_cli_register_spec_dispatches_the_real_registrar(tmp_path):
+    store = _git_store(tmp_path)
+    _write_task(store, "01-base.md", TASK_ONE)
+
+    result = _agentic(store, "register-spec", "specs/demo")
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "register-spec: 1 task(s) registered\n"
+    assert "spec-task:specs/demo/tasks/01-base.md" in _issues(store)
 
 
 @requires_bd
@@ -228,7 +263,7 @@ def test_rerun_only_changes_registrar_owned_registration_state(tmp_path):
         ],
         cwd=str(store),
     )
-    bd._run(["comment", "add", issue["id"], "keep me"], cwd=str(store))
+    bd._run(["comment", issue["id"], "keep me"], cwd=str(store))
 
     register.register_spec(store / "specs" / "demo", store_cwd=store)
     after = _issues(store)["spec-task:specs/demo/tasks/01-base.md"]

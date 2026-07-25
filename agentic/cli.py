@@ -1,34 +1,44 @@
 """``agentic`` command-line entrypoint.
 
-Registers EVERY planned subcommand so sibling tasks stay Touch-disjoint on
-their own modules: ``init`` is implemented here; the verbs later tasks fill
-(ready, claim, verdict, resume, compose, ctx, inbox, demote) are registered
-as stubs that exit 2 ("not implemented").
+Working commands are registered for normal discovery. Retired pre-2.0 names
+are handled before parser construction so they remain exact compatibility
+aliases without appearing in help or completion metadata.
 """
 
 import argparse
 import sys
 
-from agentic import audit, claim, initialize, ready, resume, shadow, verdict
+from agentic import audit, claim, initialize, ready, register, resume, verdict
 from agentic.bd import BdError
 
-# Verbs whose bodies belong to later tasks (06, 07, 11). Registered now as
-# stubs so the subcommand surface is stable and disjoint. ready/resume (03)
-# and claim/verdict (04) are implemented and routed to their modules below.
-_STUB_SUBCOMMANDS = (
+_RETIRED_DIAGNOSTICS = {
+    "compose": (
+        "agentic compose: retired by the native-orchestration pivot; "
+        "use /work, /build, or /drain"
+    ),
+    "ctx": "agentic ctx: wrapper not shipped; use ctx directly",
+    "inbox": "agentic inbox: retired; use bd ready and bd human list",
+    "demote": "agentic demote: retired; use bd update <id> --status deferred",
+    "shadow-sync": (
+        "agentic shadow-sync: retired; task state lives in bd; "
+        "use register-spec only for new tasks"
+    ),
+}
+_RETIRED_SUBCOMMANDS = (
     "compose",
     "ctx",
     "inbox",
     "demote",
+    "shadow-sync",
 )
 
 
-def _make_stub(name):
-    def _run(_args):
-        print(f"agentic {name}: not implemented", file=sys.stderr)
-        return 2
-
-    return _run
+def _build_compatibility_parser():
+    parser = argparse.ArgumentParser(add_help=False)
+    sub = parser.add_subparsers(dest="command", required=True)
+    for name in _RETIRED_SUBCOMMANDS:
+        sub.add_parser(name, add_help=False)
+    return parser
 
 
 def build_parser():
@@ -75,11 +85,12 @@ def build_parser():
     )
     p_verdict.set_defaults(func=verdict.run)
 
-    p_shadow = sub.add_parser(
-        "shadow-sync",
-        help="Mirror specs/*/tasks/*.md headers into bd (one-way, markdown-authoritative).",
+    p_register = sub.add_parser(
+        "register-spec",
+        help="Create absent bd issues and dependency edges for one spec.",
     )
-    p_shadow.set_defaults(func=shadow.run)
+    p_register.add_argument("spec_dir", help="spec directory containing tasks/")
+    p_register.set_defaults(func=register.run)
 
     p_audit = sub.add_parser(
         "audit",
@@ -95,16 +106,15 @@ def build_parser():
     )
     p_audit.set_defaults(func=audit.run)
 
-    for name in _STUB_SUBCOMMANDS:
-        p = sub.add_parser(name, help=f"({name}) not implemented yet")
-        p.add_argument("args", nargs=argparse.REMAINDER)
-        p.set_defaults(func=_make_stub(name))
-
     return parser
 
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in _RETIRED_DIAGNOSTICS:
+        _build_compatibility_parser().parse_args(argv[:1])
+        print(_RETIRED_DIAGNOSTICS[argv[0]], file=sys.stderr)
+        return 2
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
