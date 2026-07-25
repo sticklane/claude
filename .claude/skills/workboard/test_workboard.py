@@ -222,7 +222,12 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
                 "# A\nStatus: open\n", encoding="utf-8"
             )
 
-            specs = workboard.scan_toolkit_specs(Path(tmp))
+            specs = workboard.scan_toolkit_specs(
+                Path(tmp),
+                bd_issues=[
+                    make_spec_issue("specs/demo/tasks/01-a.md", status="open")
+                ],
+            )
 
             self.assertEqual(specs[0]["tasks_blocked"], [])
 
@@ -237,7 +242,14 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
                 "# A\nStatus: needs-verification\n", encoding="utf-8"
             )
 
-            specs = workboard.scan_toolkit_specs(Path(tmp))
+            specs = workboard.scan_toolkit_specs(
+                Path(tmp),
+                bd_issues=[
+                    make_spec_issue(
+                        "specs/demo/tasks/01-a.md", status="needs_verification"
+                    )
+                ],
+            )
 
             self.assertEqual(specs[0]["tasks_blocked"], [])
             self.assertEqual(specs[0]["tasks_done"], 0)
@@ -251,7 +263,12 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
                 "# A\nStatus: failed\n", encoding="utf-8"
             )
 
-            specs = workboard.scan_toolkit_specs(Path(tmp))
+            specs = workboard.scan_toolkit_specs(
+                Path(tmp),
+                bd_issues=[
+                    make_spec_issue("specs/demo/tasks/01-a.md", status="failed")
+                ],
+            )
 
             self.assertEqual(len(specs[0]["tasks_blocked"]), 1)
 
@@ -1285,10 +1302,15 @@ def _write_unblock_spec(root, slug="demo", spec_body="# Demo\n", tasks=None):
 
 
 class TestUnblockParsing(unittest.TestCase):
-    def _scan_task(self, body, name="01-a.md"):
+    def _scan_task(self, body, name="01-a.md", status="blocked"):
         with tempfile.TemporaryDirectory() as tmp:
             _write_unblock_spec(tmp, tasks={name: body})
-            specs = workboard.scan_toolkit_specs(Path(tmp))
+            specs = workboard.scan_toolkit_specs(
+                Path(tmp),
+                bd_issues=[
+                    make_spec_issue(f"specs/demo/tasks/{name}", status=status)
+                ],
+            )
         return specs[0]["tasks"][0]
 
     def test_blocked_task_with_ask_unblock_parses_type_and_step(self):
@@ -1308,7 +1330,9 @@ class TestUnblockParsing(unittest.TestCase):
         self.assertNotIn("unblock", t)
 
     def test_unblock_line_on_non_blocked_task_is_ignored(self):
-        t = self._scan_task("# A\nStatus: pending\nUnblock: ask: which creds?\n")
+        t = self._scan_task(
+            "# A\nStatus: pending\nUnblock: ask: which creds?\n", status="open"
+        )
         self.assertNotIn("unblock", t)
 
     def test_deferred_questions_section_appears_in_task_json(self):
@@ -1323,7 +1347,7 @@ class TestUnblockParsing(unittest.TestCase):
 
 
 class TestWaitingSpecUnblock(unittest.TestCase):
-    def test_waiting_spec_header_surfaces_unblock_and_counts_open(self):
+    def test_waiting_spec_header_is_frozen_display_not_live_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             _write_unblock_spec(
                 tmp,
@@ -1331,10 +1355,8 @@ class TestWaitingSpecUnblock(unittest.TestCase):
             )
             specs = workboard.scan_toolkit_specs(Path(tmp))
         s = specs[0]
-        self.assertEqual(s["unblock"], {"type": "agent", "step": "check the deploy"})
-        self.assertEqual(s["status"], "waiting")
-        # a waiting spec (no completed tasks) still counts among open specs
-        self.assertTrue(s["tasks_total"] == 0 or s["tasks_done"] < s["tasks_total"])
+        self.assertNotIn("unblock", s)
+        self.assertNotIn("status", s)
 
     def test_spec_without_status_header_has_no_unblock_key(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -2039,58 +2061,23 @@ class GitInfoConfigUpstreamTestCase(unittest.TestCase):
             self.assertIsNone(info["behind"])
 
 
-class TestDeferSpec(unittest.TestCase):
-    def _spec_text(self, root, slug="demo"):
-        return (Path(root) / "specs" / slug / "SPEC.md").read_text(encoding="utf-8")
-
-    def test_defer_spec_inserts_status_after_title_when_absent(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, spec_body="# Demo\n\nBody text.\n")
-            found = workboard.defer_spec(Path(tmp), "demo")
-            lines = self._spec_text(tmp).splitlines()
-        self.assertTrue(found)
-        self.assertEqual(lines[0], "# Demo")
-        self.assertEqual(lines[1], "Status: deferred")
-
-    def test_defer_spec_updates_an_existing_status_line_in_place(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, spec_body="# Demo\nStatus: waiting\nBody.\n")
-            workboard.defer_spec(Path(tmp), "demo")
-            text = self._spec_text(tmp)
-        self.assertEqual(len(workboard.STATUS_RE.findall(text)), 1)
-        self.assertEqual(workboard.STATUS_RE.search(text).group(1), "deferred")
-
-    def test_defer_spec_is_idempotent(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, spec_body="# Demo\n\nBody.\n")
-            workboard.defer_spec(Path(tmp), "demo")
-            once = self._spec_text(tmp)
-            workboard.defer_spec(Path(tmp), "demo")
-            twice = self._spec_text(tmp)
-        self.assertEqual(once, twice)
-        self.assertEqual(len(workboard.STATUS_RE.findall(twice)), 1)
-
-    def test_defer_spec_reports_unknown_slug_as_not_found(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, spec_body="# Demo\n")
-            self.assertFalse(workboard.defer_spec(Path(tmp), "nope"))
-
-    def test_deferred_spec_header_is_captured_by_scanner(self):
+class TestFrozenSpecStatus(unittest.TestCase):
+    def test_deferred_spec_header_is_ignored_by_scanner(self):
         with tempfile.TemporaryDirectory() as tmp:
             _write_unblock_spec(tmp, spec_body="# Demo\nStatus: deferred\n")
             specs = workboard.scan_toolkit_specs(Path(tmp))
-        self.assertEqual(specs[0]["status"], "deferred")
+        self.assertNotIn("status", specs[0])
 
-    def test_deferred_spec_is_excluded_from_stale_inbox(self):
+    def test_frozen_deferred_header_cannot_exclude_live_open_work(self):
         stale_ts = workboard.now_ts() - 30 * 86400
-        spec = _unblock_spec([_unblock_task(status="pending")], status="deferred")
+        spec = _unblock_spec([_unblock_task(status="pending")])
         spec["last_touched"] = stale_ts
         repo = make_repo_record(path="/r/demo")
         repo["specs"] = [spec]
         items = workboard.attention_items([repo], [], [], stale_days=7)
-        self.assertEqual([i for i in items if i["state"] in ("stale", "blocked")], [])
+        self.assertEqual(len([i for i in items if i["state"] == "stale"]), 1)
 
-    def test_stale_spec_inbox_item_carries_runnable_defer_command(self):
+    def test_stale_spec_inbox_does_not_offer_markdown_defer_command(self):
         spec = _unblock_spec([_unblock_task(status="pending")])
         spec["last_touched"] = workboard.now_ts() - 30 * 86400
         repo = make_repo_record(path="/r/demo")
@@ -2101,6 +2088,7 @@ class TestDeferSpec(unittest.TestCase):
             if i["state"] == "stale"
         ]
         self.assertEqual(len(stale), 1)
+        self.assertNotIn("--defer", stale[0].get("cmd", ""))
         cmd = stale[0].get("cmd", "")
         self.assertIn("--defer demo", cmd)
         self.assertIn("/r/demo", cmd)
