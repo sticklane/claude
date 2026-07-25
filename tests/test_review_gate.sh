@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# Tests for bin/review-gate and hooks/review-gate/pretool-review.sh — the
-# mechanical gate that blocks `git commit` until an adversarial review has
-# been recorded against the exact staged diff. Runs against a throwaway
-# fixture repo in a temp dir; never touches this toolkit's own .git.
+# Tests for bin/review-gate, hooks/review-gate/pre-commit and
+# bin/install-review-gate — the mechanical gate that blocks `git commit` until
+# an adversarial review has been recorded against the diff that commit will
+# contain. Every gate assertion drives a REAL `git commit` in a throwaway
+# fixture repo and asserts on its exit status and resulting history; nothing
+# here simulates a commit. This toolkit's own .git is never touched.
 set -u
 
 TOOLKIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 GATE="$TOOLKIT_DIR/bin/review-gate"
-HOOK="$TOOLKIT_DIR/hooks/review-gate/pretool-review.sh"
+HOOK="$TOOLKIT_DIR/hooks/review-gate/pre-commit"
+INSTALLER="$TOOLKIT_DIR/bin/install-review-gate"
+README="$TOOLKIT_DIR/hooks/review-gate/README.md"
 
 pass=0
 fail=0
@@ -19,6 +23,16 @@ assert() { # assert <description> <command...>
   else
     fail=$((fail + 1))
     echo "FAIL: $desc" >&2
+  fi
+}
+
+refute() { # refute <description> <command...>
+  local desc="$1"; shift
+  if "$@" >/dev/null 2>&1; then
+    fail=$((fail + 1))
+    echo "FAIL: $desc (command unexpectedly succeeded)" >&2
+  else
+    pass=$((pass + 1))
   fi
 }
 
@@ -42,496 +56,493 @@ assert_ne() { # assert_ne <description> <unexpected> <actual>
   fi
 }
 
-refute() { # refute <description> <command...>
-  local desc="$1"; shift
-  if "$@" >/dev/null 2>&1; then
+assert_has() { # assert_has <description> <needle> <haystack>
+  local desc="$1" needle="$2" haystack="$3"
+  if printf '%s' "$haystack" | grep -qF -- "$needle"; then
+    pass=$((pass + 1))
+  else
     fail=$((fail + 1))
-    echo "FAIL: $desc (command unexpectedly succeeded)" >&2
+    echo "FAIL: $desc (missing '$needle')" >&2
+  fi
+}
+
+refute_has() { # refute_has <description> <needle> <haystack>
+  local desc="$1" needle="$2" haystack="$3"
+  if printf '%s' "$haystack" | grep -qF -- "$needle"; then
+    fail=$((fail + 1))
+    echo "FAIL: $desc (unexpectedly found '$needle')" >&2
   else
     pass=$((pass + 1))
   fi
 }
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
 
-# Fixture repo (name contains a space: paths must be space-safe throughout).
-REPO="$TMP/gate repo"
-mkdir -p "$REPO/sub dir"
-git -C "$REPO" init -q
-git -C "$REPO" config user.email test@example.com
-git -C "$REPO" config user.name test
-
-# run_gate <subcommand> [stdin] [cwd] -> RG_EXIT / RG_OUT / RG_ERR
-run_gate() {
-  local sub="$1" stdin="${2:-}" cwd="${3:-$REPO}"
-  local out_f="$TMP/.rg_out" err_f="$TMP/.rg_err"
-  (
-    cd "$cwd" || exit 97
-    printf '%s' "$stdin" | "$GATE" "$sub" >"$out_f" 2>"$err_f"
-  )
-  RG_EXIT=$?
-  RG_OUT="$(cat "$out_f")"
-  RG_ERR="$(cat "$err_f")"
-}
-
-# run_hook <stdin> [cwd] -> RH_EXIT / RH_OUT / RH_ERR. Honors HOOK_PATH.
-run_hook() {
-  local stdin="$1" cwd="${2:-$REPO}" script="${HOOK_SCRIPT:-$HOOK}"
-  local out_f="$TMP/.rh_out" err_f="$TMP/.rh_err"
-  (
-    cd "$cwd" || exit 97
-    [ -n "${HOOK_PATH:-}" ] && export PATH="$HOOK_PATH"
-    printf '%s' "$stdin" | "$script" >"$out_f" 2>"$err_f"
-  )
-  RH_EXIT=$?
-  RH_OUT="$(cat "$out_f")"
-  RH_ERR="$(cat "$err_f")"
-}
-
-hook_json() { # hook_json <command>
-  jq -nc --arg cmd "$1" --arg cwd "$REPO" \
-    '{tool_name: "Bash", tool_input: {command: $cmd}, cwd: $cwd}'
-}
-
-hook_decision() {
-  printf '%s' "$RH_OUT" | jq -r '.hookSpecificOutput.permissionDecision // empty' 2>/dev/null
-}
-
-hook_reason() {
-  printf '%s' "$RH_OUT" | jq -r '.hookSpecificOutput.permissionDecisionReason // empty' 2>/dev/null
-}
-
-# --- Files exist and are executable ------------------------------------------
-
-assert "bin/review-gate exists and is executable" test -x "$GATE"
-assert "pretool-review.sh exists and is executable" test -x "$HOOK"
-
-# --- key: empty staged diff --------------------------------------------------
-
-run_gate key
-assert_eq "key exits 1 with an empty staged diff" 1 "$RG_EXIT"
-assert_eq "key prints nothing with an empty staged diff" "" "$RG_OUT"
-
-# --- check: no staged diff at all allows -------------------------------------
-
-run_gate check
-assert_eq "check exits 0 when nothing is staged" 0 "$RG_EXIT"
-
-# --- key: stable for the same staged diff ------------------------------------
-
-echo "one" > "$REPO/a.txt"
-git -C "$REPO" add a.txt
-run_gate key
-KEY1="$RG_OUT"
-assert_eq "key exits 0 with a staged diff" 0 "$RG_EXIT"
-assert "key is 16 hex characters" grep -Eqx '[0-9a-f]{16}' <<<"$KEY1"
-
-run_gate key
-assert_eq "key is stable for the same staged diff" "$KEY1" "$RG_OUT"
-
-# key is identical when computed from a subdirectory of the same repo
-run_gate key "" "$REPO/sub dir"
-assert_eq "key is identical from a repo subdirectory" "$KEY1" "$RG_OUT"
-
-# --- check fails before record, passes after ---------------------------------
-
-run_gate check
-assert_eq "check exits 1 before any review is recorded" 1 "$RG_EXIT"
-
-run_gate record ""
-assert_eq "record refuses empty stdin (exit 1)" 1 "$RG_EXIT"
-assert "record refusal explains itself on stderr" test -n "$RG_ERR"
-
-run_gate check
-assert_eq "check still fails after a refused record" 1 "$RG_EXIT"
-
-STATUS_BEFORE="$(git -C "$REPO" status --porcelain)"
-run_gate record "VERDICT: READY - no blocking findings"
-assert_eq "record exits 0 with a verdict on stdin" 0 "$RG_EXIT"
-
-run_gate check
-assert_eq "check exits 0 once a review is recorded" 0 "$RG_EXIT"
-
-# --- markers live inside the git common dir, never in the worktree -----------
-
-MARKER="$REPO/.git/agentic-review/$KEY1"
-assert "marker written under the git common dir" test -f "$MARKER"
-assert "marker carries the recorded verdict" grep -q "VERDICT: READY" "$MARKER"
-assert_eq "git status is unchanged by recording" \
-  "$STATUS_BEFORE" "$(git -C "$REPO" status --porcelain)"
-
-# --- a stale marker must not authorize a different staged diff ---------------
-
-echo "two" >> "$REPO/a.txt"
-git -C "$REPO" add a.txt
-run_gate key
-KEY2="$RG_OUT"
-assert_ne "key changes when the staged diff changes" "$KEY1" "$KEY2"
-
-run_gate check
-assert_eq "check fails again once more changes are staged" 1 "$RG_EXIT"
-
-# --- hook: denies commits without a recorded review --------------------------
-
-hook_denies() { # hook_denies <description> <command>
-  run_hook "$(hook_json "$2")"
-  assert_eq "$1: exit 0" 0 "$RH_EXIT"
-  assert_eq "$1: permissionDecision deny" "deny" "$(hook_decision)"
-  assert_eq "$1: hookEventName PreToolUse" "PreToolUse" \
-    "$(printf '%s' "$RH_OUT" | jq -r '.hookSpecificOutput.hookEventName // empty' 2>/dev/null)"
-  assert "$1: reason names the staged key" grep -qF "$KEY2" <<<"$(hook_reason)"
-  assert "$1: reason names the record command" \
-    grep -qF "review-gate record" <<<"$(hook_reason)"
-  assert "$1: reason names an adversarial review path" \
-    grep -Eq "critic|code-review" <<<"$(hook_reason)"
-}
-
-hook_allows() { # hook_allows <description> <command>
-  run_hook "$(hook_json "$2")"
-  assert_eq "$1: exit 0" 0 "$RH_EXIT"
-  assert_eq "$1: no output (allow)" "" "$RH_OUT"
-}
-
-hook_denies "plain commit" "git commit -m x"
-hook_denies "bare commit" "git commit"
-hook_denies "commit after &&" "cd /x && git commit -m y"
-hook_denies "commit after ;" "echo hi; git commit -m y"
-hook_denies "commit with -C into the repo" "git -C \"$REPO\" commit -m y"
-hook_denies "commit with global flags" "git --no-pager -c user.name=a commit -m y"
-hook_denies "commit piped after another command" "true | git commit -m y"
-
-hook_allows "git status" "git status"
-hook_allows "git log --oneline" "git log --oneline"
-hook_allows "git log with commit in a format string" "git log --format=%H-commit-%s"
-hook_allows "git commit-graph" "git commit-graph write"
-hook_allows "pre-commit runner" "pre-commit run --all-files"
-hook_allows "precommit npm script" "npm run precommit"
-hook_allows "commit inside a quoted argument" 'echo "git commit -m x"'
-hook_allows "commit inside a single-quoted argument" "grep 'git commit' notes.txt"
-
-# --- hook: allows a commit once the review is recorded -----------------------
-
-run_gate record "VERDICT: READY - second pass"
-assert_eq "record exits 0 for the new staged key" 0 "$RG_EXIT"
-hook_allows "commit with a recorded review" "git commit -m x"
-
-# --- hook: fail-open boundaries ----------------------------------------------
-
-# Re-stage so the gate would otherwise deny, proving fail-open is what allows.
-echo "three" >> "$REPO/a.txt"
-git -C "$REPO" add a.txt
-run_gate check
-assert_eq "check fails for the third staged diff" 1 "$RG_EXIT"
-
-NOJQ="$TMP/nojq"
-mkdir -p "$NOJQ"
-for b in git shasum cut mkdir cat sed grep dirname basename; do
-  ln -sf "/usr/bin/$b" "$NOJQ/$b" 2>/dev/null || true
+# A runaway chain would fork until the process table gives out, so the tests
+# that probe recursion run under a wall-clock ceiling when one is available.
+TIMEOUT_BIN=""
+for candidate in timeout gtimeout; do
+  command -v "$candidate" >/dev/null 2>&1 && { TIMEOUT_BIN="$candidate"; break; }
 done
-ln -sf /bin/bash "$NOJQ/bash"
-[ -x "$NOJQ/cat" ] || ln -sf /bin/cat "$NOJQ/cat"
-[ -x "$NOJQ/mkdir" ] || ln -sf /bin/mkdir "$NOJQ/mkdir"
-[ -x "$NOJQ/sed" ] || ln -sf /usr/bin/sed "$NOJQ/sed"
+bounded() { # bounded <command...>
+  if [ -n "$TIMEOUT_BIN" ]; then "$TIMEOUT_BIN" 60 "$@"; else "$@"; fi
+}
 
-HOOK_PATH="$NOJQ" run_hook "$(hook_json "git commit -m x")"
-assert_eq "hook exits 0 when jq is unavailable" 0 "$RH_EXIT"
-assert_eq "hook emits no deny JSON when jq is unavailable" "" "$RH_OUT"
-unset HOOK_PATH
+# The hook as an install would leave it: a symlink in a hooks directory that
+# core.hooksPath points at. The directory name contains a space on purpose.
+GHOOKS="$TMP/global hooks"
+mkdir -p "$GHOOKS"
+ln -sf "$HOOK" "$GHOOKS/pre-commit"
 
-run_hook "this is not json {"
-assert_eq "hook exits 0 on malformed JSON" 0 "$RH_EXIT"
-assert_eq "hook emits no deny JSON on malformed JSON" "" "$RH_OUT"
+new_repo() { # new_repo <path> — fixture repo wired to the global hook
+  local repo="$1"
+  mkdir -p "$repo"
+  git -C "$repo" init -q
+  git -C "$repo" config user.email test@example.com
+  git -C "$repo" config user.name test
+  git -C "$repo" config commit.gpgsign false
+  git -C "$repo" config core.hooksPath "$GHOOKS"
+}
 
-run_hook ""
-assert_eq "hook exits 0 on empty stdin" 0 "$RH_EXIT"
-assert_eq "hook emits no deny JSON on empty stdin" "" "$RH_OUT"
+commits_in() { # commits_in <repo>
+  git -C "$1" rev-list --count HEAD 2>/dev/null || echo 0
+}
 
-# not a git repo -> fail open
-NOTREPO="$TMP/not a repo"
-mkdir -p "$NOTREPO"
-run_hook "$(jq -nc --arg cmd "git commit -m x" --arg cwd "$NOTREPO" \
-  '{tool_name: "Bash", tool_input: {command: $cmd}, cwd: $cwd}')" "$NOTREPO"
-assert_eq "hook exits 0 outside a git repo" 0 "$RH_EXIT"
-assert_eq "hook emits no deny JSON outside a git repo" "" "$RH_OUT"
+# git_in <repo> <git-args...> -> GIT_EXIT / GIT_ERR (stdout discarded)
+git_in() {
+  local repo="$1"; shift
+  GIT_ERR="$( cd "$repo" && bounded git "$@" 2>&1 >/dev/null )"
+  GIT_EXIT=$?
+}
 
-# review-gate not findable (hook copied away from bin/, and not on PATH)
-LONELY="$TMP/lonely hook"
+# sh_in <repo> <shell-snippet> -> GIT_EXIT / GIT_ERR
+sh_in() {
+  local repo="$1" snippet="$2"
+  GIT_ERR="$( cd "$repo" && bounded bash -c "$snippet" 2>&1 >/dev/null )"
+  GIT_EXIT=$?
+}
+
+assert_blocked() { # assert_blocked <description> <repo> <git-args...>
+  local desc="$1" repo="$2"; shift 2
+  local before after
+  before="$(commits_in "$repo")"
+  git_in "$repo" "$@"
+  after="$(commits_in "$repo")"
+  assert_ne "$desc: git exits non-zero" 0 "$GIT_EXIT"
+  assert_eq "$desc: history is unchanged" "$before" "$after"
+}
+
+assert_committed() { # assert_committed <description> <repo> <git-args...>
+  local desc="$1" repo="$2"; shift 2
+  local before after
+  before="$(commits_in "$repo")"
+  git_in "$repo" "$@"
+  after="$(commits_in "$repo")"
+  assert_eq "$desc: git exits 0" 0 "$GIT_EXIT"
+  assert_eq "$desc: one new commit" "$((before + 1))" "$after"
+}
+
+record_in() { # record_in <repo> <verdict>
+  ( cd "$1" && printf '%s' "$2" | "$GATE" record ) >/dev/null 2>&1
+}
+
+key_in() { # key_in <repo>
+  ( cd "$1" && "$GATE" key 2>/dev/null )
+}
+
+# --- the three executables ship ----------------------------------------------
+
+assert "bin/review-gate is executable" test -x "$GATE"
+assert "hooks/review-gate/pre-commit is executable" test -x "$HOOK"
+assert "bin/install-review-gate is executable" test -x "$INSTALLER"
+refute "the PreToolUse hook is gone" \
+  test -e "$TOOLKIT_DIR/hooks/review-gate/pretool-review.sh"
+
+# --- a plain commit is blocked until a review is recorded --------------------
+
+PLAIN="$TMP/plain repo"
+new_repo "$PLAIN"
+printf 'one\n' > "$PLAIN/a.txt"
+git -C "$PLAIN" add a.txt
+
+PLAIN_KEY="$(key_in "$PLAIN")"
+assert "the staged key is 16 hex characters" \
+  grep -Eqx '[0-9a-f]{16}' <<<"$PLAIN_KEY"
+
+assert_blocked "plain commit without a review" "$PLAIN" commit -m first
+assert_has "the refusal names the staged key" "$PLAIN_KEY" "$GIT_ERR"
+assert_has "the refusal names the record command" "review-gate record" "$GIT_ERR"
+assert_has "the refusal names the REVIEW_GATE=0 bypass" \
+  "REVIEW_GATE=0 git commit" "$GIT_ERR"
+assert_has "the refusal names the --no-verify bypass" \
+  "git commit --no-verify" "$GIT_ERR"
+assert "the refusal points at an adversarial review" \
+  grep -Eq 'critique|critic|code-review' <<<"$GIT_ERR"
+
+record_in "$PLAIN" "VERDICT: READY - no blocking findings"
+assert_committed "plain commit once the review is recorded" "$PLAIN" commit -m first
+assert_eq "the recorded marker lives inside .git" "1" \
+  "$(ls "$PLAIN/.git/agentic-review" | wc -l | tr -d ' ')"
+
+# --- a stale marker does not authorize a different diff ----------------------
+
+printf 'two\n' >> "$PLAIN/a.txt"
+git -C "$PLAIN" add a.txt
+assert_ne "the key changes when the staged diff changes" \
+  "$PLAIN_KEY" "$(key_in "$PLAIN")"
+assert_blocked "a stale marker does not authorize a different diff" \
+  "$PLAIN" commit -m second
+
+# --- git commit -a: keyed on what the commit will contain, not the index -----
+
+DASH_A="$TMP/dash a"
+new_repo "$DASH_A"
+printf 'base\n' > "$DASH_A/f.txt"
+git -C "$DASH_A" add f.txt
+record_in "$DASH_A" "VERDICT: READY - seed"
+git -C "$DASH_A" commit -qm seed
+
+printf 'modified\n' > "$DASH_A/f.txt"   # tracked, unstaged; the index is clean
+assert_eq "the index really is clean" "" "$(key_in "$DASH_A")"
+
+assert_blocked "commit -a is blocked before its content is reviewed" \
+  "$DASH_A" commit -am unreviewed
+
+# The key the refusal names is the key of that same content staged, so a review
+# recorded against it authorizes the -a commit even with a clean index — which
+# is only possible if the hook sees what `commit -a` will write.
+git -C "$DASH_A" add f.txt
+DASH_A_KEY="$(key_in "$DASH_A")"
+assert_has "the commit -a refusal names the content's own key" \
+  "$DASH_A_KEY" "$GIT_ERR"
+assert_has "the refusal names git add -u, not git add -A" \
+  "git add -u" "$GIT_ERR"
+record_in "$DASH_A" "VERDICT: READY - the -a content"
+git -C "$DASH_A" reset -q
+
+assert_committed "commit -a is allowed once that content is reviewed" \
+  "$DASH_A" commit -am reviewed
+assert_eq "the commit -a landed the worktree content" "modified" \
+  "$(git -C "$DASH_A" show HEAD:f.txt)"
+
+# `git add -u` must be advice that works: `git add -A` would also stage
+# untracked files, which a `-a` commit does not contain, so it would record a
+# key the hook never computes and the refusal would repeat forever.
+printf 'again\n' > "$DASH_A/f.txt"
+printf 'untracked\n' > "$DASH_A/u.txt"
+git -C "$DASH_A" add -u
+DASH_A_KEY="$(key_in "$DASH_A")"
+git -C "$DASH_A" add -A
+assert_ne "git add -A records a different key when an untracked file exists" \
+  "$DASH_A_KEY" "$(key_in "$DASH_A")"
+git -C "$DASH_A" reset -q
+git -C "$DASH_A" add -u
+record_in "$DASH_A" "VERDICT: READY - staged the way the refusal says to"
+git -C "$DASH_A" reset -q
+assert_committed "the refusal's own instructions satisfy the gate" \
+  "$DASH_A" commit -am "as instructed"
+assert_eq "the untracked file stayed out of the commit" "" \
+  "$(git -C "$DASH_A" ls-tree --name-only HEAD u.txt)"
+
+# --- git commit --amend is gated on what is staged against HEAD --------------
+
+AMEND="$TMP/amend repo"
+new_repo "$AMEND"
+printf 'base\n' > "$AMEND/f.txt"
+git -C "$AMEND" add f.txt
+record_in "$AMEND" "VERDICT: READY - seed"
+git -C "$AMEND" commit -qm seed
+AMEND_HEAD="$(git -C "$AMEND" rev-parse HEAD)"
+
+printf 'amended\n' > "$AMEND/f.txt"
+git -C "$AMEND" add f.txt
+git_in "$AMEND" commit --amend --no-edit
+assert_ne "an amend with staged content is refused" 0 "$GIT_EXIT"
+assert_eq "the refused amend left HEAD alone" \
+  "$AMEND_HEAD" "$(git -C "$AMEND" rev-parse HEAD)"
+record_in "$AMEND" "VERDICT: READY - the amended content"
+git_in "$AMEND" commit --amend --no-edit
+assert_eq "an amend is allowed once its staged content is reviewed" 0 "$GIT_EXIT"
+assert_ne "the allowed amend rewrote HEAD" \
+  "$AMEND_HEAD" "$(git -C "$AMEND" rev-parse HEAD)"
+
+# The documented amend caveat: a reword stages nothing, so nothing is gated.
+git_in "$AMEND" commit --amend -m "reworded, ungated"
+assert_eq "a reword with nothing staged is not gated" 0 "$GIT_EXIT"
+assert_eq "the reword took effect" "reworded, ungated" \
+  "$(git -C "$AMEND" log -1 --format=%s)"
+
+# --- pathspec commits are gated on the pathspec's content --------------------
+
+PS="$TMP/pathspec repo"
+new_repo "$PS"
+printf 'base\n' > "$PS/f.txt"
+git -C "$PS" add f.txt
+record_in "$PS" "VERDICT: READY - seed"
+git -C "$PS" commit -qm seed
+
+printf 'from the worktree\n' > "$PS/f.txt"   # worktree only; index stays clean
+assert_blocked "a pathspec commit is blocked without a review" \
+  "$PS" commit -m pathspec f.txt
+
+git -C "$PS" add f.txt
+PS_KEY="$(key_in "$PS")"
+assert_has "the pathspec refusal names the pathspec content's key" \
+  "$PS_KEY" "$GIT_ERR"
+record_in "$PS" "VERDICT: READY - the pathspec content"
+git -C "$PS" reset -q
+assert_committed "a pathspec commit is allowed once reviewed" \
+  "$PS" commit -m pathspec f.txt
+
+# A pathspec commit is built from HEAD plus the named paths, so anything else
+# left staged is in the recorded key but not in the commit. The documented
+# recipe clears the index first; without that the refusal repeats forever.
+printf 'other\n' > "$PS/g.txt"
+git -C "$PS" add g.txt
+git -C "$PS" commit -qm "seed g" --no-verify
+printf 'changed f\n' > "$PS/f.txt"
+printf 'changed g\n' > "$PS/g.txt"
+git -C "$PS" add g.txt          # unrelated staged work
+git -C "$PS" add -- f.txt
+record_in "$PS" "VERDICT: READY - but the index holds more than the pathspec"
+assert_blocked "unrelated staged content does not authorize a pathspec commit" \
+  "$PS" commit -m pathspec f.txt
+
+git -C "$PS" reset -q
+git -C "$PS" add -- f.txt
+record_in "$PS" "VERDICT: READY - the pathspec content alone"
+assert_committed "the documented pathspec recipe satisfies the gate" \
+  "$PS" commit -m pathspec f.txt
+assert_eq "the unrelated change stayed out of the pathspec commit" "other" \
+  "$(git -C "$PS" show HEAD:g.txt)"
+
+# --- a commit inside bash -c is gated too (no command-string parsing left) ---
+
+BC="$TMP/bash dash c"
+new_repo "$BC"
+printf 'one\n' > "$BC/a.txt"
+git -C "$BC" add a.txt
+before="$(commits_in "$BC")"
+sh_in "$BC" 'git commit -m "from bash -c"'
+assert_ne "a commit run under bash -c exits non-zero" 0 "$GIT_EXIT"
+assert_eq "a commit run under bash -c creates no commit" \
+  "$before" "$(commits_in "$BC")"
+sh_in "$BC" 'eval "git commit -m evaled"'
+assert_ne "a commit run under eval exits non-zero" 0 "$GIT_EXIT"
+assert_eq "a commit run under eval creates no commit" \
+  "$before" "$(commits_in "$BC")"
+
+# --- the two bypasses --------------------------------------------------------
+
+BYPASS="$TMP/bypass repo"
+new_repo "$BYPASS"
+printf 'one\n' > "$BYPASS/a.txt"
+git -C "$BYPASS" add a.txt
+assert_blocked "the bypass fixture is gated to begin with" \
+  "$BYPASS" commit -m gated
+
+before="$(commits_in "$BYPASS")"
+sh_in "$BYPASS" 'REVIEW_GATE=0 git commit -m bypassed'
+assert_eq "REVIEW_GATE=0 git commit exits 0" 0 "$GIT_EXIT"
+assert_eq "REVIEW_GATE=0 git commit creates the commit" \
+  "$((before + 1))" "$(commits_in "$BYPASS")"
+
+printf 'two\n' >> "$BYPASS/a.txt"
+git -C "$BYPASS" add a.txt
+assert_blocked "the next diff is gated again" "$BYPASS" commit -m gated
+assert_committed "git commit --no-verify skips the hook" \
+  "$BYPASS" commit --no-verify -m unverified
+
+# Both bypasses return before the chain, so neither runs the repository's own
+# pre-commit hook. The README says so; this pins it.
+BYPASS_CHAIN="$TMP/bypass chain"
+new_repo "$BYPASS_CHAIN"
+mkdir -p "$BYPASS_CHAIN/.git/hooks"
+printf '#!/usr/bin/env bash\ndate > "%s"\nexit 0\n' "$TMP/bypass-chain-ran" \
+  > "$BYPASS_CHAIN/.git/hooks/pre-commit"
+chmod 755 "$BYPASS_CHAIN/.git/hooks/pre-commit"
+printf 'one\n' > "$BYPASS_CHAIN/a.txt"
+git -C "$BYPASS_CHAIN" add a.txt
+assert_blocked "the bypass-chain fixture is gated to begin with" \
+  "$BYPASS_CHAIN" commit -m gated
+assert "the repo hook does run in this fixture without the bypass" \
+  test -f "$TMP/bypass-chain-ran"
+rm -f "$TMP/bypass-chain-ran"
+sh_in "$BYPASS_CHAIN" 'REVIEW_GATE=0 git commit -m bypassed'
+assert_eq "REVIEW_GATE=0 commits past the repo hook" 0 "$GIT_EXIT"
+refute "REVIEW_GATE=0 does not run the repository's own hook" \
+  test -f "$TMP/bypass-chain-ran"
+
+# --- nothing staged is not something to gate ---------------------------------
+
+EMPTY="$TMP/empty commit"
+new_repo "$EMPTY"
+printf 'seed\n' > "$EMPTY/a.txt"
+git -C "$EMPTY" add a.txt
+record_in "$EMPTY" "VERDICT: READY - seed"
+git -C "$EMPTY" commit -qm seed
+assert_committed "an empty commit is not blocked" \
+  "$EMPTY" commit --allow-empty -m nothing
+( cd "$EMPTY" && bounded "$GHOOKS/pre-commit" ) >/dev/null 2>&1
+assert_eq "the hook itself exits 0 with nothing staged" 0 "$?"
+
+# --- linked worktrees share the marker directory -----------------------------
+
+WT_MAIN="$TMP/worktree main"
+new_repo "$WT_MAIN"
+printf 'base\n' > "$WT_MAIN/f.txt"
+git -C "$WT_MAIN" add f.txt
+record_in "$WT_MAIN" "VERDICT: READY - seed"
+git -C "$WT_MAIN" commit -qm seed
+WT_LINK="$TMP/worktree linked"
+git -C "$WT_MAIN" worktree add -q "$WT_LINK" -b linked
+printf 'from the worktree\n' > "$WT_LINK/f.txt"
+git -C "$WT_LINK" add f.txt
+assert_blocked "a commit in a linked worktree is gated" "$WT_LINK" commit -m x
+record_in "$WT_LINK" "VERDICT: READY - the worktree change"
+assert_committed "a linked worktree commits once reviewed" "$WT_LINK" commit -m x
+assert "the worktree's marker landed in the shared common dir" \
+  test -d "$WT_MAIN/.git/agentic-review"
+
+# --- a commit from a subdirectory is gated on the same key -------------------
+
+SUBDIR="$TMP/subdir repo"
+new_repo "$SUBDIR"
+mkdir -p "$SUBDIR/nested dir"
+printf 'one\n' > "$SUBDIR/nested dir/a.txt"
+git -C "$SUBDIR" add .
+assert_blocked "a commit issued from a subdirectory is gated" \
+  "$SUBDIR/nested dir" commit -m x
+record_in "$SUBDIR/nested dir" "VERDICT: READY"
+assert_committed "a subdirectory commit lands once reviewed" \
+  "$SUBDIR/nested dir" commit -m x
+
+# --- chaining: the repo's own pre-commit hook still runs ---------------------
+
+write_repo_hook() { # write_repo_hook <repo> <body>
+  local repo="$1" body="$2" dir
+  dir="$repo/.git/hooks"
+  mkdir -p "$dir"
+  printf '#!/usr/bin/env bash\n%s\n' "$body" > "$dir/pre-commit"
+  chmod 755 "$dir/pre-commit"
+}
+
+CHAIN_FAIL="$TMP/chain fail"
+new_repo "$CHAIN_FAIL"
+write_repo_hook "$CHAIN_FAIL" 'echo "repo hook says no" >&2; exit 1'
+printf 'one\n' > "$CHAIN_FAIL/a.txt"
+git -C "$CHAIN_FAIL" add a.txt
+record_in "$CHAIN_FAIL" "VERDICT: READY - reviewed but the repo hook fails"
+assert_blocked "a failing repo hook blocks even with a review recorded" \
+  "$CHAIN_FAIL" commit -m x
+assert_has "the repo hook's own message reaches the user" \
+  "repo hook says no" "$GIT_ERR"
+refute_has "a failing repo hook prints nothing extra from the gate" \
+  "REVIEW_GATE=0 git commit" "$GIT_ERR"
+
+write_repo_hook "$CHAIN_FAIL" 'exit 3'
+( cd "$CHAIN_FAIL" && bounded "$GHOOKS/pre-commit" ) >/dev/null 2>&1
+assert_eq "the hook exits with the repo hook's own status" 3 "$?"
+
+CHAIN_OK="$TMP/chain ok"
+new_repo "$CHAIN_OK"
+write_repo_hook "$CHAIN_OK" "date > \"$TMP/chain-ok-ran\"; exit 0"
+printf 'one\n' > "$CHAIN_OK/a.txt"
+git -C "$CHAIN_OK" add a.txt
+assert_blocked "a passing repo hook lets the review check decide" \
+  "$CHAIN_OK" commit -m x
+assert "the passing repo hook actually ran" test -f "$TMP/chain-ok-ran"
+record_in "$CHAIN_OK" "VERDICT: READY"
+assert_committed "a passing repo hook plus a review commits" \
+  "$CHAIN_OK" commit -m x
+
+CHAIN_IO="$TMP/chain io"
+new_repo "$CHAIN_IO"
+write_repo_hook "$CHAIN_IO" \
+  "printf '%s' \"\$*\" > \"$TMP/chain-args\"; cat > \"$TMP/chain-stdin\"; exit 0"
+( cd "$CHAIN_IO" && printf 'stdin payload' | bounded "$GHOOKS/pre-commit" one "arg two" ) \
+  >/dev/null 2>&1
+assert_eq "the repo hook receives the hook's own arguments" \
+  "one arg two" "$(cat "$TMP/chain-args" 2>/dev/null)"
+assert_eq "the repo hook receives the hook's own stdin" \
+  "stdin payload" "$(cat "$TMP/chain-stdin" 2>/dev/null)"
+
+# Recursion guards: the repo hook IS the global hook, by symlink and by copy.
+CHAIN_LINK="$TMP/chain symlink"
+new_repo "$CHAIN_LINK"
+mkdir -p "$CHAIN_LINK/.git/hooks"
+ln -sf "$GHOOKS/pre-commit" "$CHAIN_LINK/.git/hooks/pre-commit"
+printf 'one\n' > "$CHAIN_LINK/a.txt"
+git -C "$CHAIN_LINK" add a.txt
+assert_blocked "a self-referential symlinked repo hook still gates" \
+  "$CHAIN_LINK" commit -m x
+assert_ne "the self-referential symlink does not run away" 124 "$GIT_EXIT"
+record_in "$CHAIN_LINK" "VERDICT: READY"
+assert_committed "a self-referential symlinked repo hook commits once reviewed" \
+  "$CHAIN_LINK" commit -m x
+
+CHAIN_COPY="$TMP/chain copy"
+new_repo "$CHAIN_COPY"
+mkdir -p "$CHAIN_COPY/.git/hooks"
+cp "$HOOK" "$CHAIN_COPY/.git/hooks/pre-commit"
+chmod 755 "$CHAIN_COPY/.git/hooks/pre-commit"
+printf 'one\n' > "$CHAIN_COPY/a.txt"
+git -C "$CHAIN_COPY" add a.txt
+assert_blocked "a copied-in repo hook still gates without recursing" \
+  "$CHAIN_COPY" commit -m x
+assert_ne "the copied repo hook does not run away" 124 "$GIT_EXIT"
+record_in "$CHAIN_COPY" "VERDICT: READY"
+assert_committed "a copied-in repo hook commits once reviewed" \
+  "$CHAIN_COPY" commit -m x
+
+# A non-executable repo hook is not run, exactly as git would treat it.
+CHAIN_NOX="$TMP/chain nonexec"
+new_repo "$CHAIN_NOX"
+write_repo_hook "$CHAIN_NOX" 'exit 1'
+chmod 644 "$CHAIN_NOX/.git/hooks/pre-commit"
+printf 'one\n' > "$CHAIN_NOX/a.txt"
+git -C "$CHAIN_NOX" add a.txt
+record_in "$CHAIN_NOX" "VERDICT: READY"
+assert_committed "a non-executable repo hook is skipped" "$CHAIN_NOX" commit -m x
+
+# --- fail-open boundaries ----------------------------------------------------
+
+FO="$TMP/fail open"
+new_repo "$FO"
+printf 'one\n' > "$FO/a.txt"
+git -C "$FO" add a.txt
+assert_blocked "the fail-open fixture is gated to begin with" "$FO" commit -m x
+
+# review-gate neither beside the hook nor on PATH. The fixture carries no
+# core.hooksPath, so the stray copy has no hook of its own to chain into.
+LONELY="$TMP/lonely hooks"
 mkdir -p "$LONELY"
-cp "$HOOK" "$LONELY/pretool-review.sh"
-chmod 755 "$LONELY/pretool-review.sh"
-# PATH is scrubbed of any directory shipping review-gate, so this still
-# exercises fail-open once the gate is installed on PATH machine-wide.
+cp "$HOOK" "$LONELY/pre-commit"
+chmod 755 "$LONELY/pre-commit"
+LONELY_REPO="$TMP/lonely repo"
+new_repo "$LONELY_REPO"
+git -C "$LONELY_REPO" config --unset core.hooksPath
+printf 'one\n' > "$LONELY_REPO/a.txt"
+git -C "$LONELY_REPO" add a.txt
 SCRUBBED=""
 IFS=: read -r -a _pdirs <<< "$PATH"
 for _d in "${_pdirs[@]}"; do
   [ -x "$_d/review-gate" ] && continue
   SCRUBBED="${SCRUBBED:+$SCRUBBED:}$_d"
 done
-HOOK_SCRIPT="$LONELY/pretool-review.sh" HOOK_PATH="$SCRUBBED" \
-  run_hook "$(hook_json "git commit -m x")"
-assert_eq "hook exits 0 when review-gate cannot be located" 0 "$RH_EXIT"
-assert_eq "hook emits no deny JSON when review-gate is missing" "" "$RH_OUT"
-assert "hook says why it allowed when review-gate is missing" \
-  bash -c 'printf %s "$1" | grep -q "review-gate not found"' _ "$RH_ERR"
-unset HOOK_SCRIPT HOOK_PATH
+FO_ERR="$( cd "$LONELY_REPO" && PATH="$SCRUBBED" bounded "$LONELY/pre-commit" 2>&1 )"
+assert_eq "the hook exits 0 when review-gate cannot be located" 0 "$?"
+assert_has "the hook says why it allowed" "review-gate not found" "$FO_ERR"
 
-# a non-Bash tool call is never a commit
-run_hook '{"tool_name": "Edit", "tool_input": {"file_path": "/tmp/x"}}'
-assert_eq "hook exits 0 for a non-Bash tool call" 0 "$RH_EXIT"
-assert_eq "hook emits no deny JSON for a non-Bash tool call" "" "$RH_OUT"
+# outside a git repository
+NOTREPO="$TMP/not a repo"
+mkdir -p "$NOTREPO"
+( cd "$NOTREPO" && bounded "$GHOOKS/pre-commit" ) >/dev/null 2>&1
+assert_eq "the hook exits 0 outside a git repository" 0 "$?"
 
-
-# --- bypass regressions: the key covers what the commit WOULD contain --------
-# `git commit -a` and `git commit --amend` both produce a commit from content
-# the index does not hold, so keying on the index alone let them through.
-BR="$TMP/bypass"
-mkdir -p "$BR"
-git -C "$BR" init -q
-git -C "$BR" config user.email t@e.com
-git -C "$BR" config user.name t
-echo one > "$BR/f.txt"
-git -C "$BR" add -A
-git -C "$BR" commit -qm first
-
-gate_in() { # gate_in <cwd> <args...>
-  local cwd="$1"; shift
-  ( cd "$cwd" && "$GATE" "$@" 2>/dev/null )
-}
-hook_in() { # hook_in <cwd> <command>
-  local cwd="$1" cmd="$2"
-  RH_OUT="$( jq -nc --arg cmd "$cmd" --arg cwd "$cwd" \
-      '{tool_name:"Bash", tool_input:{command:$cmd}, cwd:$cwd}' \
-    | ( cd "$cwd" && "$HOOK" 2>/dev/null ) )"
-}
-
-echo two > "$BR/f.txt"
-assert_eq "plain key is empty when nothing is staged" "" "$(gate_in "$BR" key)"
-assert "--all key is non-empty for tracked-but-unstaged changes" \
-  test -n "$(gate_in "$BR" key --all)"
-hook_in "$BR" 'git commit -am wip'
-assert_eq "commit -a is denied despite an empty index" "deny" "$(hook_decision)"
-
-git -C "$BR" checkout -q -- f.txt
-assert "--amend key is non-empty on a clean index" \
-  test -n "$(gate_in "$BR" key --amend)"
-hook_in "$BR" 'git commit --amend --no-edit'
-assert_eq "commit --amend is denied on a clean index" "deny" "$(hook_decision)"
-
-printf 'reviewed' | ( cd "$BR" && "$GATE" record --amend ) >/dev/null 2>&1
-hook_in "$BR" 'git commit --amend --no-edit'
-assert_eq "amend allowed once its own review is recorded" "" "$(hook_decision)"
-echo three > "$BR/f.txt"
-git -C "$BR" add -A
-hook_in "$BR" 'git commit -m other'
-assert_eq "an amend review does not authorize a different staged commit" "deny" "$(hook_decision)"
-
-
-# --- `-a` key must equal HEAD..worktree, not index..worktree ----------------
-# Staged content is part of what `git commit -a` writes, so a review recorded
-# against only the unstaged hunk must not authorize it.
-MX="$TMP/mixed"
-mkdir -p "$MX"
-git -C "$MX" init -q
-git -C "$MX" config user.email t@e.com
-git -C "$MX" config user.name t
-printf 'base\n' > "$MX/f.txt"
-printf 'base\n' > "$MX/g.txt"
-git -C "$MX" add -A
-git -C "$MX" commit -qm first
-
-printf 'SECRET_BACKDOOR\n' > "$MX/f.txt"
-git -C "$MX" add f.txt          # staged
-printf 'harmless\n' > "$MX/g.txt"  # unstaged
-
-assert_ne "key --all differs from key when both staged and unstaged exist" \
-  "$(gate_in "$MX" key)" "$(gate_in "$MX" key --all)"
-# Coverage, not mere non-emptiness: the --all key is the digest of the whole
-# HEAD..worktree diff, which contains both the staged and the unstaged file.
-MX_ALL_DIFF="$( cd "$MX" && git diff HEAD )"
-assert "the HEAD..worktree diff holds the staged file" \
-  grep -q 'SECRET_BACKDOOR' <<<"$MX_ALL_DIFF"
-assert "the HEAD..worktree diff holds the unstaged file" \
-  grep -q 'harmless' <<<"$MX_ALL_DIFF"
-assert_eq "key --all is the digest of that whole diff" \
-  "$( cd "$MX" && git diff HEAD | shasum -a 256 | cut -c1-16 )" \
-  "$(gate_in "$MX" key --all)"
-
-# Record a review of the unstaged hunk only, then attempt `git commit -a`.
-printf 'reviewed the harmless change' | ( cd "$MX" && "$GATE" record ) >/dev/null 2>&1
-hook_in "$MX" 'git commit -am wip'
-assert_eq "a review of the staged-only diff does not authorize commit -a" \
-  "deny" "$(hook_decision)"
-
-# And with a clean worktree but a staged change, commit -a must still be gated.
-MX2="$TMP/mixed2"
-mkdir -p "$MX2"
-git -C "$MX2" init -q
-git -C "$MX2" config user.email t@e.com
-git -C "$MX2" config user.name t
-printf 'base\n' > "$MX2/f.txt"
-git -C "$MX2" add -A
-git -C "$MX2" commit -qm first
-printf 'staged-only\n' > "$MX2/f.txt"
-git -C "$MX2" add f.txt
-hook_in "$MX2" 'git commit -am wip'
-assert_eq "commit -a with a staged change and clean worktree is denied" \
-  "deny" "$(hook_decision)"
-
-
-# --- `git -C <other>` is decided against <other>, not the hook's cwd --------
-OTHER="$TMP/other repo"
-mkdir -p "$OTHER"
-git -C "$OTHER" init -q
-git -C "$OTHER" config user.email t@e.com
-git -C "$OTHER" config user.name t
-echo seed > "$OTHER/s.txt"
-git -C "$OTHER" add -A
-git -C "$OTHER" commit -qm seed
-# $OTHER has nothing staged, so a commit there needs no review even though the
-# hook's own cwd repo has an unreviewed staged diff.
-RH_OUT="$( jq -nc --arg cmd "git -C \"$OTHER\" commit -m x" --arg cwd "$REPO" \
-    '{tool_name:"Bash", tool_input:{command:$cmd}, cwd:$cwd}' \
-  | "$HOOK" 2>/dev/null )"
-assert_eq "a clean -C target is not denied because of the cwd repo" \
-  "" "$(hook_decision)"
-# Stage something in $OTHER: now it must be denied, on ITS key.
-echo change > "$OTHER/s.txt"
-git -C "$OTHER" add -A
-RH_OUT="$( jq -nc --arg cmd "git -C \"$OTHER\" commit -m x" --arg cwd "$REPO" \
-    '{tool_name:"Bash", tool_input:{command:$cmd}, cwd:$cwd}' \
-  | "$HOOK" 2>/dev/null )"
-assert_eq "a dirty -C target is denied" "deny" "$(hook_decision)"
-OTHER_KEY="$(cd "$OTHER" && "$GATE" key 2>/dev/null)"
-assert "the deny names the -C target's own key" \
-  grep -qF "$OTHER_KEY" <<<"$(hook_reason)"
-refute "the deny does not name the hook cwd repo's key" \
-  grep -qF "$(cd "$REPO" && "$GATE" key 2>/dev/null)" <<<"$(hook_reason)"
-# Following the deny's own instructions must land the marker in $OTHER, not in
-# whatever directory the agent happens to stand in.
-assert "the record command in the deny cds into the -C target" \
-  grep -qF "cd \"$OTHER\" &&" <<<"$(hook_reason)"
-
-# --- pathspec commits bypass the index entirely ------------------------------
-# `git commit -m x f.txt` takes content from the worktree, so `git diff --cached`
-# is empty and the gate would key on nothing. Such commits are never gated.
-PS="$TMP/pathspec"
-mkdir -p "$PS"
-git -C "$PS" init -q
-git -C "$PS" config user.email t@e.com
-git -C "$PS" config user.name t
-printf 'base\n' > "$PS/f.txt"
-git -C "$PS" add -A
-git -C "$PS" commit -qm first
-printf 'unreviewed\n' > "$PS/f.txt"   # worktree only; the index stays clean
-
-pathspec_denies() { # pathspec_denies <description> <command>
-  hook_in "$PS" "$2"
-  assert_eq "$1: denied" "deny" "$(hook_decision)"
-  assert "$1: reason explains the pathspec" \
-    grep -qi "pathspec" <<<"$(hook_reason)"
-}
-
-no_pathspec_allows() { # no_pathspec_allows <description> <command>
-  hook_in "$PS" "$2"
-  assert_eq "$1: allowed (flag value is not a pathspec)" "" "$(hook_decision)"
-}
-
-pathspec_denies "trailing pathspec" "git commit -m x f.txt"
-pathspec_denies "pathspec after --" "git commit -m x -- f.txt"
-pathspec_denies "bare commit with only a pathspec" "git commit f.txt"
-pathspec_denies "amend with a pathspec" "git commit --amend --no-edit f.txt"
-pathspec_denies "attached short value then pathspec" "git commit -mwip f.txt"
-pathspec_denies "pathspec with a quoted space" "git commit -m x \"sub dir/f.txt\""
-
-no_pathspec_allows "-m value" "git commit -m x"
-no_pathspec_allows "--message value" "git commit --message x"
-no_pathspec_allows "-F value" "git commit -F msg.txt"
-no_pathspec_allows "--file value" "git commit --file msg.txt"
-no_pathspec_allows "--author value" "git commit --author \"A U <a@u>\" -m x"
-no_pathspec_allows "--date value" "git commit --date 2020-01-01 -m x"
-no_pathspec_allows "-C reuse-message value" "git commit -C HEAD"
-no_pathspec_allows "-c reedit-message value" "git commit -c HEAD"
-no_pathspec_allows "--squash value" "git commit --squash HEAD"
-no_pathspec_allows "--fixup value" "git commit --fixup HEAD"
-no_pathspec_allows "-t template value" "git commit -t tpl.txt"
-no_pathspec_allows "--cleanup value" "git commit --cleanup strip -m x"
-no_pathspec_allows "--pathspec-from-file value" "git commit --pathspec-from-file list.txt"
-no_pathspec_allows "-S with no value" "git commit -S -m x"
-no_pathspec_allows "--gpg-sign with attached value" "git commit --gpg-sign=KEYID -m x"
-no_pathspec_allows "-u with no value" "git commit -u -m x"
-no_pathspec_allows "--untracked-files attached" "git commit --untracked-files=no -m x"
-no_pathspec_allows "trailing -- with nothing after it" "git commit -m x --"
-no_pathspec_allows "--message= attached value" "git commit --message=x"
-
-# A bundled `-am wip` message value must not be read as a pathspec: the deny
-# there is the ordinary review deny.
-hook_in "$PS" 'git commit -am wip'
-assert_eq "commit -am is denied on unstaged tracked changes" "deny" "$(hook_decision)"
-refute "the -am deny is a review deny, not a pathspec deny" \
-  grep -qi "pathspec" <<<"$(hook_reason)"
-
-# --- heredoc bodies are data, not commands -----------------------------------
-# A script being WRITTEN by a heredoc may contain the text `git commit`; that is
-# not a commit. A real commit after the heredoc terminator still is.
-HD="$TMP/heredoc"
-mkdir -p "$HD"
-git -C "$HD" init -q
-git -C "$HD" config user.email t@e.com
-git -C "$HD" config user.name t
-printf 'base\n' > "$HD/f.txt"
-git -C "$HD" add -A   # staged and unreviewed: a real commit here denies
-
-hd_allows() { # hd_allows <description> <command>
-  hook_in "$HD" "$2"
-  assert_eq "$1: allowed" "" "$(hook_decision)"
-}
-hd_denies() { # hd_denies <description> <command>
-  hook_in "$HD" "$2"
-  assert_eq "$1: denied" "deny" "$(hook_decision)"
-}
-
-hd_denies "plain commit in the heredoc fixture" 'git commit -m x'
-hd_allows "unquoted heredoc body mentioning git commit" \
-  "$(printf 'cat > setup.sh <<EOF\ngit commit -m x\nEOF\n')"
-hd_allows "single-quoted heredoc delimiter" \
-  "$(printf "cat > setup.sh <<'EOF'\ngit commit -m x\nEOF\n")"
-hd_allows "double-quoted heredoc delimiter" \
-  "$(printf 'cat > setup.sh <<"EOF"\ngit commit -m x\nEOF\n')"
-hd_allows "<<- heredoc with a tab-indented terminator" \
-  "$(printf 'cat > setup.sh <<-EOF\n\tgit commit -m x\n\tEOF\n')"
-hd_allows "heredoc whose body holds the delimiter as a substring" \
-  "$(printf 'cat > setup.sh <<MARK\ngit commit -m MARKER\nMARK\n')"
-hd_denies "a real commit after a heredoc block" \
-  "$(printf 'cat > setup.sh <<EOF\nhello\nEOF\ngit commit -m x\n')"
-hd_denies "a real commit after a quoted-delimiter heredoc block" \
-  "$(printf "cat > setup.sh <<'EOF'\nhello\nEOF\ngit commit -m x\n")"
-hd_denies "a real commit after a <<- heredoc block" \
-  "$(printf 'cat > setup.sh <<-EOF\n\thello\n\tEOF\ngit commit -m x\n')"
-hd_denies "a here-string is not a heredoc" 'git commit -m x <<<data'
-
-# --- "cannot compute" is not "nothing to review" -----------------------------
-# A repository with no HEAD, and a machine with no digest tool, both used to
-# turn the gate off silently.
-INIT="$TMP/initial commit"
-mkdir -p "$INIT"
-git -C "$INIT" init -q
-git -C "$INIT" config user.email t@e.com
-git -C "$INIT" config user.name t
-printf 'first\n' > "$INIT/f.txt"
-git -C "$INIT" add -A
-
-assert "key --all is non-empty before any commit exists" \
-  test -n "$(gate_in "$INIT" key --all)"
-hook_in "$INIT" 'git commit -am initial'
-assert_eq "the very first commit -am is denied" "deny" "$(hook_decision)"
-printf 'reviewed the initial import' | \
-  ( cd "$INIT" && "$GATE" record --all ) >/dev/null 2>&1
-hook_in "$INIT" 'git commit -am initial'
-assert_eq "the very first commit -am is allowed once reviewed" "" "$(hook_decision)"
-
-# A PATH with neither shasum nor sha256sum: the gate cannot compute a key, so
-# it must say so and deny rather than allow everything machine-wide.
+# No digest tool is the one documented condition that denies rather than
+# allowing: a gate that cannot see the diff is not a gate.
 stock_path_dir() { # stock_path_dir <dir> <binary...>
   local dir="$1" b src; shift
   mkdir -p "$dir"
@@ -540,131 +551,173 @@ stock_path_dir() { # stock_path_dir <dir> <binary...>
   done
   ln -sf /bin/bash "$dir/bash"
 }
-
-NODIGEST="$TMP/nodigest"
-stock_path_dir "$NODIGEST" git cut dirname mkdir cat basename head awk jq
-( cd "$INIT" && PATH="$NODIGEST" "$GATE" check ) \
-  >"$TMP/.nd_out" 2>"$TMP/.nd_err"
-ND_EXIT=$?
-assert_ne "check does not exit 0 when no digest tool exists" 0 "$ND_EXIT"
-assert "check names the missing digest tool on stderr" \
-  grep -Eq "sha256sum|shasum" "$TMP/.nd_err"
-
-HOOK_PATH="$NODIGEST" run_hook "$(hook_json "git commit -m x")"
-assert_eq "the hook denies when the key cannot be computed" \
-  "deny" "$(hook_decision)"
-unset HOOK_PATH
-
-# The digest falls back to sha256sum when shasum is missing.
-SHA256ONLY="$TMP/sha256only"
-stock_path_dir "$SHA256ONLY" git cut dirname mkdir cat basename head awk sha256sum
-if [ ! -e "$SHA256ONLY/sha256sum" ]; then
-  printf '#!/bin/sh\nexec %s -a 256 "$@"\n' "$(command -v shasum)" \
-    > "$SHA256ONLY/sha256sum"
-  chmod 755 "$SHA256ONLY/sha256sum"
-fi
-assert_eq "key falls back to sha256sum when shasum is absent" \
-  "$(gate_in "$INIT" key)" \
-  "$( cd "$INIT" && PATH="$SHA256ONLY" "$GATE" key 2>/dev/null )"
-
-# --- checking must not have side effects -------------------------------------
-FRESH="$TMP/fresh probe"
-mkdir -p "$FRESH"
-git -C "$FRESH" init -q
-git -C "$FRESH" config user.email t@e.com
-git -C "$FRESH" config user.name t
-printf 'x\n' > "$FRESH/f.txt"
-git -C "$FRESH" add -A
-run_gate check "" "$FRESH"
-assert_eq "check exits 1 in the fresh probe repo" 1 "$RG_EXIT"
-refute "check creates no marker directory" test -e "$FRESH/.git/agentic-review"
+NODIGEST="$TMP/no digest"
+stock_path_dir "$NODIGEST" git cut dirname basename mkdir cat readlink printf
+( cd "$FO" && PATH="$NODIGEST" bounded "$GHOOKS/pre-commit" ) >/dev/null 2>&1
+assert_ne "the hook denies when no digest tool exists" 0 "$?"
+( cd "$FO" && PATH="$NODIGEST" "$GATE" check ) >/dev/null 2>"$TMP/.nodigest_err"
+assert_ne "review-gate check denies when no digest tool exists" 0 "$?"
+assert "the denial names the missing digest tool" \
+  grep -Eq 'shasum|sha256sum' "$TMP/.nodigest_err"
 
 # An unwritable marker location must allow rather than wedge the repository.
 UNWRITABLE="$TMP/unwritable"
-mkdir -p "$UNWRITABLE"
-git -C "$UNWRITABLE" init -q
-git -C "$UNWRITABLE" config user.email t@e.com
-git -C "$UNWRITABLE" config user.name t
-printf 'x\n' > "$UNWRITABLE/f.txt"
-git -C "$UNWRITABLE" add -A
-run_gate check "" "$UNWRITABLE"
-assert_eq "check denies while the marker location is writable" 1 "$RG_EXIT"
+new_repo "$UNWRITABLE"
+printf 'one\n' > "$UNWRITABLE/a.txt"
+git -C "$UNWRITABLE" add a.txt
+( cd "$UNWRITABLE" && "$GATE" check ) >/dev/null 2>&1
+assert_eq "check denies while the marker location is writable" 1 "$?"
 chmod 500 "$UNWRITABLE/.git"
-run_gate check "" "$UNWRITABLE"
-assert_eq "check allows when the marker cannot be written" 0 "$RG_EXIT"
+( cd "$UNWRITABLE" && "$GATE" check ) >/dev/null 2>&1
+assert_eq "check allows when the marker cannot be written" 0 "$?"
 chmod 700 "$UNWRITABLE/.git"
 
-# --- REVIEW_GATE=0 is the deliberate bypass ----------------------------------
-run_gate_env() { # run_gate_env <env-assignment> <subcommand> <cwd>
-  ( cd "$3" && env "$1" "$GATE" "$2" ) >/dev/null 2>&1
-  RG_EXIT=$?
-}
-run_gate check "" "$FRESH"
-assert_eq "check denies the fresh probe repo without the bypass" 1 "$RG_EXIT"
-run_gate_env "REVIEW_GATE=0" check "$FRESH"
-assert_eq "REVIEW_GATE=0 makes check exit 0" 0 "$RG_EXIT"
+# --- bin/review-gate keeps its contract --------------------------------------
 
-hook_bypassed() { # hook_bypassed <description> <cwd> <command>
-  RH_OUT="$( jq -nc --arg cmd "$3" --arg cwd "$2" \
-      '{tool_name:"Bash", tool_input:{command:$cmd}, cwd:$cwd}' \
-    | ( cd "$2" && REVIEW_GATE=0 "$HOOK" 2>/dev/null ) )"
-  assert_eq "$1" "" "$(hook_decision)"
-}
-hook_bypassed "REVIEW_GATE=0 bypasses the hook's review deny" "$FRESH" 'git commit -m x'
-hook_bypassed "REVIEW_GATE=0 bypasses the hook's pathspec deny" "$PS" 'git commit -m x f.txt'
-
-# --- `git commit -a --amend` is keyed on HEAD^..worktree ---------------------
-AA="$TMP/amend all"
-mkdir -p "$AA"
-git -C "$AA" init -q
-git -C "$AA" config user.email t@e.com
-git -C "$AA" config user.name t
-printf 'one\n' > "$AA/f.txt"
-git -C "$AA" add -A
-git -C "$AA" commit -qm first
-printf 'two\n' > "$AA/f.txt"   # tracked, unstaged
-hook_in "$AA" 'git commit -a --amend --no-edit'
-assert_eq "commit -a --amend is denied" "deny" "$(hook_decision)"
-assert "the -a --amend deny names both gate flags" \
-  grep -qF "record --all --amend" <<<"$(hook_reason)"
-printf 'reviewed the amended tree' | \
-  ( cd "$AA" && "$GATE" record --all --amend ) >/dev/null 2>&1
-hook_in "$AA" 'git commit -a --amend --no-edit'
-assert_eq "commit -a --amend is allowed once its own review is recorded" \
-  "" "$(hook_decision)"
-hook_in "$AA" 'git commit -am wip'
-assert_eq "an -a --amend review does not authorize a plain commit -a" \
-  "deny" "$(hook_decision)"
-
-# --- the escape hatch is documented where it is needed -----------------------
-assert "bin/review-gate's usage block documents REVIEW_GATE=0" \
+CLI="$TMP/cli repo"
+new_repo "$CLI"
+( cd "$CLI" && "$GATE" key ) >/dev/null 2>&1
+assert_eq "key exits 1 on an empty staged diff" 1 "$?"
+printf 'one\n' > "$CLI/a.txt"
+git -C "$CLI" add a.txt
+CLI_KEY="$(key_in "$CLI")"
+mkdir -p "$CLI/sub dir"
+assert_eq "the key is identical from a repo subdirectory" \
+  "$CLI_KEY" "$(key_in "$CLI/sub dir")"
+( cd "$CLI" && printf '' | "$GATE" record ) >/dev/null 2>&1
+assert_eq "record refuses an empty verdict" 1 "$?"
+( cd "$CLI" && "$GATE" key --all ) >/dev/null 2>&1
+assert_ne "the --all flag is gone" 0 "$?"
+( cd "$CLI" && "$GATE" key --amend ) >/dev/null 2>&1
+assert_ne "the --amend flag is gone" 0 "$?"
+refute "no diff-base widening is left in bin/review-gate" \
+  grep -Eq 'effective_diff|diff_base' "$GATE"
+assert "bin/review-gate documents the REVIEW_GATE=0 bypass" \
   bash -c 'sed -n "1,/^set -u/p" "$1" | grep -q "REVIEW_GATE=0"' _ "$GATE"
-hook_in "$FRESH" 'git commit -m x'
-assert "the review deny names the REVIEW_GATE=0 bypass" \
-  grep -qF "REVIEW_GATE=0" <<<"$(hook_reason)"
-hook_in "$PS" 'git commit -m x f.txt'
-assert "the pathspec deny names the REVIEW_GATE=0 bypass" \
-  grep -qF "REVIEW_GATE=0" <<<"$(hook_reason)"
+assert "bin/review-gate documents the --amend caveat" \
+  bash -c 'sed -n "1,/^set -u/p" "$1" | grep -q -- "--amend"' _ "$GATE"
 
-README="$TOOLKIT_DIR/hooks/review-gate/README.md"
+# --- bin/install-review-gate -------------------------------------------------
+# Sandboxed: HOME and the global git config both point into the temp dir, so no
+# assertion here can touch the real machine's configuration. If this git does
+# not honor GIT_CONFIG_GLOBAL, the installer assertions are skipped rather than
+# run against the real config.
+
+FAKEHOME="$TMP/fake home"
+mkdir -p "$FAKEHOME"
+FAKECONFIG="$FAKEHOME/.gitconfig"
+: > "$FAKECONFIG"
+GIT_CONFIG_GLOBAL="$FAKECONFIG" git config --global reviewgate.probe sandboxed 2>/dev/null
+if grep -q sandboxed "$FAKECONFIG" 2>/dev/null; then
+  sandboxed() { # sandboxed <command...>
+    HOME="$FAKEHOME" GIT_CONFIG_GLOBAL="$FAKECONFIG" "$@"
+  }
+  global_hookspath() {
+    GIT_CONFIG_GLOBAL="$FAKECONFIG" git config --global --get core.hooksPath 2>/dev/null
+  }
+
+  IDIR="$TMP/installed hooks"
+  INS_OUT="$(sandboxed "$INSTALLER" install "$IDIR" 2>&1)"
+  assert_eq "install exits 0" 0 "$?"
+  assert "install puts an executable pre-commit in the hooks dir" \
+    test -x "$IDIR/pre-commit"
+  assert_eq "install points core.hooksPath at the hooks dir" \
+    "$IDIR" "$(global_hookspath)"
+
+  sandboxed "$INSTALLER" install "$IDIR" >/dev/null 2>&1
+  assert_eq "install is idempotent" 0 "$?"
+  assert_eq "a second install leaves core.hooksPath alone" \
+    "$IDIR" "$(global_hookspath)"
+
+  STATUS_OUT="$(sandboxed "$INSTALLER" status 2>&1)"
+  assert_eq "status exits 0 when installed" 0 "$?"
+  assert_has "status reports the hooks dir" "$IDIR" "$STATUS_OUT"
+  assert "status reports that it is installed" \
+    grep -Eqi 'installed: *yes' <<<"$STATUS_OUT"
+
+  # An installed hook gates a real commit through the global config alone.
+  GLOBALLY="$TMP/globally gated"
+  mkdir -p "$GLOBALLY"
+  sandboxed git init -q "$GLOBALLY"
+  sandboxed git -C "$GLOBALLY" config user.email t@e.com
+  sandboxed git -C "$GLOBALLY" config user.name t
+  printf 'one\n' > "$GLOBALLY/a.txt"
+  sandboxed git -C "$GLOBALLY" add a.txt
+  ( cd "$GLOBALLY" && sandboxed bounded git commit -m x ) >/dev/null 2>&1
+  assert_ne "an installed hook gates a repo with no local config" 0 "$?"
+  assert_eq "no commit was created under the installed hook" \
+    "0" "$(commits_in "$GLOBALLY")"
+
+  # A foreign core.hooksPath is refused, never clobbered.
+  FOREIGN="$TMP/foreign hooks"
+  mkdir -p "$FOREIGN"
+  GIT_CONFIG_GLOBAL="$FAKECONFIG" git config --global core.hooksPath "$FOREIGN"
+  REFUSE_OUT="$(sandboxed "$INSTALLER" install "$IDIR" 2>&1)"
+  assert_ne "install refuses a foreign core.hooksPath" 0 "$?"
+  assert_has "the refusal names core.hooksPath" "core.hooksPath" "$REFUSE_OUT"
+  assert_eq "the foreign core.hooksPath is left untouched" \
+    "$FOREIGN" "$(global_hookspath)"
+
+  sandboxed "$INSTALLER" uninstall >/dev/null 2>&1
+  assert_eq "uninstall leaves a foreign core.hooksPath set" \
+    "$FOREIGN" "$(global_hookspath)"
+
+  GIT_CONFIG_GLOBAL="$FAKECONFIG" git config --global core.hooksPath "$IDIR"
+  sandboxed "$INSTALLER" uninstall >/dev/null 2>&1
+  assert_eq "uninstall exits 0" 0 "$?"
+  assert_eq "uninstall unsets our core.hooksPath" "" "$(global_hookspath)"
+  refute "uninstall removes the hook" test -e "$IDIR/pre-commit"
+
+  STATUS_OUT="$(sandboxed "$INSTALLER" status 2>&1)"
+  assert "status reports that it is not installed" \
+    grep -Eqi 'installed: *no' <<<"$STATUS_OUT"
+
+  # A moved toolkit checkout leaves a dangling symlink. Uninstall must still
+  # clear core.hooksPath, or every repository's own hooks stay disabled with
+  # no supported way back.
+  sandboxed "$INSTALLER" install "$IDIR" >/dev/null 2>&1
+  ln -sfn "$TMP/moved away/hooks/review-gate/pre-commit" "$IDIR/pre-commit"
+  sandboxed "$INSTALLER" uninstall >/dev/null 2>&1
+  assert_eq "uninstall exits 0 with a dangling hook symlink" 0 "$?"
+  assert_eq "uninstall clears core.hooksPath for a dangling symlink" \
+    "" "$(global_hookspath)"
+  refute "uninstall removes the dangling symlink" test -L "$IDIR/pre-commit"
+
+  # Install warns that a global hooks path retires every other hook type.
+  INS_OUT="$(sandboxed "$INSTALLER" install "$IDIR" 2>&1)"
+  assert_has "install warns about non-pre-commit hooks" "commit-msg" "$INS_OUT"
+  sandboxed "$INSTALLER" uninstall >/dev/null 2>&1
+else
+  echo "SKIP: git does not honor GIT_CONFIG_GLOBAL; installer assertions skipped" >&2
+fi
+
+# --- the README describes the design that actually ships ---------------------
+
 assert "hooks/review-gate/README.md exists" test -f "$README"
 assert "the README documents the REVIEW_GATE=0 bypass" \
-  grep -qF "REVIEW_GATE=0" "$README"
-assert "the README has a Known gaps section" \
-  grep -q '^## Known gaps' "$README"
-for gap in "bash -c" "sh -c" "xargs" "eval"; do
-  assert "the README's Known gaps names the $gap evasion" \
-    grep -qF "$gap" "$README"
+  grep -qF 'REVIEW_GATE=0' "$README"
+assert "the README documents the --no-verify bypass" \
+  grep -qF -- '--no-verify' "$README"
+assert "the README documents the core.hooksPath chaining caveat" \
+  grep -qF 'core.hooksPath' "$README"
+assert "the README names bin/install-review-gate" \
+  grep -qF 'bin/install-review-gate' "$README"
+assert "the README keeps an Install section" grep -q '^## Install' "$README"
+assert "the README keeps an Uninstall section" grep -q '^## Uninstall' "$README"
+assert "the README keeps a Known gaps section" grep -q '^## Known gaps' "$README"
+assert "the README keeps the review-bar section" \
+  grep -q '^## What the review itself should block on' "$README"
+for gap in "git merge" "pre-merge-commit" "git rebase" "git am"; do
+  assert "the README's Known gaps names $gap" grep -qF "$gap" "$README"
 done
 assert "the README states what the gate does not guarantee" \
   bash -c 'tr "\n" " " < "$1" | grep -Eqi "not proof|does not prove|no proof"' _ "$README"
-assert "the README documents installing the hook" \
-  grep -q '^## Install' "$README"
-assert "the README documents uninstalling the hook" \
-  grep -q '^## Uninstall' "$README"
+refute "the README no longer installs the retired PreToolUse hook" \
+  grep -qF 'pretool-review.sh' "$README"
+refute "the README no longer wires a Bash matcher into settings.json" \
+  grep -qF '"matcher": "Bash"' "$README"
 
 # --- Summary -----------------------------------------------------------------
 
 echo "pass: $pass, fail: $fail"
 [ "$fail" -eq 0 ]
-

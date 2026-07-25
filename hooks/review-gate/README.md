@@ -1,26 +1,29 @@
 # review-gate hook
 
-A `PreToolUse` hook that denies a Bash `git commit` until a review has been
-recorded against the exact diff that commit would contain. The recording tool
-is `bin/review-gate`; this hook is the thing that makes forgetting to use it
-cost you a round trip instead of nothing.
+A git `pre-commit` hook that refuses a commit until a review has been recorded
+against the content that commit will contain. The recording tool is
+`bin/review-gate`; this hook is the thing that makes forgetting to use it cost
+you a round trip instead of nothing.
+
+It is a git hook rather than a Claude Code `PreToolUse` hook because the
+content is only unambiguous once git has staged it. A `PreToolUse` hook sees a
+command string and has to guess: `git commit -am`, pathspec commits, heredocs,
+`bash -c`, and aliases each defeated a different version of that parser. Inside
+a `pre-commit` hook, `git diff --cached` is the commit, whatever form the
+command took, and there is nothing left to parse.
 
 ## What it does
 
-- Parses the Bash command about to run, finds a `git commit` in it, and works
-  out what the commit would contain — `--all` widens the diff to tracked
-  unstaged changes, `--amend` measures against the commit being replaced,
-  `git -C <dir>` moves the decision into `<dir>`.
-- Asks `review-gate check` whether a review is on file for that diff's key. If
-  it is, the hook stays silent and the commit proceeds.
-- If it is not, the hook emits a `deny` naming the key, the diff command to
-  review, and the exact `review-gate record` line to run afterwards.
-- Denies a pathspec commit (`git commit -m x file.txt`) outright. That form
-  takes content from the worktree rather than the index, so there is no diff
-  for the gate to key on.
-- Denies when it cannot compute the key at all — no `shasum` or `sha256sum` on
-  `PATH`, or a `git diff` that failed. A gate that cannot see the diff would
-  otherwise switch itself off silently.
+- Asks `review-gate check` whether a review is on file for the key of
+  `git diff --cached`. If it is, the hook stays silent and the commit proceeds.
+- If it is not, the hook prints the key, the exact `review-gate record` command
+  to run once you have reviewed, and both bypasses; then it exits 1 and the
+  commit does not happen.
+- Runs the repository's own `pre-commit` hook first, and exits with that hook's
+  status if it fails (see the `core.hooksPath` caveat below).
+- Refuses when it cannot compute the key at all — no `shasum` or `sha256sum` on
+  `PATH`. A gate that cannot see the diff would otherwise switch itself off
+  silently.
 
 ## What it does NOT guarantee
 
@@ -55,93 +58,134 @@ never blocks a merge on them
 
 That bar applies to this gate too. Google's Tricorder turns off any analyzer
 that produces 10% or more effective false positives
-(<https://abseil.io/resources/swe-book/html/ch20.html>). A wrong deny here
-blocks real work in every repository on the machine, so a false deny is a more
-serious defect than a missed commit. If this gate starts denying legitimate
-commands, turn it off rather than working around it.
+(<https://abseil.io/resources/swe-book/html/ch20.html>). A wrong refusal here
+blocks real work in every repository on the machine, so a false refusal is a
+more serious defect than a missed commit. If this gate starts refusing
+legitimate commits, turn it off rather than working around it.
 
-## The bypass
+## The bypasses
 
-`REVIEW_GATE=0` in the command's environment turns the gate off for that
-command — both the hook and `review-gate check` honor it, including for the
-pathspec deny. Use it when you have decided a commit should not be gated. It is
-named in every deny message, so nobody has to go looking for it.
+There are two, and every refusal names both:
 
-## Known gaps
+- `REVIEW_GATE=0 git commit ...` turns the gate off for that command. Use it
+  for a commit you have decided not to gate.
+- `git commit --no-verify` skips every `pre-commit` hook, this one included —
+  the standard git escape hatch.
 
-The hook reads one command string. These evade it, and no amount of parsing
-will fix them, because the commit text is not visible until a shell expands it:
+Neither is narrower than the other in practice: the gate returns on
+`REVIEW_GATE=0` before it chains, so both bypasses also skip whatever
+staged-file format and lint checks the repository's own `pre-commit` hook runs.
+Re-run those by hand, or don't bypass.
 
-- `bash -c 'git commit -m x'` and `sh -c '...'` — the commit lives inside a
-  quoted argument, which the parser deliberately treats as data.
-- `xargs git commit` — the command word comes from stdin.
-- `eval "$cmd"` and `$(...)` command substitution — the commit text is
-  produced at runtime.
-- Committing through a tool other than Bash, or a `git` alias that wraps
-  `commit` under another name.
-- Heredoc bodies are skipped wholesale, so a heredoc that is executed rather
-  than written to a file hides its commits.
+## Recording a review for `-a` and pathspec commits
 
-Treat every gap above as open.
+`review-gate record` reads `git diff --cached` from your shell, where
+`git commit -a` and `git commit -m x <path>` have not staged anything yet. The
+index has to hold exactly what the commit will contain, or the key you record is
+not the key the hook computes and the commit is refused.
 
-In the other direction, the pathspec deny fires on an unexpanded variable
-(`git commit -m x $FILE`), because the hook sees the literal text and a
-positional argument there really would be a pathspec. Expand it yourself, or
-use the bypass.
+For `git commit -a`, that is `git add -u` — tracked changes only, which is what
+`-a` writes. Not `git add -A`: it also stages untracked files, which a `-a`
+commit does not contain.
 
-## Requirements
+```sh
+git add -u
+printf '%s' 'VERDICT: READY — no blocking findings' | review-gate record
+git commit -am 'the reviewed change'
+```
 
-- `jq` on `PATH` (the hook is silent and allows without it).
-- `bin/review-gate` next to the hook (`../../bin/review-gate`) or on `PATH`.
+For a pathspec commit, git builds the commit from `HEAD` plus the paths you
+name, ignoring everything else in the index — so anything else staged has to
+come out of the index first, or it lands in the key and not in the commit:
+
+```sh
+git reset                     # unrelated staged work goes back to the worktree
+git add -- src/thing.go
+printf '%s' 'VERDICT: READY — no blocking findings' | review-gate record
+git commit -m 'the reviewed change' src/thing.go
+```
 
 ## Install
 
-The hook is not auto-installed. Wire it in your user settings at
-`~/.claude/settings.json` to cover every repo (replace `<TOOLKIT>` with the
-toolkit checkout root):
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "<TOOLKIT>/hooks/review-gate/pretool-review.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
+```sh
+bin/install-review-gate install            # ~/.git-hooks, or pass a directory
+bin/install-review-gate status
 ```
 
-If `~/.claude/settings.json` already has a `hooks` block, append this entry to
-the existing `PreToolUse` array rather than replacing the block. Restart or
-reload sessions for the setting to take effect.
+That symlinks the hook into the hooks directory and sets
+`git config --global core.hooksPath` to point at it, which covers every
+repository on the machine. If `core.hooksPath` is already set somewhere else,
+the installer refuses and tells you rather than clobbering it.
 
 ## Uninstall
 
-Remove that entry from `~/.claude/settings.json` and reload. Nothing else is
-left behind outside `.git/agentic-review/` in repos where a review was
-recorded; delete those directories to clean up:
+```sh
+bin/install-review-gate uninstall
+```
+
+That removes the hook and unsets `core.hooksPath` when it still points at the
+hook's directory. Markers are left behind in repositories where a review was
+recorded; delete those per repository:
 
 ```sh
 rm -rf "$(git rev-parse --git-common-dir)/agentic-review"
 ```
 
-To disable it for a single command instead, use `REVIEW_GATE=0` (above).
+## The `core.hooksPath` caveat
 
-## Fail-open boundaries
+`core.hooksPath` **replaces** a repository's `.git/hooks` rather than adding to
+it. A global install would therefore silently disable every repository's own
+`pre-commit` hook — on this machine, the staged-file format and lint checks
+that gated repos run there.
 
-Every unexpected condition allows the commit and says why on stderr: no `jq`,
-malformed hook JSON, empty stdin, not a git repository, `review-gate` not
-found, a `git -C` target that is not a directory, or a marker location that
-cannot be written (a read-only `.git` must not wedge the repository). The one
-deliberate exception is the uncomputable-key deny above, where allowing would
-mean the gate is off with no signal.
+So the hook chains: before checking for a review it runs the repository's own
+`hooks/pre-commit` (resolved from the git common dir, since `git rev-parse
+--git-path hooks/pre-commit` answers with `core.hooksPath`'s entry once that is
+set), passing along its own arguments and stdin. A non-zero exit from that hook
+is the commit's exit status, and the gate adds nothing to its output. It runs
+the repository's hook exactly once even when that hook is this same file, by
+symlink or by copy.
+
+`REVIEW_GATE=0` returns before the chain and therefore runs neither the review
+check nor the repository's own hook; `git commit --no-verify` skips both by
+skipping the hook entirely.
+
+Only `pre-commit` is chained. Every OTHER hook type a repository defines —
+`commit-msg`, `prepare-commit-msg`, `pre-push`, `post-commit`, `pre-rebase`,
+`post-merge`, and the rest, including anything husky installed — stops running
+in every repository for as long as `core.hooksPath` is set, because git looks
+for those names in the hooks directory too and finds nothing there. That is a
+property of `core.hooksPath`, not of this hook. `bin/install-review-gate
+install` says so at install time. If a repository on this machine depends on
+one of those hooks, install per repository (symlink the hook into that
+repository's `.git/hooks/pre-commit`) instead of globally.
+
+## Requirements
+
+- `bin/review-gate` next to the hook (`../../bin/review-gate`, following the
+  installed symlink) or on `PATH`.
+- `shasum` or `sha256sum` on `PATH`.
+
+## Known gaps
+
+A `pre-commit` hook covers `git commit`. These write history without running
+it, and are not gated:
+
+- `git merge` — runs `pre-merge-commit` instead, which this does not install.
+  A merge that stops for a manual `git commit` is gated, as an ordinary commit.
+- `git rebase` — replayed commits do not run `pre-commit`. Neither does
+  `git cherry-pick`, `git revert`, or `git commit --amend` under a rebase.
+- `git am` and `git apply --index` followed by a rebase-style commit.
+- Any tool writing objects directly: `git commit-tree`, `git fast-import`,
+  `git update-ref` on a hand-built tree, or a library like libgit2 or
+  Dulwich that never shells out to the hook.
+- `git commit --amend` IS gated, but on what is staged against `HEAD` rather
+  than on the whole commit the amend produces. A reword with nothing staged has
+  an empty diff and passes.
+- Every non-`pre-commit` hook in every repository, while a global install is
+  in place — see the `core.hooksPath` caveat above.
+
+Treat every gap above as open.
 
 ## Tests
 
@@ -149,8 +193,9 @@ mean the gate is off with no signal.
 bash tests/test_review_gate.sh
 ```
 
-The tests drive both the hook and `bin/review-gate` against throwaway fixture
-repositories in a temp dir, covering the deny and allow paths, the `-a` /
-`--amend` / `-C` variants, pathspec commits, heredoc bodies, every fail-open
-boundary, and the `REVIEW_GATE=0` bypass. They never touch this toolkit's own
-`.git`.
+The tests drive real `git commit` invocations against throwaway fixture
+repositories in a temp dir — plain, `-a`, pathspec, and `bash -c` commits, both
+bypasses, the chaining and recursion cases, and every fail-open boundary. The
+installer assertions run against a sandboxed `HOME` and `GIT_CONFIG_GLOBAL`,
+and skip themselves if git does not honor the latter. Nothing here touches this
+toolkit's own `.git` or the machine's real git configuration.

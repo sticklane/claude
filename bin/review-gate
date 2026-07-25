@@ -10,27 +10,29 @@
 # committing agent's control.
 #
 # Usage:
-#   review-gate key [--all] [--amend]
-#                        Print the key for the diff the next commit would
-#                        contain (16 hex chars). Exits 1 and prints nothing
-#                        when that diff is empty.
-#   review-gate check [--all] [--amend]
-#                        Exit 0 when a review is recorded for that key, when
+#   review-gate key      Print the key for the staged diff (16 hex chars).
+#                        Exits 1 and prints nothing when that diff is empty.
+#   review-gate check    Exit 0 when a review is recorded for that key, when
 #                        the diff is empty, or when no marker could ever be
 #                        written here; exit 1 when a review is missing; exit 2
 #                        when the key cannot be computed at all (the cause goes
 #                        to stderr).
-#   review-gate record [--all] [--amend]
-#                        Read a review verdict on stdin and store it against
+#   review-gate record   Read a review verdict on stdin and store it against
 #                        that key. Exits 1 on empty stdin.
 #
-# The flags mirror git commit's, so the key always covers what the resulting
-# commit would actually contain: --all adds tracked-but-unstaged changes,
-# --amend measures against the commit being replaced rather than HEAD.
+# The key is always `git diff --cached`. Inside the pre-commit hook this tool
+# exists for, that diff is what the commit will contain — plain, `git commit -a`,
+# and pathspec commits alike, because git stages all three before running it.
+#
+# CAVEAT, --amend: the key covers what is staged against HEAD, not the whole
+# commit the amend produces. Amending with something staged is gated on that
+# staged content; a reword with nothing staged has an empty diff and is not
+# gated at all.
 #
 # REVIEW_GATE=0 in the environment turns the gate off: `check` exits 0 without
 # consulting anything. That is the deliberate escape hatch for a commit you
-# have decided not to gate, and the hook honors it too.
+# have decided not to gate, and the pre-commit hook honors it too.
+# `git commit --no-verify` skips the hook outright.
 #
 # Markers live at <git-common-dir>/agentic-review/<key>, inside .git, so they
 # are never committed and are shared by every worktree of the repository.
@@ -73,40 +75,14 @@ key_failure_cause() {
   fi
 }
 
-# diff_base prints the revision the next commit is measured against: the commit
-# --amend would replace, HEAD otherwise, and the empty tree when neither exists.
-diff_base() {
-  if [ "$AMEND" -eq 1 ]; then
-    git rev-parse --verify --quiet HEAD^ 2>/dev/null && return 0
-  elif git rev-parse --verify --quiet HEAD 2>/dev/null; then
-    return 0
-  fi
-  git hash-object -t tree /dev/null
-}
-
-# effective_diff prints the diff the next commit would contain: --all widens
-# the base to HEAD because `git commit -a` writes staged and unstaged tracked
-# changes alike, and --amend measures against the commit being replaced.
-effective_diff() {
-  local base
-  base="$(diff_base)" || return 1
-  if [ "$ALL" -eq 1 ]; then
-    git diff "$base" 2>/dev/null
-  elif [ "$AMEND" -eq 1 ]; then
-    git diff --cached "$base" 2>/dev/null
-  else
-    git diff --cached 2>/dev/null
-  fi
-}
-
 # staged_key prints the key, or returns 1 for a genuinely empty diff and 2 when
 # the key cannot be computed. The two must never collapse into one: an
 # uncomputable key means the gate is blind, not that there is nothing to review.
 staged_key() {
   local diff key
-  diff="$(effective_diff)" || return 2
+  diff="$(git diff --cached 2>/dev/null)" || return 2
   [ -n "$diff" ] || return 1
-  key="$(effective_diff | digest | cut -c1-16)" || return 2
+  key="$(git diff --cached 2>/dev/null | digest | cut -c1-16)" || return 2
   case "$key" in '' | *[!0-9a-f]*) return 2 ;; esac
   printf '%s' "$key"
 }
@@ -175,20 +151,13 @@ git rev-parse --git-common-dir >/dev/null 2>&1 ||
 subcommand="${1:-}"
 shift || true
 
-ALL=0
-AMEND=0
 for arg in "$@"; do
-  case "$arg" in
-    '') ;;
-    --all) ALL=1 ;;
-    --amend) AMEND=1 ;;
-    *) die "unknown option: $arg" ;;
-  esac
+  [ -z "$arg" ] || die "unknown option: $arg"
 done
 
 case "$subcommand" in
   key) cmd_key ;;
   check) cmd_check ;;
   record) cmd_record ;;
-  *) die "usage: review-gate {key|check|record} [--all] [--amend]" ;;
+  *) die "usage: review-gate {key|check|record}" ;;
 esac

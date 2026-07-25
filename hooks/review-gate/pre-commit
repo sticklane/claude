@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# review-gate pre-commit hook — refuses a commit whose content has no review
+# recorded against it by bin/review-gate.
+#
+# It runs, in order:
+#   1. REVIEW_GATE=0 in the environment, which turns the gate off and returns.
+#   2. The repository's own hooks/pre-commit, with this hook's arguments and
+#      stdin, exiting with its status if it fails. core.hooksPath REPLACES a
+#      repository's hooks rather than adding to them, so without this a global
+#      install would silently disable every repository's own pre-commit hook.
+#   3. `review-gate check`, against the content this commit will actually
+#      contain — `git diff --cached` inside a pre-commit hook covers plain,
+#      `-a`, and pathspec commits alike.
+#
+# Anything unexpected — no review-gate, no repository — allows the commit. The
+# single exception is a key that cannot be computed at all (no digest tool),
+# which refuses: a gate that cannot see the diff is not a gate.
+#
+# `git commit --no-verify` skips this hook, as it skips any git hook.
+set -u
+
+warn() { printf 'review-gate: %s\n' "$1" >&2; }
+
+# resolve <path> — absolute path with symlinks followed, for identity
+# comparisons between hook files.
+resolve() {
+  local target="$1" link dir hops=0
+  while [ -L "$target" ] && [ "$hops" -lt 40 ]; do
+    link="$(readlink "$target")" || return 1
+    case "$link" in
+      /*) target="$link" ;;
+      *) target="$(dirname "$target")/$link" ;;
+    esac
+    hops=$((hops + 1))
+  done
+  dir="$(cd "$(dirname "$target")" 2>/dev/null && pwd -P)" || return 1
+  printf '%s/%s' "$dir" "$(basename "$target")"
+}
+
+# repo_hook_path prints the repository's own pre-commit hook, which is this
+# file itself when nothing else claims that name.
+repo_hook_path() {
+  local candidate common
+  candidate="$(git rev-parse --git-path hooks/pre-commit 2>/dev/null)" || return 1
+  if [ -n "$SELF" ] && [ "$(resolve "$candidate" 2>/dev/null)" = "$SELF" ]; then
+    common="$(git rev-parse --git-common-dir 2>/dev/null)" || return 1
+    candidate="$common/hooks/pre-commit"
+  fi
+  printf '%s' "$candidate"
+}
+
+# chain_repo_hook runs the repository's own pre-commit hook and returns its
+# status, or 0 when there is none to run.
+chain_repo_hook() {
+  local hook
+  [ -z "${REVIEW_GATE_CHAINED:-}" ] || return 0
+  hook="$(repo_hook_path)" || return 0
+  [ -n "$hook" ] && [ -x "$hook" ] || return 0
+  [ "$(resolve "$hook" 2>/dev/null)" != "$SELF" ] || return 0
+  REVIEW_GATE_CHAINED=1 "$hook" "$@"
+}
+
+find_gate() {
+  local gate
+  if [ -n "$SELF" ]; then
+    gate="$(dirname "$SELF")/../../bin/review-gate"
+    [ -x "$gate" ] && { resolve "$gate"; return 0; }
+  fi
+  gate="$(command -v review-gate 2>/dev/null)" || return 1
+  [ -x "$gate" ] || return 1
+  printf '%s' "$gate"
+}
+
+refuse_unreviewed() { # refuse_unreviewed <gate> <key>
+  local gate="$1" key="$2"
+  cat >&2 <<MESSAGE
+review-gate: no review is recorded for what this commit contains.
+
+  key: $key
+
+Review the change first (/critique, or /code-review for a working diff), then
+record the verdict against this exact content and commit again:
+
+  printf '%s' 'VERDICT: ...' | $gate record
+
+\`record\` reads the staged diff, so the index has to hold exactly what this
+commit will contain. Before a \`git commit -a\`, that is \`git add -u\` — not
+\`git add -A\`, which stages untracked files a \`-a\` commit leaves out. Before a
+pathspec commit, it is those paths AND NOTHING ELSE staged, since git builds
+that commit from HEAD plus the paths you name.
+
+To commit without the gate:
+
+  REVIEW_GATE=0 git commit ...   # this commit only
+  git commit --no-verify ...     # skips every pre-commit hook
+MESSAGE
+}
+
+[ "${REVIEW_GATE:-1}" != "0" ] || exit 0
+git rev-parse --git-common-dir >/dev/null 2>&1 || exit 0
+
+SELF="$(resolve "$0" 2>/dev/null)" || SELF=""
+
+chain_repo_hook "$@" || exit $?
+
+GATE="$(find_gate)" || {
+  warn "review-gate not found beside this hook or on PATH; allowing this commit"
+  exit 0
+}
+
+gate_error="$("$GATE" check 2>&1 >/dev/null)"
+gate_status=$?
+[ "$gate_status" -eq 0 ] && exit 0
+
+if [ "$gate_status" -ne 1 ]; then
+  warn "${gate_error:-cannot see what this commit would contain}"
+  warn "refusing the commit: a gate that cannot see the diff is not a gate"
+  exit 1
+fi
+
+refuse_unreviewed "$GATE" "$("$GATE" key 2>/dev/null)"
+exit 1
