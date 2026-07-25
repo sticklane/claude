@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# bd-export-guard pre-commit hook — refuses a commit that would record a
+# zero-issue .beads/issues.jsonl while the bd database still holds issues.
+#
+# `bd export` can write an empty file, print "Exported 0 issues", and exit 0
+# against a database that `bd list` reports as holding issues (bd 1.1.0,
+# observed in /Users/sjaconette/ynab-mcp-new — docs/memory/bd-empty-export.md).
+# The exported JSONL is the committed, portable representation of the queue,
+# so anything trusting that exit code replaces a real queue file with an empty
+# one and the loss reaches the remote.
+#
+# The condition is the MISMATCH, never the bare zero: a repository whose bd
+# database is genuinely empty exports zero issues correctly and commits
+# normally. Only "export says zero, database says more than zero" refuses.
+#
+# Anything the guard cannot establish — no bd, no repository, unreadable
+# counts — allows the commit. A hook that refuses on its own uncertainty only
+# teaches the operator to bypass it.
+#
+#   BD_EXPORT_GUARD=0 git commit ...   # this commit only
+#   git commit --no-verify ...         # skips every pre-commit hook
+set -u
+
+EXPORT_PATH="${BD_EXPORT_GUARD_PATH:-.beads/issues.jsonl}"
+
+refuse() { # refuse <exported> <in_db>
+  cat >&2 <<MESSAGE
+bd-export-guard: this commit would record an empty queue export.
+
+  staged in $EXPORT_PATH: $1 issues
+  held in the database:   $2 issues
+
+The export is the committed, portable copy of the queue, and \`bd export\` can
+write an empty file and still exit 0. Committing this replaces the real queue
+with an empty one.
+
+Re-export and check the file before committing:
+
+  bd export -o $EXPORT_PATH && wc -l $EXPORT_PATH
+
+If it still comes out empty, the database is not exporting — see
+docs/memory/bd-empty-export.md — and this commit should not carry the export
+at all (\`git restore --staged $EXPORT_PATH\`).
+
+To commit anyway:
+
+  BD_EXPORT_GUARD=0 git commit ...   # this commit only
+  git commit --no-verify ...         # skips every pre-commit hook
+MESSAGE
+}
+
+# issue_count — issues the database holds, across every status, or nothing at
+# all when the count cannot be established.
+issue_count() {
+  local json
+  json="$(bd list --all --limit 0 --json 2>/dev/null)" || return 1
+  [ -n "$json" ] || return 1
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$json" | jq -e 'if type == "array" then length else empty end' 2>/dev/null
+  else
+    printf '%s' "$json" | python3 -c '
+import json, sys
+try:
+    issues = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+if not isinstance(issues, list):
+    sys.exit(1)
+print(len(issues))
+' 2>/dev/null
+  fi
+}
+
+# staged_issue_count — nonblank lines in the staged export, 0 when the commit
+# deletes it (an export removed from the index is an export of nothing).
+staged_issue_count() {
+  local blob
+  blob="$(git show ":$EXPORT_PATH" 2>/dev/null)" || { printf '0'; return 0; }
+  printf '%s' "$blob" | grep -c '[^[:space:]]' || true
+}
+
+[ "${BD_EXPORT_GUARD:-1}" != "0" ] || exit 0
+command -v bd >/dev/null 2>&1 || exit 0
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$root" 2>/dev/null || exit 0
+
+[ -n "$(git diff --cached --name-only -- "$EXPORT_PATH" 2>/dev/null)" ] || exit 0
+
+in_db="$(issue_count)" || exit 0
+[ -n "$in_db" ] || exit 0
+[ "$in_db" -gt 0 ] 2>/dev/null || exit 0
+
+exported="$(staged_issue_count)"
+[ "$exported" -eq 0 ] 2>/dev/null || exit 0
+
+refuse "$exported" "$in_db"
+exit 1
