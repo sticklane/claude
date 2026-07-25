@@ -55,7 +55,7 @@ fi
 
 # docs-only diff scoping: when every file changed since the last commit
 # matches CLAUDE.md's paths-ignore globs (**.md, docs/**, specs/**,
-# .claude/**), skip the full check — the same convention CLAUDE.md states for
+# .claude/**) or is generated tracker export under .beads/, skip the full check — the same convention CLAUDE.md states for
 # push-triggered CI, applied to the local Stop-hook gate. A change that
 # touches any non-docs path still runs scripts/check.sh in full; this is a
 # scoping optimization, never a blanket skip. No change since HEAD (a clean
@@ -80,6 +80,7 @@ docs_only_diff() { # docs_only_diff <repo-root>
     path="${path#\"}"; path="${path%\"}"            # unquote paths with specials
     case "$path" in
       .claude/*) [ "$claude_is_product" -eq 0 ] || return 1 ;;  # product repo: run check
+      .beads/*) : ;;                                # generated tracker export
       *.md|docs/*|specs/*) : ;;                     # docs path: keep scanning
       *) return 1 ;;                                 # non-docs change: run check
     esac

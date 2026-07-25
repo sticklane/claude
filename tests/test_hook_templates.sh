@@ -374,6 +374,30 @@ assert_eq "stop-gate exits 0 on docs/ subtree-only diff" 0 "$RH_EXIT"
 assert "check.sh NOT run for docs/ subtree-only diff" \
   test ! -f "$DOCS_REPO/check-ran.marker"
 
+# .beads/ is generated tracker export, not source: a .beads/-only diff is
+# skippable. bd re-serializes .beads/issues.jsonl on nearly every command
+# (CLAUDE.md's Beads section documents the cosmetic churn), so without this
+# the docs-only skip never fires in a bd-using repo and every stop pays the
+# full suite.
+git -C "$DOCS_REPO" clean -fdq
+rm -f "$DOCS_REPO/check-ran.marker"
+mkdir -p "$DOCS_REPO/.beads"
+echo '{"id":"x-1"}' > "$DOCS_REPO/.beads/issues.jsonl"
+run_hook "$STOP_GATE" "$json_stop_false" "$DOCS_REPO"
+assert_eq "stop-gate exits 0 on .beads/-only diff" 0 "$RH_EXIT"
+assert "check.sh NOT run for .beads/-only diff" \
+  test ! -f "$DOCS_REPO/check-ran.marker"
+
+# .beads/ alongside a real source change -> full check still runs
+git -C "$DOCS_REPO" clean -fdq
+rm -f "$DOCS_REPO/check-ran.marker"
+mkdir -p "$DOCS_REPO/.beads"
+echo '{"id":"x-2"}' > "$DOCS_REPO/.beads/issues.jsonl"
+echo "code" > "$DOCS_REPO/main.py"
+run_hook "$STOP_GATE" "$json_stop_false" "$DOCS_REPO"
+assert "check.sh runs when .beads/ accompanies a source change" \
+  test -f "$DOCS_REPO/check-ran.marker"
+
 # a non-docs change alongside a docs change -> full check still runs
 git -C "$DOCS_REPO" clean -fdq
 echo "note" >> "$DOCS_REPO/HUMAN.md"
