@@ -17,6 +17,7 @@ import json
 import types
 import unittest
 from email.message import Message
+from html.parser import HTMLParser
 from pathlib import Path
 from unittest.mock import patch
 
@@ -179,6 +180,81 @@ class RenderUntypedFanoutLine(unittest.TestCase):
         summary = dict(_SUMMARY, untyped_fanout=None)
         html = ac.render_workboard(_board(), summary)  # no exception
         self.assertNotIn("untyped", html.lower())
+
+
+_SESSION_START = 1_700_000_000
+_SESSION_LAST = _SESSION_START + 600
+
+
+def _session_board(cost_microusd=None):
+    """A board with one visible session, carrying spend only when given."""
+    sid = "sess-1"
+    fixture = {
+        "repos": [
+            {
+                "path": "/tmp/fixture-repo",
+                "name": "fixture",
+                "git": {"branch": "main", "dirty": 0, "ahead": 0, "behind": 0},
+                "specs": [],
+                "handoffs": [],
+                "sessions": [
+                    {
+                        "id": sid,
+                        "state": "active",
+                        "prompt": "drain the queue",
+                        "branch": "feat/x",
+                        "start_ts": _SESSION_START,
+                        "last_ts": _SESSION_LAST,
+                    }
+                ],
+            }
+        ],
+        "orphan_sessions": [],
+        "inbox": [],
+        "liveness_unknown": False,
+        "spend": {
+            "by_session": {sid: {"cost_microusd": cost_microusd}}
+            if cost_microusd is not None
+            else {}
+        },
+    }
+    with (
+        patch.object(ac, "gh_visibility", return_value={}),
+        patch.object(ac, "_repo_extras", return_value=({}, {})),
+    ):
+        return ac._adapt_board(fixture, [], [])
+
+
+class _BarTitles(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.titles = []
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if "viz-bar" in (a.get("class") or "").split() and a.get("title"):
+            self.titles.append(a["title"])
+
+
+def _timeline_tooltips(page: str) -> list:
+    p = _BarTitles()
+    p.feed(page)
+    return p.titles
+
+
+class SessionTimelineTooltipCost(unittest.TestCase):
+    def test_tooltip_carries_formatted_cost_when_session_has_spend(self):
+        page = ac.render_workboard(_session_board(2_540_000), _SUMMARY)
+        tips = _timeline_tooltips(page)
+        self.assertEqual(len(tips), 1)
+        self.assertIn(ac._usd(2_540_000), tips[0])
+        self.assertIn("feat/x", tips[0])
+
+    def test_tooltip_keeps_branch_and_age_only_when_session_has_no_spend(self):
+        page = ac.render_workboard(_session_board(None), _SUMMARY)
+        tips = _timeline_tooltips(page)
+        self.assertEqual(len(tips), 1)
+        self.assertEqual(tips[0], f"feat/x · {ac._ago(_SESSION_LAST)}")
 
 
 class WorkboardHandlerReadsSummary(unittest.TestCase):
