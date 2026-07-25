@@ -266,6 +266,9 @@ false` on the Agent tool is advisory, not guaranteed — the harness may
   getting heavy mid-task, park state via `/handoff` and restart from it.
 - Don't re-run searches or re-read files already established this session;
   don't paste large command output back into the conversation — summarize it.
+  `hooks/tool-output-spill/` is the optional mechanical backstop for this
+  bullet: a `PostToolUse` hook that replaces an over-budget tool result with a
+  spill-file path plus a preview (per-user wiring in its README).
 - **A `Workflow()` call's returned JSON is large-artifact output, not a
   verdict — never inline it into the main session's own context.** The
   "Externalize large artifacts, return a path" rule under Dispatch
@@ -359,8 +362,9 @@ for either way.
   "Prompt caching" —
   https://platform.claude.com/docs/en/build-with-claude/prompt-caching),
   and an always-fires nudge pays uncached, full-price generation on every
-  turn it touches. `hooks/handoff-resume/`, `hooks/plugin-staleness/`, and
-  `hooks/session-refresh/` are this repo's compliant examples — each fires
+  turn it touches. `hooks/handoff-resume/`, `hooks/plugin-staleness/`,
+  `hooks/session-refresh/`, and `hooks/tool-output-spill/` are this repo's
+  compliant examples — each fires
   conditionally on genuinely time-varying state and stays silent otherwise;
   a stacked, always-fires static-nudge wrapper (the disabled
   `prompt-improver` plugin's shape) is the anti-pattern to avoid.
