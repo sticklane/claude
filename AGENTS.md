@@ -17,7 +17,7 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 - `bin/`—installer scripts (quality gates, skill sync).
 - `docs/`—research and doctrine (anthropic-playbook, external-playbooks, memory index).
 - `evals/`—skill eval scenarios plus the headless runner.
-- `hooks/`—this repo's own Claude Code hooks. Wired in `.claude/settings.json`: plugin-staleness (SessionStart warn) and plugin-autorefresh (Stop auto-update after a pushed version bump). Shipped but wired per-user in `~/.claude/settings.json` (each hook's README has the block): handoff-resume, session-refresh, tool-output-spill (PostToolUse; rewrites an oversized tool result to a spill-file pointer). Opt-in, not yet wired anywhere: bd-bootstrap (SessionStart; see its README). One exception to the Claude-Code-hook framing: review-gate is a git `pre-commit` hook, installed machine-wide by `bin/install-review-gate` rather than wired in settings.json.
+- `hooks/`—this repo's own Claude Code hooks. Wired in `.claude/settings.json`: plugin-staleness (SessionStart warn) and plugin-autorefresh (Stop auto-update after a pushed version bump). Shipped but wired per-user in `~/.claude/settings.json` (each hook's README has the block): handoff-resume, session-refresh. Opt-in, not yet wired anywhere: bd-bootstrap (SessionStart; see its README). One exception to the Claude-Code-hook framing: review-gate is a git `pre-commit` hook, installed machine-wide by `bin/install-review-gate` rather than wired in settings.json.
 - `runtimes/`—per-runtime profiles mapping tier language to concrete models.
 - `specs/`—one directory per spec with `SPEC.md` and `tasks/`; `specs/QUEUE.md` is the combined wave plan.
 - `templates/`—hook and check-script templates the installers copy from.

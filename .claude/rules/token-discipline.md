@@ -267,8 +267,9 @@ false` on the Agent tool is advisory, not guaranteed — the harness may
 - Don't re-run searches or re-read files already established this session;
   don't paste large command output back into the conversation — summarize it.
   `hooks/tool-output-spill/` is the optional mechanical backstop for this
-  bullet: a `PostToolUse` hook that replaces an over-budget tool result with a
-  spill-file path plus a preview (per-user wiring in its README).
+  bullet: a `PostToolUse` hook that rewrites an over-budget `Bash` result to
+  a spill-file path plus a preview (per-user wiring, and why it covers only
+  `Bash`, in its README).
 - **A `Workflow()` call's returned JSON is large-artifact output, not a
   verdict — never inline it into the main session's own context.** The
   "Externalize large artifacts, return a path" rule under Dispatch

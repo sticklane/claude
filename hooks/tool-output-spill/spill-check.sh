@@ -1,17 +1,25 @@
 #!/usr/bin/env bash
-# tool-output-spill: PostToolUse hook that keeps an oversized tool result out
+# tool-output-spill: PostToolUse hook that keeps an oversized Bash result out
 # of the main session's context. Past a character budget it writes the full
-# result to a spill file and returns a short pointer-plus-preview in its
-# place, via the documented PostToolUse field:
+# field to a spill file and replaces it with a short pointer-plus-preview via
+# the documented PostToolUse field:
 #
-#   "updatedToolOutput | Replace the tool's result with this string before
-#    Claude processes it. Useful for redacting sensitive data or transforming
-#    tool output. The original result is not shown to Claude"
-#   — https://code.claude.com/docs/en/hooks
+#   "`updatedToolOutput` | Replaces the tool's output with the provided value
+#    before it is sent to Claude. The value must match the tool's output
+#    shape"
+#   — https://code.claude.com/docs/en/hooks, "PostToolUse decision control"
+#
+# The shape requirement is load-bearing: "For built-in tools, a value that
+# doesn't match the tool's output schema is ignored and the original output
+# is used" (same page, Warning). So the replacement is emitted as the Bash
+# output object — {stdout, stderr, interrupted, isImage}, the one built-in
+# shape the docs establish — with only the over-budget field(s) rewritten.
+# Any other tool is a silent no-op: guessing an undocumented schema would be
+# silently ignored, leaving a hook that looks installed and does nothing.
 #
 # This is wake-budget cause #5 (.claude/rules/token-discipline.md, "Session
 # refresh"): a main session that inlines large raw tool output pays for it on
-# every later turn. Nothing is lost — the spill file holds the whole result,
+# every later turn. Nothing is lost — the spill file holds the whole field,
 # and the replacement names its path so the session reads back only the slice
 # it needs.
 #
@@ -34,35 +42,52 @@ command -v jq >/dev/null 2>&1 || exit 0
 
 payload="$(cat)"
 
-# One pass for both the size decision and the spill filename. A non-string
-# tool_response (Read, Agent, Workflow return objects) is measured and stored
-# as its compact JSON — the same text that would otherwise reach the model.
-measure='[((.tool_response // "") | (if type == "string" then . else tojson end) | length),
-          (.tool_name // "tool")] | @tsv'
-IFS=$'\t' read -r size tool <<<"$(printf '%s' "$payload" | jq -r "$measure" 2>/dev/null)"
-
-case "${size:-}" in '' | *[!0-9]*) exit 0 ;; esac
-[ "$size" -ge "$BUDGET" ] || exit 0
+sizes="$(printf '%s' "$payload" | jq -r '
+  select(.tool_name == "Bash") | .tool_response
+  | select(type == "object")
+  | [((.stdout // "") | tostring | length), ((.stderr // "") | tostring | length)]
+  | @tsv' 2>/dev/null)"
+[ -n "$sizes" ] || exit 0
+IFS=$'\t' read -r stdout_size stderr_size <<<"$sizes"
+case "${stdout_size:-}${stderr_size:-}" in '' | *[!0-9]*) exit 0 ;; esac
+[ "$stdout_size" -ge "$BUDGET" ] || [ "$stderr_size" -ge "$BUDGET" ] || exit 0
 
 dir="${TMPDIR:-/tmp}/claude-tool-output-spill"
 mkdir -p "$dir" 2>/dev/null || exit 0
 find "$dir" -type f -mtime +1 -delete 2>/dev/null
 
-tool="${tool//[^A-Za-z0-9_-]/}"
-spill="$dir/${tool:-tool}-$(date +%Y%m%dT%H%M%S)-$$.txt"
-
-printf '%s' "$payload" |
-  jq -j '(.tool_response // "") | if type == "string" then . else tojson end' \
-    >"$spill" 2>/dev/null || exit 0
-[ -s "$spill" ] || exit 0
-
-replacement="$(
-  printf '[tool output spilled: %s characters, past the %s-character context budget]\n' "$size" "$BUDGET"
+spill_field() { # spill_field <stdout|stderr> <size> -> pointer text on stdout
+  local field="$1" size="$2" spill
+  spill="$dir/Bash-$field-$(date +%Y%m%dT%H%M%S)-$$.txt"
+  printf '%s' "$payload" |
+    jq -j ".tool_response.$field // \"\" | tostring" >"$spill" 2>/dev/null || return 1
+  [ -s "$spill" ] || return 1
+  printf '[Bash %s spilled: %s characters, past the %s-character context budget]\n' \
+    "$field" "$size" "$BUDGET"
   printf 'Full result: %s\n' "$spill"
-  printf 'Read back only the slice you need (Read with offset/limit, or grep over that path) rather than re-running the tool.\n\n'
+  printf 'Read back only the slice you need (Read with offset/limit, or grep over that path) rather than re-running the command.\n\n'
   printf -- '--- first %s characters ---\n' "$PREVIEW"
   head -c "$PREVIEW" "$spill"
-)"
+}
 
-jq -n --arg out "$replacement" \
-  '{hookSpecificOutput: {hookEventName: "PostToolUse", updatedToolOutput: $out}}'
+new_stdout="" new_stderr=""
+if [ "$stdout_size" -ge "$BUDGET" ]; then
+  new_stdout="$(spill_field stdout "$stdout_size")" || exit 0
+fi
+if [ "$stderr_size" -ge "$BUDGET" ]; then
+  new_stderr="$(spill_field stderr "$stderr_size")" || exit 0
+fi
+
+printf '%s' "$payload" | jq -c \
+  --arg so "$new_stdout" --arg se "$new_stderr" \
+  --argjson ro "$([ -n "$new_stdout" ] && echo true || echo false)" \
+  --argjson re "$([ -n "$new_stderr" ] && echo true || echo false)" '
+  .tool_response as $r |
+  {hookSpecificOutput: {
+    hookEventName: "PostToolUse",
+    updatedToolOutput: {
+      stdout: (if $ro then $so else (($r.stdout // "") | tostring) end),
+      stderr: (if $re then $se else (($r.stderr // "") | tostring) end),
+      interrupted: (($r.interrupted // false) == true),
+      isImage: (($r.isImage // false) == true)
+    }}}' 2>/dev/null

@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # Bring the tool-output-spill hook's own suite inside scripts/check.sh, whose
 # glob is tests/test_*.sh — without this the hook is ungated. Adds one case
-# the string-only fixtures cannot express: a structured (non-string)
-# tool_response, the shape Read/Agent/Workflow returns actually carry.
+# beyond the suite: the emitted replacement, parsed as JSON, is exactly the
+# Bash output object the docs require ("The value must match the tool's
+# output shape" — a mismatched replacement is silently ignored for built-in
+# tools, making the hook a no-op).
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOK="$ROOT/hooks/tool-output-spill/spill-check.sh"
 
 command -v jq >/dev/null 2>&1 || {
-  printf 'skip - structured-response case needs jq\n'
+  printf 'skip - schema case needs jq\n'
   exec bash "$ROOT/hooks/tool-output-spill/test.sh"
 }
 
@@ -20,24 +22,19 @@ export TMPDIR="$work"
 fail=0
 
 big="$(head -c 60000 /dev/zero | tr '\0' 'y')"
-out="$(jq -n --arg c "$big" \
-  '{session_id:"structured",hook_event_name:"PostToolUse",tool_name:"Read",tool_input:{},tool_response:{file:{content:$c}}}' |
-  bash "$HOOK")"
+shape="$(jq -n --arg so "$big" \
+  '{session_id:"schema",hook_event_name:"PostToolUse",tool_name:"Bash",
+    tool_input:{command:"true"},
+    tool_response:{stdout:$so,stderr:"",interrupted:false,isImage:false}}' |
+  bash "$HOOK" |
+  jq -r '.hookSpecificOutput.updatedToolOutput
+    | [type, (.stdout|type), (.stderr|type), (.interrupted|type), (.isImage|type),
+       (keys | sort | join(","))] | join("|")' 2>/dev/null)"
 
-event="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.hookEventName // empty' 2>/dev/null)"
-if [ "$event" = "PostToolUse" ]; then
-  printf 'ok   - structured tool_response over budget is replaced\n'
+if [ "$shape" = "object|string|string|boolean|boolean|interrupted,isImage,stderr,stdout" ]; then
+  printf 'ok   - replacement is the Bash output object the docs require\n'
 else
-  printf 'FAIL - structured tool_response over budget is replaced (got %q)\n' "$event"
-  fail=1
-fi
-
-small="$(jq -n '{session_id:"structured",hook_event_name:"PostToolUse",tool_name:"Read",tool_input:{},tool_response:{file:{content:"hi"}}}' |
-  bash "$HOOK")"
-if [ -z "$small" ]; then
-  printf 'ok   - structured tool_response under budget stays silent\n'
-else
-  printf 'FAIL - structured tool_response under budget stays silent\n'
+  printf 'FAIL - replacement is the Bash output object the docs require (got %s)\n' "$shape"
   fail=1
 fi
 

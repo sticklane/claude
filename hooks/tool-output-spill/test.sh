@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 # Suite for the tool-output-spill PostToolUse hook. Run directly or via
 # tests/test_tool_output_spill_hook.sh (scripts/check.sh's glob).
+#
+# The load-bearing assertions are shape assertions: per the hooks docs, a
+# built-in tool's updatedToolOutput "must match the tool's output shape" or
+# it is silently ignored — so a replacement that is merely a short string is
+# a no-op, and a test that only checks for a short string passes while the
+# hook does nothing. Every over-budget case here asserts the emitted
+# replacement is the Bash output object: {stdout, stderr, interrupted,
+# isImage} with the right types.
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,9 +31,11 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 export TMPDIR="$work"
 
-payload() { # payload <tool_name> <result-text>
-  jq -n --arg t "$1" --arg r "$2" \
-    '{session_id:"spill-test",hook_event_name:"PostToolUse",tool_name:$t,tool_input:{},tool_response:$r}'
+bash_payload() { # bash_payload <stdout> <stderr> <interrupted>
+  jq -n --arg so "$1" --arg se "$2" --argjson intr "$3" \
+    '{session_id:"spill-test",hook_event_name:"PostToolUse",tool_name:"Bash",
+      tool_input:{command:"true"},
+      tool_response:{stdout:$so,stderr:$se,interrupted:$intr,isImage:false}}'
 }
 
 big_text="$(head -c 60000 /dev/zero | tr '\0' 'x')"
@@ -37,49 +47,81 @@ fi
 
 # 1. Under budget: the hook must stay completely silent (cache economics —
 #    .claude/rules/token-discipline.md).
-out="$(payload Bash "a short result" | bash "$HOOK")"
+out="$(bash_payload "a short result" "" false | bash "$HOOK")"
 rc=$?
-check "small tool result produces empty stdout" "${#out}" "0"
-check "small tool result exits 0" "$rc" "0"
+check "small Bash result produces empty stdout" "${#out}" "0"
+check "small Bash result exits 0" "$rc" "0"
 
-# 2. Over budget: the result is replaced via updatedToolOutput.
-out="$(payload Bash "$big_text" | bash "$HOOK")"
+# 2. Over budget: the replacement must be the Bash output object, not a bare
+#    string — a bare string is silently ignored and the hook is a no-op.
+out="$(bash_payload "$big_text" "warning: partial" true | bash "$HOOK")"
 event="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.hookEventName // empty' 2>/dev/null)"
-check "large tool result emits a PostToolUse hookSpecificOutput" "$event" "PostToolUse"
+check "large Bash stdout emits a PostToolUse hookSpecificOutput" "$event" "PostToolUse"
 
-replacement="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.updatedToolOutput // empty' 2>/dev/null)"
-check "large tool result carries a non-empty replacement" \
-  "$([ -n "$replacement" ] && echo yes || echo no)" "yes"
+shape="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.updatedToolOutput
+  | [type, (.stdout|type), (.stderr|type), (.interrupted|type), (.isImage|type),
+     (keys | sort | join(","))] | join("|")' 2>/dev/null)"
+check "replacement matches the Bash output schema (object; typed fields; exact keys)" \
+  "$shape" "object|string|string|boolean|boolean|interrupted,isImage,stderr,stdout"
 
-check "replacement is smaller than the original result" \
-  "$([ "${#replacement}" -lt "${#big_text}" ] && echo yes || echo no)" "yes"
+check "replacement preserves interrupted from the original response" \
+  "$(printf '%s' "$out" | jq -r '.hookSpecificOutput.updatedToolOutput.interrupted')" "true"
+check "replacement preserves the original stderr verbatim" \
+  "$(printf '%s' "$out" | jq -r '.hookSpecificOutput.updatedToolOutput.stderr')" "warning: partial"
 
-# 3. The full result is preserved on disk at the path the replacement names.
-spill="$(printf '%s\n' "$replacement" | sed -n 's/^Full result: //p' | head -n 1)"
-check "replacement names a spill file that exists" \
+new_stdout="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.updatedToolOutput.stdout')"
+check "replacement stdout is smaller than the original stdout" \
+  "$([ "${#new_stdout}" -lt "${#big_text}" ] && echo yes || echo no)" "yes"
+
+# 3. The full original stdout is preserved on disk at the path named inline.
+spill="$(printf '%s\n' "$new_stdout" | sed -n 's/^Full result: //p' | head -n 1)"
+check "replacement stdout names a spill file that exists" \
   "$([ -n "$spill" ] && [ -f "$spill" ] && echo yes || echo no)" "yes"
-check "spill file holds the whole original result" \
+check "spill file holds the whole original stdout" \
   "$(wc -c <"$spill" | tr -d ' ')" "${#big_text}"
 
-# 4. The threshold is tunable, so a small result can be forced over budget.
-out="$(TOOL_OUTPUT_SPILL_BUDGET=5 payload Bash "a short result" | TOOL_OUTPUT_SPILL_BUDGET=5 bash "$HOOK")"
+# 4. An oversized stderr spills the same way, leaving stdout intact.
+out="$(bash_payload "ok" "$big_text" false | bash "$HOOK")"
+check "large Bash stderr keeps stdout verbatim" \
+  "$(printf '%s' "$out" | jq -r '.hookSpecificOutput.updatedToolOutput.stdout')" "ok"
+err_repl="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.updatedToolOutput.stderr')"
+check "large Bash stderr is replaced by a smaller pointer" \
+  "$([ -n "$err_repl" ] && [ "${#err_repl}" -lt "${#big_text}" ] && echo yes || echo no)" "yes"
+
+# 5. Tools whose output schema the docs do not establish are excluded: a
+#    guessed replacement would be silently ignored, so the hook says nothing.
+out="$(jq -n --arg c "$big_text" \
+  '{session_id:"spill-test",hook_event_name:"PostToolUse",tool_name:"Read",
+    tool_input:{},tool_response:{file:{content:$c}}}' | bash "$HOOK")"
+rc=$?
+check "oversized non-Bash (Read) response stays silent" "${#out}" "0"
+check "oversized non-Bash (Read) response exits 0" "$rc" "0"
+
+# 6. The threshold is tunable, so a small result can be forced over budget.
+out="$(bash_payload "a short result" "" false | TOOL_OUTPUT_SPILL_BUDGET=5 bash "$HOOK")"
 check "a lowered budget makes a small result spill" \
   "$(printf '%s' "$out" | jq -r '.hookSpecificOutput.hookEventName // empty' 2>/dev/null)" "PostToolUse"
 
-# 5. Degraded inputs never break the turn: no tool_response, malformed JSON.
+# 7. Degraded inputs never break the turn: no tool_response, a string
+#    tool_response (not Bash's object shape), malformed JSON.
 out="$(printf '{"session_id":"x","hook_event_name":"PostToolUse","tool_name":"Bash"}' | bash "$HOOK")"
 check "payload without tool_response produces empty stdout" "${#out}" "0"
+
+out="$(jq -n --arg r "$big_text" \
+  '{session_id:"x",hook_event_name:"PostToolUse",tool_name:"Bash",tool_input:{},tool_response:$r}' |
+  bash "$HOOK")"
+check "string tool_response (not the Bash object shape) produces empty stdout" "${#out}" "0"
 
 out="$(printf 'not json at all' | bash "$HOOK")"
 rc=$?
 check "malformed payload produces empty stdout" "${#out}" "0"
 check "malformed payload exits 0" "$rc" "0"
 
-# 6. Missing jq degrades to a silent no-op rather than an error.
+# 8. Missing jq degrades to a silent no-op rather than an error.
 stub="$work/stub-bin"
 mkdir -p "$stub"
 bash_bin="$(command -v bash)"
-out="$(payload Bash "$big_text" | PATH="$stub" "$bash_bin" "$HOOK")"
+out="$(bash_payload "$big_text" "" false | PATH="$stub" "$bash_bin" "$HOOK")"
 rc=$?
 check "missing jq produces empty stdout" "${#out}" "0"
 check "missing jq exits 0" "$rc" "0"
