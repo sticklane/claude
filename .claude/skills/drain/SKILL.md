@@ -87,8 +87,8 @@ record why on the issue and leave it for the batch interview.
    format (a structured verdict capped at ≤2k tokens, never a transcript)
    are in [reference.md](reference.md)'s "Worker prompt". A dispatch that
    declares external `write-deny-paths` follows reference.md's mechanical
-   write-deny boundary and fails closed before launch if no backend exists.
-   Tier the
+   boundary dispatcher, MUST NOT use a native spawn path, and fails closed
+   before launch if no backend exists. Tier the
    dispatch by stage type per `.claude/rules/token-discipline.md` (cite it,
    don't restate). Default **one** worker; scale to a **3–5** concurrent
    window ONLY for genuinely parallel, file-disjoint ready issues the user
@@ -193,11 +193,13 @@ executes the loop above; bd remains the durable checkpoint.
 In Claude Code, compile and run a native `Workflow` script. In Antigravity,
 use native subagents (`invoke_subagent` with `Workspace: 'branch'` for writers
 and `'share'` for read-only panels). In Codex, use collaboration subagents
-through `spawn_agent`, `wait_agent`, and follow-ups. For both runtimes,
-Ultra-equivalent means the orchestration shape; tier each child by its stage
-role per token discipline instead of upgrading every child to the frontier
-model. Give each child a compact, self-contained prompt and no inherited
-conversation transcript (Codex: `fork_turns: "none"`). Before each Codex
+through `spawn_agent`, `wait_agent`, and follow-ups. Implementation workers
+keep the `implementation-worker` tier pin (deep-tier); verifier and critic
+children keep their own role pins. For both runtimes, Ultra-equivalent means
+the orchestration shape; tier each child by its stage role per token discipline
+instead of upgrading every child to the frontier model. Give each child a
+compact, self-contained prompt and no inherited conversation transcript
+(Codex: `fork_turns: "none"`). Before each Codex
 worker dispatch, the orchestrator creates a
 dedicated branch and worktree with `git worktree add -b <branch> <path>
 <base-revision>`, then gives the worker that absolute path and requires every
