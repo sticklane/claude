@@ -52,12 +52,14 @@ def _get(path, host="127.0.0.1:8899"):
 def _write_stub(dirpath, record_path, sleep=2):
     """A fake `claude` that dumps `$PWD` then its argv (NUL-separated) to
     `record_path`, then sleeps so the dispatch stays 'running' for the lock
-    test. Returns the executable path."""
+    test. The dump lands via a rename so a reader that sees `record_path` sees
+    all of it, never a half-written prefix. Returns the executable path."""
     stub = os.path.join(dirpath, "claude-stub.sh")
     script = (
         "#!/bin/sh\n"
         f'{{ printf %s\\\\n "$PWD"; for a in "$@"; do printf %s\\\\0 "$a"; done; }} '
-        f'> "{record_path}"\n'
+        f'> "{record_path}.part"\n'
+        f'mv "{record_path}.part" "{record_path}"\n'
         f"sleep {sleep}\n"
     )
     Path(stub).write_text(script)
