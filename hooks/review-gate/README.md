@@ -31,6 +31,35 @@ is a speed bump: it converts an oversight into a deliberate act. It is not
 proof of review and must not be reported as one. Real proof would require the
 gate to run the review itself, outside the committing agent's control.
 
+## What the review itself should block on
+
+The gate fires on *whether a review happened*, never on what it found. Deciding
+which findings are worth stopping for stays with the reviewer, and the bar there
+isn't "clean." Published practice converges on approving work that improves the
+codebase even when imperfect, and on reserving a block for defects rather than
+taste:
+
+- Hard-block on correctness bugs, security vulnerabilities, and defects that
+  would break production.
+- Report but allow style, naming, structure, nits, missing non-critical tests,
+  and pre-existing issues the change didn't introduce.
+
+Google's standard is to "favor approving a CL once it is in a state where it
+definitely improves the overall code health of the system being worked on, even
+if the CL isn't perfect," and to never "block CLs from being submitted based
+only on personal style preferences"
+(<https://google.github.io/eng-practices/review/reviewer/standard.html>).
+Anthropic's own Code Review tags findings Important / Nit / Pre-existing and
+never blocks a merge on them
+(<https://code.claude.com/docs/en/code-review>).
+
+That bar applies to this gate too. Google's Tricorder turns off any analyzer
+that produces 10% or more effective false positives
+(<https://abseil.io/resources/swe-book/html/ch20.html>). A wrong deny here
+blocks real work in every repository on the machine, so a false deny is a more
+serious defect than a missed commit. If this gate starts denying legitimate
+commands, turn it off rather than working around it.
+
 ## The bypass
 
 `REVIEW_GATE=0` in the command's environment turns the gate off for that
