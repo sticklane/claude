@@ -17,9 +17,9 @@
 # split across wrapped lines are seen together. The prose here states intent;
 # tests/test_check_token_discipline.sh is the contract.
 #
-# Tests point CHECK_TD_FILES (newline-separated literal paths) at fixture files
-# so they never touch the real tree; unset, the checker walks the in-scope list
-# under [skills-root] (default: the repo root above this script).
+# Fixture cases point CHECK_TD_FILES (newline-separated literal paths) at
+# throwaway files; the integration case clears it so the checker walks the
+# real in-scope list under [skills-root] (default: this script's repo root).
 set -u
 
 ROOT="${1:-}"

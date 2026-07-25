@@ -348,7 +348,7 @@ assert "violating-file report names the file" \
 # real in-scope skill and workflow files, not only on synthetic fixtures.
 # ---------------------------------------------------------------------------
 assert "real in-scope skill and workflow files pass token discipline" \
-  "$CHECK" "$TOOLKIT_DIR"
+  env CHECK_TD_FILES= "$CHECK" "$TOOLKIT_DIR"
 
 # ---------------------------------------------------------------------------
 echo "pass: $pass fail: $fail"
