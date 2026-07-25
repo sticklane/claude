@@ -82,14 +82,20 @@ record why on the issue and leave it for the batch interview.
 3. **Verify each verdict, then close in bd.** Collect the worker's verdict
    (DONE / BLOCKED / DEFERRED). On DONE, run an independent `verifier` over
    the worker's branch, naming in the dispatch both that branch and the
-   worktree to run in — unlocated, the verifier lands in the shared checkout
-   and its worktree-integrity precheck halts INCOMPLETE instead of verifying.
+   worktree to run in — resolve that path from `git worktree list`, taking the
+   entry whose branch is the one being verified; unlocated, the verifier lands
+   in the shared checkout and its worktree-integrity precheck halts INCOMPLETE
+   instead of verifying.
    On verifier PASS, merge, `bd close <id>`, and remove
    that `<id>` line from `.beads/session-claims` (one unit — a closed issue
    still listed trips the compliance hook). On
    worker or verifier FAIL, relaunch once one tier up
    (`.claude/rules/token-discipline.md`); a second failure records the cause
    on the issue and leaves it ready-or-blocked rather than thrashing. On
+   verifier INCOMPLETE, re-dispatch the verifier ONCE into the worktree
+   resolved above and never tier-escalate — a higher tier cannot fix a
+   location fault; a second INCOMPLETE records the anomaly on the issue and
+   leaves it open, never merged. On
    BLOCKED, record the typed `Unblock:` on the issue; on DEFERRED, record the
    question on the issue (format in [reference.md](reference.md)'s "Deferred
    questions"). Discovered out-of-scope work is filed, never dropped:

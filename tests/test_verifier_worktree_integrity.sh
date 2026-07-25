@@ -59,6 +59,26 @@ check "the precheck states what it does when no branch was given" $?
 printf '%s\n' "$section" | grep -qiE "never (repair|fix)|do not (repair|fix)"
 check "the precheck forbids repairing the mismatch itself" $?
 
+printf '%s\n' "$section" | grep -qi "untracked"
+check "the precheck states that untracked files halt it too" $?
+
+# --- the orchestrator's side of the halt ------------------------------------
+
+# INCOMPLETE is a third verdict beside PASS and FAIL, so drain's verdict step
+# has to define an action for it — including how to obtain the worktree path a
+# re-dispatch must name.
+DRAIN="$TOOLKIT_DIR/.claude/skills/drain/SKILL.md"
+verify_step="$(awk '/^3\. \*\*Verify each verdict/ {f=1} /^4\. \*\*Loop/ {f=0} f' "$DRAIN")"
+
+[ -n "$verify_step" ]
+check "drain SKILL.md carries a verdict step" $?
+
+printf '%s\n' "$verify_step" | grep -qi "re-dispatch"
+check "drain's verdict step defines an action for an INCOMPLETE verifier" $?
+
+printf '%s\n' "$verify_step" | grep -q "git worktree list"
+check "drain's verdict step says how to resolve the worktree path" $?
+
 # --- the snippet itself -----------------------------------------------------
 
 snippet_dir="$(mktemp -d)"
@@ -99,7 +119,6 @@ mkrepo() {
   printf '%s' "$r"
 }
 
-# 1. Healthy worktree: HEAD is the branch tip and nothing is uncommitted.
 repo="$(mkrepo)"
 run_precheck "$repo" feat
 [ "$RC" -eq 0 ]
@@ -108,8 +127,6 @@ if printf '%s\n' "$out" | grep -q "INCOMPLETE"; then quiet=1; else quiet=0; fi
 check "healthy worktree is not reported as a mismatch" "$quiet"
 rm -rf "$repo"
 
-# 2. Stale worktree (the live agentic-z7b.3 shape): the branch ref advanced
-#    past the checked-out tree via `git update-ref`.
 repo="$(mkrepo)"
 tip="$(git -C "$repo" rev-parse HEAD)"
 git -C "$repo" reset -q --hard HEAD~1 >/dev/null 2>&1
@@ -125,7 +142,6 @@ printf '%s\n' "$out" | grep -q "f\.txt"
 check "stale worktree halt names the file that differs" $?
 rm -rf "$repo"
 
-# 3. Foreign checkout: verifying branch `feat` from a tree sitting on main.
 repo="$(mkrepo)"
 branch_rev="$(git -C "$repo" rev-parse refs/heads/feat)"
 git -C "$repo" checkout -q main >/dev/null 2>&1
@@ -141,8 +157,6 @@ printf '%s\n' "$out" | grep -q "$branch_rev"
 check "foreign checkout halt names the branch revision it should have been" $?
 rm -rf "$repo"
 
-# 4. Uncommitted work on an otherwise-matching checkout: still not the tree
-#    the branch would merge, because step 0 stages everything before diffing.
 repo="$(mkrepo)"
 printf 'three\n' > "$repo/f.txt"
 run_precheck "$repo" feat
@@ -152,7 +166,13 @@ printf '%s\n' "$out" | grep -q "INCOMPLETE"
 check "dirty-tree halt is reported as INCOMPLETE" $?
 rm -rf "$repo"
 
-# 5. A branch that does not resolve at all is a halt, never a silent pass.
+repo="$(mkrepo)"
+printf 'scratch\n' > "$repo/notes.tmp"
+run_precheck "$repo" feat
+[ "$RC" -ne 0 ]
+check "an untracked file alone halts the precheck" $?
+rm -rf "$repo"
+
 repo="$(mkrepo)"
 run_precheck "$repo" nonexistent-branch
 [ "$RC" -ne 0 ]

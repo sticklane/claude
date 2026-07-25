@@ -45,7 +45,11 @@ to work in lands in the shared main working copy. A dirty tree on a matching
 HEAD means the checkout is stale: advancing a branch ref with `git update-ref`
 leaves the old files and index in place, and because step 0 stages everything
 before diffing, that stale content would be evaluated as if the branch carried
-it.
+it. Untracked files count as dirt on the same grounds and halt the precheck
+too — step 0's `git add -A` would otherwise fold a stray uncommitted file into
+what you judge as the branch's content — so the strictness is deliberate: a
+halt you can clear by naming the right worktree costs far less than a PASS
+issued over content the branch does not carry.
 
 Never repair the mismatch yourself — no checkout, reset, stash, or clean.
 Repairing discards state you did not create so that your own run can proceed,
