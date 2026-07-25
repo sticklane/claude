@@ -16,7 +16,7 @@ Tests:
 
 | Source | Path | What it yields |
 |---|---|---|
-| Toolkit specs | authored definitions under `<repo>/specs/<slug>/` plus `bd list --all --json` | titles, evidence/unblock prose, and filenames from markdown; live status and typed `blocks` dependencies from issues whose external reference is `spec-task:<path>`. Frozen markdown status/dependency headers never drive the dashboard |
+| Toolkit specs | authored definitions under `<repo>/specs/<slug>/`, `bd list --all --json`, and `bd show --json --include-comments` for blocked/deferred task issues | titles, evidence history, and filenames from markdown; live status, typed `blocks` dependencies, typed unblock details, and deferred questions from bd metadata/notes/comments for issues whose external reference is `spec-task:<path>`. Frozen markdown status, dependency, unblock, and deferred-question text never drive the dashboard |
 | Kiro specs | `<repo>/.kiro/specs/<name>/tasks.md` | checkbox states — `[ ]` todo, `[-]` doing, `[x]` done; phase = which of requirements/design/tasks files exist |
 | Handoffs | `bd list --label handoff --status=open --json`, per scanned repo with a `.beads/` dir | parked work waiting on a human — always an inbox item. One bounded `bd` call per repo; a repo without `.beads/` is skipped without invoking `bd`, and a missing binary, timeout, non-zero exit, or unparseable output yields no handoffs rather than failing the scan |
 | Sessions | `~/.claude/projects/<escaped-cwd>/<sessionId>.jsonl` | first user prompt (head read), `cwd`, `gitBranch`, last-record timestamp (64 KB tail read — transcripts are never read wholesale) |
@@ -38,9 +38,13 @@ Two axes, following Antigravity (decision-oriented status) and Kiro
 - **Session states**: `active` (live pid) → `recent` (<48 h) → `idle` →
   `stale` (> `--stale-days`, default 7).
 - **Work states** (inbox): `blocked` (an open `handoff`-labeled bd issue, or a
-  task whose bd status is neither open nor closed), `needs-review` (all tasks done but
-  spec not archived; dirty repo with no live session; unpushed commits),
-  `stale` (open tasks untouched past the threshold).
+  task whose bd status is neither open nor closed, or a tracker read that
+  failed), `needs-review` (all tasks done but spec not archived; dirty repo
+  with no live session; unpushed commits), `stale` (open tasks untouched past
+  the threshold). A missing `.beads/` directory routes to tracker
+  initialization; missing issues in a successfully read tracker route to
+  create-only spec registration; command, timeout, and JSON failures route to
+  a bd-read retry instead.
 
 Severity order in the inbox: serious (blocked) before warning
 (needs-review/stale), newest first within a tier. Every state renders as
@@ -62,6 +66,8 @@ runnable shell command — on items with a one-command fix), `repos[]` (`path`,
 `tracks`), `updated_ts`. Each session record also carries `spawn_tree` —
 the nested agent-spawn tree for that session (see `scan_session_spawns` under
 Extending); `[]` for a session that spawned no sub-agents.
+Toolkit spec records also carry `tracker_state` and `tracker_error`, so an
+unavailable tracker never masquerades as an empty, successfully read one.
 
 ## Extending
 

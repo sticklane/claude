@@ -9,7 +9,6 @@ import contextlib
 import io
 import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -221,9 +220,7 @@ class TestBdTaskAuthority(unittest.TestCase):
         self.assertEqual(
             [task["status"] for task in scanned["tasks"]], ["done", "pending"]
         )
-        self.assertEqual(
-            scanned["tasks"][1]["deps"], ["specs/demo/tasks/01-base.md"]
-        )
+        self.assertEqual(scanned["tasks"][1]["deps"], ["specs/demo/tasks/01-base.md"])
         self.assertEqual(scanned["tasks_done"], 1)
 
 
@@ -231,9 +228,9 @@ class TestBdBlockerDetailAuthority(unittest.TestCase):
     def _scan_task(self, markdown, issue):
         with tempfile.TemporaryDirectory() as tmp:
             _write_unblock_spec(tmp, tasks={"01-a.md": markdown})
-            return workboard.scan_toolkit_specs(
-                Path(tmp), bd_issues=[issue]
-            )[0]["tasks"][0]
+            return workboard.scan_toolkit_specs(Path(tmp), bd_issues=[issue])[0][
+                "tasks"
+            ][0]
 
     def test_latest_bd_comment_wins_over_frozen_markdown_unblock(self):
         issue = make_spec_issue(
@@ -292,6 +289,21 @@ class TestBdBlockerDetailAuthority(unittest.TestCase):
 
         self.assertEqual(task["unblock"], {"type": "run", "step": "make smoke"})
         self.assertEqual(task["deferred_questions"], ["keep the fallback?"])
+
+    def test_bd_metadata_preserves_human_provision_type(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md",
+            status="blocked",
+            metadata={
+                "unblock": {"type": "provision", "detail": "grant deploy access"}
+            },
+        )
+
+        task = self._scan_task("# A\nStatus: pending\n", issue)
+
+        self.assertEqual(
+            task["unblock"], {"type": "provision", "step": "grant deploy access"}
+        )
 
     def test_markdown_blocker_details_are_display_history_only(self):
         issue = make_spec_issue("specs/demo/tasks/01-a.md", status="blocked")
@@ -367,9 +379,7 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
 
             specs = workboard.scan_toolkit_specs(
                 Path(tmp),
-                bd_issues=[
-                    make_spec_issue("specs/demo/tasks/01-a.md", status="open")
-                ],
+                bd_issues=[make_spec_issue("specs/demo/tasks/01-a.md", status="open")],
             )
 
             self.assertEqual(specs[0]["tasks_blocked"], [])
@@ -1447,11 +1457,16 @@ def _write_unblock_spec(root, slug="demo", spec_body="# Demo\n", tasks=None):
 class TestUnblockParsing(unittest.TestCase):
     def _scan_task(self, body, name="01-a.md", status="blocked"):
         with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, tasks={name: body})
+            _write_unblock_spec(
+                tmp,
+                tasks={name: "# A\nStatus: done\nUnblock: ask: markdown history\n"},
+            )
             specs = workboard.scan_toolkit_specs(
                 Path(tmp),
                 bd_issues=[
-                    make_spec_issue(f"specs/demo/tasks/{name}", status=status)
+                    make_spec_issue(
+                        f"specs/demo/tasks/{name}", status=status, notes=body
+                    )
                 ],
             )
         return specs[0]["tasks"][0]
@@ -1593,6 +1608,18 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         )
         self.assertEqual(self._inbox(spec), [])
 
+    def test_provision_unblock_task_is_a_human_blocked_item(self):
+        spec = _unblock_spec(
+            [
+                _unblock_task(
+                    unblock={"type": "provision", "step": "grant deploy access"}
+                )
+            ]
+        )
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("grant deploy access", blocked[0]["why"])
+
     def test_draft_task_is_not_an_inbox_item(self):
         # Drafts are queue state (intake promotes them); decision-shaped
         # drafts surface via HUMAN.md entries, not the spec-blocked row.
@@ -1700,6 +1727,7 @@ class TestStructuredUnblockForwarded(unittest.TestCase):
         )
         answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
         self.assertNotEqual(answer[0].get("unblock_missing"), True)
+
 
 def _agent_tool_use(tool_use_id, subagent_type="scout", desc="do the thing", ts=OLD_TS):
     """An assistant record spawning a sub-agent (real transcript shape:

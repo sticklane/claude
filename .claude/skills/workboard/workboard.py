@@ -277,7 +277,10 @@ def git_info(repo):
 # ---------------------------------------------------------------- specs
 
 TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
-UNBLOCK_RE = re.compile(r"^Unblock:\s*(run|agent|ask):\s*(\S.*?)\s*$", re.MULTILINE)
+UNBLOCK_RE = re.compile(
+    r"^Unblock:\s*(run|agent|ask|provision|decide):\s*(\S.*?)\s*$",
+    re.MULTILINE,
+)
 DEFERRED_RE = re.compile(
     r"^#{2,}\s+Deferred questions\s*$(.*?)(?=^#{1,6}\s|\Z)",
     re.MULTILINE | re.DOTALL | re.IGNORECASE,
@@ -305,7 +308,7 @@ def _task_is_blocked(status):
 
 
 def parse_unblock(text):
-    """The `Unblock: <run|agent|ask>: <step>` line → {type, step}; None when the
+    """A typed `Unblock: <type>: <step>` line → {type, step}; None when the
     line is absent or malformed (unknown type, or empty step)."""
     m = UNBLOCK_RE.search(text)
     if not m:
@@ -338,33 +341,217 @@ def _bd_task_status(status):
     }.get((status or "").lower(), (status or "unregistered").lower())
 
 
-def _list_bd_issues(repo):
-    if not (repo / ".beads").is_dir():
-        return []
+def _tracker_snapshot(state, issues=None, error=""):
+    return {"state": state, "issues": list(issues or []), "error": error}
+
+
+def _bd_failure_detail(out):
+    detail = (getattr(out, "stderr", "") or getattr(out, "stdout", "")).strip()
+    return detail.splitlines()[-1] if detail else f"bd exited {out.returncode}"
+
+
+def _with_bd_details(repo, issues):
+    detail_ids = [
+        str(issue["id"])
+        for issue in issues
+        if issue.get("id")
+        and str(issue.get("external_ref") or "").startswith("spec-task:")
+        and (
+            _task_is_blocked(_bd_task_status(issue.get("status")))
+            or _bd_task_status(issue.get("status")) == "deferred"
+        )
+    ]
+    if not detail_ids:
+        return issues
+    cmd = ["bd", "-C", str(repo), "--readonly", "show"]
+    cmd.extend(f"--id={issue_id}" for issue_id in detail_ids)
+    cmd.extend(["--json", "--include-comments"])
     try:
         out = subprocess.run(
-            ["bd", "-C", str(repo), "list", "--all", "--limit", "0", "--json"],
+            cmd,
             capture_output=True,
             text=True,
             timeout=5,
         )
-    except (OSError, subprocess.TimeoutExpired):
-        return []
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return [
+            {
+                **issue,
+                "_detail_error": f"bd show failed: {exc}",
+            }
+            if str(issue.get("id")) in detail_ids
+            else issue
+            for issue in issues
+        ]
     if out.returncode != 0:
-        return []
+        error = _bd_failure_detail(out)
+        return [
+            {**issue, "_detail_error": f"bd show failed: {error}"}
+            if str(issue.get("id")) in detail_ids
+            else issue
+            for issue in issues
+        ]
+    try:
+        details = json.loads(out.stdout)
+    except json.JSONDecodeError as exc:
+        return [
+            {**issue, "_detail_error": f"bd show returned invalid JSON: {exc.msg}"}
+            if str(issue.get("id")) in detail_ids
+            else issue
+            for issue in issues
+        ]
+    if isinstance(details, dict):
+        details = [details]
+    if not isinstance(details, list) or any(
+        not isinstance(detail, dict) for detail in details
+    ):
+        return [
+            {**issue, "_detail_error": "bd show returned a non-issue JSON value"}
+            if str(issue.get("id")) in detail_ids
+            else issue
+            for issue in issues
+        ]
+    details_by_id = {
+        str(detail.get("id")): detail for detail in details if detail.get("id")
+    }
+    return [
+        {**issue, **details_by_id.get(str(issue.get("id")), {})} for issue in issues
+    ]
+
+
+def _list_bd_issues(repo):
+    if not (repo / ".beads").is_dir():
+        return _tracker_snapshot(
+            "uninitialized", error="tracker directory .beads is absent"
+        )
+    try:
+        out = subprocess.run(
+            [
+                "bd",
+                "-C",
+                str(repo),
+                "--readonly",
+                "list",
+                "--all",
+                "--limit",
+                "0",
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except FileNotFoundError:
+        return _tracker_snapshot("unavailable", error="bd executable not found")
+    except subprocess.TimeoutExpired:
+        return _tracker_snapshot("timeout", error="bd list timed out after 5s")
+    except OSError as exc:
+        return _tracker_snapshot("unavailable", error=f"bd list failed: {exc}")
+    if out.returncode != 0:
+        return _tracker_snapshot("error", error=_bd_failure_detail(out))
     try:
         issues = json.loads(out.stdout)
-    except json.JSONDecodeError:
-        return []
-    if not isinstance(issues, list):
-        return []
-    return issues
+    except json.JSONDecodeError as exc:
+        return _tracker_snapshot(
+            "invalid", error=f"bd list returned invalid JSON: {exc.msg}"
+        )
+    if not isinstance(issues, list) or any(
+        not isinstance(issue, dict) for issue in issues
+    ):
+        return _tracker_snapshot(
+            "invalid", error="bd list returned a non-issue JSON value"
+        )
+    return _tracker_snapshot("ready", issues=_with_bd_details(repo, issues))
+
+
+def _metadata_dict(issue):
+    metadata = issue.get("metadata") or {}
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except json.JSONDecodeError:
+            return {}
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _structured_unblock(value):
+    if isinstance(value, str):
+        return parse_unblock(value)
+    if not isinstance(value, dict):
+        return None
+    kind = value.get("type")
+    step = value.get("step") or value.get("detail")
+    if kind not in {"run", "agent", "ask", "provision", "decide"} or not isinstance(
+        step, str
+    ):
+        return None
+    step = step.strip()
+    return {"type": kind, "step": step} if step else None
+
+
+def _bd_detail_texts(issue):
+    comments = issue.get("comments") or []
+    if not isinstance(comments, list):
+        comments = []
+    comments = sorted(
+        (comment for comment in comments if isinstance(comment, dict)),
+        key=lambda comment: str(comment.get("created_at") or ""),
+        reverse=True,
+    )
+    texts = [
+        comment.get("text")
+        for comment in comments
+        if isinstance(comment.get("text"), str)
+    ]
+    notes = issue.get("notes")
+    if isinstance(notes, str):
+        texts.append(notes)
+    return texts
+
+
+def _bd_task_details(issue):
+    metadata = _metadata_dict(issue)
+    result = {}
+    unblock = _structured_unblock(metadata.get("unblock"))
+    texts = _bd_detail_texts(issue)
+    if unblock is None:
+        unblock = next(
+            (candidate for text in texts if (candidate := parse_unblock(text))),
+            None,
+        )
+    if unblock:
+        result["unblock"] = unblock
+
+    questions = metadata.get("deferred_questions")
+    if isinstance(questions, list):
+        questions = [
+            question.strip()
+            for question in questions
+            if isinstance(question, str) and question.strip()
+        ]
+    else:
+        questions = []
+    if not questions:
+        questions = next(
+            (
+                candidates
+                for text in texts
+                if (candidates := parse_deferred_questions(text))
+            ),
+            [],
+        )
+    if questions:
+        result["deferred_questions"] = questions
+    if issue.get("_detail_error"):
+        result["tracker_detail_error"] = issue["_detail_error"]
+    return result
 
 
 def _bd_task_record(issue, issues_by_id):
     deps = []
     unresolved = []
     satisfied = True
+    status = _bd_task_status(issue.get("status"))
     for edge in issue.get("dependencies") or []:
         if edge.get("type") != "blocks":
             continue
@@ -378,11 +565,17 @@ def _bd_task_record(issue, issues_by_id):
         deps.append(ref.removeprefix("spec-task:") if ref else dep_id)
         if _bd_task_status(dep_issue.get("status")) != "done":
             satisfied = False
+    details = (
+        _bd_task_details(issue)
+        if _task_is_blocked(status) or status == "deferred"
+        else {}
+    )
     return {
-        "status": _bd_task_status(issue.get("status")),
+        "status": status,
         "deps": deps,
         "deps_satisfied": satisfied,
         "deps_unresolved": unresolved,
+        **details,
     }
 
 
@@ -393,11 +586,18 @@ def scan_toolkit_specs(repo, bd_issues=None):
     if not specs_dir.is_dir():
         return specs
     if bd_issues is None:
-        bd_issues = _list_bd_issues(repo)
-    issues_by_id = {issue.get("id"): issue for issue in bd_issues if issue.get("id")}
+        tracker = _list_bd_issues(repo)
+    elif isinstance(bd_issues, dict):
+        tracker = bd_issues
+    else:
+        tracker = _tracker_snapshot("ready", issues=bd_issues)
+    tracker_state = tracker.get("state") or "invalid"
+    tracker_error = str(tracker.get("error") or "")
+    issues = tracker.get("issues") if isinstance(tracker.get("issues"), list) else []
+    issues_by_id = {issue.get("id"): issue for issue in issues if issue.get("id")}
     issues_by_path = {
         str(issue.get("external_ref"))[len("spec-task:") :]: issue
-        for issue in bd_issues
+        for issue in issues
         if str(issue.get("external_ref") or "").startswith("spec-task:")
     }
     for spec_dir in sorted(specs_dir.iterdir()):
@@ -420,12 +620,21 @@ def scan_toolkit_specs(repo, bd_issues=None):
                 state = (
                     _bd_task_record(issue, issues_by_id)
                     if issue
-                    else {
-                        "status": "unregistered",
-                        "deps": [],
-                        "deps_satisfied": False,
-                        "deps_unresolved": ["missing bd issue"],
-                    }
+                    else (
+                        {
+                            "status": "unregistered",
+                            "deps": [],
+                            "deps_satisfied": False,
+                            "deps_unresolved": ["missing bd issue"],
+                        }
+                        if tracker_state == "ready"
+                        else {
+                            "status": "tracker-unavailable",
+                            "deps": [],
+                            "deps_satisfied": False,
+                            "deps_unresolved": [tracker_error or tracker_state],
+                        }
+                    )
                 )
                 task = {
                     "file": rel,
@@ -433,13 +642,6 @@ def scan_toolkit_specs(repo, bd_issues=None):
                     "title": tm.group(1).strip() if tm else tf.stem,
                     **state,
                 }
-                if _task_is_blocked(task["status"]):
-                    ub = parse_unblock(t_text)
-                    if ub:
-                        task["unblock"] = ub
-                dq = parse_deferred_questions(t_text)
-                if dq:
-                    task["deferred_questions"] = dq
                 tasks.append(task)
                 mtimes.append(tf.stat().st_mtime)
                 if not _TASK_NUM_RE.match(tf.name):
@@ -466,6 +668,8 @@ def scan_toolkit_specs(repo, bd_issues=None):
             "tasks_blocked": [t["file"] for t in blocked],
             "tasks": tasks,
             "tasks_unparseable": unparseable,
+            "tracker_state": tracker_state,
+            "tracker_error": tracker_error,
             "last_touched": max(mtimes),
         }
         specs.append(spec_rec)
@@ -1316,17 +1520,54 @@ def attention_items(
             )
         for s in r["specs"]:
             open_tasks = s["tasks_total"] - s["tasks_done"]
-            # Needs-your-answer surfaces: ask-typed unblocks + deferred questions.
+            tracker_state = s.get("tracker_state", "ready")
+            if tracker_state != "ready" and s.get("tasks"):
+                if tracker_state == "uninitialized":
+                    what = f"Spec {s['slug']}: tracker not initialized"
+                    why = (
+                        f"{s.get('tracker_error') or 'tracker is absent'} — "
+                        "initialize the repo tracker before registering tasks"
+                    )
+                    cmd = f"cd {shlex.quote(rp)} && python3 -m agentic init"
+                else:
+                    what = f"Spec {s['slug']}: tracker read failed ({tracker_state})"
+                    why = (
+                        f"{s.get('tracker_error') or 'bd state unavailable'} — "
+                        "retry the live bd read; task registration state is unknown"
+                    )
+                    cmd = (
+                        f"cd {shlex.quote(rp)} && "
+                        "bd list --readonly --all --limit 0 --json"
+                    )
+                items.append(
+                    {
+                        "severity": "serious",
+                        "state": "blocked",
+                        "repo": r["name"],
+                        "what": what,
+                        "why": why,
+                        "cmd": cmd,
+                        "age_ts": s["last_touched"],
+                    }
+                )
+                continue
+            # Human-bounded typed unblocks + deferred questions.
             # No dispatch cmd — these are human decisions only (R6).
             for t in s.get("tasks", []):
                 ub = t.get("unblock")
-                if ub and ub["type"] == "ask":
+                if ub and ub["type"] in {"ask", "decide", "provision"}:
+                    state = _HUMAN_BLOCKER_STATE.get(ub["type"], "needs-answer")
+                    label = (
+                        "Provision needed"
+                        if ub["type"] == "provision"
+                        else "Answer needed"
+                    )
                     items.append(
                         {
                             "severity": "serious",
-                            "state": "needs-answer",
+                            "state": state,
                             "repo": r["name"],
-                            "what": f"Answer needed: {t['title']}",
+                            "what": f"{label}: {t['title']}",
                             "why": ub["step"],
                             "unblock": ub,
                             "age_ts": s["last_touched"],
