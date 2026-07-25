@@ -266,6 +266,19 @@ false` on the Agent tool is advisory, not guaranteed — the harness may
   getting heavy mid-task, park state via `/handoff` and restart from it.
 - Don't re-run searches or re-read files already established this session;
   don't paste large command output back into the conversation — summarize it.
+- **A `Workflow()` call's returned JSON is large-artifact output, not a
+  verdict — never inline it into the main session's own context.** The
+  "Externalize large artifacts, return a path" rule under Dispatch
+  authoring binds a dispatched worker; this closes the matching gap for
+  the orchestrating session's own handling of what `Workflow()` hands
+  back. Extract or summarize what the reply needs; if the full result
+  must persist, write it to the scratchpad and reference the path — don't
+  paste it wholesale. A 2026-07-24 drain session's context-size arm fired
+  at 436K tokens against the 250K budget (re-prime count was still low,
+  nowhere near its own 3-re-prime budget), traced to inlined full
+  `Workflow` JSON results rather than externalized ones — the two arms
+  measure different failure modes, and this was the context-size arm
+  catching a real one.
 
 ## Session refresh
 
