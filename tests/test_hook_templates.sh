@@ -453,6 +453,31 @@ assert "check.sh NOT run for .md diff in a plugin repo" \
   test ! -f "$PLUGIN_REPO/check-ran.marker"
 git -C "$PLUGIN_REPO" clean -fdq
 
+# --- stop-gate: docs + .beads/ skip holds in BOTH deployed copies ------------
+# A bd-using repo's ordinary stop has two changes at once: an edited doc and
+# the .beads/issues.jsonl that bd re-serializes on nearly every command. The
+# skip must survive that combination in the copy this repo runs
+# (.claude/hooks/stop-gate.sh) as well as the copy install-gates deploys
+# (templates/stop-gate.sh), so both are exercised directly here.
+
+INSTALLED_GATE="$TOOLKIT_DIR/.claude/hooks/stop-gate.sh"
+assert "installed stop-gate.sh exists and is executable" test -x "$INSTALLED_GATE"
+
+for gate in "$STOP_GATE" "$INSTALLED_GATE"; do
+  label="$(basename "$(dirname "$gate")")/$(basename "$gate")"
+  git -C "$DOCS_REPO" checkout -q -- .
+  git -C "$DOCS_REPO" clean -fdq
+  mkdir -p "$DOCS_REPO/.beads"
+  echo '{"id":"x-3"}' > "$DOCS_REPO/.beads/issues.jsonl"
+  echo "note" >> "$DOCS_REPO/HUMAN.md"
+  run_hook "$gate" "$json_stop_false" "$DOCS_REPO"
+  assert_eq "$label exits 0 on a docs + .beads/ diff" 0 "$RH_EXIT"
+  assert "$label does NOT run check.sh for a docs + .beads/ diff" \
+    test ! -f "$DOCS_REPO/check-ran.marker"
+done
+git -C "$DOCS_REPO" checkout -q -- .
+git -C "$DOCS_REPO" clean -fdq
+
 # --- Summary -----------------------------------------------------------------
 
 echo "pass: $pass, fail: $fail"
