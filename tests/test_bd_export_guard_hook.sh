@@ -139,10 +139,64 @@ assert_eq "BD_EXPORT_GUARD=0 turns the guard off" 0 "$RH_EXIT"
 run_hook "$POPULATED" PATH=/usr/bin:/bin
 assert_eq "bd missing from PATH never bricks the commit" 0 "$RH_EXIT"
 
-# --- the hook is wired into the repo's own pre-commit chain ------------------
+# --- the chain block refuses a real `git commit` -----------------------------
+#
+# Everything above runs $HOOK directly. This drives git itself through the
+# repo's own chain block — its `git rev-parse --show-toplevel` resolution, its
+# executable test, and its `|| exit $?` propagation — copied verbatim out of
+# .beads/hooks/pre-commit. The beads and review-gate blocks around it are left
+# out: beads' block re-exports and re-stages the very file under test, and
+# review-gate's hardcoded path points outside the fixture.
 
-assert "the repo's bd pre-commit hook chains the guard" \
-  grep -qF "hooks/bd-export-guard/pre-commit" "$TOOLKIT_DIR/.beads/hooks/pre-commit"
+CHAIN_BLOCK="$TMP/chain-block.sh"
+awk '/BEGIN AGENTIC BD-EXPORT-GUARD/,/END AGENTIC BD-EXPORT-GUARD/' \
+  "$TOOLKIT_DIR/.beads/hooks/pre-commit" > "$CHAIN_BLOCK"
+assert "the repo's bd pre-commit hook carries the guard chain block" \
+  test -s "$CHAIN_BLOCK"
+
+# The guard must run after the beads block, which is what stages the export it
+# reads — and that block exits early on its own nonzero status.
+beads_end="$(grep -n 'END BEADS INTEGRATION' "$TOOLKIT_DIR/.beads/hooks/pre-commit" | cut -d: -f1)"
+guard_begin="$(grep -n 'BEGIN AGENTIC BD-EXPORT-GUARD' "$TOOLKIT_DIR/.beads/hooks/pre-commit" | cut -d: -f1)"
+assert "the guard is chained after the beads block, not before it" \
+  test "${beads_end:-0}" -lt "${guard_begin:-0}"
+
+CHAINED="$TMP/chained"
+make_repo "$CHAINED" bdegchain
+if ! (cd "$CHAINED" && bd create "chain fixture issue" >/dev/null 2>&1); then
+  echo "FAIL: chain fixture setup could not create a bd issue" >&2
+  exit 1
+fi
+mkdir -p "$CHAINED/hooks/bd-export-guard" "$CHAINED/.githooks"
+cp "$HOOK" "$CHAINED/hooks/bd-export-guard/pre-commit"
+chmod +x "$CHAINED/hooks/bd-export-guard/pre-commit"
+{ printf '#!/usr/bin/env sh\n'; cat "$CHAIN_BLOCK"; } > "$CHAINED/.githooks/pre-commit"
+chmod +x "$CHAINED/.githooks/pre-commit"
+git -C "$CHAINED" config core.hooksPath .githooks
+
+# commit_chained [env assignments...] -- sets CC_EXIT / CC_ERR / CC_HEAD.
+commit_chained() {
+  local err_f="$TMP/.cc_err"
+  (
+    cd "$CHAINED" || exit 97
+    env "$@" git commit -m "record export" >/dev/null 2>"$err_f"
+  )
+  CC_EXIT=$?
+  CC_ERR="$(cat "$err_f")"
+  CC_HEAD="$(git -C "$CHAINED" rev-parse HEAD)"
+}
+
+before_head="$(git -C "$CHAINED" rev-parse HEAD)"
+stage_empty_export "$CHAINED"
+commit_chained
+assert_eq "git commit itself is refused through the chained hook" 1 "$CC_EXIT"
+assert "the refusal reaching git comes from the guard" \
+  grep -qF "bd-export-guard" <<<"$CC_ERR"
+assert_eq "the refused commit left HEAD where it was" "$before_head" "$CC_HEAD"
+
+commit_chained BD_EXPORT_GUARD=0
+assert_eq "the chained hook lets a commit through when the guard stands down" 0 "$CC_EXIT"
+assert "the allowed commit advanced HEAD" test "$before_head" != "$CC_HEAD"
 
 echo "bd-export-guard hook: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
