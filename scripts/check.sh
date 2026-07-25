@@ -39,7 +39,10 @@ is_quarantined() {
 
 # Tests asserting a wall-clock ceiling cannot share CPU with the concurrent
 # batch — contention alone pushes them past their threshold. They run
-# sequentially, after everything else has finished.
+# sequentially, after everything else has finished. This controls contention
+# only WITHIN one check run; other processes on the host still swing the
+# numbers, so such a ceiling needs headroom over the loaded case
+# (docs/memory/wall-clock-perf-assertions.md).
 SERIAL=(
   "tests/test_agentic_latency.sh"
 )
