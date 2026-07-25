@@ -94,6 +94,34 @@ def test_touch_disjointness_matches_the_conservative_glob_prefix_port():
     assert frontier.entries_disjoint(set(), {"anything"})
 
 
+def test_frontier_blocks_issue_when_dependency_is_missing():
+    issues = [
+        _issue(
+            "pr-orphan",
+            "missing dependency",
+            touch=["src/orphan.py"],
+            blocked_by="pr-missing",
+        )
+    ]
+
+    result = frontier.compute_frontier(issues)
+
+    assert result["dispatchable"] == []
+    assert result["admissible"] == []
+
+
+@pytest.mark.parametrize(
+    "retired_path",
+    [
+        ".claude/skills/drain/drain_frontier.py",
+        ".claude/skills/drain/test_drain_frontier.py",
+        ".claude/skills/drain/fixtures/basic-window",
+    ],
+)
+def test_markdown_frontier_assets_remain_retired(retired_path):
+    assert not (REPO_ROOT / retired_path).exists()
+
+
 # --- ready command ---------------------------------------------------------
 
 
@@ -173,6 +201,43 @@ def test_ready_orders_higher_priority_first(tmp_path):
     )
     order = _ready_ids(store)
     assert order.index("pr-hi") < order.index("pr-lo")  # P0 before P2
+
+
+@requires_bd
+def test_ready_breaks_priority_tie_by_unblocking_power(tmp_path):
+    store = _seed(
+        tmp_path,
+        [
+            _issue("pr-a", "no dependents", priority=1, touch=["src/a.py"]),
+            _issue("pr-z", "unblocks work", priority=1, touch=["src/z.py"]),
+            _issue(
+                "pr-child",
+                "blocked child",
+                priority=1,
+                touch=["src/child.py"],
+                blocked_by="pr-z",
+            ),
+        ],
+    )
+
+    ids = _ready_ids(store)
+
+    assert ids.index("pr-z") < ids.index("pr-a")
+
+
+@requires_bd
+def test_ready_breaks_remaining_tie_by_issue_id(tmp_path):
+    store = _seed(
+        tmp_path,
+        [
+            _issue("pr-z", "lexically later", priority=1, touch=["src/z.py"]),
+            _issue("pr-a", "lexically earlier", priority=1, touch=["src/a.py"]),
+        ],
+    )
+
+    ids = _ready_ids(store)
+
+    assert ids == ["pr-a", "pr-z"]
 
 
 @requires_bd
