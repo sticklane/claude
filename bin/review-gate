@@ -75,14 +75,21 @@ key_failure_cause() {
   fi
 }
 
+# reviewable_diff prints the staged diff minus generated files. A tracker
+# export is rewritten by its own pre-commit hook mid-commit, which would change
+# the key after a review was recorded and refuse the commit.
+reviewable_diff() {
+  git diff --cached -- ':(top)' ':(exclude,top).beads/issues.jsonl' 2>/dev/null
+}
+
 # staged_key prints the key, or returns 1 for a genuinely empty diff and 2 when
 # the key cannot be computed. The two must never collapse into one: an
 # uncomputable key means the gate is blind, not that there is nothing to review.
 staged_key() {
   local diff key
-  diff="$(git diff --cached 2>/dev/null)" || return 2
+  diff="$(reviewable_diff)" || return 2
   [ -n "$diff" ] || return 1
-  key="$(git diff --cached 2>/dev/null | digest | cut -c1-16)" || return 2
+  key="$(reviewable_diff | digest | cut -c1-16)" || return 2
   case "$key" in '' | *[!0-9a-f]*) return 2 ;; esac
   printf '%s' "$key"
 }
