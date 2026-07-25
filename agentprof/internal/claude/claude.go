@@ -54,11 +54,21 @@ type Turn struct {
 // R1). A threshold of 0 disables the label entirely.
 const DefaultReprimeThreshold = 50000
 
+// DefaultReprimeMinGap is the idle gap since the previous main-loop model call
+// a large cache write must follow to be labeled reprime=true (cache-reprime
+// SPEC R1). It is the shortest prompt-cache TTL Anthropic offers, so a write
+// closer than this to the previous call cannot be a TTL expiry.
+const DefaultReprimeMinGap = 5 * time.Minute
+
 // Options tunes Collect beyond its defaults (CollectWithOptions).
 type Options struct {
 	// ReprimeThreshold is the cache_write_tokens ceiling for reprime labeling
 	// (see CollectWithReprime); 0 disables the label.
 	ReprimeThreshold int
+	// ReprimeMinGap is the idle gap since the previous main-loop model call
+	// required for reprime labeling (see CollectWithReprime); 0 selects
+	// DefaultReprimeMinGap.
+	ReprimeMinGap time.Duration
 	// KeepPending preserves today's per-call tool:(pending) emission — one
 	// empty-valued sample per unmatched tool_use — instead of consolidating
 	// the unmatched calls of a response into a single pending_calls sample
@@ -89,9 +99,12 @@ func Collect(dir string, cutoff time.Time) ([]schema.Sample, []Turn, int, error)
 
 // CollectWithReprime is Collect with a tunable reprime threshold: a main-loop
 // model-call sample (stack has no agent: frame) that is not the main loop's
-// first model call in its transcript and whose cache_write_tokens exceeds
-// reprimeThreshold gets label reprime=true (SPEC R1). Subagent samples and the
+// first model call in its transcript, whose cache_write_tokens exceeds
+// reprimeThreshold, and that lands at least DefaultReprimeMinGap after the
+// previous main-loop call gets label reprime=true (SPEC R1). A turn scores at
+// most one reprime however many responses it streams. Subagent samples and the
 // main loop's first call are never marked; reprimeThreshold 0 disables it.
+// Callers needing a non-default gap use CollectWithOptions.
 func CollectWithReprime(dir string, cutoff time.Time, reprimeThreshold int) ([]schema.Sample, []Turn, int, error) {
 	samples, turns, stats, err := CollectWithOptions(dir, cutoff, Options{ReprimeThreshold: reprimeThreshold})
 	return samples, turns, stats.Skipped, err
@@ -416,6 +429,12 @@ func (s session) collect(opts Options, home string) ([]schema.Sample, []Turn, St
 		return prefix, turnIdx, true
 	}
 
+	reprimeMinGap := opts.ReprimeMinGap
+	if reprimeMinGap <= 0 {
+		reprimeMinGap = DefaultReprimeMinGap
+	}
+	reprimedTurns := map[int]bool{}
+
 	var out []schema.Sample
 	for i, r := range mainP.responses {
 		turn := fmt.Sprintf("%02d", r.turnIdx)
@@ -433,12 +452,13 @@ func (s session) collect(opts Options, home string) ([]schema.Sample, []Turn, St
 				ms.Values["ctx_usage"] = n
 			}
 		}
-		// Re-prime (SPEC R1): a main-loop model call past the transcript's first
-		// (i > 0) that writes more than the threshold re-writes the whole cache
-		// after a TTL expiry. Subagents (handled below) are never marked, and
-		// threshold 0 disables the label.
-		if opts.ReprimeThreshold > 0 && i > 0 && r.usage.CacheCreationTokens > int64(opts.ReprimeThreshold) {
+		// Re-prime (SPEC R1); see CollectWithReprime for the labeling rule.
+		if opts.ReprimeThreshold > 0 && i > 0 &&
+			r.usage.CacheCreationTokens > int64(opts.ReprimeThreshold) &&
+			r.time.Sub(mainP.responses[i-1].time) >= reprimeMinGap &&
+			!reprimedTurns[r.turnIdx] {
 			ms.Labels["reprime"] = "true"
+			reprimedTurns[r.turnIdx] = true
 		}
 		out = append(out, ms)
 		tsamps, pending := r.toolSamples(stack, mainP.toolResults, s.id, turn, opts.KeepPending)

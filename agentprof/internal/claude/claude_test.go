@@ -692,24 +692,37 @@ func TestCollectMarkerlessTranscriptKeepsByteIdenticalStacks(t *testing.T) {
 	}
 }
 
-// assistantLineCacheWrite is an assistant model-call line with a specific
-// cache_creation_input_tokens (cache_write), a distinct prompt-opened turn, and
-// a distinct model, so the emitted sample is locatable by stack.
-func assistantLineCacheWrite(msgID, prompt string, cacheWrite int64) string {
-	return `{"type":"user","timestamp":"2026-07-01T09:04:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"role":"user","content":"` + prompt + `"}}` + "\n" +
-		`{"type":"assistant","timestamp":"2026-07-01T09:05:00Z","cwd":"/z/app","sessionId":"sess-z","message":{"id":"` + msgID +
+// userLineAt opens a prompt turn at a given wall-clock time.
+func userLineAt(clock, prompt string) string {
+	return `{"type":"user","timestamp":"2026-07-01T` + clock + `Z","cwd":"/z/app","sessionId":"sess-z","message":{"role":"user","content":"` + prompt + `"}}`
+}
+
+// assistantLineCacheWriteAt is an assistant model-call line at a given
+// wall-clock time with a specific cache_creation_input_tokens (cache_write). It
+// opens no turn, so consecutive calls land in the turn already open.
+func assistantLineCacheWriteAt(msgID, clock string, cacheWrite int64) string {
+	return `{"type":"assistant","timestamp":"2026-07-01T` + clock + `Z","cwd":"/z/app","sessionId":"sess-z","message":{"id":"` + msgID +
 		`","model":"claude-fable-5","usage":{"input_tokens":10,"output_tokens":1,"cache_creation_input_tokens":` + fmt.Sprintf("%d", cacheWrite) + `}}}`
 }
 
-// writeReprimeFixture builds a session with three main-loop model calls (first
-// >50k write, a later >50k write, a later <50k write) plus one subagent whose
-// only call writes >50k under the same session label. Returns the claude dir.
+// assistantLineCacheWrite is an assistant model-call line with a specific
+// cache_creation_input_tokens (cache_write), a distinct prompt-opened turn
+// starting one minute before the given assistant clock time, and a distinct
+// model, so the emitted sample is locatable by stack.
+func assistantLineCacheWrite(msgID, prompt, clock string, cacheWrite int64) string {
+	return userLineAt(clock, prompt) + "\n" + assistantLineCacheWriteAt(msgID, clock, cacheWrite)
+}
+
+// writeReprimeFixture builds a session with three main-loop model calls, each
+// an hour after the last (first >50k write, a later >50k write, a later <50k
+// write) plus one subagent whose only call writes >50k under the same session
+// label. Returns the claude dir.
 func writeReprimeFixture(t *testing.T) string {
 	t.Helper()
 	dir := writeMain(t,
-		assistantLineCacheWrite("m1", "alpha", 60000), // first main-loop call, >50k
-		assistantLineCacheWrite("m2", "bravo", 60000), // later main-loop call, >50k
-		assistantLineCacheWrite("m3", "charlie", 100), // later main-loop call, <50k
+		assistantLineCacheWrite("m1", "alpha", "09:05:00", 60000), // first main-loop call, >50k
+		assistantLineCacheWrite("m2", "bravo", "10:05:00", 60000), // later main-loop call, >50k
+		assistantLineCacheWrite("m3", "charlie", "11:05:00", 100), // later main-loop call, <50k
 	)
 	sub := filepath.Join(dir, "projects", "-z-app", "sess-z", "subagents")
 	if err := os.MkdirAll(sub, 0o755); err != nil {
@@ -777,6 +790,104 @@ func TestCollectReprimeThresholdZeroDisablesLabel(t *testing.T) {
 	mid := []string{"app", "t02 · bravo", "(no skill)", "main", "claude-fable-5"}
 	if v, ok := reprimeLabel(samples, mid); ok {
 		t.Errorf("threshold 0 must disable reprime, got reprime=%q", v)
+	}
+}
+
+// countReprime counts the samples labeled reprime=true.
+func countReprime(samples []schema.Sample) int {
+	n := 0
+	for _, s := range samples {
+		if s.Labels["reprime"] == "true" {
+			n++
+		}
+	}
+	return n
+}
+
+// TestCollectReprimeRequiresCacheTTLGapAndScoresEachTurnOnce covers R1: a large
+// cache write only counts as a re-prime when the previous main-loop call is
+// further back than the shortest prompt-cache TTL, and several streaming
+// entries within one turn contribute at most one re-prime between them.
+func TestCollectReprimeRequiresCacheTTLGapAndScoresEachTurnOnce(t *testing.T) {
+	tests := []struct {
+		name  string
+		lines []string
+		want  int
+	}{
+		{
+			name: "streamed entries seconds apart in one turn score once",
+			lines: []string{
+				userLineAt("01:00:00", "alpha"),
+				assistantLineCacheWriteAt("m1", "01:00:05", 99992),
+				userLineAt("01:24:30", "bravo"),
+				assistantLineCacheWriteAt("m2", "01:24:37", 99992),
+				assistantLineCacheWriteAt("m3", "01:24:39", 99992),
+				assistantLineCacheWriteAt("m4", "01:24:48", 99992),
+			},
+			want: 1,
+		},
+		{
+			name: "separate turns ten seconds apart outlive no cache TTL",
+			lines: []string{
+				userLineAt("01:00:00", "alpha"),
+				assistantLineCacheWriteAt("m1", "01:00:05", 99992),
+				userLineAt("01:00:10", "bravo"),
+				assistantLineCacheWriteAt("m2", "01:00:15", 99992),
+			},
+			want: 0,
+		},
+		{
+			name: "call after a two-hour idle scores once",
+			lines: []string{
+				userLineAt("01:00:00", "alpha"),
+				assistantLineCacheWriteAt("m1", "01:00:05", 99992),
+				userLineAt("03:00:00", "bravo"),
+				assistantLineCacheWriteAt("m2", "03:00:05", 99992),
+			},
+			want: 1,
+		},
+		{
+			name: "two past-TTL entries inside one turn still score once",
+			lines: []string{
+				userLineAt("01:00:00", "alpha"),
+				assistantLineCacheWriteAt("m1", "01:00:05", 99992),
+				assistantLineCacheWriteAt("m2", "01:10:05", 99992),
+				assistantLineCacheWriteAt("m3", "01:20:05", 99992),
+			},
+			want: 1,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			samples, _, _, err := claude.CollectWithReprime(writeMain(t, tc.lines...), anyCutoff, 50000)
+			if err != nil {
+				t.Fatalf("CollectWithReprime: %v", err)
+			}
+			if got := countReprime(samples); got != tc.want {
+				t.Errorf("reprime count = %d, want %d; stacks: %v", got, tc.want, stacks(samples))
+			}
+		})
+	}
+}
+
+// TestCollectReprimeMinGapIsConfigurable covers R1: Options.ReprimeMinGap
+// shortens the idle gap a large cache write must follow, so a pair of calls ten
+// seconds apart scores under a one-second gap and not under the default.
+func TestCollectReprimeMinGapIsConfigurable(t *testing.T) {
+	lines := []string{
+		userLineAt("01:00:00", "alpha"),
+		assistantLineCacheWriteAt("m1", "01:00:05", 99992),
+		userLineAt("01:00:10", "bravo"),
+		assistantLineCacheWriteAt("m2", "01:00:15", 99992),
+	}
+	opts := claude.Options{ReprimeThreshold: 50000, ReprimeMinGap: time.Second}
+
+	samples, _, _, err := claude.CollectWithOptions(writeMain(t, lines...), anyCutoff, opts)
+	if err != nil {
+		t.Fatalf("CollectWithOptions: %v", err)
+	}
+	if got := countReprime(samples); got != 1 {
+		t.Errorf("reprime count under a 1s min gap = %d, want 1; stacks: %v", got, stacks(samples))
 	}
 }
 
