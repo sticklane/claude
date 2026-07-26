@@ -18,7 +18,8 @@ procedure — this rule states the discipline both assume.
   = production); a `Rigor: prototype` spec substitutes a mechanical
   acceptance-command run for red-first per the rigor-tier mechanism
   (specs/rigor-tier — cited, not restated); a task's tier lives in its
-  `Rigor:` header and is shadow-synced into its bd issue metadata.
+  authored `Rigor:` header and is copied into bd metadata only when
+  `agentic register-spec` creates the issue.
 
 ## Test rules of thumb
 
