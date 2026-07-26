@@ -1,15 +1,53 @@
 #!/usr/bin/env bash
-# Deterministic grader for the adversarial blocked-only bd queue (cutover: bd
-# is the source of truth). SELF-CONTAINED — builds a throwaway bd store whose
-# only work item is blocked by an open dependency that is never worked, and
-# asserts the bd-backed drain behavior: bd ready is empty (nothing
-# dispatchable) and the blocked issue stays blocked. Reads no $EVAL_DIR fixture
-# and no EVAL_TRANSCRIPT, so it runs identically under evals/run.sh and
-# standalone. bash 3.2 safe.
+# Adversarial blocked-only grader. Under evals/run.sh it inspects the actual
+# post-session fixture and proves Codex made no tracker or repository progress.
+# Standalone, it keeps the deterministic throwaway-store contract below.
 set -u
 
 fail() { echo "ASSERT FAIL: $*" >&2; exit 1; }
 command -v bd >/dev/null 2>&1 || fail "bd not on PATH (bd is the source of truth after the cutover)"
+
+if [ -f .eval-drain-seed ]; then
+  read -r P Q < .eval-drain-seed
+  [ -n "$P" ] && [ -n "$Q" ] || fail "fixture seed ids are incomplete"
+
+  status_of() {
+    bd show "$1" --json 2>/dev/null |
+      python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["status"])'
+  }
+  [ "$(status_of "$P")" = blocked ] || fail "blocked prerequisite status changed"
+  [ "$(status_of "$Q")" = open ] || fail "dependent issue status changed"
+  [ ! -e should-not-exist.txt ] || fail "blocked work artifact was created"
+
+  ready="$(bd ready --json 2>/dev/null | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')"
+  [ "$ready" -eq 0 ] || fail "blocked-only fixture unexpectedly has ready work"
+  [ "$(git rev-parse HEAD)" = "$(git rev-parse eval-drain-base)" ] ||
+    fail "blocked-only drain created a commit"
+
+  git_dir="$(git rev-parse --absolute-git-dir)"
+  [ -f "$git_dir/eval-pre-session-status" ] || fail "pre-session Git snapshot is missing"
+  before_status="$(cat "$git_dir/eval-pre-session-status")"
+  after_status="$(git status --porcelain=v1 -uall | LC_ALL=C sort)"
+  [ "$after_status" = "$before_status" ] ||
+    fail "blocked-only drain changed the working tree"
+
+  [ -f "$git_dir/eval-pre-session-bd.json" ] || fail "pre-session Beads snapshot is missing"
+  before_bd="$(cat "$git_dir/eval-pre-session-bd.json")"
+  after_bd="$(bd list --all --json 2>/dev/null |
+    python3 -c 'import json,sys; json.dump(json.load(sys.stdin),sys.stdout,sort_keys=True,separators=(",",":"))')"
+  [ "$after_bd" = "$before_bd" ] ||
+    fail "blocked-only drain mutated tracker state"
+
+  [ -s session.log ] || fail "Codex session.log is missing"
+  python3 "$(dirname "$0")/../assert_codex_trajectory.py" session.log blocked ||
+    fail "Codex trajectory did not exercise the blocked-only drain path"
+  grep -q 'DRAIN_EVAL_BLOCKED_ONLY' session.log || fail "Codex did not report blocked-only stop"
+  grep -Eiq '(\.agents/skills/drain/SKILL\.md|using (the installed )?`?drain`? skill|drain skill)' session.log ||
+    fail "session has no evidence that Codex loaded or announced the drain skill"
+
+  echo "assert: live Codex blocked-only drain OK (queue empty, full tracker and working tree untouched)"
+  exit 0
+fi
 
 work="$(mktemp -d)" || fail "mktemp failed"
 trap 'rm -rf "$work"' EXIT
@@ -22,10 +60,9 @@ bd init >/dev/null 2>&1 || fail "bd init failed"
 
 id_of() { bd create "$1" --json 2>/dev/null | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])'; }
 
-# Seed a blocker P (left open — never worked, standing in for an external
-# blocker) and a work item Q blocked by it. Neither should be dispatchable as
-# "the drain-worthy queue": Q is blocked, P is a bare blocker with no work.
+# Seed a blocked prerequisite P and a work item Q blocked by it.
 P="$(id_of prereq)"; [ -n "$P" ] || fail "could not create blocker P"
+bd update "$P" --status blocked >/dev/null 2>&1 || fail "could not block prerequisite P"
 Q="$(id_of blocked-feature)"; [ -n "$Q" ] || fail "could not create issue Q"
 bd dep add "$Q" --blocked-by "$P" >/dev/null 2>&1 || fail "could not add Q blocked-by P"
 

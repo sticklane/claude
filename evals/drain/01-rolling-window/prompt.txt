@@ -1,1 +1,15 @@
-/drain the bd ready queue
+Use the installed `drain` skill to work the Beads ready queue to exhaustion.
+This is a hermetic eval repository. Each ready issue has a runnable acceptance
+command and a disjoint Touch path. Follow the Codex drain workflow exactly:
+claim through bd, use isolated writing workers serially, verify, merge, close,
+and re-read bd ready after each landing. Do not invent work outside the seeded
+issues. Every required skill, rule, agent, and hook contract is provisioned
+inside this repository; do not search, read, or write outside its root. When
+each implementation worker returns successfully, report
+`DRAIN_EVAL_WORKER <issue-id> DONE` on its own line. After that issue's
+independent verifier and critic have both returned successfully, report
+`DRAIN_EVAL_REVIEW <issue-id> verifier=PASS critic=<READY|READY_WITH_NITS>`
+on its own line. These are trajectory receipts, not substitutes for the
+required agents, acceptance evidence, or branch gates. When
+the queue is empty, end with the exact marker
+`DRAIN_EVAL_COMPLETE`.

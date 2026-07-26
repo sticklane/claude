@@ -49,14 +49,23 @@ record why on the issue and leave it for the batch interview.
 0. **Reclaim orphaned claims (startup, first pass only).** Before the first
    `bd ready` read, list the issues a dead drain session left claimed:
    `bd list --status in_progress --json`, then for each one with no live
-   session working it (cross-check `claude agents --json` per
-   `.claude/rules/concurrent-sessions.md`), unclaim and requeue it
+   session working it (cross-check the runtime-native live-agent inventory
+   per `.claude/rules/concurrent-sessions.md`; Codex uses `list_agents`, not
+   the Claude CLI), unclaim and requeue it
    (`bd update <id> --status open`) and drop its line from
    `.beads/session-claims` and `.beads/session-inflight` if present — a dead
    session's in-flight marker describes a worker that no longer exists, and
    `bd ready` excludes `in_progress`,
-   so an issue claimed when a session died never resurfaces otherwise. Then
-   read the queue.
+   so an issue claimed when a session died never resurfaces otherwise.
+   Under Codex, also resolve any registered `drain/<id>*` branch/worktree.
+   A clean worktree whose branch contains committed issue work is reusable:
+   retain that exact branch/path and resume the issue through a worker plus
+   the normal review barrier instead of creating a suffixed duplicate. A
+   dirty orphan is never deleted or overwritten; record it as BLOCKED with
+   the path and required reconciliation. Whichever clean branch is reused
+   must still be removed after its successful landing, so interruption
+   recovery leaves no worker branches or worktrees behind. Then read the
+   queue.
 
 1. **Read the ready queue.** `bd ready --json` — the unblocked, priority-
    sorted issues whose dependencies are closed. bd does NOT compute file
@@ -73,6 +82,8 @@ record why on the issue and leave it for the batch interview.
    claim bookkeeping, cited not restated — the compliance hook reads it), and
    append `<id> $(date +%s)` on its own line to `.beads/session-inflight`.
    Only then dispatch one awaited, `isolation: worktree` worker per issue.
+   A Codex issue reclaimed in step 0 reuses its clean registered
+   branch/worktree; do not create a `-r2`/retry worktree beside it.
    The marker must be on disk before the dispatch because the orchestrator's
    turn ends AT the dispatch while it awaits the worker — a marker written
    afterwards can land after the compliance hook has already fired, or never,
@@ -123,7 +134,10 @@ record why on the issue and leave it for the batch interview.
    outcome, not an exception, and dispatching a review-fix round on those
    findings before the merge is the normal way to clear them.
    On verifier PASS and a resolved critic verdict, run the repository's
-   canonical project gate exactly once on the reviewed branch. Worker and fix
+   canonical project gate exactly once on the reviewed branch. Under Codex,
+   run it with cwd set to the resolved worker worktree (or an explicit
+   equivalent such as `git -C <worktree>`); a gate run from the shared
+   checkout tests the unmerged base and is invalid. Worker and fix
    rounds run acceptance commands plus directly relevant targeted tests, never
    this full gate; repeating a multi-minute suite inside every round is not
    additional evidence. If the final gate fails, route its evidence through
@@ -133,7 +147,9 @@ record why on the issue and leave it for the batch interview.
    `.beads/session-inflight` (one unit — a closed issue
    still listed trips the compliance hook). Drop the `.beads/session-inflight`
    line on a BLOCKED or DEFERRED verdict too: nothing is in flight for that id
-   once its verdict is in hand. On
+   once its verdict is in hand. Remove any per-issue `.beads/drain-*`
+   screening/task-input file at the same transition; it is transient prompt
+   staging, never durable drain state. On
    worker or verifier FAIL, relaunch once one tier up
    (`.claude/rules/token-discipline.md`); a second failure records the cause
    on the issue and leaves it ready-or-blocked rather than thrashing. On
@@ -200,12 +216,13 @@ children keep their own role pins. For both runtimes, Ultra-equivalent means
 the orchestration shape; tier each child by its stage role per token discipline
 instead of upgrading every child to the frontier model. Give each child a
 compact, self-contained prompt and no inherited conversation transcript
-(Codex: `fork_turns: "none"`). Before each Codex
+(Codex: `fork_turns: "none"`). Before each new Codex
 worker dispatch, the orchestrator creates a
 dedicated branch and worktree with `git worktree add -b <branch> <path>
-<base-revision>`, then gives the worker that absolute path and requires every
-command to run there. Codex dispatches writing workers serially; never let a
-worker edit the shared checkout. Pass the same worktree path and branch to
+<base-revision>`; a clean orphan reclaimed at startup reuses its already
+registered branch/worktree instead. Then give the worker that absolute path
+and require every command to run there. Codex dispatches writing workers
+serially; never let a worker edit the shared checkout. Pass the same worktree path and branch to
 fresh read-only verifier and critic subagents, merge only after their verdicts,
 then remove the worktree. The worker returns the reference.md verdict contract
 and leaves tracker writes to the orchestrator. This is a capability adapter,

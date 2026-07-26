@@ -40,10 +40,11 @@ attempt-1/relaunch workers, who run this procedure verbatim.
 
 **Startup session sweep (advisory).** Before editing anything, list other
 live sessions whose cwd resolves into this repo (the pre-flight in
-`.claude/rules/concurrent-sessions.md`, cited not restated: `claude agents
---json`, worktree list, unexplained working-tree changes): one line per
-foreign live session, a "sweep unavailable" line on failure, never
-blocking.
+`.claude/rules/concurrent-sessions.md`, cited not restated: the
+runtime-native live-agent inventory, worktree list, unexplained working-tree
+changes): one line per foreign live session, a "sweep unavailable" line on
+failure, never blocking. Under Codex, use `list_agents`; do not invoke the
+Claude CLI.
 
 Record the current revision identifier now — the base the verifier's
 append-only task-file diff runs against in step 3 (e.g., under git: `git rev-parse HEAD`). Do NOT preload the codebase: for anything

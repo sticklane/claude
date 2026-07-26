@@ -6,8 +6,11 @@ other (docs/memory/concurrent-session-collision.md has the incident).
 
 ## Pre-flight
 
-- `claude agents --json` — a live session whose `cwd` resolves into this
-  repo, with a different session id than yours, is another editor.
+- Use the active runtime's native live-agent/session inventory. In Claude
+  Code that is `claude agents --json`; in Codex it is the collaboration
+  runtime's agent list (`list_agents`), not a shell call to the Claude CLI.
+  A live session whose `cwd` resolves into this repo, with a different
+  session id than yours, is another editor.
 - List the VCS's checkouts/worktrees of this repo — a single checkout entry
   means a shared tree with zero isolation (e.g., under git: `git worktree
   list`).

@@ -44,7 +44,7 @@ Non-interactive mode is `codex exec` (confirmed live against
 `codex-cli 0.144.1`; flags per `codex exec --help`):
 
 ```bash
-codex exec --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>"
+codex exec --json --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>"
 ```
 
 - `<prompt>` — a self-contained single-agent prompt, same contract as the
@@ -67,6 +67,14 @@ codex exec --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>
   fixtures always init one, but this keeps the template robust either way).
 - `--ephemeral` skips persisting session files — appropriate for one-shot
   relaunches and evals; drop it for a resumable headless session.
+- **Drain sandbox requirement:** a headless drain run creates refs and
+  worktrees through the repository's Git common directory. Codex's
+  `workspace-write` sandbox does not permit those writes even when the
+  checkout itself is writable. In a trusted or hermetic repository, launch
+  drain with `--sandbox danger-full-access`; keep `workspace-write` for
+  single-checkout tasks that do not mutate Git metadata outside the
+  workspace. This is a drain-specific prerequisite, not a recommendation to
+  disable sandboxing globally.
 - **Discovery is cwd/`--cd`-relative, not git-root-relative**: Codex reads
   skills from `.agents/skills/` under the directory it is invoked in (or
   `--cd <dir>`). Run from, or `--cd` into, the repository root.
@@ -79,6 +87,10 @@ codex exec --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>
 
 - **Primitive**: Codex collaboration subagents (`spawn_agent`,
   `wait_agent`, `followup_task`) managed by the main session.
+- **Live-agent inventory**: use the collaboration runtime's `list_agents`
+  primitive for orphan and collision checks. Do not shell out to
+  `claude agents`; that reports Claude Code sessions, not the current Codex
+  orchestration tree.
 - **Ultra-equivalent shape**: the main session compiles the same logical
   stages as Claude Workflow—fan-out, barrier/reduction, verification, and a
   bounded fix round—into subagent calls. Read-only stages may run in

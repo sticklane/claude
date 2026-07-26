@@ -25,14 +25,20 @@
 # Env knobs: EVALS_ROOT (scenario dir), SKILLS_ROOT (skill provisioning
 # source, for external repos' evals), AGENTS_ROOT (agents provisioning
 # source; defaults to SKILLS_ROOT's sibling agents/, skipped if absent),
-# MAX_TURNS (claude-code runner turn cap, default 40). A scenario may
+# MAX_TURNS (claude-code runner turn cap, default 40), and SESSION_TIMEOUT
+# (headless process ceiling in seconds, default 900). A scenario may
+# provide timeout-seconds.txt when its native orchestration legitimately
+# needs a larger ceiling; an explicit SESSION_TIMEOUT overrides that file.
+# A scenario may
 # ship an optional teardown.sh — run whenever setup.sh was attempted,
 # pass or fail, to reverse external live-service state; its failure
 # fails the scenario.
 #
-# Runtime: the active runtime (`.claude/runtime.md`, default claude-code)
-# picks the headless template via runtimes/parse_headless.py — see that
-# file's `## Headless` contract. Provisioning always writes BOTH layouts
+# Runtime: EVAL_RUNTIME, when set, explicitly selects a runtime for this
+# eval invocation. Otherwise the active runtime (`.claude/runtime.md`,
+# default claude-code) picks the headless template via
+# runtimes/parse_headless.py — see that file's `## Headless` contract.
+# Provisioning always writes BOTH layouts
 # (.claude/skills/ and .agents/skills/) regardless of which runtime runs,
 # so a fixture is runtime-portable: switch `.claude/runtime.md` to `codex`
 # (confirmed live via `codex exec`) and re-run without re-provisioning. A
@@ -67,6 +73,14 @@ EVALS_ROOT="${EVALS_ROOT:-$ROOT/evals}"
 # repos without agent definitions just don't get one provisioned.
 SKILLS_ROOT="${SKILLS_ROOT:-$ROOT/.claude/skills}"
 AGENTS_ROOT="${AGENTS_ROOT:-$(dirname "$SKILLS_ROOT")/agents}"
+RULES_ROOT="${RULES_ROOT:-$(dirname "$SKILLS_ROOT")/rules}"
+skills_parent="$(cd "$(dirname "$SKILLS_ROOT")" && pwd)"
+if [ "$(basename "$skills_parent")" = .claude ]; then
+  default_source_root="$(cd "$skills_parent/.." && pwd)"
+else
+  default_source_root="$skills_parent"
+fi
+SOURCE_ROOT="${SOURCE_ROOT:-$default_source_root}"
 
 # MAX_TURNS override for the claude-code runner (MCP-heavy skills may
 # need headroom beyond the default).
@@ -111,6 +125,17 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
   name="$skill/$(basename "$scenario")"
   [ -n "$filter" ] && [ "$skill" != "$filter" ] && continue
 
+  scenario_timeout="${SESSION_TIMEOUT:-}"
+  if [ -z "$scenario_timeout" ] && [ -f "$scenario/timeout-seconds.txt" ]; then
+    scenario_timeout="$(head -n 1 "$scenario/timeout-seconds.txt")"
+  fi
+  scenario_timeout="${scenario_timeout:-900}"
+  case "$scenario_timeout" in
+    *[!0-9]*|'') echo "invalid session timeout for $name: $scenario_timeout" >&2; exit 1 ;;
+  esac
+  [ "$scenario_timeout" -gt 0 ] ||
+    { echo "invalid session timeout for $name: $scenario_timeout" >&2; exit 1; }
+
   EVAL_DIR="$(mktemp -d)"
   verdict="FAIL"
   setup_ran=0
@@ -126,6 +151,8 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     mkdir -p "$EVAL_DIR/.claude/skills"
     cp -rL "$SKILLS_ROOT/$skill" "$EVAL_DIR/.claude/skills/"
     [ -d "$AGENTS_ROOT" ] && cp -r "$AGENTS_ROOT" "$EVAL_DIR/.claude/agents"
+    [ -d "$RULES_ROOT" ] && cp -r "$RULES_ROOT" "$EVAL_DIR/.claude/rules"
+    [ -d "$SOURCE_ROOT/hooks" ] && cp -r "$SOURCE_ROOT/hooks" "$EVAL_DIR/hooks"
 
     # Provision shared script dependencies centrally so scenarios don't
     # hand-copy them: several skills' scripts import .claude/skills/_shared
@@ -139,10 +166,10 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     [ -d "$ROOT/runtimes" ] && cp -rL "$ROOT/runtimes" "$EVAL_DIR/runtimes"
 
     # Optional skill-deps.txt: a scenario naming sibling *skills* its script
-    # loads as a library (e.g. a scanner that loads workboard.py). One
-    # skill dir name per line; blank lines and #-comments ignored. Declared
-    # explicitly rather than provisioning all skills, so the sandbox keeps
-    # only the skill under test plus its named deps — no blanket pollution.
+    # loads as a library (e.g. drain loading build/beads doctrine). One
+    # skill dir name per line; blank lines and #-comments ignored. Provision
+    # each dependency into both discovery layouts so the same fixture works
+    # under Claude Code and Codex.
     if [ -f "$scenario/skill-deps.txt" ]; then
       while IFS= read -r dep || [ -n "$dep" ]; do
         dep="${dep%%#*}"
@@ -150,32 +177,52 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
         [ -z "$dep" ] && continue
         if [ -d "$SKILLS_ROOT/$dep" ]; then
           cp -rL "$SKILLS_ROOT/$dep" "$EVAL_DIR/.claude/skills/"
+          mkdir -p "$EVAL_DIR/.agents/skills"
+          agents_dep_src="$SOURCE_ROOT/.agents/skills/$dep"
+          [ -e "$agents_dep_src" ] || agents_dep_src="$SKILLS_ROOT/$dep"
+          mkdir -p "$EVAL_DIR/.agents/skills/$dep"
+          cp -rL "$agents_dep_src/." "$EVAL_DIR/.agents/skills/$dep/"
         else
           echo "eval: skill-dep '$dep' for '$name' not found under $SKILLS_ROOT (skipped)" >&2
         fi
       done < "$scenario/skill-deps.txt"
     fi
 
-    # Also provision the Agent Skills layout (.agents/skills/) that
-    # Antigravity and Codex discover from, unconditionally and regardless
-    # of the resolved runtime below — cheap, and harmless for a
-    # claude-code run. Source real content, dereferencing symlinks
-    # (-L) since codex/.agents/skills/<name> is often a relative symlink
-    # into antigravity/ whose target would otherwise dangle outside
-    # $EVAL_DIR. Prefer codex's copy (covers the four launch-gated
-    # skills' codex-specific SKILL.md); fall back to antigravity's.
-    agents_skill_src="$ROOT/codex/.agents/skills/$skill"
-    [ -e "$agents_skill_src" ] || agents_skill_src="$ROOT/antigravity/.agents/skills/$skill"
+    # Also provision the repository-root Agent Skills layout
+    # (.agents/skills/) that Codex discovers from. The portability pivot
+    # retired per-runtime mirror trees, so source the shared root symlink
+    # and dereference it into the fixture. External SKILLS_ROOT callers fall
+    # back to that real skill directory when no root entrypoint exists.
+    agents_skill_src="$SOURCE_ROOT/.agents/skills/$skill"
+    [ -e "$agents_skill_src" ] || agents_skill_src="$SKILLS_ROOT/$skill"
     if [ -e "$agents_skill_src" ]; then
-      mkdir -p "$EVAL_DIR/.agents/skills"
-      cp -rL "$agents_skill_src" "$EVAL_DIR/.agents/skills/$skill"
-      if [ -d "$ROOT/antigravity/.agents/skills/_shared" ]; then
-        cp -rL "$ROOT/antigravity/.agents/skills/_shared" "$EVAL_DIR/.agents/skills/"
+      mkdir -p "$EVAL_DIR/.agents/skills/$skill"
+      cp -rL "$agents_skill_src/." "$EVAL_DIR/.agents/skills/$skill/"
+      if [ -d "$SKILLS_ROOT/_shared" ]; then
+        cp -rL "$SKILLS_ROOT/_shared" "$EVAL_DIR/.agents/skills/"
       fi
     fi
 
     allowed="$DEFAULT_ALLOWED"
     [ -f "$scenario/allowed-tools.txt" ] && allowed="$(head -n 1 "$scenario/allowed-tools.txt")"
+
+    # Capture the exact pre-session repository and tracker state after all
+    # runner-owned provisioning. Scenario graders that promise non-mutation
+    # can compare these snapshots with the post-session fixture without
+    # mistaking provisioned skills/rules/hooks for model edits. Store them in
+    # the Git directory so the snapshot files do not perturb `git status`.
+    : > "$EVAL_DIR/session.log"
+    eval_git_dir="$(git -C "$EVAL_DIR" rev-parse --absolute-git-dir 2>/dev/null || true)"
+    if [ -n "$eval_git_dir" ]; then
+      if command -v bd >/dev/null 2>&1 && [ -d "$EVAL_DIR/.beads" ]; then
+        (cd "$EVAL_DIR" && bd list --all --json 2>/dev/null |
+          python3 -c 'import json,sys; json.dump(json.load(sys.stdin),sys.stdout,sort_keys=True,separators=(",",":"))') \
+          > "$eval_git_dir/eval-pre-session-bd.json" ||
+          rm -f "$eval_git_dir/eval-pre-session-bd.json"
+      fi
+      git -C "$EVAL_DIR" status --porcelain=v1 -uall |
+        LC_ALL=C sort > "$eval_git_dir/eval-pre-session-status"
+    fi
 
     # RUNNER_CMD override: run a non-Claude headless command instead,
     # word-split, with the scenario prompt appended as the final
@@ -192,15 +239,15 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     fi
     session_rc=0
     # EVAL_TRANSCRIPT: absolute path to this run's JSONL transcript, exposed
-    # to assert.sh for trajectory assertions. Only the claude-code runner
-    # emits a locatable transcript today (session.log becomes JSONL via
-    # --output-format stream-json); the RUNNER_CMD and other-runtime branches
-    # have no stream-json mechanism, so they leave it empty and warn. Resolved
-    # and exported centrally after the runner branches, below.
+    # to assert.sh for trajectory assertions. Claude Code and Codex both emit
+    # JSONL on stdout under their checked-in headless profiles, so session.log
+    # doubles as the transcript for those runtimes. RUNNER_CMD and runtimes
+    # without a JSONL profile leave it empty and warn. Resolved and exported
+    # centrally after the runner branches, below.
     EVAL_TRANSCRIPT=""
     if [ -n "$scenario_runner_cmd" ]; then
       read -r -a runner <<<"$scenario_runner_cmd"
-      (cd "$EVAL_DIR" && ALLOWED_TOOLS="$allowed" timeout 900 "${runner[@]}" \
+      (cd "$EVAL_DIR" && ALLOWED_TOOLS="$allowed" timeout "$scenario_timeout" "${runner[@]}" \
           "$(cat "$scenario/prompt.txt")" 2>&1 \
           | tee "$EVAL_DIR/session.log") || session_rc=$?
     else
@@ -212,8 +259,8 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
       # runtime's `## Headless` template, resolved via parse_headless.py.
       # Set EVAL_DRY_RUN=1 to echo the resolved runner instead of invoking
       # it (previewing the derived command without a live session).
-      runtime="claude-code"
-      if [ -f "$ROOT/.claude/runtime.md" ]; then
+      runtime="${EVAL_RUNTIME:-claude-code}"
+      if [ -z "${EVAL_RUNTIME:-}" ] && [ -f "$ROOT/.claude/runtime.md" ]; then
         rt_line="$(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/.claude/runtime.md" | head -n 1)"
         case "$rt_line" in
           runtime:*) runtime="$(printf '%s' "${rt_line#runtime:}" | tr -d '[:space:]')" ;;
@@ -228,7 +275,7 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
           # transcript on stdout; tee captures it as session.log, which then
           # doubles as EVAL_TRANSCRIPT (a single invocation cannot emit both
           # plaintext and JSONL, so session.log IS the transcript).
-          (cd "$EVAL_DIR" && timeout 900 claude -p "$(cat "$scenario/prompt.txt")" \
+          (cd "$EVAL_DIR" && timeout "$scenario_timeout" claude -p "$(cat "$scenario/prompt.txt")" \
               --output-format stream-json --verbose \
               --permission-mode dontAsk --max-turns "$MAX_TURNS" --allowed-tools "$allowed" 2>&1 \
               | tee "$EVAL_DIR/session.log") || session_rc=$?
@@ -244,6 +291,20 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
         # tokens with the concrete prompt/allowlist as single argv
         # elements (so a prompt with spaces is never re-split).
         read -r -a runner <<<"$template"
+        # Drain's Codex adapter writes Git refs/worktrees through the common
+        # Git directory. The generic Codex profile stays workspace-write for
+        # ordinary skills; an explicit/active Codex drain eval raises only
+        # this scenario to the documented trusted-fixture prerequisite.
+        if [ "$runtime" = codex ] && [ "$skill" = drain ]; then
+          i=0
+          while [ "$i" -lt "${#runner[@]}" ]; do
+            if [ "${runner[$i]}" = --sandbox ] &&
+               [ "$((i + 1))" -lt "${#runner[@]}" ]; then
+              runner[$((i + 1))]=danger-full-access
+            fi
+            i=$((i + 1))
+          done
+        fi
         prompt_text="$(cat "$scenario/prompt.txt")"
         for i in "${!runner[@]}"; do
           case "${runner[$i]}" in
@@ -254,13 +315,16 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
         if [ -n "${EVAL_DRY_RUN:-}" ]; then
           printf 'DRY-RUN [%s] runner:' "$runtime"; printf ' %q' "${runner[@]}"; printf '\n'
         else
-          (cd "$EVAL_DIR" && ALLOWED_TOOLS="$allowed" timeout 900 "${runner[@]}" 2>&1 \
+          (cd "$EVAL_DIR" && ALLOWED_TOOLS="$allowed" timeout "$scenario_timeout" "${runner[@]}" 2>&1 \
               | tee "$EVAL_DIR/session.log") || session_rc=$?
+          if [ "$runtime" = codex ]; then
+            EVAL_TRANSCRIPT="$EVAL_DIR/session.log"
+          fi
         fi
       fi
     fi
     # Resolve and export EVAL_TRANSCRIPT for assert.sh. A candidate path is
-    # only set by the claude-code branch above; keep it when the file was
+    # set by a JSONL-capable runtime branch above; keep it when the file was
     # actually produced and is non-empty, otherwise clear it and warn so an
     # assertion that requires a transcript fails loudly instead of reading a
     # stale or missing path. Skipped under dry-run (no session, no assert.sh).

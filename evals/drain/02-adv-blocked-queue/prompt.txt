@@ -1,1 +1,9 @@
-/drain the bd ready queue
+Use the installed `drain` skill to inspect and drain the Beads ready queue.
+This hermetic eval is intentionally blocked-only: no issue is dispatchable.
+The prerequisite is a synthetic non-human upstream sentinel, so there is no
+actionable human-only blocker to add to HUMAN.md.
+Do not claim, close, reopen, or edit either blocked issue, and do not invent
+new work. Every required skill, rule, agent, and hook contract is provisioned
+inside this repository; do not search, read, or write outside its root. Stop
+after confirming bd ready is empty and end with the exact marker
+`DRAIN_EVAL_BLOCKED_ONLY`.

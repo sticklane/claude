@@ -71,11 +71,11 @@ verbatim). `chmod +x` both scripts.
 
 `./evals/run.sh <skill>` (no argument runs every evalset). Per scenario
 the runner builds a fresh fixture, copies `.claude/skills/<skill>/` and
-`.claude/agents/` from this checkout into `$EVAL_DIR/.claude/` (it also
-still provisions a legacy `.agents/skills/<skill>/` copy; the mirrored
-runtime trees that consumed it were deleted in the 2026-07-22 portability
-pivot, so that copy is inert), and runs
-the prompt there under `timeout 900` with a fixed allowlist — a
+`.claude/agents/` from this checkout into `$EVAL_DIR/.claude/`, provisions
+the same skill and declared dependencies under Codex's active
+`.agents/skills/` discovery layout, and runs
+the prompt under the scenario's `timeout-seconds.txt` value (default 900)
+with a fixed allowlist — a
 deliberate, documented exception to the toolkit's self-contained-prompt
 rule, because exercising the real skill text is the entire point.
 
