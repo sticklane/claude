@@ -319,6 +319,33 @@ class TestBdBlockerDetailAuthority(unittest.TestCase):
         self.assertNotIn("unblock", task)
         self.assertNotIn("deferred_questions", task)
 
+    def test_detail_read_error_becomes_explicit_retry_attention_item(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md", status="blocked", issue_id="tk-detail"
+        )
+        issue["_detail_error"] = "bd show failed: database locked"
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_unblock_spec(tmp, tasks={"01-a.md": "# Blocked task\n"})
+            repo = make_repo_record(path="/r/demo")
+            repo["specs"] = workboard.scan_toolkit_specs(
+                Path(tmp), bd_issues=[issue]
+            )
+
+        detail_rows = [
+            item
+            for item in workboard.attention_items(
+                [repo], [], [], stale_days=7
+            )
+            if "tracker detail" in item["what"].lower()
+        ]
+
+        self.assertEqual(len(detail_rows), 1)
+        self.assertIn("database locked", detail_rows[0]["why"])
+        self.assertIn(
+            "bd show --include-comments --id=tk-detail --json",
+            detail_rows[0]["cmd"],
+        )
+
 
 class TestBdTrackerSnapshot(unittest.TestCase):
     def _repo_with_beads(self, root):
