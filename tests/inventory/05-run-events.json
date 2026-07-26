@@ -7,6 +7,12 @@
       "path": "tests/test_agentic_events.py",
       "runner": "pytest",
       "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_events_corrections.py",
+      "runner": "pytest",
+      "serial": false
     }
   ]
 }
