@@ -8,11 +8,9 @@ human decision, on the **live agent-console dashboard** — do not write a
 static HTML snapshot. Read-only: nothing here mutates the state it reports —
 the explicit exceptions are the scanner's `--abandon` / `--abandon-stale`,
 which write a `.workboard-abandoned` skip-marker into an Antigravity
-conversation dir (Antigravity's own artifacts are never touched), `--defer
-<slug>`, which writes a `Status: deferred` header into the current repo's
-`specs/<slug>/SPEC.md` so a parked spec leaves the inbox, and
-`--prune-stale-sessions`, which deletes dead-pid `~/.claude/sessions/*.json`
-records (step 4).
+conversation dir (Antigravity's own artifacts are never touched), and
+`--prune-stale-sessions`, which deletes dead-pid
+`~/.claude/sessions/*.json` records (step 4).
 Design rationale and sources: [docs/agent-dashboards.md](../../../docs/agent-dashboards.md).
 
 ## 1. Launch the live dashboard
@@ -56,8 +54,8 @@ actionable part; don't re-narrate the repo cards.
 The inbox is **human-bounded work only**: agent-bounded work (drafts,
 `Unblock: run:/agent:` rechecks, all-tasks-done specs awaiting the
 verifier) proceeds via dispatch and never appears as an attention item —
-the one exception is a parked `HANDOFF.md`, which surfaces because
-resuming it needs a human to restart the session.
+the one exception is an open `handoff`-labeled bd issue, which surfaces
+because resuming it needs a human to restart the session.
 
 - No ROOTS → it scans `~/code ~/src ~/projects ~/dev ~/repos ~/work`, the
   cwd, **plus every repo any Claude Code session has touched** (from session
@@ -71,12 +69,13 @@ resuming it needs a human to restart the session.
 
 For each inbox item the suggested action column already names the move:
 
-- `blocked` handoff → resume it in a fresh session from the HANDOFF.md, then
-  delete the file. Blocked task file (no unblock step recorded) → answer its
-  open question or add an `Unblock:` line, flip its `Status:` line,
-  re-dispatch via /build or /drain.
+- `blocked` handoff → run `/resume-handoff` in a fresh session; it reads the
+  handoff-labeled bd issue and its tracked issue comments, resumes the
+  recorded next step, then closes the handoff issue. Blocked task (no unblock
+  step recorded) → answer its open question or record a typed `Unblock:` in
+  its bd issue, then re-dispatch via /build or /drain.
 - `needs-review` dirty/unpushed repo → commit, stash, or push.
-- `stale` open spec → resume, defer (`Status: deferred`), or delete — open
+- `stale` open spec → resume it or close/defer its task issues in bd — open
   work decays; deciding is the point.
 - `stale` Antigravity conversation → resume it in Antigravity, or run the
   scanner's `--abandon <conv-id>` (or `--abandon-stale` for all) — the

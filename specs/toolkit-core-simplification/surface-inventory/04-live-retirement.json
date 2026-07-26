@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "04-live-retirement",
+  "frozen_sha256": "6a9bdd36aaa30575dc4a1bd48c90cd30f0c762ead42a5b5d5e1bc9df91115adf",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_live_surface_retirement.sh#assert:9c1f4eb14b6af3f0acd15f0a5c20e7611e993e5fcf41c9ef57b34cc2f57c31b6"
+      ],
+      "content_sha256": "38555b9abb19e1c6a2ba3c6336631ecdb061afb5f5f0cabc55b78a6ae7d46f9e",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_live_surface_retirement.sh",
+      "path": "tests/test_live_surface_retirement.sh",
+      "rationale": "Canonical coverage for retiring only approved dead workflows while retaining native runtime surfaces and historical evidence.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

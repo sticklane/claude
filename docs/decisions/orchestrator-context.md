@@ -4,6 +4,13 @@ Date: 2026-07-03 (amended 2026-07-03 — see cross-vendor note below)
 Spec: [`specs/orchestrator-context/SPEC.md`](../../specs/orchestrator-context/SPEC.md)
 Research: [`docs/context-management-research-2026-07.md`](../context-management-research-2026-07.md)
 
+> **Historical record.** The 2026-07-22 pivot retired the baton, lease,
+> generation, and task-header queue mechanisms described below. Current drain
+> orchestration uses bd plus runtime-native session management; see
+> [`architecture-pivot-2026-07-22.md`](../architecture-pivot-2026-07-22.md).
+> The remainder is preserved as evidence of the superseded design, not live
+> operating guidance.
+
 ## Context
 
 Drain's queue state survives session death (committed `Status:` flips), but the

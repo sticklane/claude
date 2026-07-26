@@ -19,6 +19,14 @@ work is split into two specs, each citing this doc rather than restating
 it: `specs/cheap-task-status-checks/SPEC.md` (status representation) and
 `specs/structured-handoff-headers/SPEC.md` (handoff representation).
 
+> **Historical record.** The 2026-07-22 pivot adopted bd as canonical live
+> state and retired the mirrored procedure trees and
+> `drain_frontier.py`. Claims below about git/markdown authority, mirrored
+> runtimes, or that executable describe the pre-pivot system and are retained
+> only as research evidence. See
+> [`architecture-pivot-2026-07-22.md`](architecture-pivot-2026-07-22.md) for
+> the replacement architecture.
+
 ## Table of contents
 
 Beads (bd) — design and stated rationale · Similar tools and the

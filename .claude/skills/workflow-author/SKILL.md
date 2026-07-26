@@ -88,11 +88,11 @@ session model`), so the both-or-neither choice is auditable in the script.
 Every generated script that touches queue state carries all four; the
 templates in `reference.md` demonstrate them.
 
-- **Single writer.** A script that flips task `Status:` lines is the
-  sole writer of those lines while it runs — its header comment says so
-  and warns against running it alongside an attended /drain. All state lands
-  in committed files, never only in script variables (disk-resumability
-  doctrine).
+- **Tracker authority.** A queue script reads readiness and dependencies from
+  bd, claims each issue atomically before dispatch, and records every blocked
+  or closed transition in bd. Markdown task headers are frozen display. Its
+  header warns against competing orchestrators even though atomic claims
+  prevent duplicate ownership.
 - **BLOCKED routing.** Any worker return whose verdict is BLOCKED stops that
   item's remaining stages, and the script's final return quotes the blocked
   content verbatim — no human reads mid-run transcripts, so the report is

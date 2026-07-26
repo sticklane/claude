@@ -1,0 +1,12 @@
+{
+  "fragment": "04-live-retirement",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_live_surface_retirement.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

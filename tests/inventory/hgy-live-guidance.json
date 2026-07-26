@@ -1,0 +1,12 @@
+{
+  "fragment": "hgy-live-guidance",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_live_guidance_retirement.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

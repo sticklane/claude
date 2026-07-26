@@ -9,8 +9,8 @@ Orientation — repo map, live work state, verified commands — is in @AGENTS.m
 
 ## Compact instructions
 
-When this session compacts, preserve: task-file paths and their Status
-values, the current wave/dispatch state, branch names,
+When this session compacts, preserve: task-file paths and their bd issue ids
+and statuses, the current wave/dispatch state, branch names,
 acceptance-evidence pointers (paths to `evidence/` files, not their
 contents), and unresolved review findings. Drop first: raw tool output
 and file listings — both are re-derivable from disk.
@@ -77,11 +77,12 @@ order cannot resolve are surfaced, not guessed.
 - Reference files over 100 lines open with a table of contents.
 - References stay one level deep: SKILL.md → reference file, never
   reference → reference.
-- Fields any skill reads programmatically — Status, Depends on, Priority
-  (optional; absent = P2), Budget, (post-review-fix-wave) Touch, and Rigor
-  (optional; absent = production) — are
+- Authored definition fields read during create-only registration — Depends
+  on, Priority (optional; absent = P2), Budget, Touch, and Rigor (optional;
+  absent = production) — are
   single-line `Key: value` headers above the file's first `##` heading;
-  body sections are for humans and workers, never for orchestrator parsing.
+  body sections are for humans and workers. Live status, dependencies, claims,
+  handoffs, and closure are read from bd, never from those headers.
 - Every skill that produces an artifact must say where the file goes and what
   the next pipeline step is, and closes with a `Next stage:` line naming the
   next skill and the artifact path, marked "(self-chains per conventions)"
@@ -179,12 +180,10 @@ bd (beads) is this repo's source of truth for task state: `bd prime`
 at session start, `bd ready` for the queue, claim before working,
 close on done — the `/work` skill owns the flow. Markdown task files
 under `specs/*/tasks/` carry the human-readable Goal/Steps/Acceptance
-text; their `Status:` headers are shadow-synced into bd, not the other
-way around — and the sync is **bd-authoritative for the closed state**: it
-can seed a new task or advance one toward closed, but never reopens an issue
-bd has closed (a stale markdown `pending` can't revive closed bd work —
-agentic-uz1). So close work in bd; a markdown header is display that seeds
-and advances, never the live authority.
+text; their `Status:` headers are frozen display and no live procedure reads
+or updates them. `agentic register-spec` may create absent issues and
+dependency edges from authored definitions, but it ignores `Status:` and
+never synchronizes ongoing state. bd is the only live authority.
 
 Record discovered work in bd immediately, not just in prose — a bug
 found, doc drift spotted, or new work scoped while doing something

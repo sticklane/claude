@@ -13,11 +13,10 @@ Emit `<!-- agentprof:stage=load -->` verbatim as this step's opening line
 every time you enter it — agentprof reads it from this session's transcript
 to attribute cost/tokens/time to this stage until the next stage marker.
 
-Read the task file (and its spec's Requirements section if referenced). Mark
-the task's Status as `in-progress` (a bare SPEC.md has no Status field — skip
-the bookkeeping steps for it and work from its acceptance criteria directly).
-Claim the task in bd as well: its issue's title is the task file's
-repo-relative path (shadow-sync's upsert key), and `/work`'s SKILL.md owns
+Read the task file (and its spec's Requirements section if referenced).
+Markdown `Status:` is frozen display; bd is the only live authority. Claim
+the task's bd issue: its external reference is
+`spec-task:<repo-relative-path>`, and `/work`'s SKILL.md owns
 the claim commands and the `.beads/session-claims` bookkeeping — cite it,
 don't restate it. Skip the claim only when the issue is already claimed (a
 drain dispatch claims before launching its worker) or bd is unavailable on
@@ -83,8 +82,8 @@ on: the same step failing twice (a third attempt in a degraded context won't
 do better), and reaching a high-risk action — push, deploy, data deletion,
 publishing, spending — which the run must never take on its own.
 
-For long `/goal`-bounded runs that grow heavy before finishing, write a
-`/handoff` file and end rather than pressing on in a degraded context. The
+For long `/goal`-bounded runs that grow heavy before finishing, run
+`/handoff` to park the state in bd and end. The
 scoped-permissions template, containment ladder, headless template, and
 failure-recovery doctrine for unattended runs live in
 [reference.md](reference.md).
@@ -175,20 +174,18 @@ to a normal production task, not as done work.
    known failure mode; a fresh session with a better task file beats a long
    session of thrashing.
 6. Heavy-context escape: when the session itself has grown heavy — not just
-   one stuck fix — write a `/handoff` file and lead the report with its resume
-   command instead of continuing degraded.
-7. Stopping blocked (the **same-edit** rule): when the session must stop on
+   one stuck fix — run `/handoff` and lead the report with its resume command
+   instead of continuing degraded.
+7. Stopping blocked: when the session must stop on
    an external blocker it cannot clear — missing creds, an undeployed
-   dependency, a product decision only the user can make — write
-   `Status: blocked` AND its `Unblock:` line into the task file in the **same
-   edit**, never a bare `blocked` with no recorded move. Pick the narrowest
-   type (breakdown's grammar): `Unblock: run: <cmd>` when a shell command can
-   check or clear it, `Unblock: agent: <prompt>` when clearing needs an
-   agent's judgment, `Unblock: ask: <exact question>` only for a genuine human
-   decision, quoting the exact question. The `Unblock:` line goes on the line
-   immediately after `Status:`. **HUMAN.md pair (R3), ATTENDED `/build` only:**
-   that intra-file `Status:`+`Unblock:` atomicity is UNCHANGED, and the SAME
-   COMMIT also makes a second edit adding a matching entry to the repo-root
+   dependency, a product decision only the user can make — update the issue
+   to blocked in bd and record its typed `Unblock:` in a bd comment as one
+   operation. Pick the narrowest type (breakdown's grammar):
+   `Unblock: run: <cmd>` when a shell command can check or clear it,
+   `Unblock: agent: <prompt>` when clearing needs an agent's judgment, or
+   `Unblock: ask: <exact question>` only for a genuine human decision,
+   quoting the exact question. **HUMAN.md pair (R3), ATTENDED `/build` only:**
+   the same commit also adds a matching entry to the repo-root
    `HUMAN.md`'s `## Agent-filed blockers` section, typed to the `Unblock:` line
    (`run`→`run`, `ask`→`ask`, a credentials/access blocker → `provision`;
    grammar in `.claude/rules/human-blockers.md`). An `Unblock: agent:` stop is
@@ -196,7 +193,8 @@ to a normal production task, not as done work.
    attended-scope only: a DRAINED/unattended worker NEVER writes `HUMAN.md` — it
    returns its BLOCKED verdict and drain's orchestrator (not the worker) files
    the entry; a worker that wrote `HUMAN.md` would fail drain's merge-time Touch
-   whitelist.
+   whitelist. The same worker never calls bd; its typed verdict gives the
+   orchestrator the blocked transition and comment to record.
 
 ## 4. Close out
 
@@ -267,10 +265,11 @@ line every time you enter it.
   offer to record it with `ctx notes add <symbol> "<text>" --kind
 gotcha|invariant|rationale|todo` before finishing (the note is committed;
   it survives refactors the code comment would not).
-- Update the task file: Status `done`, tick acceptance boxes, one line of
-  evidence each (from the verifier's report, not your own claim) rather
-  than duplicating output — citing the `evidence/` file when an evidence
-  path was passed in step 3; delete the plan comment block from step 1.
+- Update durable task-file content only: tick acceptance boxes and add one
+  evidence line each (from the verifier's report, not your own claim) rather
+  than duplicating output — citing the `evidence/` file when an evidence path
+  was passed in step 3; delete the plan comment block from step 1. Never edit
+  its frozen `Status:` header.
   Close the task's bd issue and clear its `.beads/session-claims` line in
   the same breath (`/work`'s close flow, cited not restated) — unless the
   claim was the dispatching orchestrator's (drain closes what it claimed)
@@ -300,19 +299,16 @@ gotcha|invariant|rationale|todo` before finishing (the note is committed;
   (drain reference.md's worker prompt). Skip with a one-line note when
   bd is unavailable. For non-DONE outcomes the report also carries
   one fixed `Done vs remaining:` line summarizing partial progress.
-- For items in `Discovered:`, offer to write each as a header-only
-  `Status: draft` stub in the owning spec's tasks/ dir (the format in drain's
-  bookkeeping step) — written only on the user's yes; no silent queue writes.
+- For items in `Discovered:`, offer to author a task definition in the owning
+  spec and register it create-only — written only on the user's yes; no silent
+  queue writes.
 - Tell the user to `/clear` before starting the next task. Then, only if
   the just-completed task file resolves to a `specs/<slug>/tasks/*.md` path
-  AND at least one sibling `tasks/*.md` in that same directory has a
-  `Status: pending` header line — checked with `grep -l '^Status: pending'
-specs/<slug>/tasks/*.md` (a header-only match, never a full `Read` of each
-  sibling file) — print one additional line pointing the user
+  AND `bd ready --json` contains another issue whose external reference is
+  under that spec's `tasks/` directory, print one additional line pointing the user
   at `/drain specs/<slug>` for continuous work across the remaining tasks
   (alongside, not replacing, the `/clear` line). If the path is not under a
-  `specs/<slug>/tasks/` layout, or the only siblings are `Status: blocked`
-  (or there are no siblings — the `grep -l` prints nothing), print no nudge
+  `specs/<slug>/tasks/` layout, or bd reports no ready sibling, print no nudge
   line — this is a printed pointer, not a loop, so do not over-fire it.
 
 ## Ultra path

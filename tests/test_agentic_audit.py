@@ -1,8 +1,8 @@
 """SPEC S14 / Migration step 7: ``agentic audit [--since DATE] [--dry-run]``
-reads Claude Code session transcripts and the bd tracker, measures four
+reads Claude Code session transcripts and the bd tracker, measures three
 tool-adoption regression classes — structure lookups that bypassed
-``agentic ctx`` for grep, dispatches that bypassed compose, verdict-schema
-failures, and spend over cap — and files each NON-ZERO class as one tracker
+``agentic ctx`` for grep, verdict-schema failures, and spend over cap — and
+files each NON-ZERO class as one tracker
 task linked ``discovered-from`` a standing audit anchor issue. ``--dry-run``
 prints the measures and writes nothing. A second run files nothing new
 (dedup against open audit tasks).
@@ -53,18 +53,6 @@ def _grep_bypass_record(ts="2026-07-15T10:00:00Z"):
     return _assistant(_tool_use("Grep", pattern="def compute_frontier"), ts=ts)
 
 
-def _compose_bypass_record(ts="2026-07-15T11:00:00Z"):
-    # A Task dispatch whose prompt never went through `agentic compose`.
-    return _assistant(
-        _tool_use(
-            "Task",
-            subagent_type="general-purpose",
-            prompt="Go implement the widget and report back.",
-        ),
-        ts=ts,
-    )
-
-
 def _write_transcripts(dir_path, records_by_file):
     dir_path.mkdir(parents=True, exist_ok=True)
     for name, records in records_by_file.items():
@@ -78,14 +66,10 @@ def _write_transcripts(dir_path, records_by_file):
 def test_measure_counts_one_grep_and_one_compose_bypass(tmp_path):
     root = _write_transcripts(
         tmp_path / "projects",
-        {
-            "a.jsonl": [_grep_bypass_record()],
-            "b.jsonl": [_compose_bypass_record()],
-        },
+        {"a.jsonl": [_grep_bypass_record()]},
     )
     counts = audit.measure(audit.discover_transcripts(root), cwd=str(tmp_path))
     assert counts["grep-bypass"] == 1
-    assert counts["compose-bypass"] == 1
     assert counts["verdict-schema-failure"] == 0
 
 
@@ -94,17 +78,6 @@ def test_grep_led_bash_is_a_bypass_but_a_piped_grep_is_not():
     piped = _tool_use("Bash", command="git status --short | grep audit")
     assert audit.is_grep_bypass(grep_led)
     assert not audit.is_grep_bypass(piped)
-
-
-def test_task_dispatch_through_compose_is_not_a_bypass():
-    through = _tool_use(
-        "Task",
-        subagent_type="general-purpose",
-        prompt="$(agentic compose bd-7)\nDo the task above.",
-    )
-    without = _tool_use("Task", subagent_type="general-purpose", prompt="just do it")
-    assert not audit.is_compose_bypass(through)
-    assert audit.is_compose_bypass(without)
 
 
 def test_verdict_schema_failure_is_counted_from_tool_results(tmp_path):
@@ -207,34 +180,26 @@ def _discovered_from_anchor(store):
 def test_audit_files_exactly_two_typed_tasks_linked_discovered_from(tmp_path):
     tr = _write_transcripts(
         tmp_path / "projects",
-        {
-            "a.jsonl": [_grep_bypass_record()],
-            "b.jsonl": [_compose_bypass_record()],
-        },
+        {"a.jsonl": [_grep_bypass_record()]},
     )
     store = _seed_store(tmp_path)
     r = _agentic(store, tr, "audit", "--since", "2026-07-01")
     assert r.returncode == 0, r.stderr
 
     filed = _discovered_from_anchor(store)
-    assert sorted(filed) == sorted(
-        [audit.title_for("grep-bypass"), audit.title_for("compose-bypass")]
-    ), filed
+    assert filed == [audit.title_for("grep-bypass")], filed
 
 
 @requires_bd
 def test_second_run_files_nothing_new(tmp_path):
     tr = _write_transcripts(
         tmp_path / "projects",
-        {
-            "a.jsonl": [_grep_bypass_record()],
-            "b.jsonl": [_compose_bypass_record()],
-        },
+        {"a.jsonl": [_grep_bypass_record()]},
     )
     store = _seed_store(tmp_path)
     assert _agentic(store, tr, "audit", "--since", "2026-07-01").returncode == 0
     first = _discovered_from_anchor(store)
-    assert len(first) == 2
+    assert len(first) == 1
 
     assert _agentic(store, tr, "audit", "--since", "2026-07-01").returncode == 0
     second = _discovered_from_anchor(store)
@@ -245,16 +210,12 @@ def test_second_run_files_nothing_new(tmp_path):
 def test_dry_run_prints_measures_and_files_nothing(tmp_path):
     tr = _write_transcripts(
         tmp_path / "projects",
-        {
-            "a.jsonl": [_grep_bypass_record()],
-            "b.jsonl": [_compose_bypass_record()],
-        },
+        {"a.jsonl": [_grep_bypass_record()]},
     )
     store = _seed_store(tmp_path)
     r = _agentic(store, tr, "audit", "--since", "2026-07-01", "--dry-run")
     assert r.returncode == 0, r.stderr
     # Measures are reported...
     assert "grep-bypass" in r.stdout
-    assert "compose-bypass" in r.stdout
     # ...but nothing is filed.
     assert _discovered_from_anchor(store) == []

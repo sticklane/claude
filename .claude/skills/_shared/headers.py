@@ -1,10 +1,7 @@
-"""Shared task-header parsing for the toolkit's own skill scripts.
+"""Shared authored-header parsing for the toolkit's own skill scripts.
 
-One home for the `Key: value` task-header regexes and the importlib bootstrap
-helper that `workboard.py`, `drain_frontier.py`, and `shadow.py` each
-otherwise defined or duplicated locally. Consolidating them here means the
-same header reads one way everywhere — the `Priority:` divergence this module
-closes had the toolkit's consumers parsing `Priority: [P1]` two ways.
+Task status and dependency state live in bd and are intentionally absent.
+This module retains the authored `Priority:` parser and importlib bootstrap.
 
 Reached the same way workboard reaches `viz`/`spec_readiness`:
 `sys.path.insert(0, <.../_shared>)` then `import headers` — a regular import,
@@ -17,11 +14,7 @@ Stdlib only; no side effects on import beyond compiling the regexes.
 import importlib.util
 import re
 
-# `Status:` tolerates the bracketed `[value]` shape (`Status: [done]`).
-STATUS_RE = re.compile(r"^Status:\s*\[?([A-Za-z_-]+)\]?", re.MULTILINE)
-# `Depends on:` — the raw remainder of the line (parsed into entries by callers).
-DEPENDS_RE = re.compile(r"^Depends on:\s*(.*)$", re.MULTILINE)
-# `Priority:` — bracket-tolerant like `Status:`, but range-restricted to the
+# `Priority:` is bracket-tolerant but range-restricted to the
 # toolkit's defined P0-P3 priorities. An out-of-range value (`P7`) does NOT
 # match, so callers fall through to their own default (P2).
 PRIORITY_RE = re.compile(r"^Priority:\s*\[?(P[0-3])\]?", re.MULTILINE)

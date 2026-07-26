@@ -9,7 +9,6 @@ import contextlib
 import io
 import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -159,6 +158,674 @@ def make_handoff_record(issue_id="md-abc123", **fields):
     return record
 
 
+def make_spec_issue(
+    path,
+    status="open",
+    issue_id="tk-1",
+    dependencies=None,
+    metadata=None,
+    notes=None,
+    comments=None,
+):
+    issue = {
+        "id": issue_id,
+        "external_ref": f"spec-task:{path}",
+        "status": status,
+        "dependencies": dependencies or [],
+    }
+    if metadata is not None:
+        issue["metadata"] = metadata
+    if notes is not None:
+        issue["notes"] = notes
+    if comments is not None:
+        issue["comments"] = comments
+    return issue
+
+
+class TestBdTaskAuthority(unittest.TestCase):
+    def test_bd_status_and_dependencies_win_over_frozen_markdown_headers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = root / "specs" / "demo"
+            (spec / "tasks").mkdir(parents=True)
+            (spec / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
+            (spec / "tasks" / "01-base.md").write_text(
+                "# Base\nStatus: pending\nDepends on: none\n", encoding="utf-8"
+            )
+            (spec / "tasks" / "02-next.md").write_text(
+                "# Next\nStatus: done\nDepends on: none\n", encoding="utf-8"
+            )
+            issues = [
+                make_spec_issue(
+                    "specs/demo/tasks/01-base.md",
+                    status="closed",
+                    issue_id="tk-base",
+                ),
+                make_spec_issue(
+                    "specs/demo/tasks/02-next.md",
+                    status="open",
+                    issue_id="tk-next",
+                    dependencies=[
+                        {
+                            "issue_id": "tk-next",
+                            "depends_on_id": "tk-base",
+                            "type": "blocks",
+                        }
+                    ],
+                ),
+            ]
+
+            scanned = workboard.scan_toolkit_specs(root, bd_issues=issues)[0]
+
+        self.assertEqual(
+            [task["status"] for task in scanned["tasks"]], ["done", "pending"]
+        )
+        self.assertEqual(scanned["tasks"][1]["deps"], ["specs/demo/tasks/01-base.md"])
+        self.assertEqual(scanned["tasks_done"], 1)
+        self._assert_build_and_drain_route_claims_and_results_through_bd()
+        self._assert_queue_wave_settles_only_owned_claims()
+
+    def _run_agentic(self, repo_root, store, actor, *args):
+        return subprocess.run(
+            [sys.executable, "-m", "agentic", *args],
+            cwd=store,
+            env={
+                **os.environ,
+                "PYTHONPATH": str(repo_root),
+                "BD_ACTOR": actor,
+            },
+            capture_output=True,
+            text=True,
+        )
+
+    def _bd_issue(self, store, issue_id):
+        return json.loads(
+            subprocess.run(
+                ["bd", "--readonly", "show", issue_id, "--json"],
+                cwd=store,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+        )[0]
+
+    def _assert_build_and_drain_route_claims_and_results_through_bd(self):
+        from agentic import bd
+
+        repo_root = workboard.SCRIPT.parents[3]
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "authority-fixture"
+            store.mkdir()
+            subprocess.run(["git", "init", "-q", "."], cwd=store, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "authority@example.com"],
+                cwd=store,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Authority fixture"],
+                cwd=store,
+                check=True,
+            )
+            bd.bd_init(str(store))
+
+            tasks = store / "specs" / "demo" / "tasks"
+            tasks.mkdir(parents=True)
+            frozen = {
+                "01-conflict.md": "# Conflict\nStatus: pending\n",
+                "02-close.md": "# Close\nStatus: done\n",
+                "03-block.md": "# Block\nStatus: done\n",
+                "04-verify.md": "# Verify\nStatus: done\n",
+            }
+            for name, text in frozen.items():
+                (tasks / name).write_text(text, encoding="utf-8")
+
+            rows = [
+                {
+                    "id": issue_id,
+                    "title": issue_id,
+                    "external_ref": f"spec-task:specs/demo/tasks/{name}",
+                    "status": status,
+                    "priority": 1,
+                    "issue_type": "task",
+                    "metadata": metadata,
+                }
+                for issue_id, name, status, metadata in (
+                    (
+                        "fx-conflict",
+                        "01-conflict.md",
+                        "open",
+                        {"touch": ["src/fx-conflict.py"]},
+                    ),
+                    (
+                        "fx-close",
+                        "02-close.md",
+                        "open",
+                        {"touch": ["src/fx-close.py"]},
+                    ),
+                    (
+                        "fx-block",
+                        "03-block.md",
+                        "open",
+                        {"touch": ["src/fx-block.py"]},
+                    ),
+                    (
+                        "fx-verify",
+                        "04-verify.md",
+                        "blocked",
+                        {
+                            "touch": ["src/fx-verify.py"],
+                            "verification_required": "true",
+                        },
+                    ),
+                )
+            ]
+            seed = store / "seed.jsonl"
+            seed.write_text(
+                "\n".join(json.dumps(row) for row in rows) + "\n",
+                encoding="utf-8",
+            )
+            bd.bd_import(str(seed), cwd=str(store))
+
+            ready = self._run_agentic(
+                repo_root, store, "queue-reader", "ready", "--json"
+            )
+            self.assertEqual(ready.returncode, 0, ready.stderr)
+            ready_ids = {row["id"] for row in json.loads(ready.stdout)}
+            self.assertNotIn("fx-verify", ready_ids)
+
+            winner = self._run_agentic(
+                repo_root, store, "winning-run", "claim", "fx-conflict"
+            )
+            self.assertEqual(winner.returncode, 0, winner.stderr)
+            loser = self._run_agentic(
+                repo_root, store, "losing-run", "claim", "fx-conflict"
+            )
+            self.assertNotEqual(loser.returncode, 0)
+            self.assertIn("already claimed", loser.stderr.lower())
+            self.assertEqual(self._bd_issue(store, "fx-conflict")["status"], "in_progress")
+
+            close_claim = self._run_agentic(
+                repo_root, store, "build-run", "claim", "fx-close"
+            )
+            self.assertEqual(close_claim.returncode, 0, close_claim.stderr)
+            done = store / "done.json"
+            done.write_text(
+                json.dumps({"status": "DONE", "summary": "verified"}),
+                encoding="utf-8",
+            )
+            close = self._run_agentic(
+                repo_root,
+                store,
+                "build-run",
+                "verdict",
+                "fx-close",
+                "--file",
+                str(done),
+            )
+            self.assertEqual(close.returncode, 0, close.stderr)
+            self.assertEqual(self._bd_issue(store, "fx-close")["status"], "closed")
+
+            block_claim = self._run_agentic(
+                repo_root, store, "drain-run", "claim", "fx-block"
+            )
+            self.assertEqual(block_claim.returncode, 0, block_claim.stderr)
+            blocked = store / "blocked.json"
+            blocked.write_text(
+                json.dumps(
+                    {
+                        "status": "BLOCKED",
+                        "summary": "dependency unavailable",
+                        "unblock": {"type": "run", "detail": "retry dependency"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            block = self._run_agentic(
+                repo_root,
+                store,
+                "drain-run",
+                "verdict",
+                "fx-block",
+                "--file",
+                str(blocked),
+            )
+            self.assertEqual(block.returncode, 0, block.stderr)
+            self.assertEqual(self._bd_issue(store, "fx-block")["status"], "blocked")
+
+            self.assertEqual(
+                {name: (tasks / name).read_text(encoding="utf-8") for name in frozen},
+                frozen,
+            )
+
+    def _run_queue_wave(self, scenario):
+        reference = (
+            workboard.SCRIPT.parents[1] / "workflow-author" / "reference.md"
+        ).read_text(encoding="utf-8")
+        section = reference.split("## Template: queue-wave.js", 1)[1]
+        source = section.split("```javascript", 1)[1].split("```", 1)[0]
+        source = source.replace("export const meta", "const meta", 1)
+        harness = "\n".join(
+            [
+                f"const scenario = {json.dumps(scenario)}",
+                "const issue = { status: scenario.initialStatus, owner: scenario.initialOwner }",
+                "const trace = []",
+                "const phase = name => trace.push({ kind: 'phase', name })",
+                "const log = message => trace.push({ kind: 'log', message })",
+                "const budget = { remaining: () => 100 }",
+                "const args = {}",
+                "const pipeline = async (items, fn) => {",
+                "  const values = []",
+                "  for (const item of items) values.push(await fn(item))",
+                "  return values",
+                "}",
+                "const agent = async (prompt, options) => {",
+                "  trace.push({ kind: 'agent', phase: options.phase, label: options.label || '', prompt })",
+                "  if (options.phase === 'inventory') {",
+                "    return { tasks: [{ issueId: 'fx-task', path: 'specs/demo/tasks/01-task.md' }] }",
+                "  }",
+                "  if (options.phase === 'dispatch' && !String(options.label).startsWith('verify ')) {",
+                "    if (issue.owner && issue.owner !== scenario.runOwner) {",
+                "      return { outcome: 'CLAIM_CONFLICT', claimOwned: false, report: 'owned elsewhere' }",
+                "    }",
+                "    issue.owner = scenario.runOwner",
+                "    issue.status = 'in_progress'",
+                "    return { outcome: scenario.workerOutcome, claimOwned: true, report: scenario.report, branch: 'fixture' }",
+                "  }",
+                "  if (options.phase === 'dispatch') {",
+                "    return { verdict: scenario.verifyOutcome, evidence: 'fixture evidence' }",
+                "  }",
+                "  if (options.phase === 'settle') {",
+                "    if (issue.owner !== scenario.runOwner) throw new Error('settlement without claim ownership')",
+                "    if (prompt.startsWith('Close bd issue')) issue.status = 'closed'",
+                "    else if (prompt.startsWith('Set bd issue')) issue.status = 'blocked'",
+                "    else if (prompt.startsWith('Reopen bd issue')) issue.status = 'open'",
+                "    return { issueId: 'fx-task', status: issue.status }",
+                "  }",
+                "  throw new Error(`unexpected agent call: ${options.phase} ${prompt}`)",
+                "}",
+                "const result = await (async () => {",
+                source,
+                "})()",
+                "process.stdout.write(JSON.stringify({ result, issue, trace }))",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            script = Path(tmp) / "queue-wave.mjs"
+            script.write_text(harness, encoding="utf-8")
+            result = subprocess.run(
+                ["node", str(script)],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        return json.loads(result.stdout)
+
+    def _assert_queue_wave_settles_only_owned_claims(self):
+        conflict = self._run_queue_wave(
+            {
+                "initialStatus": "in_progress",
+                "initialOwner": "other-run",
+                "runOwner": "this-run",
+                "workerOutcome": "DONE",
+                "verifyOutcome": "PASS",
+                "report": "unused",
+            }
+        )
+        self.assertEqual(
+            conflict["issue"], {"status": "in_progress", "owner": "other-run"}
+        )
+        self.assertEqual(
+            [event for event in conflict["trace"] if event.get("phase") == "settle"],
+            [],
+        )
+        self.assertEqual(
+            [row["verdict"] for row in conflict["result"]["claimConflicts"]],
+            ["CLAIM_CONFLICT"],
+        )
+
+        closed = self._run_queue_wave(
+            {
+                "initialStatus": "open",
+                "initialOwner": None,
+                "runOwner": "this-run",
+                "workerOutcome": "DONE",
+                "verifyOutcome": "PASS",
+                "report": "done",
+            }
+        )
+        self.assertEqual(closed["issue"]["status"], "closed")
+
+        blocked = self._run_queue_wave(
+            {
+                "initialStatus": "open",
+                "initialOwner": None,
+                "runOwner": "this-run",
+                "workerOutcome": "BLOCKED",
+                "verifyOutcome": "PASS",
+                "report": "dependency unavailable",
+            }
+        )
+        self.assertEqual(blocked["issue"]["status"], "blocked")
+
+
+class TestBdAuthorityAdditiveContracts(unittest.TestCase):
+    def test_build_and_drain_cli_route_live_state_through_bd(self):
+        from agentic import bd
+
+        repo_root = workboard.SCRIPT.parents[3]
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "authority-fixture"
+            store.mkdir()
+            subprocess.run(["git", "init", "-q", "."], cwd=store, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "authority@example.com"],
+                cwd=store,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Authority fixture"],
+                cwd=store,
+                check=True,
+            )
+            bd.bd_init(str(store))
+
+            tasks = store / "specs" / "demo" / "tasks"
+            tasks.mkdir(parents=True)
+            (store / "specs" / "demo" / "SPEC.md").write_text(
+                "# Demo\n", encoding="utf-8"
+            )
+            (tasks / "01-build.md").write_text(
+                "# Build\nStatus: done\n", encoding="utf-8"
+            )
+            (tasks / "02-drain-open.md").write_text(
+                "# Drain open\nStatus: done\n", encoding="utf-8"
+            )
+            (tasks / "03-drain-closed.md").write_text(
+                "# Drain closed\nStatus: pending\n", encoding="utf-8"
+            )
+
+            rows = [
+                {
+                    "id": "fx-build",
+                    "title": "build target",
+                    "external_ref": "spec-task:specs/demo/tasks/01-build.md",
+                    "status": "open",
+                    "priority": 1,
+                    "issue_type": "task",
+                    "metadata": {"touch": ["src/build.py"]},
+                },
+                {
+                    "id": "fx-drain-open",
+                    "title": "drain target",
+                    "external_ref": "spec-task:specs/demo/tasks/02-drain-open.md",
+                    "status": "open",
+                    "priority": 1,
+                    "issue_type": "task",
+                    "metadata": {"touch": ["src/drain.py"]},
+                },
+                {
+                    "id": "fx-drain-closed",
+                    "title": "closed target",
+                    "external_ref": "spec-task:specs/demo/tasks/03-drain-closed.md",
+                    "status": "closed",
+                    "priority": 1,
+                    "issue_type": "task",
+                    "metadata": {"touch": ["src/closed.py"]},
+                },
+            ]
+            seed = store / "seed.jsonl"
+            seed.write_text(
+                "\n".join(json.dumps(row) for row in rows) + "\n",
+                encoding="utf-8",
+            )
+            bd.bd_import(str(seed), cwd=str(store))
+
+            env = {
+                **os.environ,
+                "PYTHONPATH": str(repo_root),
+                "BD_ACTOR": "authority-test",
+            }
+            ready = subprocess.run(
+                [sys.executable, "-m", "agentic", "ready", "--json"],
+                cwd=store,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            ready_ids = {row["id"] for row in json.loads(ready.stdout)}
+            self.assertIn("fx-drain-open", ready_ids)
+            self.assertNotIn("fx-drain-closed", ready_ids)
+
+            claimed = subprocess.run(
+                [sys.executable, "-m", "agentic", "claim", "fx-build"],
+                cwd=store,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(claimed.returncode, 0, claimed.stderr)
+            current = json.loads(
+                subprocess.run(
+                    ["bd", "--readonly", "show", "fx-build", "--json"],
+                    cwd=store,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout
+            )[0]
+            self.assertEqual(current["status"], "in_progress")
+            self.assertIn("Status: done", (tasks / "01-build.md").read_text())
+
+    def test_workboard_skill_uses_bd_native_handoffs(self):
+        skill = (
+            workboard.SCRIPT.parent / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("HANDOFF.md", skill)
+
+    def test_handoff_uses_blocked_verification_marker(self):
+        skill = (
+            workboard.SCRIPT.parents[1] / "handoff" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("--status blocked", skill)
+        self.assertIn("--set-metadata verification_required=true", skill)
+        self.assertIn("Unblock: agent:", skill)
+        self.assertIn(
+            "--unset-metadata verification_required --status closed", skill
+        )
+        self.assertIn(
+            "--unset-metadata verification_required --status open", skill
+        )
+        self.assertNotIn("needs-verification bd state", skill)
+
+    def test_queue_wave_awaits_terminal_tracker_settlement(self):
+        reference = (
+            workboard.SCRIPT.parents[1] / "workflow-author" / "reference.md"
+        ).read_text(encoding="utf-8")
+        queue_wave = reference.split("## Template: queue-wave.js", 1)[1]
+        required = [
+            "phase('settle')",
+            "await pipeline(results",
+            "Close bd issue ${r.issueId}",
+            "Set bd issue ${r.issueId} to blocked",
+            "Reopen bd issue ${r.issueId}",
+        ]
+        self.assertEqual(
+            [token for token in required if token not in queue_wave], []
+        )
+
+
+class TestBdBlockerDetailAuthority(unittest.TestCase):
+    def _scan_task(self, markdown, issue):
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_unblock_spec(tmp, tasks={"01-a.md": markdown})
+            return workboard.scan_toolkit_specs(Path(tmp), bd_issues=[issue])[0][
+                "tasks"
+            ][0]
+
+    def test_latest_bd_comment_wins_over_frozen_markdown_unblock(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md",
+            status="blocked",
+            comments=[
+                {
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "text": "Unblock: run: stale tracker step",
+                },
+                {
+                    "created_at": "2026-01-02T00:00:00Z",
+                    "text": "Unblock: ask: which live credential?",
+                },
+            ],
+        )
+
+        task = self._scan_task(
+            "# A\nStatus: blocked\nUnblock: agent: markdown history\n", issue
+        )
+
+        self.assertEqual(
+            task["unblock"], {"type": "ask", "step": "which live credential?"}
+        )
+
+    def test_bd_metadata_supplies_structured_unblock_and_deferred_questions(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md",
+            status="deferred",
+            metadata={
+                "unblock": {"type": "agent", "detail": "recheck deployment"},
+                "deferred_questions": ["which provider?", "which region?"],
+            },
+        )
+
+        task = self._scan_task("# A\nStatus: done\n", issue)
+
+        self.assertEqual(
+            task["unblock"], {"type": "agent", "step": "recheck deployment"}
+        )
+        self.assertEqual(
+            task["deferred_questions"], ["which provider?", "which region?"]
+        )
+
+    def test_bd_notes_supply_blocker_details(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md",
+            status="blocked",
+            notes=(
+                "Unblock: run: make smoke\n\n"
+                "## Deferred questions\n\n- keep the fallback?\n"
+            ),
+        )
+
+        task = self._scan_task("# A\nStatus: blocked\n", issue)
+
+        self.assertEqual(task["unblock"], {"type": "run", "step": "make smoke"})
+        self.assertEqual(task["deferred_questions"], ["keep the fallback?"])
+
+    def test_bd_metadata_preserves_human_provision_type(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md",
+            status="blocked",
+            metadata={
+                "unblock": {"type": "provision", "detail": "grant deploy access"}
+            },
+        )
+
+        task = self._scan_task("# A\nStatus: pending\n", issue)
+
+        self.assertEqual(
+            task["unblock"], {"type": "provision", "step": "grant deploy access"}
+        )
+
+    def test_markdown_blocker_details_are_display_history_only(self):
+        issue = make_spec_issue("specs/demo/tasks/01-a.md", status="blocked")
+
+        task = self._scan_task(
+            (
+                "# A\nStatus: blocked\nUnblock: ask: stale question\n\n"
+                "## Deferred questions\n\n- stale deferred question\n"
+            ),
+            issue,
+        )
+
+        self.assertNotIn("unblock", task)
+        self.assertNotIn("deferred_questions", task)
+
+    def test_detail_read_error_becomes_explicit_retry_attention_item(self):
+        issue = make_spec_issue(
+            "specs/demo/tasks/01-a.md", status="blocked", issue_id="tk-detail"
+        )
+        issue["_detail_error"] = "bd show failed: database locked"
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_unblock_spec(tmp, tasks={"01-a.md": "# Blocked task\n"})
+            repo = make_repo_record(path="/r/demo")
+            repo["specs"] = workboard.scan_toolkit_specs(
+                Path(tmp), bd_issues=[issue]
+            )
+
+        detail_rows = [
+            item
+            for item in workboard.attention_items(
+                [repo], [], [], stale_days=7
+            )
+            if "tracker detail" in item["what"].lower()
+        ]
+
+        self.assertEqual(len(detail_rows), 1)
+        self.assertIn("database locked", detail_rows[0]["why"])
+        self.assertIn(
+            "bd show --include-comments --id=tk-detail --json",
+            detail_rows[0]["cmd"],
+        )
+
+
+class TestBdTrackerSnapshot(unittest.TestCase):
+    def _repo_with_beads(self, root):
+        repo = Path(root)
+        (repo / ".beads").mkdir()
+        return repo
+
+    def test_absent_tracker_is_explicitly_uninitialized(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            snapshot = workboard._list_bd_issues(Path(tmp))
+
+        self.assertEqual(snapshot["state"], "uninitialized")
+        self.assertEqual(snapshot["issues"], [])
+
+    def test_missing_bd_binary_is_explicitly_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo_with_beads(tmp)
+            with mock.patch.object(
+                workboard.subprocess, "run", side_effect=FileNotFoundError
+            ):
+                snapshot = workboard._list_bd_issues(repo)
+
+        self.assertEqual(snapshot["state"], "unavailable")
+        self.assertIn("not found", snapshot["error"])
+
+    def test_timed_out_bd_read_is_explicit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo_with_beads(tmp)
+            timeout = subprocess.TimeoutExpired(cmd=["bd"], timeout=5)
+            with mock.patch.object(workboard.subprocess, "run", side_effect=timeout):
+                snapshot = workboard._list_bd_issues(repo)
+
+        self.assertEqual(snapshot["state"], "timeout")
+        self.assertIn("timed out", snapshot["error"])
+
+    def test_invalid_bd_json_is_explicit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo_with_beads(tmp)
+            result = subprocess.CompletedProcess(
+                args=["bd"], returncode=0, stdout="{not json", stderr=""
+            )
+            with mock.patch.object(workboard.subprocess, "run", return_value=result):
+                snapshot = workboard._list_bd_issues(repo)
+
+        self.assertEqual(snapshot["state"], "invalid")
+        self.assertIn("JSON", snapshot["error"])
+
+
 class TestOpenStatusNotBlocked(unittest.TestCase):
     def test_status_open_counts_as_open_not_blocked(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -169,25 +836,55 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
                 "# A\nStatus: open\n", encoding="utf-8"
             )
 
-            specs = workboard.scan_toolkit_specs(Path(tmp))
+            specs = workboard.scan_toolkit_specs(
+                Path(tmp),
+                bd_issues=[make_spec_issue("specs/demo/tasks/01-a.md", status="open")],
+            )
 
             self.assertEqual(specs[0]["tasks_blocked"], [])
 
-    def test_needs_verification_is_open_not_blocked(self):
-        # Formal status for completed-but-unverified work: agent-bounded
-        # (the verifier proceeds), so it is open — never a blocked flag.
+    def test_blocked_verification_marker_renders_as_needs_verification(self):
         with tempfile.TemporaryDirectory() as tmp:
             spec = Path(tmp) / "specs" / "demo"
             (spec / "tasks").mkdir(parents=True)
             (spec / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
             (spec / "tasks" / "01-a.md").write_text(
-                "# A\nStatus: needs-verification\n", encoding="utf-8"
+                "# A\nStatus: done\n", encoding="utf-8"
             )
 
-            specs = workboard.scan_toolkit_specs(Path(tmp))
+            specs = workboard.scan_toolkit_specs(
+                Path(tmp),
+                bd_issues=[
+                    make_spec_issue(
+                        "specs/demo/tasks/01-a.md",
+                        status="blocked",
+                        metadata={"verification_required": "true"},
+                        comments=[
+                            {
+                                "created_at": "2026-01-01T00:00:00Z",
+                                "text": (
+                                    "Unblock: agent: run verifier against the "
+                                    "recorded acceptance criteria"
+                                ),
+                            }
+                        ],
+                    )
+                ],
+            )
+            repo = make_repo_record(path=tmp)
+            repo["specs"] = specs
 
             self.assertEqual(specs[0]["tasks_blocked"], [])
             self.assertEqual(specs[0]["tasks_done"], 0)
+            self.assertEqual(specs[0]["tasks"][0]["status"], "needs-verification")
+            self.assertEqual(
+                specs[0]["tasks"][0]["unblock"],
+                {
+                    "type": "agent",
+                    "step": "run verifier against the recorded acceptance criteria",
+                },
+            )
+            self.assertEqual(workboard.ready_items([repo])["items"], [])
 
     def test_status_failed_still_flags_as_blocked(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -198,7 +895,12 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
                 "# A\nStatus: failed\n", encoding="utf-8"
             )
 
-            specs = workboard.scan_toolkit_specs(Path(tmp))
+            specs = workboard.scan_toolkit_specs(
+                Path(tmp),
+                bd_issues=[
+                    make_spec_issue("specs/demo/tasks/01-a.md", status="failed")
+                ],
+            )
 
             self.assertEqual(len(specs[0]["tasks_blocked"]), 1)
 
@@ -1232,10 +1934,20 @@ def _write_unblock_spec(root, slug="demo", spec_body="# Demo\n", tasks=None):
 
 
 class TestUnblockParsing(unittest.TestCase):
-    def _scan_task(self, body, name="01-a.md"):
+    def _scan_task(self, body, name="01-a.md", status="blocked"):
         with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, tasks={name: body})
-            specs = workboard.scan_toolkit_specs(Path(tmp))
+            _write_unblock_spec(
+                tmp,
+                tasks={name: "# A\nStatus: done\nUnblock: ask: markdown history\n"},
+            )
+            specs = workboard.scan_toolkit_specs(
+                Path(tmp),
+                bd_issues=[
+                    make_spec_issue(
+                        f"specs/demo/tasks/{name}", status=status, notes=body
+                    )
+                ],
+            )
         return specs[0]["tasks"][0]
 
     def test_blocked_task_with_ask_unblock_parses_type_and_step(self):
@@ -1255,7 +1967,9 @@ class TestUnblockParsing(unittest.TestCase):
         self.assertNotIn("unblock", t)
 
     def test_unblock_line_on_non_blocked_task_is_ignored(self):
-        t = self._scan_task("# A\nStatus: pending\nUnblock: ask: which creds?\n")
+        t = self._scan_task(
+            "# A\nStatus: pending\nUnblock: ask: which creds?\n", status="open"
+        )
         self.assertNotIn("unblock", t)
 
     def test_deferred_questions_section_appears_in_task_json(self):
@@ -1270,7 +1984,7 @@ class TestUnblockParsing(unittest.TestCase):
 
 
 class TestWaitingSpecUnblock(unittest.TestCase):
-    def test_waiting_spec_header_surfaces_unblock_and_counts_open(self):
+    def test_waiting_spec_header_is_frozen_display_not_live_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             _write_unblock_spec(
                 tmp,
@@ -1278,10 +1992,8 @@ class TestWaitingSpecUnblock(unittest.TestCase):
             )
             specs = workboard.scan_toolkit_specs(Path(tmp))
         s = specs[0]
-        self.assertEqual(s["unblock"], {"type": "agent", "step": "check the deploy"})
-        self.assertEqual(s["status"], "waiting")
-        # a waiting spec (no completed tasks) still counts among open specs
-        self.assertTrue(s["tasks_total"] == 0 or s["tasks_done"] < s["tasks_total"])
+        self.assertNotIn("unblock", s)
+        self.assertNotIn("status", s)
 
     def test_spec_without_status_header_has_no_unblock_key(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1375,6 +2087,18 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         )
         self.assertEqual(self._inbox(spec), [])
 
+    def test_provision_unblock_task_is_a_human_blocked_item(self):
+        spec = _unblock_spec(
+            [
+                _unblock_task(
+                    unblock={"type": "provision", "step": "grant deploy access"}
+                )
+            ]
+        )
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("grant deploy access", blocked[0]["why"])
+
     def test_draft_task_is_not_an_inbox_item(self):
         # Drafts are queue state (intake promotes them); decision-shaped
         # drafts surface via HUMAN.md entries, not the spec-blocked row.
@@ -1388,6 +2112,37 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         self.assertEqual(len(blocked), 1)
         self.assertIn("no unblock step recorded", blocked[0]["why"])
 
+    def test_unregistered_task_points_to_create_only_registration(self):
+        spec = _unblock_spec([_unblock_task(status="unregistered")])
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("missing bd issue", blocked[0]["why"])
+        self.assertIn("agentic register-spec specs/demo", blocked[0]["cmd"])
+
+    def test_uninitialized_tracker_points_to_initialization_not_registration(self):
+        spec = _unblock_spec([_unblock_task(status="tracker-unavailable")])
+        spec["tracker_state"] = "uninitialized"
+        spec["tracker_error"] = "tracker directory .beads is absent"
+
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("not initialized", blocked[0]["what"])
+        self.assertIn("agentic init", blocked[0]["cmd"])
+        self.assertNotIn("register-spec", blocked[0]["cmd"])
+
+    def test_tracker_read_error_points_to_retry_not_registration(self):
+        spec = _unblock_spec([_unblock_task(status="tracker-unavailable")])
+        spec["tracker_state"] = "timeout"
+        spec["tracker_error"] = "bd list timed out after 5s"
+
+        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
+
+        self.assertEqual(len(blocked), 1)
+        self.assertIn("tracker read failed", blocked[0]["what"])
+        self.assertIn("bd list", blocked[0]["cmd"])
+        self.assertNotIn("register-spec", blocked[0]["cmd"])
+
     def test_ask_unblock_task_does_not_duplicate_spec_blocked_row(self):
         # The ask task already has its own needs-answer row; the spec-level
         # blocked row must not repeat it.
@@ -1397,14 +2152,11 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         inbox = self._inbox(spec)
         self.assertEqual([i["state"] for i in inbox], ["needs-answer"])
 
-    def test_waiting_spec_ask_unblock_becomes_needs_answer(self):
+    def test_waiting_spec_ask_unblock_is_frozen_and_ignored(self):
         spec = _unblock_spec(
             [], status="waiting", unblock={"type": "ask", "step": "sign in at URL?"}
         )
-        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
-        self.assertEqual(len(answer), 1)
-        self.assertIn("sign in at URL?", answer[0]["why"])
-        self.assertNotIn("cmd", answer[0])
+        self.assertEqual(self._inbox(spec), [])
 
     def test_waiting_spec_agent_unblock_is_not_an_inbox_item(self):
         # Agent-bounded: the recheck step proceeds; not an attention item.
@@ -1413,11 +2165,9 @@ class TestNeedsAnswerInbox(unittest.TestCase):
         )
         self.assertEqual(self._inbox(spec), [])
 
-    def test_waiting_spec_without_unblock_still_flags(self):
+    def test_waiting_spec_without_unblock_is_frozen_and_ignored(self):
         spec = _unblock_spec([], status="waiting")
-        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
-        self.assertEqual(len(blocked), 1)
-        self.assertIn("no unblock step recorded", blocked[0]["why"])
+        self.assertEqual(self._inbox(spec), [])
 
 
 class TestStructuredUnblockForwarded(unittest.TestCase):
@@ -1443,18 +2193,6 @@ class TestStructuredUnblockForwarded(unittest.TestCase):
         answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
         self.assertEqual(answer[0].get("deferred_questions"), ["which provider?"])
 
-    def test_waiting_spec_ask_item_forwards_structured_unblock_dict(self):
-        ub = {"type": "ask", "step": "sign in at URL?"}
-        spec = _unblock_spec([], status="waiting", unblock=ub)
-        answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
-        self.assertEqual(answer[0].get("unblock"), ub)
-
-    def test_waiting_spec_blocked_item_marks_unblock_missing_when_absent(self):
-        spec = _unblock_spec([], status="waiting")
-        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
-        self.assertIs(blocked[0].get("unblock"), None)
-        self.assertIs(blocked[0].get("unblock_missing"), True)
-
     def test_blocked_task_item_marks_unblock_missing_when_absent(self):
         spec = _unblock_spec([_unblock_task()])
         blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
@@ -1468,14 +2206,6 @@ class TestStructuredUnblockForwarded(unittest.TestCase):
         )
         answer = [i for i in self._inbox(spec) if i["state"] == "needs-answer"]
         self.assertNotEqual(answer[0].get("unblock_missing"), True)
-
-    def test_why_text_unchanged_on_blocked_waiting_spec(self):
-        # Display prose stays as-is for backward compatibility.
-        spec = _unblock_spec([], status="waiting")
-        blocked = [i for i in self._inbox(spec) if i["state"] == "blocked"]
-        self.assertEqual(
-            blocked[0]["why"], "no unblock step recorded — add an Unblock: line"
-        )
 
 
 def _agent_tool_use(tool_use_id, subagent_type="scout", desc="do the thing", ts=OLD_TS):
@@ -1986,58 +2716,23 @@ class GitInfoConfigUpstreamTestCase(unittest.TestCase):
             self.assertIsNone(info["behind"])
 
 
-class TestDeferSpec(unittest.TestCase):
-    def _spec_text(self, root, slug="demo"):
-        return (Path(root) / "specs" / slug / "SPEC.md").read_text(encoding="utf-8")
-
-    def test_defer_spec_inserts_status_after_title_when_absent(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, spec_body="# Demo\n\nBody text.\n")
-            found = workboard.defer_spec(Path(tmp), "demo")
-            lines = self._spec_text(tmp).splitlines()
-        self.assertTrue(found)
-        self.assertEqual(lines[0], "# Demo")
-        self.assertEqual(lines[1], "Status: deferred")
-
-    def test_defer_spec_updates_an_existing_status_line_in_place(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, spec_body="# Demo\nStatus: waiting\nBody.\n")
-            workboard.defer_spec(Path(tmp), "demo")
-            text = self._spec_text(tmp)
-        self.assertEqual(len(workboard.STATUS_RE.findall(text)), 1)
-        self.assertEqual(workboard.STATUS_RE.search(text).group(1), "deferred")
-
-    def test_defer_spec_is_idempotent(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, spec_body="# Demo\n\nBody.\n")
-            workboard.defer_spec(Path(tmp), "demo")
-            once = self._spec_text(tmp)
-            workboard.defer_spec(Path(tmp), "demo")
-            twice = self._spec_text(tmp)
-        self.assertEqual(once, twice)
-        self.assertEqual(len(workboard.STATUS_RE.findall(twice)), 1)
-
-    def test_defer_spec_reports_unknown_slug_as_not_found(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            _write_unblock_spec(tmp, spec_body="# Demo\n")
-            self.assertFalse(workboard.defer_spec(Path(tmp), "nope"))
-
-    def test_deferred_spec_header_is_captured_by_scanner(self):
+class TestFrozenSpecStatus(unittest.TestCase):
+    def test_deferred_spec_header_is_ignored_by_scanner(self):
         with tempfile.TemporaryDirectory() as tmp:
             _write_unblock_spec(tmp, spec_body="# Demo\nStatus: deferred\n")
             specs = workboard.scan_toolkit_specs(Path(tmp))
-        self.assertEqual(specs[0]["status"], "deferred")
+        self.assertNotIn("status", specs[0])
 
-    def test_deferred_spec_is_excluded_from_stale_inbox(self):
+    def test_frozen_deferred_header_cannot_exclude_live_open_work(self):
         stale_ts = workboard.now_ts() - 30 * 86400
-        spec = _unblock_spec([_unblock_task(status="pending")], status="deferred")
+        spec = _unblock_spec([_unblock_task(status="pending")])
         spec["last_touched"] = stale_ts
         repo = make_repo_record(path="/r/demo")
         repo["specs"] = [spec]
         items = workboard.attention_items([repo], [], [], stale_days=7)
-        self.assertEqual([i for i in items if i["state"] in ("stale", "blocked")], [])
+        self.assertEqual(len([i for i in items if i["state"] == "stale"]), 1)
 
-    def test_stale_spec_inbox_item_carries_runnable_defer_command(self):
+    def test_stale_spec_inbox_does_not_offer_markdown_defer_command(self):
         spec = _unblock_spec([_unblock_task(status="pending")])
         spec["last_touched"] = workboard.now_ts() - 30 * 86400
         repo = make_repo_record(path="/r/demo")
@@ -2048,16 +2743,14 @@ class TestDeferSpec(unittest.TestCase):
             if i["state"] == "stale"
         ]
         self.assertEqual(len(stale), 1)
-        cmd = stale[0].get("cmd", "")
-        self.assertIn("--defer demo", cmd)
-        self.assertIn("/r/demo", cmd)
+        self.assertNotIn("--defer", stale[0].get("cmd", ""))
 
-    def test_defer_flag_is_registered_on_the_cli(self):
+    def test_defer_flag_is_absent_from_the_cli(self):
         with mock.patch.object(sys, "argv", ["workboard.py", "--help"]):
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 with self.assertRaises(SystemExit):
                     workboard.main()
-        self.assertIn("--defer", out.getvalue())
+        self.assertNotIn("--defer", out.getvalue())
 
 
 if __name__ == "__main__":
