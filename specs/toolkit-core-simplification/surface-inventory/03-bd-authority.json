@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "03-bd-authority",
+  "frozen_sha256": "1a09dcc6f401cebe6620e709b74fbb92dfc6c2b3ad9d5060da300bbc4d9630dd",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_bd_authority_contract.sh#assert:41a7582fb7a5defacd48b614b438fedfeeab54d07f3ca7d80fbf4874ff06d1fa"
+      ],
+      "content_sha256": "8ed0bf42af993cdba8f1013435892def0c7a32a5986cc1b7954d270a3b2a8ca3",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_bd_authority_contract.sh",
+      "path": "tests/test_bd_authority_contract.sh",
+      "rationale": "Canonical behavioral guard that bd wins markdown disagreement and live procedures never update task status headers.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

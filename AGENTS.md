@@ -9,7 +9,7 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 
 - `.claude/`—the source of truth: `skills/` (pipeline stages), `agents/` (scout, critic, verifier...), `rules/` (always-on).
 - `.claude-plugin/`—plugin + marketplace manifests distributing the toolkit as plugin `agentic`.
-- `agentic/`—the `agentic` CLI (Python): fronts bd (tracker) and ctx (index) behind one command. `agentic init` bootstraps a clone's tracker from the committed `.beads/issues.jsonl`; `ready`, `resume`, `claim`, `verdict`, `audit`, and `shadow-sync` (mirror `specs/*/tasks/*.md` headers into bd) are live; the rest are stubs.
+- `agentic/`—the `agentic` CLI (Python): fronts bd (tracker) and ctx (index) behind one command. `agentic init` bootstraps a clone's tracker from the committed `.beads/issues.jsonl`; `register-spec` creates absent task issues and dependency edges from authored definitions without reading status. `ready`, `resume`, `claim`, `verdict`, and `audit` are live; `shadow-sync` is a hidden non-mutating retirement alias. Task 04 owns the remaining stub dispositions.
 - `agentprof/`—pprof profiler for AI-agent token & spend attribution (Claude Code transcripts, GCP billing, OTel; cache re-prime + skill/project attribution metrics—flags and labels in its README/SCHEMA).
 - `agent-console/`—local zero-LLM dashboard (workboard view, `/workboard-kanban` board view grouping every repo's spec tasks into status columns, cost panel incl. re-prime line) for this machine's Claude Code setup.
 - `context-tree/`—Rust CLI `ctx` + MCP server: tree-sitter symbol index (12 languages), structural queries (tree/sig/map/deps/refs/at), refactor-surviving symbol notes; the `/ctx` skill teaches agents to use it.
@@ -25,7 +25,7 @@ plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 
 ## State
 
-- **bd (beads) is the canonical live state** for task status, dependencies, and ready-work (agentic-core-redesign cutover). Task-file `Status:` headers in `specs/*/tasks/*.md` are frozen display, no longer scanned.
+- **bd (beads) is the canonical live state** for task status, dependencies, and ready-work (agentic-core-redesign cutover). Task-file `Status:` headers in `specs/*/tasks/*.md` are frozen display: no live procedure scans or updates them. `agentic register-spec` reads authored definitions once to create absent issues and edges.
 - `specs/QUEUE.md` is the wave plan—dispatch order, not live state.
 - `./specs/status.sh` renders the live dashboard from bd on demand (`bd ready` + `bd list`).
 - In-flight session handoffs land in bd, not on disk: `/handoff` opens one `handoff`-labeled issue per parked session, linked by a `tracks` dependency to every issue it leaves open. `bd list --label handoff --status=open` is the discovery surface the resume hook and `/resume-handoff` both read; `/resume-handoff` closes that issue once the work is picked back up.
