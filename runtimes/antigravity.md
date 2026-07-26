@@ -128,14 +128,10 @@ mode absent an explicit fresh-workspace flag.
 - `<tier alias>` — `--model "<exact name from agy models>"` for the Role
   pins ladder above (unverified — see Tiers).
 - **Discovery walks up to find the workspace root**, not strictly
-  cwd/`--cd`-relative like Codex: invoked from `antigravity/` in this
-  repo, it treated `/Users/sjaconette/claude` (one level up, the git
-  root) as "the project" in its own summary, while still finding and
-  running the skill that only exists under `antigravity/.agents/skills/`
-  — i.e. it discovered skills relative to the actual invocation cwd even
-  while reporting a workspace root above it. Run it from (or `--add-dir`
-  into) `antigravity/`, matching Codex's `--cd codex` convention, until a
-  more precise discovery-root test is run.
+  cwd/`--cd`-relative like Codex. Run Antigravity from the repository root,
+  where `.agents/skills/` exposes the single `.claude/skills/` source through
+  symlinks. The bd queue, `.context/` index, and `specs/` directory resolve
+  from that same root.
 - **Skill invocation** works the same way Codex's does (both consume the
   Agent Skills standard antigravity defines): no custom slash commands,
   reached by natural-language description match. Unlike Codex's
@@ -168,16 +164,17 @@ mode absent an explicit fresh-workspace flag.
   Headless). No schema validation.
 - **Resume**: `--continue`/`-c` (most recent conversation) or
   `--conversation <id>` (resume by id) reattach a previous session,
-  confirmed present in `--help` (not live-tested); a wrapper owns any
-  cross-worker resume logic. `brain/<uuid>/` artifact directories
-  (confirmed live, under `~/.gemini/antigravity-cli/brain/`) persist
-  generated files across a session.
-- **Parallelism cap**: whatever the wrapper imposes; nothing built in.
+  confirmed present in `--help` (not live-tested); the native subagent
+  coordinator owns cross-worker resume logic. `brain/<uuid>/` artifact
+  directories (confirmed live, under `~/.gemini/antigravity-cli/brain/`)
+  persist generated files across a session.
+- **Parallelism cap**: the native subagent coordinator sets the cap; the
+  command-line tool does not provide one.
 
 ## Notes
 
-- **Config locations**: repo — `.agents/skills/`, `.agents/workflows/`,
-  `AGENTS.md` (always-on rules), `.agents/hooks.json`; global —
+- **Config locations**: repository `.agents/skills/` symlinks and
+  `AGENTS.md`; global —
   `~/.gemini/config/skills/`, `~/.gemini/antigravity-cli/brain/`
   (generated-artifact storage, confirmed live). Older Antigravity builds
   read `.agent/` instead of `.agents/`.

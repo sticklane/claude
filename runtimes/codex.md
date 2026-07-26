@@ -71,18 +71,9 @@ codex exec --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>
   skills from `.agents/skills/` under the directory it is invoked in (or
   `--cd <dir>`). Run from, or `--cd` into, the repository root.
 - **No custom slash commands.** `/breakdown`-style invocation does not
-  exist; skills are reached by natural-language description match (15
-  reused skills) or by typing the skill's name — see "What degrades on
-  Codex" in [../codex/README.md](../codex/README.md).
-- **Explicit invocation is unreliable.** The three launch-gated skills
-  (`drain`/`build`/`evals`, `allow_implicit_invocation: false`)
-  do not reliably invoke through `$name` in `codex exec` yet (upstream
-  [openai/codex #19695](https://github.com/openai/codex/issues/19695),
-  [#10585](https://github.com/openai/codex/issues/10585),
-  [#23454](https://github.com/openai/codex/issues/23454)) — confirmed live,
-  `codex/README.md`'s "(c-pos)" result. A headless relaunch of one of the
-  four gated stages on Codex is best-effort until those issues close; the
-  guard against *unwanted* auto-trigger (the c-neg case) does work.
+  exist; Codex discovers every shared skill from the repository-root
+  `.agents/skills/` symlinks and invokes it by description or skill name.
+  Launch authorization remains in the shared skill instructions.
 
 ## Orchestration
 

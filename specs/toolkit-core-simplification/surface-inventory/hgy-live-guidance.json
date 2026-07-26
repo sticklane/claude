@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "hgy-live-guidance",
+  "frozen_sha256": "56d60fa8b9b775018a522486d1416f00206e8576227c19d7bf4394269705299c",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_live_guidance_retirement.sh#assert:dfbaa38cef20e75fc6b16ee249993550137e907f7347ed149dbebfc9d662f180"
+      ],
+      "content_sha256": "c50877c53445f0edd10f83ebfafc88f151a46e28c2f873f12a10c5d0526a4468",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_live_guidance_retirement.sh",
+      "path": "tests/test_live_guidance_retirement.sh",
+      "rationale": "Canonical regression preventing live runtime and frontier guidance from citing retired procedure paths.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

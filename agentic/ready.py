@@ -2,9 +2,9 @@
 
 Lists open tasks whose blocking dependencies are all done and whose Touch
 paths (bd ``touch`` metadata) do not overlap any claimed (in-progress) task
-or a higher-priority ready task, in priority order. The Touch-disjoint
-co-admission and ordering are ported from
-``.claude/skills/drain/drain_frontier.py`` onto bd tracker state.
+or a higher-priority ready task, in priority order. Touch-disjoint
+co-admission and ordering follow the native drain contract over bd tracker
+state.
 
 ``--json`` prints a JSON array; each element carries the documented fields
 ``id``, ``title``, ``priority`` (bd integer, 0 highest), and ``touch`` (the

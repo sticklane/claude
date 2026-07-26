@@ -6,12 +6,10 @@ open tasks whose blocking dependencies are all done, ordered by priority and
 unblocking power, admitted greedily so no two admitted tasks — and no
 admitted task and any in-progress (claimed) task — share a Touch path.
 
-The Touch-disjointness predicate and the ordering are ported verbatim in
-behavior from ``.claude/skills/drain/drain_frontier.py`` and
-``.claude/skills/_shared/touch_disjoint.py`` (glob-prefix conflict,
-conservative on ambiguity; priority then -unblocking_power then id). bd is
-read only through the task-02 ``agentic.bd`` helpers; nothing here shells out
-to bd directly.
+The Touch-disjointness predicate and ordering preserve the native drain
+contract: glob-prefix conflicts are conservative on ambiguity, and ordering
+uses priority, descending unblocking power, then id. bd is read only through
+the task-02 ``agentic.bd`` helpers; nothing here shells out to bd directly.
 """
 
 import json
@@ -39,7 +37,7 @@ def literal_prefix(entry):
 def pair_conflicts(a, b):
     """Two Touch entries conflict when either literal prefix is a prefix of the
     other. Ambiguity (a glob prefix that is itself a prefix of a concrete path)
-    resolves to conflict — conservative, matching drain_frontier.py."""
+    resolves to conflict, matching the native drain contract."""
     pa, pb = literal_prefix(a), literal_prefix(b)
     return pa.startswith(pb) or pb.startswith(pa)
 
