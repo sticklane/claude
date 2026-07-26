@@ -7,7 +7,7 @@ Depends on: 02
 Priority: P1
 Budget: 36 turns
 Spec: ../SPEC.md (requirement R5)
-Touch: agentic/cli.py, agentic/events.py, agentic/schema/run-event.json, tests/test_agentic_events.py, tests/inventory/05-run-events.json, specs/toolkit-core-simplification/surface-inventory/05-run-events.json
+Touch: agentic/cli.py, agentic/events.py, agentic/schema/run-event.json, tests/test_agentic_events.py, tests/test_agentic_events_corrections.py, tests/inventory/05-run-events.json, specs/toolkit-core-simplification/surface-inventory/05-run-events.json, specs/toolkit-core-simplification/surface-inventory/05-run-events-corrections.json
 
 ## Goal
 
