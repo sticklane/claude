@@ -222,6 +222,259 @@ class TestBdTaskAuthority(unittest.TestCase):
         )
         self.assertEqual(scanned["tasks"][1]["deps"], ["specs/demo/tasks/01-base.md"])
         self.assertEqual(scanned["tasks_done"], 1)
+        self._assert_build_and_drain_route_claims_and_results_through_bd()
+        self._assert_queue_wave_settles_only_owned_claims()
+
+    def _run_agentic(self, repo_root, store, actor, *args):
+        return subprocess.run(
+            [sys.executable, "-m", "agentic", *args],
+            cwd=store,
+            env={
+                **os.environ,
+                "PYTHONPATH": str(repo_root),
+                "BD_ACTOR": actor,
+            },
+            capture_output=True,
+            text=True,
+        )
+
+    def _bd_issue(self, store, issue_id):
+        return json.loads(
+            subprocess.run(
+                ["bd", "--readonly", "show", issue_id, "--json"],
+                cwd=store,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+        )[0]
+
+    def _assert_build_and_drain_route_claims_and_results_through_bd(self):
+        from agentic import bd
+
+        repo_root = workboard.SCRIPT.parents[3]
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "authority-fixture"
+            store.mkdir()
+            subprocess.run(["git", "init", "-q", "."], cwd=store, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "authority@example.com"],
+                cwd=store,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Authority fixture"],
+                cwd=store,
+                check=True,
+            )
+            bd.bd_init(str(store))
+
+            tasks = store / "specs" / "demo" / "tasks"
+            tasks.mkdir(parents=True)
+            frozen = {
+                "01-conflict.md": "# Conflict\nStatus: pending\n",
+                "02-close.md": "# Close\nStatus: done\n",
+                "03-block.md": "# Block\nStatus: done\n",
+            }
+            for name, text in frozen.items():
+                (tasks / name).write_text(text, encoding="utf-8")
+
+            rows = [
+                {
+                    "id": issue_id,
+                    "title": issue_id,
+                    "external_ref": f"spec-task:specs/demo/tasks/{name}",
+                    "status": "open",
+                    "priority": 1,
+                    "issue_type": "task",
+                    "metadata": {"touch": [f"src/{issue_id}.py"]},
+                }
+                for issue_id, name in (
+                    ("fx-conflict", "01-conflict.md"),
+                    ("fx-close", "02-close.md"),
+                    ("fx-block", "03-block.md"),
+                )
+            ]
+            seed = store / "seed.jsonl"
+            seed.write_text(
+                "\n".join(json.dumps(row) for row in rows) + "\n",
+                encoding="utf-8",
+            )
+            bd.bd_import(str(seed), cwd=str(store))
+
+            winner = self._run_agentic(
+                repo_root, store, "winning-run", "claim", "fx-conflict"
+            )
+            self.assertEqual(winner.returncode, 0, winner.stderr)
+            loser = self._run_agentic(
+                repo_root, store, "losing-run", "claim", "fx-conflict"
+            )
+            self.assertNotEqual(loser.returncode, 0)
+            self.assertIn("already claimed", loser.stderr.lower())
+            self.assertEqual(self._bd_issue(store, "fx-conflict")["status"], "in_progress")
+
+            close_claim = self._run_agentic(
+                repo_root, store, "build-run", "claim", "fx-close"
+            )
+            self.assertEqual(close_claim.returncode, 0, close_claim.stderr)
+            done = store / "done.json"
+            done.write_text(
+                json.dumps({"status": "DONE", "summary": "verified"}),
+                encoding="utf-8",
+            )
+            close = self._run_agentic(
+                repo_root,
+                store,
+                "build-run",
+                "verdict",
+                "fx-close",
+                "--file",
+                str(done),
+            )
+            self.assertEqual(close.returncode, 0, close.stderr)
+            self.assertEqual(self._bd_issue(store, "fx-close")["status"], "closed")
+
+            block_claim = self._run_agentic(
+                repo_root, store, "drain-run", "claim", "fx-block"
+            )
+            self.assertEqual(block_claim.returncode, 0, block_claim.stderr)
+            blocked = store / "blocked.json"
+            blocked.write_text(
+                json.dumps(
+                    {
+                        "status": "BLOCKED",
+                        "summary": "dependency unavailable",
+                        "unblock": {"type": "run", "detail": "retry dependency"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            block = self._run_agentic(
+                repo_root,
+                store,
+                "drain-run",
+                "verdict",
+                "fx-block",
+                "--file",
+                str(blocked),
+            )
+            self.assertEqual(block.returncode, 0, block.stderr)
+            self.assertEqual(self._bd_issue(store, "fx-block")["status"], "blocked")
+
+            self.assertEqual(
+                {name: (tasks / name).read_text(encoding="utf-8") for name in frozen},
+                frozen,
+            )
+
+    def _run_queue_wave(self, scenario):
+        reference = (
+            workboard.SCRIPT.parents[1] / "workflow-author" / "reference.md"
+        ).read_text(encoding="utf-8")
+        section = reference.split("## Template: queue-wave.js", 1)[1]
+        source = section.split("```javascript", 1)[1].split("```", 1)[0]
+        source = source.replace("export const meta", "const meta", 1)
+        harness = "\n".join(
+            [
+                f"const scenario = {json.dumps(scenario)}",
+                "const issue = { status: scenario.initialStatus, owner: scenario.initialOwner }",
+                "const trace = []",
+                "const phase = name => trace.push({ kind: 'phase', name })",
+                "const log = message => trace.push({ kind: 'log', message })",
+                "const budget = { remaining: () => 100 }",
+                "const args = {}",
+                "const pipeline = async (items, fn) => {",
+                "  const values = []",
+                "  for (const item of items) values.push(await fn(item))",
+                "  return values",
+                "}",
+                "const agent = async (prompt, options) => {",
+                "  trace.push({ kind: 'agent', phase: options.phase, label: options.label || '', prompt })",
+                "  if (options.phase === 'inventory') {",
+                "    return { tasks: [{ issueId: 'fx-task', path: 'specs/demo/tasks/01-task.md' }] }",
+                "  }",
+                "  if (options.phase === 'dispatch' && !String(options.label).startsWith('verify ')) {",
+                "    if (issue.owner && issue.owner !== scenario.runOwner) {",
+                "      return { outcome: 'CLAIM_CONFLICT', claimOwned: false, report: 'owned elsewhere' }",
+                "    }",
+                "    issue.owner = scenario.runOwner",
+                "    issue.status = 'in_progress'",
+                "    return { outcome: scenario.workerOutcome, claimOwned: true, report: scenario.report, branch: 'fixture' }",
+                "  }",
+                "  if (options.phase === 'dispatch') {",
+                "    return { verdict: scenario.verifyOutcome, evidence: 'fixture evidence' }",
+                "  }",
+                "  if (options.phase === 'settle') {",
+                "    if (issue.owner !== scenario.runOwner) throw new Error('settlement without claim ownership')",
+                "    if (prompt.startsWith('Close bd issue')) issue.status = 'closed'",
+                "    else if (prompt.startsWith('Set bd issue')) issue.status = 'blocked'",
+                "    else if (prompt.startsWith('Reopen bd issue')) issue.status = 'open'",
+                "    return { issueId: 'fx-task', status: issue.status }",
+                "  }",
+                "  throw new Error(`unexpected agent call: ${options.phase} ${prompt}`)",
+                "}",
+                "const result = await (async () => {",
+                source,
+                "})()",
+                "process.stdout.write(JSON.stringify({ result, issue, trace }))",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            script = Path(tmp) / "queue-wave.mjs"
+            script.write_text(harness, encoding="utf-8")
+            result = subprocess.run(
+                ["node", str(script)],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        return json.loads(result.stdout)
+
+    def _assert_queue_wave_settles_only_owned_claims(self):
+        conflict = self._run_queue_wave(
+            {
+                "initialStatus": "in_progress",
+                "initialOwner": "other-run",
+                "runOwner": "this-run",
+                "workerOutcome": "DONE",
+                "verifyOutcome": "PASS",
+                "report": "unused",
+            }
+        )
+        self.assertEqual(
+            conflict["issue"], {"status": "in_progress", "owner": "other-run"}
+        )
+        self.assertEqual(
+            [event for event in conflict["trace"] if event.get("phase") == "settle"],
+            [],
+        )
+        self.assertEqual(
+            [row["verdict"] for row in conflict["result"]["claimConflicts"]],
+            ["CLAIM_CONFLICT"],
+        )
+
+        closed = self._run_queue_wave(
+            {
+                "initialStatus": "open",
+                "initialOwner": None,
+                "runOwner": "this-run",
+                "workerOutcome": "DONE",
+                "verifyOutcome": "PASS",
+                "report": "done",
+            }
+        )
+        self.assertEqual(closed["issue"]["status"], "closed")
+
+        blocked = self._run_queue_wave(
+            {
+                "initialStatus": "open",
+                "initialOwner": None,
+                "runOwner": "this-run",
+                "workerOutcome": "BLOCKED",
+                "verifyOutcome": "PASS",
+                "report": "dependency unavailable",
+            }
+        )
+        self.assertEqual(blocked["issue"]["status"], "blocked")
 
 
 class TestBdAuthorityAdditiveContracts(unittest.TestCase):
