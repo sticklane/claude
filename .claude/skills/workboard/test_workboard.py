@@ -592,6 +592,15 @@ class TestBdAuthorityAdditiveContracts(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertNotIn("HANDOFF.md", skill)
 
+    def test_handoff_uses_open_verification_marker(self):
+        skill = (
+            workboard.SCRIPT.parents[1] / "handoff" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("--status open", skill)
+        self.assertIn("--set-metadata verification_required=true", skill)
+        self.assertIn("Verification-required: true", skill)
+        self.assertNotIn("needs-verification bd state", skill)
+
     def test_queue_wave_awaits_terminal_tracker_settlement(self):
         reference = (
             workboard.SCRIPT.parents[1] / "workflow-author" / "reference.md"
@@ -796,28 +805,32 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
 
             self.assertEqual(specs[0]["tasks_blocked"], [])
 
-    def test_needs_verification_is_open_not_blocked(self):
-        # Formal status for completed-but-unverified work: agent-bounded
-        # (the verifier proceeds), so it is open — never a blocked flag.
+    def test_open_verification_marker_is_not_ready_or_blocked(self):
         with tempfile.TemporaryDirectory() as tmp:
             spec = Path(tmp) / "specs" / "demo"
             (spec / "tasks").mkdir(parents=True)
             (spec / "SPEC.md").write_text("# Demo\n", encoding="utf-8")
             (spec / "tasks" / "01-a.md").write_text(
-                "# A\nStatus: needs-verification\n", encoding="utf-8"
+                "# A\nStatus: done\n", encoding="utf-8"
             )
 
             specs = workboard.scan_toolkit_specs(
                 Path(tmp),
                 bd_issues=[
                     make_spec_issue(
-                        "specs/demo/tasks/01-a.md", status="needs_verification"
+                        "specs/demo/tasks/01-a.md",
+                        status="open",
+                        metadata={"verification_required": True},
                     )
                 ],
             )
+            repo = make_repo_record(path=tmp)
+            repo["specs"] = specs
 
             self.assertEqual(specs[0]["tasks_blocked"], [])
             self.assertEqual(specs[0]["tasks_done"], 0)
+            self.assertEqual(specs[0]["tasks"][0]["status"], "needs-verification")
+            self.assertEqual(workboard.ready_items([repo])["items"], [])
 
     def test_status_failed_still_flags_as_blocked(self):
         with tempfile.TemporaryDirectory() as tmp:
