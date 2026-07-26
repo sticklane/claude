@@ -32,11 +32,7 @@ IN_SCOPE='.claude/skills/drain/SKILL.md
 .claude/skills/design/SKILL.md
 .claude/skills/evals/SKILL.md
 .claude/skills/evals/reference.md
-.claude/workflows/deep-research.js
-.claude/workflows/cross-repo-beads-adoption.js
-.claude/workflows/full-cutover-and-health-check.js
-.claude/workflows/ultracode-queue-sweep.js
-.claude/workflows/ultracode-queue-sweep-phase2.js'
+.claude/workflows/deep-research.js'
 
 # Build the file list.
 FILES=()

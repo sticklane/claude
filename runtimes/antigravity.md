@@ -1,9 +1,8 @@
 # Runtime profile: antigravity
 
-Describes how the abstract tiers and surfaces map onto Antigravity. The
-`antigravity/` directory in this repo is the reference port (skills,
-workflows, AGENTS.md, hooks); this profile describes it, it does not
-replace it.
+Describes how the abstract tiers and native orchestration surfaces map onto
+Antigravity. `antigravity/README.md` explains the bd/ctx/spec data layer used
+after the procedure-copy tree was retired.
 
 "Antigravity" always means the `antigravity-cli` package (binary `agy`)
 plus the Agent Manager GUI — never the GUI alone. **Name collision, verify
@@ -48,7 +47,7 @@ exist as a flag; exact value acceptance unverified — see Tiers above).
 | Role                                                                 | Antigravity default                                                                      |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | session default                                                       | the CLI's configured default model (no plan/execution split exists)                          |
-| implementation workers                                                | `Claude Opus 4.6 (Thinking)`, via `--model` — deep-tier adopted default, mirroring claude-code's `opus` pin |
+| implementation workers                                                | `Claude Opus 4.6 (Thinking)`, via `--model` — deep-tier adopted default matching claude-code's `opus` pin |
 | explore / codebase-search                                             | `Gemini 3.5 Flash (Low)`, via `--model`                                                      |
 | verifier (acceptance evidence; advisory reviewer lane)                | `Gemini 3.5 Flash (Low)`, via `--model`                                                      |
 | spec/plan/diff critic                                                 | `Claude Opus 4.6 (Thinking)` — deep-tier work; a critic pass costs ~1% of a wrong implementation |
@@ -59,10 +58,8 @@ exist as a flag; exact value acceptance unverified — see Tiers above).
 ## Headless
 
 Non-interactive mode is `agy -p` / `--print` (confirmed live,
-`antigravity-cli` 1.1.1, 2026-07-12 — both a plain reply and a real
-skill invocation: `list-specs` auto-triggered by description match, ran
-its bundled `specs/status.sh`, and returned an accurate report, from a
-scratch fixture and from this repo's `antigravity/` port root):
+`antigravity-cli` 1.1.1, 2026-07-12 — both a plain reply and an isolated
+file-edit fixture completed successfully):
 
 ```bash
 /opt/homebrew/bin/agy -p "<prompt>" --new-project --mode accept-edits --sandbox
@@ -131,14 +128,10 @@ mode absent an explicit fresh-workspace flag.
 - `<tier alias>` — `--model "<exact name from agy models>"` for the Role
   pins ladder above (unverified — see Tiers).
 - **Discovery walks up to find the workspace root**, not strictly
-  cwd/`--cd`-relative like Codex: invoked from `antigravity/` in this
-  repo, it treated `/Users/sjaconette/claude` (one level up, the git
-  root) as "the project" in its own summary, while still finding and
-  running the skill that only exists under `antigravity/.agents/skills/`
-  — i.e. it discovered skills relative to the actual invocation cwd even
-  while reporting a workspace root above it. Run it from (or `--add-dir`
-  into) `antigravity/`, matching Codex's `--cd codex` convention, until a
-  more precise discovery-root test is run.
+  cwd/`--cd`-relative like Codex. Run Antigravity from the repository root,
+  where `.agents/skills/` exposes the single `.claude/skills/` source through
+  symlinks. The bd queue, `.context/` index, and `specs/` directory resolve
+  from that same root.
 - **Skill invocation** works the same way Codex's does (both consume the
   Agent Skills standard antigravity defines): no custom slash commands,
   reached by natural-language description match. Unlike Codex's
@@ -171,16 +164,17 @@ mode absent an explicit fresh-workspace flag.
   Headless). No schema validation.
 - **Resume**: `--continue`/`-c` (most recent conversation) or
   `--conversation <id>` (resume by id) reattach a previous session,
-  confirmed present in `--help` (not live-tested); a wrapper owns any
-  cross-worker resume logic. `brain/<uuid>/` artifact directories
-  (confirmed live, under `~/.gemini/antigravity-cli/brain/`) persist
-  generated files across a session.
-- **Parallelism cap**: whatever the wrapper imposes; nothing built in.
+  confirmed present in `--help` (not live-tested); the native subagent
+  coordinator owns cross-worker resume logic. `brain/<uuid>/` artifact
+  directories (confirmed live, under `~/.gemini/antigravity-cli/brain/`)
+  persist generated files across a session.
+- **Parallelism cap**: the native subagent coordinator sets the cap; the
+  command-line tool does not provide one.
 
 ## Notes
 
-- **Config locations**: repo — `.agents/skills/`, `.agents/workflows/`,
-  `AGENTS.md` (always-on rules), `.agents/hooks.json`; global —
+- **Config locations**: repository `.agents/skills/` symlinks and
+  `AGENTS.md`; global —
   `~/.gemini/config/skills/`, `~/.gemini/antigravity-cli/brain/`
   (generated-artifact storage, confirmed live). Older Antigravity builds
   read `.agent/` instead of `.agents/`.
@@ -195,13 +189,12 @@ mode absent an explicit fresh-workspace flag.
   real**: confirmed on this machine (`~/.antigravity/antigravity/bin`
   before `/opt/homebrew/bin` in `$PATH`); verify PATH order or use an
   absolute path before trusting a bare `agy` invocation elsewhere.
-- **Reference port**: `antigravity/README.md` carries the full
-  concept-mapping table; `docs/porting.md` summarizes it alongside the
-  other runtimes.
-- **Verification**: `-p`, model listing, and one real skill auto-trigger
-  (`list-specs`) were confirmed live against `antigravity-cli` 1.1.1
-  (Homebrew cask, installed 2026-07-11) on 2026-07-12. `--new-project`
-  workspace isolation was confirmed live the same way on 2026-07-13 (two
+- **Runtime guide**: `antigravity/README.md` explains the common bd/ctx/spec
+  data layer and records why the copied procedure tree was retired.
+- **Verification**: `-p` and model listing were confirmed live against
+  `antigravity-cli` 1.1.1 (Homebrew cask, installed 2026-07-11) on
+  2026-07-12. `--new-project` workspace isolation was confirmed live on
+  2026-07-13 (two
   back-to-back isolated invocations, no cross-contamination, no stray
   writes to the real checkout — see Headless above). `--model`,
   `--mode`, `--dangerously-skip-permissions`, `--continue`/

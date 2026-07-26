@@ -4,6 +4,14 @@ Date: 2026-07-04
 Spec: [`specs/ultra-mode/SPEC.md`](../../specs/ultra-mode/SPEC.md)
 Research: [`docs/orchestration-research-2026-07.md`](../orchestration-research-2026-07.md)
 
+> **Historical record.** The 2026-07-22 native-orchestration pivot superseded
+> this decision's shared Workflow templates, task-header queue, and
+> Workflow-only drain claims. Current execution uses each runtime's native
+> orchestration primitive with bd as live state; see
+> [`architecture-pivot-2026-07-22.md`](../architecture-pivot-2026-07-22.md)
+> and the runtime profiles. The text below is retained as design history, not
+> live operating guidance.
+
 ## Context
 
 The toolkit's orchestration was split between a deterministic file-based state

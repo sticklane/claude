@@ -102,19 +102,20 @@ cheap version of this).
 
 ## Design principles workboard encodes
 
-1. **Artifact-first**: read state from files on disk (task `Status:` lines,
-   checkboxes, HANDOFF.md, metadata sidecars, git) — never transcripts
-   (Anthropic memory pattern; Kiro committed specs; Antigravity brain).
+1. **Artifact-first**: read live task state and dependencies from bd, and
+   supporting state from durable artifacts (handoff issues, metadata
+   sidecars, git) — never transcripts (Anthropic memory pattern; Kiro
+   committed specs; Antigravity brain).
 2. **Inbox over inventory**: the top of the dashboard is the set of items
    demanding a human decision — blocked, needs-review, stale — sorted by
    severity (Antigravity Inbox; OpenAI escalation triggers).
 3. **Small state machine**: `active / recent / idle / stale` for sessions;
    `blocked / needs-review / stale` for work. More states = less decision.
-4. **Two-axis progress**: pipeline stage (spec → tasks → done) × task
+4. **Two-axis progress**: pipeline stage (spec → tasks → done) × bd task
    completion (Kiro), rendered as one bar with done + in-progress segments.
-5. **Staleness is a first-class defect**: open work with no artifact-mtime
-   or session activity past a threshold gets flagged — the reconcile-
-   against-reality instinct (Kiro Sync Files; AlphaEvolve re-scoring).
+5. **Staleness is a first-class defect**: open bd work with no tracker or
+   session activity past a threshold gets flagged — the reconcile-against-
+   reality instinct (Kiro Sync Files; AlphaEvolve re-scoring).
 6. **Population view**: one page over every repo and session, because
    aggregate anomalies (five dirty repos, three parked handoffs) are
    invisible per-session (DeepMind).

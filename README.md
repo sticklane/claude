@@ -167,25 +167,19 @@ and type `/`—you should see `idea`, `breakdown`, `build`, `gate`, and the
 rest in the menu (prefixed `agentic:` if you installed the plugin). Then
 point it at a real repo: `/onboard` first, `/idea` for your first feature.
 
-**Option D—Google Antigravity** instead of the Claude Code CLI: the full
-port lives in [antigravity/](antigravity/README.md)—same skills (native
-Agent Skills support), the human-only commands as workflows, `AGENTS.md`
-replacing CLAUDE.md, and hooks in Antigravity's format. From your project
-root:
+**Antigravity and Codex**
 
-```bash
-cp -r ~/agentic-toolkit/antigravity/.agents .
-cp ~/agentic-toolkit/antigravity/AGENTS.md .    # merge if you have one
-```
+Run the native runtime from a checkout that
+contains the toolkit's shared data layer. Both runtimes read the bd work
+queue, the code-structure index, and `specs/` directly. Codex also discovers
+the single `.claude/skills/` source through the repository's
+`.agents/skills/` symlinks. Runtime-specific execution stays native.
+Antigravity uses its subagents, and Codex uses collaboration subagents.
 
-See [antigravity/README.md](antigravity/README.md) for the concept mapping
-and what degrades (notably: no enforced cheap subagents, softer stop gates).
-
-A third leg, [codex/](codex/README.md), overlays the Antigravity port for
-the Codex runtime: most skills are symlinks into `antigravity/`, plus three
-real-content wrappers (`drain`, `build`, `evals`) gated by
-Codex's `allow_implicit_invocation: false`. The port chain is `.claude/` →
-`antigravity/` → `codex/`.
+The [Antigravity guide](antigravity/README.md) and
+[Codex guide](codex/README.md) describe those runtime mappings. These
+directories contain guidance, so there is no runtime-specific procedure
+directory to copy into a project.
 
 ### Other runtimes and models
 
