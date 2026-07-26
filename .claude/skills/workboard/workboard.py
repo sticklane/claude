@@ -293,10 +293,7 @@ OPEN_TASK_STATUSES = {
     "in-progress",
     "in_progress",
     "claimed",
-    # completed-but-unverified: agent-bounded (the verifier proceeds), so it
-    # is open in-flight work — never a blocked flag, never done.
     "needs-verification",
-    "needs_verification",
 }
 CLOSED_TASK_STATUSES = {"done", "deferred", "skipped"}
 
@@ -474,6 +471,14 @@ def _metadata_dict(issue):
     return metadata if isinstance(metadata, dict) else {}
 
 
+def _verification_required(issue):
+    return _metadata_dict(issue).get("verification_required") in {
+        True,
+        1,
+        "true",
+    }
+
+
 def _structured_unblock(value):
     if isinstance(value, str):
         return parse_unblock(value)
@@ -552,6 +557,8 @@ def _bd_task_record(issue, issues_by_id):
     unresolved = []
     satisfied = True
     status = _bd_task_status(issue.get("status"))
+    if status == "pending" and _verification_required(issue):
+        status = "needs-verification"
     for edge in issue.get("dependencies") or []:
         if edge.get("type") != "blocks":
             continue

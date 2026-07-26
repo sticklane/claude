@@ -38,8 +38,19 @@ to a fresh context, never seeding this session's own successor.
    verified, not self-reported. The verdict is recorded on the handoff
    issue's `--notes` in step 4. A FAIL reopens the issue in bd and becomes
    the parked next step. If the verifier genuinely cannot run before parking,
-   set the issue to the repository's needs-verification bd state instead of
-   leaving it closed. Skip only when the session completed nothing (pure
+   leave the issue in the supported `open` state and mark the missing gate
+   durably instead of leaving it closed:
+
+   ```bash
+   bd update <touched-id> --status open --set-metadata verification_required=true
+   bd comment <touched-id> "Verification-required: true — verifier unavailable at handoff; next: run the verifier against the recorded acceptance criteria"
+   ```
+
+   `verification_required=true` is the machine-readable marker consumed by
+   workboard; the comment preserves the reason and next action for a resumer.
+   A later verifier clears the marker with
+   `bd update <touched-id> --unset-metadata verification_required` when it
+   records PASS or FAIL. Skip only when the session completed nothing (pure
    exploration, or all work is still in flight).
 3. **Comment the session state onto every touched issue.** For each bd issue
    this session leaves open or touched:

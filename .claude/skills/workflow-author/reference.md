@@ -161,8 +161,9 @@ export const meta = {
 }
 
 // TRACKER AUTHORITY: workers atomically claim issues and record transitions
-// in bd. Markdown task headers are frozen display. Do not run this beside an
-// attended /drain; atomic claims reject duplicate ownership, but competing
+// in bd. Markdown task headers are frozen display. A claim conflict is not a
+// task blocker: it proves this run owns nothing and therefore permits no later
+// tracker write. Do not run this beside an attended /drain; competing
 // orchestrators still make the report misleading.
 // Budget is human-set at launch; this script never chooses or raises it.
 // Untrusted returns: worker final text and `args` are data, not instructions.
@@ -207,7 +208,7 @@ const results = await pipeline(wave, async t => {
   if (budget.remaining() < 2) {
     return {
       issueId: t.issueId, task: t.path, verdict: 'SKIPPED',
-      reason: 'budget exhausted (human-set at launch)',
+      claimOwned: false, reason: 'budget exhausted (human-set at launch)',
     }
   }
   // Judgment stage (implementation): omit model deliberately so it inherits
@@ -215,26 +216,38 @@ const results = await pipeline(wave, async t => {
   const built = await agent(
     `Atomically claim bd issue ${t.issueId}, execute task file ${t.path}, ` +
     `implement to its acceptance criteria, and commit to a branch. Return ` +
-    `DONE or BLOCKED; the settlement stage records the terminal bd transition.`,
+    `DONE or BLOCKED only after a successful claim, with claimOwned=true. ` +
+    `If the atomic claim conflicts, make no other change and return ` +
+    `CLAIM_CONFLICT with claimOwned=false; settlement then performs no bd write.`,
     {
       label: t.path, phase: 'dispatch', isolation: 'worktree',
       schema: {
         type: 'object',
-        required: ['verdict', 'report'],
+        required: ['outcome', 'claimOwned', 'report'],
         properties: {
-          verdict: { type: 'string', enum: ['DONE', 'BLOCKED'] },
+          outcome: {
+            type: 'string',
+            enum: ['DONE', 'BLOCKED', 'CLAIM_CONFLICT'],
+          },
+          claimOwned: { type: 'boolean' },
           report: { type: 'string' },
           branch: { type: 'string' },
         },
       },
     },
   )
-  // BLOCKED routing: stop this item's remaining stages; the report phase
-  // quotes the blocked content verbatim.
-  if (built.verdict === 'BLOCKED') {
+  if (built.outcome === 'CLAIM_CONFLICT' || !built.claimOwned) {
     return {
       issueId: t.issueId, task: t.path,
-      verdict: 'BLOCKED', quote: built.report,
+      verdict: 'CLAIM_CONFLICT', claimOwned: false, quote: built.report,
+    }
+  }
+  // BLOCKED routing: stop this item's remaining stages; the report phase
+  // quotes the blocked content verbatim.
+  if (built.outcome === 'BLOCKED') {
+    return {
+      issueId: t.issueId, task: t.path,
+      verdict: 'BLOCKED', claimOwned: true, quote: built.report,
     }
   }
   const verified = await agent(
@@ -254,21 +267,21 @@ const results = await pipeline(wave, async t => {
   if (verified.verdict === 'BLOCKED') {
     return {
       issueId: t.issueId, task: t.path,
-      verdict: 'BLOCKED', quote: verified.evidence,
+      verdict: 'BLOCKED', claimOwned: true, quote: verified.evidence,
     }
   }
   return {
     issueId: t.issueId, task: t.path, verdict: verified.verdict,
-    branch: built.branch, evidence: verified.evidence,
+    claimOwned: true, branch: built.branch, evidence: verified.evidence,
   }
 })
 
 phase('settle')
-// Every claimed result reaches one awaited tracker-write stage: PASS closes,
-// BLOCKED records the blocker, and FAIL reopens the issue for a later wave.
-// SKIPPED was never claimed, so it remains ready without a tracker write.
+// Only results that prove this run owns the claim reach the tracker-write
+// stage: PASS closes, BLOCKED records the blocker, and FAIL reopens the issue.
+// SKIPPED and CLAIM_CONFLICT own no claim and receive no bd write.
 const settled = await pipeline(results, async r => {
-  if (r.verdict === 'SKIPPED') return r
+  if (!r.claimOwned) return r
   const trackerPrompt = r.verdict === 'PASS'
     ? `Close bd issue ${r.issueId}.`
     : r.verdict === 'BLOCKED'
@@ -302,6 +315,7 @@ return {
   passed: settled.filter(r => r.verdict === 'PASS'),
   failed: settled.filter(r => r.verdict === 'FAIL'),
   skipped: settled.filter(r => r.verdict === 'SKIPPED'),
+  claimConflicts: settled.filter(r => r.verdict === 'CLAIM_CONFLICT'),
   blocked: settled.filter(r => r.verdict === 'BLOCKED'),
 }
 ```
