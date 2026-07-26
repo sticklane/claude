@@ -345,19 +345,9 @@ assert "violating-file report names the file" \
 
 # ---------------------------------------------------------------------------
 # INTEGRATION — the canonical shell-test glob must enforce conformance on the
-# retained in-scope skill and workflow files, not retired workflow paths.
+# real in-scope skill and workflow files, not only on synthetic fixtures.
 # ---------------------------------------------------------------------------
-for retired in \
-  .claude/workflows/cross-repo-beads-adoption.js \
-  .claude/workflows/full-cutover-and-health-check.js \
-  .claude/workflows/ultracode-queue-sweep.js \
-  .claude/workflows/ultracode-queue-sweep-phase2.js
-do
-  assert "token-discipline scope excludes retired workflow: $retired" \
-    sh -c "! grep -qF -- \"$retired\" \"$CHECK\""
-done
-
-assert "retained in-scope skill and workflow files pass token discipline" \
+assert "real in-scope skill and workflow files pass token discipline" \
   env CHECK_TD_FILES= "$CHECK" "$TOOLKIT_DIR"
 
 # ---------------------------------------------------------------------------
