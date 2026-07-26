@@ -8,7 +8,7 @@ aliases without appearing in help or completion metadata.
 import argparse
 import sys
 
-from agentic import audit, claim, initialize, ready, register, resume, verdict
+from agentic import audit, claim, events, initialize, ready, register, resume, verdict
 from agentic.bd import BdError
 
 _RETIRED_DIAGNOSTICS = {
@@ -105,6 +105,12 @@ def build_parser():
         help="print the measures without filing any tasks",
     )
     p_audit.set_defaults(func=audit.run)
+
+    p_event = sub.add_parser(
+        "event",
+        help="Create, append, or read schema-validated run events.",
+    )
+    events.configure_cli(p_event)
 
     return parser
 

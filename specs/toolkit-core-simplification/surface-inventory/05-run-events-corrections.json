@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "05-run-events-corrections",
+  "frozen_sha256": "b533d7487cb36cd29b1871ed2015ace6cbb26c84a01cfd0d19b4bb11ad4dd7c1",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_events_corrections.py::test_append_recovers_short_unterminated_tail_before_next_record"
+      ],
+      "content_sha256": "f0030eb1a408fbd3e53eb93aeda3d194f2258145779ea70134b658d92f871195",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_events_corrections.py",
+      "path": "tests/test_agentic_events_corrections.py",
+      "rationale": "Additive regression coverage for portable calendar validation and recovery from interrupted appends.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
