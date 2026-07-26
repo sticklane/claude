@@ -556,8 +556,9 @@ def _bd_task_record(issue, issues_by_id):
     deps = []
     unresolved = []
     satisfied = True
-    status = _bd_task_status(issue.get("status"))
-    if status == "pending" and _verification_required(issue):
+    live_status = _bd_task_status(issue.get("status"))
+    status = live_status
+    if live_status == "blocked" and _verification_required(issue):
         status = "needs-verification"
     for edge in issue.get("dependencies") or []:
         if edge.get("type") != "blocks":
@@ -574,7 +575,7 @@ def _bd_task_record(issue, issues_by_id):
             satisfied = False
     details = (
         _bd_task_details(issue)
-        if _task_is_blocked(status) or status == "deferred"
+        if _task_is_blocked(live_status) or live_status == "deferred"
         else {}
     )
     return {
