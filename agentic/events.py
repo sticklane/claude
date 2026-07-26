@@ -219,22 +219,10 @@ def _parse_timestamp(value: str) -> datetime:
     return parsed
 
 
-def _is_json_datetime(value: object) -> bool:
-    if not isinstance(value, str):
-        return True
-    try:
-        _parse_timestamp(value)
-    except EventValidationError:
-        return False
-    return True
-
-
 @functools.lru_cache(maxsize=1)
 def _event_validator() -> jsonschema.Draft202012Validator:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    format_checker = jsonschema.FormatChecker()
-    format_checker.checks("date-time")(_is_json_datetime)
-    return jsonschema.Draft202012Validator(schema, format_checker=format_checker)
+    return jsonschema.Draft202012Validator(schema)
 
 
 def validate_event(record: Mapping[str, Any]) -> dict[str, Any]:
@@ -294,6 +282,24 @@ def _encoded_record(record: Mapping[str, Any]) -> tuple[dict[str, Any], bytes]:
     return valid, payload
 
 
+def _truncate_unterminated_tail(fd: int) -> None:
+    end = os.lseek(fd, 0, os.SEEK_END)
+    if end == 0 or os.pread(fd, 1, end - 1) == b"\n":
+        return
+    position = end
+    while position:
+        start = max(0, position - MAX_RECORD_BYTES)
+        chunk = os.pread(fd, position - start, start)
+        newline = chunk.rfind(b"\n")
+        if newline >= 0:
+            os.ftruncate(fd, start + newline + 1)
+            os.fsync(fd)
+            return
+        position = start
+    os.ftruncate(fd, 0)
+    os.fsync(fd)
+
+
 def append_event(
     record: Mapping[str, Any],
     *,
@@ -302,9 +308,10 @@ def append_event(
     valid, payload = _encoded_record(record)
     path = monthly_log_path(cwd, _parse_timestamp(valid["timestamp_utc"]))
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_APPEND, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
+        _truncate_unterminated_tail(fd)
         written = os.write(fd, payload)
         if written != len(payload):
             raise OSError(f"short append: wrote {written} of {len(payload)} bytes")
