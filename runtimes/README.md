@@ -6,15 +6,19 @@ command template and orchestration surface — onto one concrete runtime:
 
 - [claude-code.md](claude-code.md) — the default; reproduces today's
   behavior exactly.
-- [antigravity.md](antigravity.md) — describes the `antigravity/`
-  reference port.
-- [codex.md](codex.md) — describes the `codex/` reference port (OpenAI's
-  Codex CLI).
-- [gemini-cli.md](gemini-cli.md) — mapping for Google's gemini-cli.
+- [antigravity.md](antigravity.md): maps the tiers and native subagent
+  surface for Antigravity.
+- [codex.md](codex.md): maps the tiers and collaboration subagents for
+  OpenAI's Codex command-line tool.
+- [gemini-cli.md](gemini-cli.md): maps the tiers for Google's gemini-cli.
 
 This file is the single home of the selection convention and the
 tier-override format. Other files (the drain and build references,
 `.claude/agents/scout.md`) cite it; they do not restate it.
+
+Profiles describe execution capabilities; they are not install roots.
+Every runtime works from the same bd queue, code-structure index, and
+`specs/` directory. Each runtime then uses its own orchestration primitive.
 
 ## Selecting a runtime
 
