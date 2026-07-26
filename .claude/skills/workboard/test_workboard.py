@@ -275,6 +275,7 @@ class TestBdTaskAuthority(unittest.TestCase):
                 "01-conflict.md": "# Conflict\nStatus: pending\n",
                 "02-close.md": "# Close\nStatus: done\n",
                 "03-block.md": "# Block\nStatus: done\n",
+                "04-verify.md": "# Verify\nStatus: done\n",
             }
             for name, text in frozen.items():
                 (tasks / name).write_text(text, encoding="utf-8")
@@ -284,15 +285,39 @@ class TestBdTaskAuthority(unittest.TestCase):
                     "id": issue_id,
                     "title": issue_id,
                     "external_ref": f"spec-task:specs/demo/tasks/{name}",
-                    "status": "open",
+                    "status": status,
                     "priority": 1,
                     "issue_type": "task",
-                    "metadata": {"touch": [f"src/{issue_id}.py"]},
+                    "metadata": metadata,
                 }
-                for issue_id, name in (
-                    ("fx-conflict", "01-conflict.md"),
-                    ("fx-close", "02-close.md"),
-                    ("fx-block", "03-block.md"),
+                for issue_id, name, status, metadata in (
+                    (
+                        "fx-conflict",
+                        "01-conflict.md",
+                        "open",
+                        {"touch": ["src/fx-conflict.py"]},
+                    ),
+                    (
+                        "fx-close",
+                        "02-close.md",
+                        "open",
+                        {"touch": ["src/fx-close.py"]},
+                    ),
+                    (
+                        "fx-block",
+                        "03-block.md",
+                        "open",
+                        {"touch": ["src/fx-block.py"]},
+                    ),
+                    (
+                        "fx-verify",
+                        "04-verify.md",
+                        "blocked",
+                        {
+                            "touch": ["src/fx-verify.py"],
+                            "verification_required": "true",
+                        },
+                    ),
                 )
             ]
             seed = store / "seed.jsonl"
@@ -301,6 +326,13 @@ class TestBdTaskAuthority(unittest.TestCase):
                 encoding="utf-8",
             )
             bd.bd_import(str(seed), cwd=str(store))
+
+            ready = self._run_agentic(
+                repo_root, store, "queue-reader", "ready", "--json"
+            )
+            self.assertEqual(ready.returncode, 0, ready.stderr)
+            ready_ids = {row["id"] for row in json.loads(ready.stdout)}
+            self.assertNotIn("fx-verify", ready_ids)
 
             winner = self._run_agentic(
                 repo_root, store, "winning-run", "claim", "fx-conflict"
@@ -592,13 +624,19 @@ class TestBdAuthorityAdditiveContracts(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertNotIn("HANDOFF.md", skill)
 
-    def test_handoff_uses_open_verification_marker(self):
+    def test_handoff_uses_blocked_verification_marker(self):
         skill = (
             workboard.SCRIPT.parents[1] / "handoff" / "SKILL.md"
         ).read_text(encoding="utf-8")
-        self.assertIn("--status open", skill)
+        self.assertIn("--status blocked", skill)
         self.assertIn("--set-metadata verification_required=true", skill)
-        self.assertIn("Verification-required: true", skill)
+        self.assertIn("Unblock: agent:", skill)
+        self.assertIn(
+            "--unset-metadata verification_required --status closed", skill
+        )
+        self.assertIn(
+            "--unset-metadata verification_required --status open", skill
+        )
         self.assertNotIn("needs-verification bd state", skill)
 
     def test_queue_wave_awaits_terminal_tracker_settlement(self):
@@ -805,7 +843,7 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
 
             self.assertEqual(specs[0]["tasks_blocked"], [])
 
-    def test_open_verification_marker_is_not_ready_or_blocked(self):
+    def test_blocked_verification_marker_renders_as_needs_verification(self):
         with tempfile.TemporaryDirectory() as tmp:
             spec = Path(tmp) / "specs" / "demo"
             (spec / "tasks").mkdir(parents=True)
@@ -819,8 +857,17 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
                 bd_issues=[
                     make_spec_issue(
                         "specs/demo/tasks/01-a.md",
-                        status="open",
-                        metadata={"verification_required": True},
+                        status="blocked",
+                        metadata={"verification_required": "true"},
+                        comments=[
+                            {
+                                "created_at": "2026-01-01T00:00:00Z",
+                                "text": (
+                                    "Unblock: agent: run verifier against the "
+                                    "recorded acceptance criteria"
+                                ),
+                            }
+                        ],
                     )
                 ],
             )
@@ -830,6 +877,13 @@ class TestOpenStatusNotBlocked(unittest.TestCase):
             self.assertEqual(specs[0]["tasks_blocked"], [])
             self.assertEqual(specs[0]["tasks_done"], 0)
             self.assertEqual(specs[0]["tasks"][0]["status"], "needs-verification")
+            self.assertEqual(
+                specs[0]["tasks"][0]["unblock"],
+                {
+                    "type": "agent",
+                    "step": "run verifier against the recorded acceptance criteria",
+                },
+            )
             self.assertEqual(workboard.ready_items([repo])["items"], [])
 
     def test_status_failed_still_flags_as_blocked(self):
