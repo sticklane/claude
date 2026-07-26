@@ -571,6 +571,7 @@ def _bd_task_record(issue, issues_by_id):
         else {}
     )
     return {
+        "tracker_issue_id": str(issue.get("id") or ""),
         "status": status,
         "deps": deps,
         "deps_satisfied": satisfied,
@@ -1554,6 +1555,27 @@ def attention_items(
             # Human-bounded typed unblocks + deferred questions.
             # No dispatch cmd — these are human decisions only (R6).
             for t in s.get("tasks", []):
+                detail_error = t.get("tracker_detail_error")
+                if detail_error:
+                    issue_id = t.get("tracker_issue_id")
+                    cmd = f"cd {shlex.quote(rp)} && bd show --include-comments"
+                    if issue_id:
+                        cmd += f" --id={shlex.quote(issue_id)}"
+                    cmd += " --json"
+                    items.append(
+                        {
+                            "severity": "serious",
+                            "state": "blocked",
+                            "repo": r["name"],
+                            "what": f"Tracker detail read failed: {t['title']}",
+                            "why": (
+                                f"{detail_error} — retry the live bd detail read; "
+                                "blocker details are unavailable"
+                            ),
+                            "cmd": cmd,
+                            "age_ts": s["last_touched"],
+                        }
+                    )
                 ub = t.get("unblock")
                 if ub and ub["type"] in {"ask", "decide", "provision"}:
                     state = _HUMAN_BLOCKER_STATE.get(ub["type"], "needs-answer")
@@ -1616,6 +1638,7 @@ def attention_items(
                 if _task_is_blocked(t["status"])
                 and t["status"] != "draft"
                 and t["status"] != "unregistered"
+                and not t.get("tracker_detail_error")
                 and not t.get("unblock")
             ]
             if needs_human:

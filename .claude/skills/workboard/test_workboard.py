@@ -224,6 +224,138 @@ class TestBdTaskAuthority(unittest.TestCase):
         self.assertEqual(scanned["tasks_done"], 1)
 
 
+class TestBdAuthorityAdditiveContracts(unittest.TestCase):
+    def test_build_and_drain_cli_route_live_state_through_bd(self):
+        from agentic import bd
+
+        repo_root = workboard.SCRIPT.parents[3]
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "authority-fixture"
+            store.mkdir()
+            subprocess.run(["git", "init", "-q", "."], cwd=store, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "authority@example.com"],
+                cwd=store,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Authority fixture"],
+                cwd=store,
+                check=True,
+            )
+            bd.bd_init(str(store))
+
+            tasks = store / "specs" / "demo" / "tasks"
+            tasks.mkdir(parents=True)
+            (store / "specs" / "demo" / "SPEC.md").write_text(
+                "# Demo\n", encoding="utf-8"
+            )
+            (tasks / "01-build.md").write_text(
+                "# Build\nStatus: done\n", encoding="utf-8"
+            )
+            (tasks / "02-drain-open.md").write_text(
+                "# Drain open\nStatus: done\n", encoding="utf-8"
+            )
+            (tasks / "03-drain-closed.md").write_text(
+                "# Drain closed\nStatus: pending\n", encoding="utf-8"
+            )
+
+            rows = [
+                {
+                    "id": "fx-build",
+                    "title": "build target",
+                    "external_ref": "spec-task:specs/demo/tasks/01-build.md",
+                    "status": "open",
+                    "priority": 1,
+                    "issue_type": "task",
+                    "metadata": {"touch": ["src/build.py"]},
+                },
+                {
+                    "id": "fx-drain-open",
+                    "title": "drain target",
+                    "external_ref": "spec-task:specs/demo/tasks/02-drain-open.md",
+                    "status": "open",
+                    "priority": 1,
+                    "issue_type": "task",
+                    "metadata": {"touch": ["src/drain.py"]},
+                },
+                {
+                    "id": "fx-drain-closed",
+                    "title": "closed target",
+                    "external_ref": "spec-task:specs/demo/tasks/03-drain-closed.md",
+                    "status": "closed",
+                    "priority": 1,
+                    "issue_type": "task",
+                    "metadata": {"touch": ["src/closed.py"]},
+                },
+            ]
+            seed = store / "seed.jsonl"
+            seed.write_text(
+                "\n".join(json.dumps(row) for row in rows) + "\n",
+                encoding="utf-8",
+            )
+            bd.bd_import(str(seed), cwd=str(store))
+
+            env = {
+                **os.environ,
+                "PYTHONPATH": str(repo_root),
+                "BD_ACTOR": "authority-test",
+            }
+            ready = subprocess.run(
+                [sys.executable, "-m", "agentic", "ready", "--json"],
+                cwd=store,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            ready_ids = {row["id"] for row in json.loads(ready.stdout)}
+            self.assertIn("fx-drain-open", ready_ids)
+            self.assertNotIn("fx-drain-closed", ready_ids)
+
+            claimed = subprocess.run(
+                [sys.executable, "-m", "agentic", "claim", "fx-build"],
+                cwd=store,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(claimed.returncode, 0, claimed.stderr)
+            current = json.loads(
+                subprocess.run(
+                    ["bd", "--readonly", "show", "fx-build", "--json"],
+                    cwd=store,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout
+            )[0]
+            self.assertEqual(current["status"], "in_progress")
+            self.assertIn("Status: done", (tasks / "01-build.md").read_text())
+
+    def test_workboard_skill_uses_bd_native_handoffs(self):
+        skill = (
+            workboard.SCRIPT.parent / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("HANDOFF.md", skill)
+
+    def test_queue_wave_awaits_terminal_tracker_settlement(self):
+        reference = (
+            workboard.SCRIPT.parents[1] / "workflow-author" / "reference.md"
+        ).read_text(encoding="utf-8")
+        queue_wave = reference.split("## Template: queue-wave.js", 1)[1]
+        required = [
+            "phase('settle')",
+            "await pipeline(results",
+            "Close bd issue ${r.issueId}",
+            "Set bd issue ${r.issueId} to blocked",
+            "Reopen bd issue ${r.issueId}",
+        ]
+        self.assertEqual(
+            [token for token in required if token not in queue_wave], []
+        )
+
+
 class TestBdBlockerDetailAuthority(unittest.TestCase):
     def _scan_task(self, markdown, issue):
         with tempfile.TemporaryDirectory() as tmp:
