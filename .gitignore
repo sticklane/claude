@@ -27,3 +27,6 @@ specs/*/.drain-gen.log
 # runtime-only)
 .beads/session-claims
 .beads/session-inflight
+
+# Eval spend ledger: machine state, not source.
+evals/cost-ledger.jsonl

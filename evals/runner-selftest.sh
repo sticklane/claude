@@ -13,6 +13,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SKILL=handoff
 RUNNER_CMD="${RUNNER_CMD:-$ROOT/evals/stub-cli.sh}"
 
+# Keep the selftest's spend rows out of the machine's real ledger.
+export EVAL_LEDGER="${TMPDIR:-/tmp}/eval-selftest-ledger.jsonl"
+
 TMP="$(mktemp -d)"
 kept_fixture=""
 trap 'rm -rf "$TMP" "$kept_fixture"' EXIT
