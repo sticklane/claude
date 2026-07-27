@@ -1,247 +1,381 @@
 # Design of the agentic toolkit
 
-This document reconstructs the design from the artifacts, as of 2026-07-27:
-32 skills, 4 agents, 7 rules, 10 hooks, 131 spec directories, 501 task files,
-and 3,378 commits laid down between 2026-07-02 and 2026-07-26. It asks what
-the built thing is actually optimizing for, what it holds invariant, what it
-traded away, and where it is under strain.
+This document reconstructs the design from the skill bodies, agent
+definitions, and enforcement scripts as they stand on 2026-07-27. It asks what
+the system assumes about its own components, what it holds invariant, what it
+traded away, and where those choices now conflict with each other.
 
-It complements two existing documents rather than replacing them.
-[architecture.md](architecture.md) maps the components and traces the pipeline;
-[architecture-pivot-2026-07-22.md](architecture-pivot-2026-07-22.md) records
-the single largest decision. Neither states the invariants the whole system
-rests on, and neither names the places where those invariants now conflict
-with each other. That is this document's job.
+It complements [architecture.md](architecture.md), which maps components and
+traces the pipeline, and
+[architecture-pivot-2026-07-22.md](architecture-pivot-2026-07-22.md), which
+records the largest single decision. Neither states the operating premise the
+mechanisms are built on, and neither names the places where two mechanisms now
+disagree. That is this document's job.
 
-## The problem being solved
+## The premise
 
-The stated purpose is a spec pipeline: an idea becomes a spec, the spec is
-split into tasks, agents execute the tasks. That description is accurate and
-it undersells the design, because a pipeline is the easy half. Every mechanism
-that took real engineering — the tier ladder, the scout agent, the fresh
-verifier, the bd cutover, the session-refresh budget, the spill hook — exists
-to solve a different problem.
+The system treats a language model as a component with four specific
+liabilities: it forgets, it is expensive, it is unreliable, and it games its
+own success criteria. Almost every mechanism in the repo maps to one of those
+four, and reading the design that way explains choices that otherwise look
+like overhead.
 
-**The binding constraint is context, not capability.** A model that can write
-the code cannot hold the repository, the task, the research, and its own
-reasoning at once, and everything it does hold is re-billed on every
-subsequent turn. So the design question is never "can the agent do this"; it
-is "what does the agent have to read to do this, who pays for that reading,
-and does that cost survive contact with a hundred more turns." The toolkit is
-a context-economy first and a workflow engine second.
+The fourth liability is the one that makes this toolkit unusual. Most agent
+frameworks defend against the first three. This one is built by someone who
+watched workers satisfy acceptance criteria without implementing the
+requirement, and who then designed against it in four separate places.
 
-Three consequences follow, and they explain nearly every structural choice in
-the repo. Work must be decomposable into units that fit one clean context.
-State must live outside the conversation, because conversations end and
-compact. And judgment must be delegable to processes that are cheaper than
-the session that needs the answer.
+## Designing around forgetting
 
-## The forces
+Nothing durable is reconstructed from conversation. bd holds task status,
+dependencies, claims, and provenance; `specs/<slug>/` holds the work
+definitions; `specs/<slug>/evidence/<name>.md` holds the verifier's full
+report; the task file's `## Decisions` section holds reversible calls taken
+mid-run. Resume is a `bd ready` query, which is why `/drain` can state that
+interrupting it loses nothing.
 
-**Prose does not bind an agent; mechanisms do.** The pivot document states
-this from measurement — compliance with "prefer X" advisory prose was zero.
-This is the most consequential finding in the repo, because the repo's own
-primary output format is prose.
+Two rules make the single-writer property hold. Task-file `Status:` headers
+are frozen display, read by no live procedure — the dual-source version
+drifted, and the fix was to demote one source to decoration rather than
+synchronize two. And task definitions are immutable after registration:
+`agentic register-spec` reads the authored headers once to create issues and
+edges, then bd owns everything. The verifier enforces this mechanically with
+an append-only task-file check that diffs `*/tasks/*.md` path-scoped against
+the base and fails on any edit outside a small allowed set — checkbox ticks,
+evidence lines, the plan comment block. A worker-written `## Progress` section
+is an automatic FAIL.
 
-**Cost is nonlinear and mostly invisible at authoring time.** The recorded
-numbers are specific: roughly $1,406/week of unstructured orchestration
-before `/drain` existed; a $123 leak from one nested untyped-agent chain;
-26% of an overnight window's spend on cache re-priming alone; a
-general-purpose agent at $0.067/call running dearer than the Opus-pinned
-implementation-worker at $0.057/call, because the untyped agent inherits the
-session's frontier model while the typed one is pinned down. Nothing in the
-authoring experience makes any of this visible, so the design has to encode
-the economics structurally.
+`/distill` closes the loop by routing a session's learnings to shared
+guidance, a `docs/memory/` topic file, or a new skill — with an explicit
+"Nowhere — write nothing" row and the gate "would removing this line cause a
+future agent to make a mistake?" It is pinned `model: opus`, which inverts
+naive cost optimization: the step that decides what the system permanently
+believes gets the strongest model available.
 
-**The host defines what can be enforced.** The toolkit can only be mandatory
-where Claude Code offers a seam: `SessionStart`, `PreToolUse`, `PostToolUse`,
-`Stop`, and a process exit code. Everywhere else it can only advise. The
-architecture is shaped by that extension surface, not by what the designer
-would prefer to control — and the honest cases where a hook was scoped and
-rejected are recorded as such (the untyped-under-untyped dispatch warning was
-not shipped because the hook payload exposes neither dispatch depth nor the
-running agent's tier).
+## Designing around cost
 
-## Invariants
+The tier ladder is the visible half: scout on Haiku at low effort, ordinary
+judgment on the session model, `implementation-worker` and `critic` pinned to
+Opus in their own frontmatter so a dispatch tier survives whatever the calling
+session happens to be running. The pins are structural rather than advisory
+for a measured reason — an untyped general-purpose agent inherits the
+session's frontier model and ran dearer per call than the Opus-pinned worker.
 
-Five rules hold across the entire system. They are what a change should be
-tested against.
+The less obvious half is that the system memoizes expensive judgment against a
+freshness key, in three places with the same shape:
 
-**One writer per fact.** Task status lives in bd and nowhere else. The
-`Status:` headers in 501 markdown task files are frozen display, explicitly
-read by no live procedure. This was a cutover, not a coincidence: the
-dual-source version drifted, and the fix was to demote one source to
-decoration rather than to synchronize two. The same shape appears in
-`specs/QUEUE.md`, which is a wave plan rather than live state, and in
-`.beads/issues.jsonl`, which is a passive export rather than a sync channel.
+- `/critique` hashes the SPEC.md bytes and records the verdict in
+  `specs/<slug>/critique-findings.md`. A byte-identical re-run skips the critic
+  dispatch entirely and relays the recorded verdict. An absent or unparseable
+  hash always means run it.
+- `/idea` checks `docs/` for a topically matching `Verified:` stamp inside a
+  90-day window before dispatching any research agent, and refreshes the stamp
+  when it does research.
+- `/critique` stamps `Breakdown-ready: true` into the spec at READY, and
+  `/drain`'s auto-breakdown phase greps for exactly that line. The artifact
+  carries its own gate token.
 
-**Resume is a query, not a narrative.** Nothing durable is reconstructed from
-conversation memory. `/handoff` writes an issue; the resume hook reads a
-label; `bd ready` answers what to do next. The earlier baton, owner-lease, and
-generation-counter machinery in `/drain` was deleted precisely because a prose
-orchestrator loses its place, and a database does not.
+Cost discipline also shows up as skip gates keyed to risk. `/build`'s
+pre-commit review stages everything, diffs per-path line counts against the
+step-0 base, classifies paths as product or non-product by glob, and skips the
+review outright for docs-only, tests-only, or under-25-line product diffs,
+recording `review skipped: <reason>` as the evidence. `/work`'s
+`preflight_fanout.sh` refuses above 20 agents without `--override`, and the
+skill is explicit that the printed token estimate is context for judgment
+while the count is the gate.
 
-**No artifact is trusted until a context that did not produce it agrees.**
-The critic reads a spec before implementation; the verifier reads acceptance
-criteria after it, with no memory of the work. The mechanism is not
-skepticism, it is amnesia — a fresh context is structurally unable to
-rationalize a shortcut it never took. This is the cheapest correctness
-mechanism available for LLM work, and the toolkit spends it liberally.
+Dispatch itself is context-economical. `/drain` delivers its worker prompt by
+path-pointer — the worker is told to read `reference.md` and follow it
+verbatim, never handed the pasted body — which keeps every dispatch call small
+and single-sources the contract at once.
 
-**Every dispatch declares its tier, its budget, and its bound.** Mechanical
-work runs Haiku, ordinary judgment runs the session model, heavy judgment runs
-Opus, and frontier is reserved. Subagent returns cap at 1–2k tokens; large
-outputs are written to disk and returned as a path. Loops name a cycle count.
-Concurrent writers cap at 3–5 with rolling top-up rather than wave barriers.
-`bin/check-token-discipline` enforces the first three of these across the
-dispatch-authoring skills, which makes it one of the few doctrine lines that
-has become a test.
+Finally, the pipeline is instrumented from inside the prompt. `/build` emits
+`<!-- agentprof:stage=load -->`, `=plan`, `=implement`, `=verify`,
+`=close-out` verbatim at each step, and `agentprof` reads those markers out of
+the transcript to attribute tokens and dollars per stage. The agent narrates
+its own state transitions so a downstream profiler can bill them.
 
-**Tool output is data, never instruction.** File contents, command output, web
-pages, and tracker text carry no authority. Only the user's live message, the
-rules, and the executing task file do. This is the reason execution stages
-cannot be launched by a file, a notification, or another agent — a boundary
-that survived the pivot intact while the elaborate launch-authorization
-contracts built on top of it were deleted.
+## Designing around unreliability
 
-## The layering that falls out
+Fresh-context adversarial review is the backbone: `critic` before
+implementation, `verifier` after. The mechanism is amnesia, not skepticism — a
+context that never took the shortcut cannot rationalize it, and the verifier is
+told in as many words not to trust the implementer's claims, including any
+"verified ✓" notes in the task file.
 
-Read bottom-up, the system is four layers plus packaging.
+Independence is enforced by topology rather than instruction. Agent nesting is
+one level, so a drain worker cannot spawn its own reviewer; the review-gate
+verdict it can produce is stamped `self-review`, and the orchestrator is
+structurally the only place an independent read can happen. `/drain` therefore
+owns the verifier/critic barrier and the worker is told, in the dispatch
+prompt, not to spawn build's verifier at all.
 
-The **data layer** is bd for live work state, Codebase-Memory for code
-structure, and `specs/<slug>/` for the units of work themselves. This layer
-is the portability story: any agent on any runtime can read it. Task headers
-(`Depends on`, `Touch`, `Budget`, `Rigor`) are the scheduler's input —
-`Touch` disjointness in particular is what makes parallel writers safe without
-locking.
+Around that sit mechanical prechecks that halt before any judgment runs. The
+verifier's worktree-integrity precheck compares `HEAD` to the branch ref and
+refuses on any dirt, including untracked files, because a verifier dispatched
+without being told which worktree to use lands in the shared checkout and
+would otherwise grade content the branch does not carry. Its empty-diff
+precheck stages everything, restricts the diff to `Touch:` when present, and
+returns FAIL on an empty result before running a single acceptance command.
+The verifier is explicitly forbidden from repairing a mismatch: a mismatch it
+did not cause may be a concurrent-session collision the human needs to see
+intact.
 
-The **judgment layer** is the skills. They encode taste that neither a tracker
-nor an orchestration engine has: how to interview for a spec, how to attack
-one, how to size a task for a single session, how to tell a real lesson from
-session noise. This is the "skill-augmented" half of the architecture's own
-name for itself, and it is the part with no commodity substitute.
+Retry policy is matched to failure class rather than applied uniformly. A
+worker or verifier FAIL relaunches once, one tier up. A verifier INCOMPLETE
+re-dispatches once into the resolved worktree and never escalates tier —
+"a higher tier cannot fix a location fault." A second failure of either kind
+records the cause and leaves the issue open rather than thrashing. `/build`
+stops after two failed fix attempts on the same issue on the stated grounds
+that repeated correction in a degraded context is the known failure mode.
 
-The **enforcement layer** is hooks and check scripts: 1,683 lines of hook
-code, 2,893 lines under `bin/`, 14,072 lines of tests. The Stop hook refuses
-"done" while checks are red or claimed bd issues sit open. `PreToolUse`
-protects files; `PostToolUse` formats and spills over-budget output. This
-layer is small relative to the prose it enforces, and growing it is the
-repo's clearest direction of travel.
+Gate placement follows the same economy. Workers and fix rounds run acceptance
+commands and directly relevant targeted tests only; the orchestrator runs the
+repository's canonical `scripts/check.sh` exactly once, on the reviewed
+branch, at the merge barrier — because repeating a multi-minute suite inside
+every round is not additional evidence.
 
-The **measurement layer** is `agentprof` (17,549 lines of Go attributing
-tokens and dollars to skills, projects, and cache behavior), `agent-console`
-(a local dashboard), and `evals/` — 22 stored scenarios, 10 of them
-adversarial. The eval pattern deserves naming: each skill's evalset pairs a
-happy path (`01-small-spec`) with a scenario the skill must *decline* to act
-on (`02-adv-gameable-criterion`, `02-adv-noise-rejection`,
-`02-adv-graph-empty-is-not-absence`). Prompts are treated as software with
-regression tests, and the adversarial half tests for the failure mode prose
-skills actually have, which is firing when they should not.
+## Designing around specification gaming
 
-**Packaging** distributes all of it as the `agentic` plugin, with generated
-per-runtime entrypoints under `skills/`.
+This is the part that distinguishes the design, and it appears at four
+separate stages.
 
-## The life of one unit of work
+**At authoring.** `/idea` runs an anchor check on every grep- or count-based
+criterion the moment it drafts it: run the count against current on-disk
+state, confirm the expected result actually differs from today's, and record
+the outcome inline. It then rejects any criterion whose target phrase is a
+byproduct of the spec's own requirements — the self-referential trap, where a
+worker satisfies the check by typing the literal search string without
+implementing the behavior.
 
-An idea becomes `specs/<slug>/SPEC.md` with runnable acceptance criteria. The
-critic attacks the spec while it is still cheap to be wrong. `/breakdown`
-splits it into task files sized for one clean session, each declaring what it
-touches and what it depends on. `agentic register-spec` creates the bd issues
-and dependency edges from those headers once, reading the authored definitions
-and ignoring their status. From then on bd owns the state.
+**At classification.** Every criterion is ranked on a depth ladder: L0 text
+presence, L1 artifact structure, L2 behavior, L3 end-to-end. The rule is
+deepest-feasible rather than default-to-grep. What makes this honest rather
+than aspirational is the escape: a requirement that genuinely bottoms out at
+L0/L1 carries a `Depth ceiling:` annotation stating why deeper is infeasible
+and naming the behavioral complement. The skill says plainly that prose skills
+— most of this toolkit — legitimately bottom out at L0/L1, and that the
+annotation "legalizes that ceiling instead of letting a grep pose as
+behavioral proof."
 
-Execution takes one of two shapes. `/build` works a single task attended.
-`/drain` compiles the ready queue into dependency-ordered, `Touch`-disjoint
-waves and runs a fresh worker per issue. Either way a verifier that never saw
-the implementation checks it against the written criteria before bd closes the
-issue, and `/distill` folds what the session learned back into rules or
-skills.
+**At review.** The critic runs a three-question attack on each criterion:
+gameable by literal, anchor still differs from disk, deepest feasible level
+reached. A gameable criterion with no depth-ceiling annotation blocks READY
+with the same force as an unmapped requirement. And `/critique`'s finding
+triage routes gameable criteria to JUDGMENT specifically so they cannot be
+auto-fixed — "swapping what a criterion checks changes what the spec
+verifies."
 
-The acceptance criteria are load-bearing in a way worth calling out. They are
-runnable commands, verified against current file state at authoring time — a
-grep must anchor on a phrase confirmed absent, a numeric bound must be
-confirmed satisfiable. An unverified criterion either passes vacuously or
-stalls a drain forever, so criterion authoring is where a lot of the system's
-correctness actually lives.
+**At verification.** The verifier checks for overfitting to the checks: were
+test files modified after the failing tests were committed, does the
+implementation special-case the exact test inputs, would it survive a
+reasonable variation. An implementation that games its acceptance criteria is
+a FAIL even when every command passes. Its mandatory per-requirement
+criteria-adequacy line asks whether the passing criteria actually *entail* the
+requirement, and a behavioral requirement evidenced solely at L0 is INCOMPLETE
+rather than PASS.
 
-## Decisions and what they cost
+## The privilege architecture
 
-| Decision | Bought | Paid |
+Authority is separated from throughput. The drain worker — isolated in its own
+worktree, running on the deep tier, doing the actual implementation — is
+deliberately de-privileged. It never pushes, never calls bd, never writes
+`HUMAN.md`, never spawns a subagent, never creates a task or issue for
+something it discovered. It returns a capped verdict with fixed sections:
+`DONE`/`BLOCKED`/`DEFERRED`, per-criterion evidence, `Decisions:`,
+`Discovered:`, and for a blocked stop a typed `Unblock: run:` / `agent:` /
+`ask:` line. Every state mutation is the orchestrator's, and the separation is
+backed structurally — a worker that wrote `HUMAN.md` would fail drain's
+merge-time `Touch` whitelist.
+
+`Touch:` itself carries three jobs from one declaration: it is the concurrency
+key (disjointness is what lets issues run in the same window), the scope
+boundary the verifier tests for creep, and the repair authority — `/build`
+fixes a review finding only if it is a correctness defect *and* the fix stays
+inside `Touch`, otherwise surfacing or filing it.
+
+Where containment actually matters, the design drops out of the agent
+framework entirely. A dispatch declaring `write-deny-paths` must not use a
+native spawn or subagent path; it runs headless through `dispatch-worker.sh`
+into `write-deny.sh`, which applies an OS write denial inherited by the agent
+and all its child processes — Seatbelt on macOS, bubblewrap on Linux. If the
+platform backend is unavailable the wrapper exits nonzero before the worker
+starts and drain records BLOCKED. The instruction is unambiguous: never
+substitute a prompt-only prohibition. That is the mechanism-over-prose
+principle taken to its conclusion, and it costs the native fast path to get
+there.
+
+The untrusted-data boundary has a mechanical implementation too:
+tracker text bound for a worker prompt is written to a temp file and screened
+by `screen-stub.sh`, exit 0 clean and exit 1 refused, with exit 2 explicitly
+defined as a usage error never to be treated as clean.
+
+## The artifact protocol
+
+Stages communicate through typed tokens in files rather than through prose
+handoffs, which is what lets them run in separate sessions.
+
+| Token | Written by | Read by |
 | --- | --- | --- |
-| bd as sole live state; markdown headers frozen | Drift-free resume; queries instead of narratives | A human reading a task file sees a stale `Status:` line |
-| Data-level portability; procedure mirrors deleted | Removed hand-maintained triplication and its parity gates | Other runtimes get no procedures; a thin generated entrypoint layer came back because plugin caches drop symlinks |
-| Advisory cost control plus thin guards, not an approval ledger | Unblocked work; caps and visibility instead of gates | No hard ceiling — leaks are found after the fact by `agentprof` |
-| Native orchestration instead of a custom engine | Schema'd returns, resume, concurrency caps, tier routing for free | Multi-agent execution is coupled to one runtime's feature set |
-| Fresh-context adversarial review at every stage | The cheapest available correctness mechanism | Every artifact pays a review round; review latency is on the critical path |
-| Frozen `retain` test inventory | Regression surfaces cannot silently disappear | See the first strain below |
+| `Breakdown-ready: true` | `/critique` at READY | `/drain` auto-breakdown |
+| content hash + verdict in `critique-findings.md` | `/critique` | `/critique` re-run skip |
+| `Verified: <date>` in `docs/` | `/idea` research step | `/idea` freshness check |
+| `Depends on:`, `Touch:`, `Budget:`, `Rigor:` | `/breakdown` | `register-spec`, then bd |
+| `DONE`/`BLOCKED`/`DEFERRED` + typed `Unblock:` | worker | drain orchestrator, gate hook |
+| `PASS`/`FAIL`/`INCOMPLETE` | verifier | drain routing |
+| `READY`/`READY WITH NITS`/`NOT READY` | critic | drain routing |
+
+Two details show the protocol has been debugged against real failures. A final
+message beginning with `DEFERRED`, `BLOCKED`, or `INCOMPLETE` passes the gate
+Stop hook even while checks are red — unattended workers stop mid-red by
+contract, and blocking them would trap them in a loop. And drain is told to
+route on the critic's verdict line only, never to grep its findings for
+severity words, because the critic emits 0–100 confidence scores and no
+severity labels at all.
+
+The confidence threshold itself is set by stage economics: the critic reports
+only findings at 80+ on a diff, but admits 60–79 on a spec, because ambiguity
+is cheap to fix before implementation and expensive after.
+
+## Two dials that scale the process
+
+`Rigor:` scales the gates. Absent means production: TDD red-first, the full
+verifier spawn, everything. `Rigor: prototype` skips red-first and skips the
+verifier, substituting a mechanical acceptance-command run as the reported
+signal so drain's verdict routing still works unchanged. Commit hygiene,
+runnable criteria, and the untrusted-data rules never scale. The one-way door
+is explicit: prototype code never merges into production-rigor work without
+flipping the header and treating the existing code as untested input to a
+normal task.
+
+Reversibility scales escalation. A mid-task decision with a reversible default
+is taken, logged as (decision, default, how to reverse), and work continues.
+A decision with no reversible default — or anything on the irreversible,
+blast-radius, spend, or authority list — stops. Attended `/build` asks the
+human; an unattended worker parks it as `DEFERRED`. Deferred questions can
+even carry `Contradicts-premise: true` with a verbatim excerpt, so the batch
+interview can substring-match it against the artifact's current text and skip
+re-opening a question the artifact has since answered.
+
+## What the design optimizes for that most don't
+
+`/design`'s selection criteria rank requirements fit first, then **verification
+story — could an agent test this well?**, then on-distribution, then
+simplicity. Fast deterministic checks, low-noise output, and typed APIs score
+high, and the skill calls this "the tiebreaker that matters most for agentic
+development." Technology is chosen for agent-verifiability rather than
+developer experience. The companion principle is to stay on distribution —
+prefer what the model already knows deeply, because "an exotic choice means
+every future session pays a teaching tax."
+
+The same instinct governs whether to use a model at all. `/design` classifies
+each part of an AI-embedding feature on a code-vs-LLM ladder, defaults to the
+lowest rung meeting the requirements, and requires any higher rung to name the
+failing per-part test that justifies it. `/idea` applies it to itself: a
+one-sentence diff gets done, not specced, and a mechanical transform a
+deterministic tool can perform "gets a script, not a spec."
+
+Skills are tested as software. An evalset scenario builds a fixture repo, runs
+the skill headlessly, and grades the artifacts. Beyond that, **trigger
+scenarios grade the routing decision** — the prompt describes the task in a
+user's words and never names the skill, and the grader reads activation from
+the transcript, accepting either a Claude `Skill` call or a Codex/Antigravity
+read of `SKILL.md` so one scenario grades under any runtime. Every evalset
+with trigger coverage carries negative cases, because "a positive-only set
+cannot catch the failure that costs the most: a description broad enough to
+pull the skill into a neighbour's work." The conclusion drawn is precise:
+trigger failures are description failures, so fix the frontmatter, not the
+body. Coverage is governed by a tier table and enforced model-free by
+`lint-eval-coverage.sh`, which fails on any skill missing from the table.
 
 ## Where the design strains
 
-**The frozen-surface guard has become the main source of stalls.** Of the 17
-open human blockers in `HUMAN.md`, five — and five of the six most recent, all
-filed 2026-07-26 — are the same collision: a task whose acceptance requires
-editing a test file that the inventory pins as immutable `retain`. In each
-case the implementation passes its own checks and fails only the frozen-content
-inventory. The guard is working exactly as specified. The defect is upstream:
-immutability is enforced at commit time but not consulted at task-authoring
-time, so tasks get written that cannot legally complete, and the only exit is
-a human adjudication. A bd memory now records the pre-flight check to run
-before dispatch, which is doctrine patching a mechanism gap — the durable fix
-is to make the authoring stage read the inventory.
+**Prose is being used as a programming language, and only the model type-checks
+it.** `/build`'s close-out step is roughly a hundred lines of branching
+English: a skip gate with a glob list and a numeric threshold, a
+fix-iff-in-Touch conditional, a fallback chain when native skill invocation is
+unavailable, carve-outs for drain-worker mode and bare-SPEC runs. It is a
+program whose interpreter is a language model. Individual branches are rarely
+exercised, no test covers most of them, and the failure mode is silent
+divergence rather than an error. The skill-size convention caps bodies at 500
+lines, which bounds the file but not the branching.
 
-**The doctrine-to-mechanism ratio still runs the wrong way.** Against 18,648
-lines of enforcement code sit roughly 100,000 lines of markdown, and the
-repo's own finding is that advisory prose measurably does not bind. Some of
-that prose is irreducible: the judgment skills are the product. But there is
-no standing classification separating "genuinely unmechanizable judgment" from
-"mechanizable, not yet mechanized," so the two are indistinguishable in the
-tree and the second silently accumulates. `bin/check-token-discipline` and
-`bin/check-agent-model-pins` show what the conversion looks like when it
-happens; the missing artifact is a disposition on every doctrine line.
+**The doctrine is densely cross-referential and the citations are not
+link-checked.** "Cite it, don't restate it" is the governing convention, and
+it works — it kept CLAUDE.md at 210 lines and the rules at 737. The cost is
+that a worker's actual obligations are spread across a citation graph: a skill
+cites a rule, which cites a `docs/memory/` topic, which cites an archived
+spec. Nothing verifies those targets still exist or still say what the citing
+line claims. The pivot document already flags entries in `docs/memory.md` that
+describe retired mechanisms; that decay has no automatic detector, and
+`/distill`'s manual prune is named in the skill as "the layer's only decay
+mechanism."
 
-**Distribution lags the source, silently and consequentially.** This session
+**The frozen-surface guard has become the main source of stalls.** Five of the
+17 open blockers in `HUMAN.md` — and five of the six most recent, all filed
+2026-07-26 — are the same collision: a task whose acceptance requires editing
+a test the inventory pins as immutable `retain`. Each implementation passes
+its own checks and fails only the frozen-content inventory. The guard is
+working as specified; the defect is upstream, since immutability is enforced
+at commit time but never consulted at task-authoring time. `/breakdown`
+already classifies criteria for privileged-access infeasibility and flags
+those tasks MANUAL at authoring time — the same pre-flight applied to the
+surface inventory would close this, and a bd memory currently patches it with
+a reminder instead.
+
+**Routing complexity grows faster than the skill count.** Eight skills now
+share the prose domain, and their descriptions carry explicit mutual-exclusion
+clauses — `/prose-review` not for external deliverables, `humanizer` not for
+first drafts, `grounding` not a style pass, `/critique` by artifact type
+rather than by request wording. Negative trigger evals exist precisely because
+these boundaries are non-obvious, and the critique/prose-review split is the
+worked example in the eval doctrine. The mitigation is real, but the cost of
+each additional skill in a crowded domain is a routing test against every
+neighbour, not just its own evalset.
+
+**Distribution lags source, silently and consequentially.** This session
 opened with the installed plugin at 0.18.7 against a source repo at 0.18.12.
-That gap is not cosmetic: `docs/memory/verifier-tier-leak.md` records a
-shipped agent-definition fix that appeared not to work because the immutable
-plugin-cache snapshot was still serving the old `model: inherit` pin — a
-correctness and cost defect caused purely by deployment lag. A staleness hook
-warns; nothing reconciles.
+`docs/memory/verifier-tier-leak.md` records what that costs: a shipped
+agent-definition fix appeared not to work because the immutable plugin-cache
+snapshot was still serving the old `model: inherit` pin — a correctness and
+cost defect from deployment lag alone. A staleness hook warns; nothing
+reconciles.
 
-**The queue's steady state is human-gated.** bd currently shows 18 open, 19
-blocked, and zero ready. Every item needs either a dependency or a person.
-This is arguably the pipeline working — it converts work agents cannot finish
-into explicit, well-written decisions rather than into guesses — but it means
-throughput is bounded by one human's decision rate, and the blocker list is
-where the system's actual backpressure shows up. Four of those blockers are
-residue from a policy reversal: the 2026-07-03 exit from bd, reversed on
-2026-07-22 for this repo only, left four sibling repos holding contradictory
-tracking instructions that only a human can adjudicate.
+**The queue's steady state is human-gated.** bd shows 18 open, 19 blocked,
+zero ready. The `/drain` design is deliberate here — there is no human-watched lane,
+and sensitive work raises the scrutiny bar rather than routing to a person, so
+the only things that reach `HUMAN.md` are genuinely unresolvable by an agent.
+That is the pipeline working. It also means throughput is bounded by one
+person's decision rate, and four of those blockers are pure residue from the
+2026-07-03 tracker exit being reversed on 2026-07-22 for this repo only,
+leaving four sibling repos holding contradictory instructions.
 
 **The system is its own only serious customer.** 131 specs in 24 days, nearly
-all of them about the toolkit. That is a fast, honest feedback loop — every
-mechanism is exercised by the work of building the next mechanism, and the
-incident files in `docs/memory/` read like a system that learns. It is also
-the classic overfitting risk: mechanisms are tuned to one repository, one
-operator, and one runtime, and the cross-repo rollout blockers are the first
-evidence that what fits here does not transplant without a decision at each
-destination.
+all about the toolkit. The feedback loop is fast and honest — every mechanism
+is exercised by the work of building the next one, and `docs/memory/` reads
+like a system that learns from incidents. It is also the classic overfitting
+risk, and the cross-repo rollout blockers are the first evidence that what
+fits here needs a decision at each destination.
 
-## What would falsify this design
+## What would falsify this
 
-The design rests on claims that are testable, and holding them testable is
-worth more than defending them.
+The design rests on testable claims, and keeping them testable is worth more
+than defending them.
 
-If mechanized enforcement does not measurably outperform doctrine, the
-conversion program is wasted effort and the prose should stay prose. If the
-tier ladder does not show up in `agentprof` attribution, the pinning
-machinery is ceremony. If fresh-context verification passes work that later
-breaks, the amnesia argument is weaker than assumed and review needs to move
-earlier or deeper. And if the human blocker queue keeps growing faster than it
-drains, the bottleneck is not agent capability at all but the rate at which
-one person can adjudicate, in which case the highest-leverage work is reducing
-the number of decisions that reach a human rather than increasing the number
-of tasks that reach an agent.
+If the anti-gaming machinery never fires — if no criterion is ever rejected as
+gameable and no verifier ever returns INCOMPLETE on an L0-only behavioral
+requirement — then the ladder is ceremony and the simpler check was enough. If
+the tier pins do not show up in `agentprof` attribution, the pinning is
+ceremony too. If memoized critique verdicts are ever relayed against a spec
+whose meaning changed without its bytes changing, hash-keying was the wrong
+freshness key. If fresh-context verification passes work that later breaks,
+the amnesia argument is weaker than assumed and review needs to move earlier.
+
+And if the human blocker queue keeps growing faster than it drains, the
+bottleneck is not agent capability but adjudication rate — in which case the
+highest-leverage work is reducing the number of decisions that reach a person,
+not increasing the number of tasks that reach an agent.
 
 The head-to-head eval harness (`specs/skills-vs-ultracode-eval`) was built on
-exactly this principle, and the pivot document states the standard plainly: if
-the data disagrees with the document, the data wins.
+this principle, and the pivot document states the standard plainly: if the
+data disagrees with the document, the data wins.
