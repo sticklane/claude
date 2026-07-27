@@ -155,7 +155,7 @@ implementing the behavior.
 **At classification.** Every criterion is ranked on a depth ladder: L0 text
 presence, L1 artifact structure, L2 behavior, L3 end-to-end. The rule is
 deepest-feasible rather than default-to-grep. What makes this honest rather
-than aspirational is the escape: a requirement that genuinely bottoms out at
+than aspirational is the escape: a requirement that bottoms out at
 L0/L1 carries a `Depth ceiling:` annotation stating why deeper is infeasible
 and naming the behavioral complement. The skill says plainly that prose skills
 — most of this toolkit — legitimately bottom out at L0/L1, and that the
@@ -296,8 +296,9 @@ body. Coverage is governed by a tier table and enforced model-free by
 
 Partly, and the part it solves is not the part most tooling competes on.
 
-**Where it leads.** The anti-gaming machinery has no equivalent in the
-mainstream agentic-coding tools. Everyone runs tests; this repo asks whether
+**Where it leads.** The anti-gaming machinery is the strongest thing here, and
+I know of no equivalent in the tools I can check — a judgment, not a survey.
+Everyone runs tests; this repo asks whether
 passing the test entails satisfying the requirement, ranks the evidence on a
 ladder, and blocks READY on a criterion a worker could green-check by typing a
 literal. Hard output budgets on every dispatched agent are similarly unusual —
@@ -381,22 +382,24 @@ remember` nor the harness memory directory. Nothing arbitrates. An agent
 following all three instructions writes the same lesson to three places, and
 an agent following any one of them misses what the other two hold.
 
-**The absorption trend is the strategic question.** Over the four weeks this
-repo covers, the harness gained skills, hooks, typed subagents, native
-orchestration, built-in review, scheduling, and loops — and each gain
-converted some part of this toolkit from a capability into a wrapper. The
-pivot document is itself evidence of the pattern, having deleted a nine-task
-plan to replicate the native engine. The useful split for planning is durable
+**The absorption trend is the strategic question.** The harness now ships
+skills, hooks, typed subagents, native orchestration, built-in review,
+scheduling, and loops, each of which converts some part of this toolkit from a
+capability into a wrapper. I have not verified when each arrived, so the trend
+is inferred rather than measured — but the repo's own record supports the
+direction: the pivot deleted a nine-task plan to replicate the native engine
+on the finding that the platform already did it, and re-adopted beads after
+having exited it. The useful split for planning is durable
 versus absorbable: the bd data layer, criterion-depth discipline, cost
-attribution, and the eval harness have no native analogue and are unlikely to
-grow one soon; orchestration wrappers, agent dashboards, and research mirrors
+attribution, and the eval harness have no native analogue I can find today;
+orchestration wrappers, agent dashboards, and research mirrors
 are on the absorption path and should be maintained accordingly — thin, and
 with a standing question about whether they still earn their line count.
 
 ## Where the design strains
 
 **Prose is being used as a programming language, and only the model type-checks
-it.** `/build`'s close-out step is roughly a hundred lines of branching
+it.** `/build`'s close-out step is 114 lines of branching
 English: a skip gate with a glob list and a numeric threshold, a
 fix-iff-in-Touch conditional, a fallback chain when native skill invocation is
 unavailable, carve-outs for drain-worker mode and bare-SPEC runs. It is a
@@ -458,7 +461,7 @@ leaving four sibling repos holding contradictory instructions.
 **The system is its own only serious customer.** 131 specs in 24 days, nearly
 all about the toolkit. The feedback loop is fast and honest — every mechanism
 is exercised by the work of building the next one, and `docs/memory/` reads
-like a system that learns from incidents. It is also the classic overfitting
+like a system that learns from incidents. It is also an overfitting
 risk, and the cross-repo rollout blockers are the first evidence that what
 fits here needs a decision at each destination.
 
