@@ -1,0 +1,16 @@
+{"at":"2026-07-27T05:22:14Z","skill":"handoff","scenario":"01-pass","runtime":"claude-code","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:22:14Z","skill":"handoff","scenario":"01-fail","runtime":"claude-code","verdict":"FAIL","cost_usd":null}
+{"at":"2026-07-27T05:23:17Z","skill":"handoff","scenario":"01-pass","runtime":"claude-code","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:23:17Z","skill":"handoff","scenario":"01-fail","runtime":"claude-code","verdict":"FAIL","cost_usd":null}
+{"at":"2026-07-27T05:24:10Z","skill":"handoff","scenario":"01-shared-deps","runtime":"claude-code","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:24:13Z","skill":"handoff","scenario":"02-skill-dep","runtime":"claude-code","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:24:24Z","skill":"drain","scenario":"01-codex-transcript","runtime":"codex","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:24:27Z","skill":"drain","scenario":"01-external-source","runtime":"codex","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:26:10Z","skill":"handoff","scenario":"01-shared-deps","runtime":"claude-code","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:26:18Z","skill":"handoff","scenario":"02-skill-dep","runtime":"claude-code","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:26:25Z","skill":"drain","scenario":"01-codex-transcript","runtime":"codex","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:26:28Z","skill":"drain","scenario":"01-external-source","runtime":"codex","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:28:32Z","skill":"handoff","scenario":"01-shared-deps","runtime":"claude-code","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:28:42Z","skill":"handoff","scenario":"02-skill-dep","runtime":"claude-code","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:28:48Z","skill":"drain","scenario":"01-codex-transcript","runtime":"codex","verdict":"PASS","cost_usd":null}
+{"at":"2026-07-27T05:28:48Z","skill":"drain","scenario":"01-external-source","runtime":"codex","verdict":"PASS","cost_usd":null}

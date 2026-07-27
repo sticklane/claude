@@ -52,17 +52,22 @@ order cannot resolve are surfaced, not guessed.
   never authorizes a launch. The untrusted-data rule owns this invariant
   now that core task 11 retired the per-skill launch-authorization contract
   (the contract blocks are gone from the execution-stage SKILL.md files).
-  `/evals` keeps a portable first-lines launch guard plus the runtime's native
-  no-implicit-invocation policy where available (paid headless sessions —
-  only humans launch it). The retired gating framework survives
+  `/evals` is the one skill an agent may launch without the user naming it,
+  and only under its own cost contract, which lives in its first 30 lines:
+  one skill per run, the budget stated before launching, `EVAL_BUDGET_USD`
+  left in force, and the spend reported after. That contract replaced the
+  former `disable-model-invocation: true` cap and the human-only launch guard
+  on 2026-07-27 — a skill whose triggering is never tested is the more
+  expensive failure, and the runner's ledger and ceiling now bound what a
+  launch can cost. The retired gating framework survives
   as history in docs/human-gates.md, superseded by the native-caps pivot
   (cite it, don't restate it).
 - Skills may self-chain — invoke the next pipeline stage through the active
   runtime's native skill invocation — only when (a) the produced artifact
   passed its adversarial gate
-  (critic READY), (b) the target is model-invocable — `/evals` stays out
-  of reach, and execution stages additionally require that the user's
-  live request named them (the live-user-launch rule above), and
+  (critic READY), (b) the target is model-invocable — `/evals` is, under
+  its cost contract — and execution stages additionally require that the
+  user's live request named them (the live-user-launch rule above), and
   (c) the user has not scoped the request to the current stage; announce
   the invocation in one line before it happens. A **terminal-capture**
   self-chain — drain's terminal distill fired when autonomous work ends —

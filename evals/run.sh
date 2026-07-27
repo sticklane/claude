@@ -25,10 +25,16 @@
 # Env knobs: EVALS_ROOT (scenario dir), SKILLS_ROOT (skill provisioning
 # source, for external repos' evals), AGENTS_ROOT (agents provisioning
 # source; defaults to SKILLS_ROOT's sibling agents/, skipped if absent),
-# MAX_TURNS (claude-code runner turn cap, default 40), and SESSION_TIMEOUT
-# (headless process ceiling in seconds, default 900). A scenario may
+# MAX_TURNS (claude-code runner turn cap, default 40), SESSION_TIMEOUT
+# (headless process ceiling in seconds, default 900), EVAL_BUDGET_USD (spend
+# ceiling for the whole run, default 5.00), and EVAL_LEDGER (where the priced
+# per-scenario rows append). A scenario may
 # provide timeout-seconds.txt when its native orchestration legitimately
 # needs a larger ceiling; an explicit SESSION_TIMEOUT overrides that file.
+# It may likewise provide max-turns.txt — a trigger scenario needs only enough
+# turns to observe the routing decision — which an explicit MAX_TURNS
+# overrides. A scenario's assert.sh can call the graders under EVALS_LIB,
+# including assert-trigger.sh for trigger scenarios.
 # A scenario may
 # ship an optional teardown.sh — run whenever setup.sh was attempted,
 # pass or fail, to reverse external live-service state; its failure
@@ -66,6 +72,12 @@ DEFAULT_ALLOWED='Read,Edit,Write,Glob,Grep,Bash(git *)'
 # $EVALS_ROOT/<skill>/<NN-name>/ instead of this checkout's evals/.
 EVALS_ROOT="${EVALS_ROOT:-$ROOT/evals}"
 
+# EVALS_LIB: where the graders a scenario's assert.sh may call live. It tracks
+# the runner, not EVALS_ROOT, so an external repo's scenarios can call
+# assert-trigger.sh without vendoring it.
+EVALS_LIB="$ROOT/evals"
+export EVALS_LIB
+
 # SKILLS_ROOT override: provision the skill under test from another
 # repo's skills dir (e.g. SKILLS_ROOT=~/automation/skills) instead of
 # this checkout's .claude/skills/. AGENTS_ROOT defaults to the sibling
@@ -84,6 +96,7 @@ SOURCE_ROOT="${SOURCE_ROOT:-$default_source_root}"
 
 # MAX_TURNS override for the claude-code runner (MCP-heavy skills may
 # need headroom beyond the default).
+MAX_TURNS_EXPLICIT="${MAX_TURNS:-}"
 MAX_TURNS="${MAX_TURNS:-40}"
 
 # Isolate git from the user's global config (signing, hooks, templates)
@@ -110,6 +123,29 @@ if [ -n "$filter" ] && [ ! -d "$SKILLS_ROOT/$filter" ]; then
   exit 1
 fi
 
+# Cost accounting. Every scenario is a paid headless session, so each run
+# appends one priced row to EVAL_LEDGER and stops before launching a scenario
+# the remaining EVAL_BUDGET_USD cannot cover — projected from the most
+# expensive scenario seen so far, so the ceiling holds without knowing a
+# scenario's cost in advance. A runtime whose transcript carries no cost field
+# records null rather than 0: unknown spend must not read as free.
+EVAL_LEDGER="${EVAL_LEDGER:-$ROOT/evals/cost-ledger.jsonl}"
+EVAL_BUDGET_USD="${EVAL_BUDGET_USD:-5.00}"
+spend=0
+worst=0
+over_budget=0
+
+# scenario_cost prints the total cost of the session captured in $1, or the
+# empty string when the transcript carries no cost field.
+scenario_cost() {
+  [ -s "$1" ] || return 0
+  grep -o '"total_cost_usd":[0-9.]*' "$1" | tail -n 1 | cut -d: -f2
+}
+
+# exceeds prints "yes" when $1 is greater than $2, using awk so the comparison
+# stays float-correct under bash 3.2.
+exceeds() { awk -v a="$1" -v b="$2" 'BEGIN { print (a > b) ? "yes" : "no" }'; }
+
 # Clean up the in-flight fixture on exit or interrupt; kept-on-FAIL
 # fixtures set EVAL_DIR="" first so the trap never removes them.
 EVAL_DIR=""
@@ -125,10 +161,27 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
   name="$skill/$(basename "$scenario")"
   [ -n "$filter" ] && [ "$skill" != "$filter" ] && continue
 
+  if [ "$(exceeds "$(awk -v s="$spend" -v w="$worst" 'BEGIN { print s + w }')" "$EVAL_BUDGET_USD")" = yes ]; then
+    echo "STOP  budget reached: \$$spend spent of \$$EVAL_BUDGET_USD; not launching $name" >&2
+    over_budget=1
+    break
+  fi
+
   scenario_timeout="${SESSION_TIMEOUT:-}"
   if [ -z "$scenario_timeout" ] && [ -f "$scenario/timeout-seconds.txt" ]; then
     scenario_timeout="$(head -n 1 "$scenario/timeout-seconds.txt")"
   fi
+  # Per-scenario turn cap, mirroring timeout-seconds.txt. A trigger scenario
+  # only needs to observe the routing decision, so capping its turns is the
+  # difference between reading a verdict and paying for a whole task run.
+  scenario_turns="${MAX_TURNS}"
+  if [ -z "${MAX_TURNS_EXPLICIT:-}" ] && [ -f "$scenario/max-turns.txt" ]; then
+    scenario_turns="$(head -n 1 "$scenario/max-turns.txt" | tr -d '[:space:]')"
+  fi
+  case "$scenario_turns" in
+    *[!0-9]*|'') echo "invalid max turns for $name: $scenario_turns" >&2; exit 1 ;;
+  esac
+
   scenario_timeout="${scenario_timeout:-900}"
   case "$scenario_timeout" in
     *[!0-9]*|'') echo "invalid session timeout for $name: $scenario_timeout" >&2; exit 1 ;;
@@ -274,7 +327,7 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
       # it (previewing the derived command without a live session).
       if [ "$runtime" = "claude-code" ]; then
         if [ -n "${EVAL_DRY_RUN:-}" ]; then
-          printf 'DRY-RUN [claude-code] runner: claude -p "<prompt>" --output-format stream-json --verbose --permission-mode dontAsk --max-turns %s --allowed-tools %q\n' "$MAX_TURNS" "$allowed"
+          printf 'DRY-RUN [claude-code] runner: claude -p "<prompt>" --output-format stream-json --verbose --permission-mode dontAsk --max-turns %s --allowed-tools %q\n' "$scenario_turns" "$allowed"
         else
           # --output-format stream-json --verbose makes claude emit a JSONL
           # transcript on stdout; tee captures it as session.log, which then
@@ -282,7 +335,7 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
           # plaintext and JSONL, so session.log IS the transcript).
           (cd "$EVAL_DIR" && timeout "$scenario_timeout" claude -p "$(cat "$scenario/prompt.txt")" \
               --output-format stream-json --verbose \
-              --permission-mode dontAsk --max-turns "$MAX_TURNS" --allowed-tools "$allowed" 2>&1 \
+              --permission-mode dontAsk --max-turns "$scenario_turns" --allowed-tools "$allowed" 2>&1 \
               | tee "$EVAL_DIR/session.log") || session_rc=$?
           EVAL_TRANSCRIPT="$EVAL_DIR/session.log"
         fi
@@ -369,6 +422,17 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
     fi
   fi
 
+  if [ -z "${EVAL_DRY_RUN:-}" ]; then
+    cost="$(scenario_cost "$EVAL_DIR/session.log")"
+    printf '{"at":"%s","skill":"%s","scenario":"%s","runtime":"%s","verdict":"%s","cost_usd":%s}\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$skill" "$(basename "$scenario")" \
+      "${EVAL_RUNTIME:-claude-code}" "$verdict" "${cost:-null}" >> "$EVAL_LEDGER"
+    if [ -n "$cost" ]; then
+      spend="$(awk -v s="$spend" -v c="$cost" 'BEGIN { printf "%.4f", s + c }')"
+      [ "$(exceeds "$cost" "$worst")" = yes ] && worst="$cost"
+    fi
+  fi
+
   if [ "$verdict" = "PASS" ]; then
     rm -rf "$EVAL_DIR"
     pass=$((pass + 1))
@@ -387,4 +451,5 @@ if [ "$total" -eq 0 ]; then
 fi
 echo "----"
 echo "$pass/$total scenarios passed"
-[ "$fail" -eq 0 ]
+echo "spend: \$$spend of \$$EVAL_BUDGET_USD budget (ledger: $EVAL_LEDGER)"
+[ "$over_budget" -eq 0 ] && [ "$fail" -eq 0 ]
