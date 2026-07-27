@@ -1,160 +1,58 @@
-# Large-codebase context retrieval
+# Large-codebase exploration
 
-How the toolkit retrieves context from large codebases — and when to reach
-for an external code-search MCP server instead of building indexing tooling
-here. The guiding decision is _document, don't build_: the mature prior art
-already lives in public repos, so the win is integrating with the best fit,
-not reinventing it.
+Verified: 2026-07-26
 
-Verified: 2026-07-11
+The toolkit uses Codebase-Memory as its optional structural exploration
+backend. The graph reduces repeated file reads, but it is never treated as
+proof that unchecked source is absent.
 
-## The retrieval landscape
+## Retrieval order
 
-### Anthropic: just-in-time retrieval, hybrid where latency matters
+1. Select the Codebase-Memory project whose canonical root matches the active
+   Git repository. Index only that root when no project exists.
+2. Use `get_architecture` for orientation.
+3. Inspect `get_graph_schema` before writing a nontrivial graph query.
+4. Resolve names to qualified symbols with `search_graph`.
+5. Use `trace_path` from one resolved function for bounded caller/callee
+   traversal, and use `detect_changes` for impact.
+6. Fetch a body with `get_code_snippet` only after locating the symbol.
+7. Use `search_code` for literal/content questions.
 
-Anthropic's context-engineering guidance favors **just-in-time (JIT)
-retrieval** — the agent holds lightweight identifiers (file paths, names,
-links) and loads the actual content on demand at runtime — over loading a
-heavy pre-computed index up front. It explicitly endorses a **hybrid**
-(some upfront retrieval plus autonomous just-in-time exploration) where
-latency matters and waiting for round after round of on-demand discovery
-would be too slow.
-[anthropic.com/engineering/effective-context-engineering-for-ai-agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
-
-This is why this toolkit's default retrieval move is a `scout` agent doing
-grep/glob on demand, not a maintained index: JIT first, and reach for a
-pre-built index only when JIT stops converging.
-
-### Aider's repo-map: the reference design
-
-Aider's **repo-map** is the best-documented reference design for a compact,
-whole-repo view. It parses source with **tree-sitter**, ranks symbols with a
-**PageRank-style** graph over reference/definition edges, and renders a
-**signature-only view of roughly 1k tokens** — just the definitions that
-matter, not the bodies. It is the canonical example of "some upfront
-retrieval" done cheaply.
-[aider.chat/2023/10/22/repomap.html](https://aider.chat/2023/10/22/repomap.html)
-
-### The official MCP reference servers ship nothing for code search
-
-The official Model Context Protocol reference-servers repository ships
-**nothing for code search or indexing** — there is no first-party MCP server
-to adopt for this. Any integration is therefore with a third-party,
-user-installed server.
-[github.com/modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers)
-
-## The in-repo structural option: `ctx`
-
-Since 2026-07, this toolkit ships its own **structural** index:
-`context-tree/` (CLI `ctx`, plus `ctx mcp` for tool-based harnesses). It
-answers where-is-X-defined / who-calls-X / what-does-this-import questions
-from a tree-sitter symbol index and carries refactor-surviving notes — the
-`/ctx` skill teaches agents when to reach for it. It complements rather
-than replaces the servers below: `ctx` is exact and structural; they are
-semantic/fuzzy content search. For a structure question, try `ctx` first —
-it needs no external service.
-
-## The two mature third-party MCP servers
-
-Both are **optional, user-installed, external** MCP servers. This toolkit
-never bundles, installs, configures, or depends on either — every skill and
-agent here works identically whether or not one is connected. They are
-candidates you (the user) install into your own MCP configuration when your
-repo is big enough to warrant it.
-
-### `claude-context` (zilliztech) — semantic / hybrid search
-
-Hybrid **BM25 + dense-vector** search over **AST-chunked** code, with
-**Merkle-tree incremental re-indexing** so only changed files are
-re-embedded. Best when you need semantic/fuzzy retrieval ("where do we
-handle retries?") across a large, frequently-changing repo.
-[github.com/zilliztech/claude-context](https://github.com/zilliztech/claude-context)
-
-Install (typical, via its README): add it to your MCP client config as an
-npx-launched server, e.g. in `claude_desktop_config.json` /
-`.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "claude-context": {
-      "command": "npx",
-      "args": ["-y", "@zilliz/claude-context-mcp@latest"]
-    }
-  }
-}
-```
-
-It needs an embedding provider (e.g. an OpenAI API key) and a vector store
-(Zilliz Cloud / Milvus) configured via env vars — see the README for the
-exact variables. Follow the upstream README as the source of truth.
-
-### `code-index-mcp` (trondhindenes) — fast literal / regex search
-
-Wraps Sourcegraph's **Zoekt trigram index** for fast **substring and regex**
-search across a large tree. No semantic layer — it is a speed play for
-literal lookups, not meaning-based ones.
-[github.com/trondhindenes/code-index-mcp](https://github.com/trondhindenes/code-index-mcp)
-
-Install (typical, via its README): add it as an MCP server pointed at your
-repo path, e.g.:
-
-```json
-{
-  "mcpServers": {
-    "code-index": {
-      "command": "code-index-mcp",
-      "args": ["--path", "/path/to/your/repo"]
-    }
-  }
-}
-```
-
-Zoekt builds and maintains the trigram index; follow the upstream README for
-the exact binary/launch details and indexing flags.
-
-## Decision table: which one, if any
-
-| Your situation                                                                                                                        | Reach for        | Why                                                                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| Need **semantic / fuzzy** search across a **large, frequently-changing** repo (meaning-based "where do we do X", tolerant of renames) | `claude-context` | Hybrid BM25 + dense-vector + AST chunking; Merkle-tree incremental reindex keeps a moving repo current cheaply. |
-| Need **fast literal / regex** search across a large tree, **no semantic layer** needed                                                | `code-index-mcp` | Zoekt trigram index gives fast substring/regex hits without the cost of embeddings.                             |
-| Repo is **small / medium**, and `scout`'s grep/glob is already enough                                                                 | **neither**      | JIT grep/glob converges fine; an external index adds setup and drift for no gain. Start here.                   |
-
-Default to the last row. Only climb to a server when repeated `scout`
-rounds on a fuzzy or semantic query genuinely stop converging.
-
-## Decision flow
+Keep pages small and distill results to qualified symbols, paths,
+relationships, and coverage facts. The canonical
+`codebase-memory` skill carries the complete query and negative-claim
+contract.
 
 ```mermaid
 flowchart TD
-    A["Retrieving context from this repo"] --> B{"Repo small/medium?\nscout grep/glob enough?"}
-    B -->|yes| N["Neither — use scout (JIT grep/glob)"]
-    B -->|no| C{"Need semantic / fuzzy\nmeaning-based search?"}
-    C -->|yes| S["claude-context\n(BM25 + dense-vector, AST chunks)"]
-    C -->|no| L["code-index-mcp\n(Zoekt trigram: fast literal/regex)"]
+    A["Identify the active Git project"] --> B{"Current CBM index?"}
+    B -->|no| C["Index this project root"]
+    B -->|yes| D["Inspect architecture and graph schema"]
+    C --> D
+    D --> E["Resolve qualified symbols and relationships"]
+    E --> F["Fetch only the needed snippet"]
+    F --> G{"Negative or exhaustive claim?"}
+    G -->|yes| H["Check coverage, pages, and uncommitted changes"]
+    H --> I["Bounded source fallback for uncovered paths"]
+    G -->|no| J["Return distilled evidence"]
+    I --> J
 ```
 
-## How this connects to the session's judgment
+## Coverage boundary
 
-Choosing a server is the **orchestrating session's** call, one layer above
-`scout` — `scout` itself cannot `ToolSearch` and its tool grant is
-deliberately narrow (Read, Grep, Glob, a little `git`). When repeated scout
-dispatches on a fuzzy/semantic query aren't converging and such a server
-_happens to be connected_ this session, the session runs a `ToolSearch` to
-discover it and prefers it over further scout rounds. That preference is
-recorded as one advisory bullet in
-[../../.claude/rules/token-discipline.md](../../.claude/rules/token-discipline.md)'s
-"Delegation defaults" section — conditional on a server being connected,
-never a hard dependency.
+Before an exhaustive or negative claim, check project identity, index status,
+pagination, ignored/skipped/unparsed paths, and uncommitted changes. A clean
+graph result does not cover source the graph did not parse. Search those
+candidate paths with bounded `rg` and small file reads.
 
-## Further reading
+If Codebase-Memory is unavailable, use that bounded fallback directly and say
+that graph coverage was unavailable. A missing optional backend must not block
+unrelated pipeline work.
 
-- [anthropic.com/engineering/effective-context-engineering-for-ai-agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
-  — JIT vs. hybrid retrieval.
-- [aider.chat/2023/10/22/repomap.html](https://aider.chat/2023/10/22/repomap.html)
-  — the repo-map reference design.
-- [github.com/zilliztech/claude-context](https://github.com/zilliztech/claude-context)
-  and
-  [github.com/trondhindenes/code-index-mcp](https://github.com/trondhindenes/code-index-mcp)
-  — the two servers' own READMEs (the install source of truth).
+## Runtime isolation
+
+Install the pinned binary with `bin/install-codebase-memory`. The toolkit
+launcher restricts each process to `CBM_ALLOWED_ROOT` and directs graph state
+to `${XDG_CACHE_HOME:-$HOME/.cache}/agentic/codebase-memory`. Do not enable
+the optional UI, automatic indexing of new repositories, or a graph artifact
+inside the checkout.

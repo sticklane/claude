@@ -46,8 +46,10 @@ shell tools over it.
 ## (e) Cross-references
 
 - The gate skill's Stop hook covers Edit/Write only; pair it with
-  `Bash(sed -i *)` permission `deny` rules when write protection must be
-  hard (gate/reference.md).
+  `Bash(sed -i|perl -pi|awk -i|ed|tee ...)` permission `deny` rules when
+  write protection must be hard (gate/reference.md). This list is
+  non-exhaustive — section (a) binds all in-place shell writes and redirection
+  patterns on tracked source/docs files.
 - Delegate exploratory reads to the `scout` agent rather than reading
   files into main context to look around (token-discipline.md's
   delegation default).

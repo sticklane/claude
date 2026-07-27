@@ -27,6 +27,11 @@ func SkillFrontmatter(path string) (Frontmatter, error) {
 	if err != nil {
 		return Frontmatter{}, err
 	}
+	return SkillFrontmatterBytes(data)
+}
+
+// SkillFrontmatterBytes parses the three audited fields from a SKILL.md body.
+func SkillFrontmatterBytes(data []byte) (Frontmatter, error) {
 	fields := frontmatterFields(string(data))
 	return Frontmatter{
 		Description:            fields["description"],

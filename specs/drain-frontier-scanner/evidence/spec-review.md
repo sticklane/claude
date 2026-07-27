@@ -8,7 +8,7 @@ Cumulative product diff, ref range `4f527b3..HEAD` (first pinned flip commit
 for this spec through this run's HEAD), restricted to the union `Touch:` of
 tasks 01-04 (task 05 excluded — unpromoted draft stub):
 
-- `.claude/skills/drain/drain_frontier.py`
+- `.claude/skills/drain/drain_frontier.py (retired)`
 - `evals/drain/01-rolling-window/assert.sh`
 - `.claude/skills/drain/SKILL.md`
 - `.claude/skills/drain/reference.md`
@@ -35,7 +35,7 @@ so not a divergence) was excluded by the finding filter.
 ## Gate re-run (all green)
 
 - `python3 .claude/skills/drain/test_drain_frontier.py` — PASS (22 tests)
-- `python3 .claude/skills/drain/drain_frontier.py .claude/skills/drain/fixtures/basic-window --window 2` — PASS
+- `python3 .claude/skills/drain/drain_frontier.py (retired) .claude/skills/drain/fixtures/basic-window --window 2` — PASS
 - `grep -c 'drain_frontier' .claude/skills/drain/SKILL.md` — 3 (≥2)
 - `grep -c 'tie-break is computed by drain_frontier' .claude/skills/drain/SKILL.md` — 1 (≥1)
 - `grep -c 'drain_frontier' .claude/skills/drain/reference.md` — 4 (≥1)

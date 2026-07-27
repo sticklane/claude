@@ -18,7 +18,7 @@ One hierarchical ledger: every dispatch charges the run's pool (hard
 typed refusal at the cap) and, when task-scoped, that task's
 budget_tokens. Structural caps enforced from the profile: dispatch
 depth (AGENTIC_RUN_DEPTH, max 2), per-run concurrency (default 10,
-queueing above it), per-run agent lifetime (default 200). ctx queries
+queueing above it), per-run agent lifetime (default 200). Codebase-Memory queries
 leave the meter unchanged. Dispatch's tracker-silence — the
 load-bearing concurrency invariant — is proven on the store, and the
 write lock exposes an attempt counter so the proof is not vacuous.
@@ -34,7 +34,7 @@ Touch-disjoint and safe to run concurrently.
 
 1. Write failing tests first: `tests/test_agentic_run_budget.py`
    (pool sized for 2 of 3 → third refused typed; task-scoped refusal
-   on exhausted budget_tokens; an `agentic ctx` query between
+   on exhausted budget_tokens; a Codebase-Memory query between
    dispatches leaves the meter reading unchanged);
    `tests/test_agentic_run_caps.sh` (depth-3 refused; with
    controlled-sleep stub workers, above-cap dispatches show journal
@@ -47,7 +47,7 @@ Touch-disjoint and safe to run concurrently.
 
 ## Acceptance
 
-- [ ] `python3 -m pytest tests/test_agentic_run_budget.py -q` → passes (RW-B incl. ctx-unmetered)
+- [ ] `python3 -m pytest tests/test_agentic_run_budget.py -q` → passes (RW-B, including unmetered index queries)
 - [ ] `bash tests/test_agentic_run_caps.sh` → prints `CAPS OK` (RW-C, queuedAt/startedAt mechanism)
 - [ ] `bash tests/test_agentic_dispatch_silent.sh` → prints `SILENT OK` (empty export diff, zero lock attempts) (RW-N)
 - [ ] `bash scripts/check.sh` → green

@@ -198,10 +198,10 @@ IS the toolkit's doctrine:
   on the public surface it demands MORE than most code carries, which is
   also what makes the signature no-surprise rule achievable.
 - **Why/rationale** — even the deodorant camp keeps it ("A comment is a good
-  place to say why you did something" — Fowler/Beck). The toolkit's answer
-  routes it out of the body: `ctx notes add` anchors rationale to the
-  symbol and survives refactors, answering Ousterhout's discoverability
-  objection to external docs better than a rotting inline line does.
+  place to say why you did something" — Fowler/Beck). The toolkit routes a
+  durable cross-file rationale to the narrowest existing design or
+  contributor document and uses Codebase-Memory to locate the affected
+  qualified symbols.
 - **Irreducibly dense code** (regexes, algorithms — Google's own named
   exceptions; antirez's "teacher" comments; Wayne's context-switch
   objection to extracting six half-line methods) — this is precisely the
@@ -210,12 +210,12 @@ IS the toolkit's doctrine:
 - **Checklist/warning comments about non-local coupling** (antirez) —
   colocate the coupled code where possible (Ousterhout: "If two pieces of
   code are tightly related, the solution is to bring them together");
-  when the coupling spans files, that is a routed `ctx notes add` gotcha,
-  not an inline comment.
+  when the coupling spans files, route the warning to the narrowest existing
+  design or contributor document, not an inline comment.
 
 The reviewer consequence: naming the comment's CATEGORY picks the right
 reported fix — restructure for what/how, promote-to-interface-doc for
-contract information that leaked into a body comment, route-to-notes for
+contract information that leaked into a body comment, route-to-docs for
 why/rationale and cross-file warnings, and no finding at all for the
 narrow escape. A blanket "delete the comment" is wrong in every category.
 

@@ -68,6 +68,7 @@ DPROHIB="(^|[^a-zA-Z])(no|never|not|cannot|don't)[^a-zA-Z]+${DVERB}([^a-zA-Z]|\$
 TIER_RE='haiku|session model|opts\.model|effort|tier pin|tier up|agentType'
 
 BUDGET_RE='(≤|under|at most|no more than|cap(ped)?)[[:space:]]?.{0,20}(words|tokens|lines)'
+WORKFLOW_ARGS_DESTRUCT='const[[:space:]]+\{[^}]*\bid\b[^}]*\bbranch\b[^}]*\bspec\b[^}]*\}[[:space:]]*=[[:space:]]*(args|payload)'
 
 # Iterative re-dispatch triggers (lowercased before matching).
 LTRIG='(retry|retries|retried|re-dispatch|redispatch|revise|revises|revised|iterate|iterates|iterated|cycle|cycles|cycled|relaunch|relaunches|relaunched|relaunching)'
@@ -159,6 +160,30 @@ has_bound() { # <paragraph>
 
 snippet() { printf '%s' "$1" | cut -c1-60; }
 
+check_workflow_args() { # <file> — assert drain compile-script args shape
+  local file="$1" raw compact
+  raw="$(cat "$file")"
+
+  # Only files that parse task fields from args receive this check.
+  if ! printf '%s\n' "$raw" | grep -Eq "$WORKFLOW_ARGS_DESTRUCT"; then
+    return
+  fi
+
+  if ! printf '%s\n' "$raw" | grep -Eq "typeof[[:space:]]+args[[:space:]]*===?[[:space:]]*['\\\"][a-zA-Z]+['\\\"]"; then
+    report "$file: [args] normalize JSON-string task payloads before destructuring"
+  fi
+  if ! printf '%s\n' "$raw" | grep -q 'JSON.parse'; then
+    report "$file: [args] parse JSON-string task payloads before destructuring"
+  fi
+
+  compact="$(printf '%s' "$raw" | tr -d '[:space:]')"
+  if ! (printf '%s' "$compact" | grep -q '!id' && \
+       printf '%s' "$compact" | grep -q '!branch' && \
+       printf '%s' "$compact" | grep -q '!spec'); then
+    report "$file: [args] guard required fields before dispatch: id, branch, spec"
+  fi
+}
+
 # --- per-file checks ---------------------------------------------------------
 PARAS=()
 load_paragraphs() { # <file> — populate PARAS[] (frontmatter/table rows removed)
@@ -194,6 +219,7 @@ check_file() { # <file>
     return
   fi
   load_paragraphs "$file"
+  check_workflow_args "$file"
 
   local n=${#PARAS[@]} i prev next
 

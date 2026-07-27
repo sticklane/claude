@@ -1,0 +1,5 @@
+Codebase-Memory selected project `fixture`, reports the index current, and
+search_graph resolved `app.dispatch.dispatch` in app/dispatch.py. The result
+is page 1 of 2, and app/generated/ is reported unparsed. Explain the exact
+next query sequence needed before claiming there are no other callers. Do not
+edit the repository.

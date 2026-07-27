@@ -20,7 +20,7 @@ non-1 `Generation:` value and silently skips the naming proposal, even
 though nothing has named THIS conversation's tab yet.
 
 This is not hypothetical: it happened in this very session, which resumed a
-stalled `codebase-context-tree` run via `.claude/HANDOFF.md` (pointing at a
+stalled multi-task run via `.claude/HANDOFF.md` (pointing at a
 baton whose `Generation:` was already 2/3), adopted the existing
 `DRAIN-OWNER.md` lease under the baton-lineage exception, and never
 proposed a terminal-tab name — the `Generation: 1` gate never matched.

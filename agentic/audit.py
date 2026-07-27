@@ -7,8 +7,9 @@ default; overridable with ``AGENTIC_TRANSCRIPT_ROOT`` for testing and for
 alternate runtimes) plus the bd tracker, and measures three tool-adoption
 regression classes:
 
-- ``grep-bypass``          — structure lookups that bypassed ``agentic ctx``
-                             for a raw grep.
+- ``code-exploration-bypass`` — raw Grep or grep-led shell search before any
+                                Codebase-Memory query in that session. This is
+                                an ordering signal, not a boundedness claim.
 - ``verdict-schema-failure`` — verdict files that failed schema validation.
 - ``spend-over-cap``       — dispatch spend over the configured cap
                              (best-effort: measured only where a spend signal
@@ -35,7 +36,7 @@ from agentic.sync import sync_write
 
 # The regression classes, in report order.
 REGRESSION_CLASSES = (
-    "grep-bypass",
+    "code-exploration-bypass",
     "verdict-schema-failure",
     "spend-over-cap",
 )
@@ -55,6 +56,25 @@ _ENV_SPEND_CAP_USD = "AGENTIC_SPEND_CAP_USD"
 # VAR=val assignments) is grep/rg/ag — a raw structure search, as opposed to
 # a pipeline that merely filters other output through grep.
 _GREP_LED = re.compile(r"^\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*(?:grep|rg|ag)\b")
+_CBM_CLI = re.compile(
+    r"(?:^|[\s;&|(])(?:\S*/)?(?:agentic-)?codebase-memory-mcp\s+cli\s+"
+    r"(?:index_repository|list_projects|index_status|search_graph|trace_path|"
+    r"detect_changes|query_graph|get_graph_schema|get_code_snippet|"
+    r"get_architecture|search_code)\b"
+)
+_CBM_QUERY_TOOLS = {
+    "index_repository",
+    "list_projects",
+    "index_status",
+    "search_graph",
+    "trace_path",
+    "detect_changes",
+    "query_graph",
+    "get_graph_schema",
+    "get_code_snippet",
+    "get_architecture",
+    "search_code",
+}
 
 
 def title_for(cls):
@@ -81,21 +101,22 @@ def discover_transcripts(root):
     return sorted(root.rglob("*.jsonl"))
 
 
-def _iter_records(paths):
-    """Yield each parseable JSON record across every transcript file."""
-    for path in paths:
-        try:
-            text = Path(path).read_text()
-        except (OSError, UnicodeDecodeError):
+def _records(path):
+    """Parseable JSON records from one transcript file."""
+    try:
+        text = Path(path).read_text()
+    except (OSError, UnicodeDecodeError):
+        return []
+    records = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
             continue
-        for line in text.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                yield json.loads(line)
-            except ValueError:
-                continue
+        try:
+            records.append(json.loads(line))
+        except ValueError:
+            continue
+    return records
 
 
 def _tool_uses(rec):
@@ -121,8 +142,8 @@ def _before(rec, since):
 # --- detectors --------------------------------------------------------------
 
 
-def is_grep_bypass(tool):
-    """A structure lookup that bypassed ``agentic ctx`` for a raw grep."""
+def is_raw_search(tool):
+    """Whether a tool starts raw grep-like exploration."""
     name = tool.get("name")
     if name == "Grep":
         return True
@@ -130,6 +151,22 @@ def is_grep_bypass(tool):
         cmd = (tool.get("input") or {}).get("command", "") or ""
         return bool(_GREP_LED.match(cmd))
     return False
+
+
+def is_codebase_memory_use(tool):
+    """Whether a tool use invokes the Codebase-Memory skill, MCP, or CLI."""
+    name = str(tool.get("name") or "")
+    inp = tool.get("input") or {}
+    if name == "Skill":
+        skill = str(inp.get("skill") or inp.get("command") or "").strip()
+        return skill.rsplit(":", 1)[-1] == "codebase-memory"
+    if name == "Bash":
+        return bool(_CBM_CLI.search(str(inp.get("command") or "")))
+    normalized = name.lower().replace("-", "_")
+    return (
+        "codebase_memory" in normalized
+        and any(normalized.endswith("_" + query) for query in _CBM_QUERY_TOOLS)
+    )
 
 
 def _is_verdict_schema_failure(rec):
@@ -171,14 +208,20 @@ def measure(transcript_paths, *, since=None, cwd=None):
     env-sourced.
     """
     counts = {cls: 0 for cls in REGRESSION_CLASSES}
-    for rec in _iter_records(transcript_paths):
-        if _before(rec, since):
-            continue
-        for tool in _tool_uses(rec):
-            if is_grep_bypass(tool):
-                counts["grep-bypass"] += 1
-        if _is_verdict_schema_failure(rec):
-            counts["verdict-schema-failure"] += 1
+    for path in transcript_paths:
+        used_codebase_memory = False
+        for rec in _records(path):
+            if _before(rec, since):
+                if any(is_codebase_memory_use(tool) for tool in _tool_uses(rec)):
+                    used_codebase_memory = True
+                continue
+            for tool in _tool_uses(rec):
+                if is_codebase_memory_use(tool):
+                    used_codebase_memory = True
+                elif not used_codebase_memory and is_raw_search(tool):
+                    counts["code-exploration-bypass"] += 1
+            if _is_verdict_schema_failure(rec):
+                counts["verdict-schema-failure"] += 1
     counts["spend-over-cap"] = _measure_spend_over_cap()
     return counts
 

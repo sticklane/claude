@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "runtime-gate-adapters",
+  "frozen_sha256": "df8c0cf1760bc5e552f8df6b8a64a3055430d8f8ff3bc751b78f7841c86e32b4",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_runtime_gate_adapters.sh#assert:09186fac02f54b48feb2d2555a43b198dfb1f97a415f6c36dcaa6e532673b35a"
+      ],
+      "content_sha256": "910fd558432789dc907e30314e1a86ebe709a6e393328446e5484561b3e339e2",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_runtime_gate_adapters.sh",
+      "path": "tests/test_runtime_gate_adapters.sh",
+      "rationale": "Canonical regression coverage for native Codex and Antigravity lifecycle gate installation and hook contracts.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

@@ -151,6 +151,12 @@ key_in() { # key_in <repo>
   ( cd "$1" && "$GATE" key 2>/dev/null )
 }
 
+run_gate_show() { # run_gate_show <repo> <key>
+  local repo="$1" key="$2"
+  GATE_SHOW_OUT="$(cd "$repo" && "$GATE" show "$key" 2>&1)"
+  GATE_SHOW_EXIT=$?
+}
+
 # --- the three executables ship ----------------------------------------------
 
 assert "bin/review-gate is executable" test -x "$GATE"
@@ -400,7 +406,14 @@ git -C "$WT_MAIN" worktree add -q "$WT_LINK" -b linked
 printf 'from the worktree\n' > "$WT_LINK/f.txt"
 git -C "$WT_LINK" add f.txt
 assert_blocked "a commit in a linked worktree is gated" "$WT_LINK" commit -m x
+WT_LINK_KEY="$(key_in "$WT_LINK")"
+run_gate_show "$WT_LINK" "$WT_LINK_KEY"
+assert_ne "show is absent before the linked worktree's marker is recorded" 0 "$GATE_SHOW_EXIT"
 record_in "$WT_LINK" "VERDICT: READY - the worktree change"
+run_gate_show "$WT_LINK" "$WT_LINK_KEY"
+assert_eq "show returns the linked worktree marker from the shared directory" 0 "$GATE_SHOW_EXIT"
+assert_has "show reads the linked worktree verdict" \
+  "VERDICT: READY - the worktree change" "$GATE_SHOW_OUT"
 assert_committed "a linked worktree commits once reviewed" "$WT_LINK" commit -m x
 assert "the worktree's marker landed in the shared common dir" \
   test -d "$WT_MAIN/.git/agentic-review"
@@ -592,10 +605,35 @@ assert_ne "the --all flag is gone" 0 "$?"
 assert_ne "the --amend flag is gone" 0 "$?"
 refute "no diff-base widening is left in bin/review-gate" \
   grep -Eq 'effective_diff|diff_base' "$GATE"
+SHOW_REPO="$TMP/show repo"
+new_repo "$SHOW_REPO"
+printf 'one\n' > "$SHOW_REPO/a.txt"
+git -C "$SHOW_REPO" add a.txt
+SHOW_KEY="$(key_in "$SHOW_REPO")"
+run_gate_show "$SHOW_REPO" "$SHOW_KEY"
+assert_ne "review-gate show is absent before the marker exists" 0 "$GATE_SHOW_EXIT"
+record_in "$SHOW_REPO" "VERDICT: READY - show command is readable"
+run_gate_show "$SHOW_REPO" "$SHOW_KEY"
+assert_eq "review-gate show prints a recorded verdict" 0 "$GATE_SHOW_EXIT"
+assert_has "show prints the full verdict body" \
+  "VERDICT: READY - show command is readable" "$GATE_SHOW_OUT"
+run_gate_show "$SHOW_REPO" "${SHOW_KEY}ff"
+assert_ne "review-gate show is absent for a missing marker" 0 "$GATE_SHOW_EXIT"
+assert_eq "show prints no output for a missing marker" "" "$GATE_SHOW_OUT"
 assert "bin/review-gate documents the REVIEW_GATE=0 bypass" \
   bash -c 'sed -n "1,/^set -u/p" "$1" | grep -q "REVIEW_GATE=0"' _ "$GATE"
 assert "bin/review-gate documents the --amend caveat" \
   bash -c 'sed -n "1,/^set -u/p" "$1" | grep -q -- "--amend"' _ "$GATE"
+
+SHOW_UNWRITABLE="$TMP/show unwritable marker directory"
+new_repo "$SHOW_UNWRITABLE"
+printf 'one\n' > "$SHOW_UNWRITABLE/a.txt"
+git -C "$SHOW_UNWRITABLE" add a.txt
+SHOW_UNWRITABLE_KEY="$(key_in "$SHOW_UNWRITABLE")"
+chmod 500 "$SHOW_UNWRITABLE/.git"
+run_gate_show "$SHOW_UNWRITABLE" "$SHOW_UNWRITABLE_KEY"
+assert_ne "review-gate show is blocked when the marker dir is unwritable" 0 "$GATE_SHOW_EXIT"
+chmod 700 "$SHOW_UNWRITABLE/.git"
 
 # --- bin/install-review-gate: per-repository installation --------------------
 # Sandboxed: HOME and the global git config both point into the temp dir, so no
@@ -991,6 +1029,26 @@ Correctness: no bugs found
 [data-loss] n/a'
 assert_committed "a blocking label reporting nothing does not block" \
   "$NEGATED" commit -m x
+
+EMDASH="$(sev_repo 'severity emdash')"
+record_in "$EMDASH" 'VERDICT: READY
+Correctness: none — no user-visible issue'
+assert_committed "a correctness none verdict with an em dash explanation does not block" \
+  "$EMDASH" commit -m x
+
+BARE_NONE="$(sev_repo 'severity bare none')"
+record_in "$BARE_NONE" 'VERDICT: READY
+Correctness: none'
+assert_committed "a bare correctness none verdict does not block" \
+  "$BARE_NONE" commit -m x
+
+NONE_OF="$(sev_repo 'severity none of')"
+record_in "$NONE_OF" 'VERDICT: READY
+Correctness: none of the writes are atomic'
+assert_blocked "a correctness claim that says none of the writes are atomic still blocks" \
+  "$NONE_OF" commit -m x
+assert_has "the refusal still blocks on the non-trivial none of wording" \
+  "none of the writes are atomic" "$GIT_ERR"
 
 PROSE="$(sev_repo 'severity prose')"
 record_in "$PROSE" 'VERDICT: READY - I checked correctness and security and found nothing'

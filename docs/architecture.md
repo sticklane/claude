@@ -25,11 +25,11 @@ and writes.
   "where was I" as a query, so resume is a lookup rather than a
   reconstructed narrative. The committed `.beads/issues.jsonl` is the
   portable form any agent can read.
-- **The ctx index** (`.context/`) is a code-structure index — symbol
-  trees, cross-file references, an import graph, and refactor-surviving
-  notes anchored to symbols. Agents query it through the `context-tree`
-  CLI (`ctx`) instead of reading whole files to answer where a symbol
-  lives or what calls it.
+- **Codebase-Memory** is the code-structure graph — architecture,
+  qualified symbols, cross-file relationships, and impact analysis.
+  The plugin bundles its MCP declaration and a project-scoping launcher;
+  generated graph state stays in the account-wide toolkit cache rather
+  than the checkout.
 - **The task files** under `specs/<slug>/` carry each unit of work: a
   `SPEC.md` with runnable acceptance criteria and `tasks/*.md` sized for
   one clean session each. Their headers (`Depends on`, `Touch`, `Budget`)
@@ -100,7 +100,7 @@ adds judgment and provenance rather than re-implementing orchestration.
 ## Runtime portability
 
 Claude Code is the primary runtime. Other runtimes read the same data
-layer — the bd queue, the ctx index, and the task files — and work tasks
+layer — the bd queue, Codebase-Memory, and the task files — and work tasks
 with their own abilities; they no longer receive ported copies of the
 procedures. The `antigravity/` and `codex/` directories are each now a
 single README pointing a reader of that runtime at the data layer, not a

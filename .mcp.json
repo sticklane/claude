@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "codebase-memory-mcp": {
+      "command": "agentic-codebase-memory-mcp",
+      "args": [],
+      "env": {
+        "CBM_ALLOWED_ROOT": "${CLAUDE_PROJECT_DIR}"
+      }
+    }
+  }
+}

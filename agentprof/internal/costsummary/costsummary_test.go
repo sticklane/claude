@@ -330,38 +330,35 @@ func TestBuildSessionsSectionNonNilWhenEmpty(t *testing.T) {
 	}
 }
 
-func TestBuildSessionsSectionSurfacesCtxUsage(t *testing.T) {
+func TestBuildSessionsSectionSurfacesCodebaseMemoryUsage(t *testing.T) {
 	samples := []schema.Sample{
-		// session s1: two main-loop calls carrying ctx_usage, summed per session.
+		// session s1: two main-loop calls carrying the adoption metric.
 		sample("s1", []string{"proj", "t01 · x", "skill:build", "main", "claude-fable-5"},
-			map[string]int64{"calls": 1, "ctx_usage": 2}),
+			map[string]int64{"calls": 1, "codebase_memory_usage": 2}),
 		sample("s1", []string{"proj", "t02 · y", "skill:build", "main", "claude-fable-5"},
-			map[string]int64{"calls": 1, "ctx_usage": 1}),
-		// A subagent call carrying ctx_usage must NOT contribute — per-session
-		// ctx usage is main-loop-scoped, matching the percentile scope.
+			map[string]int64{"calls": 1, "codebase_memory_usage": 1}),
+		// A subagent call must not contribute to the main-loop adoption signal.
 		sample("s1", []string{"proj", "t03 · z", "skill:build", "main", "agent:scout", "claude-haiku-4-5"},
-			map[string]int64{"calls": 1, "ctx_usage": 99}),
-		// session s2: a main-loop call with no ctx usage.
+			map[string]int64{"calls": 1, "codebase_memory_usage": 99}),
+		// session s2: a main-loop call with no Codebase-Memory usage.
 		sample("s2", []string{"beta", "t01 · h", "(no skill)", "main", "claude-sonnet-4-5"},
 			map[string]int64{"calls": 1}),
 	}
 	s := Build(samples, nil)
-	if got := s.Sessions["s1"].CtxUsage; got != 3 {
-		t.Errorf("sessions[s1].ctx_usage = %d, want 3 (2+1, subagent excluded)", got)
+	if got := s.Sessions["s1"].CodebaseMemoryUsage; got != 3 {
+		t.Errorf("sessions[s1].codebase_memory_usage = %d, want 3", got)
 	}
-	if got := s.Sessions["s2"].CtxUsage; got != 0 {
-		t.Errorf("sessions[s2].ctx_usage = %d, want 0 (no ctx usage)", got)
+	if got := s.Sessions["s2"].CodebaseMemoryUsage; got != 0 {
+		t.Errorf("sessions[s2].codebase_memory_usage = %d, want 0", got)
 	}
-	// ctx_usage is a per-session metric: it must not leak into the by_* rollups
-	// or the grand totals alongside token/cost sample types.
-	if _, ok := s.Totals["ctx_usage"]; ok {
-		t.Errorf("totals must not carry ctx_usage; got %v", s.Totals)
+	if _, ok := s.Totals["codebase_memory_usage"]; ok {
+		t.Errorf("totals must not carry codebase_memory_usage; got %v", s.Totals)
 	}
-	if _, ok := s.BySkill["skill:build"]["ctx_usage"]; ok {
-		t.Error("by_skill must not carry ctx_usage")
+	if _, ok := s.BySkill["skill:build"]["codebase_memory_usage"]; ok {
+		t.Error("by_skill must not carry codebase_memory_usage")
 	}
-	if _, ok := s.ByProject["proj"]["ctx_usage"]; ok {
-		t.Error("by_project must not carry ctx_usage")
+	if _, ok := s.ByProject["proj"]["codebase_memory_usage"]; ok {
+		t.Error("by_project must not carry codebase_memory_usage")
 	}
 }
 

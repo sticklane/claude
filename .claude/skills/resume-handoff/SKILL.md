@@ -7,8 +7,9 @@ Parked state only helps if the next session actually reads and acts on it.
 The `handoff-resume` SessionStart hook (`hooks/handoff-resume/resume-check.sh`)
 flags an open handoff issue when one exists, but its injected text is
 advisory context, not a binding instruction — when the live user message
-asks for something else, that something else correctly wins per CLAUDE.md's
-precedence order, and the flagged handoff goes un-acted-on. This skill is
+asks for something else, that something else correctly wins per the
+repository's instruction precedence, and the flagged handoff goes
+un-acted-on. This skill is
 the deterministic alternative: invoke it by name to guarantee the resume
 actually happens, instead of hoping prose compliance is consistent.
 
@@ -24,8 +25,8 @@ actually happens, instead of hoping prose compliance is consistent.
    - Zero found: tell the user there's nothing to resume and stop.
      `Next stage: none — no open handoff issue`.
    - Exactly one: that's the handoff to resume; don't ask.
-   - Multiple found: build an `AskUserQuestion` whose options come from each
-     candidate's title plus a bounded `bd show <id>` read (its notes summary
+   - Multiple found: use the runtime's native question UI with options from
+     each candidate's title plus a bounded `bd show <id>` read (its notes summary
      — never the full comment history, which is what step 2 is for), so the
      question is answerable without reading every candidate in full. Infer
      instead of asking only when the live request already names the task;
@@ -51,8 +52,8 @@ actually happens, instead of hoping prose compliance is consistent.
    recommended stage and get the user's explicit go-ahead before invoking
    it.
 4. **Reconcile the tracker.** Claim the tracked issue(s) for the work now
-   being resumed and close any the handoff shows finished (CLAUDE.md's Beads
-   section owns those commands — cite it, don't restate it). Anything the
+   being resumed and close any the handoff shows finished (the repository's
+   Beads guidance owns those commands — cite it, don't restate it). Anything the
    handoff's narrative names that has no issue of its own gets filed now,
    before resuming, so the queue reflects the work even if this session
    parks again.

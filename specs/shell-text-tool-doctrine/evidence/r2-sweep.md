@@ -28,7 +28,6 @@ Verdict legend:
 | `.claude/skills/gate/reference.md` | l33,43,53,172,173 | ok | `grep -qE` anchored, `INPUT=$(cat)` stdin capture, `head -1 \| grep -qE`; l172-173 `sed -i`/`cat >` are deny-rule ADVICE text = R1 exception |
 | `.claude/skills/workflow-author/SKILL.md` | l48 | ok | "grep-like scouting" prose |
 | `.claude/skills/workflow-author/reference.md` | l167 | ok | "grep-like scouting" comment prose |
-| `.claude/skills/ctx/SKILL.md` | l3 | ok | description prose "grep/Grep fits that" |
 | `.claude/skills/build/SKILL.md` | l286,292 | ok | `grep -l '^Status: pending'` bounded+anchored |
 
 Result: **11/11 files ok** — zero bounded-fix, zero write-violation. The
@@ -81,7 +80,6 @@ codifies the existing practice rather than correcting it.
 | gate/reference.md:173 | prose `Bash(sed -i *)` deny-advice | prose/exception | ok |
 | workflow-author/reference.md:167 | comment "grep-like scouting" | prose | ok |
 | workflow-author/SKILL.md:48 | "grep-like scouting" | prose | ok |
-| ctx/SKILL.md:3 | description "grep/Grep fits that" | prose | ok |
 | build/SKILL.md:286 | `grep -l '^Status: pending'` | read/bounded | ok |
 | build/SKILL.md:292 | `grep -l` prose reference | prose | ok |
 

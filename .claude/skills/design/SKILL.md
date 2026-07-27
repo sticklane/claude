@@ -1,10 +1,10 @@
 ---
 name: design
-description: Chooses technology and architecture through parallel investigation - concurrent agents explore candidate approaches, judged on agent-buildability, and the decision is recorded in the spec and CLAUDE.md. Use when a spec leaves a tech or design choice open, or the user asks "which library/framework/approach should I use" or "how should we architect this".
+description: Chooses technology and architecture through parallel investigation - concurrent agents explore candidate approaches, judged on agent-buildability, and the decision is recorded in the spec and shared AGENTS.md guidance. Use when a spec leaves a tech or design choice open, or the user asks "which library/framework/approach should I use" or "how should we architect this".
 argument-hint: "[path/to/SPEC.md or the decision to make]"
 ---
 
-Resolve the open design/technology decision in $ARGUMENTS. Three principles
+Resolve the open design/technology decision named in the current invocation. Three principles
 govern everything here (see "How they choose tech" in the toolkit repo's
 docs/anthropic-playbook.md — not shipped with installs):
 
@@ -70,7 +70,7 @@ with the runner-up and the one scenario that would flip it. Then record:
   /breakdown refuses any spec with unresolved entries there.
 - SPEC.md appendix: rejected options and the reason, one line each — and,
   when the ladder applied, the chosen rung per component.
-- CLAUDE.md: a single line constraining future agents ("Use X for Y; do not
+- AGENTS.md: a single line constraining future agents ("Use X for Y; do not
   introduce Z") — only if the decision is repo-wide, and it passes the
   "would removing this cause mistakes?" test.
 

@@ -109,12 +109,11 @@ attribution make possible:
   `cache_read_tokens + input_tokens`), and `reprime_count` /
   `reprime_cost_microusd` — that session's own slice of the `reprime` rollup
   (how many of its main-loop calls were labeled `reprime=true` and what they
-  cost; `0` / `0` for a session with no re-primes) — and `ctx_usage`, the count
-  of the session's ctx code-navigation events (`ctx <verb>` Bash calls +
-  `agentic:ctx` Skill calls) over its main-loop calls, surfaced alongside skill
-  attribution as an adoption signal. It is `0` for a session whose cwd is not a
-  ctx-indexed repo (a `.context/` directory present at the cwd, resolved at
-  analysis time), even when the transcript carries ctx-shaped commands.
+  cost; `0` / `0` for a session with no re-primes) — and
+  `codebase_memory_usage`, the count of the session's Codebase-Memory MCP,
+  one-shot CLI, and canonical-skill calls over its main-loop calls, surfaced
+  alongside skill attribution as an adoption signal. This metric comes from
+  transcript tool events; it does not require graph state in the checkout.
 
 `p50_ctx` / `p90_ctx` are computed over that session's **main-loop model calls
 only** — subagent calls carry the parent's `session` label but are excluded
@@ -161,7 +160,7 @@ The full "Cost (7d)" summary JSON has these top-level keys (every field of the
   `cost_microusd`, `by_project`); see above.
 - `sessions` — per-session context-size profiles keyed by session id
   (`project`, `calls`, `cost_microusd`, `p50_ctx`, `p90_ctx`,
-  `reprime_count`, `reprime_cost_microusd`, `ctx_usage`); see above.
+  `reprime_count`, `reprime_cost_microusd`, `codebase_memory_usage`); see above.
 - `untyped_fanout` — the untyped catch-all dispatch guard metric (`calls`,
   `cost_microusd`, `by_model`, `max_depth`) over the exact-match untyped set;
   see above.

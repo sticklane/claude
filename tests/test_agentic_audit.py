@@ -1,7 +1,7 @@
 """SPEC S14 / Migration step 7: ``agentic audit [--since DATE] [--dry-run]``
 reads Claude Code session transcripts and the bd tracker, measures three
-tool-adoption regression classes — structure lookups that bypassed
-``agentic ctx`` for grep, verdict-schema failures, and spend over cap — and
+tool-adoption regression classes — raw searches that bypassed
+Codebase-Memory, verdict-schema failures, and spend over cap — and
 files each NON-ZERO class as one tracker
 task linked ``discovered-from`` a standing audit anchor issue. ``--dry-run``
 prints the measures and writes nothing. A second run files nothing new
@@ -36,11 +36,11 @@ requires_bd = pytest.mark.skipif(
 # --- transcript fixtures ----------------------------------------------------
 
 
-def _assistant(tool_use, ts="2026-07-15T10:00:00Z"):
+def _assistant(*tool_uses, ts="2026-07-15T10:00:00Z"):
     return {
         "type": "assistant",
         "timestamp": ts,
-        "message": {"content": [tool_use]},
+        "message": {"content": list(tool_uses)},
     }
 
 
@@ -49,7 +49,7 @@ def _tool_use(name, **inp):
 
 
 def _grep_bypass_record(ts="2026-07-15T10:00:00Z"):
-    # A raw Grep for a symbol — a structure lookup that bypassed `agentic ctx`.
+    # A raw Grep for a symbol before Codebase-Memory was queried.
     return _assistant(_tool_use("Grep", pattern="def compute_frontier"), ts=ts)
 
 
@@ -69,15 +69,74 @@ def test_measure_counts_one_grep_and_one_compose_bypass(tmp_path):
         {"a.jsonl": [_grep_bypass_record()]},
     )
     counts = audit.measure(audit.discover_transcripts(root), cwd=str(tmp_path))
-    assert counts["grep-bypass"] == 1
+    assert counts["code-exploration-bypass"] == 1
     assert counts["verdict-schema-failure"] == 0
 
 
-def test_grep_led_bash_is_a_bypass_but_a_piped_grep_is_not():
+def test_grep_led_bash_is_raw_search_but_a_piped_grep_is_not():
     grep_led = _tool_use("Bash", command="grep -rn 'class Foo' agentic/")
     piped = _tool_use("Bash", command="git status --short | grep audit")
-    assert audit.is_grep_bypass(grep_led)
-    assert not audit.is_grep_bypass(piped)
+    assert audit.is_raw_search(grep_led)
+    assert not audit.is_raw_search(piped)
+
+
+def test_codebase_memory_query_before_bounded_grep_is_not_a_bypass(tmp_path):
+    cbm = _assistant(
+        _tool_use(
+            "mcp__codebase-memory-mcp__search_graph",
+            name_pattern="compute_frontier",
+        )
+    )
+    root = _write_transcripts(
+        tmp_path / "projects",
+        {"a.jsonl": [cbm, _grep_bypass_record()]},
+    )
+    counts = audit.measure(audit.discover_transcripts(root), cwd=str(tmp_path))
+    assert counts["code-exploration-bypass"] == 0
+
+
+def test_tool_order_within_one_record_is_preserved(tmp_path):
+    raw_then_cbm = _assistant(
+        _tool_use("Grep", pattern="compute_frontier"),
+        _tool_use(
+            "mcp__codebase-memory-mcp__search_graph",
+            name_pattern="compute_frontier",
+        ),
+    )
+    cbm_then_raw = _assistant(
+        _tool_use(
+            "mcp__codebase-memory-mcp__search_graph",
+            name_pattern="compute_frontier",
+        ),
+        _tool_use("Grep", pattern="compute_frontier"),
+    )
+    root = _write_transcripts(
+        tmp_path / "projects",
+        {"a.jsonl": [raw_then_cbm], "b.jsonl": [cbm_then_raw]},
+    )
+    counts = audit.measure(audit.discover_transcripts(root), cwd=str(tmp_path))
+    assert counts["code-exploration-bypass"] == 1
+
+
+def test_generic_tool_name_is_not_cbm_but_absolute_launcher_is(tmp_path):
+    generic_then_raw = _assistant(
+        _tool_use("search_code", query="compute_frontier"),
+        _tool_use("Grep", pattern="compute_frontier"),
+    )
+    absolute_then_raw = _assistant(
+        _tool_use(
+            "Bash",
+            command="/opt/agentic/bin/agentic-codebase-memory-mcp "
+            "cli search_code --query compute_frontier",
+        ),
+        _tool_use("Grep", pattern="compute_frontier"),
+    )
+    root = _write_transcripts(
+        tmp_path / "projects",
+        {"a.jsonl": [generic_then_raw], "b.jsonl": [absolute_then_raw]},
+    )
+    counts = audit.measure(audit.discover_transcripts(root), cwd=str(tmp_path))
+    assert counts["code-exploration-bypass"] == 1
 
 
 def test_verdict_schema_failure_is_counted_from_tool_results(tmp_path):
@@ -109,7 +168,7 @@ def test_since_filters_out_older_events(tmp_path):
     counts = audit.measure(
         audit.discover_transcripts(root), since="2026-07-01", cwd=str(tmp_path)
     )
-    assert counts["grep-bypass"] == 1
+    assert counts["code-exploration-bypass"] == 1
 
 
 # --- filing / dedup against a real bd store --------------------------------
@@ -187,7 +246,7 @@ def test_audit_files_exactly_two_typed_tasks_linked_discovered_from(tmp_path):
     assert r.returncode == 0, r.stderr
 
     filed = _discovered_from_anchor(store)
-    assert filed == [audit.title_for("grep-bypass")], filed
+    assert filed == [audit.title_for("code-exploration-bypass")], filed
 
 
 @requires_bd
@@ -216,6 +275,6 @@ def test_dry_run_prints_measures_and_files_nothing(tmp_path):
     r = _agentic(store, tr, "audit", "--since", "2026-07-01", "--dry-run")
     assert r.returncode == 0, r.stderr
     # Measures are reported...
-    assert "grep-bypass" in r.stdout
+    assert "code-exploration-bypass" in r.stdout
     # ...but nothing is filed.
     assert _discovered_from_anchor(store) == []

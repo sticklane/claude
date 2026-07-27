@@ -1,32 +1,60 @@
-# Using this toolkit with OpenAI Codex CLI
+# Using this toolkit with OpenAI Codex
 
-The toolkit keeps one procedure source in `.claude/skills/`. Codex discovers
-those same directories through `.agents/skills/` symlinks, so a skill edit is
-available to both runtimes without a copied port. The repository gate checks
-that every source skill has a valid Codex entrypoint.
+Codex runs the same workflow skills as Claude Code and Antigravity. The
+procedures have one source in [`.claude/skills/`](../.claude/skills/).
+Repository sessions discover that source through
+[`.agents/skills/`](../.agents/skills/). Installed Codex plugins use the
+regular-file entrypoints under [`skills/`](../skills/), because the Codex
+plugin cache does not preserve symlinked skill directories; each generated
+entrypoint loads the canonical procedure instead of copying it.
 
-## What Codex consumes
+## Install
 
-Codex reads the shared skills and the same data layer as Claude Code:
+For this checkout, no plugin install is required. Start Codex from the
+repository root and it discovers `.agents/skills/`.
 
-- **The work queue** — bd (beads): `bd ready --json`, `bd show <id>`, or
-  the committed `.beads/issues.jsonl` export. This is the source of ready
-  work and its dependency graph.
-- **Code structure** — the `ctx` index under `.context/`: `ctx tree`,
-  `ctx sig`, `ctx refs`, `ctx deps`, `ctx map`, `ctx at`. Structural
-  questions are answered from the index rather than by reading whole
-  files.
-- **Specs and tasks** — the markdown under `specs/`: each `SPEC.md` and
-  its `tasks/*.md`, with the single-line `Status:` / `Depends on:` /
-  `Touch:` headers a runtime can parse directly.
+To install the plugin globally from a clone:
 
-A Codex session run from this checkout can invoke the repository skills
-directly. Skills select a runtime capability where orchestration differs:
-Claude Code uses Workflow, while Codex uses awaited collaboration subagents.
-Both paths use bd for claim and closure state.
+```bash
+codex plugin marketplace add ~/agentic-toolkit
+codex plugin add agentic@agentic-toolkit
+codex plugin list
+```
 
-## Why the skills are linked
+The package exposes all 29 skills, including `evals`, and includes the eval
+runner and scenarios. `evals` has Codex's native
+`allow_implicit_invocation: false` policy because every run starts paid
+headless sessions; users can still invoke it explicitly.
 
-Copied runtime trees drift. Symlinks preserve one procedure source while
-letting each runtime use its native discovery path. Runtime-specific behavior
-belongs in capability-based branches inside that shared procedure.
+## Native execution
+
+Codex uses its collaboration primitives for workflow orchestration:
+
+- `spawn_agent`, `wait_agent`, and `followup_task` for attended fan-out.
+- Parallel read-only panels and serialized writers unless isolated
+  worktrees are available.
+- `codex exec` for Codex headless sessions and skill evals.
+
+A shared skill may describe the Claude Code and Antigravity adapters, but a
+Codex run never launches either runtime. The
+[`codex` runtime profile](../runtimes/codex.md) owns its model, headless,
+permission, and orchestration mappings.
+
+`gate` selects the Codex lifecycle adapter explicitly. It writes
+`.codex/hooks.json` and `.codex/hooks/*.sh`, alongside the shared
+`scripts/check.sh` and git pre-commit gate. Review and trust new project hooks
+through Codex's `/hooks` view before relying on them.
+
+## Shared state
+
+- **Ready work:** `bd ready --json` and `bd show <id>`.
+- **Code structure:** `.codex-plugin/plugin.json` registers
+  `codebase-memory-mcp` inline through `agentic-codebase-memory-mcp`. Query
+  Codebase-Memory first; when unavailable, use bounded `rg` plus small reads
+  and report that graph coverage was not checked.
+- **Definitions and evidence:** `specs/<slug>/SPEC.md`, task files, and
+  evidence directories. Live status and dependencies remain in bd.
+
+The repository gate checks source-to-entrypoint coverage, generated wrapper
+freshness, native package manifests, and the ban on executable Claude
+command-line recipes inside shared skills.

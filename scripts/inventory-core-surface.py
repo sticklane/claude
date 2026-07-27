@@ -763,6 +763,15 @@ def check_inventory(root: pathlib.Path, baseline_path: pathlib.Path) -> list[str
                 diagnostics.append(f"{path}: additive manifest must be a fragment")
             manifests.append((path, fragment))
 
+    retired_identities: set[str] = set()
+    retirement_path = root / "config" / "ctx-retirement-surfaces.txt"
+    if retirement_path.is_file():
+        retired_identities = {
+            line.strip()
+            for line in retirement_path.read_text().splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+
     classified: dict[str, tuple[pathlib.Path, dict[str, Any]]] = {}
     fragments: dict[str, pathlib.Path] = {}
     for source, manifest in manifests:
@@ -780,6 +789,11 @@ def check_inventory(root: pathlib.Path, baseline_path: pathlib.Path) -> list[str
                 continue
             identity = surface.get("identity")
             if not isinstance(identity, str):
+                continue
+            if (
+                identity in retired_identities
+                and manifest.get("fragment") != "codebase-memory-hard-cutover"
+            ):
                 continue
             prior = classified.get(identity)
             if prior is not None:

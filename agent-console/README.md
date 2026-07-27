@@ -9,7 +9,7 @@ else, so it costs nothing to run. Auto-starts at login via launchd.
 | View          | Path         | Shows                                                                                                                                                     |
 | ------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Skills**    | `/`          | Every installed agent skill & subagent — personal, project, and plugin (skills, commands, and agents), grouped by source, with a live filter.             |
-| **Workboard** | `/workboard` | Open work across every repo in `~/REPOS.md`: specs, `docs/TASKS.md`, handoffs, git state, and Claude Code sessions — with a needs-attention inbox up top. |
+| **Workboard** | `/workboard` | Open work across every repo in `~/REPOS.md`: specs, task issues, handoffs, git state, and native Claude Code, Codex, or Antigravity sessions — with a needs-attention inbox up top. |
 
 Each request re-scans on demand (workboard git state is cached ~45s), and the
 page **auto-refreshes in place every 25s** — it re-fetches and swaps the data

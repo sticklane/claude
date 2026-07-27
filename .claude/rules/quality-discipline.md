@@ -57,9 +57,11 @@ surveyed in docs/code-review-research-2026-07.md.
   descriptive names for distant use. The Go guidelines are the calibration
   source; verbatim quotes in docs/code-review-research-2026-07.md.
 - A would-be private comment has a routed home instead of an inline line:
-  a gotcha, invariant, or rationale tied to a symbol goes to `ctx notes add`
-  (indexed repos — /build's close-out already routes these); a TODO goes to
-  bd as an issue, never a code comment.
+  a durable cross-file invariant or rationale goes in the narrowest existing
+  design or contributor document; a TODO goes to bd as an issue, never a code
+  comment. Use Codebase-Memory first to locate the affected qualified symbols;
+  if it is unavailable, use bounded `rg` and small reads. Do not invent a
+  graph-note feature.
 - Narrow escape, reached rarely: a constraint the code cannot express (an
   external system's quirk, a spec-mandated oddity) may stay inline — and
   wanting it is itself a cue to look again at the structure first.

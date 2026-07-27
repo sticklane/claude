@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Parks session state in bd — a timestamped comment on every touched issue plus one `handoff`-labeled tracking issue carrying the cross-cutting narrative — then tells the user to /clear. Use when a session has grown long or degraded, when switching tasks mid-flight, or when the user says "pick this up later" or "hand this off".
+description: Parks session state in bd — a timestamped comment on every touched issue plus one `handoff`-labeled tracking issue carrying the cross-cutting narrative — then tells the user to start a fresh runtime session. Use when a session has grown long or degraded, when switching tasks mid-flight, or when the user says "pick this up later" or "hand this off".
 ---
 
 Long sessions accumulate dead context that is re-billed every turn and
@@ -64,7 +64,7 @@ to a fresh context, never seeding this session's own successor.
    File anything that has no issue yet before commenting on it — each open
    question, pending decision, or unfinished item this parking records
    becomes its own issue, with a `discovered-from` link where a current
-   issue exists (CLAUDE.md's Beads section owns those commands — cite it,
+   issue exists (the repository's Beads guidance owns those commands — cite it,
    don't restate it). `bd ready` is where the next session discovers the
    work; state that lives only in prose is how parked work goes invisible to
    the queue.
@@ -93,9 +93,10 @@ to a fresh context, never seeding this session's own successor.
    parked state pointing at an uncommitted tree is fragile.
 7. Run /distill first if there were corrections worth keeping — handoff
    preserves state, distill preserves lessons; they're different.
-8. Tell the user: `/clear`, then resume with `/resume-handoff`, naming the
+8. Tell the user to start a fresh runtime session, then invoke
+   `/resume-handoff`, naming the
    handoff issue's id. Never instruct an ad hoc "read the issue and
    continue": that bypasses the tracker reconciliation and consumption steps
    the resume skill exists to guarantee (its own doctrine, and the
    handoff-resume hook says the same). Close with:
-   `Next stage: none — /clear, then /resume-handoff picks the work up`.
+   `Next stage: none — start a fresh session, then /resume-handoff picks the work up`.

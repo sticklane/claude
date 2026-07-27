@@ -15,9 +15,8 @@ Touch: agentic/audit.py, tests/test_agentic_audit.py
 ## Goal
 
 `agentic audit [--since <date>]` reads session transcripts (the
-agentprof transcript locations) and tracker data, measures: structure
-lookups that bypassed `agentic ctx` for grep, dispatches that bypassed
-compose, verdict-schema failures, and spend vs caps — and files each
+agentprof transcript locations) and tracker data, measures: raw search before
+Codebase-Memory, verdict-schema failures, and spend vs caps — and files each
 regression class as a tracker task with a `discovered-from` edge to a
 standing audit anchor issue. Scheduling wiring (cron/Routine) is a
 one-line doc note; the command itself is the deliverable, runnable by

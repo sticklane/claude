@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  echo "agentic-codebase-memory-mcp: $*" >&2
+  exit 1
+}
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+if [[ -x "$script_dir/codebase-memory-mcp" ]]; then
+  cbm_binary="$script_dir/codebase-memory-mcp"
+elif cbm_binary="$(command -v codebase-memory-mcp 2>/dev/null)"; then
+  :
+else
+  fail "codebase-memory-mcp is not installed; run bin/install-codebase-memory"
+fi
+
+if [[ -n "${CBM_ALLOWED_ROOT:-}" ]]; then
+  [[ -d "$CBM_ALLOWED_ROOT" ]] \
+    || fail "CBM_ALLOWED_ROOT is not a directory: $CBM_ALLOWED_ROOT"
+  allowed_root="$(cd "$CBM_ALLOWED_ROOT" && pwd -P)"
+else
+  allowed_root="$(git -C "$PWD" rev-parse --show-toplevel 2>/dev/null)" \
+    || fail "CBM_ALLOWED_ROOT is unset and the launch directory is not in a Git worktree"
+  allowed_root="$(cd "$allowed_root" && pwd -P)"
+fi
+
+if [[ -z "${CBM_CACHE_DIR:-}" ]]; then
+  if [[ -n "${XDG_CACHE_HOME:-}" ]]; then
+    CBM_CACHE_DIR="$XDG_CACHE_HOME/agentic/codebase-memory"
+  else
+    [[ -n "${HOME:-}" ]] || fail "HOME is unset; set CBM_CACHE_DIR explicitly"
+    CBM_CACHE_DIR="$HOME/.cache/agentic/codebase-memory"
+  fi
+fi
+
+export CBM_ALLOWED_ROOT="$allowed_root"
+export CBM_CACHE_DIR
+exec "$cbm_binary" "$@"

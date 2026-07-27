@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """workboard — a cross-repo dashboard of specs, tasks, sessions, and agent state.
 
-Scans local git repos and Claude Code state on this machine and emits a
+Scans local git repos and the active agent runtime's state on this machine and emits a
 JSON snapshot of all open work (with --json; consumed by agent-console's
 live dashboard). With no --json flag it prints a one-line
 summary. It covers:
@@ -10,8 +10,9 @@ summary. It covers:
   - Kiro specs      .kiro/specs/<name>/tasks.md checkbox state ([ ] [-] [x])
   - Antigravity     ~/.gemini/antigravity*/brain/<id>/ artifacts (task.md + metadata)
   - handoffs        open bd issues labeled `handoff` (blocked-on-human, resumable)
-  - sessions        ~/.claude/projects/<escaped>/<sessionId>.jsonl transcripts
-                    (repo, branch, first prompt, last activity, live PID)
+  - sessions        native Claude Code, Codex, or Antigravity session records
+                    (repo, first prompt/summary, and last activity; live state
+                    only where that runtime exposes a supported inventory)
   - git             branch, dirty files, unpushed commits, worktrees
 
 Stdlib only. Read-only: it never mutates any of the state it reports on,
@@ -24,8 +25,8 @@ Usage:
                [--max-depth 3] [--quiet]
 
 With no ROOTS it scans common code directories (~/code ~/src ~/projects
-~/dev ~/repos ~/work, plus the cwd) and every repo any Claude Code session
-has touched (derived from session records' cwd field).
+~/dev ~/repos ~/work, plus the cwd) and every repo an active-runtime session
+has touched (derived from native session metadata).
 """
 
 import argparse
@@ -39,6 +40,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parent.parent / "_shared"))
@@ -66,13 +68,31 @@ SKIP_DIRS = {
 }
 DEFAULT_ROOT_CANDIDATES = ["code", "src", "projects", "dev", "repos", "work"]
 
+RUNTIME_ALIASES = {
+    "claude": "claude-code",
+    "claude-code": "claude-code",
+    "codex": "codex",
+    "antigravity": "antigravity",
+    "agy": "antigravity",
+}
+
+
+def active_runtime():
+    """Normalized runtime selected by the launcher.
+
+    The historical default stays Claude Code when no selector is present.
+    Installed Codex and Antigravity entrypoints always set AGENTIC_RUNTIME.
+    """
+    raw = os.environ.get("AGENTIC_RUNTIME", "claude-code").strip().lower()
+    return RUNTIME_ALIASES.get(raw, raw)
+
 # --------------------------------------------------- scanner dispatch prompts
 
 
 def scanner_verify_prompt(spec_slug):
-    """The detached-`claude` prompt for verifying an all-tasks-done spec.
-    Importable so agent-console's dispatch buttons reuse this exact wording
-    (contract-tested) rather than re-parsing an attention item's text."""
+    """Portable prompt for verifying an all-tasks-done spec.
+    Importable so any runtime adapter reuses this exact wording rather than
+    re-parsing an attention item's text."""
     return (
         f"Use the verifier agent to verify specs/{spec_slug} against its "
         "acceptance criteria; if it passes, archive the spec dir"
@@ -80,11 +100,18 @@ def scanner_verify_prompt(spec_slug):
 
 
 def scanner_resume_prompt(handoff_issue_id):
-    """The detached-`claude` prompt for resuming a parked handoff. Shared by
-    the parked-handoff attention item's cmd and agent-console's dispatch."""
+    """Portable prompt for resuming a parked handoff."""
     return (
         f"Run /resume-handoff on bd issue {handoff_issue_id}; "
         "close it with bd close once fully resumed"
+    )
+
+
+def native_skill_action(repo_path, prompt):
+    """Human-readable action that never selects or launches an agent runtime."""
+    return (
+        f"In {repo_path}, use the current runtime's native skill invocation: "
+        f"{prompt}"
     )
 
 
@@ -294,6 +321,7 @@ OPEN_TASK_STATUSES = {
     "in_progress",
     "claimed",
     "needs-verification",
+    "needs_verification",
 }
 CLOSED_TASK_STATUSES = {"done", "deferred", "skipped"}
 
@@ -714,8 +742,8 @@ def ready_items(repos):
                 elif t.get("deps_satisfied"):
                     spec_ready.append(t)
             if len(spec_ready) >= 2:
-                cmd = (
-                    f'cd {shlex.quote(repo_path)} && claude "/drain specs/{s["slug"]}"'
+                cmd = native_skill_action(
+                    repo_path, f"drain specs/{s['slug']}"
                 )
                 items.append(
                     {
@@ -728,7 +756,7 @@ def ready_items(repos):
                 )
             elif spec_ready:
                 t = spec_ready[0]
-                cmd = f'cd {shlex.quote(repo_path)} && claude "/build {t["file"]}"'
+                cmd = native_skill_action(repo_path, f"build {t['file']}")
                 items.append(
                     {
                         "repo": r["name"],
@@ -975,9 +1003,7 @@ def _last_record_ts(path):
 
 
 def _claude_agents_json():
-    """Parse `claude agents --json`. None if `claude` is absent from PATH,
-    errors, times out, or its stdout isn't a JSON list — any of which sends
-    live_session_ids() to the PID-record fallback (SPEC.md R1)."""
+    """Parse the Claude Code runtime's native live-agent inventory."""
     try:
         out = subprocess.run(
             ["claude", "agents", "--json"],
@@ -1045,17 +1071,21 @@ def prune_stale_session_pids(claude_home):
 def live_session_ids(claude_home):
     """sessionIds with a live Claude Code process.
 
-    Primary source: `claude agents --json` — any record carrying both
-    `sessionId` and `pid` counts as live, regardless of its `status` string.
-    Falls back to the PID-record scan (_live_session_ids_from_pids) when the
-    CLI is absent or its output isn't a JSON list.
+    When Claude Code is the explicitly active runtime, its native inventory is
+    the primary source. Codex and Antigravity never launch the Claude CLI;
+    they read the runtime-neutral PID records instead. An unset
+    AGENTIC_RUNTIME also takes the safe PID-only path.
 
     Returns (live, liveness_unknown): `live` keeps the `{sid: {...}}` shape
     in both paths; `liveness_unknown` is True only when the CLI returned a
     non-empty list but none of its records counted as live (SPEC.md R1/R4) —
     the PID-record fallback never sets it.
     """
-    records = _claude_agents_json()
+    records = (
+        _claude_agents_json()
+        if os.environ.get("AGENTIC_RUNTIME") == "claude-code"
+        else None
+    )
     if records is None:
         return _live_session_ids_from_pids(claude_home), False
 
@@ -1075,7 +1105,7 @@ _last_liveness_unknown = (
 )
 
 
-def scan_sessions(claude_home, stale_days):
+def scan_claude_sessions(claude_home, stale_days):
     global _last_liveness_unknown
     sessions = []
     projects = claude_home / "projects"
@@ -1122,10 +1152,189 @@ def scan_sessions(claude_home, stale_days):
                     "end_ts": last_ts,
                     "bytes": jl.stat().st_size,
                     "state": state,
+                    "runtime": "claude-code",
+                    "liveness_supported": True,
                 }
             )
     sessions.sort(key=lambda s: s["last_ts"], reverse=True)
     return sessions
+
+
+def default_codex_home():
+    return Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
+
+
+def _codex_prompt_and_meta(path):
+    """Read one Codex rollout's session metadata and first user prompt."""
+    sid = cwd = prompt = None
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                payload = rec.get("payload") if isinstance(rec, dict) else None
+                if not isinstance(payload, dict):
+                    continue
+                if rec.get("type") == "session_meta":
+                    sid = sid or payload.get("id") or payload.get("session_id")
+                    cwd = cwd or payload.get("cwd")
+                if (
+                    prompt is None
+                    and rec.get("type") == "response_item"
+                    and payload.get("type") == "message"
+                    and payload.get("role") == "user"
+                ):
+                    content = payload.get("content")
+                    if isinstance(content, str):
+                        prompt = content
+                    elif isinstance(content, list):
+                        texts = [
+                            item.get("text") or item.get("input_text") or ""
+                            for item in content
+                            if isinstance(item, dict)
+                            and item.get("type") in ("input_text", "text")
+                        ]
+                        prompt = " ".join(texts).strip() or None
+                if sid and cwd and prompt:
+                    break
+    except OSError:
+        pass
+    if prompt:
+        prompt = re.sub(r"<[^>]+>", " ", prompt)
+        prompt = re.sub(r"\s+", " ", prompt).strip()[:200]
+    return sid, cwd, prompt
+
+
+def scan_codex_sessions(codex_home, stale_days):
+    """Codex rollout inventory.
+
+    Codex currently exposes durable JSONL transcripts but no supported
+    machine-wide live-process inventory, so sessions are deliberately never
+    labeled active. `liveness_supported:false` keeps that limitation explicit.
+    """
+    global _last_liveness_unknown
+    _last_liveness_unknown = False
+    sessions = []
+    root = Path(codex_home) / "sessions"
+    if not root.is_dir():
+        return sessions
+    for jl in root.glob("**/rollout-*.jsonl"):
+        sid, cwd, prompt = _codex_prompt_and_meta(jl)
+        if not sid:
+            continue
+        last_ts, _ = _last_record_ts(jl)
+        try:
+            stat = jl.stat()
+        except OSError:
+            continue
+        last_ts = last_ts or stat.st_mtime
+        start_ts = _first_record_ts(jl) or last_ts
+        age_days = (now_ts() - last_ts) / 86400
+        if age_days * 24 < RECENT_HOURS:
+            state = "recent"
+        elif age_days > stale_days:
+            state = "stale"
+        else:
+            state = "idle"
+        sessions.append(
+            {
+                "id": sid,
+                "cwd": cwd,
+                "branch": None,
+                "prompt": prompt or "(no prompt found)",
+                "last_ts": last_ts,
+                "start_ts": start_ts,
+                "end_ts": last_ts,
+                "bytes": stat.st_size,
+                "state": state,
+                "runtime": "codex",
+                "liveness_supported": False,
+            }
+        )
+    sessions.sort(key=lambda s: s["last_ts"], reverse=True)
+    return sessions
+
+
+def _file_uri_path(value):
+    parsed = urlparse(value or "")
+    if parsed.scheme != "file":
+        return ""
+    return unquote(parsed.path)
+
+
+def scan_antigravity_sessions(antigravity_home, stale_days):
+    """Antigravity CLI conversations from its public local metadata cache.
+
+    The cache supplies resume IDs, workspace URIs, summaries, and timestamps,
+    but not process liveness. As with Codex, that unsupported state is explicit.
+    """
+    global _last_liveness_unknown
+    _last_liveness_unknown = False
+    meta = Path(antigravity_home) / "cache" / "conversation_metadata.json"
+    try:
+        raw = json.loads(read_text(meta, 20_000_000))
+    except json.JSONDecodeError:
+        return []
+    records = raw.get("conversations") if isinstance(raw, dict) else None
+    if not isinstance(records, dict):
+        return []
+    sessions = []
+    for key, entry in records.items():
+        summary = entry.get("summary") if isinstance(entry, dict) else None
+        if not isinstance(summary, dict):
+            continue
+        sid = summary.get("ID") or key
+        uris = summary.get("WorkspaceURIs") or []
+        cwd = next(
+            (
+                path
+                for path in (_file_uri_path(uri) for uri in uris)
+                if path
+            ),
+            "",
+        )
+        last_ts = iso_to_ts(summary.get("UpdatedAt", ""))
+        if not last_ts:
+            last_ts = iso_to_ts(entry.get("last_modified_time", ""))
+        if not last_ts:
+            continue
+        age_days = (now_ts() - last_ts) / 86400
+        if age_days * 24 < RECENT_HOURS:
+            state = "recent"
+        elif age_days > stale_days:
+            state = "stale"
+        else:
+            state = "idle"
+        prompt = summary.get("Title") or summary.get("Preview") or sid
+        sessions.append(
+            {
+                "id": sid,
+                "cwd": cwd,
+                "branch": None,
+                "prompt": str(prompt)[:200],
+                "last_ts": last_ts,
+                "start_ts": last_ts,
+                "end_ts": last_ts,
+                "bytes": 0,
+                "state": state,
+                "runtime": "antigravity",
+                "liveness_supported": False,
+            }
+        )
+    sessions.sort(key=lambda s: s["last_ts"], reverse=True)
+    return sessions
+
+
+def scan_sessions(runtime_home, stale_days):
+    """Dispatch session discovery to the selected runtime only."""
+    runtime = active_runtime()
+    if runtime == "codex":
+        return scan_codex_sessions(default_codex_home(), stale_days)
+    if runtime == "antigravity":
+        return scan_antigravity_sessions(default_antigravity_dir(), stale_days)
+    return scan_claude_sessions(runtime_home, stale_days)
 
 
 # ------------------------------------------------------ agent spawn tree
@@ -1509,7 +1718,7 @@ def attention_items(
                     "repo": r["name"],
                     "what": f"Handoff parked: {h['title']}",
                     "why": f"bd issue {h['id']} (tracks {tracked}) — resume it in a fresh session, then close the issue:",
-                    "cmd": f"cd {shlex.quote(rp)} && claude {shlex.quote(resume_prompt)}",
+                    "cmd": native_skill_action(rp, resume_prompt),
                     "age_ts": h["updated_ts"],
                 }
             )
@@ -1693,13 +1902,26 @@ def attention_items(
                     }
                 )
             else:
+                if active_runtime() == "claude-code":
+                    ownership = "no live session"
+                    why = (
+                        f"on branch {r['git']['branch']} — commit (then push) "
+                        "or stash; small focused commits"
+                    )
+                else:
+                    ownership = "live-session state unavailable"
+                    why = (
+                        f"on branch {r['git']['branch']} — confirm whether a "
+                        "native session owns it; otherwise commit (then push) "
+                        "or stash"
+                    )
                 items.append(
                     {
                         "severity": "warning",
                         "state": "needs-review",
                         "repo": r["name"],
-                        "what": f"{r['git']['dirty']} uncommitted change(s), no live session",
-                        "why": f"on branch {r['git']['branch']} — commit (then push) or stash; small focused commits",
+                        "what": f"{r['git']['dirty']} uncommitted change(s), {ownership}",
+                        "why": why,
                         "age_ts": r["git"]["last_commit_ts"],
                     }
                 )
@@ -1963,12 +2185,14 @@ def default_antigravity_dir():
 
 
 def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFAULT):
+    runtime = active_runtime()
     claude_home = default_claude_home()
     sessions = scan_sessions(claude_home, stale_days)
 
     # attach each session's agent spawn tree (SPEC.md R5/R8) — scan_session_spawns()
-    # is a separate read-only scan, so no other scan_*() output shape changes.
-    spawns = scan_session_spawns(claude_home)
+    # is Claude-transcript-specific. Other runtimes report an empty tree rather
+    # than reading another runtime's history.
+    spawns = scan_session_spawns(claude_home) if runtime == "claude-code" else {}
     for s in sessions:
         s["spawn_tree"] = spawns.get(s["id"], {}).get("spawn_tree", [])
 
@@ -2007,7 +2231,7 @@ def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFA
     orphan_sessions = [s for s in sessions if s["id"] not in matched]
 
     antigravity = scan_antigravity()
-    todos = scan_todos(claude_home)
+    todos = scan_todos(claude_home) if runtime == "claude-code" else []
     inbox = attention_items(repos, sessions, antigravity, stale_days, drain_window)
     ready = ready_items(repos)
 
@@ -2015,6 +2239,7 @@ def assemble(roots, max_depth, stale_days, quiet, drain_window=DRAIN_WINDOW_DEFA
         "generated_at": datetime.now(timezone.utc)
         .astimezone()
         .isoformat(timespec="seconds"),
+        "runtime": runtime,
         "stale_days": stale_days,
         "repos": repos,
         "sessions": sessions,

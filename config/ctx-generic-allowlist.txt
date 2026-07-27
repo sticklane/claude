@@ -1,0 +1,18 @@
+# Exact files where "ctx" is a normal context variable/metric, not the retired product.
+agent-console/agent-console.py
+agentprof/cmd_otel.go
+agentprof/internal/claude/claude.go
+agentprof/internal/costsummary/costsummary.go
+agentprof/internal/costsummary/costsummary_test.go
+agentprof/internal/judge/cli.go
+agentprof/internal/naming/cli.go
+agentprof/internal/otel/otel_test.go
+hooks/session-refresh/README.md
+hooks/session-refresh/refresh-check.sh
+hooks/session-refresh/test.sh
+specs/archive/cache-reprime-visibility/evidence/02-summary-sections.md
+specs/archive/cache-reprime-visibility/tasks/02-summary-sections.md
+specs/archive/session-refresh-automation/evidence/03-refresh-trigger-hook.md
+specs/archive/session-refresh-automation/evidence/05-workboard-reprime-flag.md
+specs/archive/skill-profiling-workboard/SPEC.md
+specs/retire-static-dashboards/SPEC.md

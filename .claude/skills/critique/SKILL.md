@@ -4,7 +4,8 @@ description: Runs an adversarial review of a spec, plan, or diff via the critic 
 argument-hint: "[path/to/artifact | 'diff']"
 ---
 
-Get an adversarial second opinion on $ARGUMENTS. If no argument: an
+Get an adversarial second opinion on the target named in the current
+invocation. If no target was named: an
 uncommitted diff exists → review that; otherwise the most recently touched
 SPEC.md or plan.
 

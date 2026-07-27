@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent.parent
+SOURCE_ROOT = ROOT / ".claude" / "skills"
+PACKAGE_ROOT = ROOT / "skills"
+# Codex's Agent Skills schema accepts these shared fields. Claude-specific
+# presentation metadata such as `argument-hint` remains on the canonical
+# source but must not leak into the portable package entrypoint.
+FRONTMATTER_FIELDS = ("name", "description")
+
+
+def source_skills() -> dict[str, Path]:
+    return {
+        path.name: path
+        for path in sorted(SOURCE_ROOT.iterdir())
+        if (path / "SKILL.md").is_file()
+    }
+
+
+def frontmatter_lines(source: Path) -> list[str]:
+    lines = source.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0] != "---":
+        raise ValueError(f"{source} has no YAML frontmatter")
+    selected: list[str] = []
+    include = False
+    for line in lines[1:]:
+        if line == "---":
+            break
+        if line and not line[0].isspace():
+            include = any(line.startswith(f"{field}:") for field in FRONTMATTER_FIELDS)
+        if include:
+            # The portable Agent Skills schema rejects angle brackets in a
+            # description. Preserve their placeholder meaning with square
+            # brackets while leaving the canonical Claude metadata intact.
+            selected.append(line.replace("<", "[").replace(">", "]"))
+    return selected
+
+
+def wrapper_text(name: str, source: Path) -> str:
+    frontmatter = "\n".join(frontmatter_lines(source / "SKILL.md"))
+    canonical = f"../../.claude/skills/{name}/SKILL.md"
+    return (
+        f"---\n{frontmatter}\n---\n\n"
+        f"Read and follow [the canonical workflow]({canonical}) completely "
+        "before acting. Resolve every relative link in that file against its "
+        "own directory. This packaging entrypoint contains no workflow "
+        "procedure; the linked file remains the single source of truth.\n"
+    )
+
+
+def expected_files() -> dict[Path, str]:
+    expected: dict[Path, str] = {}
+    for name, source in source_skills().items():
+        expected[PACKAGE_ROOT / name / "SKILL.md"] = wrapper_text(name, source)
+        policy = source / "agents" / "openai.yaml"
+        if policy.is_file():
+            expected[PACKAGE_ROOT / name / "agents" / "openai.yaml"] = (
+                policy.read_text(encoding="utf-8")
+            )
+    return expected
+
+
+def check() -> list[str]:
+    failures = []
+    expected = expected_files()
+    expected_dirs = {path.parent for path in expected}
+    if PACKAGE_ROOT.is_dir():
+        actual_dirs = {path for path in PACKAGE_ROOT.iterdir() if path.is_dir()}
+        for path in sorted(actual_dirs - {PACKAGE_ROOT / name for name in source_skills()}):
+            failures.append(f"orphaned packaging entrypoint: {path.relative_to(ROOT)}")
+    for path, contents in expected.items():
+        if path.parent in expected_dirs and path.parent.is_symlink():
+            failures.append(f"packaging entrypoint is a symlink: {path.parent.relative_to(ROOT)}")
+        elif not path.is_file():
+            failures.append(f"missing generated file: {path.relative_to(ROOT)}")
+        elif path.read_text(encoding="utf-8") != contents:
+            failures.append(f"stale generated file: {path.relative_to(ROOT)}")
+    return failures
+
+
+def write() -> None:
+    PACKAGE_ROOT.mkdir(exist_ok=True)
+    for name in source_skills():
+        target = PACKAGE_ROOT / name
+        if target.is_symlink():
+            target.unlink()
+        target.mkdir(exist_ok=True)
+    for path, contents in expected_files().items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(contents, encoding="utf-8")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Generate regular-file Codex skill packaging entrypoints."
+    )
+    parser.add_argument("--write", action="store_true")
+    args = parser.parse_args()
+    if args.write:
+        write()
+    failures = check()
+    if failures:
+        raise SystemExit("\n".join(failures))
+
+
+if __name__ == "__main__":
+    main()

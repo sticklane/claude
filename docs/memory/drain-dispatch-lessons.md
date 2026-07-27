@@ -334,17 +334,17 @@ step assumes it did.
 Widening a task's `Touch:` header at merge time (the established pattern
 above) can silently corrupt the header if the new line ends up containing
 two separate single-asterisk glob patterns, e.g.
-`context-tree/src/cmd/*.rs, ..., context-tree/tests/*.rs`. A repo-installed
+`engine/src/cmd/*.rs, ..., engine/tests/*.rs`. A repo-installed
 markdown/prose formatter hook (observed 2026-07-17, on `Edit`) reparses the
 line as markdown, treats the two lone `*` characters as a paired
 emphasis span, and re-serializes with `_` delimiters —
-`context-tree/src/cmd/_.rs, ..., context-tree/tests/_.rs` — silently
+`engine/src/cmd/_.rs, ..., engine/tests/_.rs` — silently
 changing what paths the glob actually matches (a wildcard glob becomes a
 literal filename `_.rs`). The original single-glob line
-(`context-tree/tests/*.rs` alone) was unaffected; the corruption only
+(`engine/tests/*.rs` alone) was unaffected; the corruption only
 triggers once a SECOND lone single-`*` glob is introduced on the same line,
 giving the formatter something to pair as open/close emphasis. Fix:
-prefer a directory-level `**` (e.g. `context-tree/src/cmd/**`) over a
+prefer a directory-level `**` (e.g. `engine/src/cmd/**`) over a
 second `*.ext` glob when a `Touch:` line already contains one — `**` did
 not get mangled in the same session. More generally, always `grep` a
 `Touch:` (or any `*`-containing) line immediately after editing it, before
@@ -352,7 +352,7 @@ committing, to confirm the formatter hook didn't rewrite it.
 
 ## Clean up a completed worker's worktree before the next gate run, not after
 
-`context-tree/target/` (or any language's build-artifact directory) can run
+`engine/target/` (or any language's build-artifact directory) can run
 several GB per worktree. Each dispatched worker gets its own worktree with
 its own full build; if the orchestrator merges a branch and moves straight
 to running gates without first removing that worker's now-unneeded

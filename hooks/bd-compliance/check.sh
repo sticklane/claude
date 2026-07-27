@@ -36,55 +36,86 @@
 # that abandoned claimed work is already `in_progress`, so telling it the file
 # name would hand it a one-line self-exemption. Do not add it back.
 #
-# Follows the same Stop-hook stdin contract as templates/stop-gate.sh:
-# `.stop_hook_active` (loop protection), `.transcript_path` (sanctioned
-# unattended-worker stop verdicts), `.cwd` (repo-root resolution).
+# Follows the runtime-neutral Stop-hook contract in templates/stop-gate.sh.
 set -u
 
 warn() { printf 'bd-compliance: %s\n' "$1" >&2; }
 
+runtime="${AGENTIC_HOOK_RUNTIME:-claude-code}"
+case "$runtime" in
+  claude|claude-code) runtime=claude-code ;;
+  codex|antigravity) ;;
+  *) warn "warning: unknown AGENTIC_HOOK_RUNTIME=$runtime; using Claude Code hook semantics"; runtime=claude-code ;;
+esac
+
+allow_stop() {
+  case "$runtime" in
+    codex) printf '{}\n' ;;
+    antigravity) printf '{"decision":"allow"}\n' ;;
+  esac
+  exit 0
+}
+
+block_stop() { # block_stop <reason>
+  case "$runtime" in
+    claude-code) printf '%s\n' "$1" >&2; exit 2 ;;
+    codex) jq -n --arg reason "$1" '{decision:"block", reason:$reason}'; exit 0 ;;
+    antigravity) jq -n --arg reason "$1" '{decision:"continue", reason:$reason}'; exit 0 ;;
+  esac
+}
+
 input="$(cat 2>/dev/null || true)"
 if [ -z "$input" ]; then
   warn "warning: empty hook input on stdin; skipping check"
-  exit 0
+  allow_stop
 fi
 if ! command -v jq >/dev/null 2>&1; then
   warn "warning: jq not found on PATH; skipping check"
-  exit 0
+  allow_stop
 fi
 if ! active="$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null)"; then
   warn "warning: malformed hook JSON on stdin; skipping check"
-  exit 0
+  allow_stop
 fi
 if [ "$active" = "true" ]; then
-  exit 0  # loop protection: a previous Stop-hook rejection is already active
+  allow_stop
+fi
+if [ "$runtime" = antigravity ]; then
+  fully_idle="$(printf '%s' "$input" | jq -r \
+    'if has("fullyIdle") then .fullyIdle else true end' 2>/dev/null || true)"
+  execution_num="$(printf '%s' "$input" | jq -r '.executionNum // 0' 2>/dev/null || true)"
+  [ "$fully_idle" = "true" ] || allow_stop
+  case "$execution_num" in ''|*[!0-9]*) execution_num=0 ;; esac
+  [ "$execution_num" -le 1 ] || allow_stop
 fi
 
 # Sanctioned stop: an unattended worker's contractual mid-red stop (a final
 # message beginning DEFERRED, BLOCKED, or INCOMPLETE) is let through rather
 # than trapped — same convention as templates/stop-gate.sh.
-transcript="$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null || true)"
+last="$(printf '%s' "$input" | jq -r '.last_assistant_message // empty' 2>/dev/null || true)"
+transcript="$(printf '%s' "$input" | jq -r '.transcript_path // .transcriptPath // empty' 2>/dev/null || true)"
 if [ -n "$transcript" ] && [ -r "$transcript" ]; then
-  last="$(tail -50 "$transcript" \
+  transcript_last="$(tail -50 "$transcript" \
     | jq -rs '[.[] | select(.type == "assistant")] | last
               | .message.content[]? | select(.type == "text") | .text' \
     2>/dev/null || true)"
-  if printf '%s' "$last" | head -1 | grep -qE '^(DEFERRED|BLOCKED|INCOMPLETE)\b'; then
-    exit 0
-  fi
+  [ -n "$transcript_last" ] && last="$transcript_last"
+fi
+if printf '%s' "$last" | head -1 | grep -qE '^(DEFERRED|BLOCKED|INCOMPLETE)\b'; then
+  allow_stop
 fi
 
 # Resolve the repo root: hook JSON cwd if present, else current directory,
 # widened to the enclosing git toplevel when available.
-hook_cwd="$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null || true)"
+hook_cwd="$(printf '%s' "$input" | jq -r '.cwd // .workspacePaths[0] // empty' 2>/dev/null || true)"
 if [ -n "$hook_cwd" ] && [ -d "$hook_cwd" ]; then
-  cd "$hook_cwd" || { warn "warning: cannot cd to $hook_cwd; skipping check"; exit 0; }
+  cd "$hook_cwd" || { warn "warning: cannot cd to $hook_cwd; skipping check"; allow_stop; }
 fi
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || root="$PWD"
 
 claims="$root/.beads/session-claims"
 if [ ! -f "$claims" ]; then
-  exit 0
+  allow_stop
 fi
 
 # Collect non-blank claimed ids.
@@ -95,12 +126,12 @@ while IFS= read -r line || [ -n "$line" ]; do
 done < "$claims"
 
 if [ "${#ids[@]}" -eq 0 ]; then
-  exit 0
+  allow_stop
 fi
 
 if ! command -v bd >/dev/null 2>&1; then
   warn "note: bd not installed on PATH; skipping bd-compliance check for: ${ids[*]}"
-  exit 0
+  allow_stop
 fi
 
 inflight="$root/.beads/session-inflight"
@@ -137,12 +168,8 @@ for id in "${ids[@]}"; do
 done
 
 if [ "${#open_ids[@]}" -eq 0 ]; then
-  exit 0
+  allow_stop
 fi
 
-{
-  printf 'bd-compliance: claimed issue(s) neither closed nor in flight: %s\n' \
-    "${open_ids[*]}"
-  printf 'If the work is done: `bd close <id>` and remove the line from .beads/session-claims. Otherwise defer or unclaim it per the /work skill.\n'
-} >&2
-exit 2
+reason="$(printf 'bd-compliance: claimed issue(s) neither closed nor in flight: %s\nIf the work is done: `bd close <id>` and remove the line from .beads/session-claims. Otherwise defer or unclaim it per the /work skill.' "${open_ids[*]}")"
+block_stop "$reason"

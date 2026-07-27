@@ -50,11 +50,11 @@ per-language invocation:
 npx --yes jscpd --format typescript,go -r console,json -o <out-dir> <path>
 ```
 
-This is the exact command the in-repo rediscovery check
-(`specs/ctx-static-analysis-augmentation/tests/clone-audit.sh`) runs against
-the committed TS and Go fixture pairs
-(`specs/ctx-static-analysis-augmentation/fixtures/clone-audit/`) to prove the
-recipe actually rediscovers a known clone in both stacks.
+Use Codebase-Memory first to confirm the active project and source roots
+before selecting `<path>`. If it is unavailable, choose the roots with
+bounded `rg`/Glob inspection and say that graph coverage was not checked.
+The command's JSON report, not graph output, remains the clone finding
+authority.
 
 ## Reading the report
 

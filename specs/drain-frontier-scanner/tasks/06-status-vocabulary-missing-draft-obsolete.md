@@ -20,7 +20,7 @@ no-argument (whole-queue) `/drain` launch includes any spec with a draft
 or obsolete task anywhere in scope.
 
 Observed live 2026-07-21: a whole-queue frontier scan
-(`python3 .claude/skills/drain/drain_frontier.py specs/*/`) failed with
+(`python3 .claude/skills/drain/drain_frontier.py (retired) specs/*/`) failed with
 `specs/agentprof-skill-audit/tasks/05-judge-fake-replies-mode.md:
 malformed Status value 'draft'` before producing any output, forcing a
 manual per-spec header-read fallback across all 45 specs / 207 task

@@ -59,5 +59,5 @@ correctly skill-less, hence R1's builtin denylist.)
 
 - Skill frames embed skill names verbatim; one retired local-only skill
   name appeared in this window's frames (verified NOT present in the
-  already-pinned specs/drain-wake-cost profile). Evidence profiles pinned
+  already-pinned specs/archive/drain-wake-cost profile). Evidence profiles pinned
   in-repo must be denylist-scrubbed; the denylist itself never ships.

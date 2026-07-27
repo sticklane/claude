@@ -5,15 +5,25 @@ running an agent-driven spec pipeline, distributed as the `agentic`
 plugin. Authoring conventions and always-on rules live in CLAUDE.md and
 `.claude/rules/`—this file is the map, not the rulebook.
 
+## Session start
+
+Read `CLAUDE.md` and the applicable `.claude/rules/`, then run `bd prime` for
+the tracker workflow. Use `/work` for the attended default; it reads `bd
+ready`, claims the selected issue, and closes it after verification. Use
+`/drain` only when the user asks to work the ready queue.
+
 ## Repo map
 
 - `.claude/`—the source of truth: `skills/` (pipeline stages), `agents/` (scout, critic, verifier...), `rules/` (always-on).
-- `.claude-plugin/`—plugin + marketplace manifests distributing the toolkit as plugin `agentic`.
-- `agentic/`—the `agentic` CLI (Python): fronts bd (tracker) and ctx (index) behind one command. `agentic init` bootstraps a clone's tracker from the committed `.beads/issues.jsonl`; `register-spec` creates absent task issues and dependency edges from authored definitions without reading status. `ready`, `resume`, `claim`, `verdict`, and `audit` are live; `shadow-sync` is a hidden non-mutating retirement alias. Task 04 owns the remaining stub dispositions.
+- `.claude-plugin/`, `.codex-plugin/`, `plugin.json`—native Claude Code, Codex, and Antigravity package manifests for plugin `agentic`.
+- `skills/`—generated regular-file package entrypoints for Codex and Antigravity; each loads its canonical `.claude/skills/` procedure. Regenerate with `bin/generate-codex-skill-entrypoints --write`; never hand-edit.
+- `agentic/`—the `agentic` CLI (Python): fronts bd for tracker workflows and audits Codebase-Memory exploration adoption. `agentic init` bootstraps a clone's tracker from the committed `.beads/issues.jsonl`; `register-spec` creates absent task issues and dependency edges from authored definitions without reading status. `ready`, `resume`, `claim`, `verdict`, and `audit` are live; `shadow-sync` is a hidden non-mutating retirement alias.
 - `agentprof/`—pprof profiler for AI-agent token & spend attribution (Claude Code transcripts, GCP billing, OTel; cache re-prime + skill/project attribution metrics—flags and labels in its README/SCHEMA).
 - `agent-console/`—local zero-LLM dashboard (workboard view, `/workboard-kanban` board view grouping every repo's spec tasks into status columns, cost panel incl. re-prime line) for this machine's Claude Code setup.
-- `context-tree/`—Rust CLI `ctx` + MCP server: tree-sitter symbol index (12 languages), structural queries (tree/sig/map/deps/refs/at), refactor-surviving symbol notes; the `/ctx` skill teaches agents to use it.
-- `antigravity/`, `codex/`—one-page READMEs pointing at the data layer (bd's queue, ctx's index, `specs/`); the former mirrored-port trees were deleted in the 2026-07-22 portability pivot (CLAUDE.md's "Authoring conventions").
+- `.claude/skills/codebase-memory/`—the code-exploration contract: use the
+  bundled Codebase-Memory MCP server for structure first; if unavailable,
+  use bounded `rg` plus small reads without claiming graph coverage.
+- `antigravity/`, `codex/`—runtime install and native-execution guides. The 2026-07-22 portability pivot removed the former copied procedure trees.
 - `bin/`—installer scripts (quality gates, skill sync).
 - `docs/`—research and doctrine (anthropic-playbook, external-playbooks, memory index).
 - `evals/`—skill eval scenarios plus the headless runner.
@@ -43,12 +53,15 @@ All re-verified 2026-07-11 (each run green); run from the repo root.
 - `./specs/status.sh`—renders the live dashboard from bd; prints one row per issue and a TOTAL of the ready count plus each non-ready bd status.
 - `bash tests/test_status_cutover.sh`—proves `status.sh`'s totals equal bd's counts (`CUTOVER OK`).
 - `claude plugin validate .`—proves the plugin + marketplace manifests are valid.
+- `python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .`—validates the Codex plugin package; `agy plugin validate .` validates the Antigravity package and reports the discovered skill count.
+- `bash tests/test_codex_skill_entrypoints.sh`—proves all shared runtime entrypoints are present, generated wrappers are current, and shared skill instructions contain no executable cross-runtime Claude CLI recipes.
 - `for t in tests/test_*.sh; do bash "$t"; done`—proves installers and hook templates work.
 - `./bin/check-agent-model-pins`—proves every `.claude/agents/*.md` pins a model alias in {haiku, sonnet, opus}.
 - `./evals/runner-selftest.sh`—proves the eval runner's plumbing (stub CLI, no model calls); full skill evals run via `./evals/run.sh <skill>` (headless model sessions—spend).
 - `bash agentprof/scripts/check.sh`—proves agentprof's Go build: gofmt, vet, tests.
 - `bash agent-console/scripts/check.sh`—proves agent-console's py_compile, render smoke test, and unit tests.
-- `bash context-tree/scripts/check.sh`—proves context-tree's Rust build: fmt, clippy, tests (needs the Rust toolchain).
+- `bash tests/test_codebase_memory_integration.sh`—proves the pinned installer,
+  launcher isolation, MCP packaging, routing doctrine, and skill contract.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:970c3bf2 -->
 

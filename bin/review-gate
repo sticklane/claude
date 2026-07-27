@@ -19,6 +19,10 @@
 #                        to stderr).
 #   review-gate record   Read a review verdict on stdin and store it against
 #                        that key. Exits 1 on empty stdin.
+#   review-gate show [key]
+#                        Print the recorded verdict for key, or for the staged
+#                        diff when no key is provided. Exits 1 when the key
+#                        exists but no marker does.
 #
 # The key is always `git diff --cached`. Inside the pre-commit hook this tool
 # exists for, that diff is what the commit will contain — plain, `git commit -a`,
@@ -170,6 +174,20 @@ cmd_record() {
   } > "$marker" || die "cannot write marker $marker"
 }
 
+cmd_show() {
+  local key status marker
+  key="$1"
+  if [ -z "$key" ]; then
+    key="$(staged_key)"
+    status=$?
+    [ "$status" -ne 1 ] || die "nothing staged; stage the change you want to inspect"
+    [ "$status" -eq 0 ] || die "$(key_failure_cause)"
+  fi
+  marker="$(marker_path "$key")" || die "not inside a git repository"
+  [ -r "$marker" ] || return 1
+  cat "$marker"
+}
+
 git rev-parse --git-common-dir >/dev/null 2>&1 ||
   die "not inside a git repository"
 
@@ -184,5 +202,6 @@ case "$subcommand" in
   key) cmd_key ;;
   check) cmd_check ;;
   record) cmd_record ;;
-  *) die "usage: review-gate {key|check|record}" ;;
+  show) cmd_show "${1-}" ;;
+  *) die "usage: review-gate {key|check|record|show}" ;;
 esac

@@ -119,20 +119,13 @@ severity_re() {
 # A blocking label whose finding is that it found nothing — `Security: none`,
 # `Correctness: no bugs found` — reports a clean tier, not a defect.
 NOTHING_FOUND='(none|no|n/?a|nothing|not applicable|clear|ok|0)([[:space:]]+(issues?|bugs?|findings?|problems?|concerns?|risks?|holes?|found|detected|identified|observed)){0,2}'
-NOTHING_FOUND_RE="[]:=][[:space:]]*$NOTHING_FOUND[[:space:][:punct:]]*\$"
+NOTHING_FOUND_RE="[]:=][[:space:]]*$NOTHING_FOUND([[:space:]]*[[:punct:]—–](?:[[:space:]].*)?)?\$"
 
 # recorded_verdict <key> — the review text recorded against <key>, or nothing.
 recorded_verdict() {
-  local dir marker
-  [ -n "$1" ] || return 1
-  dir="$(git rev-parse --git-common-dir 2>/dev/null)" || return 1
-  case "$dir" in
-    /*) ;;
-    *) dir="$(cd "$dir" 2>/dev/null && pwd -P)" || return 1 ;;
-  esac
-  marker="$dir/agentic-review/$1"
-  [ -r "$marker" ] || return 1
-  cat "$marker"
+  local key="$1"
+  [ -n "$key" ] || return 1
+  "$GATE" show "$key"
 }
 
 # gate_stamped <key> — true when bin/review-gate wrote this marker. Only the

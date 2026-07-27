@@ -458,7 +458,7 @@ Those artifacts apply the practices; the research stays here.
   model-agnostic spec, `specs/model-agnostic/SPEC.md`) — e.g.
   Antigravity degrades to human-dispatched launch-list workflows.
   (Superseded 2026-07-22: portability dropped from procedure-level to
-  data-level — other runtimes now read the bd queue, ctx index, and task
+  data-level — other runtimes now read the bd queue, Codebase-Memory index, and task
   files rather than receiving ported orchestration procedures;
   [architecture-pivot-2026-07-22.md](architecture-pivot-2026-07-22.md).)
 

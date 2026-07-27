@@ -1,42 +1,69 @@
 # Using this toolkit with Google Antigravity
 
-This directory no longer holds a ported copy of the pipeline. On
-2026-07-22 the toolkit pivoted from procedure-level portability to
-**data-level portability** (maintainer-ratified addendum in
-[`specs/agentic-core-redesign/SPEC.md`](../specs/agentic-core-redesign/SPEC.md)):
-Claude Code is the primary runtime, and the mirrored `antigravity/` and
-`codex/` skill trees — plus the mirror manifest, parity gates, and both
-mirror rules — were deleted. There is no longer a per-runtime procedure
-tree to install or keep in sync.
+Antigravity runs the same workflow skills as Claude Code and Codex. The
+procedures have one source in [`.claude/skills/`](../.claude/skills/);
+repository sessions discover them through [`.agents/skills/`](../.agents/skills/),
+and the installable Antigravity plugin exposes generated entrypoints under
+[`skills/`](../skills/). Those entrypoints load the canonical procedure
+instead of copying it.
 
-## What a non-Claude runtime consumes instead
+## Install
 
-Any agent runtime with shell access reads the toolkit's **data layer**
-directly — no port of the skills is required:
+For this checkout, no global install is required. Start `agy` from the
+repository root and Antigravity discovers `.agents/skills/`.
 
-- **The work queue** — bd (beads): `bd ready --json`, `bd show <id>`, or
-  the committed `.beads/issues.jsonl` export. This is the source of ready
-  work and its dependency graph.
-- **Code structure** — the `ctx` index under `.context/`: `ctx tree`,
-  `ctx sig`, `ctx refs`, `ctx deps`, `ctx map`, `ctx at`. Structural
-  questions are answered from the index rather than by reading whole
-  files.
-- **Specs and tasks** — the markdown under `specs/`: each `SPEC.md` and
-  its `tasks/*.md`, with the single-line `Status:` / `Depends on:` /
-  `Touch:` headers a runtime can parse directly.
+To make the workflows available in every Antigravity workspace, clone the
+toolkit and install its local plugin:
 
-An Antigravity agent pointed at a checkout of this repo works the same
-queue Claude Code does by reading those three surfaces. The pipeline
-discipline itself (tiering, gates, launch authorization) lives in
-[`.claude/`](../.claude/) and the repo's rules; it is documentation a
-capable agent can follow, not a runtime-specific install.
+```bash
+git clone https://github.com/sticklane/claude.git ~/agentic-toolkit
+agy plugin validate ~/agentic-toolkit
+agy plugin install ~/agentic-toolkit
+agy plugin list
+```
 
-## Why the port was retired
+The plugin stages all 29 skills, including `evals`. Running `evals` still
+requires an explicit user invocation because it starts paid headless
+sessions; it is an installed workflow, not a developer-only repo command.
 
-Maintaining three near-identical procedure trees (`.claude/` →
-`antigravity/` → `codex/`) cost more than it returned: the prose was
-never byte-identical, the parity gates only proved structural
-conformance rather than that a mirror still worked, and every skill edit
-had to be re-derived by hand into two more places. Data-level portability
-gives other runtimes the one thing they actually need — the state — while
-letting the procedures evolve in a single home.
+## Native execution
+
+Antigravity consumes the common bd queue, Codebase-Memory graph, and `specs/`
+artifacts, but it executes orchestration with Antigravity primitives:
+
+- `invoke_subagent` and `define_subagent` for attended fan-out and
+  verification.
+- `Workspace: 'branch'` for isolated writers; shared-workspace writers run
+  serially.
+- `agy -p --new-project` for Antigravity headless sessions and skill evals.
+
+A shared skill may describe the Claude Code and Codex adapters, but an
+Antigravity run never launches either runtime. The
+[`antigravity` runtime profile](../runtimes/antigravity.md) owns its model,
+headless, permission, and orchestration mappings.
+
+`gate` selects the Antigravity lifecycle adapter explicitly. It writes
+`.agents/hooks.json` and `.agents/hooks/*.sh`, alongside the shared
+`scripts/check.sh` and git pre-commit gate. Its hooks use Antigravity's
+camelCase payloads and native `deny`/`continue` decisions.
+
+## Shared state
+
+- **Ready work:** `bd ready --json` and `bd show <id>`.
+- **Code structure:** Codebase-Memory through the toolkit launcher. Query it
+  first; when unavailable, use bounded `rg` plus small reads and report that
+  graph coverage was not checked.
+- **Definitions and evidence:** `specs/<slug>/SPEC.md`, task files, and
+  evidence directories. Live status and dependencies remain in bd.
+
+The old copied Antigravity procedure tree was retired because it drifted.
+The current layout keeps one procedure source while retaining a native
+Antigravity execution adapter.
+
+## Antigravity registration
+
+Antigravity's plugin manifest has no bundled-MCP field. Add a stdio server
+named `codebase-memory-mcp` with command
+`agentic-codebase-memory-mcp` through Antigravity's native `/mcp` manager or
+in `~/.gemini/config/mcp_config.json`. Do not substitute a Claude Code or
+Codex registration command.

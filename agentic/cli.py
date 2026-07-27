@@ -16,7 +16,6 @@ _RETIRED_DIAGNOSTICS = {
         "agentic compose: retired by the native-orchestration pivot; "
         "use /work, /build, or /drain"
     ),
-    "ctx": "agentic ctx: wrapper not shipped; use ctx directly",
     "inbox": "agentic inbox: retired; use bd ready and bd human list",
     "demote": "agentic demote: retired; use bd update <id> --status deferred",
     "shadow-sync": (
@@ -26,7 +25,6 @@ _RETIRED_DIAGNOSTICS = {
 }
 _RETIRED_SUBCOMMANDS = (
     "compose",
-    "ctx",
     "inbox",
     "demote",
     "shadow-sync",

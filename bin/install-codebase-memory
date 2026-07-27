@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+repo_root="$(cd "$script_dir/.." && pwd -P)"
+release_file="$repo_root/config/codebase-memory-release.json"
+install_dir=""
+dry_run=0
+
+usage() {
+  cat <<'EOF'
+usage: install-codebase-memory [--dir PATH] [--dry-run]
+
+Install the checksum-pinned headless Codebase-Memory binary and the toolkit's
+project-scoping launcher. This command never runs Codebase-Memory's own
+client-configuring installer.
+EOF
+}
+
+fail() {
+  echo "install-codebase-memory: $*" >&2
+  exit 1
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --dir)
+      [[ "$#" -ge 2 ]] || fail "--dir requires a path"
+      install_dir="$2"
+      shift 2
+      ;;
+    --dir=*)
+      install_dir="${1#--dir=}"
+      shift
+      ;;
+    --dry-run)
+      dry_run=1
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+if [[ -z "$install_dir" ]]; then
+  [[ -n "${HOME:-}" ]] || fail "HOME is unset; pass --dir explicitly"
+  install_dir="$HOME/.local/bin"
+fi
+command -v python3 >/dev/null 2>&1 || fail "python3 is required"
+
+if [[ -n "${AGENTIC_CBM_RELEASE_FILE:-}" ]]; then
+  [[ "${AGENTIC_CBM_TESTING:-0}" == "1" ]] \
+    || fail "AGENTIC_CBM_RELEASE_FILE is restricted to the test harness"
+  release_file="$AGENTIC_CBM_RELEASE_FILE"
+fi
+[[ -f "$release_file" ]] || fail "release metadata not found: $release_file"
+
+if [[ -n "${AGENTIC_TEST_UNAME_S:-}${AGENTIC_TEST_UNAME_M:-}" ]] &&
+  [[ "${AGENTIC_CBM_TESTING:-0}" != "1" ]]
+then
+  fail "AGENTIC_TEST_UNAME_S/M are restricted to the test harness"
+fi
+os_name="${AGENTIC_TEST_UNAME_S:-$(uname -s)}"
+arch_name="${AGENTIC_TEST_UNAME_M:-$(uname -m)}"
+case "$os_name" in
+  Darwin) os=darwin ;;
+  Linux) os=linux ;;
+  *) fail "unsupported platform: $os_name/$arch_name" ;;
+esac
+case "$arch_name" in
+  x86_64|amd64) arch=amd64 ;;
+  arm64|aarch64) arch=arm64 ;;
+  *) fail "unsupported platform: $os_name/$arch_name" ;;
+esac
+platform="$os-$arch"
+
+metadata="$(
+  python3 - "$release_file" "$platform" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+try:
+    asset = data["assets"][sys.argv[2]]
+except KeyError as error:
+    raise SystemExit(f"missing release metadata: {error}")
+print(data["version"])
+print(data["repository"])
+print(asset["name"])
+print(asset["sha256"])
+PY
+)" || fail "could not select release metadata for $platform"
+version="$(sed -n '1p' <<<"$metadata")"
+repository="$(sed -n '2p' <<<"$metadata")"
+asset="$(sed -n '3p' <<<"$metadata")"
+expected_sha="$(sed -n '4p' <<<"$metadata")"
+destination="$install_dir/codebase-memory-mcp"
+launcher_destination="$install_dir/agentic-codebase-memory-mcp"
+url="https://github.com/$repository/releases/download/v$version/$asset"
+
+if [[ "$dry_run" == "1" ]]; then
+  cat <<EOF
+version: $version
+platform: $platform
+asset: $asset
+sha256: $expected_sha
+destination: $destination
+launcher: $launcher_destination
+url: $url
+EOF
+  exit 0
+fi
+
+command -v curl >/dev/null 2>&1 || fail "curl is required"
+command -v tar >/dev/null 2>&1 || fail "tar is required"
+if command -v shasum >/dev/null 2>&1; then
+  digest_command=(shasum -a 256)
+elif command -v sha256sum >/dev/null 2>&1; then
+  digest_command=(sha256sum)
+else
+  fail "shasum or sha256sum is required"
+fi
+
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/agentic-cbm.XXXXXX")"
+cleanup() {
+  [[ -z "${binary_stage:-}" ]] || rm -f "$binary_stage"
+  [[ -z "${launcher_stage:-}" ]] || rm -f "$launcher_stage"
+  rm -rf "$tmp_dir"
+}
+trap cleanup EXIT
+
+archive="$tmp_dir/$asset"
+curl -fL --retry 2 -o "$archive" "$url"
+actual_sha="$("${digest_command[@]}" "$archive" | awk '{print $1}')"
+[[ "$actual_sha" == "$expected_sha" ]] \
+  || fail "checksum mismatch for $asset: expected $expected_sha, got $actual_sha"
+
+extract_dir="$tmp_dir/extracted"
+mkdir -p "$extract_dir"
+tar -xzf "$archive" -C "$extract_dir"
+source_binary="$(find "$extract_dir" -type f -name codebase-memory-mcp | head -1)"
+[[ -n "$source_binary" ]] || fail "archive does not contain codebase-memory-mcp"
+
+mkdir -p "$install_dir"
+binary_stage="$(mktemp "$install_dir/.codebase-memory-mcp.new.XXXXXX")"
+launcher_stage="$(mktemp "$install_dir/.agentic-codebase-memory-mcp.new.XXXXXX")"
+cp "$source_binary" "$binary_stage"
+cp "$script_dir/agentic-codebase-memory-mcp" "$launcher_stage"
+chmod 0755 "$binary_stage" "$launcher_stage"
+
+binary_backup="$tmp_dir/binary.backup"
+launcher_backup="$tmp_dir/launcher.backup"
+binary_existed=0
+launcher_existed=0
+if [[ -e "$destination" ]]; then
+  cp -p "$destination" "$binary_backup"
+  binary_existed=1
+fi
+if [[ -e "$launcher_destination" ]]; then
+  cp -p "$launcher_destination" "$launcher_backup"
+  launcher_existed=1
+fi
+
+if ! mv -f "$binary_stage" "$destination" ||
+  ! mv -f "$launcher_stage" "$launcher_destination"
+then
+  if [[ "$binary_existed" == "1" ]]; then
+    cp -p "$binary_backup" "$destination"
+  else
+    rm -f "$destination"
+  fi
+  if [[ "$launcher_existed" == "1" ]]; then
+    cp -p "$launcher_backup" "$launcher_destination"
+  else
+    rm -f "$launcher_destination"
+  fi
+  fail "installation failed; previous binary and launcher were restored"
+fi
+
+cat <<EOF
+Installed Codebase-Memory $version:
+  binary:   $destination
+  launcher: $launcher_destination
+  cache:    \${XDG_CACHE_HOME:-\$HOME/.cache}/agentic/codebase-memory
+
+The upstream client-configuring installer was not run.
+EOF

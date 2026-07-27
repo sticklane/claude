@@ -9,10 +9,13 @@
 #
 # Step 1 (cheapest, no CLI call): is <repo-relative-path> present relative to
 # the repo root? If yes, that IS the path — the toolkit is in-repo, stop.
-# Step 2 (plugin-cache install): resolve the INSTALLED version freshly via
+# Step 2 (Claude Code plugin-cache install only): resolve the INSTALLED version freshly via
 # `claude plugin list --json` (the exact parse bin/plugin-installed-version
 # uses), then construct and verify
 # $HOME/.claude/plugins/cache/agentic-toolkit/agentic/<version>/<repo-relative-path>.
+# Codex and Antigravity installs contain the in-repo path from step 1. Set
+# AGENTIC_RUNTIME to the active runtime; a non-Claude runtime fails here
+# instead of launching the Claude CLI if its package is incomplete.
 # Resolve once per session, never reuse a version number seen elsewhere in
 # context — only ever the freshly-queried value.
 #
@@ -39,6 +42,12 @@ if [ -f "$root/$rel" ]; then
 fi
 
 # --- Step 2: plugin-cache install ------------------------------------------
+runtime="${AGENTIC_RUNTIME:-claude-code}"
+if [ "$runtime" != "claude-code" ]; then
+  echo "resolve-skill-path: could not resolve $rel in the $runtime package at $root/$rel; refusing to invoke another runtime's CLI" >&2
+  exit 1
+fi
+
 version=""
 if command -v claude >/dev/null 2>&1; then
   version="$(claude plugin list --json 2>/dev/null | python3 -c '

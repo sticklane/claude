@@ -292,6 +292,42 @@ Relaunch the worker, stopping at the third attempt.
 Revise the draft, capped at the third pass.
 EOF
 
+# ---------------------------------------------------------------------------
+# DRAIN WORKFLOW ARGS GUARD — JSON-STRING NORMALIZATION + REQUIRED FIELDS
+# ---------------------------------------------------------------------------
+
+F="$TMP/drain_args_unwrapped.md"
+cat > "$F" <<'EOF'
+const { id, branch, spec } = args
+if (!id || !branch || !spec) {
+  throw new Error("bad")
+}
+EOF
+run_check "$F"
+assert_marker "unnormalized workflow args are flagged for [args]" present "[args]"
+
+F="$TMP/drain_args_missing_guard.md"
+cat > "$F" <<'EOF'
+const payload = typeof args === "string" ? JSON.parse(args) : args
+const { id, branch, spec } = payload
+if (!id || !branch) {
+  throw new Error("missing only one bound")
+}
+EOF
+run_check "$F"
+assert_marker "normalized workflow args with missing required-field guard are flagged" present "[args]"
+
+F="$TMP/drain_args_ok.md"
+cat > "$F" <<'EOF'
+const payload = typeof args === "string" ? JSON.parse(args) : args
+const { id, branch, spec } = payload
+if (!id || !branch || !spec) {
+  throw new Error("ok")
+}
+EOF
+run_check "$F"
+assert_marker "normalized workflow args with required fields are not flagged" absent "[args]"
+
 # Un-tiered dispatch → dispatch check fires.
 F="$TMP/untiered_dispatch.md"
 cat > "$F" <<'EOF'

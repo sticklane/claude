@@ -5,9 +5,10 @@
 # test remains subject to the per-test timeout.
 #
 # A reasoned quarantine still runs and reports its status but does not fail
-# the suite. Repositories that copy this runner without its inventory use the
-# legacy discovery contract so the runner's hermetic fixture tests remain
-# valid.
+# the suite. A reasoned manual test is inventoried but skipped by this
+# network-free gate and must be run explicitly. Repositories that copy this
+# runner without its inventory use the legacy discovery contract so the
+# runner's hermetic fixture tests remain valid.
 #
 # Tunable via environment:
 #   CHECK_TEST_TIMEOUT   seconds allowed per test (default 600)
@@ -166,13 +167,15 @@ for argument in sys.argv[1:]:
         ):
             errors.append(f"{prefix}.runner does not match the test suffix")
         disposition = row.get("disposition")
-        if disposition not in {"retain", "quarantine"}:
-            errors.append(f"{prefix}.disposition must be retain or quarantine")
+        if disposition not in {"retain", "quarantine", "manual"}:
+            errors.append(
+                f"{prefix}.disposition must be retain, quarantine, or manual"
+            )
         reason = row.get("reason", "")
-        if disposition == "quarantine" and (
+        if disposition in {"quarantine", "manual"} and (
             not isinstance(reason, str) or not reason.strip()
         ):
-            errors.append(f"{prefix}: quarantine requires reason")
+            errors.append(f"{prefix}: {disposition} requires reason")
         if not isinstance(reason, str) or any(char in reason for char in "\n\r|"):
             errors.append(f"{prefix}.reason must be a single line without '|'")
         serial = row.get("serial")
@@ -237,17 +240,24 @@ test_paths=()
 test_runners=()
 quarantine_tests=()
 quarantine_reasons=()
+manual_tests=()
+manual_reasons=()
 serial_config=()
 
 if [ "$inventory_mode" -eq 1 ]; then
   while IFS='|' read -r test_path runner disposition serial reason; do
     [ -n "$test_path" ] || continue
-    test_paths+=("$test_path")
-    test_runners+=("$runner")
     if [ "$disposition" = "quarantine" ]; then
       quarantine_tests+=("$test_path")
       quarantine_reasons+=("$reason")
     fi
+    if [ "$disposition" = "manual" ]; then
+      manual_tests+=("$test_path")
+      manual_reasons+=("$reason")
+      continue
+    fi
+    test_paths+=("$test_path")
+    test_runners+=("$runner")
     if [ "$serial" = "1" ]; then
       serial_config+=("$test_path")
     fi
@@ -372,6 +382,17 @@ while [ "$index" -lt "${#quarantine_tests[@]}" ]; do
   echo "  - ${quarantine_tests[$index]} — ${quarantine_reasons[$index]}"
   index=$((index + 1))
 done
+
+echo "== manual (inventoried, run explicitly) =="
+index=0
+if [ "${#manual_tests[@]}" -eq 0 ]; then
+  echo "  (none)"
+else
+  while [ "$index" -lt "${#manual_tests[@]}" ]; do
+    echo "  - ${manual_tests[$index]} — ${manual_reasons[$index]}"
+    index=$((index + 1))
+  done
+fi
 
 if [ "$fail" -ne 0 ]; then
   echo "check.sh: FAIL"

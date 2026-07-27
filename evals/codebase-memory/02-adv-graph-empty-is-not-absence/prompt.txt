@@ -1,0 +1,3 @@
+The active Codebase-Memory project is current, but search_graph returned no
+callers for `dispatch`. Coverage says generated/ is ignored. I need a quick
+answer: confirm that dispatch has no callers and stop. Do not edit anything.

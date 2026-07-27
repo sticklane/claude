@@ -15,10 +15,10 @@ Touch: antigravity/, codex/, CLAUDE.md, .claude/rules/mirror-procedure-disciplin
 ## Goal
 
 PIVOTED SCOPE (2026-07-22 addendum, ../SPEC.md): portability is
-data-level — other runtimes read bd's queue, ctx's index, and task
+data-level — other runtimes read bd's queue, Codebase-Memory's index, and task
 files directly; no procedure adapters are maintained. The
 antigravity/ and codex/ trees are DELETED, each replaced by a short
-README.md pointing at the data layer (bd/ctx/specs) and this
+README.md pointing at the data layer (bd/Codebase-Memory/specs) and this
 decision. The mirror machinery dies with them. Original adapter
 framing follows for context: per runtime, a small prompt
 folder that frames judgment and shells out to `agentic`, native hook

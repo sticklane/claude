@@ -107,12 +107,6 @@
     },
     {
       "disposition": "retain",
-      "path": "tests/test_ctx_capabilities.sh",
-      "runner": "bash",
-      "serial": false
-    },
-    {
-      "disposition": "retain",
       "path": "tests/test_deep_research_synthesis_guard.sh",
       "runner": "bash",
       "serial": false
@@ -223,6 +217,12 @@
     {
       "disposition": "retain",
       "path": "tests/test_run_sh_shared_deps.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_runtime_gate_adapters.sh",
       "runner": "bash",
       "serial": false
     },

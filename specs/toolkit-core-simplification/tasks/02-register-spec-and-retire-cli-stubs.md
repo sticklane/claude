@@ -27,7 +27,7 @@ runtime profiles; Tasks 03 and 04 own those disjoint surfaces.
    conflicting hashes/edges, and forbidden existing-state mutation.
 2. Implement `agentic register-spec <spec-dir>` using the existing repo lock
    and the two phases in R3.
-3. Hide `compose`, `ctx`, `inbox`, `demote`, and `shadow-sync` from discovery;
+3. Hide `compose`, `inbox`, `demote`, and `shadow-sync` from discovery;
    retain exact-name exit-2 aliases with the exact R4 messages.
 4. Replace the old `test_agentic_shadow.py` mutation assertions with the new
    register/retirement behavior and classify the superseded test surface in

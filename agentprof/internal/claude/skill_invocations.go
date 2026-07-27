@@ -45,7 +45,7 @@ type skillBlock struct {
 
 // skillInput is a Skill tool_use's input payload: the invoked skill's name and
 // any args passed to it. Real Claude Code Skill tool_use blocks carry the skill
-// name under "skill" (e.g. {"skill":"agentic:ctx"}), not "command".
+// name under "skill" (e.g. {"skill":"agentic:codebase-memory"}), not "command".
 type skillInput struct {
 	Skill string `json:"skill"`
 	Args  string `json:"args"`

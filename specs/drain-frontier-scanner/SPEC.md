@@ -35,7 +35,7 @@ living model-side.
 Keep task files as the sole source of truth (files-as-state is
 load-bearing for resume, diffability, and the port chain — this spec
 adds no database and no new state). Add a read-only, stdlib-only scanner
-`.claude/skills/drain/drain_frontier.py` that loads
+`.claude/skills/drain/drain_frontier.py (retired)` that loads
 `.claude/skills/_shared/headers.py` via the same importlib bootstrap as
 `list_specs.py`, reads one or more spec dirs' task headers plus
 `## Parallelization` `- Group:` lines, and emits a JSON frontier report.
@@ -188,7 +188,7 @@ so it adds no new launch surface and needs no gating
 - [ ] `python3 .claude/skills/drain/test_drain_frontier.py` exits 0,
       with at least one test per R2 incident class (R1, R2 — L2:
       exercises the scanner's behavior on fixtures).
-- [ ] `python3 .claude/skills/drain/drain_frontier.py
+- [ ] `python3 .claude/skills/drain/drain_frontier.py (retired)
 .claude/skills/drain/fixtures/basic-window --window 2` emits JSON
       whose `admissible` set matches the fixture's documented
       expectation (R1 — golden-output check). The committed fixture

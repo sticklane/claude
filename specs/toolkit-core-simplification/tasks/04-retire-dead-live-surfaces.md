@@ -19,7 +19,7 @@ explicitly historical.
 ## Touch
 
 Delete only rows classified `retire-dead` in the frozen baseline. Preserve
-`deep-research.js`, standalone ctx, native runtime orchestration, and every
+`deep-research.js`, the Codebase-Memory integration, native runtime orchestration, and every
 functioning on-demand skill.
 
 ## Steps

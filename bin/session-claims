@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Lightweight helper for `.beads/session-claims` bookkeeping.
+# Supports idempotent append/remove and robust single-line updates, including
+# the last-line removal case that can silently no-op common grep-mv patterns.
+set -u
+
+usage() {
+  echo "usage: session-claims <add|rm|contains> <id>" >&2
+  exit 64
+}
+
+require_arg() { # require_arg <value>
+  [ -n "$1" ] || { echo "session-claims: missing required argument" >&2; usage; }
+}
+
+tmpfile() { # tmpfile <path>
+  mktemp "${1}.session-claims.XXXXXX"
+}
+
+op="${1:-}"
+id="${2:-}"
+[ -n "$op" ] || usage
+require_arg "$id"
+
+CLAIMS_FILE="${SESSION_CLAIMS_FILE:-.beads/session-claims}"
+mkdir -p "$(dirname "$CLAIMS_FILE")"
+
+case "$op" in
+  add)
+    tmp="$(tmpfile "$CLAIMS_FILE")"
+    if [ -e "$CLAIMS_FILE" ]; then
+      awk -v id="$id" 'NF && $0 != id' "$CLAIMS_FILE" > "$tmp"
+    fi
+    printf '%s\n' "$id" >> "$tmp"
+    mv "$tmp" "$CLAIMS_FILE"
+    ;;
+  rm|remove)
+    [ -e "$CLAIMS_FILE" ] || exit 0
+    tmp="$(tmpfile "$CLAIMS_FILE")"
+    awk -v id="$id" 'NF && $0 != id' "$CLAIMS_FILE" > "$tmp"
+    mv "$tmp" "$CLAIMS_FILE"
+    ;;
+  contains)
+    if [ -e "$CLAIMS_FILE" ]; then
+      awk -v id="$id" 'NF && $0 == id { found = 1 } END { exit (found ? 0 : 1) }' \
+        "$CLAIMS_FILE"
+    else
+      exit 1
+    fi
+    ;;
+  *)
+    usage
+    ;;
+esac

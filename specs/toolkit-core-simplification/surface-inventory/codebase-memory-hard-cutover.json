@@ -1,0 +1,97 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "codebase-memory-hard-cutover",
+  "frozen_sha256": "6295498090ceff25a8d1ba7bd63961346ed0ad252e7bfd13a2dc4e41c6fe7ff6",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [],
+      "content_sha256": "eb056fce6683f4a59dd563ed56624b4aa217ad90874ac979d07ee9008cf00143",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:codebase-memory",
+      "path": ".claude/skills/codebase-memory/SKILL.md",
+      "rationale": "Canonical Codebase-Memory exploration contract added by the hard cutover.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "d2132b2fa8dfce1f3c80684fcf3b50a103610c157ce060008f63e398b7664faf",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_agentic_cli_retirement.py",
+      "path": "tests/test_agentic_cli_retirement.py",
+      "rationale": "Compatibility test updated after the obsolete code-exploration alias was removed.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "ffb754439663a01989a81f44798d16a183c7225edbb3b01f32ea13f5053974ef",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_codebase_memory_integration.sh",
+      "path": "tests/test_codebase_memory_integration.sh",
+      "rationale": "Network-free Codebase-Memory installer, launcher, packaging, routing, and contract coverage.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "3e1cc7fe721c9c48d0419053146da1419b989a520f06aec67caec54c941cbce8",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_codebase_memory_live.sh",
+      "path": "tests/test_codebase_memory_live.sh",
+      "rationale": "Explicitly invoked live smoke for the pinned upstream binary.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "c707cf0ac9a5895b2eb5ebe919740af48e81beba2de13c474856f3d49086e38c",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_check_manual_inventory.sh",
+      "path": "tests/test_check_manual_inventory.sh",
+      "rationale": "Proves networked smoke tests can be inventoried without entering the network-free canonical gate.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "9bb6f0c223127a430f04faf56013d529053db8f817320cbd80744025c2135e15",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_live_surface_retirement.sh",
+      "path": "tests/test_live_surface_retirement.sh",
+      "rationale": "Live-surface assertion updated to the Codebase-Memory replacement.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "c38188e3d185c7e8f87338839f57a38378eb69cb8416cc1fdd05c6b1896bc127",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_no_ctx_surface.sh",
+      "path": "tests/test_no_ctx_surface.sh",
+      "rationale": "Exact retirement-manifest and live-reference absence contract.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

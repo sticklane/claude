@@ -92,7 +92,7 @@ they ARE the judgment/context guidance the end-state is supposed to be.
 - CLAUDE.md#authoring-conventions-human-blockers-ref · kept · pointer to human-blockers.md.
 - CLAUDE.md#testing-changes-evals · kept · procedure (evals/run.sh model sessions; the former evals/lint-ultra-gate.sh was removed when drain became always-workflow and the ultra gate was retired).
 - CLAUDE.md#testing-changes-skill-retirement · kept · procedure (retirement checklist + critic on the diff).
-- CLAUDE.md#code-navigation-ctx · kept · convention (prefer `ctx` over reading files).
+- CLAUDE.md#code-navigation · kept · convention (prefer Codebase-Memory over broad file reads).
 - CLAUDE.md#beads-transition-scope · kept · transition guidance (markdown headers remain source of truth until task 09 cutover) — live, not dead.
 - CLAUDE.md#compact-instructions · kept · context-management judgment (what to preserve on compaction).
 

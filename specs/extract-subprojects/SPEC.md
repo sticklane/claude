@@ -5,19 +5,17 @@ Unblock: ask: owner schedules the extraction (needs new sibling repos + release 
 
 ## Problem
 
-Three substantial subprojects live vendored in the toolkit repo:
-`agentprof/` (Go, ~16.7k LOC), `agent-console/` (Python, ~8.6k LOC), and
-`context-tree/` (Rust, the `ctx` index). The holistic critique
-(agentic-nvl, 2026-07-23) flagged ~25k LOC + two extra toolchains riding in
-every clone, with `agentprof`/`agent-console` checks wired into neither the
-canonical `scripts/check.sh` nor CI. Only `context-tree` is genuine core
-(the `ctx` skill and 6+ others depend on it) — and even it is consumed as a
-binary, not as source.
+Two substantial subprojects live vendored in the toolkit repo:
+`agentprof/` (Go, ~16.7k LOC) and `agent-console/` (Python, ~8.6k LOC).
+The holistic critique (agentic-nvl, 2026-07-23) flagged their LOC and extra
+toolchain/dependency weight, with their checks wired into neither the
+canonical `scripts/check.sh` nor CI.
 
 Owner decision (2026-07-23, agentic-2my): **extract `agentprof` and
-`agent-console` to sibling repos consumed as installed binaries; keep
-`context-tree` but ship `ctx` as a released binary rather than vendored Rust
-source.** This spec is the plan; execution is owner-scheduled (it needs new
+`agent-console` to sibling repos consumed as installed binaries.**
+Code exploration is now supplied separately by the pinned Codebase-Memory
+release and is not part of this extraction. This spec is the plan; execution
+is owner-scheduled (it needs new
 repos, CI, and release wiring that cannot be created from inside this repo
 headless).
 
@@ -29,9 +27,8 @@ headless).
 - R2 — `agent-console/` moves to its own repo, same terms (no Python
   dashboard deps in a toolkit clone). Note the `/workboard` live-server hang
   (agentic-wns) travels with it — file it against the new repo.
-- R3 — `context-tree/` stays, but `ctx` ships as a released binary the
-  installer fetches; the Rust source is not required to use the toolkit.
-  (Lighter than a full extraction — a build/release step, not a repo move.)
+- R3 — Codebase-Memory remains an external checksum-pinned binary; this spec
+  does not fork, move, or package its source.
 - R4 — every in-tree reference to the moved trees is rewritten:
   `scripts/check.sh` (drop the subproject sub-checks), `AGENTS.md`'s repo
   map, `docs/` mentions, and any skill that shells into them. A clone with

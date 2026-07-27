@@ -5,8 +5,8 @@
 # correction the user made and asked to remember — the exact integration-test
 # invocation `./run-tests.sh --db=memory`, without which the suite hangs. A
 # competent /distill routes this durable command gotcha into a doctrine file
-# (CLAUDE.md / .claude/rules / docs/memory); assert.sh greps for the literal
-# flag there. The seed CLAUDE.md deliberately omits it so any match is the
+# (AGENTS.md / docs/memory / a portable skill); assert.sh greps for the literal
+# flag there. The seed AGENTS.md deliberately omits it so any match is the
 # run's own writing (capture is real, not pre-seeded).
 # bash 3.2 compatible: no `declare -A`, no bash-4+ syntax.
 set -eu
@@ -14,7 +14,7 @@ set -eu
 cd "$EVAL_DIR"
 git init -q
 
-cat > CLAUDE.md <<'EOF'
+cat > AGENTS.md <<'EOF'
 # Project conventions
 
 - Prefer small, focused commits.

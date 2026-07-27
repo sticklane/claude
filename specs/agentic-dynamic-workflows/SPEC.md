@@ -51,10 +51,10 @@ ultracode's full functionality on any agent runtime:
    checkout only, execute it (`claim`/`verdict`) — the drain loop is
    ultimately just the first saved workflow, though core task 08
    ships unchanged and any unification comes later.
-9. Structure-shaped fan-out comes from ctx: a script derives its
-   work list from `agentic ctx tree --json` (one agent per module),
-   and dispatch prompts carry composed code-map slices exactly as
-   task dispatches do.
+9. Structure-shaped fan-out comes from Codebase-Memory: a script derives
+   its work list from qualified graph nodes (one agent per selected module),
+   and dispatch prompts carry distilled project, path, relationship, and
+   coverage evidence exactly as task dispatches do.
 10. Saved workflows are committed files under `scripts/workflows/`;
     the model may author a bespoke script per problem — the model
     owns decomposition, the script owns the loop (decision D2's
@@ -161,15 +161,15 @@ Two real ultracode runs were executed and inspected for this design
 - **DW7 — beads is the durable half of every run.** Run issues carry
   script hash, pool, and actuals in metadata; kept findings become
   issues `discovered-from` the run issue; the journal and progress
-  stream are gitignored derived state (the ctx storage pattern); the
+  stream are gitignored derived state (the graph-cache storage pattern); the
   committed JSONL export carries run history at issue granularity.
   Cost attribution, provenance forensics, and inbox visibility all
   fall out of the tracker for free.
-- **DW8 — ctx shapes and briefs the fan-out.** Work lists derive
+- **DW8 — Codebase-Memory shapes and briefs the fan-out.** Work lists derive
   from structure queries; dispatch prompts carry Touch-scoped code
-  maps via the composer's existing injection. ctx queries are not
+  maps via the composer's existing injection. Codebase-Memory queries are not
   metered — reading the index must never compete with the budget
-  for doing work — and RW-B's acceptance asserts a ctx query leaves
+  for doing work — and RW-B's acceptance asserts an index query leaves
   the meter unchanged.
 - **DW9 — Tier aliases only, default-cheap inside runs.** `--tier
 scout|session|deep|frontier` maps to model+effort in the runtime
@@ -266,7 +266,7 @@ exists (the core package itself is still landing), and no
 - [ ] RW-B: `tests/test_agentic_run_budget.py` — a pool sized for 2
       of 3 dispatches refuses the third with the typed cap error;
       task-scoped dispatch refuses on exhausted budget_tokens; an
-      `agentic ctx` query between dispatches leaves the meter
+      Codebase-Memory query between dispatches leaves the meter
       reading unchanged (DW8).
 - [ ] RW-C: `tests/test_agentic_run_caps.sh` — depth-3 nesting
       refused; with controlled-sleep stub workers, dispatches above
@@ -338,7 +338,7 @@ plain statement, decision cost, and requirement maps to a task.
 | S6 phase/log + watch               | 01, 06                               |
 | S7 run issues + checkout guard     | 05, 03 (guard)                       |
 | S8 queue bridge / loop-as-workflow | 08; 09 (draft, the unification)      |
-| S9 ctx-shaped fan-out              | 08 (example), 02 (map injection)     |
+| S9 graph-shaped fan-out            | 08 (example), 02 (map injection)     |
 | S10 saved workflows                | 08                                   |
 | S11 runs/stop                      | 06                                   |
 | DW1 no interpreter                 | 08                                   |
@@ -348,7 +348,7 @@ plain statement, decision cost, and requirement maps to a task.
 | DW5 structural caps                | 04                                   |
 | DW6 no batons                      | 03 (replay is the successor)         |
 | DW7 beads durable half             | 05                                   |
-| DW8 ctx briefs + unmetered         | 02, 04                               |
+| DW8 Codebase-Memory briefs + unmetered | 02, 04                            |
 | DW9 tier aliases                   | 02                                   |
 | DW10 progress contract             | 01                                   |
 | DW11 caps not opt-ins              | 04 (pool default-allow), 02 (screen) |

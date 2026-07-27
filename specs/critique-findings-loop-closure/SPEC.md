@@ -33,7 +33,8 @@ the same spec repeatedly (see Requirement 3's grounding below) but never
 closed the mechanical-application gap. A related cost: a whole headless
 generation (full cold-start reprime) got burned on 5 intake attempts that
 were all NOT READY — zero real dispatch progress — and other queues hit
-drain's 10-generation hard cap without finishing, directly caused by
+drain's retired 10-generation hard cap (pre-workflow-pivot) without finishing,
+directly caused by
 stuck-in-`decide` draft specs recurring every cycle.
 
 **A contradicted DEFER gets redispatched and re-derived from scratch.** The
@@ -143,8 +144,9 @@ never count toward this threshold** — they already carry their own per-run
 at-most-once bookkeeping (`Intake-failed:` / `Stub-intake-failed:` below),
 and counting them pays a full reprime for zero dispatch progress: a
 fooszone drain queue batoned gen 5→6 on 5 intake attempts that were all NOT
-READY, then exhausted the 10-generation cap without finishing the queue
-(specs/drain-wake-cost/EVIDENCE.md, "Follow-up (2026-07-13)")."
+READY, then exhausted the retired 10-generation cap without finishing the
+queue (that threshold is retired)
+(specs/archive/drain-wake-cost/EVIDENCE.md, "Follow-up (2026-07-13)")."
 
 Repo evidence of the manual workaround this spec automates: `git log
 --oneline` commits `2af860a` ("merge: idea-research-freshness — apply
@@ -276,9 +278,10 @@ READY, new findings)").
   progress — is confirmed already shipped in
   `.claude/skills/drain/SKILL.md`'s 3a Baton pass section ("Critique-intake
   and stub-intake attempts never count toward this threshold"), landed
-  under specs/drain-wake-cost's 2026-07-13 follow-up citing the identical
+  under specs/archive/drain-wake-cost's 2026-07-13 follow-up citing the identical
   incident shape (a fooszone queue batoning on 5 all-NOT-READY intake
-  attempts and exhausting the generation cap). No task should re-implement
+attempts and exhausting the retired generation cap). No task should
+re-implement
   this; breakdown should not create a task for R7.
 - R8 **Ship gate.** Any task whose Touch includes `.claude/skills/critique/
 SKILL.md` carries a matching `antigravity/.agents/workflows/critique.md`

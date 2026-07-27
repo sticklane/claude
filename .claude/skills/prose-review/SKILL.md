@@ -4,7 +4,7 @@ description: Reviews human-facing technical writing (a file, a diff, or pasted t
 argument-hint: "[path/to/doc | 'diff' | pasted text] [--fix]"
 ---
 
-Review the human-facing prose in $ARGUMENTS for the writing antipatterns this
+Review the human-facing prose named in the current invocation for the writing antipatterns this
 toolkit's docs fall into. This is review of _style and comprehension_, the gap
 `/code-review` (code only) and `/critique` (a spec's content, not its prose)
 leave open. The doctrine — the nine-item rubric with vendor quotes, the

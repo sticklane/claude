@@ -9,9 +9,13 @@ it must stay cheap: metadata only, never transcripts.
 
 ## 1. Gather (metadata only)
 
-- List background tasks/agents via the harness task tools (`TaskList`; load
-  it with ToolSearch if deferred). Capture per task: label/description, type,
-  status, start time, end time if finished, and the output-file path.
+- Query the current runtime's native live-agent inventory; never invoke a
+  different runtime's CLI. Claude Code uses its harness task listing, Codex
+  uses `list_agents`, and Antigravity uses its native Agent Manager/subagent
+  inventory. Capture per task: label/description, type, status, start time,
+  end time if finished, and the output-file path when the runtime exposes one.
+  If the current runtime has no inventory surface, say so and continue with
+  the worktree inventory rather than substituting another runtime.
 - Enumerate this session's isolated worktrees — e.g., under git: `git worktree
 list --porcelain`. Worktrees named for `task/NN-*` branches are dispatched
   task workers (a drain queue or group, /build); match them to

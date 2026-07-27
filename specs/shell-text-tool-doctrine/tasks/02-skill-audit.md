@@ -18,7 +18,7 @@ command usages. Must NOT touch the rule file (Task 01).
 
 1. Sweep `.claude/skills/**/SKILL.md` and `reference.md` for embedded
    sed/awk/grep/cat commands (11 files: evals, breakdown, idea, drain, gate,
-   workflow-author, build, ctx).
+   workflow-author, build, codebase-memory).
 2. For each usage classify verdict: ok / bounded-fix / write-violation.
    Every WRITE-shaped usage (`sed -i`, `cat >` onto a tracked file) is removed,
    converted to an Edit/Write instruction, or annotated as a documented R1

@@ -1,10 +1,10 @@
 ---
 name: idea
-description: Transforms a raw idea into an agent-ready spec. Interviews the user with AskUserQuestion, scouts the codebase with cheap subagents, and writes specs/<slug>/SPEC.md with runnable acceptance criteria. Use when the user pitches a feature, describes something they want built, or says "I have an idea" / "I want to add X".
+description: Transforms a raw idea into an agent-ready spec. Interviews the user with the runtime's native question UI, scouts the codebase with cheap subagents, and writes specs/<slug>/SPEC.md with runnable acceptance criteria. Use when the user pitches a feature, describes something they want built, or says "I have an idea" / "I want to add X".
 argument-hint: "[one-line idea]"
 ---
 
-Turn the idea in $ARGUMENTS (ask for it if empty) into a spec precise enough
+Turn the idea in the current invocation (ask for it if none was supplied) into a spec precise enough
 that a fresh agent session can implement and verify it without you.
 
 **Right-size first.** If the change is describable as a one-sentence diff
@@ -47,9 +47,10 @@ proceed to the interview.
 
 ## 3. Interview the user
 
-Use AskUserQuestion in small batches (if the session is non-interactive, ask
-in plain prose — or stop and say the interview needs an interactive session
-rather than inventing answers). Cover, as relevant:
+Use the runtime's native question UI in small batches (plain conversational
+questions when no structured UI exists). If the session is non-interactive,
+ask in plain prose — or stop and say the interview needs an interactive
+session rather than inventing answers. Cover, as relevant:
 
 - Problem and user: who needs this, what breaks or annoys them today?
 - Behavior: happy path, then edge cases (empty, error, concurrent, permission).
@@ -61,7 +62,7 @@ rather than inventing answers). Cover, as relevant:
 - Scope: what is explicitly OUT. Push for at least one exclusion.
 - Verification: how will we know it works — what command, test, or observable
   behavior proves each requirement?
-- Rigor: prototype or production? Offer this as one AskUserQuestion option set —
+- Rigor: prototype or production? Offer this as one native-question option set —
   prototype-grade work legitimately skips verification that production-grade
   work must pay for, and the failure mode is not declaring a point on that
   spectrum. On "prototype", step 4 writes a `Rigor: prototype` header; on
@@ -163,11 +164,11 @@ rather than waiting for a READY the critique pass cannot reach by editing
 prose.
 
 If `## Open questions` names a technology/architecture choice, self-chain into
-`/design` — the same synchronous, in-session Skill-tool mechanism step 7 uses
-for `/breakdown`, never `run_in_background` or a detached Agent dispatch:
+`/design` through the runtime's native synchronous skill invocation — the
+same mechanism step 7 uses for `/breakdown`, never a detached agent dispatch:
 
 1. Announce it in one line — "`/design` needed for <the open choice>, chaining
-   now" — then invoke the Skill tool for `design` with argument
+   now" — then invoke the native `design` skill with argument
    `specs/<slug>/SPEC.md`, blocking until it returns.
 2. `/design` records its decision directly into the SPEC.md and prints its own
    closing `Next stage: /breakdown ... (human-launched)` line. **Ignore that
@@ -197,7 +198,7 @@ and proceed to step 6.
 
 ## 6. Adversarial pass
 
-Invoke the `/critique` skill on the spec file (via the Skill tool) rather than
+Invoke the `/critique` skill on the spec file through native skill invocation rather than
 spawning the critic agent directly — `/critique` is what stamps the spec's
 `Breakdown-ready: true` header once it reaches READY, the token step 7's
 self-chain and `/drain`'s auto-breakdown phase both rely on. Fix what it
@@ -210,14 +211,14 @@ costs.
 ## 7. Hand off
 
 After READY, chain: announce it in one line, then invoke `/breakdown` on the
-spec via the Skill tool, per the self-chain bullet in CLAUDE.md's authoring
+spec through native skill invocation, per the self-chain bullet in the repository's authoring
 conventions. Chaining into /breakdown in-session is the sanctioned exception
 to the fresh-session hand-off — it is a light artifact stage that works from
 the spec file, not from this conversation's context.
 
 Fall back to the printed pointer when the self-chain conditions fail — the
 user asked for the spec only, or non-interactive doubt (answers you had to
-infer rather than get). The fallback keeps the `/clear`-first advice: tell the
+infer rather than get). The fallback keeps the fresh-session advice: tell the
 user to run `/breakdown specs/<slug>/SPEC.md` (or `/build specs/<slug>/SPEC.md`
 for single-session work) in a FRESH session — the spec is the handoff artifact.
 

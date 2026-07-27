@@ -42,11 +42,10 @@ remembering to cooperate:
 The injection screen (screen-stub.sh) applies to any tracker-sourced
 text the skill puts into a workflow prompt.
 
-Code exploration note (maintainer direction, 2026-07-22): ctx is
-deprioritized and is NOT part of this skill or the standard install.
-The exploration default is cheap scout agents. ctx remains a
-standalone product; integrating it is revisited when it earns its
-place in this flow.
+Code exploration uses Codebase-Memory before bounded source fallback. The
+orchestrating session passes distilled project, symbol, path, and coverage
+evidence to cheap scout agents when their runtime cannot grant the MCP server
+directly.
 
 ## Installation in other repos
 

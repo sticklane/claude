@@ -104,5 +104,60 @@ class TestResumeAgentSuccess(unittest.TestCase):
         )
 
 
+class TestNativeRuntimeResume(unittest.TestCase):
+    def test_codex_resume_uses_codex_exec_only(self):
+        repo = "/repo/codex"
+        sessions = [{"id": "codex-sid", "cwd": repo}]
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "AGENTIC_RUNTIME": "codex",
+                    "AGENT_CONSOLE_CODEX_BIN": "/opt/stub/codex",
+                },
+            ),
+            patch.object(
+                ac.workboard, "scan_codex_sessions", return_value=sessions
+            ),
+            patch.object(ac, "_spawn_bg") as spawn,
+        ):
+            ok, msg = ac.resume_agent("codex-sid", "continue codex")
+        self.assertTrue(ok, msg)
+        argv, cwd = spawn.call_args.args
+        self.assertEqual(argv[0:2], ["/opt/stub/codex", "exec"])
+        self.assertIn("resume", argv)
+        self.assertIn("codex-sid", argv)
+        self.assertNotIn("claude", " ".join(argv))
+        self.assertNotIn("agy", " ".join(argv))
+        self.assertEqual(cwd, os.path.realpath(repo))
+
+    def test_antigravity_resume_uses_conversation_only(self):
+        repo = "/repo/agy"
+        sessions = [{"id": "agy-sid", "cwd": repo}]
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "AGENTIC_RUNTIME": "antigravity",
+                    "AGENT_CONSOLE_ANTIGRAVITY_BIN": "/opt/stub/agy",
+                },
+            ),
+            patch.object(
+                ac.workboard, "scan_antigravity_sessions", return_value=sessions
+            ),
+            patch.object(ac, "_spawn_bg") as spawn,
+        ):
+            ok, msg = ac.resume_agent("agy-sid", "continue agy")
+        self.assertTrue(ok, msg)
+        argv, cwd = spawn.call_args.args
+        self.assertEqual(argv[0:3], ["/opt/stub/agy", "-p", "continue agy"])
+        self.assertIn("--conversation", argv)
+        self.assertIn("agy-sid", argv)
+        self.assertNotIn("--new-project", argv)
+        self.assertNotIn("claude", " ".join(argv))
+        self.assertNotIn("codex", " ".join(argv))
+        self.assertEqual(cwd, os.path.realpath(repo))
+
+
 if __name__ == "__main__":
     unittest.main()

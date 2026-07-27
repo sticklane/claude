@@ -49,12 +49,12 @@ def _get(path, host="127.0.0.1:8899"):
     return h, captured
 
 
-def _write_stub(dirpath, record_path, sleep=2):
-    """A fake `claude` that dumps `$PWD` then its argv (NUL-separated) to
+def _write_stub(dirpath, record_path, sleep=2, name="claude"):
+    """A fake runtime that dumps `$PWD` then its argv (NUL-separated) to
     `record_path`, then sleeps so the dispatch stays 'running' for the lock
     test. The dump lands via a rename so a reader that sees `record_path` sees
     all of it, never a half-written prefix. Returns the executable path."""
-    stub = os.path.join(dirpath, "claude-stub.sh")
+    stub = os.path.join(dirpath, f"{name}-stub.sh")
     script = (
         "#!/bin/sh\n"
         f'{{ printf %s\\\\n "$PWD"; for a in "$@"; do printf %s\\\\0 "$a"; done; }} '
@@ -72,10 +72,19 @@ class _DispatchDirTest(unittest.TestCase):
         self.tmp = tempfile.mkdtemp()
         self._prev_env = {
             k: os.environ.get(k)
-            for k in ("AGENT_CONSOLE_DISPATCH_DIR", "AGENT_CONSOLE_CLAUDE_BIN")
+            for k in (
+                "AGENT_CONSOLE_DISPATCH_DIR",
+                "AGENT_CONSOLE_CLAUDE_BIN",
+                "AGENT_CONSOLE_CODEX_BIN",
+                "AGENT_CONSOLE_ANTIGRAVITY_BIN",
+                "AGENTIC_RUNTIME",
+            )
         }
         os.environ["AGENT_CONSOLE_DISPATCH_DIR"] = self.tmp
         os.environ.pop("AGENT_CONSOLE_CLAUDE_BIN", None)
+        os.environ.pop("AGENT_CONSOLE_CODEX_BIN", None)
+        os.environ.pop("AGENT_CONSOLE_ANTIGRAVITY_BIN", None)
+        os.environ["AGENTIC_RUNTIME"] = "claude-code"
         self._spawned = []
 
     def tearDown(self):
@@ -190,6 +199,49 @@ class TestStartDispatch(_DispatchDirTest):
         argv = [a for a in raw[raw.index("\n") + 1 :].split("\0") if a]
         self.assertIn("--max-turns", argv)
         self.assertIn("5", argv)
+
+    def test_codex_dispatch_uses_codex_exec_and_no_other_runtime(self):
+        cwd = tempfile.mkdtemp()
+        rec_file = os.path.join(self.tmp, "codex-argv.txt")
+        os.environ["AGENTIC_RUNTIME"] = "codex"
+        os.environ["AGENT_CONSOLE_CODEX_BIN"] = _write_stub(
+            self.tmp, rec_file, name="codex"
+        )
+
+        result = self._track(ac.start_dispatch("drain", cwd, "work the queue"))
+        self.assertEqual(result["code"], 200)
+        self.assertTrue(self._wait_for(rec_file))
+        raw = Path(rec_file).read_text()
+        argv = [a for a in raw[raw.index("\n") + 1 :].split("\0") if a]
+        self.assertEqual(argv[0], "exec")
+        self.assertIn("--json", argv)
+        self.assertIn("workspace-write", argv)
+        self.assertIn("work the queue", argv)
+        self.assertNotIn("claude", " ".join(argv))
+        self.assertNotIn("agy", " ".join(argv))
+        rec = self._record_for(result["body"]["id"])
+        self.assertEqual(rec["runtime"], "codex")
+
+    def test_antigravity_dispatch_uses_agy_and_no_other_runtime(self):
+        cwd = tempfile.mkdtemp()
+        rec_file = os.path.join(self.tmp, "agy-argv.txt")
+        os.environ["AGENTIC_RUNTIME"] = "antigravity"
+        os.environ["AGENT_CONSOLE_ANTIGRAVITY_BIN"] = _write_stub(
+            self.tmp, rec_file, name="agy"
+        )
+
+        result = self._track(ac.start_dispatch("verify", cwd, "verify it"))
+        self.assertEqual(result["code"], 200)
+        self.assertTrue(self._wait_for(rec_file))
+        raw = Path(rec_file).read_text()
+        argv = [a for a in raw[raw.index("\n") + 1 :].split("\0") if a]
+        self.assertEqual(argv[0:2], ["-p", "verify it"])
+        self.assertIn("--new-project", argv)
+        self.assertIn("accept-edits", argv)
+        self.assertNotIn("claude", " ".join(argv))
+        self.assertNotIn("codex", " ".join(argv))
+        rec = self._record_for(result["body"]["id"])
+        self.assertEqual(rec["runtime"], "antigravity")
 
 
 class TestPerCwdLock(_DispatchDirTest):

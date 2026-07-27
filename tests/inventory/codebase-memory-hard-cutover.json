@@ -1,0 +1,31 @@
+{
+  "fragment": "codebase-memory-hard-cutover",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_codebase_memory_integration.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "manual",
+      "path": "tests/test_codebase_memory_live.sh",
+      "reason": "Downloads and executes the pinned upstream release; run explicitly as the supported-host smoke test.",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_check_manual_inventory.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_no_ctx_surface.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

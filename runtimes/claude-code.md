@@ -298,5 +298,10 @@ export default async function ({ parallel, agent, idea }) {
   (auto-approve file edits), `plan` (read-only), `dontAsk` (unapproved
   tools abort — the headless/CI mode above), `bypassPermissions`
   (approve everything; sandboxed use only).
+- **Codebase-Memory MCP registration**: the plugin root `.mcp.json`
+  auto-discovers `codebase-memory-mcp` and launches
+  `agentic-codebase-memory-mcp` with `CBM_ALLOWED_ROOT` set from
+  `${CLAUDE_PROJECT_DIR}`. Query it first; if unavailable, use bounded `rg`
+  plus small reads and name the coverage limitation.
 - **Runtime selection / tier overrides**: `.claude/runtime.md`,
   documented once in [README.md](README.md).

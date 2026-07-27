@@ -25,7 +25,7 @@ already own — reads true after the pivot. Concretely:
   uncommitted rather than shipped stale (2026-07-22 sync session) —
   this task writes the real replacement: component architecture,
   pipeline, and runtime-portability sections rewritten for the
-  data-level model (bd queue + ctx index + task files; no mirror
+  data-level model (bd queue + Codebase-Memory index + task files; no mirror
   trees), citing `docs/architecture-pivot-2026-07-22.md` for the
   decision rather than restating it.
 - `docs/anthropic-playbook.md` and `docs/external-playbooks.md`: any
@@ -84,7 +84,7 @@ issue rather than let it sit silent.
 
 Task 14 completed 2026-07-22 — doc-currency sweep of `docs/` after the pivot.
 
-- `docs/architecture.md` written fresh: data-layer model (bd queue + ctx
+- `docs/architecture.md` written fresh: data-layer model (bd queue + Codebase-Memory
   index + task files), components, pipeline, execution engine, runtime
   portability, cost control — the decision cited to
   `docs/architecture-pivot-2026-07-22.md`, not restated. Retired-mechanism
@@ -107,7 +107,7 @@ prose-review evidence (step 4 / acceptance 5):
 
 - Vale pass run over all four changed files. Remaining error-labelled findings
   are Google.EmDash (spaced em-dash) and Vale.Spelling on project jargon
-  (ctx, ultracode, schema'd, cutover, agy). Both are established house
+  (Codebase-Memory, ultracode, schema'd, cutover, agy). Both are established house
   convention — the maintainer-ratified `docs/architecture-pivot-2026-07-22.md`
   carries the identical vale profile (14 spelling/em-dash errors). Resolved as
   house style; no reader-blocking finding remains above low severity.

@@ -1,234 +1,133 @@
-# Quality-gate hook templates
+# Quality-gate lifecycle adapters
+
+`bin/install-gates` owns generated gate files. This reference explains the
+runtime contracts behind them; do not copy these descriptions into a target
+repo by hand.
 
 ## Table of contents
 
-Stop gate · Auto-format on edit · Protected files ·
-Session-scoped alternatives · Sanity rules
+Installed layers · Runtime selection · Stop gate · Protected files ·
+Auto-format · Beads compliance · Operational checks
 
-Verified against code.claude.com/docs/en/hooks and hooks-guide (July 2026).
-Semantics that matter: exit code 2 blocks (exit 1 is non-blocking and
-proceeds); `PostToolUse` cannot block (the tool already ran); a PreToolUse
-`permissionDecision: "deny"` blocks even in `bypassPermissions` mode.
+Verified in July 2026 against the current official hook documentation for
+[Claude Code](https://code.claude.com/docs/en/hooks),
+[Codex](https://learn.chatgpt.com/docs/hooks), and
+[Antigravity](https://antigravity.google/docs/hooks).
 
-Setup rules that silently break gates when skipped:
+## Installed layers
 
-- `chmod +x .claude/hooks/*.sh` — files created by the Write tool are not
-  executable, and hooks fail open on script errors.
-- The scripts depend on `jq`; check `command -v jq` first and install or
-  rewrite without it if absent.
-- If `.claude/settings.json` already exists, MERGE the `hooks` key into it —
-  never overwrite the file.
+Every non-generic project gets two runtime-independent layers:
 
-## Stop gate (blocks "done" until checks pass)
+- `scripts/check.sh`, the canonical project check.
+- The git pre-commit hook, containing only fast staged-file checks.
 
-`.claude/hooks/stop-gate.sh` — replace `npm test` with the project's check;
-note the exit status is captured from the check itself, never from a pipe.
-Before exiting 2, the hook checks for a **sanctioned stop**: unattended
-workers (drain/build dispatch, and the verifier) are contractually
-REQUIRED to stop mid-red with a final message beginning with a verdict line
-— `DEFERRED`, `BLOCKED`, or `INCOMPLETE`. Without the bypass the gate would
-trap them in a block loop they can never satisfy. The hook's stdin JSON
-carries `transcript_path`; the installed hook reads the last assistant
-message from the transcript tail and runs exactly
-`grep -qE '^(DEFERRED|BLOCKED|INCOMPLETE)\b'` on its first line — a match
-exits 0:
+Every project also gets native protected-file and auto-format lifecycle hooks.
+Non-generic projects get a Stop gate. A repo containing `.beads/` gets the
+bd-compliance Stop hook as a separate handler. Generic projects have no
+canonical check, so they do not get the quality Stop gate.
 
-```bash
-#!/bin/bash
-# Re-runs the check on every stop attempt, including continuation rounds
-# (stop_hook_active=true), so the gate only opens when the check is green.
-# Loop safety comes from Claude Code's cap: after 8 consecutive blocks
-# without progress it force-ends the turn (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
-# raises that if a gate legitimately needs more rounds).
-INPUT=$(cat)
+| Runtime | Config | Scripts | Guidance |
+| --- | --- | --- | --- |
+| Claude Code | `.claude/settings.json` | `.claude/hooks/*.sh` | `CLAUDE.md` |
+| Codex | `.codex/hooks.json` | `.codex/hooks/*.sh` | `AGENTS.md` |
+| Antigravity | `.agents/hooks.json` | `.agents/hooks/*.sh` | `AGENTS.md` |
 
-# Sanctioned stop: a final message beginning with a verdict line is an
-# unattended worker's contractual mid-red stop — let it through.
-TRANSCRIPT=$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty')
-if [ -n "$TRANSCRIPT" ] && [ -r "$TRANSCRIPT" ]; then
-  LAST=$(tail -50 "$TRANSCRIPT" \
-    | jq -rs '[.[] | select(.type == "assistant")] | last
-              | .message.content[]? | select(.type == "text") | .text' \
-    2>/dev/null)
-  if printf '%s' "$LAST" | head -1 | grep -qE '^(DEFERRED|BLOCKED|INCOMPLETE)\b'; then
-    exit 0
-  fi
-fi
+The installer merges existing JSON opaquely, keeps unrelated hooks and
+top-level keys, and appends only missing agentic handlers. Re-running the same
+runtime is byte-idempotent.
 
-if ! RESULT=$(npm test 2>&1); then
-  echo "Checks failing — keep working. Output (last 20 lines):" >&2
-  printf '%s\n' "$RESULT" | tail -20 >&2
-  exit 2
-fi
-exit 0
-```
+## Runtime selection
 
-Registration in `.claude/settings.json`:
+Pass `--runtime claude-code|codex|antigravity`. `AGENTIC_RUNTIME` is the
+non-interactive equivalent; an explicit flag wins. An unknown runtime is an
+error. The installer never invokes an agent CLI and never installs a
+different runtime as fallback.
 
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-gate.sh",
-            "timeout": 120
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+Claude Code remains the default only for backward compatibility with older
+direct installer calls. A skill invocation must pass its active runtime
+explicitly.
 
-A repo with `.beads/` (the `/work` skill's queue) gets this wired by
-`bin/install-gates` automatically: it copies the hook to
-`.claude/hooks/bd-compliance.sh` and appends a second entry in the same
-`Stop` array, same shape — never merged into the stop-gate entry's own
-`hooks` list. (In the toolkit repo itself the source lives at
-`hooks/bd-compliance/check.sh`; the installed copy is what settings
-reference.)
+## Stop gate
 
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-gate.sh",
-            "timeout": 120
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/bd-compliance/check.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+The shared `templates/stop-gate.sh` reads the active runtime's native payload,
+finds the repo root, and runs `scripts/check.sh`. Its result translation is:
 
-Stop hooks fire whenever Claude finishes responding, not only at task
-completion — keep the check cheap, or the gate taxes every conversational
-turn. If the check is too slow to re-run each round, use the
-`stop_hook_active` input field to allow stopping after one forced retry —
-but then describe the gate honestly as "one retry", not "until green":
+| Runtime | Block/continue result | Allow result | Loop signal |
+| --- | --- | --- | --- |
+| Claude Code | failure text on stderr, exit 2 | exit 0 | `stop_hook_active` |
+| Codex | `{"decision":"block","reason":"…"}` | `{}` | `stop_hook_active` |
+| Antigravity | `{"decision":"continue","reason":"…"}` | `{"decision":"allow"}` | `executionNum` |
 
-```bash
-# $INPUT already captured at the top of the script
-if [ "$(printf '%s' "$INPUT" | jq -r '.stop_hook_active')" = "true" ]; then
-  exit 0
-fi
-```
+The adapter permits the next stop attempt after one forced retry. This is
+deliberate loop safety, so describe the behavior as a one-retry gate rather
+than “cannot stop until green.” Antigravity also permits stop handling when
+`fullyIdle` is false; active background work is not a completed session.
 
-## Auto-format on edit
+An unattended worker can make a sanctioned mid-red stop by beginning its final
+message with `DEFERRED`, `BLOCKED`, or `INCOMPLETE`. Codex supplies
+`last_assistant_message` directly. Claude Code supplies a transcript path.
+Antigravity does not expose a stable final-message field, so its one-retry cap
+is the hard loop boundary.
 
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-file.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-`.claude/hooks/format-file.sh` (quoted variable — paths with spaces survive;
-`// empty` prevents formatting the literal string "null"):
-
-```bash
-#!/bin/bash
-FILE=$(jq -r '.tool_input.file_path // empty')
-[ -n "$FILE" ] && npx prettier --write --ignore-unknown "$FILE"
-exit 0
-```
-
-Swap the formatter per project (`gofmt -w`, `ruff format`, `cargo fmt --`).
+The gate fails open only when its input is unusable, `jq` is unavailable, or
+`scripts/check.sh` is missing/unreadable. A real non-zero check result is
+always translated into the runtime's native continuation result.
 
 ## Protected files
 
-`.claude/hooks/protect-files.sh` — output built with jq so a hostile file
-path cannot inject JSON; tighten or extend the pattern list per repo. Note
-that the `*.git/*` entry is a **git-specific** pattern string (git keeps its
-metadata under `.git/`), not a VCS-agnostic one — a jj-colocated repo would
-add `*.jj/*` to protect the equivalent internal state:
+`templates/pre-tool-protect.sh` denies `.env*`, lockfiles, and `.git/` paths.
+It extracts edited paths from:
 
-```bash
-#!/bin/bash
-FILE=$(jq -r '.tool_input.file_path // empty')
-case "$FILE" in
-  .env|.env.*|*/.env|*/.env.*|*package-lock.json|*pnpm-lock.yaml|*.git/*)
-    jq -n --arg reason "Protected file: $FILE" \
-      '{hookSpecificOutput: {hookEventName: "PreToolUse",
-        permissionDecision: "deny", permissionDecisionReason: $reason}}'
-    exit 0
-    ;;
-esac
-exit 0
-```
+- Claude Code: `.tool_input.file_path`.
+- Codex: every `Add File`, `Update File`, `Delete File`, and `Move to` header
+  in the native `apply_patch` command.
+- Antigravity: `.toolCall.args.TargetFile` for
+  `write_to_file`, `replace_file_content`, and
+  `multi_replace_file_content`.
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-files.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+Claude Code blocks with exit 2. Codex returns
+`hookSpecificOutput.permissionDecision: "deny"`. Antigravity returns
+`decision: "deny"`. Unparseable inputs fail open with a warning.
 
-**Scope honestly**: this matcher covers Edit/Write only. An agent with Bash
-can still write via `sed -i` or `cat >` — pair the hook with permission
-`deny` rules in settings.json (e.g. `Bash(sed -i *)` or denying Bash write
-patterns) if the protection must be hard, and remember hooks fail open on
-script errors while permission rules don't.
+This covers native file-edit tools, not arbitrary shell writes. If protection
+must be hard, pair it with the active runtime's command permissions. A
+session-scoped TDD variant may add the project's test glob after failing tests
+are committed, then remove it for test-authoring work.
 
-**TDD variant** (anti-test-gaming, community practice built on the official
-deny mechanism): add the project's test glob (e.g. `*.test.ts|*_test.go`)
-to the case list while an implementation task is running, after the failing
-tests are committed. Remove it for test-authoring work. Same Bash caveat
-applies — the committed failing tests are the tamper-evidence either way.
+## Auto-format
 
-## Session-scoped alternatives
+`templates/post-tool-format.sh` uses the same native path extraction and runs
+the matching project formatter:
 
-- `/goal all tests in <dir> pass and lint is clean, or stop after 20 turns`
-  — a per-session prompt-based Stop hook; the runtime's
-  built-in transcript evaluator (Claude Code: Haiku) judges the transcript
-  each turn. Conditions must be demonstrable IN the transcript: have the agent
-  run the command so the evaluator can see the output. Bound every goal
-  with a turn or time clause.
-- Prompt-type hooks (`"type": "prompt"`) for judgment calls a script can't
-  make; agent-type hooks (experimental) can run tools to verify, e.g.
-  "Verify that all unit tests pass. Run the test suite and check results."
+- Python: `ruff format`, falling back to `uvx ruff format`.
+- Go: `gofmt -w`.
+- Web/config formats: repo-local Prettier, falling back to
+  `npx --no-install prettier`.
 
-## Sanity rules
+Codex can edit several files in one `apply_patch`; each parsed target is
+formatted. Current Antigravity `PostToolUse` input does not include the tool
+call. The paired PreToolUse hook therefore records the allowed `TargetFile`
+under a conversation-scoped temporary name, and PostToolUse consumes and
+removes it. Antigravity PostToolUse always emits the required `{}` response.
 
-- Don't mix exit-code and JSON output in one hook: JSON is ignored on exit 2.
-- Hooks fail open on script errors — enforce hard denies with permission
-  `deny` rules in settings.json, not hooks alone.
-- Test every hook by triggering it once before trusting it.
+Formatting is fail-open and never reverses an already-completed edit.
+
+## Beads compliance
+
+For repos with `.beads/`, the installer copies
+`hooks/bd-compliance/check.sh` beside the other runtime hooks and registers it
+as a separate Stop handler. It uses the same runtime-specific Stop result
+translation as the quality gate. Separate handlers matter because one check
+guards project quality while the other guards claimed issue state.
+
+## Operational checks
+
+- `jq` must be available.
+- Installed scripts are mode 755.
+- Codex project hooks require the user to review and trust their exact
+  definitions through `/hooks`; installation must not bypass that review.
+- Trigger protection, formatting, and a failing Stop check once before
+  trusting the setup.
+- Do not mix one runtime's input fields or result schema into another
+  runtime's config.
+- Do not shell out to Claude Code, Codex, or Antigravity from an adapter.

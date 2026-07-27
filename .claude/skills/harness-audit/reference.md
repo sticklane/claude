@@ -21,8 +21,11 @@ Enumerate documented commands, then classify each before running:
 - Collect candidates from `AGENTS.md`'s `## Commands` section, CLAUDE.md's
   Checks/Commands prose, and build files (`package.json` scripts,
   `Makefile`, `justfile`, `scripts/*.sh`).
-- Read the repo's allowlist (`.claude/settings.json` /
-  `.claude/settings.local.json` `permissions.allow`).
+- Read the active runtime's native permission config. Claude Code's
+  per-command allowlist is `.claude/settings.json` /
+  `.claude/settings.local.json` `permissions.allow`. Codex and Antigravity
+  have no equivalent checked-in per-command list; do not substitute Claude
+  settings for them.
 - **Mutation class**: treat build / deploy / migrate / publish / commit /
   push / release verbs (and anything with side effects on disk, network, or
   a database) as mutating. When in doubt, classify as mutating — inspect,
@@ -36,8 +39,11 @@ Finding shape: `<file>: command "<cmd>" <stale reason> — fix: <one line>`.
 
 ## 2. Gate coverage
 
-- Detect gates: `.claude/settings.json` with a `Stop` hook entry, and a git
-  pre-commit hook (`.git/hooks/pre-commit`) or the repo's VCS equivalent.
+- Detect the active runtime's Stop hook plus a git pre-commit hook
+  (`.git/hooks/pre-commit`) or the repo's VCS equivalent:
+  - Claude Code: `.claude/settings.json` `.hooks.Stop`.
+  - Codex: `.codex/hooks.json` `.hooks.Stop`.
+  - Antigravity: any named hook in `.agents/hooks.json` with a `Stop` array.
 - If absent → single line `gate coverage: no gates installed` (not a
   per-file finding).
 - If present → read the check entrypoint the hooks invoke (commonly
@@ -48,7 +54,9 @@ Finding shape: `<file>: command "<cmd>" <stale reason> — fix: <one line>`.
 
 ## 3. Evalset presence
 
-- List skills: `.claude/skills/*/SKILL.md`.
+- List skills from the repo's canonical skill root: `.claude/skills/`,
+  `skills/`, or `.agents/skills/`. Deduplicate names when a packaging
+  entrypoint points at the canonical source.
 - For each, check whether an evalset exists (repo convention: e.g. an
   `evals/` entry or a stored evalset the runner recognizes) and compare the
   skill file's last-changed revision against the last recorded eval run.
@@ -69,7 +77,8 @@ Finding shape: `<file>: command "<cmd>" <stale reason> — fix: <one line>`.
 
 ## 5. Allowlist drift
 
-- Read `permissions.allow` from settings.
+- Read a checked-in per-command allowlist only when the active runtime
+  supports one (currently Claude Code's `permissions.allow`).
 - Cross-reference recent transcripts (the harness's transcript store) for
   which allowlisted patterns were actually exercised.
 - Findings: (a) entries granted but unused in recent transcripts — candidate
@@ -80,3 +89,7 @@ Transcript access is read-only; if transcripts are unavailable in the
 current context, emit `allowlist drift: transcripts unavailable — skipped`
 rather than silently dropping the area (the silent-skip failure mode R2
 guards against).
+
+If the active runtime has no checked-in per-command allowlist, emit
+`allowlist drift: unsupported by <runtime> — skipped`. Never query another
+agent runtime's transcript store as a fallback.

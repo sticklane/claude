@@ -34,14 +34,14 @@ literal bar ("at least one test per R2 incident class") is met since a test
 class for the incident class exists and passes.
 
 ```
-$ python3 .claude/skills/drain/drain_frontier.py <specA> <specB>   # identical Touch: src/shared.py in each
+$ python3 .claude/skills/drain/drain_frontier.py (retired) <specA> <specB>   # identical Touch: src/shared.py in each
 # both 01-a.md (specA) and 01-b.md (specB) appear in "admissible" — confirms per-spec, not global
 ```
 
 ## Criterion 2 — golden fixture JSON matches EXPECTED.md
 
 Command:
-`python3 .claude/skills/drain/drain_frontier.py .claude/skills/drain/fixtures/basic-window --window 2`
+`python3 .claude/skills/drain/drain_frontier.py (retired) .claude/skills/drain/fixtures/basic-window --window 2`
 
 Exit 0. Output `admissible` = `["...02-alpha.md", "...03-beta.md"]`,
 exactly matching `fixtures/basic-window/EXPECTED.md`'s documented
@@ -111,7 +111,7 @@ criteria's command text, outside the sanctioned edit set).
 
 Command: `git diff --stat 51aae98 HEAD`
 
-Files changed: `.claude/skills/drain/drain_frontier.py`,
+Files changed: `.claude/skills/drain/drain_frontier.py (retired)`,
 `.claude/skills/drain/test_drain_frontier.py`,
 `.claude/skills/drain/fixtures/basic-window/{SPEC.md,EXPECTED.md,tasks/*.md}`,
 and `specs/drain-frontier-scanner/tasks/01-scanner-and-tests.md` (task file
@@ -119,7 +119,7 @@ itself). `git status --porcelain` on the worktree is clean (no uncommitted
 changes). No evidence file existed prior to this verification run.
 
 ✓ PASS — matches the task's `Touch:` list
-(`.claude/skills/drain/drain_frontier.py, .claude/skills/drain/test_drain_frontier.py,
+(`.claude/skills/drain/drain_frontier.py (retired), .claude/skills/drain/test_drain_frontier.py,
 .claude/skills/drain/fixtures/`) plus the task file itself. No scope creep.
 
 ## Overfitting check

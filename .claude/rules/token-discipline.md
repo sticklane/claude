@@ -17,14 +17,17 @@ tokens on decisions; delegate consumption of raw material to subagents.
 
 ## Delegation defaults
 
-- **Index-first, before scout dispatch, when the repo is indexed.** When
-  `.context/` exists at the repo root (or `ctx` resolves on PATH), a
-  structural question — a definition, a caller, a signature, an outline, an
-  import graph — goes to the `ctx` index FIRST: `ctx tree`/`sig`/`refs`/
-  `deps`/`map`/`at`, cheaper than dispatching a `scout` because it reads the
-  index, not the raw files. Dispatch `scout` (never a bare Read) only for
-  content/text questions the index can't answer — bodies, literals,
-  patterns — or when the repo carries no index at all.
+- **Codebase-Memory first, before scout dispatch.** A structural question —
+  architecture, a definition, caller, signature, dependency, or impact —
+  goes to the `codebase-memory-mcp` graph first. Use the progressive ladder
+  in the `codebase-memory` skill and keep responses to qualified symbols,
+  paths, and relationships. If the server is unavailable, use `rg` over a
+  bounded path set plus small file reads and state that index coverage was
+  unavailable.
+- **Parent evidence handoff for children without MCP access.** The parent
+  queries Codebase-Memory, then hands the scout the project identity,
+  qualified symbols, relevant paths, index/coverage state, and distilled
+  graph evidence. Never paste the raw graph response into a child prompt.
 - **Never read files into main context to "look around."** Use the `scout`
   agent (scout-tier, read-only; Claude default: Haiku) for any
   where/how/what-exists question the index above doesn't cover. Fan out
@@ -88,7 +91,7 @@ tokens on decisions; delegate consumption of raw material to subagents.
   pages go to `scout` (this section's opening bullet), but `scout` has no MCP
   tool grant — its `.claude/agents/scout.md` frontmatter grants `Read`,
   `Grep`, `Glob`, `Bash(git log *)`, `Bash(git show *)`, `Bash(ls *)`,
-  `Bash(wc *)`, and `Bash(ctx *)` — so it cannot drive
+  and `Bash(wc *)` — so it cannot drive
   `mcp__claude-in-chrome__*` tools; reserve
   `general-purpose` or a purpose-built agent for pages needing an interaction
   sequence.
@@ -322,7 +325,7 @@ Three points govern the shape:
   cost-attribution digging, not this guardrail's dependency). The context-size
   arm is this turn's live `input_tokens + cache_read_input_tokens` off the
   most recent main-loop assistant usage entry — mirroring `agentprof`'s own
-  "ctx" definition (`agentprof/internal/costsummary/costsummary.go`) so the
+  context-size definition (`agentprof/internal/costsummary/costsummary.go`) so the
   two stay conceptually consistent, but a single current reading, not a
   window percentile. It is now the ONLY arm: a second arm counting
   `cache_creation_input_tokens` spikes as TTL-expiry "re-primes" was removed

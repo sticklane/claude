@@ -26,7 +26,7 @@ them from this task's actual landed code, not guess.
 ## Steps
 
 1. Read `.claude/skills/workboard/workboard.py`'s current handoff-related
-   code exactly (verified via `ctx` this session — no need to re-read the
+   code exactly (verified structurally this session — no need to re-read the
    whole 2000+-line file):
    - `scan_handoffs(repo)` at line ~598: globs `HANDOFF*.md`, returns
      `[{"path": ..., "title": ..., "mtime": ...}, ...]`.
@@ -55,7 +55,8 @@ them from this task's actual landed code, not guess.
    `/resume-handoff` (or `bd close`), not a file path or "delete the
    file."
 4. Update every call site reading `repo["handoffs"][i]["path"]` (used by
-   `attention_items` and anywhere else `ctx refs scan_handoffs` or a grep
+   `attention_items` and every other bounded reference search for
+   `scan_handoffs` or
    for `handoffs\[` surfaces) to read the new field names instead.
 5. Update `.claude/skills/workboard/reference.md`'s documented
    `handoffs[]` schema (lines ~19, 38, 56 per this session's scout) to

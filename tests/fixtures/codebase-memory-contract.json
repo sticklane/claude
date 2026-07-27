@@ -1,0 +1,36 @@
+{
+  "ambiguous-symbol": [
+    "list_projects",
+    "index_status",
+    "get_graph_schema",
+    "search_graph",
+    "ambiguous symbol"
+  ],
+  "incomplete-coverage": [
+    "list_projects",
+    "index_status",
+    "search_code",
+    "incomplete coverage",
+    "bounded direct source"
+  ],
+  "paginated-result": [
+    "list_projects",
+    "index_status",
+    "search_graph",
+    "pagination"
+  ],
+  "stale-uncommitted-source": [
+    "list_projects",
+    "index_status",
+    "detect_changes",
+    "uncommitted",
+    "bounded direct source"
+  ],
+  "graph-empty-text-present": [
+    "list_projects",
+    "index_status",
+    "graph-empty",
+    "search_code",
+    "bounded direct source"
+  ]
+}

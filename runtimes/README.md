@@ -31,8 +31,9 @@ runtime: <profile-name>
 
 where `<profile-name>` names a file here (`claude-code`, `antigravity`,
 `codex`, `gemini-cli`). If the file is absent, the runtime is `claude-code` —
-so a repo that never creates `.claude/runtime.md` gets today's behavior
-unchanged.
+the backward-compatible default for direct shell callers. A skill running
+inside Codex or Antigravity passes its active runtime explicitly to any
+headless helper; it never accepts this default and launches Claude Code.
 
 ## The four tiers
 

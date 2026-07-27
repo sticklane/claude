@@ -941,13 +941,13 @@ class TestSimpleCommandsInInbox(unittest.TestCase):
         self.assertEqual(len(push_items), 1)
         self.assertIn("git -C /r/demo push", push_items[0].get("cmd", ""))
 
-    def test_parked_handoff_item_carries_resume_command(self):
+    def test_parked_handoff_item_carries_runtime_neutral_resume_action(self):
         repo = make_repo_record()
         repo["handoffs"] = [make_handoff_record()]
 
         inbox = workboard.attention_items([repo], [], [], stale_days=7)
 
-        self.assertIn("claude", inbox[0].get("cmd", ""))
+        self.assertIn("native skill invocation", inbox[0].get("cmd", ""))
         self.assertIn("md-abc123", inbox[0]["cmd"])
 
     def test_all_tasks_done_spec_is_not_an_inbox_item(self):
@@ -1141,6 +1141,16 @@ class TestActiveCoverageReclassification(unittest.TestCase):
 
         self.assertEqual(self._states(inbox), ["needs-review"])
 
+    def test_codex_dirty_repo_does_not_claim_no_live_session(self):
+        repo = make_repo_record(path="/r/demo", dirty=1)
+        with mock.patch.dict(os.environ, {"AGENTIC_RUNTIME": "codex"}):
+            inbox = workboard.attention_items([repo], [], [], stale_days=7)
+
+        self.assertEqual(self._states(inbox), ["needs-review"])
+        self.assertIn("live-session state unavailable", inbox[0]["what"])
+        self.assertNotIn("no live session", inbox[0]["what"])
+        self.assertIn("confirm whether a native session owns it", inbox[0]["why"])
+
     def test_live_and_stale_differ_only_by_worktree_activity(self):
         live = make_repo_record(
             path="/r/demo", dirty=1, worktrees=[task_worktree(workboard.now_ts())]
@@ -1274,14 +1284,15 @@ class TestSessionStartTs(unittest.TestCase):
 
 
 class TestLiveSessionIdsCliAndFallback(unittest.TestCase):
-    """R1: live_session_ids() sources liveness from the `claude agents --json`
-    shim, falling back to the PID-record scan when the shim is absent/invalid,
-    and returns the 2-tuple (live, liveness_unknown) in both paths."""
+    """The scanner queries a CLI only when it is the active runtime."""
 
     def _patch_cli(self, result):
         orig = workboard._claude_agents_json
         workboard._claude_agents_json = lambda: result
         self.addCleanup(setattr, workboard, "_claude_agents_json", orig)
+        env = mock.patch.dict(os.environ, {"AGENTIC_RUNTIME": "claude-code"})
+        env.start()
+        self.addCleanup(env.stop)
 
     def test_valid_cli_list_yields_liveness_map_ignoring_status(self):
         self._patch_cli(
@@ -1312,6 +1323,21 @@ class TestLiveSessionIdsCliAndFallback(unittest.TestCase):
         self.assertEqual(set(live), {"s1"})
         self.assertFalse(liveness_unknown)
 
+    def test_codex_runtime_never_queries_claude_cli(self):
+        called = []
+        orig = workboard._claude_agents_json
+        workboard._claude_agents_json = lambda: called.append(True)
+        self.addCleanup(setattr, workboard, "_claude_agents_json", orig)
+        with (
+            mock.patch.dict(os.environ, {"AGENTIC_RUNTIME": "codex"}),
+            tempfile.TemporaryDirectory() as tmp,
+        ):
+            live, liveness_unknown = workboard.live_session_ids(Path(tmp))
+
+        self.assertEqual(called, [])
+        self.assertEqual(live, {})
+        self.assertFalse(liveness_unknown)
+
     def test_cli_non_empty_with_zero_live_marks_liveness_unknown(self):
         self._patch_cli([{"name": "orphan-record-missing-ids"}])
 
@@ -1337,6 +1363,114 @@ class TestLiveSessionIdsCliAndFallback(unittest.TestCase):
             workboard.scan_sessions(claude_home, stale_days=7)
 
         self.assertTrue(workboard._last_liveness_unknown)
+
+
+class TestNativeRuntimeSessionInventory(unittest.TestCase):
+    def test_codex_rollout_is_resumable_and_never_falsely_active(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            codex_home = Path(tmp) / ".codex"
+            day = codex_home / "sessions" / "2026" / "07" / "26"
+            day.mkdir(parents=True)
+            rollout = day / "rollout-native.jsonl"
+            rollout.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-26T12:00:00Z",
+                                "type": "session_meta",
+                                "payload": {
+                                    "id": "codex-session",
+                                    "cwd": "/repo/codex",
+                                },
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "timestamp": "2026-07-26T12:00:01Z",
+                                "type": "response_item",
+                                "payload": {
+                                    "type": "message",
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "type": "input_text",
+                                            "text": "work the ready queue",
+                                        }
+                                    ],
+                                },
+                            }
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            with (
+                mock.patch.dict(
+                    os.environ,
+                    {"AGENTIC_RUNTIME": "codex", "CODEX_HOME": str(codex_home)},
+                ),
+                mock.patch.object(
+                    workboard,
+                    "scan_claude_sessions",
+                    side_effect=AssertionError("must not read Claude sessions"),
+                ),
+            ):
+                sessions = workboard.scan_sessions(Path("/unused"), stale_days=30)
+
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0]["id"], "codex-session")
+        self.assertEqual(sessions[0]["cwd"], "/repo/codex")
+        self.assertIn("ready queue", sessions[0]["prompt"])
+        self.assertEqual(sessions[0]["runtime"], "codex")
+        self.assertFalse(sessions[0]["liveness_supported"])
+        self.assertNotEqual(sessions[0]["state"], "active")
+
+    def test_antigravity_cache_supplies_resume_id_and_workspace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ag_home = Path(tmp) / "antigravity-cli"
+            cache = ag_home / "cache"
+            cache.mkdir(parents=True)
+            (cache / "conversation_metadata.json").write_text(
+                json.dumps(
+                    {
+                        "conversations": {
+                            "agy-session": {
+                                "summary": {
+                                    "ID": "agy-session",
+                                    "Preview": "drain the queue",
+                                    "UpdatedAt": "2026-07-26T12:00:00Z",
+                                    "WorkspaceURIs": ["file:///repo/with%20space"],
+                                }
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with (
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        "AGENTIC_RUNTIME": "antigravity",
+                        "ANTIGRAVITY_DIR": str(ag_home),
+                    },
+                ),
+                mock.patch.object(
+                    workboard,
+                    "scan_claude_sessions",
+                    side_effect=AssertionError("must not read Claude sessions"),
+                ),
+            ):
+                sessions = workboard.scan_sessions(Path("/unused"), stale_days=30)
+
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0]["id"], "agy-session")
+        self.assertEqual(sessions[0]["cwd"], "/repo/with space")
+        self.assertEqual(sessions[0]["runtime"], "antigravity")
+        self.assertFalse(sessions[0]["liveness_supported"])
+        self.assertNotEqual(sessions[0]["state"], "active")
 
 
 class TestPruneStaleSessionPids(unittest.TestCase):

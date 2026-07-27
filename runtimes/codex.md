@@ -41,7 +41,7 @@ the effort axis).
 ## Headless
 
 Non-interactive mode is `codex exec` (confirmed live against
-`codex-cli 0.144.1`; flags per `codex exec --help`):
+`codex-cli 0.145.0`; flags per `codex exec --help`):
 
 ```bash
 codex exec --json --skip-git-repo-check --ephemeral --sandbox workspace-write "<prompt>"
@@ -115,15 +115,28 @@ codex exec --json --skip-git-repo-check --ephemeral --sandbox workspace-write "<
 
 ## Notes
 
-- **Config locations**: repository `.agents/skills/`; global —
-  `~/.codex/config.toml`. `AGENTS.md` is the always-on context surface.
+- **Config locations**: repository `.agents/skills/` and
+  `.codex/hooks.json`; global — `~/.codex/config.toml`; installed plugins
+  under the active Codex home. `AGENTS.md` is the always-on context surface.
+- **Quality-gate adapter**:
+  `bin/install-gates --runtime codex <repo>` installs native project hooks;
+  review their trust state through `/hooks`.
+- **Plugin install**: `codex plugin marketplace add <toolkit-clone>`, then
+  `codex plugin add agentic@agentic-toolkit`. The package's regular-file
+  entrypoints load the canonical shared procedures; Codex never invokes
+  Claude Code or Antigravity to run them.
+- **Codebase-Memory MCP registration**: `.codex-plugin/plugin.json` carries
+  an inline `codebase-memory-mcp` server map that launches
+  `agentic-codebase-memory-mcp`. This avoids colliding with Claude Code's
+  differently wrapped root `.mcp.json`. Query it first; if unavailable, use
+  bounded `rg` plus small reads and name the coverage limitation.
 - **Permission-mode equivalents**: `--sandbox read-only` ≈ plan/read-only
   mode, `--sandbox workspace-write` ≈ `acceptEdits`,
   `--dangerously-bypass-approvals-and-sandbox` ≈ `bypassPermissions`
   (sandboxed use only, per its own `--help` warning).
 - **Runtime guide**: `codex/README.md` explains shared skill discovery and
-  the common bd/ctx/spec data layer.
+  the common bd/Codebase-Memory/spec data layer.
 - **Verification**: command syntax and flags above were verified against
-  `codex exec --help` / `codex --help` output of `codex-cli 0.144.1`
-  (installed locally, 2026-07-12). Re-verify against `codex --help` before
+  `codex exec --help` / `codex --help` output of `codex-cli 0.145.0`
+  (installed locally, 2026-07-26). Re-verify against `codex --help` before
   first use on another machine or CLI version.

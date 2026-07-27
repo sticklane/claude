@@ -25,10 +25,10 @@ What we are building:
    allowed tools, the model to use, the result schema, and the
    verdict file path. It refuses if the task text fails the
    injection screen or the run is out of budget.
-7. The code-structure index is part of the same program:
-   `agentic ctx tree|sig|refs|deps|map` answers structure questions,
-   and compose's code map comes from it. One program to install,
-   grant, inject from, and measure.
+7. Code structure comes from the separately pinned Codebase-Memory MCP
+   backend. The toolkit owns its launcher, routing contract, and adoption
+   measurement; task composition carries distilled graph evidence rather
+   than an in-process index.
 8. A short script is the work loop: ready → claim → compose → run
    worker → verdict → repeat.
 9. `agentic resume` prints where things stand. There are no handoff
@@ -97,8 +97,8 @@ Each: the decision, why, what it costs.
   months), contained by version pinning (R-V).
 - **D4 — Adoption is built in, never requested.** Context is
   injected, tools are granted, results are schema-checked; no
-  "please prefer" prose. Why: ctx — a finished tool at near-zero use
-  because every default said grep. Cost: the composer must exist
+  "please prefer" prose. Why: a capable optional index still sees near-zero
+  use when every default says grep. Cost: the composer must exist
   before the prose habits it replaces can be deleted.
 - **D5 — The CLI is the source of truth; runtime folders are thin.**
   Why: three hand-copied prose trees drift, and the checking gate
@@ -171,12 +171,10 @@ output, while a file works on every runtime with a filesystem and
 stays inspectable after a failure — the same reason GitHub Actions
 replaced stdout parsing (`set-output`) with the $GITHUB_OUTPUT file.
 
-**ctx.** `agentic ctx …` fronts the existing ctx binary the same way
-the tracker verbs front bd: one interface, engines underneath.
-compose calls it for the code map; agents answer structure questions
-through the same program they already hold a grant for. Whether the
-Rust engine is later merged into the Python package is an
-implementation choice, not a design question.
+**Codebase-Memory.** The toolkit invokes the pinned index directly through
+its MCP server or scoped launcher. Compose calls it for the code map; agents
+answer structure questions through the same backend. `agentic` does not own
+or wrap the index.
 
 **Runtime adapters.** Per runtime: prompts that call `agentic`,
 native hook wiring, an onboarding snippet. The mirror-procedure
@@ -264,13 +262,13 @@ shadow mode so nothing flips until step 4.
 1. **Re-triage the open queue** against this design: every open
    spec/task marked keep / subsumed / fold-in. Known subsumed: the
    mirror machinery, the drain self-patch cluster,
-   ctx-dispatch-adoption's prompt-stanza tasks.
+   the former code-index prompt-stanza tasks.
 2. **`agentic` v0, shadow mode**: ready/claim/verdict/resume over
    pinned bd; the D8 lock and D9 sync rules; `agentic init`; import
    the ~37 live items. Markdown headers remain the source of truth,
    synced one-way into bd; every existing reader keeps working.
 3. **Composer v0**: result schema, verdict-file transport, grants,
-   code-map injection via `agentic ctx`, screen, spend metering;
+   code-map injection via Codebase-Memory, screen, spend metering;
    /build switches to it. Mirror-manifest rows for files being
    replaced are marked retired from here on.
 4. **Loop v0 and cutover**: bd becomes the source of truth; headers
@@ -331,7 +329,7 @@ can pass vacuously.
   integration effort.
 - **A composer bug hits every dispatch.** Accepted per D2; the
   composer path gets tests and evals first, not last.
-- **`agentic` could suffer ctx's fate** (built, unused). The
+- **`agentic` could become built but unused.** The
   mitigation is structural: the composer is the only dispatch path,
   grants are composed in, and the audit job measures bypass from
   day one.
@@ -397,7 +395,7 @@ cost, migration step, and requirement maps to at least one task.
 | S4 claim                          | 04                                      |
 | S5 verdict file                   | 04                                      |
 | S6 compose                        | 07                                      |
-| S7 agentic ctx                    | 06                                      |
+| S7 Codebase-Memory integration    | `specs/codebase-memory-hard-cutover`     |
 | S8 loop                           | 08                                      |
 | S9 resume, no handoff files       | 03, 09                                  |
 | S10 cap at dispatch               | 07, 11                                  |
@@ -429,7 +427,7 @@ Two decisions, ratified verbatim in the live session, supersede parts
 of this spec:
 
 1. **Claude Code is the primary runtime; portability drops from
-   procedure-level to data-level.** bd's queue, ctx's index, and task
+   procedure-level to data-level.** bd's queue, Codebase-Memory's index, and task
    files remain readable by any agent; nothing guarantees other
    runtimes can run the same procedures. Consequences: D5's adapter
    model is superseded — the antigravity/ and codex/ trees are

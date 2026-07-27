@@ -1,7 +1,7 @@
 # Evidence base for the agentic core redesign
 
 Findings from the 2026-07-21 full-system audit (five repo/web research
-passes), the ctx utilization review, and the beads verification work.
+passes) and the beads verification work.
 Pointers are to files in this repo or primary external sources.
 
 ## Flow-control placement (prose vs code)
@@ -16,7 +16,7 @@ Pointers are to files in this repo or primary external sources.
   None of it is unit-tested; coverage is model-run evals plus a
   phrase-grep manifest that by its own text cannot catch reordering or
   mirror-added content (.claude/rules/mirror-procedure-discipline.md).
-- Failure signature: specs/drain-wake-cost EVIDENCE — the baton
+- Failure signature: specs/archive/drain-wake-cost EVIDENCE — the baton
   trigger did not fire because the model never emitted it; the fix was
   prose, "model-remembered, not enforced."
 
@@ -51,24 +51,13 @@ Pointers are to files in this repo or primary external sources.
 - quality-discipline.md opens "any code change, attended or
   unattended" then scopes doc-currency to attended only (:70-84).
 
-## ctx utilization (the adoption case study)
+## Code-exploration adoption
 
-- specs/ctx-dispatch-adoption/evidence/ctx-usage-review-2026-07-21.md
-  (~1,100 transcripts): ~1 organic use in ~14 post-rollout sessions;
-  zero subagent invocations ever; 0% compliance with 6 "prefer ctx"
-  worker prompts (workers ran 99–124 greps); ~300 greps mapping 1:1 to
-  ctx commands; notes feature never used; skill auto-triggered 0
-  times.
-- Structural causes: no `Bash(ctx *)` grant anywhere (scout.md:4,
-  critic.md:4, no settings permissions block); token-discipline.md
-  routes structure questions to scout, which cannot run ctx;
-  worktrees index-cold (cache gitignored).
-- Positive controls: budget_analysis 35b223ab (3 task files from 2
-  `ctx tree` calls, zero source reads); fooszone cfd7ce8f (3-way dup
-  found via `ctx refs`).
-- Trust burns: figureBboxes absence fallacy (specs/ctx-absence-check),
-  minified `map` ~90% noise (specs/ctx-minified-skip), silent empties
-  (specs/ctx-output-shape-gaps).
+The current backend decision and primary-source comparison live in
+`docs/codebase-memory-adoption-research-2026-07.md`. The hard cutover keeps
+the useful conclusion—structural retrieval should precede repeated raw
+search—while using Codebase-Memory's broader graph and an explicit bounded
+source fallback for coverage gaps.
 
 ## External design points (primary sources)
 
@@ -98,7 +87,7 @@ Pointers are to files in this repo or primary external sources.
 
 ## Cost telemetry already in-repo
 
-- specs/drain-wake-cost/EVIDENCE.md: ~$1,406/week unstructured
+- specs/archive/drain-wake-cost/EVIDENCE.md: ~$1,406/week unstructured
   orchestration; general-purpose at session-frontier model cost MORE
   per call than the opus-pinned worker ($0.067 vs $0.057, 2026-07
   agentprof week).

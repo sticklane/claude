@@ -292,7 +292,7 @@ Five tasks, disjoint in `Touch` except one real dependency:
   relation type are all fixed in this spec. Safe to run concurrently.
 - **Task 04** (agent-console.py) depends on Task 03: it dynamically loads
   `workboard.py` as a module and consumes `scan_handoffs()`'s output shape
-  directly (confirmed via `ctx refs` during breakdown — not a Touch
+  directly (confirmed during bounded structural exploration — not a Touch
   collision, a real import/data-shape dependency). Task 04 must start
   after Task 03 lands, reading the actual committed field names rather
   than guessing them ahead of time.

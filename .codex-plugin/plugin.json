@@ -1,0 +1,45 @@
+{
+  "name": "agentic",
+  "version": "0.18.12",
+  "description": "Runtime-neutral workflow management for spec-driven agentic development.",
+  "author": {
+    "name": "sticklane",
+    "url": "https://github.com/sticklane"
+  },
+  "homepage": "https://github.com/sticklane/claude",
+  "repository": "https://github.com/sticklane/claude",
+  "license": "MIT",
+  "keywords": [
+    "agentic-development",
+    "beads",
+    "codex",
+    "skills",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "mcpServers": {
+    "codebase-memory-mcp": {
+      "command": "agentic-codebase-memory-mcp",
+      "args": []
+    }
+  },
+  "interface": {
+    "displayName": "Agentic Toolkit",
+    "shortDescription": "Run spec-driven development workflows",
+    "longDescription": "Manage ideas, specs, task queues, implementation, review, verification, and handoffs with the current runtime's native agents.",
+    "developerName": "sticklane",
+    "category": "Engineering",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/sticklane/claude",
+    "defaultPrompt": [
+      "Turn this feature idea into an implementation-ready spec",
+      "Work the next ready issue with independent verification",
+      "Drain the ready queue with native subagents"
+    ],
+    "brandColor": "#3B82F6",
+    "screenshots": []
+  }
+}

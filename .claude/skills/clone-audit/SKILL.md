@@ -11,17 +11,19 @@ is the same read-only shape harness-audit uses for its five checklist areas
 (`.claude/skills/harness-audit/SKILL.md`), applied to one narrower question:
 where does this repo have duplicated code.
 
-**Why a separate skill, not `ctx dupes` or a harness-audit area.** `ctx`
-stays model-free and per-file (structure queries only); clone detection is
-whole-repo cross-file comparison and belongs to a different tool shape.
+**Why a separate skill.** Codebase-Memory answers structural and relationship
+questions; token-level clone detection is a whole-repo cross-file comparison
+and belongs to a different tool shape. Use Codebase-Memory first to identify
+the project and relevant source roots. If it is unavailable, use bounded
+`rg`/Glob inspection to select the target roots without claiming index
+coverage.
 harness-audit's checklist areas are periodic hygiene checks over a fixed
 list — clone detection is a report a human requests on demand, not a
-recurring area. `specs/ctx-static-analysis-augmentation/SPEC.md` (F2) records
-this choice.
+recurring area.
 
 ## Procedure
 
-1. Confirm the target repo at `$ARGUMENTS` (default: cwd) mixes TS and Go, or
+1. Confirm the target repo named in the current invocation (default: cwd) mixes TS and Go, or
    run only the relevant stack's recipe if it's single-stack.
 2. Run the documented recipe for each stack present — see
    [reference.md](reference.md) for the exact commands, one worked example

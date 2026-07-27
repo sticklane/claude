@@ -11,12 +11,12 @@ dependencies, atomic claims, and
 discovered-from links all live in bd (`bd ready`, `bd update --claim`, `bd
 close`, `bd create --deps`). There are no baton files, no lease files, no
 generation counters, and no drain-owned handoff files — the queue itself is
-the state, so drain is resumable by definition: `/clear` any time and re-run
+the state, so drain is resumable by definition: start a fresh session any time and re-run
 `/drain`; "where it stopped" is a `bd ready` query, not a parked file.
 
 `/drain` is model-invocable only on the human's explicit live request naming
 drain or its target queue — the untrusted-data rule's launch-authorization
-contract (`.claude/rules/untrusted-data.md`, CLAUDE.md's "Authoring
+contract (`.claude/rules/untrusted-data.md`, the repository's "Authoring
 conventions"), cited not restated. This is why drain is safe to run
 unattended: a human opened the run.
 
@@ -77,9 +77,9 @@ record why on the issue and leave it for the batch interview.
 
 2. **Claim, then dispatch a fresh worker.** For each issue to run this pass,
    do all three claim steps as one unit BEFORE the dispatch call: claim the
-   issue atomically (`bd update <id> --claim`, or `bd ready --claim`), append
-   the claimed `<id>` on its own line to `.beads/session-claims` (`/work`'s
-   claim bookkeeping, cited not restated — the compliance hook reads it), and
+   issue atomically (`bd update <id> --claim`, or `bd ready --claim`), run
+   `bin/session-claims add <id>` (`/work`'s claim bookkeeping, cited not
+   restated — the compliance hook reads it), and
    append `<id> $(date +%s)` on its own line to `.beads/session-inflight`.
    Only then dispatch one awaited, `isolation: worktree` worker per issue.
    A Codex issue reclaimed in step 0 reuses its clean registered
@@ -118,9 +118,10 @@ record why on the issue and leave it for the batch interview.
    in the shared checkout and its worktree-integrity precheck halts INCOMPLETE
    instead of verifying.
    The critic reviews the same diff independently. A
-   dispatched worker has no Agent tool (nesting is one level), so the review
+   dispatched worker has no nested-agent capability (nesting is one level), so the review
    gate it satisfies records a verdict stamped `self-review`
-   (`hooks/review-gate/README.md`); the orchestrator has the Agent tool and is
+   (`hooks/review-gate/README.md`); the orchestrator has the runtime's native
+   agent coordinator and is
    the only place an independent read can happen. One awaited `critic` at its
    own frontmatter tier pin, given the branch and the worktree resolved above,
    capped at ≤1k tokens returned. Route it by the critic's own verdict line,
@@ -142,9 +143,9 @@ record why on the issue and leave it for the batch interview.
    this full gate; repeating a multi-minute suite inside every round is not
    additional evidence. If the final gate fails, route its evidence through
    the same single bounded fix round, then repeat the review barrier and final
-   gate once. On final-gate PASS, merge, `bd close <id>`, and remove
-   that `<id>` line from `.beads/session-claims` and from
-   `.beads/session-inflight` (one unit — a closed issue
+   gate once. On final-gate PASS, merge, `bd close <id>`, and remove that
+   `<id>` line from `.beads/session-claims` (via `bin/session-claims rm
+   <id>`) and from `.beads/session-inflight` (one unit — a closed issue
    still listed trips the compliance hook). Drop the `.beads/session-inflight`
    line on a BLOCKED or DEFERRED verdict too: nothing is in flight for that id
    once its verdict is in hand. Remove any per-issue `.beads/drain-*`

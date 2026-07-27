@@ -275,7 +275,7 @@ under drain's own session, not necessarily under the same restrictive
   false-positives on descriptive path mentions — a different defect class
   than this spec's allowlist/shell-safety focus, though both touch
   `screen-stub.sh`-adjacent machinery), `specs/drain-sweep-preservation`
-  (worktree/branch loss on crash), `specs/drain-wake-cost` and
+  (worktree/branch loss on crash), `specs/archive/drain-wake-cost` and
   `specs/drain-rolling-window` (orchestrator wake economics and dispatch
   concurrency), `specs/drain-remote-divergence-check` (concurrent-session
   detection), `specs/drain-hub-economics` (hub model-tier checks),

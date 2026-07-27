@@ -4,7 +4,7 @@ description: Decomposes a SPEC.md into independent task files sized for one clea
 argument-hint: "[path/to/SPEC.md]"
 ---
 
-Decompose the spec at $ARGUMENTS (if empty: the most recently modified
+Decompose the spec named in the current invocation (if none was named: the most recently modified
 `specs/*/SPEC.md`, or ask) into task files under the spec's directory, each
 executable by a fresh session with no other context.
 
@@ -22,17 +22,12 @@ dispatchers parse it for the over-budget stop and headless `--max-turns`.
 
 1. Read the spec. If anything under Open questions is unresolved, stop and
    say so — decomposing an ambiguous spec multiplies the ambiguity.
-2. Gather the structure task files need — signatures, callers, module
-   outlines — before any scout dispatch or file read. When `.context/`
-   exists at the repo root (an indexed repo), the `ctx` index is the
-   cheapest source: run `ctx tree <path>` per module or file for its symbol
-   outline, then `ctx sig <symbol>` / `ctx refs <symbol>` per symbol a task
-   will touch, and author the task files from those outputs (the 2026-07-21
-   budget_analysis pairing wrote three task files from two `ctx tree`
-   outlines with zero source reads). Fall back to `scout` agents only when
-   the repo is unindexed or the question is content-shaped (bodies,
-   literals, patterns the index does not carry) — and even then, don't read
-   the codebase into this session.
+2. Gather the structure task files need — architecture, qualified symbols,
+   callers, dependencies, and impact — before scout dispatch or file reads.
+   Invoke the `codebase-memory` skill and use Codebase-Memory first. When it
+   is unavailable or coverage is incomplete, use `rg` over a bounded path set
+   and dispatch scouts for small reads; record the coverage limit instead of
+   reading the codebase into this session.
 3. Write `specs/<slug>/tasks/NN-<slug>.md` for each task:
 
 ```markdown
@@ -167,7 +162,7 @@ keeps a concurrent-writer window continuously topped up from `bd ready`, sized
 by `Touch`-disjointness), or a `/goal`-bounded
 `/build specs/<slug>/tasks/NN-*.md` for an unattended single task (once
 `/gate` is installed). These next stages are all
-launch-gated per the self-chain bullet in CLAUDE.md's authoring conventions,
+launch-gated per the self-chain bullet in the repository's authoring conventions,
 so /breakdown always ends with this printed pointer, never an invocation.
 
 Close with:

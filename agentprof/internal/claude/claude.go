@@ -342,11 +342,6 @@ func (s session) collect(opts Options, home string) ([]schema.Sample, []Turn, St
 		return nil, nil, Stats{Skipped: 1}, nil
 	}
 	stats := Stats{Skipped: mainP.skipped}
-	// A session's ctx-usage metric is counted only when its cwd is a ctx-indexed
-	// repo (SPEC R5); a non-indexed session contributes zero even with ctx-shaped
-	// commands in its transcript.
-	indexed := isIndexedRepo(mainP.firstCwd)
-
 	byPath := map[string]parsed{s.mainPath: mainP}
 	agentByPath := map[string]agentFile{}
 	for _, a := range s.agents {
@@ -444,13 +439,8 @@ func (s session) collect(opts Options, home string) ([]schema.Sample, []Turn, St
 		}
 		stack = append(stack, "main", r.model)
 		ms := r.sample(stack, s.id, turn)
-		// ctx usage (SPEC R5): count this response's ctx-verb Bash and agentic:ctx
-		// Skill tool calls onto the main-loop model-call sample, gated on the
-		// session's cwd being an indexed repo. costsummary sums it per session.
-		if indexed {
-			if n := ctxUsageCount(r.toolCalls); n > 0 {
-				ms.Values["ctx_usage"] = n
-			}
+		if n := codebaseMemoryUsageCount(r.toolCalls); n > 0 {
+			ms.Values["codebase_memory_usage"] = n
 		}
 		// Re-prime (SPEC R1); see CollectWithReprime for the labeling rule.
 		if opts.ReprimeThreshold > 0 && i > 0 &&
@@ -531,13 +521,11 @@ type response struct {
 	stage string
 }
 
-// toolCall is one tool_use block: its id (to pair with a tool_result), name
-// (the tool:<name> leaf frame), and whether it is a ctx-usage event (a Bash
-// `ctx <verb>` call or an agentic:ctx Skill call — SPEC R5).
+// toolCall is one tool_use block with its result-pairing id and tool frame.
 type toolCall struct {
-	id       string
-	name     string
-	ctxUsage bool
+	id                  string
+	name                string
+	codebaseMemoryUsage bool
 }
 
 // toolUseRef is one tool_use block id with its spawning line's context.
@@ -928,7 +916,11 @@ func toolCallsFrom(raw json.RawMessage) []toolCall {
 	var calls []toolCall
 	for _, b := range blocks {
 		if b.Type == "tool_use" && b.ID != "" {
-			calls = append(calls, toolCall{id: b.ID, name: b.Name, ctxUsage: isCtxToolUse(b.Name, b.Input)})
+			calls = append(calls, toolCall{
+				id:                  b.ID,
+				name:                b.Name,
+				codebaseMemoryUsage: isCodebaseMemoryToolUse(b.Name, b.Input),
+			})
 		}
 	}
 	return calls

@@ -8,7 +8,7 @@ Depends on: none
 Priority: P1
 Budget: 16 turns
 Spec: ../SPEC.md (requirements R1, R2)
-Touch: .claude/skills/drain/drain_frontier.py, .claude/skills/drain/test_drain_frontier.py, .claude/skills/drain/fixtures/
+Touch: .claude/skills/drain/drain_frontier.py (retired), .claude/skills/drain/test_drain_frontier.py, .claude/skills/drain/fixtures/
 
 ## Goal
 
@@ -38,7 +38,7 @@ one committed golden fixture lives at
 - [x] `python3 .claude/skills/drain/test_drain_frontier.py` → exit 0,
       with at least one test per R2 incident class
       Evidence: 22 tests pass, exit 0; one TestCase per R2 incident class (evidence/01-scanner-and-tests.md).
-- [x] `python3 .claude/skills/drain/drain_frontier.py
+- [x] `python3 .claude/skills/drain/drain_frontier.py (retired)
   .claude/skills/drain/fixtures/basic-window --window 2` → JSON
       whose `admissible` matches the fixture's documented expectation
       Evidence: exit 0, admissible = [02-alpha.md, 03-beta.md], matches fixtures/basic-window/EXPECTED.md (evidence/01-scanner-and-tests.md).

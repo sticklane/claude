@@ -72,6 +72,26 @@ class TestAgentsCliParsing(unittest.TestCase):
         self.assertIsNone(ac.live_sessions_from_cli({"agents": []}))
         self.assertIsNone(ac.live_sessions_from_cli(None))
 
+    def test_codex_runtime_never_launches_claude(self):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "AGENTIC_RUNTIME": "codex",
+                    "AGENT_CONSOLE_CODEX_BIN": "/opt/stub/codex",
+                },
+            ),
+            patch.object(ac.subprocess, "run") as run,
+        ):
+            self.assertIsNone(ac._claude_json("agents"))
+            with self.assertRaisesRegex(RuntimeError, "active codex runtime"):
+                ac._claude_run_bg(["-p", "test"], "/tmp")
+            argv = ac._runtime_start_argv("test")
+        self.assertEqual(argv[0], "/opt/stub/codex")
+        self.assertEqual(argv[1], "exec")
+        self.assertNotIn("claude", " ".join(argv))
+        run.assert_not_called()
+
 
 class TestGhSlug(unittest.TestCase):
     def test_https_ssh_and_non_github(self):

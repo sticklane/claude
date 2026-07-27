@@ -1,4 +1,4 @@
-"""The five pre-2.0 compatibility aliases are exact and non-mutating."""
+"""The remaining pre-2.0 compatibility aliases are exact and non-mutating."""
 
 import os
 import subprocess
@@ -14,7 +14,6 @@ DIAGNOSTICS = {
         "agentic compose: retired by the native-orchestration pivot; "
         "use /work, /build, or /drain"
     ),
-    "ctx": "agentic ctx: wrapper not shipped; use ctx directly",
     "inbox": "agentic inbox: retired; use bd ready and bd human list",
     "demote": "agentic demote: retired; use bd update <id> --status deferred",
     "shadow-sync": (

@@ -79,11 +79,10 @@ type Reprime struct {
 // so they are NOT a per-session cut of the top-level Reprime rollup: that rollup
 // sums every reprime=true sample — including subagent-frame and non-`calls`
 // samples this per-session view excludes.
-// CtxUsage counts this session's ctx code-navigation events (ctx-verb Bash
-// calls + agentic:ctx Skill calls) over its MAIN-LOOP calls, and is 0 for a
-// session whose cwd is not a ctx-indexed repo (ctx-dispatch-adoption R5). It
-// surfaces alongside skill attribution as a per-session adoption signal; it is
-// deliberately kept out of the by_project/by_skill/by_model/totals rollups.
+// CodebaseMemoryUsage counts this session's Codebase-Memory MCP, CLI, and
+// canonical-skill events over its MAIN-LOOP calls. It surfaces alongside skill
+// attribution as a per-session adoption signal and stays out of the
+// by_project/by_skill/by_model/totals rollups.
 type SessionStat struct {
 	Project             string `json:"project"`
 	Calls               int64  `json:"calls"`
@@ -92,13 +91,10 @@ type SessionStat struct {
 	P90Ctx              int64  `json:"p90_ctx"`
 	ReprimeCount        int64  `json:"reprime_count"`
 	ReprimeCostMicrousd int64  `json:"reprime_cost_microusd"`
-	CtxUsage            int64  `json:"ctx_usage"`
+	CodebaseMemoryUsage int64  `json:"codebase_memory_usage"`
 }
 
-// ctxUsageMetric is the per-response sample value the claude collector emits for
-// ctx-usage events. It is a per-session metric only: excluded from the generic
-// by-dimension rollups so it never appears as a by_project/by_skill/totals key.
-const ctxUsageMetric = "ctx_usage"
+const codebaseMemoryUsageMetric = "codebase_memory_usage"
 
 // Build aggregates forGrouping into the by-dimension groups and totals, and
 // counts sessions_added from fresh only. In non-merge mode both arguments are
@@ -121,9 +117,7 @@ func Build(forGrouping, fresh []schema.Sample) Summary {
 		agent, hasAgent := agentType(smp.Stack)
 		model, hasModel := modelLeaf(smp.Stack)
 		for st, v := range smp.Values {
-			// ctx_usage is a per-session metric surfaced only in Sessions below —
-			// keep it out of the generic by-dimension rollups and grand totals.
-			if st == ctxUsageMetric {
+			if st == codebaseMemoryUsageMetric {
 				continue
 			}
 			add(s.ByProject, proj, st, v)
@@ -221,13 +215,13 @@ func reprimeRollup(forGrouping []schema.Sample) Reprime {
 // subagent samples are excluded) (SPEC R3).
 func sessionStats(forGrouping []schema.Sample) map[string]SessionStat {
 	type acc struct {
-		project     string
-		calls       int64
-		cost        int64
-		ctx         []int64
-		reprimeN    int64
-		reprimeCost int64
-		ctxUsage    int64
+		project             string
+		calls               int64
+		cost                int64
+		ctx                 []int64
+		reprimeN            int64
+		reprimeCost         int64
+		codebaseMemoryUsage int64
 	}
 	accs := map[string]*acc{}
 	for _, smp := range forGrouping {
@@ -252,7 +246,7 @@ func sessionStats(forGrouping []schema.Sample) map[string]SessionStat {
 		a.calls += smp.Values["calls"]
 		a.cost += smp.Values["cost_microusd"]
 		a.ctx = append(a.ctx, smp.Values["cache_read_tokens"]+smp.Values["input_tokens"])
-		a.ctxUsage += smp.Values[ctxUsageMetric]
+		a.codebaseMemoryUsage += smp.Values[codebaseMemoryUsageMetric]
 		if smp.Labels["reprime"] == "true" {
 			a.reprimeN++
 			a.reprimeCost += smp.Values["cost_microusd"]
@@ -269,7 +263,7 @@ func sessionStats(forGrouping []schema.Sample) map[string]SessionStat {
 			P90Ctx:              percentile(a.ctx, 90),
 			ReprimeCount:        a.reprimeN,
 			ReprimeCostMicrousd: a.reprimeCost,
-			CtxUsage:            a.ctxUsage,
+			CodebaseMemoryUsage: a.codebaseMemoryUsage,
 		}
 	}
 	return out

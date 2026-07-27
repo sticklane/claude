@@ -108,7 +108,6 @@ solely because its invocation rate is low.
    | Command | Shipped disposition | Exact replacement | Compatibility behavior | Removal |
    | --- | --- | --- | --- | --- |
    | `compose` | hidden retired stub | runtime-native `/work`, `/build`, or `/drain` | exit 2: `agentic compose: retired by the native-orchestration pivot; use /work, /build, or /drain` | delete alias in `agentic` 2.0 |
-   | `ctx` | hidden retired wrapper stub; standalone `ctx` remains | `ctx <args...>` | exit 2: `agentic ctx: wrapper not shipped; use ctx directly` | delete alias in `agentic` 2.0 |
    | `inbox` | hidden retired stub | `bd ready` and `bd human list` | exit 2: `agentic inbox: retired; use bd ready and bd human list` | delete alias in `agentic` 2.0 |
    | `demote` | hidden retired stub | `bd update <id> --status deferred` | exit 2: `agentic demote: retired; use bd update <id> --status deferred` | delete alias in `agentic` 2.0 |
    | `shadow-sync` | hidden non-mutating compatibility alias | `agentic register-spec <spec-dir>` for first registration; bd thereafter | exit 2: `agentic shadow-sync: retired; task state lives in bd; use register-spec only for new tasks` | delete alias in `agentic` 2.0 |
@@ -236,7 +235,7 @@ solely because its invocation rate is low.
 - Replacing bd, hiding direct human bd usage, or changing bd storage/sync.
 - Deleting or moving functioning optional skills.
 - Deleting archived specs, evidence, or historical cost profiles.
-- Rewriting ctx internals.
+- Modifying upstream Codebase-Memory internals.
 - Claiming causal productivity gains.
 - Changing external runtime APIs that cannot carry the complete event schema;
   such fields remain `unknown`.

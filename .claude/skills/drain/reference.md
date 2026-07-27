@@ -110,51 +110,21 @@ prompt-only prohibition.
 
 ### Canonical skill-path resolution recipe
 
-Resolve any `<skill>/<file>` path-pointer this section delivers in two steps,
-cheapest first; resolve once per session, never reuse a version number seen
-elsewhere in context. In the toolkit dev checkout, `bin/resolve-skill-path
-<repo-relative-path>` runs exactly these two steps as one command (the
-in-repo shortcut only); from a non-toolkit repo run the plugin-cache branch by
-hand:
+Resolve any `<skill>/<file>` path-pointer this section delivers with the
+toolkit's runtime-aware helper. Resolve once per session and never infer a
+cache path or call another runtime's plugin CLI. In a toolkit checkout or an
+installed plugin, derive the plugin root from this reference file, then run:
 
 ```bash
-# Resolve <repo-relative-path> (e.g. .claude/skills/build/SKILL.md) to a
-# concrete path. Two steps, cheapest first; resolve once per session.
-skill_rel=".claude/skills/build/SKILL.md"   # the <skill>/<file> pointer
-
-# Step 1 — in-repo (no CLI call): present relative to the repo root?
-# If yes, that IS the path — the toolkit is in-repo, stop here.
-if [ -f "$skill_rel" ]; then
-  printf '%s\n' "$skill_rel"
-else
-  # Step 2 — plugin-cache install: resolve the INSTALLED version freshly via
-  # `claude plugin list --json`, then construct and verify the versioned cache
-  # path. Never substitute a version number recalled from context.
-  version="$(claude plugin list --json 2>/dev/null | python3 -c '
-import json, sys
-
-target = "agentic@agentic-toolkit"
-try:
-    plugins = json.load(sys.stdin)
-except Exception:
-    sys.exit(1)
-if not isinstance(plugins, list):
-    sys.exit(1)
-for p in plugins:
-    if isinstance(p, dict) and p.get("id") == target and p.get("version"):
-        print(p["version"])
-        sys.exit(0)
-sys.exit(1)
-')"
-  cache_path="$HOME/.claude/plugins/cache/agentic-toolkit/agentic/$version/$skill_rel"
-  if [ -n "$version" ] && [ -f "$cache_path" ]; then
-    printf '%s\n' "$cache_path"
-  else
-    echo "resolve: neither in-repo nor plugin-cache resolved $skill_rel" >&2
-    exit 1
-  fi
-fi
+AGENTIC_RUNTIME=<active-runtime> \
+  <plugin-root>/bin/resolve-skill-path .claude/skills/build/SKILL.md
 ```
+
+The helper first resolves from its own plugin/check-out root. Its legacy
+Claude-cache fallback exists only for old Claude Code installs whose cached
+helper was invoked outside its package; use `claude-code`, `codex`, or
+`antigravity` as `<active-runtime>`. Codex and Antigravity must stop if their
+own installed root cannot resolve the path.
 
 Workers cannot invoke launch-gated execution skills (their context carries no
 live-user authorization — CLAUDE.md's execution-stage bullet), so the prompt —

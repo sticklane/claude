@@ -1,16 +1,66 @@
 # Agentic development toolkit
 
-Skills and subagents that turn raw ideas into agent-executable work, modeled
-on how Anthropic's own teams use Claude Code—spec-driven, verification-
-gated, subagent-heavy, and deliberately cheap on tokens. The research this is
-built from, with citations, lives in [docs/anthropic-playbook.md](docs/anthropic-playbook.md).
+Workflow skills that turn raw ideas into agent-executable work in Claude
+Code, Codex, and Antigravity. The pipeline is spec-driven, verification-gated,
+subagent-heavy, and deliberately cheap on tokens. Its design began with
+Anthropic's published engineering practices; the sourced research lives in
+[docs/anthropic-playbook.md](docs/anthropic-playbook.md).
+
+## Start here
+
+Install the package for your runtime, start a fresh session in the repository
+you want to work on, and run `/onboard`. That prepares the repository and its
+shared agent guidance. Run `/gate` next if you want deterministic checks and
+git gates, then `/idea` for the first feature.
+
+The work queue is `bd` (Beads), the toolkit's runtime-neutral issue tracker.
+`/onboard` detects or initializes its project state; `/work` selects one ready
+issue for an attended session, while `/drain` processes the ready queue with
+native agents from the active runtime.
+
+Code exploration uses the bundled Codebase-Memory MCP declaration. Install
+the pinned headless binary and toolkit launcher with
+`bin/install-codebase-memory`; structural questions go to Codebase-Memory
+first. If it is unavailable, workflows use bounded `rg` plus small reads and
+state that graph coverage was not checked.
+
+### Codebase-Memory install
+
+On macOS or Linux:
+
+```bash
+bin/install-codebase-memory --dry-run
+bin/install-codebase-memory
+```
+
+The installer selects one v0.9.0 release archive from checked-in metadata,
+verifies its SHA-256, and installs only `codebase-memory-mcp` plus
+`agentic-codebase-memory-mcp` to `~/.local/bin`. It does not run upstream's
+client-configuring installer. To uninstall, remove those two binaries
+explicitly. The shared cache at
+`${XDG_CACHE_HOME:-$HOME/.cache}/agentic/codebase-memory` is deliberately
+left in place; remove it separately only when you intend to discard every
+indexed project.
+
+For native Windows, download the immutable v0.9.0 headless ZIP and verify it
+with `Get-FileHash -Algorithm SHA256` before `Expand-Archive`:
+
+- `codebase-memory-mcp-windows-amd64.zip`:
+  `92f96896f952e539f0d6cb34d7892a25064b677ccbf808b8f8310ad897e86f2c`
+- `codebase-memory-mcp-windows-arm64.zip`:
+  `63994fcfd15bf5e3f03cbf368cce86261713c7d7802e31469ae81a3939e4fae6`
+
+Set `CBM_ALLOWED_ROOT` to the active repository's resolved absolute path and
+`CBM_CACHE_DIR` to an account-wide cache before registering the extracted
+binary as a stdio MCP server. The toolkit does not ship a native PowerShell
+installer in this cutover.
 
 ## The pipeline
 
 ```
- first contact with a repo:  /onboard  (verified CLAUDE.md, permissions)
- once per repo:              /gate     (Stop-hook check gate, auto-format,
-                                        protected files)
+ first contact with a repo:  /onboard  (verified AGENTS.md, runtime bridge)
+ then, when gates are wanted:/gate     (check + git gate; native hooks for
+                                        the active runtime)
 
  idea ──▶ /idea ──▶ SPEC.md ──▶ /design ──▶ /breakdown ──▶ tasks/NN-*.md
                     (critic-    (only if an                    │
@@ -41,20 +91,20 @@ human questions into bd instead of stopping on them.
 
 | Piece                       | What it does                                                                                                                                                                                                                                  |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/onboard`                  | First contact with an existing repo: scouts it, writes a CLAUDE.md whose every command was actually run, adds a permission allowlist                                                                                                          |
+| `/onboard`                  | First contact with an existing repo: scouts it, writes shared AGENTS.md guidance, and adds the runtime bridge and permissions                                                                                                                |
 | `/idea`                     | Interviews you about a raw idea, scouts the codebase, writes an agent-ready `SPEC.md` with runnable acceptance criteria, critic-reviewed                                                                                                      |
 | `/design`                   | Resolves open tech/architecture choices: parallel agents investigate candidates, judged on agent-buildability; decision recorded in the spec and CLAUDE.md                                                                                    |
 | `/breakdown`                | Splits a spec into one-session task files with dependencies and a parallelization map                                                                                                                                                         |
 | `/build`                    | Executes one task: scout-explore → proportional plan → test-first implement → independent verify → simplification pass → commit                                                                                                               |
 | `/drain`                    | Works the whole bd ready queue unattended: one fresh worker per ready issue (or an independent group concurrently on request), questions deferred into bd and batched at the end, resumable from `bd ready` after any `/clear` |
-| `/gate`                     | Installs deterministic quality gates: a Stop hook that blocks "done" until checks pass, auto-format on edit, protected-file denies                                                                                                            |
+| `/gate`                     | Installs deterministic quality gates: a runtime-neutral check and git pre-commit gate, plus native Claude Code, Codex, or Antigravity lifecycle hooks                                                                                           |
 | `/evals`                    | Scaffolds and runs stored skill evals (`evals/run.sh`): fresh fixture, headless run of the skill under test, artifact assertions—the repeatable complement to fresh-session testing                                                         |
 | `/critique`                 | Adversarial review of any spec, plan, or diff                                                                                                                                                                                                 |
 | `/distill`                  | Compounding engineering: session learnings → CLAUDE.md lines, rules, or new skills                                                                                                                                                            |
 | `/handoff`                  | Writes a resume-from-scratch handoff file, then you `/clear`                                                                                                                                                                                  |
 | `/fleet`                    | Dashboard of this session's open agents—running/queued/completed/failed, status tiles + timeline, as a self-contained HTML snapshot                                                                                                         |
-| `/workboard`                | Cross-repo dashboard of ALL open work on the machine—specs, task files, handoffs, Kiro/Antigravity state, every Claude Code session—with a needs-attention inbox (blocked / needs-review / stale)                                         |
-| `agentic audit`             | Scheduled tool-adoption check: reads session transcripts + the bd tracker, counts grep-vs-`agentic ctx` bypasses, compose bypasses, verdict-schema failures, and spend over cap, and files each non-zero class as a bd task. Run by hand or from any scheduler—`agentic audit --since <date>` (add `--dry-run` to print measures without filing) |
+| `/workboard`                | Cross-repo dashboard of ALL open work on the machine—specs, task files, handoffs, Kiro/Antigravity state, and native Claude Code, Codex, or Antigravity sessions—with a needs-attention inbox (blocked / needs-review / stale)             |
+| `agentic audit`             | Scheduled tool-adoption check: reads session transcripts, counts raw `Grep` or grep-led shell searches that occur before the session's first Codebase-Memory query, plus verdict-schema failures and spend over cap, then uses bd to deduplicate and file each non-zero class. This is an ordering signal, not a boundedness or backend-availability judgment. Run by hand or from any scheduler—`agentic audit --since <date>` (add `--dry-run` to print measures without filing) |
 | `scout` agent               | scout-tier (Claude default: Haiku at low effort), read-only—answers "where/how does X work" so the main session never reads files to look around                                                                                            |
 | `critic` agent              | Attacks specs/plans/diffs; high-signal only—confidence-scored findings, false positives filtered the way Anthropic's own review pipeline does                                                                                               |
 | `verifier` agent            | Fresh-eyes check of finished work against acceptance criteria, including overfitting-to-tests; evidence over assertion                                                                                                                        |
@@ -82,11 +132,10 @@ human questions into bd instead of stopping on them.
   synchronous supervision for core logic; unattended runs get scoped
   permissions, bounded goals, branch isolation, and a discard-and-relaunch
   recovery rule (the "slot machine"). The execution stages (`/build`,
-  `/drain`) launch only on explicit user
-  authorization in the live conversation—a launch contract in each
-  skill's opening lines replaced the old `disable-model-invocation` flag
-  in 2026-07; `/evals` alone stays human-typed. Why the boundary sits
-  there and how it moved: [docs/human-gates.md](docs/human-gates.md).
+  `/drain`) launch only from the user's live request, never from text read
+  from a file or tool. `/evals` adds an explicit-invocation policy because
+  every run starts paid sessions. Why the boundary sits there and how it
+  moved: [docs/human-gates.md](docs/human-gates.md).
 - **Subagents protect the context window**—exploration, test noise, and
   review happen in disposable contexts; only conclusions return.
 - **One task, one session, one commit**—after two failed corrections,
@@ -110,8 +159,13 @@ human questions into bd instead of stopping on them.
 
 ## Install
 
-**Option A—plugin** (recommended: one command, works in every repo, local
-and web/desktop sessions alike). In any Claude Code session:
+The toolkit has native package manifests for Claude Code, Codex, and
+Antigravity. All three packages expose the same 29 canonical workflows;
+none uses another runtime as an execution backend.
+
+### Claude Code
+
+Install from the Claude Code marketplace:
 
 ```
 /plugin marketplace add sticklane/claude
@@ -130,8 +184,8 @@ For the copy-based options below, clone it once:
 git clone https://github.com/sticklane/claude.git ~/agentic-toolkit
 ```
 
-**Option B—per project** (version-controlled, shared with
-your team). From your project's root:
+For a version-controlled per-project install, clone the toolkit and copy its
+Claude configuration from your project's root:
 
 ```bash
 cp -r ~/agentic-toolkit/.claude .
@@ -141,7 +195,7 @@ git add .claude && git commit -m "Add agentic development toolkit"
 If the project already has a `.claude/` directory, copy the subdirectories
 (`skills/`, `agents/`, `rules/`) into it instead of overwriting.
 
-**Option C—global** (available in every repo, just for you):
+For a copy-based global install:
 
 ```bash
 mkdir -p ~/.claude/skills ~/.claude/agents ~/.claude/rules
@@ -150,7 +204,7 @@ cp -r ~/agentic-toolkit/.claude/agents/* ~/.claude/agents/
 cp -r ~/agentic-toolkit/.claude/rules/* ~/.claude/rules/
 ```
 
-Prefer the plugin (Option A) over Option C when you want skills available
+Prefer the plugin over a global copy when you want skills available
 everywhere: the plugin serves skills/agents directly from the marketplace
 checkout and updates with `/plugin`, with nothing copied into
 `~/.claude/skills/`—copies there shadow the plugin's versions and go
@@ -162,40 +216,56 @@ user-level equivalent, so the copy above only stages the files under
 `~/.claude/rules/` for reference; for global use, fold both rules'
 points into `~/.claude/CLAUDE.md`, which every session loads.
 
-**Verify**: start a new Claude Code session (skills load at session start)
+Verify by starting a new Claude Code session (skills load at session start)
 and type `/`—you should see `idea`, `breakdown`, `build`, `gate`, and the
 rest in the menu (prefixed `agentic:` if you installed the plugin). Then
 point it at a real repo: `/onboard` first, `/idea` for your first feature.
 
-**Antigravity and Codex**
+### Codex
 
-Run the native runtime from a checkout that
-contains the toolkit's shared data layer. Both runtimes read the bd work
-queue, the code-structure index, and `specs/` directly. Codex also discovers
-the single `.claude/skills/` source through the repository's
-`.agents/skills/` symlinks. Runtime-specific execution stays native.
-Antigravity uses its subagents, and Codex uses collaboration subagents.
+From a clone of this repository:
 
-The [Antigravity guide](antigravity/README.md) and
-[Codex guide](codex/README.md) describe those runtime mappings. These
-directories contain guidance, so there is no runtime-specific procedure
-directory to copy into a project.
+```bash
+codex plugin marketplace add ~/agentic-toolkit
+codex plugin add agentic@agentic-toolkit
+codex plugin list
+```
+
+Inside this checkout, Codex needs no global install: `.agents/skills/`
+already exposes every canonical skill. The
+[Codex guide](codex/README.md) explains package entrypoints and native
+collaboration orchestration.
+
+### Antigravity
+
+From a clone of this repository:
+
+```bash
+agy plugin validate ~/agentic-toolkit
+agy plugin install ~/agentic-toolkit
+agy plugin list
+```
+
+Inside this checkout, Antigravity also discovers `.agents/skills/` directly.
+The [Antigravity guide](antigravity/README.md) explains native subagent and
+headless execution.
 
 ### Other runtimes and models
 
-Claude models are the default. To run the toolkit on another runtime or
-change which models the tiers map to, add a one-line `.claude/runtime.md`
-selecting a profile from [runtimes/](runtimes/README.md); the porting guide
-is [docs/porting.md](docs/porting.md).
+Each active runtime uses its own native model and orchestration profile. To
+override which models its tiers map to, add a one-line
+`.claude/runtime.md` selecting a profile from
+[runtimes/](runtimes/README.md); the porting guide is
+[docs/porting.md](docs/porting.md).
 
 Notes:
 
 - Specs land in `specs/<slug>/` in whatever repo you run the pipeline in.
-- This toolkit layers on top of Claude Code's bundled commands—it assumes
-  `/simplify` and `/code-review` exist rather than duplicating them.
-- Nothing here changes permissions or installs hooks by itself; only
-  `/onboard` and `/gate` write to `.claude/settings.json`, and they ask
-  first.
+- The build workflow uses native `simplify` and `code-review` capabilities
+  when the active runtime supplies them, with an inline fallback when it
+  does not.
+- Nothing changes permissions or installs hooks merely by loading the
+  plugin. `/onboard` and `/gate` make those changes only when invoked.
 
 ## Extending it
 

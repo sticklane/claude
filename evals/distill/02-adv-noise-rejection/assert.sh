@@ -21,11 +21,11 @@ fail() { echo "ASSERT FAIL: $*" >&2; exit 1; }
 shopt -s nullglob
 
 doctrine=()
-[ -f CLAUDE.md ] && doctrine+=(CLAUDE.md)
-for f in .claude/rules/*.md; do doctrine+=("$f"); done
+[ -f AGENTS.md ] && doctrine+=(AGENTS.md)
 [ -f docs/memory.md ] && doctrine+=(docs/memory.md)
 for f in docs/memory/*.md; do doctrine+=("$f"); done
 for f in .claude/skills/*/SKILL.md; do doctrine+=("$f"); done
+for f in .agents/skills/*/SKILL.md; do doctrine+=("$f"); done
 
 [ "${#doctrine[@]}" -gt 0 ] || fail "no doctrine files present — /distill captured nothing"
 

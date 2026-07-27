@@ -1,6 +1,6 @@
 ---
 name: example-corpus
-description: Captures a bad writing or bad code example the moment one arises — from a review finding, a user correction, or a caught AI-tell — pairs it with an agreed better version, and appends the approved pair to a corpus future agents load as calibration. Use when the user says "add this to the bad examples", "capture this as a bad example", "save this as a writing/code example", or when a review surfaces a teachable bad-vs-better pair worth keeping. NOT for general lessons or conventions (/distill routes those to CLAUDE.md/rules/skills) — this skill stores only concrete before/after example pairs.
+description: Captures a bad writing or bad code example the moment one arises — from a review finding, a user correction, or a caught AI-tell — pairs it with an agreed better version, and appends the approved pair to a corpus future agents load as calibration. Use when the user says "add this to the bad examples", "capture this as a bad example", "save this as a writing/code example", or when a review surfaces a teachable bad-vs-better pair worth keeping. NOT for general lessons or conventions (/distill routes those to shared guidance, memory, or portable skills) — this skill stores only concrete before/after example pairs.
 ---
 
 Two corpora live in this directory, one per domain:
@@ -27,12 +27,13 @@ the same edit (the one sanctioned rewrite of existing entries).
 3. **Propose.** Draft 1–2 better versions that fix only the diagnosed
    problem — a rewrite that also restyles everything else teaches nothing.
 4. **Approve.**
-   - Attended: present bad/better via `AskUserQuestion` (pick a version,
-     edit, or reject). Approved entries append with `Status: approved`.
+   - Attended: present bad/better via the runtime's native question UI
+     (pick a version, edit, or reject). Approved entries append with
+     `Status: approved`.
    - Unattended: append with `Status: proposed` AND file the approval in
      bd — `bd create "approve corpus entry <ENN>" --deps
 discovered-from:<current-id>` — so the pending entry is discoverable
-     from `bd ready`, not buried in a file (CLAUDE.md's Beads section).
+     from `bd ready`, not buried in a file (the repository's Beads guidance).
      Approval later flips the Status line and closes the issue.
 5. **Append** using the entry grammar below. Renumber nothing; new entries
    take the next ENN.

@@ -4,7 +4,7 @@ description: Executes one task file (or a small SPEC.md) end to end - explore vi
 argument-hint: "[path/to/task.md or SPEC.md]"
 ---
 
-Execute the task at $ARGUMENTS. This skill assumes an agent-ready task/spec
+Execute the task named in the current invocation. This skill assumes an agent-ready task/spec
 with runnable acceptance criteria and is designed to run in a fresh session.
 
 ## 0. Load only the task
@@ -51,25 +51,25 @@ append-only task-file diff runs against in step 3 (e.g., under git: `git rev-par
 unclear about existing code, fan out `scout` agents and work from their
 reports. Read a file directly only when you're about to edit it.
 
-**Structure lookups (ctx).** When `.context/` exists at the repo root, this
-repo carries a `ctx` structure index. For a definition, caller, signature,
-or outline question, run the ctx query BEFORE any Grep/Read: `ctx tree
-<path>` (a file's or module's symbol outline), `ctx sig <symbol>` (a
-symbol's signature), `ctx refs <symbol>` (its callers/references), `ctx deps
-<path>` (a file's import graph). Fall back to Grep for content/text
-questions (bodies, literals, patterns) and Read a file only when about to
-edit it. Brief every scout you dispatch the same way.
+**Structure lookups (Codebase-Memory).** For architecture, definitions,
+callers, signatures, dependencies, or impact, invoke the `codebase-memory`
+skill and query Codebase-Memory before Grep/Read. Keep only project identity,
+qualified symbols, paths, relationships, and index/coverage state. If a
+child cannot receive MCP tools, put that evidence in the parent handoff.
+Fall back to `rg` over a bounded path set plus small file reads for content or
+coverage gaps, and never claim complete index coverage from the fallback.
 
-## Bounded, walk-away runs (/goal)
+## Bounded, walk-away runs
 
-`/build`'s default is unbounded and attended. To run it unattended — the
-human wraps this skill's own procedure in the runtime's built-in `/goal`
-transcript-evaluator so it stops at a bounded condition (`/goal "<criteria>,
-or stop after N turns"`; `/build` parses no new flag and needs no code
-change) — first clear this go/no-go gate.
+`/build`'s default is unbounded and attended. To run it unattended, the
+human wraps this skill's own procedure in the active runtime's native bounded
+run supervisor when one exists (Claude Code/Codex: `/goal`), or uses the
+runtime profile's bounded headless command. The condition includes
+`"<criteria>, or stop after N turns"`; `/build` parses no new flag and needs
+no new code path. First clear this go/no-go gate.
 
 **Classification (go/no-go).** A peripheral feature, prototype, or migration
-with mechanical, runnable verification is fine for a `/goal`-bounded run.
+with mechanical, runnable verification is fine for a bounded walk-away run.
 Core business logic, security-sensitive code, or verification that is
 inherently "looks right" is not — those don't disqualify the task, they
 raise the bar it must clear first: tighten acceptance criteria to runnable
@@ -83,7 +83,7 @@ on: the same step failing twice (a third attempt in a degraded context won't
 do better), and reaching a high-risk action — push, deploy, data deletion,
 publishing, spending — which the run must never take on its own.
 
-For long `/goal`-bounded runs that grow heavy before finishing, run
+For long bounded runs that grow heavy before finishing, run
 `/handoff` to park the state in bd and end. The
 scoped-permissions template, containment ladder, headless template, and
 failure-recovery doctrine for unattended runs live in
@@ -147,7 +147,7 @@ to a normal production task, not as done work.
 
 1. Run every acceptance command yourself; fix until all pass.
 2. Run the project's standard gates. Run `scripts/check.sh`, the sole required
-   check entrypoint — never a hand-derived list of steps read out of CLAUDE.md
+   check entrypoint — never a hand-derived list of steps read out of guidance
    prose (repos without it fall back to their own build/lint/test commands).
    **Drain-worker exception:** a worker or fix round dispatched inside drain
    runs acceptance commands and directly relevant targeted tests only; drain's
@@ -223,9 +223,10 @@ line every time you enter it.
   `**/*.yml`, `**/*.toml`, `**/*.lock`. Skip the review — record
   `review skipped: <docs-only|tests-only|tiny-diff (<lines>)>` and go
   straight to commit — when there are no product paths, or total
-  added+deleted product lines is < 25. Otherwise invoke `/code-review` via
-  the Skill tool with args `low` when the runtime can pass them (bare
-  invocation when it can't); where the Skill tool or plugin is unavailable,
+  added+deleted product lines is < 25. Otherwise use native skill invocation
+  in the active runtime for `/code-review`, passing `low` when the runtime can
+  pass arguments (bare invocation when it can't); where native skill
+  invocation or the plugin is unavailable,
   fall back to ONE subagent on the diff, prompted for high-confidence
   correctness/behavior findings plus the doctrine-backed code-health
   checks (the critic's diff rubric, `.claude/agents/critic.md` — cited in
@@ -259,13 +260,10 @@ line every time you enter it.
   the task file's `## Decisions` section — one line each: decision, default
   taken, how to reverse. Append; never overwrite prior entries. No decisions
   taken → no section needed.
-- Persist a durable structure note (indexed repo only): when `.context/`
-  exists at the repo root and this task surfaced a symbol-anchored fact that
-  meets the code-comment bar — a gotcha, invariant, rationale, or todo tied
-  to a specific symbol, not a restatement of what the code plainly shows —
-  offer to record it with `ctx notes add <symbol> "<text>" --kind
-gotcha|invariant|rationale|todo` before finishing (the note is committed;
-  it survives refactors the code comment would not).
+- If the task surfaced a durable cross-file invariant or rationale that meets
+  the code-comment bar, offer to record it in the narrowest existing design
+  or contributor document. File TODO work in bd. Codebase-Memory supplies
+  navigation evidence, not a durable note store.
 - Update durable task-file content only: tick acceptance boxes and add one
   evidence line each (from the verifier's report, not your own claim) rather
   than duplicating output — citing the `evidence/` file when an evidence path
@@ -292,7 +290,7 @@ gotcha|invariant|rationale|todo` before finishing (the note is committed;
   (an empty section means none; never create or edit task files for
   discoveries as part of the report). Each `Discovered:` item is ALSO filed
   in bd the moment it's reported — `bd create` with a `discovered-from`
-  link to this task's issue (CLAUDE.md's Beads section, cited not
+  link to this task's issue (the repository's Beads guidance, cited not
   restated); a bd issue is a tracker record, not a task file, so this
   doesn't touch the no-queue-writes rule. Same dispatch carve-out as the
   claim and close bullets: a drain-dispatched worker only REPORTS
@@ -303,12 +301,12 @@ gotcha|invariant|rationale|todo` before finishing (the note is committed;
 - For items in `Discovered:`, offer to author a task definition in the owning
   spec and register it create-only — written only on the user's yes; no silent
   queue writes.
-- Tell the user to `/clear` before starting the next task. Then, only if
+- Tell the user to start a fresh runtime session before the next task. Then, only if
   the just-completed task file resolves to a `specs/<slug>/tasks/*.md` path
   AND `bd ready --json` contains another issue whose external reference is
   under that spec's `tasks/` directory, print one additional line pointing the user
   at `/drain specs/<slug>` for continuous work across the remaining tasks
-  (alongside, not replacing, the `/clear` line). If the path is not under a
+  (alongside, not replacing, the fresh-session line). If the path is not under a
   `specs/<slug>/tasks/` layout, or bd reports no ready sibling, print no nudge
   line — this is a printed pointer, not a loop, so do not over-fire it.
 
@@ -331,5 +329,5 @@ script-owned and bounded at 4 cycles; on the 4th unresolved cycle build flips
 to blocked with the failure evidence rather than thrashing. Everything else —
 scouts, test-first implementation, close-out — is unchanged.
 
-Next stage: none — /clear and start the next task, or run `/drain
+Next stage: none — start a fresh session for the next task, or run `/drain
 specs/<slug>` when sibling tasks remain pending (human-launched).

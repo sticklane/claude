@@ -1,0 +1,6 @@
+# Frozen-inventory identities superseded by the hard cutover.
+cli-command:ctx
+skill:ctx
+test:tests/test_ctx_capabilities.sh
+test:tests/test_agentic_cli_retirement.py
+test:tests/test_live_surface_retirement.sh

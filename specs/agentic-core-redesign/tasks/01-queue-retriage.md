@@ -35,7 +35,7 @@ this file's own checkboxes.
 ## Steps
 
 1. Enumerate open items with the cheap tools: `grep -l '^Status: \(pending\|blocked\|deferred\|draft\)' specs/*/tasks/*.md` and list `specs/*/` dirs lacking `tasks/`.
-2. For each, read only the header + Goal (head -n 30), judge against SPEC.md's design decisions and migration steps, and record `<path> · keep|subsumed|fold-in · <one-line reason>` in TRIAGE.md. The spec pre-names three subsumed clusters (mirror machinery, drain self-patch, ctx-dispatch-adoption prompt-stanza tasks) — verify membership rather than assuming it.
+2. For each, read only the header + Goal (head -n 30), judge against SPEC.md's design decisions and migration steps, and record `<path> · keep|subsumed|fold-in · <one-line reason>` in TRIAGE.md. The spec pre-names three subsumed clusters (mirror machinery, drain self-patch, and former code-index prompt-stanza tasks) — verify membership rather than assuming it.
 3. Flip subsumed items to `Status: obsolete`, citing TRIAGE.md on the line below.
 4. For fold-in items, add the fold target (which agentic task absorbs it) to TRIAGE.md.
 

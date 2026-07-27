@@ -9,10 +9,12 @@
 # only picks up content that's actually on the remote, so run this AFTER
 # pushing, not instead of it (see bin/submit for the wrapper that does both).
 #
-# Antigravity and Codex are live-file runtimes: they read antigravity/ and
-# codex/ directly from this repo's working tree on every invocation, with no
-# install/cache step of their own — nothing to refresh there. That's not a
-# gap in this script; there is genuinely nothing to clear.
+# Repository sessions in Codex and Antigravity discover `.agents/skills/`
+# directly. Their globally installed plugins are cached packages, however:
+# refresh Antigravity with `agy plugin install <checkout>`, and refresh Codex
+# through `codex plugin marketplace upgrade` followed by reinstalling the
+# package when a new marketplace release is available. This script does not
+# mutate those installations implicitly.
 
 set -euo pipefail
 
@@ -44,7 +46,7 @@ else
   echo "claude CLI not found on PATH — skipping"
 fi
 
-echo "== Antigravity (agy): live-file runtime, nothing to refresh =="
-echo "== Codex: live-file runtime, nothing to refresh =="
+echo "== Antigravity (agy): repo-local skills are live; reinstall the cached global plugin when needed =="
+echo "== Codex: repo-local skills are live; upgrade/reinstall the cached marketplace package when released =="
 
 echo "done."

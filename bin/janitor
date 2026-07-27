@@ -1,0 +1,443 @@
+#!/usr/bin/env bash
+# janitor: reclaim stale session state and orchestration artifacts for swarm hygiene.
+set -u
+
+usage() {
+  cat <<'USAGE'
+Usage: janitor [--dry-run] [--scope all|claims|drain|handoff] [--handoff-stale-days N] [--json]
+
+--dry-run                Do not mutate state (ledger still records dry-run actions)
+--scope                  Target work surface (default: all)
+--handoff-stale-days N   Minimum age in days before handoff is marked stale (default: 7)
+--apply                  Apply changes (default: dry-run)
+--json                   Print machine-readable JSON summary
+--help                   Print this help
+USAGE
+  exit 64
+}
+
+scope="all"
+dry_run=1
+json=0
+handoff_stale_days=7
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --scope)
+      scope="$2"
+      shift 2
+      ;;
+    --dry-run)
+      dry_run=1
+      shift
+      ;;
+    --apply)
+      dry_run=0
+      shift
+      ;;
+    --handoff-stale-days)
+      handoff_stale_days="$2"
+      shift 2
+      ;;
+    --json)
+      json=1
+      shift
+      ;;
+    --help|-h)
+      usage
+      ;;
+    *)
+      echo "janitor: unknown argument: $1" >&2
+      usage
+      ;;
+  esac
+done
+
+valid_scope="all claims drain handoff"
+case " $valid_scope " in
+  *" $scope "*) ;;
+  *)
+    echo "janitor: invalid --scope '$scope'. Use all, claims, drain, or handoff." >&2
+    exit 64
+    ;;
+esac
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || { echo "janitor: required command missing: $1" >&2; exit 1; }
+}
+
+need_cmd bd
+need_cmd git
+need_cmd jq
+need_cmd python3
+
+log_file=".beads/janitor-revival-log.jsonl"
+mkdir -p "$(dirname "$log_file")"
+
+log_event() {
+  local etype="$1" iid="$2" ib="$3" ipath="$4" reason="$5" recover="$6"
+  if [ "$dry_run" -eq 1 ]; then
+    etype="dry_run"
+  fi
+  python3 - "$log_file" "$etype" "$iid" "$ib" "$ipath" "$reason" "$recover" <<'PY'
+import sys
+from datetime import datetime, timezone
+log_path, etype, iid, ib, ipath, reason, recover = sys.argv[1:]
+recoverable = str(recover).lower() in ("1", "true", "yes")
+with open(log_path, "a", encoding="utf-8") as f:
+  record = {
+    "ts": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    "type": etype,
+    "id": iid or None,
+    "branch": ib or None,
+    "path": ipath or None,
+    "reason": reason,
+    "recoverable": recoverable,
+  }
+  f.write(__import__("json").dumps(record))
+  f.write("\n")
+PY
+}
+
+is_in_progress() {
+  local issue_id="$1"
+  [ -n "$issue_id" ] || return 1
+  printf '%s\n' "$inprogress" | grep -Fxq "$issue_id"
+}
+
+is_handoff_stale() {
+  local updated_at="$1" days="$2"
+  [ -n "$updated_at" ] || return 1
+  [ -n "$days" ] || return 1
+  python3 - "$updated_at" "$days" <<'PY'
+import sys
+from datetime import datetime, timezone
+updated_at, days = sys.argv[1], float(sys.argv[2])
+try:
+  dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+except Exception:
+  raise SystemExit(1)
+age_days = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds() / 86400.0
+  raise SystemExit(0 if age_days >= days else 1)
+PY
+}
+
+detect_base_branch() {
+  if base_ref=$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null); then
+    echo "${base_ref#refs/remotes/}"
+    return 0
+  fi
+  for candidate in origin/main origin/master main master; do
+    if git rev-parse --verify --quiet "$candidate" >/dev/null 2>&1; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+base_branch="$(detect_base_branch || true)"
+
+branch_merge_status() {
+  local branch_ref="$1"
+  local ahead_count
+
+  if [ -z "$base_branch" ]; then
+    return 2
+  fi
+  if ! git rev-parse --verify --quiet "$branch_ref" >/dev/null 2>&1; then
+    return 2
+  fi
+  if ! git rev-parse --verify --quiet "$base_branch" >/dev/null 2>&1; then
+    return 2
+  fi
+
+  ahead_count="$(git rev-list --left-right --count "$base_branch...$branch_ref" 2>/dev/null | awk '{print $2}' || true)"
+  if [ -z "$ahead_count" ]; then
+    return 2
+  fi
+  if [ "$ahead_count" -eq 0 ]; then
+    return 0
+  fi
+  return 1
+}
+
+is_orchestration_branch() {
+  local branch_ref="$1"
+  local branch_name
+  case "$branch_ref" in
+    refs/heads/drain/*|refs/heads/task/*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+extract_issue_id() {
+  local candidate="$1"
+  local issue=""
+  if [[ "$candidate" =~ ^(agentic-[0-9]+)([-.].*)?$ ]]; then
+    issue="${BASH_REMATCH[1]}"
+  elif [[ "$candidate" =~ ^(md-[0-9]+)([-.].*)?$ ]]; then
+    issue="${BASH_REMATCH[1]}"
+  fi
+  printf '%s\n' "$issue"
+}
+
+branch_checked_out_elsewhere() {
+  local branch_ref="$1"
+  local this_path="$2"
+  local shared
+  shared="$(awk -v branch="$branch_ref" -v path="$this_path" '
+    $1=="worktree" {current_path=$2}
+    $1=="branch" && $2==branch && current_path!="" && current_path!=path {count += 1}
+    END {print count+0}
+  ' "$tmpwt" 2>/dev/null || echo 0)"
+  [ "$shared" -gt 0 ]
+}
+
+# --- preflight --------------------------------------------------------------
+inprogress="$(bd list --status in_progress --json 2>/dev/null | jq -r '.[].id' | sort -u | xargs -n1 echo)"
+open_handoffs="$(bd list --label handoff --status=open --json 2>/dev/null || echo '[]')"
+
+claims="${inprogress}"  # alias kept for clarity
+
+# --- claims sweep -----------------------------------------------------------
+reclaimed_claims=0
+skipped=0
+
+actioned_claims=0
+if [ "$scope" = "all" ] || [ "$scope" = "claims" ]; then
+  # Claims list
+  if [ -s .beads/session-claims ]; then
+    tmp=$(mktemp)
+    while IFS= read -r issue_id; do
+      [ -n "$issue_id" ] || continue
+      if is_in_progress "$issue_id"; then
+        printf '%s\n' "$issue_id" >> "$tmp"
+        continue
+      fi
+      log_event "reclaimed_claim" "$issue_id" "" "" "session claim orphaned; no in-progress row in bd" "false"
+      if [ "$dry_run" -eq 0 ]; then
+        (bin/session-claims rm "$issue_id") >/dev/null
+      fi
+      ((reclaimed_claims+=1))
+    done < .beads/session-claims
+    mv "$tmp" .beads/session-claims
+  fi
+
+  # Inflight list
+  if [ -s .beads/session-inflight ]; then
+    tmp=$(mktemp)
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      issue_id=${line%% *}
+      if is_in_progress "$issue_id"; then
+        printf '%s\n' "$line" >> "$tmp"
+        continue
+      fi
+      log_event "reclaimed_claim" "$issue_id" "" "" "inflight marker orphaned; no in-progress row in bd" "false"
+      if [ "$dry_run" -eq 0 ]; then
+        :
+      fi
+      ((reclaimed_claims+=1))
+    done < .beads/session-inflight
+    mv "$tmp" .beads/session-inflight
+  fi
+fi
+
+# --- handoff sweep ----------------------------------------------------------
+if [ "$scope" = "all" ] || [ "$scope" = "handoff" ]; then
+  if [ "$open_handoffs" = "[]" ]; then
+    :
+  else
+    count_handoff=0
+    while IFS= read -r item; do
+      [ -n "$item" ] || continue
+      hid="$(printf '%s' "$item" | jq -r '.id')"
+      htitle="$(printf '%s' "$item" | jq -r '.title')"
+      hupdated="$(printf '%s' "$item" | jq -r '.updated_at // .metadata.updated_at // empty')"
+
+      tracked_live=0
+      if tracks=$(bd dep list "$hid" --direction=up -t tracks --json 2>/dev/null); then
+        while IFS= read -r tid; do
+          [ -n "$tid" ] || continue
+          if is_in_progress "$tid"; then
+            tracked_live=1
+            break
+          fi
+        done < <(printf '%s' "$tracks" | jq -r '.[]?.id // .depends_on_id // empty')
+      fi
+
+      if [ "$tracked_live" -eq 1 ]; then
+        continue
+      fi
+
+      if is_handoff_stale "$hupdated" "$handoff_stale_days"; then
+        ((count_handoff+=1))
+        log_event "skipped_ambiguous" "$hid" "" "" "handoff stale > ${handoff_stale_days}d and no live tracked issue" "true"
+        if [ "$dry_run" -eq 0 ]; then
+          bd comment "$hid" "[janitor] stale-handoff candidate: no live tracked sessions and no touch in >${handoff_stale_days}d; please resume or close"
+          # Conservative: do not auto-close. Keeping handoff open preserves context.
+        fi
+        echo "stale handoff: $hid - $htitle"
+      fi
+    done < <(printf '%s' "$open_handoffs" | jq -c '.[]')
+    skipped=$((skipped+count_handoff))
+  fi
+fi
+
+# --- worktree sweep ---------------------------------------------------------
+reclaimed_worktrees=0
+if [ "$scope" = "all" ] || [ "$scope" = "drain" ]; then
+  tmpwt=$(mktemp)
+  git worktree list --porcelain > "$tmpwt"
+  did_remove=0
+
+  process_worktree() {
+    local wt_path="$1"
+    local wt_branch="$2"
+    local issue_candidate=""
+    local issue_id=""
+    local merge_state=2
+    local branch_name=""
+
+    if [ ! -d "$wt_path" ]; then
+      log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "stale branch path missing" "false"
+      ((skipped+=1))
+      return
+    fi
+
+    case "$wt_branch" in
+      refs/heads/*)
+        ;;
+      *)
+        log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "skip non-checkout worktree branch entry" "false"
+        ((skipped+=1))
+        return
+        ;;
+    esac
+
+    if ! [[ "$wt_path" == /tmp/* || "$wt_path" == /private/tmp/* ]]; then
+      log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "candidate skipped: non-orchestrator worktree location" "false"
+      ((skipped+=1))
+      return
+    fi
+
+    if ! is_orchestration_branch "$wt_branch"; then
+      log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "candidate skipped: branch does not match orchestration patterns (drain|task)" "false"
+      ((skipped+=1))
+      return
+    fi
+
+    branch_name="${wt_branch#refs/heads/}"
+    issue_candidate="${branch_name#*/}"
+    issue_id="$(extract_issue_id "$issue_candidate")"
+    if [ -n "$issue_candidate" ]; then
+      if [ -z "$issue_id" ]; then
+        issue_id="$issue_candidate"
+      fi
+      if is_in_progress "$issue_id"; then
+        log_event "skipped_ambiguous" "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: issue still in progress" "false"
+        ((skipped+=1))
+        return
+      fi
+    fi
+    if [ -n "$issue_id" ]; then
+      issue_candidate="$issue_id"
+    fi
+
+    if branch_checked_out_elsewhere "$wt_branch" "$wt_path"; then
+      log_event "skipped_ambiguous" "$issue_candidate" "$wt_branch" "$wt_path" "skip cleanup: branch checked out by another worktree" "false"
+      ((skipped+=1))
+      return
+    fi
+
+    if [ -n "$(git -C "$wt_path" status --short)" ]; then
+      log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "candidate skipped: dirty worktree" "false"
+      ((skipped+=1))
+      return
+    fi
+
+    if branch_merge_status "$wt_branch"; then
+      merge_state=0
+    else
+      merge_state=$?
+      if [ "$merge_state" -eq 1 ]; then
+        log_event "skipped_ambiguous" "$issue_candidate" "$wt_branch" "$wt_path" "skip cleanup: unmerged branch work not integrated to base; likely needs merge/manual handoff" "true"
+        ((skipped+=1))
+        return
+      fi
+      log_event "skipped_ambiguous" "$issue_candidate" "$wt_branch" "$wt_path" "skip cleanup: merge state unknown" "false"
+      ((skipped+=1))
+      return
+    fi
+
+    if [ "$dry_run" -eq 0 ]; then
+      did_remove=1
+      if git worktree remove --force "$wt_path"; then
+        git branch -D "${wt_branch#refs/heads/}" >/dev/null 2>&1 || true
+        reclaimed_worktrees=$((reclaimed_worktrees + 1))
+        log_event "removed_worktree" "$issue_candidate" "$wt_branch" "$wt_path" "clean merged orphan worktree removed" "false"
+      else
+        ((skipped+=1))
+        log_event "skipped_ambiguous" "$issue_candidate" "$wt_branch" "$wt_path" "worktree remove failed" "false"
+      fi
+    else
+      log_event "removed_worktree" "${issue_id-}" "$wt_branch" "$wt_path" "dry-run: would remove clean orphan worktree" "true"
+      reclaimed_worktrees=$((reclaimed_worktrees+1))
+    fi
+  }
+
+  wt_path=""
+  wt_branch=""
+  while IFS= read -r line; do
+    case "$line" in
+      worktree\ *)
+        if [ -n "$wt_path" ] && [ -n "$wt_branch" ]; then
+          process_worktree "$wt_path" "$wt_branch"
+        fi
+        wt_path="${line#worktree }"
+        wt_branch=""
+        ;;
+      branch\ *)
+        wt_branch="${line#branch refs/heads/}"
+        wt_branch="refs/heads/${wt_branch}"
+        ;;
+      detached)
+        wt_branch=""
+        ;;
+      "")
+        if [ -n "$wt_path" ] && [ -n "$wt_branch" ]; then
+          process_worktree "$wt_path" "$wt_branch"
+        fi
+        wt_path=""
+        wt_branch=""
+        ;;
+    esac
+  done < "$tmpwt"
+  if [ -n "$wt_path" ] && [ -n "$wt_branch" ]; then
+    process_worktree "$wt_path" "$wt_branch"
+  fi
+  rm -f "$tmpwt"
+  if [ "$did_remove" -eq 1 ]; then
+    git worktree prune
+  fi
+fi
+
+actioned_claims=$((reclaimed_claims + reclaimed_worktrees))
+
+if [ "$json" -eq 1 ]; then
+  printf '{"scope":"%s","dry_run":%s,"reclaimed_claims":%s,"reclaimed_worktrees":%s,"skipped":%s,"handoff_scope":%s}\n' \
+    "$scope" "$([ "$dry_run" -eq 1 ] && echo true || echo false)" "$reclaimed_claims" "$reclaimed_worktrees" "$skipped" "${open_handoffs}" 
+else
+  echo "janitor summary:"
+  echo "  scope=$scope"
+  echo "  dry_run=$([ "$dry_run" -eq 1 ] && echo true || echo false)"
+  echo "  reclaimed_claims=$reclaimed_claims"
+  echo "  reclaimed_worktrees=$reclaimed_worktrees"
+  echo "  skipped_or_ambiguous=$skipped"
+fi
+
+exit 0

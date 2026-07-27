@@ -16,7 +16,7 @@ Touch: agentic/, tests/test_agentic_bootstrap.sh, tests/test_agentic_roundtrip.s
 
 A Python package `agentic/` exists at the repo root with a console
 entrypoint registering ALL planned subcommands (ready, claim, verdict,
-resume, compose, ctx, init, inbox, demote — stubs exit 2 "not
+resume, compose, init, inbox, demote — stubs exit 2 "not
 implemented" for verbs later tasks fill), so sibling tasks stay
 Touch-disjoint on their own modules. `agentic init` works end to end:
 controlled `bd init` (side-effect files diffed and curated, never
@@ -35,8 +35,8 @@ gains the `agentic/` component.
 ## Touch
 
 Creates the package and shared test fixtures only. Does NOT implement
-ready/claim/verdict/resume/compose/ctx/inbox bodies — those belong to
-tasks 03, 04, 06, 07, 11 in their own modules.
+ready/claim/verdict/resume/compose/inbox bodies — those belong to
+tasks 03, 04, 07, 11 in their own modules.
 
 ## Steps
 

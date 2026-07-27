@@ -109,7 +109,7 @@ drafters safe.
 
 ## Out of scope
 
-- /drain's hub cost (specs/drain-wake-cost owns it).
+- /drain's hub cost (specs/archive/drain-wake-cost owns it).
 - /parallel (already at the target profile).
 - Changing what these skills produce (spec format, task-file format,
   interview flow) — only *where* the tokens are spent producing it.

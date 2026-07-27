@@ -5,8 +5,8 @@
 setup.sh · prompt.txt · assert.sh · allowed-tools.txt · EVAL_TRANSCRIPT
 
 The runner is [evals/run.sh](../../../evals/run.sh) — read it there
-rather than duplicating it here. Runner and scenarios ship in the
-toolkit repo, not with installs — not usable from plugin installs. Below are the four files of the
+rather than duplicating it here. Runner and scenarios ship in both the
+toolkit checkout and the installable plugin. Below are the four files of the
 reference evalset `evals/breakdown/01-small-spec/`, verbatim, as the
 template for scaffolding a new scenario. Its `assert.sh` keeps its failure
 output under ~10 lines — one `ASSERT FAIL:` line per broken check, never a
@@ -132,10 +132,10 @@ inherit the runner's default allowlist.
 For a v2 trajectory assertion, the runner exports `EVAL_TRANSCRIPT` — the
 absolute path to the run's JSONL transcript — so an `assert.sh` can grade
 _how_ a run behaved, not only the artifacts it left. It is additive:
-scenarios that ignore it are unchanged. Only the claude-code runner emits a
-locatable transcript today; the runner leaves `EVAL_TRANSCRIPT` empty and
-warns otherwise, so a trajectory assertion guards that case first, then
-greps the JSONL:
+scenarios that ignore it are unchanged. Claude Code and Codex emit a
+locatable JSONL transcript; Antigravity and custom runners leave
+`EVAL_TRANSCRIPT` empty and warn, so a trajectory assertion guards that case
+first, then greps the JSONL:
 
 ```bash
 # Fail loudly when no transcript is available — a trajectory check with

@@ -20,7 +20,7 @@ workflow through `agentic run` in a bare shell (stub workers, PATH
 restricted to system + agentic + bd), exits 0, and all three result
 files exist and validate against their schemas. The first real saved
 workflow lands in `scripts/workflows/` — a find-verify-synthesize
-example that derives its work list from `agentic ctx tree --json`,
+example that derives its work list from Codebase-Memory graph nodes,
 carries the determinism note in its header, and files kept findings
 through the tracker bridge. AGENTS.md and README document the verbs,
 the DW12 boundary (native ultracode only for runs that file nothing,

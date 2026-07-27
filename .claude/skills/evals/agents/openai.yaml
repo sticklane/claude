@@ -1,0 +1,7 @@
+interface:
+  display_name: "Skill Evals"
+  short_description: "Run stored workflow-skill evals"
+  default_prompt: "Use $evals to run the named stored skill evalset."
+
+policy:
+  allow_implicit_invocation: false

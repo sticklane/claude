@@ -61,8 +61,10 @@ EOF
 
 assert "deep-research workflow remains live" \
   test -f "$ROOT/.claude/workflows/deep-research.js"
-assert "standalone ctx implementation remains live" \
-  test -f "$ROOT/context-tree/Cargo.toml"
+assert "Codebase-Memory integration remains live" \
+  test -f "$ROOT/.claude/skills/codebase-memory/SKILL.md"
+assert "Codebase-Memory launcher remains live" \
+  test -x "$ROOT/bin/agentic-codebase-memory-mcp"
 assert "native orchestration remains documented for Claude Code" \
   grep -qF '## Orchestration' "$ROOT/runtimes/claude-code.md"
 assert "native orchestration remains documented for Codex" \

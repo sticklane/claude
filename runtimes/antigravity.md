@@ -1,7 +1,7 @@
 # Runtime profile: antigravity
 
 Describes how the abstract tiers and native orchestration surfaces map onto
-Antigravity. `antigravity/README.md` explains the bd/ctx/spec data layer used
+Antigravity. `antigravity/README.md` explains the bd/Codebase-Memory/spec data layer used
 after the procedure-copy tree was retired.
 
 "Antigravity" always means the `antigravity-cli` package (binary `agy`)
@@ -20,21 +20,16 @@ silently resolve to the wrong tool. The two are easy to tell apart:
 
 | Tier          | Model                                              | Notes                                                                             |
 | ------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| scout-tier    | `Gemini 3.5 Flash (Low)`, via `--model`              | Cheap, fast reconnaissance — cheapest entry in `agy models`' output.               |
+| scout-tier    | `gemini-3.6-flash-low`, via `--model`              | Cheap, fast reconnaissance — cheapest current Flash entry in `agy models`.         |
 | session-tier  | the CLI's configured default model (no `--model`)   | Whatever the interactive session runs.                                             |
-| deep-tier     | `Claude Opus 4.6 (Thinking)` or `Gemini 3.1 Pro (High)`, via `--model` | Recommended pin value — opt-in, not an active default. Either is a legitimate flagship-tier pin; `agy models` lists both plus `Claude Sonnet 4.6 (Thinking)` and `GPT-OSS 120B (Medium)`. |
+| deep-tier     | `claude-opus-4-6-thinking` or `gemini-3.1-pro-high`, via `--model` | Recommended pin value — opt-in, not an active default. Either is a legitimate flagship-tier pin; `agy models` also lists `claude-sonnet-4-6` and `gpt-oss-120b-medium`. |
 | frontier-tier | same as deep-tier                                   | No distinct rung above deep-tier exposed by the CLI; recommended pin value — opt-in, not an active default. |
 
 The two deep-tier rows are recommended pin values, not active defaults
-(selection and override convention in [README.md](README.md)). Model
-names are exact strings from `agy models`' output (confirmed live,
-`antigravity-cli` 1.1.1, 2026-07-12) — pass them to `--model` verbatim,
-quoted; re-verify against `agy models` before pinning, since the roster
-changes as models are added/retired. Unlike the picker-only model in this
-profile's previous version, `--model` genuinely lets a script pin a model
-— no live test of `--model` accepting these exact strings has been run
-yet (only `-p` with no `--model` override was confirmed); treat the exact
-invocation as unverified until checked.
+(selection and override convention in [README.md](README.md)). Model slugs
+are exact values from `agy models` (confirmed live against
+`antigravity-cli` 1.1.7 on 2026-07-26); pass them to `--model` verbatim and
+re-check the roster before pinning because models are added and retired.
 
 ## Role pins
 
@@ -47,13 +42,13 @@ exist as a flag; exact value acceptance unverified — see Tiers above).
 | Role                                                                 | Antigravity default                                                                      |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | session default                                                       | the CLI's configured default model (no plan/execution split exists)                          |
-| implementation workers                                                | `Claude Opus 4.6 (Thinking)`, via `--model` — deep-tier adopted default matching claude-code's `opus` pin |
-| explore / codebase-search                                             | `Gemini 3.5 Flash (Low)`, via `--model`                                                      |
-| verifier (acceptance evidence; advisory reviewer lane)                | `Gemini 3.5 Flash (Low)`, via `--model`                                                      |
-| spec/plan/diff critic                                                 | `Claude Opus 4.6 (Thinking)` — deep-tier work; a critic pass costs ~1% of a wrong implementation |
-| distill workflow                                                      | `Claude Opus 4.6 (Thinking)`                                                                 |
-| retry escalation (attempt 2, verifier evidence in prompt)             | `Gemini 3.1 Pro (High)` — same tier as attempt 1; the CLI exposes no rung above deep-tier, so the retry re-runs with the verifier's failure evidence instead of a stronger model |
-| tournament escalation (attempts 3+, after the retry failed)           | `Gemini 3.1 Pro (High)` — the CLI exposes no rung above deep-tier, so the frontier rung collapses onto it |
+| implementation workers                                                | `claude-opus-4-6-thinking`, via `--model` — deep-tier adopted default matching claude-code's `opus` pin |
+| explore / codebase-search                                             | `gemini-3.6-flash-low`, via `--model`                                                        |
+| verifier (acceptance evidence; advisory reviewer lane)                | `gemini-3.6-flash-low`, via `--model`                                                        |
+| spec/plan/diff critic                                                 | `claude-opus-4-6-thinking` — deep-tier work; a critic pass costs ~1% of a wrong implementation |
+| distill workflow                                                      | `claude-opus-4-6-thinking`                                                                   |
+| retry escalation (attempt 2, verifier evidence in prompt)             | `gemini-3.1-pro-high` — same tier as attempt 1; the CLI exposes no rung above deep-tier, so the retry re-runs with the verifier's failure evidence instead of a stronger model |
+| tournament escalation (attempts 3+, after the retry failed)           | `gemini-3.1-pro-high` — the CLI exposes no rung above deep-tier, so the frontier rung collapses onto it |
 
 ## Headless
 
@@ -130,8 +125,8 @@ mode absent an explicit fresh-workspace flag.
 - **Discovery walks up to find the workspace root**, not strictly
   cwd/`--cd`-relative like Codex. Run Antigravity from the repository root,
   where `.agents/skills/` exposes the single `.claude/skills/` source through
-  symlinks. The bd queue, `.context/` index, and `specs/` directory resolve
-  from that same root.
+  symlinks. The bd queue, Codebase-Memory project, and `specs/` directory
+  resolve from that same root.
 - **Skill invocation** works the same way Codex's does (both consume the
   Agent Skills standard antigravity defines): no custom slash commands,
   reached by natural-language description match. Unlike Codex's
@@ -173,11 +168,23 @@ mode absent an explicit fresh-workspace flag.
 
 ## Notes
 
-- **Config locations**: repository `.agents/skills/` symlinks and
-  `AGENTS.md`; global —
+- **Config locations**: repository `.agents/skills/` symlinks,
+  `.agents/hooks.json`, and `AGENTS.md`; global —
   `~/.gemini/config/skills/`, `~/.gemini/antigravity-cli/brain/`
   (generated-artifact storage, confirmed live). Older Antigravity builds
   read `.agent/` instead of `.agents/`.
+- **Quality-gate adapter**:
+  `bin/install-gates --runtime antigravity <repo>` installs native project
+  hooks using Antigravity's named-hook JSON schema.
+- **Plugin install**: `agy plugin validate <toolkit-clone>`, then
+  `agy plugin install <toolkit-clone>`. Version 1.1.7 validated and installed
+  all 29 package skills from this checkout on 2026-07-26.
+- **Codebase-Memory MCP registration**: Antigravity 1.1.7 has no bundled-MCP
+  plugin field. Add stdio server `codebase-memory-mcp`, command
+  `agentic-codebase-memory-mcp`, through the native `/mcp` manager or
+  `~/.gemini/config/mcp_config.json`; never substitute another runtime's CLI.
+  Query it first; if unavailable, use bounded `rg` plus small reads and name
+  the coverage limitation.
 - **Permission-mode equivalents**: `--mode plan` ≈ read-only planning,
   `--mode accept-edits` ≈ `acceptEdits`, `--dangerously-skip-permissions`
   ≈ `bypassPermissions` (sandboxed use only, per its own naming),
@@ -189,11 +196,13 @@ mode absent an explicit fresh-workspace flag.
   real**: confirmed on this machine (`~/.antigravity/antigravity/bin`
   before `/opt/homebrew/bin` in `$PATH`); verify PATH order or use an
   absolute path before trusting a bare `agy` invocation elsewhere.
-- **Runtime guide**: `antigravity/README.md` explains the common bd/ctx/spec
+- **Runtime guide**: `antigravity/README.md` explains the common
+  bd/Codebase-Memory/spec
   data layer and records why the copied procedure tree was retired.
-- **Verification**: `-p` and model listing were confirmed live against
-  `antigravity-cli` 1.1.1 (Homebrew cask, installed 2026-07-11) on
-  2026-07-12. `--new-project` workspace isolation was confirmed live on
+- **Verification**: `-p` was confirmed live against `antigravity-cli` 1.1.1
+  on 2026-07-12. Current model listing and native plugin
+  validation/installation were confirmed against 1.1.7 on 2026-07-26.
+  `--new-project` workspace isolation was confirmed live on
   2026-07-13 (two
   back-to-back isolated invocations, no cross-contamination, no stray
   writes to the real checkout — see Headless above). `--model`,

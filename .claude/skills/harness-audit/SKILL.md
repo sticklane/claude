@@ -13,7 +13,7 @@ task/spec filed through the pipeline — never an in-audit edit. `git status`
 must be clean when the audit finishes; if it is not, the audit has a bug.
 This contract is R1 of specs/harness-audit/SPEC.md.
 
-Audit the repo at $ARGUMENTS (default: cwd) against the five-area checklist
+Audit the repo named in the current invocation (default: cwd) against the five-area checklist
 below. Each area MUST produce either concrete findings or an explicit
 "clean" line — a silent skip is the exact failure mode this skill exists to
 catch (R2). Detailed per-area check commands live in
@@ -47,11 +47,13 @@ line.
 
 ### 2. Gate coverage
 
-If gates are installed (`.claude/settings.json` Stop hook + pre-commit
-layer), confirm the checks they reference still exist and pass on a clean
-tree. A referenced check that no longer exists, or fails on a clean tree, is
-a finding. If gates are NOT installed, say so ONCE ("gate coverage: no gates
-installed") — not as a finding per file.
+Detect the active runtime's native Stop-hook config plus the pre-commit layer:
+`.claude/settings.json` for Claude Code, `.codex/hooks.json` for Codex, or
+`.agents/hooks.json` for Antigravity. Confirm the checks they reference still
+exist and pass on a clean tree. A referenced check that no longer exists, or
+fails on a clean tree, is a finding. If gates are NOT installed, say so ONCE
+("gate coverage: no gates installed") — not as a finding per file. Never
+launch another runtime to inspect its config.
 
 ### 3. Evalset presence
 
@@ -79,9 +81,13 @@ findings; a fully consistent index → "memory hygiene: clean".
 
 ### 5. Allowlist drift
 
-Compare the permission allowlist against recent transcripts: flag entries
-granted but unused, and prompts that recur without a matching entry. Each is
-a finding; no drift → "allowlist drift: clean".
+When the active runtime has a checked-in per-command allowlist, compare it
+against recent native transcripts: flag entries granted but unused, and
+prompts that recur without a matching entry. Claude Code has this surface;
+Codex and Antigravity currently do not expose an equivalent checked-in list,
+so report `allowlist drift: unsupported by <runtime> — skipped` rather than
+inventing one or reading another runtime's transcripts. Each real drift is a
+finding; no drift → "allowlist drift: clean".
 
 ### 6. Rank and synthesize (session model)
 
@@ -93,7 +99,7 @@ Emit the ranked list to the session; write nothing to disk.
 ## Dispatch tier
 
 Areas 1–5 are mechanical checks — dispatch each to a scout-tier agent
-(read-only, Claude default: Haiku at `effort: low`) per
+(read-only, using the active runtime's scout-tier mapping) per
 `.claude/rules/token-discipline.md`'s "Dispatch authoring" section (tier by
 stage type, cap each return at a structured findings summary, bound the
 fan-out to the five areas). Cite that section rather than restating it. Only

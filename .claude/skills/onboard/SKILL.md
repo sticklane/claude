@@ -1,6 +1,6 @@
 ---
 name: onboard
-description: Prepares an existing repository for agentic development - scouts the codebase, writes a concise CLAUDE.md with verified commands, adds a permission allowlist, and offers quality gates. Use on first contact with a repo, or when the user says "set this repo up for Claude", "make this codebase agent-ready", or "bootstrap CLAUDE.md".
+description: Prepares an existing repository for agentic development across Claude Code, Codex, and Antigravity - scouts the codebase, writes concise shared AGENTS.md guidance with a Claude bridge, configures only supported runtime permissions, and offers quality gates. Use on first contact with a repo, or when the user says "set this repo up for agents", "make this codebase agent-ready", or "bootstrap AGENTS.md".
 ---
 
 Make this repo a place where agents can work reliably. The default deliverable
@@ -73,32 +73,24 @@ stays small.
 
 ## 4. Permissions
 
+Configure only the current runtime's native permission surface; never launch
+or configure another runtime as a substitute. Claude Code may receive a
 `.claude/settings.json` allowlist covering exactly the verified commands
-(test/lint/build, plus staging and committing) with a `deny` on publishing
-to the remote (e.g., under git: `git push`) — the build
-skill's reference.md (in-repo at .claude/skills/build/reference.md, or
-in the agentic plugin's install directory) has the template and
-syntax rules. Merge into any existing settings file rather than overwriting,
-and keep denies that would annoy attended sessions (like WebFetch) out of
-the shared file — those belong in a personal settings.local.json autonomy
-profile.
+(test/lint/build, plus staging and committing) with a deny on publishing.
+Codex uses its sandbox/approval configuration rather than Claude permission
+syntax. Antigravity uses its native terminal policy and sandbox; it has no
+equivalent checked-in per-command allowlist. The build skill's `reference.md`
+and `runtimes/<runtime>.md` own the respective templates. Merge existing
+configuration rather than overwriting it, and do not invent a broader grant
+to make the shapes look identical.
 
-When the target repo is indexed (a `.context/` directory at its root, or
-`ctx` resolving on PATH), also recommend `Bash(ctx *)` in the allowlist so
-agents can run the code-structure index (`ctx tree`/`sig`/`refs`/`deps`)
-index-first instead of grepping for structure. Same gate, one more write:
-add an "Answering structure questions" section to the repo's **CLAUDE.md**
-(conventions, not AGENTS.md orientation) naming `ctx` as the first stop for
-a structure question, ahead of a file read or a scout dispatch — the
-reading ladder's rung order, one rung per question shape: `ctx tree <path>`
-(what a file/module contains), `ctx sig <symbol>` (a symbol's signature),
-`ctx map` (the important symbols), `ctx deps <path>` (imports/dependents),
-`ctx refs <symbol>` (definition and usages), `ctx at <file>:<line>`
-(enclosing symbol), `ctx notes <symbol>` (pinned gotchas) — falling back to
-reading the file or dispatching a scout only when `ctx` can't answer. Model
-the section on `context-tree/README.md`'s "Adoption: route structure
-questions to `ctx`" block when that repo is available; otherwise write the
-ladder above directly.
+When Codebase-Memory is installed, configure only the active runtime's native
+MCP surface with the toolkit launcher. Add an "Answering structure questions"
+section to the repo's **AGENTS.md** that routes architecture, qualified
+symbols, callers, dependencies, and impact to Codebase-Memory before scouts
+or file reads. Point to the `codebase-memory` skill for its progressive query
+ladder and coverage rules. If MCP is unavailable, prescribe `rg` over a
+bounded path set plus small reads and require an explicit coverage caveat.
 
 ## 5. bd queue setup
 
@@ -112,10 +104,11 @@ Per repo:
    `.beads/interactions.jsonl`, and commit the `issues.jsonl` export.
 2. `/gate` to install the Stop hook — with `.beads/` present from
    step 1, its installer also copies the bd-compliance check to
-   `.claude/hooks/bd-compliance.sh` and wires it as a second Stop
-   entry — plus format-on-edit if wanted.
-3. Add `Bash(bd *)` to the settings allowlist (§4) — the grant class
-   whose absence measurably killed tool adoption before.
+   the active runtime's project hook directory and wires it as a separate
+   native Stop handler — plus format-on-edit if wanted.
+3. Add the active runtime's equivalent of a `bd` command grant to its
+   project permissions (§4) — the grant class whose absence measurably
+   killed tool adoption before.
 4. Seed the queue: file the repo's first epics and issues from
    whatever plan exists, so `bd ready` has answers on day one.
 
@@ -128,8 +121,9 @@ Ask which the user wants now (don't install unasked):
   into existing settings, idempotent) rather than hand-writing hooks.
 - `REVIEW.md` — repo-specific code-review tuning (severity redefinitions,
   nit caps, skip rules like "anything CI already enforces"). Note the scope:
-  it's read by the managed GitHub Code Review service; for the local
-  `/code-review` command, review rules belong in CLAUDE.md instead.
+  it's read by the managed GitHub Code Review service; local agent review
+  rules belong in shared `AGENTS.md` guidance unless they are genuinely
+  runtime-specific.
 
 Close by reporting what was created and each command's verification
 evidence, ending with:

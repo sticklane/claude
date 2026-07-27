@@ -1,0 +1,24 @@
+# Retained code-exploration surfaces and the contracts each must carry.
+# path|comma-separated contracts
+.claude/rules/token-discipline.md|cbm-first,bounded-fallback
+.claude/rules/quality-discipline.md|cbm-first,bounded-fallback
+.claude/agents/scout.md|cbm-first,bounded-fallback,parent-handoff
+.claude/agents/critic.md|cbm-first,bounded-fallback,parent-handoff
+.claude/skills/build/SKILL.md|cbm-first,bounded-fallback,parent-handoff
+.claude/skills/build/reference.md|cbm-first,bounded-fallback
+.claude/skills/breakdown/SKILL.md|cbm-first,bounded-fallback
+.claude/skills/onboard/SKILL.md|cbm-first,bounded-fallback
+.claude/skills/clone-audit/SKILL.md|cbm-first,bounded-fallback
+.claude/skills/clone-audit/reference.md|cbm-first,bounded-fallback
+.claude/skills/work/SKILL.md|cbm-first,bounded-fallback
+AGENTS.md|cbm-first,bounded-fallback
+CLAUDE.md|cbm-first,bounded-fallback,parent-handoff
+README.md|cbm-first,bounded-fallback
+codex/README.md|cbm-first,bounded-fallback
+antigravity/README.md|cbm-first,bounded-fallback,antigravity-native
+runtimes/claude-code.md|cbm-first,bounded-fallback
+runtimes/codex.md|cbm-first,bounded-fallback
+runtimes/antigravity.md|cbm-first,bounded-fallback,antigravity-native
+agentic/audit.py|telemetry
+agentprof/SCHEMA.md|telemetry
+evals/COVERAGE.md|cbm-first,bounded-fallback

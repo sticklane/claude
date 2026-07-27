@@ -8,7 +8,7 @@ two drain mirrors, seeds ONE codex manifest line, and bumps plugin.json.
 Task 02 (commit `bb8160f`) added two things to the source
 `.claude/skills/drain/SKILL.md`:
 
-1. **Inventory step** — invoke `python3 .claude/skills/drain/drain_frontier.py
+1. **Inventory step** — invoke `python3 .claude/skills/drain/drain_frontier.py (retired)
 <spec-dir>` per spec dir, treat its output as authoritative for the
    dispatchable set and ordering; missing script or non-zero exit → today's
    header read verbatim, quoting the scanner's stderr in the fallback log line.

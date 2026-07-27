@@ -34,10 +34,10 @@
 # pass or fail, to reverse external live-service state; its failure
 # fails the scenario.
 #
-# Runtime: EVAL_RUNTIME, when set, explicitly selects a runtime for this
-# eval invocation. Otherwise the active runtime (`.claude/runtime.md`,
-# default claude-code) picks the headless template via
-# runtimes/parse_headless.py — see that file's `## Headless` contract.
+# Runtime: EVAL_RUNTIME explicitly selects the native runtime for this eval
+# invocation. It is required whenever no RUNNER_CMD override is present, so a
+# Codex or Antigravity caller can never fall through to a Claude Code launch.
+# runtimes/parse_headless.py resolves that runtime's `## Headless` contract.
 # Provisioning always writes BOTH layouts
 # (.claude/skills/ and .agents/skills/) regardless of which runtime runs,
 # so a fixture is runtime-portable: switch `.claude/runtime.md` to `codex`
@@ -251,22 +251,27 @@ for scenario in "$EVALS_ROOT"/*/[0-9][0-9]-*/; do
           "$(cat "$scenario/prompt.txt")" 2>&1 \
           | tee "$EVAL_DIR/session.log") || session_rc=$?
     else
-      # No override set: the default runner derives from the repo's active
-      # runtime profile. Absent .claude/runtime.md — or one naming
-      # claude-code — keeps today's exact hardcoded `claude -p` line: the
-      # inline Claude default, a byte-identical regression path. Any other
-      # runtime substitutes the scenario prompt (and allowlist) into that
-      # runtime's `## Headless` template, resolved via parse_headless.py.
+      # No override set: require the caller to select its own runtime.
+      # This guard is intentionally before command resolution — an omitted
+      # selector must never turn into another runtime's paid session.
+      if [ -z "${EVAL_RUNTIME:-}" ]; then
+        echo "eval: EVAL_RUNTIME is required (claude-code, codex, or antigravity); refusing to guess an agent runtime" >&2
+        exit 1
+      fi
+      runtime="$EVAL_RUNTIME"
+      case "$runtime" in
+        claude|claude-code) runtime=claude-code ;;
+        codex|antigravity) ;;
+        *)
+          echo "eval: unsupported EVAL_RUNTIME '$runtime' (expected claude-code, codex, or antigravity)" >&2
+          exit 1
+          ;;
+      esac
+
+      # The selected runtime substitutes the scenario prompt (and allowlist)
+      # into its `## Headless` template, resolved via parse_headless.py.
       # Set EVAL_DRY_RUN=1 to echo the resolved runner instead of invoking
       # it (previewing the derived command without a live session).
-      runtime="${EVAL_RUNTIME:-claude-code}"
-      if [ -z "${EVAL_RUNTIME:-}" ] && [ -f "$ROOT/.claude/runtime.md" ]; then
-        rt_line="$(grep -Ev '^[[:space:]]*(#|$)' "$ROOT/.claude/runtime.md" | head -n 1)"
-        case "$rt_line" in
-          runtime:*) runtime="$(printf '%s' "${rt_line#runtime:}" | tr -d '[:space:]')" ;;
-        esac
-      fi
-
       if [ "$runtime" = "claude-code" ]; then
         if [ -n "${EVAL_DRY_RUN:-}" ]; then
           printf 'DRY-RUN [claude-code] runner: claude -p "<prompt>" --output-format stream-json --verbose --permission-mode dontAsk --max-turns %s --allowed-tools %q\n' "$MAX_TURNS" "$allowed"

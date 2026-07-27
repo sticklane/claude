@@ -11,7 +11,7 @@
 #       future agent to make a mistake?" — no; the path won't exist next
 #       session), so it must be captured NOWHERE.
 # assert.sh passes only if the durable item landed in a doctrine file AND the
-# noise sentinel (zpopulk-7731) appears in no doctrine file. The seed CLAUDE.md
+# noise sentinel (zpopulk-7731) appears in no doctrine file. The seed AGENTS.md
 # omits both so any match is the run's own writing.
 # bash 3.2 compatible: no `declare -A`, no bash-4+ syntax.
 set -eu
@@ -19,7 +19,7 @@ set -eu
 cd "$EVAL_DIR"
 git init -q
 
-cat > CLAUDE.md <<'EOF'
+cat > AGENTS.md <<'EOF'
 # Project conventions
 
 - Prefer small, focused commits.

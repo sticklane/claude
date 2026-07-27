@@ -23,7 +23,7 @@ Resolution history:
   turns→tokens factor calibration + RW-F fixture check; RW-G result
   validation; evidence output-token claim softened to marked
   inference; DW5 cap-default rationale (provisional, below
-  ultracode's, profile-tunable); RW-B ctx-unmetered assertion; DW12
+  ultracode's, profile-tunable); RW-B unmetered-index assertion; DW12
   tracker-free boundary definition; RW-C queuedAt/startedAt
   mechanism; DW10 workboard deferral; breakdown coverage obligation.
 - Round 2 (READY WITH NITS): confirmed all fixes closed with no

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Agent Console — a local, zero-LLM dashboard for this machine's Claude setup.
+"""Agent Console — a local, zero-LLM dashboard for agentic workflow state.
 
 Two views, served by one pure-Python stdlib HTTP server (no network calls to
 Claude or anything else, so it costs nothing to run):
@@ -7,7 +7,7 @@ Claude or anything else, so it costs nothing to run):
   /            Skills   — every installed agent skill & subagent (personal,
                           project, plugin, and best-effort session built-ins).
   /workboard   Workboard — open work across all repos: specs, tasks, handoffs,
-                          git state, and Claude Code sessions, with a
+                          git state, and native runtime sessions, with a
                           needs-attention inbox up top.
 
 Each request re-scans on demand (workboard git state is cached briefly), so the
@@ -42,6 +42,27 @@ HOST = os.environ.get("SKILLS_DASHBOARD_HOST", "127.0.0.1")
 # like PORT/HOST, defaulting to the value the service ships with; trailing slash
 # trimmed so callers can append their own path.
 AGENTPROF_URL = os.environ.get("AGENTPROF_URL", "http://127.0.0.1:8901").rstrip("/")
+
+_RUNTIME_ALIASES = {
+    "claude": "claude-code",
+    "claude-code": "claude-code",
+    "codex": "codex",
+    "antigravity": "antigravity",
+    "agy": "antigravity",
+}
+
+
+def _active_runtime() -> str:
+    raw = os.environ.get("AGENTIC_RUNTIME", "claude-code").strip().lower()
+    return _RUNTIME_ALIASES.get(raw, raw)
+
+
+def _runtime_display_name() -> str:
+    return {
+        "claude-code": "Claude Code",
+        "codex": "Codex",
+        "antigravity": "Antigravity",
+    }.get(_active_runtime(), _active_runtime())
 
 
 def _skills_root() -> Path:
@@ -179,8 +200,10 @@ def _read(md_path: Path, name_fallback: str, kind: str = "skill") -> dict | None
 def _claude_json(*args):
     """Run `claude <args> --json` and parse it. Returns None on any failure
     (binary missing, non-zero exit, timeout, bad JSON) so callers can fall back
-    to reading internal files. `claude` is the supported, stable surface;
-    the file scrapers below are the offline/older-version fallback."""
+    to reading internal files. An explicit non-Claude AGENTIC_RUNTIME disables
+    this adapter: a Codex or Antigravity dashboard must never launch Claude."""
+    if _active_runtime() != "claude-code":
+        return None
     claude = shutil.which("claude")
     if not claude:
         return None
@@ -563,7 +586,15 @@ def _live_sessions_from_pids() -> list[dict]:
 
 def live_sessions() -> list[dict]:
     """Currently-running sessions. Prefers `claude agents --json` (supported,
-    stable surface); falls back to scraping the internal PID records."""
+    stable surface); falls back to scraping the internal PID records.
+
+    Codex and Antigravity do not currently expose an equivalent supported
+    machine-wide live-process inventory. Returning an empty list is deliberate:
+    the UI labels their transcript inventory resumable, never falsely active,
+    and never reads Claude's PID records while another runtime is selected.
+    """
+    if _active_runtime() != "claude-code":
+        return []
     out = live_sessions_from_cli(_agents_json_cached())
     if out is None:
         out = _live_sessions_from_pids()
@@ -607,6 +638,33 @@ def agents_view():
             "kind": e.get("kind") or "",
             "started": _iso(e.get("startedAt")),
         }
+
+    runtime = _active_runtime()
+    if runtime != "claude-code":
+        if runtime == "codex":
+            sessions = workboard.scan_codex_sessions(
+                workboard.default_codex_home(), STALE_DAYS
+            )
+        elif runtime == "antigravity":
+            sessions = workboard.scan_antigravity_sessions(
+                workboard.default_antigravity_dir(), STALE_DAYS
+            )
+        else:
+            return [], []
+        resumable = [
+            {
+                "pid": None,
+                "sid": s["id"],
+                "name": runtime,
+                "cwd": s.get("cwd") or "",
+                "status": s.get("state") or "unknown",
+                "kind": runtime,
+                "started": s.get("start_ts") or s.get("last_ts") or 0,
+                "liveness_supported": False,
+            }
+            for s in sessions[:12]
+        ]
+        return [], resumable
 
     active = _agents_json_cached()
     allrec = _claude_json("agents", "--all")
@@ -905,8 +963,15 @@ def _adapt_board(assembled: dict, running_agents: list, resumable_agents: list) 
             "session liveness could not be determined this scan — active "
             "sessions may show as idle"
         )
+    runtime = assembled.get("runtime") or _active_runtime()
+    if runtime in ("codex", "antigravity"):
+        health.append(
+            f"{runtime} does not expose a supported machine-wide live-session "
+            "inventory; native sessions are shown as resumable, not running"
+        )
 
     return {
+        "runtime": runtime,
         "repos": board_repos,
         "inbox": inbox,
         "orphans": orphans,
@@ -1212,7 +1277,7 @@ def build_action_registry(board: dict) -> dict:
     """Map action-id -> action dict for every executable action the current
     board affords. Kinds: a `push` per repo with unpushed commits
     (`git.ahead > 0`); and, for specs/handoffs in git-repo roots (R5b), the
-    detached-`claude` dispatches — `dispatch-drain` (a spec with pending
+    detached native-runtime dispatches — `dispatch-drain` (a spec with pending
     tasks), `dispatch-verify` (a spec whose tasks are all done), and
     `dispatch-resume-handoff` (a parked handoff's bd issue). Every argv is built
     here from scanned facts — never client input — and each id is content-derived
@@ -2020,7 +2085,7 @@ document.addEventListener('click',function(e){
   }else if(b.dataset.act==='push'){
     acPost('/action/'+encodeURIComponent(b.dataset.id),{},'Push "'+(b.dataset.name||'repo')+'"? Runs: git push').then(function(ok){if(ok)setTimeout(refresh,800)});
   }else if(b.dataset.act==='dispatch'){
-    acPost('/action/'+encodeURIComponent(b.dataset.id),{},b.dataset.confirm||'Launch this Claude dispatch in the repo? It runs an agent with write access and costs tokens.').then(function(ok){if(ok)setTimeout(refresh,800)});
+    acPost('/action/'+encodeURIComponent(b.dataset.id),{},b.dataset.confirm||'Launch this native agent dispatch in the repo? It has write access and costs tokens.').then(function(ok){if(ok)setTimeout(refresh,800)});
   }else if(b.dataset.act==='refresh-profile'){
     acPost('/api/profile/refresh',{}).then(function(ok){if(ok)setTimeout(refresh,600)});
   }
@@ -2582,7 +2647,7 @@ def render_workboard(
                         _handoff_target(r["path"], h["id"]),
                         "resume",
                         f'Resume the handoff "{h["title"]}" in {r["name"]}? Launches a '
-                        "Claude session to finish it (costs tokens).",
+                        f"{_runtime_display_name()} session to finish it (costs tokens).",
                     )
                     if git_root and h.get("id")
                     else ""
@@ -2667,6 +2732,12 @@ def render_workboard(
         f'<select name="cwd" aria-label="repo">{kick_opts}</select>'
         '<button class="btn go" data-act="start">Start</button></form>'
     )
+    runtime = b.get("runtime") or _active_runtime()
+    no_running = (
+        "Live-session state is unavailable for this runtime."
+        if runtime in ("codex", "antigravity")
+        else "No running agents."
+    )
     running_html = (
         "".join(
             f'<div class="line evt"><span class="chip active">{esc(a["status"] or "running")}</span>'
@@ -2677,13 +2748,13 @@ def render_workboard(
             for a in b.get("agents", [])
             if a.get("pid")
         )
-        or '<div class="zero" style="padding:6px 0">No running agents.</div>'
+        or f'<div class="zero" style="padding:6px 0">{esc(no_running)}</div>'
     )
     resumable = b.get("resumable", [])
     resume_html = (
         '<div class="sub">Recent — resume</div>'
         + "".join(
-            f'<div class="line evt"><span class="chip idle">ended</span>'
+            f'<div class="line evt"><span class="chip idle">{esc(a.get("status") or "recent")}</span>'
             f'<span class="trunc">{esc(a["name"] or a["sid"][:8])} '
             f'<span class="acwd">{esc(a["cwd"])}</span></span>'
             f'<button class="btn" data-act="resume" data-sid="{esc(a["sid"])}" '
@@ -2830,13 +2901,10 @@ def _tracked_repo_reals() -> set[str]:
     return reals
 
 
-def _claude_run_bg(args: list[str], cwd: str):
-    """Spawn a detached background `claude` process; don't wait on it."""
-    claude = shutil.which("claude")
-    if not claude:
-        raise RuntimeError("claude not found on PATH")
+def _spawn_bg(argv: list[str], cwd: str):
+    """Spawn one already-resolved native runtime command without a shell."""
     subprocess.Popen(
-        [claude, *args],
+        argv,
         cwd=cwd,
         env=GIT_ENV,
         stdin=subprocess.DEVNULL,
@@ -2844,6 +2912,17 @@ def _claude_run_bg(args: list[str], cwd: str):
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
+
+
+def _claude_run_bg(args: list[str], cwd: str):
+    """Spawn a detached background `claude` process; don't wait on it."""
+    runtime = _active_runtime()
+    if runtime != "claude-code":
+        raise RuntimeError(
+            f"Claude dispatch is disabled for the active {runtime} runtime; "
+            "use that runtime's native skill invocation"
+        )
+    _spawn_bg([_resolve_runtime_bin(runtime), *args], cwd)
 
 
 def _invalidate_board() -> None:
@@ -2893,13 +2972,9 @@ def execute_push(action: dict) -> dict:
     }
 
 
-# Every dispatch runs an agentic `claude` session with write access to the
-# target repo — that is the point of a dispatch button (R5). The elevation is
-# recorded here, deliberate, and kept local-only by the Host check + CSRF token
-# (R2/R2a): the flag set is the headless one the drain/build reference docs
-# document — a non-interactive permission mode (`dontAsk` aborts rather than
-# hangs on an unapproved tool), a tool allowlist broad enough to orchestrate a
-# drain / run the verifier / resume a handoff, and a hard `--max-turns` cap.
+# Claude Code dispatches use its explicit headless permission flags. Codex and
+# Antigravity use their own native non-interactive modes, constructed below;
+# these Claude-only flags are never forwarded across runtimes.
 _DISPATCH_PERMISSION_MODE = "dontAsk"
 _DISPATCH_ALLOWED_TOOLS = "Read,Edit,Write,Glob,Grep,Task,Bash"
 _DISPATCH_MAX_TURNS = "80"
@@ -2914,12 +2989,10 @@ _DISPATCH_ARGS = [
 
 
 def execute_dispatch(action: dict) -> dict:
-    """Run a `dispatch-*` action: launch `claude -p <prompt>` detached in the
-    target repo via the shared runtime, with the recorded permission flags. The
-    prompt and cwd come wholly from the server-built registry (spec R9); a
-    second dispatch for the same cwd is refused (409) by the per-cwd lock."""
+    """Launch the active runtime's native headless workflow command."""
+    extra = _DISPATCH_ARGS if _active_runtime() == "claude-code" else ()
     return start_dispatch(
-        action["kind"], action["cwd"], action["prompt"], extra_args=_DISPATCH_ARGS
+        action["kind"], action["cwd"], action["prompt"], extra_args=extra
     )
 
 
@@ -2984,10 +3057,10 @@ def run_action(action_id: str, confirm: bool = False) -> dict:
 
 
 # --------------------------------------------------------------------------- #
-# Dispatch runtime — detached `claude` runs, one log + one JSON record each
+# Dispatch runtime — detached native runs, one log + one JSON record each
 # --------------------------------------------------------------------------- #
 # The generic engine (action kinds are wired in a later task): resolve the
-# claude binary at dispatch time, launch it detached in its own process group,
+# selected runtime binary at dispatch time, launch it in its own process group,
 # and persist a record so a server restart can still see it (liveness = pgid
 # alive AND process start-time unchanged, so a recycled pgid never reads live).
 
@@ -3004,6 +3077,93 @@ def _resolve_claude_bin() -> str:
     if env:
         return os.path.expanduser(env)
     return shutil.which("claude") or str(HOME / ".local" / "bin" / "claude")
+
+
+def _resolve_runtime_bin(runtime: str | None = None) -> str:
+    """Resolve only the selected runtime's executable, fresh on every call."""
+    runtime = runtime or _active_runtime()
+    if runtime == "claude-code":
+        return _resolve_claude_bin()
+    config = {
+        "codex": ("AGENT_CONSOLE_CODEX_BIN", "codex"),
+        "antigravity": ("AGENT_CONSOLE_ANTIGRAVITY_BIN", "agy"),
+    }.get(runtime)
+    if not config:
+        raise RuntimeError(f"unsupported agent runtime: {runtime}")
+    env_name, command = config
+    override = os.environ.get(env_name)
+    if override:
+        return os.path.expanduser(override)
+    found = shutil.which(command)
+    if found:
+        return found
+    fallback = HOME / ".local" / "bin" / command
+    if fallback.exists():
+        return str(fallback)
+    raise RuntimeError(f"{command} not found on PATH")
+
+
+def _runtime_start_argv(prompt: str, runtime: str | None = None) -> list[str]:
+    """Native non-interactive argv for a new workflow session."""
+    runtime = runtime or _active_runtime()
+    binary = _resolve_runtime_bin(runtime)
+    if runtime == "claude-code":
+        return [binary, "-p", prompt]
+    if runtime == "codex":
+        return [
+            binary,
+            "exec",
+            "--json",
+            "--skip-git-repo-check",
+            "--sandbox",
+            "workspace-write",
+            prompt,
+        ]
+    if runtime == "antigravity":
+        return [
+            binary,
+            "-p",
+            prompt,
+            "--new-project",
+            "--mode",
+            "accept-edits",
+            "--sandbox",
+        ]
+    raise RuntimeError(f"unsupported agent runtime: {runtime}")
+
+
+def _runtime_resume_argv(
+    sid: str, prompt: str, runtime: str | None = None
+) -> list[str]:
+    """Native non-interactive argv for resuming a known runtime session."""
+    runtime = runtime or _active_runtime()
+    binary = _resolve_runtime_bin(runtime)
+    if runtime == "claude-code":
+        return [binary, "--bg", "--resume", sid, "-p", prompt]
+    if runtime == "codex":
+        return [
+            binary,
+            "exec",
+            "--json",
+            "--skip-git-repo-check",
+            "--sandbox",
+            "workspace-write",
+            "resume",
+            sid,
+            prompt,
+        ]
+    if runtime == "antigravity":
+        return [
+            binary,
+            "-p",
+            prompt,
+            "--conversation",
+            sid,
+            "--mode",
+            "accept-edits",
+            "--sandbox",
+        ]
+    raise RuntimeError(f"unsupported agent runtime: {runtime}")
 
 
 def _dispatch_dir() -> Path:
@@ -3159,11 +3319,12 @@ def _running_dispatch_for_cwd(cwd: str) -> dict | None:
 
 
 def start_dispatch(kind: str, cwd: str, prompt: str, extra_args=()) -> dict:
-    """Launch `claude -p <prompt> [extra_args]` detached in `cwd`, in its own
+    """Launch the active runtime's headless command detached in `cwd`, in its own
     process group (survives a server restart), streaming to one log file with a
     sibling JSON record. Refuses (409) when a dispatch is already live for the
     same cwd. The argv is built here from server-held values — the caller
     supplies kind/cwd/prompt, never a raw command line (spec R9)."""
+    runtime = _active_runtime()
     real = os.path.realpath(os.path.expanduser(cwd or ""))
     running = _running_dispatch_for_cwd(real)
     if running:
@@ -3176,7 +3337,12 @@ def start_dispatch(kind: str, cwd: str, prompt: str, extra_args=()) -> dict:
                 f"(id {running['id']}); stop it or wait for it to finish",
             },
         }
-    claude = _resolve_claude_bin()
+    try:
+        argv = _runtime_start_argv(prompt, runtime)
+    except RuntimeError as e:
+        return {"code": 409, "body": {"ok": False, "message": str(e)}}
+    if runtime == "claude-code":
+        argv.extend(extra_args)
     d = _dispatch_dir()
     d.mkdir(parents=True, exist_ok=True)
     did = (
@@ -3184,7 +3350,6 @@ def start_dispatch(kind: str, cwd: str, prompt: str, extra_args=()) -> dict:
         f"-{_slug(os.path.basename(real) or kind)}-{secrets.token_hex(3)}"
     )
     log_path = d / f"{did}.log"
-    argv = [claude, "-p", prompt, *extra_args]
     logf = open(log_path, "ab")
     try:
         proc = subprocess.Popen(
@@ -3206,6 +3371,7 @@ def start_dispatch(kind: str, cwd: str, prompt: str, extra_args=()) -> dict:
     rec = {
         "id": did,
         "kind": kind,
+        "runtime": runtime,
         "cwd": real,
         "pgid": pgid,
         "start_time": _proc_start_time(pgid),
@@ -3384,7 +3550,11 @@ def start_agent(cwd: str, prompt: str) -> tuple[bool, str]:
     if real not in _tracked_repo_reals():
         return False, "cwd is not a tracked repo"
     try:
-        _claude_run_bg(["--bg", "-p", prompt], real)
+        runtime = _active_runtime()
+        if runtime == "claude-code":
+            _claude_run_bg(["--bg", "-p", prompt], real)
+        else:
+            _spawn_bg(_runtime_start_argv(prompt, runtime), real)
     except (OSError, RuntimeError) as e:
         return False, str(e)
     _board_cache["ts"] = 0
@@ -3411,6 +3581,8 @@ def _verify_session_pid(pid: int) -> tuple[bool, str]:
 
 
 def stop_agent(pid: int, confirm: bool = False) -> tuple[bool, str]:
+    if _active_runtime() != "claude-code":
+        return False, "native live-session stopping is unavailable for this runtime"
     # Only signal PIDs the CLI currently reports as agent sessions — never an
     # arbitrary pid supplied by the caller.
     data = _claude_json("agents", "--all") or _claude_json("agents") or []
@@ -3433,18 +3605,40 @@ def stop_agent(pid: int, confirm: bool = False) -> tuple[bool, str]:
 
 
 def resume_agent(sid: str, prompt: str) -> tuple[bool, str]:
-    data = _claude_json("agents", "--all") or []
-    sids = {e.get("sessionId") for e in data if isinstance(e, dict)}
-    if sid not in sids:
+    runtime = _active_runtime()
+    if runtime == "claude-code":
+        data = _claude_json("agents", "--all") or []
+        records = [
+            {
+                "id": e.get("sessionId"),
+                "cwd": e.get("cwd") or "",
+            }
+            for e in data
+            if isinstance(e, dict)
+        ]
+    elif runtime == "codex":
+        records = workboard.scan_codex_sessions(
+            workboard.default_codex_home(), STALE_DAYS
+        )
+    elif runtime == "antigravity":
+        records = workboard.scan_antigravity_sessions(
+            workboard.default_antigravity_dir(), STALE_DAYS
+        )
+    else:
+        return False, f"unsupported agent runtime: {runtime}"
+    record = next((entry for entry in records if entry.get("id") == sid), None)
+    if not record:
         return False, "not a known session"
-    repo = next((e.get("cwd") for e in data if e.get("sessionId") == sid), None) or str(
-        HOME
-    )
+    repo = record.get("cwd") or str(HOME)
     real = os.path.realpath(repo)
     try:
-        _claude_run_bg(
-            ["--bg", "--resume", sid, "-p", (prompt or "continue").strip()], real
-        )
+        clean_prompt = (prompt or "continue").strip()
+        if runtime == "claude-code":
+            _claude_run_bg(
+                ["--bg", "--resume", sid, "-p", clean_prompt], real
+            )
+        else:
+            _spawn_bg(_runtime_resume_argv(sid, clean_prompt, runtime), real)
     except (OSError, RuntimeError) as e:
         return False, str(e)
     _board_cache["ts"] = 0

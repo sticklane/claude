@@ -1,6 +1,6 @@
 ---
 name: workboard
-description: Opens the live cross-repo dashboard of ALL open work on this machine - specs, task files, handoffs, Kiro/Antigravity state, and every Claude Code session (live, recent, stale) - by launching the agent-console server's Workboard tab, which re-scans on every refresh and leads with a needs-attention inbox. Use when the user asks "what's open across my repos", "show all my work", "work dashboard", "workboard", "what did I leave unfinished", or "show my sessions across projects". For agents in THIS session only, use /fleet's inline table instead.
+description: Opens the live cross-repo dashboard of ALL open work on this machine - specs, task files, handoffs, Kiro/Antigravity state, and native Claude Code, Codex, or Antigravity sessions - by launching the agent-console server's Workboard tab, which re-scans on every refresh and leads with a needs-attention inbox. Use when the user asks "what's open across my repos", "show all my work", "work dashboard", "workboard", "what did I leave unfinished", or "show my sessions across projects". For agents in THIS session only, use /fleet's inline table instead.
 ---
 
 Show the user every piece of open work on this machine and what needs a
@@ -15,9 +15,11 @@ Design rationale and sources: [docs/agent-dashboards.md](../../../docs/agent-das
 
 ## 1. Launch the live dashboard
 
-The live server is `agent-console` (`~/claude/agent-console/agent-console.py`,
-launchd label `com.agent-console`). Its `/workboard` tab re-scans on every
-request, so the page is always current — there is no snapshot to regenerate.
+The live server is `agent-console` (`~/claude/agent-console/agent-console.py`).
+Its `/workboard` tab re-scans on every request, so the page is always current
+— there is no snapshot to regenerate.
+
+For Claude Code, use its launchd service:
 
 ```
 curl -fsS http://127.0.0.1:8899/healthz >/dev/null 2>&1 \
@@ -25,12 +27,22 @@ curl -fsS http://127.0.0.1:8899/healthz >/dev/null 2>&1 \
 open http://127.0.0.1:8899/workboard
 ```
 
+For Codex or Antigravity, do not reuse that Claude Code service. Start a
+direct server on a free local port with
+`AGENTIC_RUNTIME=<active-runtime>` in its environment, then open that
+server's `/workboard` URL. The server inventories that runtime's native
+session records and routes start, dispatch, and resume through its native
+CLI. Codex and Antigravity do not expose a supported machine-wide live-session
+inventory, so their sessions are labeled resumable rather than running and
+their live-stop control is unavailable. The server never shells out to a
+different runtime as a fallback.
+
 - Port and host come from `SKILLS_DASHBOARD_PORT` (default 8899) and
   `SKILLS_DASHBOARD_HOST` (default 127.0.0.1) — use the same env vars when
   they are set.
-- If the launchd job doesn't exist, start the server directly in the
-  background (`~/claude/agent-console/agent-console.py`), re-check `/healthz`,
-  then open the URL.
+- If the Claude launchd job doesn't exist, start the server directly in the
+  background with `AGENTIC_RUNTIME=claude-code`, re-check `/healthz`, then
+  open the URL.
 - **If the live server genuinely cannot start** (the `/healthz` check fails
   AND the direct background-start attempt also fails): report the startup
   error and what to check — is `python3` available, is the port free
@@ -45,11 +57,17 @@ The user still needs the actionable list in chat, not just a URL. Pull the
 same data the dashboard renders:
 
 ```
-python3 <this skill dir>/workboard.py [ROOTS ...] --json
+AGENTIC_RUNTIME=<active-runtime> \
+  python3 <this skill dir>/workboard.py [ROOTS ...] --json
 ```
 
 and relay the **needs-attention inbox** as a short list — that is the
 actionable part; don't re-narrate the repo cards.
+
+Use `claude-code`, `codex`, or `antigravity` as `<active-runtime>`. The
+scanner reads only that runtime's session inventory: Claude Code transcripts
+plus its live-agent inventory, Codex rollout JSONL, or Antigravity's
+conversation metadata cache. It never queries another runtime.
 
 The inbox is **human-bounded work only**: agent-bounded work (drafts,
 `Unblock: run:/agent:` rechecks, all-tasks-done specs awaiting the
@@ -58,8 +76,9 @@ the one exception is an open `handoff`-labeled bd issue, which surfaces
 because resuming it needs a human to restart the session.
 
 - No ROOTS → it scans `~/code ~/src ~/projects ~/dev ~/repos ~/work`, the
-  cwd, **plus every repo any Claude Code session has touched** (from session
-  records' `cwd`). Pass explicit roots when the user names directories.
+  cwd, **plus every repo an active-runtime session has touched** (when native
+  metadata includes a workspace path). Pass explicit roots when the user names
+  directories.
 - `--stale-days N` tunes the staleness threshold (default 7).
 - Data sources and the state model are documented in
   [reference.md](reference.md) — load it only if the scan misbehaves or the
@@ -83,7 +102,7 @@ For each inbox item the suggested action column already names the move:
 
 ## 4. Session hygiene (only if the user asks)
 
-Dead-pid `~/.claude/sessions/*.json` records (left behind by `claude`
+For Claude Code only, dead-pid `~/.claude/sessions/*.json` records (left behind by `claude`
 processes that exited) accumulate forever — the dashboard already filters
 them out of its own liveness view, but the files themselves persist
 untouched. `python3 <this skill dir>/workboard.py --prune-stale-sessions`

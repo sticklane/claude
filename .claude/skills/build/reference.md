@@ -5,15 +5,18 @@
 Scoped permissions · Bounded goals · Containment ladder · Headless ·
 Failure recovery
 
-Verified against code.claude.com/docs (permissions, headless, goal,
-sandboxing) as of July 2026.
+Runtime-specific commands and permission semantics are verified in
+`runtimes/<runtime>.md`; this reference keeps only the shared workflow.
 
 ## Scoped permissions for autonomous runs
 
-Put the autonomy profile in `.claude/settings.local.json` (personal,
-gitignored) unless the whole team wants it — a checked-in `deny` applies to
-every teammate's attended sessions too. If the file exists, MERGE the
-`permissions` key; never overwrite.
+Select only the active runtime's native permission surface; never write
+another runtime's config as a fallback.
+
+For Claude Code, put the autonomy profile in
+`.claude/settings.local.json` (personal, gitignored) unless the whole team
+wants it — a checked-in `deny` applies to every teammate's attended sessions
+too. If the file exists, MERGE the `permissions` key; never overwrite.
 
 ```json
 {
@@ -42,35 +45,47 @@ covers any path. The allowlist prevents the obvious irreversible actions
 (`Bash(ls *)` matches `ls -la`, not `lsof`); `:*` is equivalent; evaluation
 order is deny → ask → allow.
 
+For Codex, use the sandbox and approval policy in `runtimes/codex.md`; it has
+no equivalent checked-in per-command allowlist, so do not create
+`.claude/settings.local.json`. For Antigravity, use its native execution mode
+and sandbox from `runtimes/antigravity.md`; likewise do not invent a Claude
+allowlist.
+
 ## Bounded goals
+
+Example for a runtime that exposes `/goal`:
 
 ```
 /goal all acceptance commands in specs/x/tasks/03-api.md pass with output
 shown in this conversation, and lint is clean, or stop after 20 turns
 ```
 
-- The runtime's built-in transcript evaluator (Claude Code: Haiku) judges
+- When available, the runtime's built-in transcript evaluator (Claude Code:
+  Haiku) judges
   only the transcript — the agent must RUN the commands so output is
   visible. It cannot call tools itself.
 - Always bound with "or stop after N turns" / a time clause.
-- Works headless: `claude -p "/goal <condition>"` runs the loop to
-  completion in one invocation.
+- If the runtime has no goal supervisor, use its bounded headless command
+  rather than launching another runtime.
+- Works headless through the active runtime profile's `## Headless` command;
+  pass the bounded condition as the self-contained prompt. Never substitute
+  another runtime's CLI.
 
 ## Fire-and-forget, unattended
 
 For unattended, fire-and-forget work on this machine, use `/drain` — its
-worktree + Agent-tool + verdict-only dispatch already runs that pattern per
-queued task, with the retry ladders and verification gates a bare background
-agent lacks.
+worktree + native awaited-agent coordinator + verdict-only dispatch already
+runs that pattern per queued task, with the retry ladders and verification
+gates a bare background agent lacks.
 
 ## Containment ladder
 
 1. Worktree: isolates the diff, not the machine. Default for parallel work.
-   When the source repo has a `ctx` index (`.context/` at its root), a fresh
-   worktree lacks the gitignored `.context/cache/`; copy it in from the main
-   checkout (`cp -R <main>/.context/cache "$PWD/.context/cache"`) — copy,
-   never symlink (two writers on one SQLite file is a corruption risk) — so
-   the isolated run starts index-warm rather than paying a cold rebuild.
+   Codebase-Memory processes share the toolkit cache but each launch is
+   restricted by `CBM_ALLOWED_ROOT` to its own Git root. Query it first for
+   structure; if unavailable in the worktree, use bounded `rg` plus small
+   reads and report that coverage was unavailable. Never copy graph state
+   into a checkout.
 2. `/sandbox` (OS-level: Seatbelt/bubblewrap): filesystem writes limited to
    CWD, per-domain network approval.
 3. Network-isolated container (the published devcontainer's default-deny
@@ -80,38 +95,22 @@ agent lacks.
 
 ## Headless (CI, scripts, cron)
 
-The headless worker gets a SELF-CONTAINED prompt — no skill references, no
-subagent fan-out (keep it single-agent), and `--allowedTools` derived from
-the task file's actual acceptance commands plus the tools the steps need.
-The template below is the active runtime profile's rendering — Claude
-Code's; other runtimes substitute their profile's `## Headless` template,
-selected per `runtimes/README.md` (toolkit repo; absent in plugin installs
-and eval fixtures, where the claude-code defaults apply):
+The headless worker gets a SELF-CONTAINED prompt — no skill references and no
+subagent fan-out (keep it single-agent). Render the launch only from the
+active runtime's `runtimes/<runtime>.md` `## Headless` section. That profile
+owns its executable, permissions/sandbox flags, output format, authentication,
+and turn/time bounds; shared skill text never supplies a fallback CLI.
 
-```bash
-claude -p "Read specs/x/tasks/03-api.md. Implement it: write the failing
-tests first, then code until the acceptance commands pass. Run every
-acceptance command and show the output. Commit to task/03-api with the
-task file updated. Do not push. Final output: verdict, evidence per
-criterion, files changed." \
-  --allowedTools "Read,Grep,Glob,Edit,Write,Bash(npm run *),Bash(npx jest *),Bash(git add *),Bash(git commit *),Bash(git checkout -b *)" \
-  --permission-mode dontAsk \
-  --max-turns 40 \
-  --output-format json
-```
-
-- Before launching, check each acceptance command in the task file is
-  covered by an `--allowedTools` entry — in `dontAsk` mode, unapproved
-  tools abort the run (that's the point: fail closed).
-- `--output-format json` includes `total_cost_usd` and `session_id`.
-- Auth for CI: `claude setup-token` → `CLAUDE_CODE_OAUTH_TOKEN`.
-- Recurring: `/loop 30m <prompt>` locally (auto-expires after 7 days) or
-  GitHub Actions `on: schedule` with `anthropics/claude-code-action@v1`
-  plus `claude_args: --max-turns 10` and a workflow-level timeout.
+The prompt itself is portable: read the named task, write failing tests first
+when production rigor applies, implement until every acceptance command
+passes, show the evidence, commit on the named task branch, do not push, and
+return verdict + evidence per criterion + files changed. Before launch,
+confirm the active profile's permission or sandbox mechanism admits every
+acceptance command and fails closed or stops clearly when it cannot.
 
 ## Failure recovery
 
 - A failed autonomous run is evidence about the task file, not a debugging
   invitation: fix the spec/task, discard the branch, relaunch clean.
-- Repeated gate blocks (Stop-hook cap, /goal turn bound) mean the task was
+- Repeated gate blocks (Stop-hook cap, goal/headless bound) mean the task was
   under-specified or the check is wrong — both are human decisions.
