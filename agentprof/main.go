@@ -37,6 +37,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdBuild(args[1:], stdout, stderr)
 	case "skillcheck":
 		return cmdSkillcheck(args[1:], stdout, stderr)
+	case "census":
+		return cmdCensus(args[1:], stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "agentprof: unknown subcommand %q\n", args[0])
 		usage(stderr)
@@ -73,6 +75,7 @@ Subcommands:
   antigravity  emit canonical samples from Antigravity CLI conversation databases
   build    convert canonical sample JSONL into a pprof profile
   skillcheck  audit skill trigger-accuracy and outcome from Claude Code transcripts
+  census   count skill and tool use across Claude Code, Codex, and Antigravity
 
 Flags:
   --version   print version and exit
