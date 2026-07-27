@@ -3,7 +3,11 @@
 This document reconstructs the design from the skill bodies, agent
 definitions, and enforcement scripts as they stand on 2026-07-27. It asks what
 the system assumes about its own components, what it holds invariant, what it
-traded away, and where those choices now conflict with each other.
+traded away, and where those choices now conflict with each other. It then
+asks the two evaluative questions that decide whether the design is worth
+maintaining: does it solve the problem of agentic coding, and how much of its
+surface still earns its keep against a harness that keeps absorbing
+capability.
 
 It complements [architecture.md](architecture.md), which maps components and
 traces the pipeline, and
@@ -288,6 +292,107 @@ trigger failures are description failures, so fix the frontmatter, not the
 body. Coverage is governed by a tier table and enforced model-free by
 `lint-eval-coverage.sh`, which fails on any skill missing from the table.
 
+## Does it solve the problem?
+
+Partly, and the part it solves is not the part most tooling competes on.
+
+**Where it leads.** The anti-gaming machinery has no equivalent in the
+mainstream agentic-coding tools. Everyone runs tests; this repo asks whether
+passing the test entails satisfying the requirement, ranks the evidence on a
+ladder, and blocks READY on a criterion a worker could green-check by typing a
+literal. Hard output budgets on every dispatched agent are similarly unusual —
+`external-playbooks.md` records that no vendor guidance was found on sizing
+what an agent returns to its caller, which matches what I can see: the closest
+published guidance is "return summaries, not raw dumps." Per-stage cost
+attribution via in-prompt markers is the third. These three are durable
+contributions, not wrappers.
+
+**Where it lags its own ambition.** The pipeline's throughput ceiling is not
+agent capability, it is the operator's adjudication rate. bd shows 18 open, 19
+blocked, zero ready. Every mechanism that raises rigor also raises the
+escalation count, and nothing in the design pushes the other way — there is no
+stage whose job is to *reduce* the number of decisions reaching a human. The
+`/drain` batch interview collects blockers; it does not triage or resolve them.
+For a solo operator this is the binding constraint, and the design does not
+name it as one.
+
+**The honest summary.** It solves verification and state durability well
+enough that a task's "done" means something, and it solves cost attribution
+well enough to have caught real leaks. It does not solve decomposition — a
+human still writes the spec and answers the interview — and it does not solve
+its own queue. Those are the two places where "agentic coding" is still
+person-shaped.
+
+## Alignment, conflict, and duplication
+
+The repo is unusually deliberate about borrowing: `external-playbooks.md`
+carries sections headed `Adopted from OpenAI`, `Adopted from Google /
+DeepMind`, `Considered and rejected`, `Deliberately skipped`, and `Where the
+toolkit leads`, each with sources. The gap is not inbound awareness. It is that the
+harness has been absorbing capability faster than the repo audits its own
+surface against it.
+
+Scope note: what follows compares against the harness surface observable from
+inside a live session — the tool list, the skill list, the hook events. Claims
+about other vendors' current products are the repo's own research, cited as
+such rather than independently confirmed here.
+
+**Deferred correctly.** The 2026-07-22 pivot deleted the custom orchestration
+composer, the custom work loop, and the code-index wrapper on the grounds that
+the native engine already did it. That call held: `Workflow` supplies schema'd
+returns, tier routing, concurrency caps, and resume, and the toolkit builds on
+it rather than beside it. The same discipline shows in review routing —
+`/critique` explicitly disclaims the built-in `/code-review`, `/security-review`,
+and `/review`, routing to each by artifact type — and in `/build` calling the
+bundled `/simplify` rather than reimplementing it. There is no competitor to
+native `/loop` or `/schedule`. `/gate` installs native hooks rather than
+replacing them. This is the right pattern and most of the surface follows it.
+
+**Duplication that survived its own retirement notice.** The pivot's "What
+goes away" table lists "the fleet view's overlap with native `/workflows`"
+under retire-or-thin. `/fleet` is still here, and its own procedure begins by
+querying "the current runtime's native live-agent inventory" — it is a
+formatter over the native view plus a worktree join. The join is real value;
+the formatter is not. Separately, `.claude/workflows/deep-research.js` is
+described as mirroring the harness built-in with per-stage token tiering — a
+self-acknowledged mirror maintained for one added feature. And `impeccable`
+and `taste` are twelve-line alias wrappers that delegate wholesale to
+`anti-ai-slop-writing` and `prose-review`, adding two more entries to the
+crowded prose-routing domain in exchange for nothing.
+
+**Deliberate conflict with the harness, defensibly.** The repo bans the native
+task tools in favor of bd. That is the right call on the merits — native tasks
+are session-scoped while bd carries dependencies, claims, provenance, and
+cross-session resume — but it is a standing fight: the harness emitted
+unsolicited "consider using TaskCreate" reminders repeatedly during this single
+session. A conflict the platform re-litigates every few turns is a maintenance
+cost, and it is worth stating in the design rather than absorbing silently.
+
+**Accidental triplication, and it is live.** Three memory systems are in force
+in this session simultaneously, and two of them contradict each other in
+writing. `AGENTS.md:85` carries the managed bd block's instruction: "Use `bd
+remember` for persistent knowledge — do NOT use MEMORY.md files."
+`.claude/skills/distill/SKILL.md:44` routes durable lessons to "a topic file
+under `docs/memory/`, indexed in `docs/memory.md`" — 17 topic files today. And
+the harness supplies its own per-project memory directory with a `MEMORY.md`
+index, which the bd block forbids by name. `/distill`'s routing table — the
+skill whose entire job is deciding where a lesson goes — mentions neither `bd
+remember` nor the harness memory directory. Nothing arbitrates. An agent
+following all three instructions writes the same lesson to three places, and
+an agent following any one of them misses what the other two hold.
+
+**The absorption trend is the strategic question.** Over the four weeks this
+repo covers, the harness gained skills, hooks, typed subagents, native
+orchestration, built-in review, scheduling, and loops — and each gain
+converted some part of this toolkit from a capability into a wrapper. The
+pivot document is itself evidence of the pattern, having deleted a nine-task
+plan to replicate the native engine. The useful split for planning is durable
+versus absorbable: the bd data layer, criterion-depth discipline, cost
+attribution, and the eval harness have no native analogue and are unlikely to
+grow one soon; orchestration wrappers, agent dashboards, and research mirrors
+are on the absorption path and should be maintained accordingly — thin, and
+with a standing question about whether they still earn their line count.
+
 ## Where the design strains
 
 **Prose is being used as a programming language, and only the model type-checks
@@ -375,6 +480,14 @@ And if the human blocker queue keeps growing faster than it drains, the
 bottleneck is not agent capability but adjudication rate — in which case the
 highest-leverage work is reducing the number of decisions that reach a person,
 not increasing the number of tasks that reach an agent.
+
+The duplication verdict has its own test, and it is the cheapest one here: for
+each wrapper over a native capability, delete it for a week and see whether
+anything is missed. `/fleet` minus its worktree join, the `deep-research`
+mirror minus its tiering, and the two prose alias skills are the candidates
+the audit above names. A wrapper nobody misses was never the value; the join,
+the tiering, or the routing was — and those are extractable at a fraction of
+the surface.
 
 The head-to-head eval harness (`specs/skills-vs-ultracode-eval`) was built on
 this principle, and the pivot document states the standard plainly: if the
