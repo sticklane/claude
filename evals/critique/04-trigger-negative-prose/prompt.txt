@@ -1,0 +1,1 @@
+The writing in README.md reads like marketing copy. Clean up the prose so it sounds like a human wrote it.

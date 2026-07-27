@@ -1,0 +1,1 @@
+Read,Write,Glob,Grep,Bash(git *)

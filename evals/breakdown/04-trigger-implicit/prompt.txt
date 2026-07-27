@@ -1,0 +1,1 @@
+specs/notes/SPEC.md is ready. Split it into pieces small enough that I can hand each one to a separate agent session without them colliding.
