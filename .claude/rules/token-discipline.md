@@ -313,10 +313,14 @@ Three points govern the shape:
   When context size crosses the budget, the session refreshes (parks state via
   `/handoff` and ends, or batons where a sanctioned baton exists) instead of
   sleeping again.
-- **Budget default: a 250k-token context, tunable.** Pinned from the 30-day
-  profile (specs/archive/session-refresh-automation): 250k sits between the
-  context p50 and p90 so the flag marks the heavy tail, not normal sessions.
-  A second arm counting re-primes was removed 2026-07-25 — see below.
+- **Budget default: a 600k-token context, tunable.** The original 250k pin
+  came from a 30-day profile (specs/archive/session-refresh-automation), where
+  it sat between the context p50 and p90 — but that profile predates 1M-context
+  sessions, and at 250k the hook fired on ordinary long working sessions rather
+  than on the heavy tail it was meant to mark (maintainer recalibration,
+  2026-07-29). 600k restores the intent: a session past it is carrying a fat
+  context worth parking, not merely a long one. Re-profile before moving it
+  again. A second arm counting re-primes was removed 2026-07-25 — see below.
 - **This budget is the main session's own context size, not total token
   spend.** `hooks/session-refresh/refresh-check.sh` reads THIS session's own
   transcript directly (`transcript_path` off the hook's own stdin payload) —

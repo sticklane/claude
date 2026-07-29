@@ -86,7 +86,7 @@ RC=$?
 check "missing jq produces empty stdout" "$([ -z "$OUT" ] && echo 0 || echo 1)"
 check "missing jq exits 0" "$([ "$RC" -eq 0 ] && echo 0 || echo 1)"
 
-# 9. Custom budgets are honored: a session under the default 250000-token
+# 9. Custom budgets are honored: a session under the default 600000-token
 #    ctx budget trips a lowered REFRESH_CTX_BUDGET.
 run_hook "$FIX/under.jsonl" REFRESH_CTX_BUDGET=1000
 check "lowered ctx budget trips the directive on an otherwise under-budget session" \

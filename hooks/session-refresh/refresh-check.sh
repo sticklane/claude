@@ -31,10 +31,10 @@
 #
 # The budget is tunable via environment (the default is the 30-day-profile
 # pin from token-discipline.md, not a hard limit):
-#   REFRESH_CTX_BUDGET       context-size arm             (default 250000)
+#   REFRESH_CTX_BUDGET       context-size arm             (default 600000)
 set -u
 
-CTX_BUDGET="${REFRESH_CTX_BUDGET:-250000}"
+CTX_BUDGET="${REFRESH_CTX_BUDGET:-600000}"
 
 # jq parses both the stdin payload and the transcript; without it, no-op.
 command -v jq >/dev/null 2>&1 || exit 0

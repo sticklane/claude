@@ -9,7 +9,7 @@ tool for general cost-attribution digging; this guardrail only needs to be
 cheap and always available).
 
 The budget and its rationale live in `.claude/rules/token-discipline.md`
-under "Session refresh". Default: **250k-token context size**.
+under "Session refresh". Default: **600k-token context size**.
 
 ## What it does
 
@@ -72,7 +72,7 @@ Override the defaults in the hook's environment:
 
 | Variable                    | Default  | Meaning                              |
 | --------------------------- | -------- | ------------------------------------ |
-| `REFRESH_CTX_BUDGET`        | `250000` | context-size arm (tokens)            |
+| `REFRESH_CTX_BUDGET`        | `600000` | context-size arm (tokens)            |
 
 ## Tests
 
