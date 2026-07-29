@@ -16,3 +16,5 @@ specs/archive/session-refresh-automation/evidence/03-refresh-trigger-hook.md
 specs/archive/session-refresh-automation/evidence/05-workboard-reprime-flag.md
 specs/archive/skill-profiling-workboard/SPEC.md
 specs/retire-static-dashboards/SPEC.md
+agentprof/internal/census/census.go
+agentprof/internal/census/census_test.go

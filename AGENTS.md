@@ -59,6 +59,7 @@ All re-verified 2026-07-11 (each run green); run from the repo root.
 - `./bin/check-agent-model-pins`—proves every `.claude/agents/*.md` pins a model alias in {haiku, sonnet, opus}.
 - `./evals/runner-selftest.sh`—proves the eval runner's plumbing (stub CLI, no model calls); full skill evals run via `./evals/run.sh <skill>` (headless model sessions—spend).
 - `bash agentprof/scripts/check.sh`—proves agentprof's Go build: gofmt, vet, tests.
+- `agentprof census`—count skill activations (and, with `--kind all`, tool calls) across Claude Code, Codex, and Antigravity for one window.
 - `bash agent-console/scripts/check.sh`—proves agent-console's py_compile, render smoke test, and unit tests.
 - `bash tests/test_codebase_memory_integration.sh`—proves the pinned installer,
   launcher isolation, MCP packaging, routing doctrine, and skill contract.
@@ -80,9 +81,16 @@ bd close <id>         # Complete work
 
 ### Rules
 
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
+- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists (see the task-tool stance below).
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+
+The repository intentionally forbids the harness-native task tools:
+`TaskCreate`, `TaskUpdate`, and `TaskList` are not used. They are session-scoped
+and cannot provide durable dependency edges, cross-session provenance, or
+inter-session resume that `bd` provides. The recurring harness suggestion
+“consider using TaskCreate” is therefore known surface friction and an accepted
+documentation debt; this repo keeps the `bd` preference as the canonical rule.
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 
