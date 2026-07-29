@@ -194,9 +194,20 @@ git rev-parse --git-common-dir >/dev/null 2>&1 ||
 subcommand="${1:-}"
 shift || true
 
-for arg in "$@"; do
-  [ -z "$arg" ] || die "unknown option: $arg"
-done
+# key/check/record read the staged diff and take no arguments. show takes an
+# optional key, which is how the pre-commit hook reads a marker it already has
+# the key for; a leading dash is an option, never a key.
+case "$subcommand" in
+  show)
+    [ "$#" -le 1 ] || die "unknown option: $2"
+    case "${1-}" in -?*) die "unknown option: $1" ;; esac
+    ;;
+  *)
+    for arg in "$@"; do
+      [ -z "$arg" ] || die "unknown option: $arg"
+    done
+    ;;
+esac
 
 case "$subcommand" in
   key) cmd_key ;;
