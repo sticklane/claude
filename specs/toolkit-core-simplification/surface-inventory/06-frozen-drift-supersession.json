@@ -1,0 +1,188 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "06-frozen-drift-supersession",
+  "frozen_sha256": "20ac2c17358a03a94d989267124e08eb6f0f0b3716dd965d2b2ea9153beba727",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_review_gate.sh#assert:64e0a1d1085a645fc2f054d70f6cd341ce100bd266ef791b782fb522f2eb774b"
+      ],
+      "content_sha256": "3bc5de0a84a279ce3f23ae4070bbc521e458ed648750462f1a732b30de469277",
+      "dependents": [
+        "test:tests/test_review_gate.sh"
+      ],
+      "disposition": "repair",
+      "identity": "hook:review-gate",
+      "path": "hooks/review-gate/pre-commit",
+      "rationale": "Baseline pinned this as retain; the content has since changed as tested work and the baseline hash cannot be re-pinned, so the surface moves to repair and keeps its behavioral-test requirement.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "e5e5dab24be70a7f2261567cb9c5e03f12b0e9e8007edf0a6807a0560ef8680c",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:impeccable",
+      "path": ".claude/skills/impeccable/SKILL.md",
+      "rationale": "Patched-in alias skill; relocation is pending agentic-dnu1.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "3fcc12e57ee57ccea1cc1d4a9e9850af7b165595ee80eabb55f52e60ae78e0ff",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:janitor",
+      "path": ".claude/skills/janitor/SKILL.md",
+      "rationale": "Patched-in alias skill; relocation is pending agentic-dnu1.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "5207d015437e7da29778f16c73a7f33ed11ea5bfae79d1cae535229e72a6eec8",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "skill:taste",
+      "path": ".claude/skills/taste/SKILL.md",
+      "rationale": "Patched-in alias skill; relocation is pending agentic-dnu1.",
+      "replacement": null,
+      "surface_type": "skill"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_pin.py::test_wrong_version_refuses_with_pin_and_upgrade_pointer"
+      ],
+      "content_sha256": "2917a535bdf755c57e6d8526a5a6b64b12848c6581400f23172d246147170adc",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_agentic_pin.py",
+      "path": "tests/test_agentic_pin.py",
+      "rationale": "Baseline pinned this as retain while it hard-coded the bd pin string, so every pin bump broke it; it now asserts against agentic.bd.PINNED_VERSION and moves to repair, keeping its named pytest case.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "a59bd461b553a0a5427aabde06a754b7f17a33a0c2b5cc06d7e4d2f96a085b52",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_agentic_scorecard.py",
+      "path": "tests/test_agentic_scorecard.py",
+      "rationale": "Arrived with the skill-telemetry merge; no assertion-scoped evidence yet.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "3356a10953f9c77e88e8b60c7f7fe3ba566c684facc9149b3713121e1ee83ca0",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_breakdown_inventory_preflight.sh",
+      "path": "tests/test_breakdown_inventory_preflight.sh",
+      "rationale": "Breakdown acceptance pre-flight test (agentic-dpqj).",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_check_inventory.sh#assert:e4b7e6a7e6e51dc7b940584aa28404f3ef7a95ca79f6fddfa01704373a090177"
+      ],
+      "content_sha256": "c6e429285153dbc3cdce1b48644ad7f3bf85d238cf47b715b8a6f158716507ed",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_check_inventory.sh",
+      "path": "tests/test_check_inventory.sh",
+      "rationale": "Baseline pinned this as retain; the content has since changed as tested work and the baseline hash cannot be re-pinned, so the surface moves to repair and keeps its behavioral-test requirement.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "74af608e0dae4e56b2d9c9b29a6da7f18676066b0bb0469a768530796dcd19b7",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_check_inventory_supersession.sh",
+      "path": "tests/test_check_inventory_supersession.sh",
+      "rationale": "Supersession coverage added additively beside the retained inventory test.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_check_token_discipline.sh#assert:2953e6da1005bdf00d45762e77cb45be7bb69a2b4fda6c50ad864dd02859acba"
+      ],
+      "content_sha256": "2484621876319246aa9b1fc49f73e40f9f3405754802b8b880ffdcdd0b4b0173",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_check_token_discipline.sh",
+      "path": "tests/test_check_token_discipline.sh",
+      "rationale": "Baseline pinned this as retain; the content has since changed as tested work and the baseline hash cannot be re-pinned, so the surface moves to repair and keeps its behavioral-test requirement.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_install_gates.sh#assert:7854a6ae400e9a89a249584b8b7baa2bef0e6c919e9839308d014a21fbdf1b47"
+      ],
+      "content_sha256": "b4b7c92055d82e68eeba4e9eea3ddaa5a1b8acbf98b42fe282ee330169c20afe",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_install_gates.sh",
+      "path": "tests/test_install_gates.sh",
+      "rationale": "Baseline pinned this as retain; the content has since changed as tested work and the baseline hash cannot be re-pinned, so the surface moves to repair and keeps its behavioral-test requirement.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "07c8b719dc7c48f9b7390affedf4687fa4f8618869faad8131c3850b3d6570e5",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_native_orchestration_contract.py",
+      "path": "tests/test_native_orchestration_contract.py",
+      "rationale": "Arrived with the skill-telemetry merge; no assertion-scoped evidence yet.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_review_gate.sh#assert:52be2106ce15a9cd5ed3e2bee315f8d4c7f1ca1dd3383ee209878db081c24ea3"
+      ],
+      "content_sha256": "e98427cee20a04e362469e3e8e4853f758234e15e563b564a0d743357c7e24be",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_review_gate.sh",
+      "path": "tests/test_review_gate.sh",
+      "rationale": "Baseline pinned this as retain; the content has since changed as tested work and the baseline hash cannot be re-pinned, so the surface moves to repair and keeps its behavioral-test requirement.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [],
+      "content_sha256": "77f4462f630099a93b8fdb6bb7122784d15248dc6572022c41b6361a7d86b41e",
+      "dependents": [],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_session_claims.sh",
+      "path": "tests/test_session_claims.sh",
+      "rationale": "Arrived with the skill-telemetry merge; no assertion-scoped evidence yet.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

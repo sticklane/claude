@@ -15,6 +15,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+sys.path.insert(0, str(REPO_ROOT))
+from agentic.bd import PINNED_VERSION  # noqa: E402
+
 
 def _write_fake_bd(directory, version_line):
     fake = directory / "bd"
@@ -51,7 +54,7 @@ def test_wrong_version_refuses_with_pin_and_upgrade_pointer(tmp_path):
 
     assert result.returncode != 0
     combined = result.stdout + result.stderr
-    assert "1.1.0" in combined  # names the pin
+    assert PINNED_VERSION in combined  # names the pin, whatever it currently is
     assert "9.9.9" in combined  # names what was found
     assert "brew upgrade beads" in combined  # upgrade pointer
     # A wrong version is NOT reported as a missing-install problem.

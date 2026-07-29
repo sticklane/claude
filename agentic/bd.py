@@ -13,9 +13,10 @@ import re
 import shutil
 import subprocess
 
-# SPEC pins bd 1.1.0. The brew bottle is the clean install path on this host
-# (bd is not buildable from source here — go install fails on ICU headers).
-PINNED_VERSION = "1.1.0"
+# SPEC pinned bd 1.1.0; brew has since moved this host to 1.1.2, which every bd
+# call the toolkit makes runs on unchanged. The brew bottle is the clean install
+# path here (bd is not buildable from source — go install fails on ICU headers).
+PINNED_VERSION = "1.1.2"
 INSTALL_CMD = "brew install beads"
 UPGRADE_CMD = "brew upgrade beads"
 

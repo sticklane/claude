@@ -796,7 +796,9 @@ def check_inventory(root: pathlib.Path, baseline_path: pathlib.Path) -> list[str
             ):
                 continue
             prior = classified.get(identity)
-            if prior is not None:
+            if prior is not None and (
+                prior[0] == source or prior[0] != baseline_path
+            ):
                 diagnostics.append(
                     f"duplicate surface identity {identity!r}: {prior[0]} and {source}"
                 )

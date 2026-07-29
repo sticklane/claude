@@ -107,7 +107,7 @@ assert "agents" not in codex, "Codex manifest must not carry Claude agent pins"
 eval_policy = (source_skills / "evals/agents/openai.yaml").read_text()
 assert (plugin_skills / "evals/agents/openai.yaml").read_text() == eval_policy
 assert "allow_implicit_invocation: false" in eval_policy
-assert "Available to every installed user" in (
+assert "priced against a budget ceiling, and ledgered" in (
     source_skills / "evals/SKILL.md"
 ).read_text()
 assert "Root `AGENTS.md`" in (source_skills / "distill/SKILL.md").read_text()

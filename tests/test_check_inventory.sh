@@ -191,21 +191,23 @@ root = pathlib.Path(sys.argv[1])
 baseline = json.loads(
     (root / "specs/toolkit-core-simplification/BASELINE.json").read_text()
 )
-fragment = {
-    "$schema": "../surface.schema.json",
-    "fragment": "duplicate",
-    "git_blob_pin": 1,
-    "manifest_type": "fragment",
-    "schema_version": 2,
-    "surfaces": [baseline["surfaces"][0]],
-}
-payload = json.dumps(fragment, sort_keys=True, separators=(",", ":")).encode()
-fragment["frozen_sha256"] = hashlib.sha256(payload).hexdigest()
-target = (
-    root
-    / "specs/toolkit-core-simplification/surface-inventory/duplicate.json"
-)
-target.write_text(json.dumps(fragment, indent=2, sort_keys=True) + "\n")
+for name in ("duplicate", "duplicate-again"):
+    fragment = {
+        "$schema": "../surface.schema.json",
+        "fragment": name,
+        "git_blob_pin": 1,
+        "manifest_type": "fragment",
+        "schema_version": 2,
+        "surfaces": [baseline["surfaces"][0]],
+    }
+    payload = json.dumps(fragment, sort_keys=True, separators=(",", ":")).encode()
+    fragment["frozen_sha256"] = hashlib.sha256(payload).hexdigest()
+    target = (
+        root
+        / "specs/toolkit-core-simplification/surface-inventory"
+        / f"{name}.json"
+    )
+    target.write_text(json.dumps(fragment, indent=2, sort_keys=True) + "\n")
 PY
 assert_failure "duplicate additive identity fails" "duplicate surface identity" run_surface "$fixture"
 

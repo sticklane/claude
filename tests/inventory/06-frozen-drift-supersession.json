@@ -1,0 +1,36 @@
+{
+  "fragment": "06-frozen-drift-supersession",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_agentic_scorecard.py",
+      "runner": "pytest",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_breakdown_inventory_preflight.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_check_inventory_supersession.sh",
+      "runner": "bash",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_native_orchestration_contract.py",
+      "runner": "pytest",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_session_claims.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

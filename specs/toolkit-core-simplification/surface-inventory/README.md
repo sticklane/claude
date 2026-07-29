@@ -11,10 +11,18 @@ outside the available history. Deepen the clone before validating.
 When a change adds a skill, agent, rule, hook, workflow, command-line command,
 runtime profile, or canonical test, add a JSON fragment in this directory. Use
 a filename that no other task uses, and set `fragment` to the filename without
-`.json`. The checker rejects duplicate fragment names and duplicate surface
-identities. Set `frozen_sha256` to the Secure Hash Algorithm 256-bit digest of
+`.json`. The checker rejects duplicate fragment names, an identity declared
+twice inside one manifest, and one fragment overriding another. Set
+`frozen_sha256` to the Secure Hash Algorithm 256-bit digest of
 the canonical JSON object without that field. This digest validates a new file
 before its first commit and validates scratch fixtures that don't use Git.
+
+A fragment may supersede a classification `../BASELINE.json` made — that is the
+only way a `retain` surface is reclassified, because the baseline is pinned to
+its first committed blob and its recorded hashes can never be edited. The
+supersession runs one direction only: the baseline yields to a fragment, and a
+fragment never yields to another fragment. State in the fragment's `rationale`
+what the baseline said and why the classification moved.
 
 Each surface records its repository-relative path and Secure Hash Algorithm
 256-bit content hash, known dependents, disposition, rationale, replacement,
