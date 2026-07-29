@@ -250,7 +250,7 @@ bd remains the checkpoint: interrupting loses nothing — re-running `/drain`
 resumes from the current `bd ready`. **Precondition:** the runtime must expose
 either `Workflow` or native/collaboration subagents (`invoke_subagent` /
 `spawn_agent`). If none is available, drain stops and names the missing
-capability.
+capability; there is no manual fallback loop.
 
 Next stage: none — drain runs until the queue drains, then batches blockers
 for the human (human-launched).

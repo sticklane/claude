@@ -114,6 +114,25 @@ manual-pending with the reason stated) rather than inventing new
 vocabulary — `docs/memory/unattended-worker-tool-limits.md` is the
 precedent this mirrors.
 
+### surface-inventory pre-flight for acceptance criteria
+
+Before each acceptance criterion lands, run a retention check for every path
+it touches. If any touched path is classified `retain`, flag the criterion
+as `manual-pending` and skip dispatching this task until a retain-to-repair
+decision exists.
+
+Use this helper for every criterion under review:
+
+```bash
+python3 .claude/skills/breakdown/preflight-acceptance-inventory.py \
+  --baseline specs/toolkit-core-simplification/BASELINE.json \
+  --path <path> [--path <path> ...]
+```
+
+Pass every explicit file path the criterion intends to create, edit, or delete.
+`repair` and `measure-before-decision` dispositions pass; `retain` fails with
+a refusal; unknown paths fail fast so they are classified before dispatch.
+
 4. Order tasks so each leaves the build green — no task may depend on a later
    one to compile or pass tests. Assign each task's `Priority:` by this
    rubric:
