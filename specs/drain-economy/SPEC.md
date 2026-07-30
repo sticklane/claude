@@ -2,7 +2,7 @@
 
 Status: open
 Priority: P1
-Breakdown-ready: false
+Breakdown-ready: true
 
 ## Problem
 
@@ -43,11 +43,11 @@ Lift priority to the feature and give the run an accounting identity. A human-ow
 **Queue economy (drain edits)**
 
 - **EP1 — Discriminate discovered work.** Drain's filing step (SKILL.md step 3 and the workflow-compile bullet at SKILL.md:247) classifies each discovered item per D1. Blocking: `bd create --deps discovered-from:<id>` as today, citing the parent criterion it unblocks. Adjacent: EP2 path. The worker prompt (reference.md) carries the discriminator wording.
-- **EP2 — Triage admission.** Adjacent items file with label `triage`. Every ready query drain and `/work` issue excludes `triage`. The batch interview lists triage items with three verbs — promote (strip label), decline (close with reason `declined-at-triage`), defer (leave). Conventions doc gains the label entry.
+- **EP2 — Triage admission.** Adjacent items file with label `triage`. Every ready query drain and `/work` issue excludes `triage`. The batch interview lists triage items with three verbs — promote (strip label), decline (close with label `declined-at-triage`), defer (leave). Decline and EP10 decay share one convention: both close the bead and both label why it died (`declined-at-triage` for a human decline, `triage-archived` for decay), so a single closed-plus-label query surfaces every dead triage item. Conventions doc gains both label entries.
 - **EP3 — Discovery budget.** At most `DRAIN_TRIAGE_CAP` (default 5) adjacent filings reach bd per run; overflow lands in the run report's "Discovered digest" with enough context to re-file by hand. Blocking children are exempt.
 - **EP4 — Severity floor.** Auto-filing (even to triage) requires the item to (a) block acceptance somewhere, or (b) violate a named rule in `.claude/rules/` or a repo invariant. Style and opportunity findings are digest-only. Mirrors the critic's high-signal doctrine (README.md:122-125).
 - **EP5 — Run issue.** Drain opens a run bead at launch — title `drain <focus-or-all> <ISO-date>`, label `drain-run`, body: NOW.md snapshot, launch argument, session id — and closes it at exit with the EP6 report. Interruption leaves it open; the next drain of the same focus reuses an open run bead younger than 24h.
-- **EP6 — Computed run report.** `bin/drain-report <run-bead-id>` emits, from bd and the run log only, leading with focus status: focus feature and its acceptance delta, blocked-on-you items first, spillover events with reasons; then closed (list), opened-blocking, opened-triage, declined, deferred, imported blocking work, chores section, discovered digest, net focus delta, tokens-per-closure where the journal provides tokens, trailing net burn over the last 3 runs of this focus, and projected passes-to-done (suppressed below 2 data points). Zero model calls.
+- **EP6 — Computed run report.** `bin/drain-report <run-bead-id>` emits, from bd and the run log only, leading with focus status: focus feature and its acceptance delta, blocked-on-you items first, spillover events with reasons; then closed (list), opened-blocking, opened-triage, declined, deferred, imported blocking work, chores section, discovered digest, net focus delta, tokens-per-closure read from the workflow journal only (the agentic meter is never consulted; no journal → the metric is omitted, never estimated), trailing net burn over the last 3 runs of this focus, and projected passes-to-done (suppressed below 2 data points). Zero model calls.
 - **EP7 — Loop narration.** After each collected verdict, one line to the session and the run log: `closed <id> (<i>/<n> in focus) · opened <b>b+<t>t · in-flight: <id> <role> attempt-<a>`, plus a line at every focus transition (EP18's wording) and at re-focus.
 - **EP8 — drain-watch.** `bin/drain-watch [run-bead-id]` tails the run log and the native workflow progress stream, one row per in-flight agent grouped by bd id: label, tier, state, attempt, tokens, elapsed; header row names the current focus. Read-only; degrades to run-log-only when no workflow stream exists.
 - **EP9 — Net-burn audit class.** `agentic audit` gains a class computed from `drain-run` beads: opened-admitted (blocking + promoted) minus closed per run; when the sum over 3 consecutive runs of one focus is positive, file one deduplicated bead naming the focus and ratio.
@@ -97,11 +97,11 @@ Lift priority to the feature and give the run an accounting identity. A human-ow
 
 ## Open questions
 
-**Must be empty before `/breakdown`. All three are Steven's.**
+None. All three were resolved by Steven on 2026-07-30:
 
-- Defaults confirmation: `DRAIN_TRIAGE_CAP=5`, `TRIAGE_DECAY_DAYS=14`, `CHORE_SLOTS=1`, thrash threshold at 2 claims — accept or adjust? (Steven)
-- Token source for tokens-per-closure: workflow journal only, or also the agentic meter when both exist and disagree? (Steven)
-- Declined triage: close-with-reason (current EP2) or archive-label like EP10 — one convention for both? (Steven)
+- Defaults accepted as written: `DRAIN_TRIAGE_CAP=5`, `TRIAGE_DECAY_DAYS=14`, `CHORE_SLOTS=1`, thrash threshold at 2 claims. Each stays an overridable knob, retunable once real runs produce data.
+- Tokens-per-closure reads the workflow journal only; the agentic meter is never consulted, and the metric is omitted rather than estimated when no journal exists (folded into EP6).
+- Declined triage and decayed triage share one convention — close the bead, label why (`declined-at-triage` / `triage-archived`) — so one query surfaces both (folded into EP2).
 
 ## Parallelization map
 
