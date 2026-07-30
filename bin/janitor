@@ -104,6 +104,12 @@ is_in_progress() {
   printf '%s\n' "$inprogress" | grep -Fxq "$issue_id"
 }
 
+is_closed_issue() {
+  local issue_id="$1"
+  [ -n "$issue_id" ] || return 1
+  printf '%s\n' "$closed_issues" | grep -Fxq "$issue_id"
+}
+
 is_handoff_stale() {
   local updated_at="$1" days="$2"
   [ -n "$updated_at" ] || return 1
@@ -174,15 +180,17 @@ is_orchestration_branch() {
   esac
 }
 
-extract_issue_id() {
+issue_id_candidates() {
   local candidate="$1"
-  local issue=""
-  if [[ "$candidate" =~ ^(agentic-[0-9]+)([-.].*)?$ ]]; then
-    issue="${BASH_REMATCH[1]}"
-  elif [[ "$candidate" =~ ^(md-[0-9]+)([-.].*)?$ ]]; then
-    issue="${BASH_REMATCH[1]}"
-  fi
-  printf '%s\n' "$issue"
+  while [ -n "$candidate" ]; do
+    printf '%s\n' "$candidate"
+    case "$candidate" in
+      # bd sub-issue ids are dotted (agentic-868.6) and only '-' joins a
+      # branch suffix, so a dotted segment is never split away.
+      *-*) candidate="${candidate%-*}" ;;
+      *) break ;;
+    esac
+  done
 }
 
 branch_checked_out_elsewhere() {
@@ -199,6 +207,7 @@ branch_checked_out_elsewhere() {
 
 # --- preflight --------------------------------------------------------------
 inprogress="$(bd list --status in_progress --json 2>/dev/null | jq -r '.[].id' | sort -u | xargs -n1 echo)"
+closed_issues="$(bd list --status closed --json 2>/dev/null | jq -r '.[].id' | sort -u | xargs -n1 echo)"
 open_handoffs="$(bd list --label handoff --status=open --json 2>/dev/null || echo '[]')"
 
 claims="${inprogress}"  # alias kept for clarity
@@ -290,136 +299,250 @@ fi
 
 # --- worktree sweep ---------------------------------------------------------
 reclaimed_worktrees=0
+salvaged_worktrees=0
 if [ "$scope" = "all" ] || [ "$scope" = "drain" ]; then
   tmpwt=$(mktemp)
   git worktree list --porcelain > "$tmpwt"
+  shared_checkout="$(awk '$1=="worktree" {print $2; exit}' "$tmpwt")"
   did_remove=0
+  history_scan_limit=50
+
+  worktree_idle_minutes="${JANITOR_WORKTREE_IDLE_MINUTES:-1440}"
+
+  recently_active() {
+    local wt_path="$1"
+    python3 - "$wt_path" "$worktree_idle_minutes" <<'PY'
+import os
+import sys
+import time
+
+path, minutes = sys.argv[1], float(sys.argv[2])
+gitlink = os.path.join(path, ".git")
+targets = [path, gitlink]
+gitdir = None
+if os.path.isdir(gitlink):
+  gitdir = gitlink
+elif os.path.isfile(gitlink):
+  try:
+    with open(gitlink, encoding="utf-8") as handle:
+      for line in handle:
+        if line.startswith("gitdir:"):
+          gitdir = line.split(":", 1)[1].strip()
+          break
+  except OSError:
+    gitdir = None
+if gitdir:
+  if not os.path.isabs(gitdir):
+    gitdir = os.path.join(path, gitdir)
+  targets += [gitdir, os.path.join(gitdir, "HEAD"), os.path.join(gitdir, "index")]
+newest = 0.0
+for target in targets:
+  try:
+    newest = max(newest, os.stat(target).st_mtime)
+  except OSError:
+    continue
+raise SystemExit(0 if (time.time() - newest) < minutes * 60.0 else 1)
+PY
+  }
+
+  is_orchestrator_location() {
+    local wt_path="$1"
+    case "$wt_path" in
+      /tmp/*|/private/tmp/*) return 0 ;;
+      "$shared_checkout"/.claude/worktrees/*) return 0 ;;
+    esac
+    return 1
+  }
+
+  content_state() {
+    local wt_path="$1" rev="$2" commit
+    if [ -z "$(git -C "$wt_path" status --porcelain)" ]; then
+      echo clean
+      return
+    fi
+    if [ -z "$(git -C "$wt_path" ls-files --others --exclude-standard)" ]; then
+      while IFS= read -r commit; do
+        [ -n "$commit" ] || continue
+        if git -C "$wt_path" diff --quiet "$commit" 2>/dev/null; then
+          echo reconstructible
+          return
+        fi
+      done < <(git -C "$wt_path" rev-list --max-count="$history_scan_limit" "$rev" 2>/dev/null)
+    fi
+    echo unique
+  }
+
+  salvage_content() {
+    local wt_path="$1" label="$2" parent="$3" index tree commit
+    index="$(mktemp -u)"
+    GIT_INDEX_FILE="$index" git -C "$wt_path" add -A >/dev/null 2>&1 || { rm -f "$index"; return 1; }
+    tree="$(GIT_INDEX_FILE="$index" git -C "$wt_path" write-tree 2>/dev/null)"
+    rm -f "$index"
+    [ -n "$tree" ] || return 1
+    if [ -n "$parent" ] && git -C "$wt_path" rev-parse --verify --quiet "$parent" >/dev/null 2>&1; then
+      commit="$(git -C "$wt_path" commit-tree "$tree" -p "$parent" -m "janitor salvage of $label" 2>/dev/null)"
+    else
+      commit="$(git -C "$wt_path" commit-tree "$tree" -m "janitor salvage of $label" 2>/dev/null)"
+    fi
+    [ -n "$commit" ] || return 1
+    git branch --force "salvage/$label" "$commit" >/dev/null 2>&1 || return 1
+    printf 'salvage/%s\n' "$label"
+  }
+
+  skip_worktree() {
+    log_event "skipped_ambiguous" "$1" "$2" "$3" "$4" "$5"
+    ((skipped+=1))
+  }
 
   process_worktree() {
-    local wt_path="$1"
-    local wt_branch="$2"
-    local issue_candidate=""
-    local issue_id=""
-    local merge_state=2
-    local branch_name=""
+    local wt_path="$1" wt_branch="$2" wt_detached="$3"
+    local issue_id="" label="" rev="" state="" salvage_ref="" head_sha=""
+    local candidate="" live_id="" closed_id=""
+    local eligible=0
+
+    if [ "$wt_path" = "$shared_checkout" ]; then
+      skip_worktree "" "$wt_branch" "$wt_path" "skip cleanup: shared checkout is never a removal candidate" "false"
+      return
+    fi
 
     if [ ! -d "$wt_path" ]; then
-      log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "stale branch path missing" "false"
-      ((skipped+=1))
+      skip_worktree "" "$wt_branch" "$wt_path" "stale branch path missing" "false"
       return
     fi
 
-    case "$wt_branch" in
-      refs/heads/*)
-        ;;
-      *)
-        log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "skip non-checkout worktree branch entry" "false"
-        ((skipped+=1))
-        return
-        ;;
-    esac
-
-    if ! [[ "$wt_path" == /tmp/* || "$wt_path" == /private/tmp/* ]]; then
-      log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "candidate skipped: non-orchestrator worktree location" "false"
-      ((skipped+=1))
+    if ! is_orchestrator_location "$wt_path"; then
+      skip_worktree "" "$wt_branch" "$wt_path" "candidate skipped: non-orchestrator worktree location" "false"
       return
     fi
 
-    if ! is_orchestration_branch "$wt_branch"; then
-      log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "candidate skipped: branch does not match orchestration patterns (drain|task)" "false"
-      ((skipped+=1))
-      return
-    fi
-
-    branch_name="${wt_branch#refs/heads/}"
-    issue_candidate="${branch_name#*/}"
-    issue_id="$(extract_issue_id "$issue_candidate")"
-    if [ -n "$issue_candidate" ]; then
-      if [ -z "$issue_id" ]; then
-        issue_id="$issue_candidate"
-      fi
-      if is_in_progress "$issue_id"; then
-        log_event "skipped_ambiguous" "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: issue still in progress" "false"
-        ((skipped+=1))
+    if [ "$wt_detached" -eq 1 ]; then
+      if recently_active "$wt_path"; then
+        skip_worktree "" "" "$wt_path" "skip cleanup: detached worktree active within ${worktree_idle_minutes}m" "true"
+        echo "left alone, detached worktree still active: $wt_path"
         return
       fi
-    fi
-    if [ -n "$issue_id" ]; then
-      issue_candidate="$issue_id"
-    fi
-
-    if branch_checked_out_elsewhere "$wt_branch" "$wt_path"; then
-      log_event "skipped_ambiguous" "$issue_candidate" "$wt_branch" "$wt_path" "skip cleanup: branch checked out by another worktree" "false"
-      ((skipped+=1))
-      return
-    fi
-
-    if [ -n "$(git -C "$wt_path" status --short)" ]; then
-      log_event "skipped_ambiguous" "" "$wt_branch" "$wt_path" "candidate skipped: dirty worktree" "false"
-      ((skipped+=1))
-      return
-    fi
-
-    if branch_merge_status "$wt_branch"; then
-      merge_state=0
+      head_sha="$(git -C "$wt_path" rev-parse --verify --quiet HEAD 2>/dev/null || true)"
+      if [ -z "$head_sha" ]; then
+        skip_worktree "" "" "$wt_path" "skip cleanup: detached worktree has no resolvable HEAD" "true"
+        return
+      fi
+      label="detached-$(git -C "$wt_path" rev-parse --short HEAD)"
+      if [ "$dry_run" -eq 0 ] && ! git branch --force "salvage/$label" "$head_sha" >/dev/null 2>&1; then
+        skip_worktree "" "" "$wt_path" "skip cleanup: detached worktree commits could not be branched" "true"
+        return
+      fi
+      wt_branch="refs/heads/salvage/$label"
+      rev="$head_sha"
+      eligible=1
     else
-      merge_state=$?
-      if [ "$merge_state" -eq 1 ]; then
-        log_event "skipped_ambiguous" "$issue_candidate" "$wt_branch" "$wt_path" "skip cleanup: unmerged branch work not integrated to base; likely needs merge/manual handoff" "true"
-        ((skipped+=1))
+      case "$wt_branch" in
+        refs/heads/*) ;;
+        *)
+          skip_worktree "" "$wt_branch" "$wt_path" "skip non-checkout worktree branch entry" "false"
+          return
+          ;;
+      esac
+
+      if ! is_orchestration_branch "$wt_branch"; then
+        skip_worktree "" "$wt_branch" "$wt_path" "candidate skipped: branch does not match orchestration patterns (drain|task)" "false"
         return
       fi
-      log_event "skipped_ambiguous" "$issue_candidate" "$wt_branch" "$wt_path" "skip cleanup: merge state unknown" "false"
-      ((skipped+=1))
-      return
+
+      label="${wt_branch#refs/heads/}"
+      label="${label#*/}"
+
+      while IFS= read -r candidate; do
+        [ -n "$candidate" ] || continue
+        if [ -z "$live_id" ] && is_in_progress "$candidate"; then
+          live_id="$candidate"
+        fi
+        if [ -z "$closed_id" ] && is_closed_issue "$candidate"; then
+          closed_id="$candidate"
+        fi
+      done < <(issue_id_candidates "$label")
+      issue_id="${live_id:-${closed_id:-$label}}"
+
+      if [ -n "$live_id" ]; then
+        skip_worktree "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: issue still in progress" "false"
+        return
+      fi
+
+      if branch_checked_out_elsewhere "$wt_branch" "$wt_path"; then
+        skip_worktree "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: branch checked out by another worktree" "false"
+        return
+      fi
+
+      rev="$wt_branch"
+      if [ -n "$closed_id" ] || branch_merge_status "$wt_branch"; then
+        eligible=1
+      fi
+      if [ "$eligible" -eq 0 ]; then
+        skip_worktree "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: issue neither closed nor branch merged into ${base_branch:-base}" "true"
+        return
+      fi
     fi
 
-    if [ "$dry_run" -eq 0 ]; then
-      did_remove=1
-      if git worktree remove --force "$wt_path"; then
-        git branch -D "${wt_branch#refs/heads/}" >/dev/null 2>&1 || true
-        reclaimed_worktrees=$((reclaimed_worktrees + 1))
-        log_event "removed_worktree" "$issue_candidate" "$wt_branch" "$wt_path" "clean merged orphan worktree removed" "false"
-      else
-        ((skipped+=1))
-        log_event "skipped_ambiguous" "$issue_candidate" "$wt_branch" "$wt_path" "worktree remove failed" "false"
+    state="$(content_state "$wt_path" "$rev")"
+
+    if [ "$state" = "unique" ]; then
+      if [ "$dry_run" -eq 1 ]; then
+        log_event "removed_worktree" "$issue_id" "$wt_branch" "$wt_path" "dry-run: would salvage unique content to salvage/$label then remove" "true"
+        reclaimed_worktrees=$((reclaimed_worktrees+1))
+        return
       fi
-    else
-      log_event "removed_worktree" "${issue_id-}" "$wt_branch" "$wt_path" "dry-run: would remove clean orphan worktree" "true"
+      salvage_ref="$(salvage_content "$wt_path" "$label" "$rev" || true)"
+      if [ -z "$salvage_ref" ]; then
+        skip_worktree "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: unique worktree content could not be salvaged" "true"
+        return
+      fi
+      salvaged_worktrees=$((salvaged_worktrees+1))
+      echo "salvaged worktree content to $salvage_ref ($wt_path)"
+    fi
+
+    if [ "$dry_run" -eq 1 ]; then
+      log_event "removed_worktree" "$issue_id" "$wt_branch" "$wt_path" "dry-run: would remove $state worktree" "true"
       reclaimed_worktrees=$((reclaimed_worktrees+1))
+      return
+    fi
+
+    did_remove=1
+    if git worktree remove --force "$wt_path" >/dev/null 2>&1; then
+      reclaimed_worktrees=$((reclaimed_worktrees+1))
+      log_event "removed_worktree" "$issue_id" "$wt_branch" "$wt_path" "$state worktree removed; branch retained as the archive" "false"
+    else
+      skip_worktree "$issue_id" "$wt_branch" "$wt_path" "worktree remove failed" "true"
     fi
   }
 
   wt_path=""
   wt_branch=""
+  wt_detached=0
+  flush_worktree() {
+    if [ -n "$wt_path" ] && { [ "$wt_detached" -eq 1 ] || [ -n "$wt_branch" ]; }; then
+      process_worktree "$wt_path" "$wt_branch" "$wt_detached"
+    fi
+    wt_path=""
+    wt_branch=""
+    wt_detached=0
+  }
   while IFS= read -r line; do
     case "$line" in
       worktree\ *)
-        if [ -n "$wt_path" ] && [ -n "$wt_branch" ]; then
-          process_worktree "$wt_path" "$wt_branch"
-        fi
+        flush_worktree
         wt_path="${line#worktree }"
-        wt_branch=""
         ;;
       branch\ *)
-        wt_branch="${line#branch refs/heads/}"
-        wt_branch="refs/heads/${wt_branch}"
+        wt_branch="${line#branch }"
         ;;
-      detached)
-        wt_branch=""
+      detached*)
+        wt_detached=1
         ;;
       "")
-        if [ -n "$wt_path" ] && [ -n "$wt_branch" ]; then
-          process_worktree "$wt_path" "$wt_branch"
-        fi
-        wt_path=""
-        wt_branch=""
+        flush_worktree
         ;;
     esac
   done < "$tmpwt"
-  if [ -n "$wt_path" ] && [ -n "$wt_branch" ]; then
-    process_worktree "$wt_path" "$wt_branch"
-  fi
+  flush_worktree
   rm -f "$tmpwt"
   if [ "$did_remove" -eq 1 ]; then
     git worktree prune
@@ -429,14 +552,15 @@ fi
 actioned_claims=$((reclaimed_claims + reclaimed_worktrees))
 
 if [ "$json" -eq 1 ]; then
-  printf '{"scope":"%s","dry_run":%s,"reclaimed_claims":%s,"reclaimed_worktrees":%s,"skipped":%s,"handoff_scope":%s}\n' \
-    "$scope" "$([ "$dry_run" -eq 1 ] && echo true || echo false)" "$reclaimed_claims" "$reclaimed_worktrees" "$skipped" "${open_handoffs}" 
+  printf '{"scope":"%s","dry_run":%s,"reclaimed_claims":%s,"reclaimed_worktrees":%s,"salvaged_worktrees":%s,"skipped":%s,"handoff_scope":%s}\n' \
+    "$scope" "$([ "$dry_run" -eq 1 ] && echo true || echo false)" "$reclaimed_claims" "$reclaimed_worktrees" "$salvaged_worktrees" "$skipped" "${open_handoffs}"
 else
   echo "janitor summary:"
   echo "  scope=$scope"
   echo "  dry_run=$([ "$dry_run" -eq 1 ] && echo true || echo false)"
   echo "  reclaimed_claims=$reclaimed_claims"
   echo "  reclaimed_worktrees=$reclaimed_worktrees"
+  echo "  salvaged_worktrees=$salvaged_worktrees"
   echo "  skipped_or_ambiguous=$skipped"
 fi
 
