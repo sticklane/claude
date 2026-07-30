@@ -13,12 +13,15 @@ from agentic.sync import repo_root
 
 SCHEMA_VERSION = 1
 EXTERNAL_REF_PREFIX = "spec-task:"
+EXTERNAL_REF_SPEC_PREFIX = "spec:"
 
 _TITLE_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 _DEPENDS_RE = re.compile(r"^Depends on:\s*(.*?)\s*$", re.MULTILINE)
 _TOUCH_RE = re.compile(r"^Touch:\s*(.*?)\s*$", re.MULTILINE)
 _BUDGET_RE = re.compile(r"^Budget:\s*(.*?)\s*$", re.MULTILINE)
 _RIGOR_RE = re.compile(r"^Rigor:\s*(.*?)\s*$", re.MULTILINE)
+_KIND_RE = re.compile(r"^Kind:\s*(.*?)\s*$", re.MULTILINE)
+_PRIORITY_RE = re.compile(r"^Priority:\s*P?(\d)\s*$", re.MULTILINE)
 _GOAL_RE = re.compile(
     r"^## Goal\s*$\n(?P<body>.*?)(?=^##\s|\Z)", re.MULTILINE | re.DOTALL
 )
@@ -54,9 +57,7 @@ def _dependency_paths(path, root, text):
         if match:
             number = int(match.group(1))
             if number in by_number:
-                raise BdError(
-                    f"duplicate task number {number:02d} in {task_dir}"
-                )
+                raise BdError(f"duplicate task number {number:02d} in {task_dir}")
             by_number[number] = sibling
 
     paths = []
@@ -108,6 +109,52 @@ def parse_task(path, root):
             EXTERNAL_REF_PREFIX + dependency for dependency in prerequisite_paths
         ],
     }
+
+
+def parse_spec(spec_dir, root):
+    """Read the epic definition from ``SPEC.md``, or None when there is none.
+
+    A spec is a feature by default and earns one epic bead grouping its tasks.
+    ``Kind: janitorial`` opts out: chores are ranked individually, not drained
+    as a feature.
+    """
+    path = Path(spec_dir) / "SPEC.md"
+    if not path.is_file():
+        return None
+    text = path.read_text(encoding="utf-8")
+    kind = (_header(_KIND_RE, text) or "feature").lower()
+    if kind != "feature":
+        return None
+    title = _header(_TITLE_RE, text)
+    if not title:
+        raise BdError(f"{path}: spec requires a title")
+    goal_match = _GOAL_RE.search(text)
+    priority_match = _PRIORITY_RE.search(text)
+    return {
+        "path": _repo_relative(path, root),
+        "title": title,
+        "goal": goal_match.group("body").strip() if goal_match else title,
+        "priority": priority_match.group(1) if priority_match else "2",
+    }
+
+
+def _create_epic(spec, root):
+    return bd._run(
+        [
+            "create",
+            spec["title"],
+            "--silent",
+            "--type",
+            "epic",
+            "--priority",
+            spec["priority"],
+            "--description",
+            spec["goal"],
+            "--external-ref",
+            EXTERNAL_REF_SPEC_PREFIX + spec["path"],
+        ],
+        cwd=str(root),
+    ).strip()
 
 
 def definition_hash(task):
@@ -165,9 +212,9 @@ def _create_issue(task, root):
     return issue_id
 
 
-def _add_edge(issue_id, prerequisite_id, root):
+def _add_edge(issue_id, prerequisite_id, root, edge_type="blocks"):
     bd._run(
-        ["dep", "add", issue_id, prerequisite_id, "--type", "blocks"],
+        ["dep", "add", issue_id, prerequisite_id, "--type", edge_type],
         cwd=str(root),
     )
 
@@ -193,7 +240,7 @@ def _edge_tuples(issues):
     return edges
 
 
-def _register_under_lock(tasks, root):
+def _register_under_lock(tasks, root, spec=None):
     by_ref = {}
     for issue in _all_issues(root):
         external_ref = issue.get("external_ref")
@@ -235,11 +282,12 @@ def _register_under_lock(tasks, root):
             "metadata": _initial_metadata(task),
         }
 
+    if spec is not None and EXTERNAL_REF_SPEC_PREFIX + spec["path"] not in by_ref:
+        _create_epic(spec, root)
+
     issues = _all_issues(root)
     by_ref = {
-        issue["external_ref"]: issue
-        for issue in issues
-        if issue.get("external_ref")
+        issue["external_ref"]: issue for issue in issues if issue.get("external_ref")
     }
     edges = _edge_tuples(issues)
 
@@ -250,6 +298,10 @@ def _register_under_lock(tasks, root):
         issue = by_ref[task_ref]
         ordered_issues.append(issue)
         expected_edges = []
+        if spec is not None:
+            epic = by_ref.get(EXTERNAL_REF_SPEC_PREFIX + spec["path"])
+            if epic is not None:
+                expected_edges.append((issue["id"], epic["id"], "parent-child"))
         for prerequisite_ref in task["prerequisites"]:
             prerequisite = by_ref.get(prerequisite_ref)
             if prerequisite is None:
@@ -276,7 +328,7 @@ def _register_under_lock(tasks, root):
                 missing_edges.append(expected)
 
     for edge in missing_edges:
-        _add_edge(edge[0], edge[1], root)
+        _add_edge(edge[0], edge[1], root, edge[2])
     for issue in ordered_issues:
         if _metadata(issue).get("registration_state") != "complete":
             _mark_complete(issue["id"], root)
@@ -298,11 +350,10 @@ def register_spec(spec_dir, *, store_cwd=None, acquire_timeout=None):
     if not tasks_dir.is_dir():
         raise BdError(f"spec directory has no tasks/: {spec_dir}")
     tasks = [parse_task(path, root) for path in sorted(tasks_dir.glob("*.md"))]
-    timeout = (
-        DEFAULT_ACQUIRE_TIMEOUT if acquire_timeout is None else acquire_timeout
-    )
+    spec = parse_spec(spec_dir, root)
+    timeout = DEFAULT_ACQUIRE_TIMEOUT if acquire_timeout is None else acquire_timeout
     with RepoLock(root, acquire_timeout=timeout):
-        return _register_under_lock(tasks, root)
+        return _register_under_lock(tasks, root, spec)
 
 
 def run(args):

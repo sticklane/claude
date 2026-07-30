@@ -1,0 +1,40 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "epic-bead-grouping",
+  "frozen_sha256": "4267742945310f2f20168a0e08b069f139813a05a7ee8c7fac3a49236f690971",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_ready.py::test_ready_drains_the_highest_priority_epic_before_a_lower_one"
+      ],
+      "content_sha256": "42668631021a14ad810b64fd7d7ba1f7d67886cd20eb42ef9459df31a7308ef0",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_ready.py",
+      "path": "tests/test_agentic_ready.py",
+      "rationale": "BASELINE.json recorded this as retain with the pre-epic content hash. Re-pinned because epic-grouped frontier ordering (agentic-3syx) added coverage that an epic is never dispatchable, that epic priority outranks task priority, and that unparented janitorial work ranks by its own priority. Disposition is unchanged: still retain.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_agentic_register_epics.py::test_register_spec_creates_an_epic_and_parents_every_task_to_it"
+      ],
+      "content_sha256": "662eae9fe68cb64cd7dc26c140e852d4567751dbfdf3cffea1eb86208845a09e",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_agentic_register_epics.py",
+      "path": "tests/test_agentic_register_epics.py",
+      "rationale": "Canonical coverage for the epic bead a feature spec registers: epic created from SPEC.md with its Priority, every task parented to it, Kind: janitorial exempt, and re-registration create-only.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

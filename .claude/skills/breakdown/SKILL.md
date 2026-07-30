@@ -173,6 +173,28 @@ a refusal; unknown paths fail fast so they are classified before dispatch.
    message (the task definitions exist but are not yet in `bd ready`) instead
    of skipping silently.
 
+## Epic bead per feature
+
+A feature's tasks are grouped under one epic bead so `/drain` works the
+highest-priority feature to completion instead of an aimless queue. Without
+it, a P0 task belonging to a minor feature outranks every task of the feature
+that actually matters.
+
+`agentic register-spec` creates the epic from `SPEC.md` — no separate step —
+and parents every task in the spec to it. Two headers in `SPEC.md` drive it,
+both single-line `Key: value` above the first `##` heading, like the task
+registration fields:
+
+- `Priority: P0`–`P3` — the feature's rank against other features. Absent
+  means P2. This is what orders the drain; a task's own `Priority:` only
+  orders it within its feature.
+- `Kind: feature | janitorial` — absent means `feature`. Janitorial work gets
+  no epic and is ranked by its own task priority, so a P0 chore still precedes
+  a P1 feature.
+
+Set `Kind: janitorial` for chores, cleanups, and drift repair — work with no
+shipped outcome to group. Everything else is a feature and gets the epic.
+
 ## Hand off
 
 Tell the user: run `/build specs/<slug>/tasks/01-*.md` in a fresh session per
