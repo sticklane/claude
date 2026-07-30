@@ -109,7 +109,12 @@ record why on the issue and leave it for the batch interview.
    with no Touch metadata runs solo rather than joining a window.
 
 3. **Verify each verdict, run the final gate once, then close in bd.** Collect
-   the worker's verdict (DONE / BLOCKED / DEFERRED). On DONE, launch an
+   the worker's verdict (DONE / BLOCKED / DEFERRED).
+   **One reviewer per artifact, and no stage re-does another's job:** the
+   `verifier` owns acceptance evidence, the `critic` owns the diff, and the
+   canonical project gate owns the suite. Three readings of one change is the
+   ceiling — a fourth is the habit this step exists to bound.
+   On DONE, launch an
    independent `verifier` and `critic` as one parallel read-only barrier over
    the worker's branch, naming in each dispatch both that branch and the
    literal `Drain-mode: true` (so the verifier skips its own full-gate step) and the
@@ -117,11 +122,9 @@ record why on the issue and leave it for the batch interview.
    entry whose branch is the one being verified; unlocated, the verifier lands
    in the shared checkout and its worktree-integrity precheck halts INCOMPLETE
    instead of verifying.
-   The critic reviews the same diff independently. A
-   dispatched worker has no nested-agent capability (nesting is one level), so the review
-   gate it satisfies records a verdict stamped `self-review`
-   (`hooks/review-gate/README.md`); the orchestrator has the runtime's native
-   agent coordinator and is
+   The critic reviews the same diff independently. A dispatched worker has no
+   nested-agent capability (nesting is one level), so it cannot review itself;
+   the orchestrator has the runtime's native agent coordinator and is
    the only place an independent read can happen. One awaited `critic` at its
    own frontmatter tier pin, given the branch and the worktree resolved above,
    capped at ≤1k tokens returned. Route it by the critic's own verdict line,
@@ -142,8 +145,11 @@ record why on the issue and leave it for the batch interview.
    rounds run acceptance commands plus directly relevant targeted tests, never
    this full gate; repeating a multi-minute suite inside every round is not
    additional evidence. If the final gate fails, route its evidence through
-   the same single bounded fix round, then repeat the review barrier and final
-   gate once. On final-gate PASS, merge, `bd close <id>`, and remove that
+   the single bounded fix round and re-run **the gate only** — never the review
+   barrier again. The verifier and critic already read this change; re-reading
+   a diff whose gate failure is the known problem is the re-review this step
+   bounds, and a fix round that cannot clear a named gate failure is a blocked
+   issue, not a fourth reading. On final-gate PASS, merge, `bd close <id>`, and remove that
    `<id>` line from `.beads/session-claims` (via `bin/session-claims rm
    <id>`) and from `.beads/session-inflight` (one unit — a closed issue
    still listed trips the compliance hook). Drop the `.beads/session-inflight`
