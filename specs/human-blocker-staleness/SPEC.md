@@ -193,7 +193,12 @@ at `agentic-umqo`, which already owns re-reading them against the supersession
 mechanism.
 
 R10. `tests/test_human_blockers.sh` is registered in a new `tests/inventory/`
-fragment with `"disposition": "repair"`, and classified in a new
+fragment with `"disposition": "retain"` — the two inventories have different
+vocabularies, and `repair` is not one of the runner's: `scripts/check.sh`
+validates the test-inventory disposition against `retain`/`quarantine`/`manual`
+and rejects anything else. The freeze this spec's Problem section is about
+lives in the SURFACE inventory, which is where `repair` applies. It is also
+classified in a new
 `specs/toolkit-core-simplification/surface-inventory/` fragment — also
 `repair`, carrying `git_blob_pin: 1`, a `frozen_sha256` over the canonical
 object without that field, and a behavioral pointer of the form
@@ -288,8 +293,8 @@ local, never reaching a foreign checkout.
 - [ ] `bash tests/test_check_manual_inventory.sh` reports OK and
       `python3 scripts/inventory-core-surface.py --root . --check
       specs/toolkit-core-simplification/BASELINE.json` prints no diagnostic
-      lines, with both new fragments carrying `"disposition": "repair"` —
-      covers R10. **L2**.
+      lines, with the surface fragment carrying `"disposition": "repair"` and
+      the runner fragment `"disposition": "retain"` — covers R10. **L2**.
 - [ ] End to end: file a new blocker through the rule's grammar, make its
       probe start **failing (nonzero)**, and confirm `/drain`'s batch interview
       withholds it and names it as withheld — the full loop this spec exists to
