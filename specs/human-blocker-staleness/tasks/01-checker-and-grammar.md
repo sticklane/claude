@@ -66,17 +66,44 @@ own temp fixtures, never in the repository's probe directory. It must NOT edit
 
 ## Acceptance
 
-- [ ] `bash tests/test_human_blockers.sh` → exits 0, reports 0 failures. **L2**
-- [ ] `bash tests/test_human_blockers.sh 2>&1 | grep -c 'SENTINEL'` → ≥ 4
+- [x] `bash tests/test_human_blockers.sh` → exits 0, reports 0 failures. **L2**
+      — `passed: 21, failed: 0`, exit 0.
+- [x] `bash tests/test_human_blockers.sh 2>&1 | grep -c 'SENTINEL'` → ≥ 4
       (one assertion per hostile case; the suite asserts sentinel absence, so
       a case that silently stopped running would drop the count). **L2**
-- [ ] `python3 scripts/inventory-core-surface.py --root . --check specs/toolkit-core-simplification/BASELINE.json 2>&1 | grep -c 'unclassified\|drift'` → 0. **L2**
-- [ ] `bash tests/test_check_manual_inventory.sh` → prints `CHECK MANUAL INVENTORY OK`. **L2**
+      — 6.
+- [x] `python3 scripts/inventory-core-surface.py --root . --check specs/toolkit-core-simplification/BASELINE.json 2>&1 | grep -c 'unclassified\|drift'` → 0. **L2**
+      — 0; the run prints `135 classified surfaces`.
+- [x] `bash tests/test_check_manual_inventory.sh` → prints `CHECK MANUAL INVENTORY OK`. **L2**
+      — printed.
 - [ ] `python3 -c "import json;d=json.load(open('tests/inventory/07-human-blocker-probes.json'));print(all(t['disposition']=='repair' for t in d['tests']))"` → `True`. **L1**
-- [ ] `awk '/^## Entry grammar/,/^## Rules/' .claude/rules/human-blockers.md | grep -c 'Still-blocked'` → ≥ 2
+      — **NOT MET, deferred.** `scripts/check.sh`'s test-inventory validator
+      accepts only `retain`, `quarantine`, or `manual`; a `repair` row fails
+      the gate with `tests[0].disposition must be retain, quarantine, or
+      manual`, which would turn the whole check red. The row is `retain` and
+      the surface fragment carries `repair` — see `## Decisions`.
+- [x] `awk '/^## Entry grammar/,/^## Rules/' .claude/rules/human-blockers.md | grep -c 'Still-blocked'` → ≥ 2
+      — 4.
       (verified 0 in the whole file today, 2026-07-29; anchored to the grammar
       section rather than a file-wide literal). **L0** — Depth ceiling: prose
       cannot be executed; its behavioral complement is the missing-clause and
       unbalanced-quote fixtures above, which prove the grammar is enforced
       rather than merely written.
-- [ ] `bash scripts/check.sh` → `check.sh: green`. **L2**
+- [ ] `bash scripts/check.sh` → `check.sh: green`. **L2** — not run here:
+      drain runs the canonical gate once after the review barrier. The
+      gate's own inventory validator was run against the real
+      `tests/inventory/` and returned 0, scheduling
+      `tests/test_human_blockers.sh|bash|retain`.
+
+## Decisions
+
+- `tests/inventory/07-human-blocker-probes.json` disposition: the task and
+  R10 ask for `repair`, but `scripts/check.sh` accepts only `retain`,
+  `quarantine`, or `manual` in the **test** inventory — `repair` exists only
+  in the **surface** inventory's vocabulary. Default taken: `retain` in
+  `tests/inventory/`, `repair` in the surface fragment. This preserves the
+  intent, because only the surface inventory's `retain` freezes a
+  content hash (the deadlock R10 names); the test inventory's `retain` just
+  means "run it". Reverse by teaching `scripts/check.sh` a `repair`
+  disposition (a separate task, out of this one's `Touch`) and flipping the
+  row, or by amending R10 to drop `repair` from the test inventory.

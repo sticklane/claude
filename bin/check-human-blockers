@@ -46,9 +46,8 @@ def open_entries(text: str) -> list[str]:
 
 def entry_label(entry: str) -> str:
     fields = entry[len("- [ ] "):].split(" · ")
-    date = fields[0].strip() if fields else "undated"
     source = fields[1].strip() if len(fields) > 1 else "unnamed source"
-    return f"{date} · {source}"
+    return f"{fields[0].strip()} · {source}"
 
 
 def entry_clause(entry: str) -> str | None:
@@ -58,11 +57,13 @@ def entry_clause(entry: str) -> str | None:
     return entry[marker + len(CLAUSE_MARKER):]
 
 
-def classify_clause(
-    clause: str | None,
+def bucket_for_entry(
+    entry: str,
     root: pathlib.Path,
-) -> tuple[str, str] | list[str]:
-    """Bucket a clause, or return the argv a legal probe clause resolves to."""
+    timeout: float,
+) -> tuple[str, str]:
+    """Sort one entry into a bucket, validating its whole clause first."""
+    clause = entry_clause(entry)
     if clause is None:
         return "violation", "no Still-blocked: clause"
     if CONTROL_CHARACTER.search(clause):
@@ -88,7 +89,7 @@ def classify_clause(
         return "violation", f"{PROBE_DIR}/{name} does not exist"
     if not os.access(probe, os.X_OK):
         return "violation", f"{PROBE_DIR}/{name} is not executable"
-    return [str(probe), *words[1:]]
+    return run_probe([str(probe), *words[1:]], root, timeout)
 
 
 def run_probe(
@@ -115,7 +116,7 @@ def run_probe(
     return "stale", f"probe exited {completed.returncode}"
 
 
-def probe_timeout() -> float:
+def probe_timeout_seconds() -> float:
     raw = os.environ.get("HUMAN_BLOCKER_PROBE_TIMEOUT", "")
     try:
         value = float(raw)
@@ -135,43 +136,31 @@ def git_root(start: pathlib.Path) -> pathlib.Path | None:
     return pathlib.Path(completed.stdout.strip())
 
 
-def report(
-    human_md: pathlib.Path,
-    root: pathlib.Path,
-    stream,
-) -> int:
+def print_buckets(note: str, sorted_entries: dict[str, list[tuple[str, str]]]) -> None:
+    print(f"check-human-blockers: {note}")
+    for bucket in BUCKETS:
+        rows = sorted_entries[bucket]
+        print(f"{bucket} ({len(rows)}):")
+        for label, detail in rows:
+            suffix = f" — {detail}" if detail else ""
+            print(f"  - {label}{suffix}")
+
+
+def report(human_md: pathlib.Path, root: pathlib.Path) -> int:
     sorted_entries: dict[str, list[tuple[str, str]]] = {
         bucket: [] for bucket in BUCKETS
     }
     entries = open_entries(human_md.read_text(errors="replace"))
-    timeout = probe_timeout()
+    timeout = probe_timeout_seconds()
     for entry in entries:
-        outcome = classify_clause(entry_clause(entry), root)
-        if isinstance(outcome, list):
-            outcome = run_probe(outcome, root, timeout)
-        bucket, detail = outcome
+        bucket, detail = bucket_for_entry(entry, root, timeout)
         sorted_entries[bucket].append((entry_label(entry), detail))
 
-    print(f"check-human-blockers: {human_md} — {len(entries)} open entries",
-          file=stream)
-    for bucket in BUCKETS:
-        rows = sorted_entries[bucket]
-        print(f"{bucket} ({len(rows)}):", file=stream)
-        for label, detail in rows:
-            suffix = f" — {detail}" if detail else ""
-            print(f"  - {label}{suffix}", file=stream)
-
+    print_buckets(f"{human_md} — {len(entries)} open entries", sorted_entries)
     if sorted_entries["violation"]:
         return 2
     if sorted_entries["stale"]:
         return 1
-    return 0
-
-
-def empty_report(note: str, stream) -> int:
-    print(f"check-human-blockers: {note}", file=stream)
-    for bucket in BUCKETS:
-        print(f"{bucket} (0):", file=stream)
     return 0
 
 
@@ -188,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
 
     anchor = args.path.parent if args.path else pathlib.Path.cwd()
-    root = git_root(anchor if str(anchor) else pathlib.Path.cwd())
+    root = git_root(anchor)
     if root is None:
         print(
             f"check-human-blockers: {anchor} is not inside a Git repository",
@@ -197,8 +186,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     human_md = args.path if args.path else root / "HUMAN.md"
     if not human_md.is_file():
-        return empty_report(f"{human_md} does not exist", sys.stdout)
-    return report(human_md, root, sys.stdout)
+        print_buckets(
+            f"{human_md} does not exist",
+            {bucket: [] for bucket in BUCKETS},
+        )
+        return 0
+    return report(human_md, root)
 
 
 if __name__ == "__main__":

@@ -138,12 +138,9 @@ expect_case() {
 }
 
 expect_no_sentinel() {
-  local name="$1"
-  if [ -z "$(find "$TMP" -name SENTINEL -print -quit)" ]; then
-    ok "$name"
-  else
-    nope "$name"
-  fi
+  local name="$1" planted
+  planted="$(find "$TMP" -name SENTINEL -print -quit)"
+  test -z "$planted" && ok "$name" || nope "$name"
 }
 
 entry() {

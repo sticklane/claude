@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "07-human-blocker-probes",
+  "frozen_sha256": "a6f8d627a686d0de98a3be4ed674923661aca00254b056dbf552c6d325001a5c",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_human_blockers.sh#assert:244b23eb2262691ff4821060e5e2809013a453deb16ee0c2b9310b73ccab546f"
+      ],
+      "content_sha256": "ce4134e0daa992fd1d206cd783b028611eea81a726578590680b6f6c124d1ac1",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_human_blockers.sh",
+      "path": "tests/test_human_blockers.sh",
+      "rationale": "Fixture suite for bin/check-human-blockers and the Still-blocked: grammar. repair, not retain: freezing this suite on the day it lands would re-create the deadlock the spec documents, where no legal edit could answer the question the entry asks.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
