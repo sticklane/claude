@@ -1,0 +1,23 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "preflight-ownership-resolution",
+  "frozen_sha256": "d00e1da2b8f4fde0eec85d14cf3fd33d7bf4b90476a2ecf72123c041b0b18b82",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [],
+      "content_sha256": "4c267a049b556b376da1bf6ca17337cba8eea4f48cd610a7aa2878dc2215cc63",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_breakdown_preflight_ownership.sh",
+      "path": "tests/test_breakdown_preflight_ownership.sh",
+      "rationale": "Coverage for /breakdown pre-flight ownership resolution: a queried path that is not itself a surface identity resolves to the classified surface owning its directory, a path owned by a retain surface refuses, and a path inside a scanned namespace with no owning classified surface still refuses. No separate behavioral test classifies this test, so it carries no evidence pointer.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

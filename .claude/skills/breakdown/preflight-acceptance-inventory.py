@@ -3,9 +3,10 @@
 
 The helper checks explicit repository paths against the current surface-inventory
 classifications. Any `retain` disposition blocks dispatch because `/drain` workers
-cannot legally edit those surfaces. A path outside every namespace
-`scripts/inventory-core-surface.py` scans can never be a surface, so it reports a
-separate out-of-namespace note and passes instead of refusing.
+cannot legally edit those surfaces. A queried path that is not itself a surface
+identity is resolved to the classified surface that owns it, so a file beside a
+`SKILL.md` inherits that skill's disposition. A path owning nothing and owned by
+nothing reports a separate out-of-namespace note and passes instead of refusing.
 """
 
 from __future__ import annotations
@@ -28,7 +29,13 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any] | None:
         return None
 
 
-def inventory_surfaces(root: pathlib.Path, baseline: pathlib.Path) -> dict[str, str]:
+class Classifications:
+    def __init__(self) -> None:
+        self.by_path: dict[str, str] = {}
+        self.by_identity: dict[str, str] = {}
+
+
+def inventory_surfaces(root: pathlib.Path, baseline: pathlib.Path) -> Classifications:
     baseline = baseline.resolve()
     if not baseline.is_absolute():
         baseline = root / baseline
@@ -38,7 +45,7 @@ def inventory_surfaces(root: pathlib.Path, baseline: pathlib.Path) -> dict[str, 
     if fragment_dir.is_dir():
         paths.extend(sorted(fragment_dir.glob("*.json")))
 
-    dispositions: dict[str, str] = {}
+    classifications = Classifications()
     for manifest_path in paths:
         manifest = load_manifest(manifest_path)
         if not manifest:
@@ -47,15 +54,19 @@ def inventory_surfaces(root: pathlib.Path, baseline: pathlib.Path) -> dict[str, 
             if not isinstance(surface, dict):
                 continue
             path = surface.get("path")
+            identity = surface.get("identity")
             disposition = surface.get("disposition")
+            if not isinstance(disposition, str):
+                continue
             if (
                 isinstance(path, str)
-                and isinstance(disposition, str)
                 and not path.startswith("/")
                 and ".." not in pathlib.PurePosixPath(path).parts
             ):
-                dispositions[path] = disposition
-    return dispositions
+                classifications.by_path[path] = disposition
+                if isinstance(identity, str) and identity:
+                    classifications.by_identity[identity] = disposition
+    return classifications
 
 
 def inventory_module_candidates(root: pathlib.Path) -> list[pathlib.Path]:
@@ -109,6 +120,34 @@ def discover_surfaces_would_find(module: ModuleType, path: str) -> bool:
     return any(surface.path == path for surface in live.values())
 
 
+def surfaces_by_directory(
+    module: ModuleType, root: pathlib.Path
+) -> dict[str, list[Any]]:
+    live, _ = module.discover_surfaces(root)
+    grouped: dict[str, list[Any]] = {}
+    for surface in live.values():
+        directory = pathlib.PurePosixPath(surface.path).parent.as_posix()
+        grouped.setdefault(directory, []).append(surface)
+    return grouped
+
+
+def owning_surface_identities(
+    grouped: dict[str, list[Any]],
+    classified: dict[str, str],
+    path: str,
+) -> list[str]:
+    for directory in pathlib.PurePosixPath(path).parents:
+        residents = grouped.get(directory.as_posix())
+        if not residents:
+            continue
+        if len({surface.path for surface in residents}) != 1:
+            return []
+        return sorted(
+            surface.identity for surface in residents if surface.identity in classified
+        )
+    return []
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check /breakdown criterion paths")
     parser.add_argument(
@@ -125,39 +164,69 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     root = pathlib.Path.cwd()
-    surfaces = inventory_surfaces(root, pathlib.Path(args.baseline))
+    classifications = inventory_surfaces(root, pathlib.Path(args.baseline))
     module = import_inventory_module(root)
+    grouped: dict[str, list[Any]] = {}
     if module is None:
         print(
             "scripts/inventory-core-surface.py unavailable; every unclassified "
             "path is treated as in-namespace",
             file=sys.stderr,
         )
+    else:
+        grouped = surfaces_by_directory(module, root)
 
     blocked = False
     for path in args.path:
-        disposition = surfaces.get(path)
-        if disposition is None:
-            if (
-                module is not None
-                and is_repo_relative(path)
-                and not discover_surfaces_would_find(module, path)
-            ):
+        disposition = classifications.by_path.get(path)
+        if disposition is not None:
+            if disposition == "retain":
                 print(
-                    f"out-of-inventory-namespace: {path} lies outside every "
-                    "namespace discover_surfaces scans, so it can never be a "
-                    "classified surface",
+                    f"retain-disposition refusal: {path} is classified retain",
                     file=sys.stderr,
                 )
-                continue
+                blocked = True
+            continue
+
+        if module is None or not is_repo_relative(path):
             print(f"Unclassified surface path: {path}", file=sys.stderr)
             blocked = True
             continue
-        if disposition == "retain":
+
+        is_surface_identity = discover_surfaces_would_find(module, path)
+        if not is_surface_identity:
             print(
-                f"retain-disposition refusal: {path} is classified retain",
+                f"out-of-inventory-namespace: {path} is not a surface identity "
+                "discover_surfaces would produce",
                 file=sys.stderr,
             )
+
+        owners = owning_surface_identities(
+            grouped,
+            classifications.by_identity,
+            path,
+        )
+        if owners:
+            print(
+                f"owning-surface: {path} is owned by {', '.join(owners)}",
+                file=sys.stderr,
+            )
+            retained = [
+                identity
+                for identity in owners
+                if classifications.by_identity[identity] == "retain"
+            ]
+            if retained:
+                print(
+                    f"retain-disposition refusal: {path} is owned by "
+                    f"{', '.join(retained)}, classified retain",
+                    file=sys.stderr,
+                )
+                blocked = True
+            continue
+
+        if is_surface_identity:
+            print(f"Unclassified surface path: {path}", file=sys.stderr)
             blocked = True
 
     if blocked:
