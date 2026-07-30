@@ -117,9 +117,8 @@ fi
 # so a `.claude/**`-only diff there is NOT docs-only and still runs the full
 # check — every other docs-only path (`**.md`, `docs/**`, `specs/**`) is
 # unaffected and stays skippable regardless of this marker.
-docs_only_diff() { # docs_only_diff <repo-root>
-  local changed line path claude_is_product=0
-  [ -d "$1/.claude-plugin" ] && claude_is_product=1
+changed_paths() { # changed_paths <repo-root> — one working-tree path per line
+  local changed line path
   changed="$(git -C "$1" status --porcelain --untracked-files=all 2>/dev/null)" \
     || return 1
   [ -n "$changed" ] || return 1
@@ -128,6 +127,19 @@ docs_only_diff() { # docs_only_diff <repo-root>
     path="${line:3}"                                # strip "XY " status prefix
     case "$path" in *" -> "*) path="${path##* -> }" ;; esac  # rename: destination
     path="${path#\"}"; path="${path%\"}"            # unquote paths with specials
+    printf '%s\n' "$path"
+  done <<EOF
+$changed
+EOF
+}
+
+docs_only_diff() { # docs_only_diff <repo-root>
+  local paths path claude_is_product=0
+  [ -d "$1/.claude-plugin" ] && claude_is_product=1
+  paths="$(changed_paths "$1")" || return 1
+  [ -n "$paths" ] || return 1
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
     case "$path" in
       .claude/*) [ "$claude_is_product" -eq 0 ] || return 1 ;;  # product repo: run check
       .beads/*) : ;;                                # generated tracker export
@@ -135,7 +147,7 @@ docs_only_diff() { # docs_only_diff <repo-root>
       *) return 1 ;;                                 # non-docs change: run check
     esac
   done <<EOF
-$changed
+$paths
 EOF
   return 0
 }
@@ -170,6 +182,13 @@ if [ -n "$current_state" ] && [ -r "$pass_marker" ] &&
   warn "tree unchanged since the last passing check; skipping"
   allow_stop
 fi
+
+# Hand check.sh the changed paths so it can skip a single-language stage whose
+# language did not change (run_scoped_stage). An empty or unexported scope
+# means "unknown" there and runs everything, so a failure to derive it costs
+# time, never coverage.
+CHECK_SCOPE="$(changed_paths "$root" || true)"
+export CHECK_SCOPE
 
 output="$(cd "$root" && bash "$check" 2>&1)"
 status=$?

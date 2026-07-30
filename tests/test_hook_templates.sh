@@ -478,6 +478,46 @@ done
 git -C "$DOCS_REPO" checkout -q -- .
 git -C "$DOCS_REPO" clean -fdq
 
+# --- stop-gate: exports CHECK_SCOPE so check.sh can scope stages ------------
+# check.sh skips a single-language stage when CHECK_SCOPE names no path that
+# stage reads. An unset scope means "unknown" and runs everything, so the hook
+# must always export it — a silently absent CHECK_SCOPE degrades to the old
+# run-everything cost rather than failing loudly.
+SCOPE_REPO="$TMP/scope repo"
+mkdir -p "$SCOPE_REPO/scripts" "$SCOPE_REPO/src"
+git -C "$SCOPE_REPO" init -q
+printf '#!/usr/bin/env bash\nprintf "%%s" "${CHECK_SCOPE-UNSET}" > "$(dirname "$0")/../scope.seen"\nexit 0\n' \
+  > "$SCOPE_REPO/scripts/check.sh"
+chmod 755 "$SCOPE_REPO/scripts/check.sh"
+echo "seed" > "$SCOPE_REPO/seed.txt"
+git -C "$SCOPE_REPO" add -A && git -C "$SCOPE_REPO" commit -qm seed
+
+echo "print(1)" > "$SCOPE_REPO/src/app.py"
+echo "notes" > "$SCOPE_REPO/README.md"
+rm -f "$SCOPE_REPO/scope.seen" "$SCOPE_REPO/.git/agentic-stop-gate-pass"
+run_hook "$STOP_GATE" "$json_stop_false" "$SCOPE_REPO"
+SCOPE_SEEN="$(cat "$SCOPE_REPO/scope.seen" 2>/dev/null || echo MISSING)"
+# A pipeline written inline as assert's arguments would bind to assert itself
+# and pass vacuously, so scope membership goes through a predicate.
+scope_has() { printf '%s' "$SCOPE_SEEN" | grep -qx -- "$1"; }
+scope_lacks() { ! scope_has "$1"; }
+assert "stop-gate exports CHECK_SCOPE to check.sh" \
+  test "$SCOPE_SEEN" != UNSET -a "$SCOPE_SEEN" != MISSING
+assert "CHECK_SCOPE lists the changed source path" scope_has 'src/app.py'
+assert "CHECK_SCOPE lists the changed docs path too" scope_has 'README.md'
+assert "CHECK_SCOPE omits unchanged paths" scope_lacks 'seed.txt'
+
+# A path with a space must survive intact — porcelain quotes such paths.
+git -C "$SCOPE_REPO" checkout -q -- . ; git -C "$SCOPE_REPO" clean -fdq
+mkdir -p "$SCOPE_REPO/src"
+echo "x" > "$SCOPE_REPO/src/two words.py"
+rm -f "$SCOPE_REPO/scope.seen" "$SCOPE_REPO/.git/agentic-stop-gate-pass"
+run_hook "$STOP_GATE" "$json_stop_false" "$SCOPE_REPO"
+SCOPE_SEEN="$(cat "$SCOPE_REPO/scope.seen" 2>/dev/null || echo MISSING)"
+assert "CHECK_SCOPE keeps a path containing a space unquoted" \
+  scope_has 'src/two words.py'
+git -C "$SCOPE_REPO" checkout -q -- . ; git -C "$SCOPE_REPO" clean -fdq
+
 # --- Summary -----------------------------------------------------------------
 
 echo "pass: $pass, fail: $fail"
