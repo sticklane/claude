@@ -1,6 +1,6 @@
 {
   "name": "agentic",
-  "version": "0.18.12",
+  "version": "0.18.13",
   "description": "Runtime-neutral workflow management for spec-driven agentic development.",
   "author": {
     "name": "sticklane",
