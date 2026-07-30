@@ -299,3 +299,26 @@ local, never reaching a foreign checkout.
 ## Open questions
 
 None.
+
+## Parallelization
+
+The three tasks are a strict chain, and the reason is decision coupling rather
+than file overlap.
+
+Task 01 owns the mechanism — the grammar, the checker, and the fixture suite.
+Tasks 02 and 03 both consume decisions 01 makes that the spec deliberately
+leaves to the implementation: how the checker is invoked and what its bucket
+report looks like on stdout. Task 02's migration is validated by running the
+checker against the real `HUMAN.md`, and task 03 has to describe the report's
+routing in drain's prose and assert against it in an eval. If 02 or 03 ran
+concurrently with 01, each would guess an output shape and one of them would be
+wrong — the "each side stubs the other, green tests over a dead seam" failure.
+
+Tasks 02 and 03 are disjoint in `Touch` — probes and `HUMAN.md` versus the
+drain skill and `evals/drain` — but they still serialize, because R11 requires
+03's eval fixture to copy `scripts/blocker-probes/`, which does not exist until
+02 lands. A worker running 03 first would author a `setup.sh` copying an absent
+directory and the scenario would pass while provisioning nothing.
+
+So: 01, then 02, then 03, one writer at a time. There is no concurrency to win
+here; the spec is three sessions of work, not a fan-out.
