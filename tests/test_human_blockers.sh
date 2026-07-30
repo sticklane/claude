@@ -8,11 +8,9 @@ trap 'rm -rf "$TMP"' EXIT
 
 pass=0
 fail=0
-# expect_no_orphan scans and kills machine-wide on this token, and
-# scripts/check.sh runs suites concurrently, so the token must name only this
-# process's own probe child. The distinct leading digit and fixed width keep it
-# unmatchable against test_command_policy.sh's slow fixture.
-SLOW_PROBE_SLEEP="9$(printf '%05d' "$(($$ % 100000))")"
+# expect_no_orphan pkills this token machine-wide; keep it ours alone.
+SLOW_PROBE_SLEEP_TOKEN=$(printf '9%05d' "$(($$ % 100000))")
+ASYNC_TEARDOWN_GRACE_SECONDS=15
 
 ok() {
   pass=$((pass + 1))
@@ -45,7 +43,7 @@ new_fixture() {
     >"$fixture/scripts/blocker-probes/dissolved"
   printf '%s\n' '#!/usr/bin/env bash' 'exit 3' \
     >"$fixture/scripts/blocker-probes/undetermined"
-  printf '%s\n' '#!/usr/bin/env bash' "sleep $SLOW_PROBE_SLEEP" 'exit 0' \
+  printf '%s\n' '#!/usr/bin/env bash' "sleep $SLOW_PROBE_SLEEP_TOKEN" 'exit 0' \
     >"$fixture/scripts/blocker-probes/slow"
   printf '%s\n' \
     '#!/usr/bin/env bash' \
@@ -165,10 +163,8 @@ expect_no_orphan() {
     nope "$name (no pgrep available to observe orphaned probe children)"
     return
   fi
-  # The checker SIGKILLs the probe's process group, but the grandchild's
-  # teardown and reaping are asynchronous, so a single sample races a loaded
-  # scheduler. A real orphan sleeps for days and is still here at the bound.
-  deadline=$((SECONDS + 15))
+  # A real orphan sleeps for days, so the grace cannot hide one.
+  deadline=$((SECONDS + ASYNC_TEARDOWN_GRACE_SECONDS))
   while pgrep -f "$pattern" >/dev/null 2>&1; do
     if [ "$SECONDS" -ge "$deadline" ]; then
       pkill -f "$pattern" >/dev/null 2>&1
@@ -232,7 +228,7 @@ run_checker "$fixture" 1
 expect_case "a probe past HUMAN_BLOCKER_PROBE_TIMEOUT is unknown, exit 0" 0 \
   'unknown (1):' 'timed out' 'stale (0):'
 expect_no_orphan "a timed-out probe leaves no orphaned grandchild process" \
-  "sleep $SLOW_PROBE_SLEEP"
+  "sleep $SLOW_PROBE_SLEEP_TOKEN"
 
 fixture="$(new_fixture resolved-entry)"
 write_human "$fixture" \

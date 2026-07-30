@@ -14,11 +14,8 @@ trap 'rm -rf "$TMP"' EXIT
 
 pass=0
 fail=0
-# scripts/check.sh runs suites concurrently and test_human_blockers.sh scans
-# and pkills machine-wide for its own probe's sleep. A token unique to this
-# process keeps that kill off this fixture; the distinct leading digit and
-# fixed width make the two suites' tokens unmatchable against each other.
-SLOW_SLEEP="8$(printf '%05d' "$(($$ % 100000))")"
+# test_human_blockers.sh pkills its own token machine-wide; keep ours distinct.
+SLOW_SLEEP_TOKEN=$(printf '8%05d' "$(($$ % 100000))")
 REJECT_CODES=""
 REJECT_CASES=0
 OUT=""
@@ -64,7 +61,7 @@ new_fixture() {
   printf '%s\n' '#!/usr/bin/env bash' 'printf marker >MARKER' \
     >"$fixture/bin/make-marker"
   printf '%s\n' '#!/usr/bin/env bash' 'exit 3' >"$fixture/bin/exit-three"
-  printf '%s\n' '#!/usr/bin/env bash' "sleep $SLOW_SLEEP" 'touch SENTINEL' \
+  printf '%s\n' '#!/usr/bin/env bash' "sleep $SLOW_SLEEP_TOKEN" 'touch SENTINEL' \
     >"$fixture/bin/slow"
   chmod 755 "$fixture/bin/"*
   printf '%s\n' '#!/usr/bin/env bash' 'touch SENTINEL' >"$fixture/bin/inert"
