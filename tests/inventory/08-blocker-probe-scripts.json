@@ -1,0 +1,12 @@
+{
+  "fragment": "08-blocker-probe-scripts",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_blocker_probes.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

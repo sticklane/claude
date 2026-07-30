@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "08-blocker-probe-scripts",
+  "frozen_sha256": "4b4ad1af03eae666c92e69f3472f8c1dba1e3a8b3843014123fa32e9cf172af8",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_blocker_probes.sh#assert:1b6ece2fa1aa696afeaff7e9665c9ca5f44193479506e967de0335605cb1eba7"
+      ],
+      "content_sha256": "d8dc0f1628141c1f78f6afc0b53cb238ed54d6ffadedb064d3d909ea6a49e129",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_blocker_probes.sh",
+      "path": "tests/test_blocker_probes.sh",
+      "rationale": "Contract suite for the scripts/blocker-probes/ scripts that HUMAN.md's Still-blocked: clauses select. repair, not retain: every new probe adds cases here, so freezing the file's bytes on the day it lands would make the next blocker unprobeable without a baseline edit.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
