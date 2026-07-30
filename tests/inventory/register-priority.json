@@ -1,0 +1,12 @@
+{
+  "fragment": "register-priority",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_register_spec_priority.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "register-priority",
+  "frozen_sha256": "4dc1c4cd56c7528e99d9edab96907270767d10f9cb418fc6137f6a7582e32f76",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_register_spec_priority.sh#assert:1b6ece2fa1aa696afeaff7e9665c9ca5f44193479506e967de0335605cb1eba7"
+      ],
+      "content_sha256": "d7af33da930a245383fc5066e74d4e8d42f37a4c0fab840dfb9963f0939c784b",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_register_spec_priority.sh",
+      "path": "tests/test_register_spec_priority.sh",
+      "rationale": "Canonical coverage for the authored Priority header at create-only registration: P0-P3 map to bd priorities 0-3, an absent header registers at 2, and re-registration never syncs an existing issue's priority.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
