@@ -12,6 +12,7 @@
           "uniqueItems": true
         },
         "content_sha256": {
+          "description": "SHA-256 of the surface file at the time this row was written. Enforced as a freeze ONLY when disposition is 'retain' — that is the single case where a later edit to the file raises 'frozen content hash drift' and fails the check. On every other disposition this hash is a measurement snapshot that goes stale silently and by design, so never write an acceptance criterion that treats a non-'retain' row's content_sha256 as drift protection: it will pass vacuously.",
           "pattern": "^[0-9a-f]{64}$",
           "type": "string"
         },
@@ -24,6 +25,7 @@
           "uniqueItems": true
         },
         "disposition": {
+          "description": "What this surface's presence commits the repo to. 'retain' additionally freezes content_sha256, so a retained surface's file cannot change without refreshing its row; the other values carry no such freeze. 'retain' and 'repair' both require a non-empty behavioral_tests list.",
           "enum": [
             "retain",
             "repair",
