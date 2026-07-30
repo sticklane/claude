@@ -1,0 +1,12 @@
+{
+  "fragment": "drain-economy-00",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_command_policy.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "drain-economy-00",
+  "frozen_sha256": "a1ef9b1d34230d64f3d2f3d083d3d13cf82ac26aae5c036efb457801a2e3b302",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_command_policy.sh#assert:a8d24305a4f684e534204b8091106990615f9386ccd817c0ca6a9a2b9a85980c"
+      ],
+      "content_sha256": "6c7da36768583744bcad1c76ec6921018de8929387b9ae12bbc743f079b135ed",
+      "dependents": [
+        "bin/command-policy",
+        "test:tests/test_command_policy.sh"
+      ],
+      "disposition": "repair",
+      "identity": "rule:file-sourced-commands",
+      "path": ".claude/rules/file-sourced-commands.md",
+      "rationale": "States the single D11 command policy that bin/command-policy implements, so the Unblock: run: consumer and bin/spec-gate cite one rule instead of restating it. repair, not retain: both consumers land after this rule and record their demotion detail in it.",
+      "replacement": null,
+      "surface_type": "rule"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_command_policy.sh#assert:a8d24305a4f684e534204b8091106990615f9386ccd817c0ca6a9a2b9a85980c"
+      ],
+      "content_sha256": "5b02291298ef053780753da2271cc19751040b7e69ab6dd123c692bbc34d6dd9",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_command_policy.sh",
+      "path": "tests/test_command_policy.sh",
+      "rationale": "Fixture suite for bin/command-policy: the accept path, one distinct reason code per reject path, and sentinel-absence proof that a rejected command never ran. repair, not retain: the suite gains a case as each consumer adopts the policy.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
