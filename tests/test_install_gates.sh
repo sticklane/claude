@@ -127,6 +127,21 @@ assert "python fixture: stage order format < lint < tests" \
   test -n "$fmt_ln" -a -n "$lint_ln" -a -n "$test_ln" -a \
        "$fmt_ln" -lt "$lint_ln" -a "$lint_ln" -lt "$test_ln"
 
+# Changed-stack scoping (agentic-cs8u). Only stages that read exactly one
+# language's sources are scoped: the per-language test runner and typechecker.
+# Lint and format-check cost ~1s, so scoping them buys nothing, and Node's
+# stages run through opaque `npm run <script>` indirection that may hide an
+# integration suite — a .ts change is what breaks a browser suite, so scoping
+# one to its own directory would scope out the case it exists to catch.
+assert "python fixture: tests stage is scoped to python sources" \
+  grep -q '^run_scoped_stage "[^"]*\*\.py[^"]*" "tests"' "$PY_CHECK"
+assert "python fixture: lint stage is NOT scoped (cheap, stays unconditional)" \
+  grep -q '^run_stage "lint"' "$PY_CHECK"
+assert "python fixture: format-check is NOT scoped" \
+  grep -q '^run_stage "format-check"' "$PY_CHECK"
+assert "python fixture: python scope includes dependency manifests" \
+  grep -q '^run_scoped_stage "[^"]*pyproject\.toml[^"]*" "tests"' "$PY_CHECK"
+
 assert "python fixture: pre-commit exists and is executable" test -x "$PY_HOOK"
 assert "python fixture: pre-commit reads staged files (ACMR)" \
   grep -q 'git diff --cached --name-only --diff-filter=ACMR' "$PY_HOOK"
@@ -259,6 +274,10 @@ assert "node-check: tier full (check script runs tests)" out_has "tier: full"
 NC_CHECK="$NC/scripts/check.sh"
 assert "node-check: check.sh delegates to npm run check" \
   grep -q 'npm run check' "$NC_CHECK"
+# `npm run <script>` is opaque — it may front a browser or integration suite,
+# which path scoping would wrongly skip. Node stages therefore stay unscoped.
+assert_not "node-check: no node stage is path-scoped" \
+  grep -q '^run_scoped_stage "' "$NC_CHECK"
 assert_eq "node-check: exactly one stage (delegation, nothing synthesized)" \
   1 "$(grep -c '^run_stage ' "$NC_CHECK")"
 assert_not "node-check: no synthesized eslint stage" grep -q 'eslint' "$NC_CHECK"
@@ -385,6 +404,12 @@ GO_CHECK="$GO/scripts/check.sh"
 assert "go: format stage uses gofmt" grep -q 'gofmt -l' "$GO_CHECK"
 assert "go: lint stage is go vet" grep -q 'go vet ./...' "$GO_CHECK"
 assert "go: tests stage is go test" grep -q 'go test ./...' "$GO_CHECK"
+assert "go: tests stage is scoped to go sources" \
+  grep -q '^run_scoped_stage "[^"]*\*\.go[^"]*" "tests"' "$GO_CHECK"
+assert "go: go scope includes the module manifest" \
+  grep -q '^run_scoped_stage "[^"]*go\.mod[^"]*" "tests"' "$GO_CHECK"
+assert "go: vet stage is NOT scoped (cheap, stays unconditional)" \
+  grep -q '^run_stage "lint"' "$GO_CHECK"
 assert "go: pre-commit format-checks staged files with gofmt" \
   grep -q 'gofmt -l' "$GO/.git/hooks/pre-commit"
 assert_not "go: no go vet in pre-commit (package-level, check.sh only)" \

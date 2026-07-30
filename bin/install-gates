@@ -162,6 +162,19 @@ add_check_stage() { # add_check_stage <name> <line>
   STAGE_DESC="${STAGE_DESC}${STAGE_DESC:+, }$1"
 }
 
+# Changed-stack scoping: a stage that reads exactly one language's sources is
+# skipped when nothing in that language changed (check.sh's run_scoped_stage,
+# fed by the Stop hook's CHECK_SCOPE). Restricted to per-language test runners
+# and typecheckers — where the seconds are — because lint and format-check are
+# ~1s and Node's `npm run <script>` indirection can front an integration suite
+# that a source change in another language is exactly what breaks.
+PY_SCOPE='*.py pyproject.toml setup.py setup.cfg requirements*.txt'
+GO_SCOPE='*.go go.mod go.sum'
+
+add_scoped_check_stage() { # add_scoped_check_stage <name> <globs> <command>
+  add_check_stage "$1" "run_scoped_stage \"$2\" \"$1\" $3"
+}
+
 add_staged_stage() { # add_staged_stage <name> <line(s)>
   STAGED_STAGES="${STAGED_STAGES}${STAGED_STAGES:+
 }$2"
@@ -206,7 +219,7 @@ detect_python() {
     if command -v pyright >/dev/null 2>&1; then TYPECHECK_CMD="pyright"; else TYPECHECK_CMD="uvx pyright"; fi
   fi
   if [ -n "$TYPECHECK_CMD" ]; then
-    add_check_stage "typecheck" "run_stage \"typecheck\" $TYPECHECK_CMD"
+    add_scoped_check_stage "typecheck" "$PY_SCOPE" "$TYPECHECK_CMD"
   fi
 
   if [ -d "$REPO/tests" ] || [ -n "$(find "$REPO" \( -name .git -o -name .venv -o -name node_modules \) -prune -o \( -name 'test_*.py' -o -name '*_test.py' \) -type f -print 2>/dev/null | head -1)" ]; then
@@ -223,7 +236,7 @@ detect_python() {
     else
       pytest_cmd="python3 -m pytest"
     fi
-    add_check_stage "tests" "run_stage \"tests\" $pytest_cmd"
+    add_scoped_check_stage "tests" "$PY_SCOPE" "$pytest_cmd"
   fi
 }
 
@@ -343,7 +356,7 @@ detect_go() {
 
   if [ -n "$(find "$REPO" -name .git -prune -o -name '*_test.go' -type f -print 2>/dev/null | head -1)" ]; then
     tests_present=1
-    add_check_stage "tests" "run_stage \"tests\" $test_cmd"
+    add_scoped_check_stage "tests" "$GO_SCOPE" "$test_cmd"
   fi
 }
 

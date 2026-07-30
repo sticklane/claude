@@ -73,6 +73,29 @@ The gate fails open only when its input is unusable, `jq` is unavailable, or
 `scripts/check.sh` is missing/unreadable. A real non-zero check result is
 always translated into the runtime's native continuation result.
 
+### Scoping: what the gate skips
+
+Three skips keep the gate off work it cannot catch anything on. The first two
+skip the whole run: a docs-only diff (every changed path under `**.md`,
+`docs/`, `specs/`, `.claude/`, or the generated `.beads/` export), and a tree
+unchanged since the last passing check.
+
+The third is per-stage. The hook exports `CHECK_SCOPE` — the changed paths,
+one per line — and `check.sh`'s `run_scoped_stage` skips a stage whose
+language did not change. An unset or empty `CHECK_SCOPE` means the scope is
+unknown, so every stage runs; a manual or CI invocation keeps full coverage,
+and a failure to derive the scope costs time rather than coverage.
+
+Only a stage reading exactly ONE language's sources may be scoped. `install-gates`
+scopes the per-language test runner and typechecker, where the seconds are, and
+leaves lint and format-check unconditional at ~1s. Node stages stay unscoped
+because `npm run <script>` is opaque and may front an integration suite.
+
+When hand-adding a stage, that last point is the rule to keep: an integration
+stage stays on plain `run_stage`. A TypeScript change is exactly what breaks a
+Playwright suite, so scoping that suite to `tests/e2e/**` would scope out the
+case it exists to catch.
+
 ## Protected files
 
 `templates/pre-tool-protect.sh` denies `.env*`, lockfiles, and `.git/` paths.

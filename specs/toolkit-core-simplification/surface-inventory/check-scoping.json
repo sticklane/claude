@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "check-scoping",
+  "frozen_sha256": "f09e767f89569fe1265f320f1b19284913502a85e0e9b06243147e675d427bd8",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_check_scoping.sh#assert:3babff7b337f4a2252971df92adfbab7cce3c1643539da96a526f6d8da395c45"
+      ],
+      "content_sha256": "251261203b9a69097f4a0e3f6a682e223f6f2b7f431528534ad5301dce3423c6",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_check_scoping.sh",
+      "path": "tests/test_check_scoping.sh",
+      "rationale": "Canonical regression coverage for changed-stack scoping in templates/check.sh.tmpl: an unset or empty CHECK_SCOPE must run every stage, an out-of-scope change must skip only the scoped stage and say so, and scoping must never weaken a failure.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
