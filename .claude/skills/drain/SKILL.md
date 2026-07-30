@@ -22,10 +22,17 @@ unattended: a human opened the run.
 
 **Launch forms — the focus comes from `specs/NOW.md`.** That file is the
 human-owned, priority-ordered list of spec slugs; only a human edits it, and
-`bin/now-focus` is the parser (`--top` for the first entry, `--why` for the
+`bin/now-focus` is the parser (no flag prints the whole priority order, one
+slug per line; `--top` prints just the first, `--why` appends each entry's
 optional one-line why).
 
 - Bare `/drain` — focus-drain the topmost NOW.md entry that has ready work.
+  Run `bin/now-focus` with no flag, walk the printed order from the top, and
+  focus the FIRST slug with at least one issue in `bd ready` (a bead belongs
+  to a slug per loop step 1's `metadata.source` test). Skip a slug whose work
+  is finished or wholly blocked and try the next one; `--top` alone is not
+  the selector, because entries[0] may have no ready work. Only when NO
+  printed slug has ready work does the run go to the batch interview.
 - `/drain specs/<slug>` — focus-drain that spec, whatever NOW.md orders.
 - `/drain --all` — today's whole-queue behavior. Announce it at launch:
   `drain --all: whole bd ready queue, no focus`.
@@ -36,6 +43,11 @@ is absent. Say so and stop, naming both escapes — `/drain --all` for the whole
 queue, or `/drain specs/<slug>` to name one focus. Drain never invents a
 focus, and never writes NOW.md except to remove a slug the completion
 ceremony just finished.
+
+**Malformed NOW.md.** `bin/now-focus` exits 2 when a list line breaks the
+entry grammar. Stop and report the offending line the selector named,
+verbatim; never guess a focus around it and never edit NOW.md to repair it —
+only a human edits that file.
 
 **Exhaustion contract.** So long as ready work remains in the
 launched scope, the run never ends. The scope is the focus selected above:
@@ -94,7 +106,8 @@ record why on the issue and leave it for the batch interview.
    metadata is treated as overlapping everything — it runs solo). Empty, or
    only blocked issues remain → go to the batch interview.
 
-   Under a focus-drain (every launch form but `--all`), the frontier is the
+   Under a focus-drain (bare `/drain` and `/drain specs/<slug>`), the
+   frontier is the
    focus spec's open beads (a bead belongs to a spec when its
    `metadata.source` sits under `specs/<slug>/`) ∪ the transitive closure of
    their *blocking*

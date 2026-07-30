@@ -126,7 +126,7 @@ NOW
 run_selector "$empty"
 assert_status "empty NOW.md exits with the no-focus status" 3
 assert_stdout_equals "empty NOW.md prints no slug" ""
-assert_stderr_contains "empty NOW.md names the --all escape" -- '--all'
+assert_stderr_contains "empty NOW.md names the --all escape" '--all'
 assert_stderr_contains "empty NOW.md names the explicit-slug escape" 'specs/<slug>'
 assert_stderr_contains "empty NOW.md refuses to invent a focus" 'never invents a focus'
 
