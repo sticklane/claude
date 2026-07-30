@@ -356,10 +356,11 @@ querying "the current runtime's native live-agent inventory" — it is a
 formatter over the native view plus a worktree join. The join is real value;
 the formatter is not. Separately, `.claude/workflows/deep-research.js` is
 described as mirroring the harness built-in with per-stage token tiering — a
-self-acknowledged mirror maintained for one added feature. And `impeccable`
-and `taste` are twelve-line alias wrappers that delegate wholesale to
-`anti-ai-slop-writing` and `prose-review`, adding two more entries to the
-crowded prose-routing domain in exchange for nothing.
+self-acknowledged mirror maintained for one added feature. The prose-routing
+domain shows what resolving one of these looks like: two twelve-line alias
+wrappers over `anti-ai-slop-writing` and `prose-review` were the same pattern
+there, and in July 2026 they were deleted outright rather than thinned.
+`/fleet` and `deep-research.js` are the two still awaiting that call.
 
 **Deliberate conflict with the harness, defensibly.** The repo bans the native
 task tools in favor of bd. That is the right call on the merits — native tasks
