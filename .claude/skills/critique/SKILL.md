@@ -55,34 +55,33 @@ it always re-runs). This skip is `SPEC.md`-only: a plan or diff target has no
    never the MECHANICAL bullet's "under-scoped acceptance command" and is
    routed to JUDGMENT. MECHANICAL findings are applied _unconditionally_,
    without the user-ask/pipeline gate that governs the rest of this step:
-   edit the target file directly, commit (`fix: apply mechanical critique
-findings` or similar), and re-run the critic **exactly once** — one
-   apply-and-recheck pass, never a loop. A reviewer told to find gaps always
-   finds more, so each extra round feels justified while returning less: a
-   2026-07-29 session spent four rounds and 272k subagent tokens on one spec,
-   and by round three the findings were a mis-scoped bucket and an
-   unsatisfiable criterion — real, but the class of thing implementation
-   surfaces for free. Round 1 finds the design flaws; the recheck confirms
-   they were fixed; anything still open is relayed, not chased. Auto-apply is
+   edit the target file directly and commit (`fix: apply mechanical critique
+findings` or similar). Auto-apply is
    scoped to the prose target only — a `SPEC.md`, or
    the plan file when `/critique` reviewed a plan document; a working-diff or
-   code target is never auto-edited. For the JUDGMENT findings (and any
-   MECHANICAL finding still open after the loop bound): a reviewer told to
-   find gaps will always find some — recommend fixing the ones that change
+   code target is never auto-edited. For the JUDGMENT findings: a reviewer told
+   to find gaps will always find some — recommend fixing the ones that change
    behavior or block verification, flag style-level ones as optional, and
    apply _these_ only if the user asks or the pipeline step you're in requires
-   READY. Nothing is dropped silently — every finding still open after the
-   single recheck, plus every JUDGMENT finding from the first pass, is relayed
-   via step 2.
-5. The step-4 recheck is the only re-run: a critique you didn't re-check is a
-   claim rather than a verification, and a third pass is a habit rather than a
-   check. Re-read only the sections the critic named, never the whole
-   artifact. A verdict that is still NOT READY after one recheck is reported
-   as NOT READY with its open findings — it is not fixed-and-rechecked again.
+   READY. Nothing is dropped silently — every JUDGMENT finding, and every
+   MECHANICAL finding you chose not to apply, is relayed via step 2.
+5. **One critic dispatch per invocation. Do not re-run it.** The critique is
+   single-pass: the critic reports, mechanical fixes land, the verdict and open
+   findings are relayed, and the skill ends. A reviewer told to find gaps
+   always finds more, so each extra round feels justified while returning less
+   — a 2026-07-29 session spent four rounds and 272k subagent tokens on one
+   spec, and by round three the findings were a mis-scoped bucket and an
+   unsatisfiable criterion — real, but the class of thing implementation
+   surfaces for free. Worse, a recheck round invites large re-edits of a file
+   the critic just read, which is itself a defect source (2026-07-30: a
+   recheck-driven rewrite deleted three sections of the spec under review).
+   Round 1 finds the design flaws; implementation finds the rest. A verdict
+   that is NOT READY is reported as NOT READY with its open findings — the
+   fixes ride into the next stage, not into another critic pass.
 6. **Persist the findings for a `SPEC.md` target** (skip for a plan or diff,
    and skip when the re-run gate above already relayed a recorded verdict —
-   nothing was re-derived to record). Once the verdict has settled (after any
-   step-4 apply→recheck loop and step-5 re-run), if the settled verdict
+   nothing was re-derived to record). Once step 4's mechanical fixes have
+   landed, if the verdict
    against the `SPEC.md` is **NOT READY or READY WITH NITS**, write or update
    `specs/<slug>/critique-findings.md` in one atomic write: a header
    recording the content hash of the exact current `SPEC.md` bytes the
