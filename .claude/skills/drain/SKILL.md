@@ -131,12 +131,22 @@ record why on the issue and leave it for the batch interview.
    which is the whole contract it emits — `READY` / `READY WITH NITS` /
    `NOT READY`, plus findings scored 0–100 for confidence and no severity
    labels at all (`.claude/agents/critic.md`), so never grep its findings for
-   severity words. `NOT READY` is a FAIL, routed through the same bounded
-   relaunch-once path below — never an open-ended fix loop. `READY` and
-   `READY WITH NITS` both merge, with the findings recorded on the issue
-   first; a `READY WITH NITS` carrying substantive findings is the ordinary
-   outcome, not an exception, and dispatching a review-fix round on those
-   findings before the merge is the normal way to clear them.
+   severity words. **Every verdict carrying findings — `NOT READY` as much as
+   `READY WITH NITS` — routes to one Findings-fix round, never to the
+   worker-relaunch path.** Relaunching the worker one tier up is the remedy for
+   a worker or verifier FAIL, where the attempt itself failed; it is the wrong
+   remedy for "you missed two inventory entries", and it does not even carry
+   the findings into the retry. Dispatch the Findings-fix round in
+   [reference.md](reference.md)'s "Findings-fix round", which hands the
+   findings verbatim to a worker on the same branch and worktree, then go
+   straight to the final gate — the barrier does not repeat (see below).
+   `READY` with no findings merges directly. A `READY WITH NITS` carrying
+   substantive findings is the ordinary outcome, not an exception.
+   If the single Findings-fix round does not clear them, record the findings
+   and the branch on the issue and leave it **blocked** with a typed
+   `Unblock: agent:` naming the remaining fix — one disposition, not
+   "ready-or-blocked", so the agent-clearable path can pick it up rather than
+   a human adjudicating a two-line change.
    On verifier PASS and a resolved critic verdict, run the repository's
    canonical project gate exactly once on the reviewed branch. Under Codex,
    run it with cwd set to the resolved worker worktree (or an explicit
