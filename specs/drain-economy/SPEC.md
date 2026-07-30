@@ -106,3 +106,44 @@ None. All three were resolved by Steven on 2026-07-30:
 ## Parallelization map
 
 Wave 1 — "drain core" as one serialized group (shared Touch on drain SKILL/reference): EP0, EP1-EP4, EP17, EP18 ∥ EP11 (grammar + idea template) ∥ EP5 (run bead). Wave 2: EP6-EP7 (need EP5, EP18 wording) ∥ EP12 (needs EP11). Wave 3: EP9-EP10 (need EP5/EP2) ∥ EP13-EP14 (need EP6/EP12) ∥ EP8 ∥ EP15 ∥ EP19. EP20 after EP12+EP18; EP16 last (touches `/critique`, needs EP11 landed).
+
+## Parallelization
+
+Prose for a human reader; the machine contract is each task's `Touch:` header
+and dependency edges as registered into bd.
+
+Two chains run independently from the start. The **drain-prose chain** — tasks
+01 → 02 → 03 → 04 → 12 — is serialized not by logic but by file: all five edit
+`.claude/skills/drain/SKILL.md`, and two workers in that file collide no matter
+how disjoint their requirements are. Task 12 additionally waits on 08. The
+**proximity chain** — 07 → 08 → 09 → 10 — is a genuine data dependency: the
+grammar defines what the gate parses, the gate writes what the status line
+reads, and the workboard renders what the status line derives. Nothing in
+either chain shares a file with the other, so both can be in flight at once
+from the moment work starts.
+
+Three tasks branch off and run concurrently with everything else once their
+input lands: 05 (`bin/drain-report`) and 06 (`bin/drain-watch`) after 04, each
+owning its own new script; 11 (audit class + janitor scope) after 04, touching
+only `agentic/audit.py` and `bin/janitor`; 13 (`/critique`) after 07. Task 14
+is last by construction — it asserts the whole mechanism end to end.
+
+Two shared-decision hazards, both resolved in the spec rather than left to a
+worker: the run-log line grammar and the run-bead body are fixed by task 04 and
+merely parsed by 05 and 06, so those two never negotiate a format between
+themselves; and the close-plus-label lifecycle for dead triage items is one
+convention, written by 03 for declines and extended by 11 for decay. A worker
+that finds either under-specified files blocking work against the owning task
+rather than choosing for itself.
+
+Task 01 carries one extra duty for the whole spec: it registers the
+surface-inventory fragment covering the existing unclassified paths later tasks
+edit (`drain/reference.md`, `agentic/ready.py`, `agentic/audit.py`,
+`bin/janitor`, `workboard.py`, `specs/QUEUE.md`). Until it lands, `/breakdown`'s
+acceptance pre-flight refuses those paths — which is why it is P0 even though
+the selector could otherwise wait.
+
+Every task touching `.claude/skills/drain/SKILL.md` carries a `wc -l` < 500
+criterion. The file is 272 lines today and this spec adds ten mechanisms to it;
+without that ceiling the last task in the chain inherits a file over the
+authoring budget and a refactor nobody scoped.
