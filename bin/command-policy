@@ -2,11 +2,11 @@
 """Decide whether a command parsed out of a repository file may execute.
 
 The policy is stated in ``.claude/rules/file-sourced-commands.md``: argv-0
-resolves to a regular executable under an allowlisted root, execution is
-direct and never through a shell, every word survives POSIX shell-word lexing
-and carries no ASCII control character or shell metacharacter, the cwd is the
-repository root, a bounded timeout applies, and the child inherits no network
-grant.
+resolves to a regular executable under an allowlisted root, carries no shell
+metacharacter, and never reads a following argument as a code string;
+execution is direct and never through a shell; no word carries an ASCII
+control character; the cwd is the repository root, a bounded timeout applies,
+and the child inherits no network grant.
 
 Words arrive either already split (positional arguments) or as one
 file-sourced string (``--command``), which this program lexes. It decides and,
@@ -42,6 +42,8 @@ SYSTEM_ROOTS = ("/bin", "/usr/bin", "/usr/local/bin", "/opt/homebrew/bin")
 NAMED_TOOLS = frozenset(
     {"bash", "echo", "git", "grep", "make", "node", "npm", "python3"}
 )
+INTERPRETERS = frozenset({"bash", "node", "python3"})
+CODE_STRING_FLAGS = frozenset({"-c", "-e", "--eval"})
 INHERITED_ENVIRONMENT = (
     "HOME",
     "LANG",
@@ -96,27 +98,41 @@ def bounded(words: list[str]) -> None:
             )
 
 
-def inert(words: list[str]) -> None:
+def printable(words: list[str]) -> None:
     for position, word in enumerate(words):
         if CONTROL_CHARACTER.search(word):
             raise Rejection(
                 "control-character",
                 f"word {position} holds an ASCII control character",
             )
-        for character in word:
-            if character in SHELL_METACHARACTERS:
-                raise Rejection(
-                    "shell-metacharacter",
-                    f"word {position} holds the shell metacharacter "
-                    f"{character!r}",
-                )
-        try:
-            shlex.split(word, posix=True)
-        except ValueError as error:
+
+
+def inert(argv0: str) -> None:
+    for character in argv0:
+        if character in SHELL_METACHARACTERS:
             raise Rejection(
-                "unbalanced-quote",
-                f"word {position} is not shell-word parsable: {error}",
-            ) from error
+                "shell-metacharacter",
+                f"argv-0 holds the shell metacharacter {character!r}",
+            )
+    try:
+        shlex.split(argv0, posix=True)
+    except ValueError as error:
+        raise Rejection(
+            "unbalanced-quote",
+            f"argv-0 is not shell-word parsable: {error}",
+        ) from error
+
+
+def noninterpreting(executable: pathlib.Path, arguments: list[str]) -> None:
+    if executable.name not in INTERPRETERS:
+        return
+    for position, argument in enumerate(arguments, start=1):
+        if argument in CODE_STRING_FLAGS:
+            raise Rejection(
+                "interpreter-code-string",
+                f"{executable.name} would read word {position} as a code "
+                f"string via {argument!r}, reintroducing the shell",
+            )
 
 
 def resolved_argv0(name: str, root: pathlib.Path) -> pathlib.Path:
@@ -161,8 +177,11 @@ def allowlisted(executable: pathlib.Path, root: pathlib.Path) -> None:
 
 def vetted(words: list[str], root: pathlib.Path) -> list[str]:
     bounded(words)
-    inert(words)
-    allowlisted(resolved_argv0(words[0], root), root)
+    printable(words)
+    inert(words[0])
+    executable = resolved_argv0(words[0], root)
+    allowlisted(executable, root)
+    noninterpreting(executable, words[1:])
     return words
 
 
@@ -289,7 +308,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    words = [word for word in args.words if word != "--"]
+    words = args.words[1:] if args.words[:1] == ["--"] else args.words
     if bool(args.command) == bool(words):
         print(
             "command-policy: give either --command <string> or command words",
@@ -311,7 +330,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     except Rejection as rejection:
         record = verdict("reject", rejection.reason, rejection.detail)
-        print(json.dumps(record, sort_keys=True), file=sys.stderr)
+        print(
+            json.dumps(record, sort_keys=True),
+            file=sys.stdout if args.check_only else sys.stderr,
+        )
         return exit_code_for(record)
 
     if args.check_only:

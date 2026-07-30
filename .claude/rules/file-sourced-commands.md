@@ -23,11 +23,24 @@ A command is accepted only when all of these hold:
   name is searched against those roots in that order and never against `$PATH`.
 - **Execution is direct, never through a shell.** The words are handed to the
   operating system as argv. Nothing is interpreted by `sh -c`, so a
-  metacharacter in an accepted argument is an inert byte.
-- **Every word survives POSIX shell-word lexing** and carries no ASCII control
-  character and no shell metacharacter (`;`, `|`, `&`, backtick, `$`, `(`,
-  `)`, `<`, `>`, `\`, newline). Words arrive already split, or as one
-  file-sourced string the policy lexes itself.
+  metacharacter in an accepted argument is an inert byte — *provided* argv-0
+  is not itself an interpreter that would read one of those arguments as
+  code, which the next condition forbids. That carve-out is why the ban below
+  is scoped to argv-0: a regex like `'unclassified\|drift'` or an apostrophe
+  in `"don't"` is ordinary argument data, and refusing it would cost the two
+  consumers their real commands for no gain.
+- **argv-0 never reads a following argument as a code string.** When argv-0
+  resolves to an interpreter in the named-tool list (`bash`, `node`,
+  `python3`), a `-c`, `-e`, or `--eval` anywhere in its arguments is refused:
+  `bash -c '…'` would hand the policy's own bytes back to a shell, undoing
+  the direct-execution guarantee above.
+- **argv-0 survives POSIX shell-word lexing** and carries no shell
+  metacharacter (`;`, `|`, `&`, backtick, `$`, `(`, `)`, `<`, `>`, `\`,
+  newline). Words arrive already split, or as one file-sourced string the
+  policy lexes itself; an unbalanced quote in that string is refused as it is
+  lexed.
+- **No word carries an ASCII control character.** This bound holds on every
+  word, argv-0 and arguments alike.
 - **Bounds hold**: at most 64 words, each at most 4096 characters.
 - **The cwd is the repository root**, resolved with `git rev-parse
   --show-toplevel`.
@@ -44,11 +57,11 @@ A command is accepted only when all of these hold:
 
 Each refusal carries one stable code, and a consumer records the code rather
 than prose: `unresolved-argv0`, `not-executable`, `outside-allowlist`,
-`shell-metacharacter`, `control-character`, `unbalanced-quote`,
-`too-many-arguments`, `argument-too-long`, and `timeout`.
+`shell-metacharacter`, `interpreter-code-string`, `control-character`,
+`unbalanced-quote`, `too-many-arguments`, `argument-too-long`, and `timeout`.
 
 `timeout` is the one code that follows an execution: the command was accepted
-and then exceeded its bound. The other eight are decided before any process
+and then exceeded its bound. The other nine are decided before any process
 starts.
 
 ## Demotion contract
@@ -71,6 +84,7 @@ bin/command-policy [--check-only] [--timeout SECONDS] --command '<one string>'
 
 One JSON verdict object is emitted — `verdict` (`accept`, `reject`,
 `timeout`), `reason`, `detail`, `executed`, and `exit_code` when a child ran.
-It goes to stdout under `--check-only` and to stderr otherwise, so an executed
-child owns stdout. Exit codes: the accepted command's own code, 78 for a
+It goes to stdout under `--check-only` — for a rejection as much as for an
+acceptance, since the reason code is what a `--check-only` consumer exists to
+capture — and to stderr otherwise, so an executed child owns stdout. Exit codes: the accepted command's own code, 78 for a
 rejection, 124 for a timeout, 2 for a usage error.

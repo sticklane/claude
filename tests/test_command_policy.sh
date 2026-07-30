@@ -180,9 +180,13 @@ expect_reject "argv-0 resolving nowhere" \
 expect_reject "argv-0 outside the allowlisted roots" \
   "$(new_fixture outside)" outside-allowlist ./outside-tool
 
-expect_reject "shell metacharacter reaching argv" \
+expect_reject "shell metacharacter in argv-0" \
   "$(new_fixture metacharacter)" shell-metacharacter \
-  --command '/bin/echo hi; touch SENTINEL'
+  --command '$(touch SENTINEL)'
+
+expect_reject "interpreter handed a code string" \
+  "$(new_fixture interpreter)" interpreter-code-string \
+  bash -c 'touch SENTINEL'
 
 expect_reject "ASCII control character in an argument" \
   "$(new_fixture control)" control-character \
@@ -230,28 +234,60 @@ else
   nope "timed-out command left the fixture census unchanged"
 fi
 
-# --- further hostile spellings reuse the metacharacter code
-expect_metacharacter() {
+# --- metacharacters in ARGUMENTS are accepted and provably inert under exec
+expect_inert_argument() {
   local desc="$1" fixture="$2"
   shift 2
   local before after
   before="$(file_census "$fixture")"
   run_policy "$fixture" "$@"
   after="$(file_census "$fixture")"
-  if [ "$(json_field "$OUT" reason)" = "shell-metacharacter" ] &&
+  if [ "$(json_field "$OUT" verdict)" = "accept" ] &&
     [ "$before" = "$after" ]; then
     ok "$desc"
   else
-    nope "$desc"
+    nope "$desc: verdict '$(json_field "$OUT" verdict)', census $before then $after"
   fi
 }
 
-expect_metacharacter "command substitution is refused, unexecuted" \
+expect_inert_argument "command substitution in an argument runs as bytes" \
   "$(new_fixture substitution)" --command '/bin/echo $(touch SENTINEL)'
-expect_metacharacter "backtick substitution is refused, unexecuted" \
+expect_inert_argument "backtick substitution in an argument runs as bytes" \
   "$(new_fixture backtick)" --command '/bin/echo `touch SENTINEL`'
-expect_metacharacter "pipeline is refused, unexecuted" \
+expect_inert_argument "a pipeline spelling in arguments runs as bytes" \
   "$(new_fixture pipeline)" --command '/bin/echo hi | touch SENTINEL'
+
+# --- an ordinary regex argument is not mistaken for shell syntax
+regex="$(new_fixture regex-argument)"
+run_policy "$regex" grep -c 'marker\|nothing' bin/make-marker
+if [ "$STATUS" -eq 0 ] && [ "$(json_field "$OUT" verdict)" = "accept" ]; then
+  ok "a regex argument holding backslash-pipe is accepted"
+else
+  nope "a regex argument holding backslash-pipe is accepted (status $STATUS)"
+fi
+run_policy "$regex" /bin/echo "don't"
+if [ "$STATUS" -eq 0 ]; then
+  ok "an apostrophe in an argument is accepted"
+else
+  nope "an apostrophe in an argument is accepted (status $STATUS)"
+fi
+
+# --- an inner `--` reaches the child rather than being stripped
+separator="$(new_fixture separator)"
+run_policy "$separator" /bin/echo a -- b
+case "$OUT" in
+  *'a -- b'*) ok "an inner -- is passed through unrewritten" ;;
+  *) nope "an inner -- is passed through unrewritten (got '$OUT')" ;;
+esac
+
+# --- a --check-only rejection puts its reason code on stdout, not stderr
+stream="$(new_fixture check-only-reject)"
+stream_out="$(cd "$stream" && "$POLICY" --check-only no-such-tool-xyzzy 2>/dev/null)"
+if [ "$(json_field "$stream_out" reason)" = "unresolved-argv0" ]; then
+  ok "--check-only writes its rejection record to stdout"
+else
+  nope "--check-only writes its rejection record to stdout (got '$stream_out')"
+fi
 
 # --- every reject case carries its own reason code
 distinct="$(printf '%s' "$REJECT_CODES" | sort -u | wc -l | tr -d ' ')"
