@@ -46,8 +46,8 @@ chmod 755 "$STUB/bd"
 PATH="$STUB:$PATH"
 export PATH
 export JANITOR_TEST_BD_STATE="$STATE"
-printf '[]\n' > "$STATE/in_progress.json"
-printf '%s\n' '[{"id":"agentic-1111"},{"id":"agentic-2222"},{"id":"agentic-3333"},{"id":"agentic-6666"}]' \
+printf '%s\n' '[{"id":"agentic-4444"},{"id":"agentic-5555.6"}]' > "$STATE/in_progress.json"
+printf '%s\n' '[{"id":"agentic-1111"},{"id":"agentic-2222"},{"id":"agentic-3333"},{"id":"agentic-5555"},{"id":"agentic-6666"}]' \
   > "$STATE/closed.json"
 
 cleanup() { chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP" "${SHARED:-$TMP/none}"; }
@@ -94,6 +94,12 @@ git -C "$REPO" worktree add -q --detach "$WT/detached" main
 commit_in "$WT/detached" "detached work" "detached work"
 DETACHED_SHA="$(git -C "$WT/detached" rev-parse HEAD)"
 
+git -C "$REPO" worktree add -q -b drain/agentic-4444 "$WT/in-progress" main
+commit_in "$WT/in-progress" "live worker output" "live worker output"
+
+git -C "$REPO" worktree add -q -b drain/agentic-5555.6-codex "$WT/open-child" main
+commit_in "$WT/open-child" "open child output" "open child output"
+
 # --- dry run removes nothing -------------------------------------------------
 DRY="$(run_janitor "$REPO" --dry-run)"; DRY_RC=$?
 assert "dry run: exits 0" "$(is "$DRY_RC" 0)"
@@ -134,6 +140,16 @@ else
   assert "detached HEAD: commits reachable from a branch after removal" \
     "$(reachable_from_a_branch "$REPO" "$DETACHED_SHA")"
 fi
+
+# A live session's detached isolation worktree is never force-removed.
+assert "detached HEAD: recently active worktree survives the sweep" \
+  "$(present "$WT/detached")"
+
+# The in-progress guard is the only liveness protection left on branch
+# worktrees, so both of its shapes are exercised.
+assert "in-progress issue: worktree survives the sweep" "$(present "$WT/in-progress")"
+assert "closed parent epic, in-progress sub-issue: worktree survives the sweep" \
+  "$(present "$WT/open-child")"
 
 # A6 — the shared checkout is never a removal candidate.
 SHARED="$(mktemp -d /tmp/janitor-shared.XXXXXX)"
