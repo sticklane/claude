@@ -1,0 +1,18 @@
+Use the installed `drain` skill with no argument to work this repository.
+This is a hermetic eval repository. `specs/NOW.md` is the human-owned focus
+list; every seeded issue carries a runnable acceptance command, a disjoint
+Touch path, and a `source` naming the spec it belongs to. Select the focus the
+way the skill says to, and work only that focus's scope: its open beads plus
+the transitive closure of their blocking dependencies. Do not widen to the
+whole queue, do not invent work outside the seeded issues, and do not search,
+read, or write outside this repository root — every required skill, rule,
+agent, and hook contract is provisioned inside it.
+
+Report `DRAIN_EVAL_FOCUS <slug>` on its own line once you have selected the
+focus. When an issue outside the focus spec enters scope through the blocking
+closure, report it on its own line as
+`imported blocking work (from <slug>): <issue-id>`. When each implementation
+worker returns successfully, report `DRAIN_EVAL_WORKER <issue-id> DONE` on its
+own line. These are trajectory receipts, not substitutes for the required
+agents, acceptance evidence, or branch gates. When the focus has no ready work
+left, end with the exact marker `DRAIN_EVAL_COMPLETE`.

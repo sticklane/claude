@@ -1,7 +1,7 @@
 ---
 name: drain
 description: Works the remaining bd (beads) ready queue with the runtime's native orchestration - dependency-ordered, Touch-disjoint workers, independent verification, bd closure, and a batched human interview when only blocked work remains. Claude compiles a Workflow; Antigravity and Codex use native subagents (`invoke_subagent` / `spawn_agent`). Trigger phrases - "/drain", "drain the queue", "drain specs/<slug>", "work the queue unattended", or a pipeline chain the user's live message requested ("critique, breakdown, and drain").
-argument-hint: "[bd label/query or specs/<slug>]"
+argument-hint: "[specs/<slug> | --all | bd label/query; default: top specs/NOW.md entry]"
 ---
 
 Work through every remaining ready issue in the bd queue without a human
@@ -20,10 +20,40 @@ contract (`.claude/rules/untrusted-data.md`, the repository's "Authoring
 conventions"), cited not restated. This is why drain is safe to run
 unattended: a human opened the run.
 
+**Launch forms — the focus comes from `specs/NOW.md`.** That file is the
+human-owned, priority-ordered list of spec slugs; only a human edits it, and
+`bin/now-focus` is the parser (no flag prints the whole priority order, one
+slug per line; `--top` prints just the first, `--why` appends each entry's
+optional one-line why).
+
+- Bare `/drain` — focus-drain the topmost NOW.md entry that has ready work.
+  Run `bin/now-focus` with no flag, walk the printed order from the top, and
+  focus the FIRST slug with at least one issue in `bd ready` (a bead belongs
+  to a slug per loop step 1's `metadata.source` test). Skip a slug whose work
+  is finished or wholly blocked and try the next one; `--top` alone is not
+  the selector, because entries[0] may have no ready work. Only when NO
+  printed slug has ready work does the run go to the batch interview.
+- `/drain specs/<slug>` — focus-drain that spec, whatever NOW.md orders.
+- `/drain --all` — today's whole-queue behavior. Announce it at launch:
+  `drain --all: whole bd ready queue, no focus`.
+- A bd label/query — limit to that filter, as before.
+
+**Empty NOW.md.** `bin/now-focus` exits 3 when the list is empty or the file
+is absent. Say so and stop, naming both escapes — `/drain --all` for the whole
+queue, or `/drain specs/<slug>` to name one focus. Drain never invents a
+focus, and never writes NOW.md except to remove a slug the completion
+ceremony just finished.
+
+**Malformed NOW.md.** `bin/now-focus` exits 2 when a list line breaks the
+entry grammar. Stop and report the offending line the selector named,
+verbatim; never guess a focus around it and never edit NOW.md to repair it —
+only a human edits that file.
+
 **Exhaustion contract.** So long as ready work remains in the
-launched scope, the run never ends. The scope is drain's launch argument:
-a `specs/<slug>` limits to that spec's issues, a bd label/query limits to
-that filter, and a no-argument launch means the whole `bd ready` queue.
+launched scope, the run never ends. The scope is the focus selected above:
+a focus-drain limits to that spec's dependency closure (loop step 1), a bd
+label/query limits to that filter, and `--all` means the whole `bd ready`
+queue.
 
 **bd is the queue; `/work` is the per-issue mechanism.** Drain is the
 unattended sibling of `/work` (the beads-daily flow, `.claude/skills/work/`):
@@ -67,13 +97,27 @@ record why on the issue and leave it for the batch interview.
    recovery leaves no worker branches or worktrees behind. Then read the
    queue.
 
-1. **Read the ready queue.** `bd ready --json` — the unblocked, priority-
-   sorted issues whose dependencies are closed. bd does NOT compute file
+1. **Read the ready queue, scoped to the focus.** `bd ready --json` — the
+   unblocked, priority-sorted issues whose dependencies are closed.
+   bd does NOT compute file
    overlap for hand-filed issues (only `python3 -m agentic ready` applies the
    Touch-disjoint frontier), so Claude checks Touch disjointness itself when
    grouping issues into concurrent waves (a hand-filed issue with no Touch
    metadata is treated as overlapping everything — it runs solo). Empty, or
    only blocked issues remain → go to the batch interview.
+
+   Under a focus-drain (bare `/drain` and `/drain specs/<slug>`), the
+   frontier is the
+   focus spec's open beads (a bead belongs to a spec when its
+   `metadata.source` sits under `specs/<slug>/`) ∪ the transitive closure of
+   their *blocking*
+   dependencies wherever those live — another spec, or no spec at all.
+   Recompute that closure on every read, never once at launch: closing a bead
+   can pull new blockers into scope. Imported blockers are claimed and worked
+   like any other issue, but reported under "imported blocking work (from
+   `<slug>`)", and the donor spec is never marked in-progress for burnup —
+   only the focus spec's own beads move its acceptance delta. Under `--all`
+   the frontier is the whole `bd ready` queue with no closure step.
 
 2. **Claim, then dispatch a fresh worker.** For each issue to run this pass,
    do all three claim steps as one unit BEFORE the dispatch call: claim the
