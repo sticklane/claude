@@ -1,0 +1,262 @@
+{
+  "schema_version": "agentic.registration-bootstrap/v1",
+  "spec_path": "specs/mardi-gras-agentic-integration/SPEC.md",
+  "workflow_path": "specs/mardi-gras-agentic-integration/bootstrap-00a-workflow.md",
+  "provider": {
+    "beads_commit": "8e4e59d39f3459a43cf21a3236a13eca4dd874f7",
+    "control_plane": "crash-recoverable-attended",
+    "live_mutation": true,
+    "request_schemas": {
+      "bootstrap_finalize": "agentic.bd-bootstrap-finalize/v1",
+      "guarded_create": "agentic.bd-guarded-create/v1",
+      "conditional_transaction": "agentic.bd-authority-transaction/v1"
+    },
+    "response_schemas": {
+      "identity": "agentic.bd-authority-identity-result/v1",
+      "install": "agentic.bd-authority-install-result/v1",
+      "bootstrap_finalize": "agentic.bd-bootstrap-finalize-result/v1",
+      "guarded_create": "agentic.bd-guarded-create-result/v1",
+      "conditional_transaction": "agentic.bd-authority-transaction-result/v1"
+    },
+    "runtime_argv": {
+      "claude": [
+        "--print"
+      ],
+      "codex": [
+        "exec"
+      ]
+    }
+  },
+  "attestation": {
+    "schema_version": "agentic.registration-bootstrap-attestation/v1",
+    "source_commit": "",
+    "source_date_utc": "",
+    "source_config_sha256": "",
+    "spec_sha256": "",
+    "workflow_sha256": "",
+    "controller_sha256": "",
+    "task_sha256": {},
+    "ready_review": {
+      "reviewer": "",
+      "verdict": "",
+      "subject_sha256": "",
+      "evidence_sha256": ""
+    }
+  },
+  "tasks": [
+    {
+      "bootstrap_id": "00A",
+      "source": "specs/mardi-gras-agentic-integration/tasks/00-add-beads-authority-core.md",
+      "task_sha256": "109f43d539ddf0fc97eae2eaffe4ac24d2c2cd0bc2988b4c2f24db8f482a0ec1",
+      "definition": {
+        "schema_version": 1,
+        "path": "specs/mardi-gras-agentic-integration/tasks/00-add-beads-authority-core.md",
+        "title": "Bootstrap Task 00A: add the Beads authority core",
+        "goal": "Provide the first reproducible Beads v1.1.0 authority fragment and the shared\nbootstrap helper needed by every later authority task. With only this fragment\napplied, the pinned Beads checkout supports no-migrate identity, transactional\ncore installation, storage-enforced external-reference uniqueness, and\nguarded bootstrap creation plus the narrow one-shot 00A finalize needed to\nfinish the bootstrap without advertising the general conditional or\nsupersession profiles.",
+        "touch": [
+          "specs/mardi-gras-agentic-integration/tests/beads-authority-provider-helper.sh",
+          "specs/mardi-gras-agentic-integration/tests/test_beads_authority_core.sh",
+          "specs/mardi-gras-agentic-integration/upstream/beads-authority-core.patch"
+        ],
+        "budget": "48 turns",
+        "rigor": "production",
+        "prerequisites": []
+      },
+      "definition_hash": "d383a2bc4425674c7ca0108309d197dd2155fcce5ae41f9809d13571dc69c1a8",
+      "envelope": {
+        "title": "Bootstrap Task 00A: add the Beads authority core",
+        "description": "Provide the first reproducible Beads v1.1.0 authority fragment and the shared\nbootstrap helper needed by every later authority task. With only this fragment\napplied, the pinned Beads checkout supports no-migrate identity, transactional\ncore installation, storage-enforced external-reference uniqueness, and\nguarded bootstrap creation plus the narrow one-shot 00A finalize needed to\nfinish the bootstrap without advertising the general conditional or\nsupersession profiles.",
+        "acceptance": "- [ ] `bash specs/mardi-gras-agentic-integration/tests/test_beads_authority_core.sh` → an exact pinned checkout with only fragment A passes no-migrate identity, core install/recovery, uniqueness, guarded create/ref update, exact 00A finalize and losing-race rejection, embedded/server serialization, raw-client barriers, and core-only handshake tests (L3).\n- [ ] `bash scripts/check.sh` → the toolkit repository gate remains green with the checked-in core fragment and helper (L3).",
+        "issue_type": "task",
+        "priority": 0,
+        "external_ref": null,
+        "canonical_external_ref": "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-authority-core.md",
+        "metadata": {
+          "budget": "48 turns",
+          "definition_hash": "d383a2bc4425674c7ca0108309d197dd2155fcce5ae41f9809d13571dc69c1a8",
+          "registration_state": "pending",
+          "rigor": "production",
+          "source": "specs/mardi-gras-agentic-integration/tasks/00-add-beads-authority-core.md",
+          "touch": [
+            "specs/mardi-gras-agentic-integration/tests/beads-authority-provider-helper.sh",
+            "specs/mardi-gras-agentic-integration/tests/test_beads_authority_core.sh",
+            "specs/mardi-gras-agentic-integration/upstream/beads-authority-core.patch"
+          ]
+        },
+        "container": {
+          "issue_id": "agentic-j01",
+          "relation": "related",
+          "phase": "post_core"
+        },
+        "dependency_refs": []
+      }
+    },
+    {
+      "bootstrap_id": "00B",
+      "source": "specs/mardi-gras-agentic-integration/tasks/00-add-beads-conditional-authority.md",
+      "task_sha256": "63d406d0f0c43deac7d7a7fa2d641aecf4624652f0110e8d2febd8d8f9c37472",
+      "definition": {
+        "schema_version": 1,
+        "path": "specs/mardi-gras-agentic-integration/tasks/00-add-beads-conditional-authority.md",
+        "title": "Bootstrap Task 00B: add conditional Beads authority",
+        "goal": "Extend the pinned Beads authority core with one stable per-issue authority\nrevision, actor-bound history, and revision-conditional single- and\nmulti-issue transactions. Every scheduling-fingerprint-relevant mutation,\nincluding writes made by supported older clients, advances the affected\nauthority cursor atomically.",
+        "touch": [
+          "specs/mardi-gras-agentic-integration/tests/test_beads_authority_conditional.sh",
+          "specs/mardi-gras-agentic-integration/upstream/beads-authority-conditional.patch"
+        ],
+        "budget": "40 turns",
+        "rigor": "production",
+        "prerequisites": [
+          "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-authority-core.md"
+        ]
+      },
+      "definition_hash": "20d8c28a0537985a3f9f6d06bb851b3a0e7546dc47ce9f1628c7cc723aea765a",
+      "envelope": {
+        "title": "Bootstrap Task 00B: add conditional Beads authority",
+        "description": "Extend the pinned Beads authority core with one stable per-issue authority\nrevision, actor-bound history, and revision-conditional single- and\nmulti-issue transactions. Every scheduling-fingerprint-relevant mutation,\nincluding writes made by supported older clients, advances the affected\nauthority cursor atomically.",
+        "acceptance": "- [ ] `bash specs/mardi-gras-agentic-integration/tests/test_beads_authority_conditional.sh` → the 00A helper applies A+B in order and passes cursor monotonicity, conditional single/batch success and conflict, actor-bound history, ambiguity recovery, and older-client metadata/incident-edge ABA tests on both backends (L3).\n- [ ] `bash scripts/check.sh` → the toolkit repository gate remains green with the conditional fragment and harness (L3).",
+        "issue_type": "task",
+        "priority": 0,
+        "external_ref": "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-conditional-authority.md",
+        "canonical_external_ref": "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-conditional-authority.md",
+        "metadata": {
+          "budget": "40 turns",
+          "definition_hash": "20d8c28a0537985a3f9f6d06bb851b3a0e7546dc47ce9f1628c7cc723aea765a",
+          "registration_state": "pending",
+          "rigor": "production",
+          "source": "specs/mardi-gras-agentic-integration/tasks/00-add-beads-conditional-authority.md",
+          "touch": [
+            "specs/mardi-gras-agentic-integration/tests/test_beads_authority_conditional.sh",
+            "specs/mardi-gras-agentic-integration/upstream/beads-authority-conditional.patch"
+          ]
+        },
+        "container": {
+          "issue_id": "agentic-j01",
+          "relation": "related",
+          "phase": "initial"
+        },
+        "dependency_refs": [
+          "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-authority-core.md"
+        ]
+      }
+    },
+    {
+      "bootstrap_id": "00C",
+      "source": "specs/mardi-gras-agentic-integration/tasks/00-add-beads-supersession-authority.md",
+      "task_sha256": "9c11333a8fd19570448cfdcafc74eb30815e01d7d793c25377a66cd348e1a7bd",
+      "definition": {
+        "schema_version": 1,
+        "path": "specs/mardi-gras-agentic-integration/tasks/00-add-beads-supersession-authority.md",
+        "title": "Bootstrap Task 00C: add supersession authority",
+        "goal": "Complete the pinned Beads storage provider with transactional supersession and\ndurable redirect behavior on 00B's authority substrate. Existing consumers\nmove atomically, later older-client attempts can never create an old-only\nblocking edge, and every redirect or supersession change advances ordered\nauthority history.",
+        "touch": [
+          "specs/mardi-gras-agentic-integration/tests/test_beads_authority_supersession.sh",
+          "specs/mardi-gras-agentic-integration/upstream/beads-authority-supersession.patch"
+        ],
+        "budget": "36 turns",
+        "rigor": "production",
+        "prerequisites": [
+          "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-conditional-authority.md"
+        ]
+      },
+      "definition_hash": "935787257317c97a051df3f071e9e4b91c888115b5d4658f3755d6407ab08bd4",
+      "envelope": {
+        "title": "Bootstrap Task 00C: add supersession authority",
+        "description": "Complete the pinned Beads storage provider with transactional supersession and\ndurable redirect behavior on 00B's authority substrate. Existing consumers\nmove atomically, later older-client attempts can never create an old-only\nblocking edge, and every redirect or supersession change advances ordered\nauthority history.",
+        "acceptance": "- [ ] `bash specs/mardi-gras-agentic-integration/tests/test_beads_authority_supersession.sh` → the 00A helper applies A+B+C in order and passes redirect cursor/history, current-dependent movement, older-client future redirect/rejection, and before/during/after race tests on both backends (L3).\n- [ ] `bash scripts/check.sh` → the toolkit repository gate remains green with the supersession fragment and harness (L3).",
+        "issue_type": "task",
+        "priority": 0,
+        "external_ref": "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-supersession-authority.md",
+        "canonical_external_ref": "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-supersession-authority.md",
+        "metadata": {
+          "budget": "36 turns",
+          "definition_hash": "935787257317c97a051df3f071e9e4b91c888115b5d4658f3755d6407ab08bd4",
+          "registration_state": "pending",
+          "rigor": "production",
+          "source": "specs/mardi-gras-agentic-integration/tasks/00-add-beads-supersession-authority.md",
+          "touch": [
+            "specs/mardi-gras-agentic-integration/tests/test_beads_authority_supersession.sh",
+            "specs/mardi-gras-agentic-integration/upstream/beads-authority-supersession.patch"
+          ]
+        },
+        "container": {
+          "issue_id": "agentic-j01",
+          "relation": "related",
+          "phase": "initial"
+        },
+        "dependency_refs": [
+          "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-conditional-authority.md"
+        ]
+      }
+    },
+    {
+      "bootstrap_id": "00D",
+      "source": "specs/mardi-gras-agentic-integration/tasks/00-install-beads-authorizer-bootstrap.md",
+      "task_sha256": "166f58161d6269bf9c9c122df3a3d7c80c73e2c9b216829a2af2c16ccdd42b12",
+      "definition": {
+        "schema_version": 1,
+        "path": "specs/mardi-gras-agentic-integration/tasks/00-install-beads-authorizer-bootstrap.md",
+        "title": "Bootstrap Task 00D: install the toolkit Beads authorizer",
+        "goal": "Install the toolkit's sole Beads capability parser, fresh per-operation\nauthorizer, conditional mutation adapter, and explicit production schema\ninstaller. All claim, migration, requeue, recovery, live-check, and cohort\ncallers can consume one ticket that binds the actual repository to one\nfingerprinted executable and the three behavior-certified authority profiles.",
+        "touch": [
+          "agentic/authority.py",
+          "agentic/bd.py",
+          "agentic/cli.py",
+          "agentic/schema/bd-authority-transaction-v1.json",
+          "agentic/schema/bd-authority-v1.json",
+          "specs/mardi-gras-agentic-integration/migrate-registration.py",
+          "specs/mardi-gras-agentic-integration/tests/test_beads_authority_provider.sh",
+          "specs/mardi-gras-agentic-integration/trusted-beads-releases-v1.json",
+          "specs/toolkit-core-simplification/surface-inventory/mardi-gras-00d-beads-authority.json",
+          "tests/inventory/mardi-gras-00d-beads-authority.json",
+          "tests/test_agentic_bd_authority.py",
+          "tests/test_mardi_gras_registration_migration.py"
+        ],
+        "budget": "48 turns",
+        "rigor": "production",
+        "prerequisites": [
+          "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-supersession-authority.md"
+        ]
+      },
+      "definition_hash": "5c0b2eca01b22273d7f88b5d00b580c5ea5109298b4fec0989e770b179b29600",
+      "envelope": {
+        "title": "Bootstrap Task 00D: install the toolkit Beads authorizer",
+        "description": "Install the toolkit's sole Beads capability parser, fresh per-operation\nauthorizer, conditional mutation adapter, and explicit production schema\ninstaller. All claim, migration, requeue, recovery, live-check, and cohort\ncallers can consume one ticket that binds the actual repository to one\nfingerprinted executable and the three behavior-certified authority profiles.",
+        "acceptance": "- [ ] `bash specs/mardi-gras-agentic-integration/tests/test_beads_authority_provider.sh` → A+B+C pass the complete R17 embedded/server and older-client matrix, the full upstream Go gate, run the non-skipped `MARDI_AUTHORITY_BINARY=<exact> python3 -m pytest tests/test_mardi_gras_registration_migration.py -q -k provider_integration` suite, and prove every per-primitive crash/recovery boundary, copied/out-of-R8 terminal-receipt rejection, fresh exact 00A–00D terminal-state proof instead of provider-flag trust, closed snapshot/storage-receipt validation, and distinct bootstrap/final commit binding before emitting the pinned binary/digest/schema/receipt bundle consumed by this adapter and migration (L3).\n- [ ] `python3 -m pytest tests/test_agentic_bd_authority.py -q` → fresh repository-bound authorization, all three profiles, conditional single/batch recovery, explicit install, opaque-ID handling, binary drift, and fail-closed unknown/lease behavior pass without an implicit migration (L3).\n- [ ] `python3 scripts/inventory-core-surface.py --check specs/toolkit-core-simplification/BASELINE.json` → the authorizer, command, schemas, and tests are uniquely classified without changing retained surfaces (L2).\n- [ ] `bash scripts/check.sh` → the toolkit repository gate remains green with the shared authorizer installed (L3).",
+        "issue_type": "task",
+        "priority": 0,
+        "external_ref": "spec-task:specs/mardi-gras-agentic-integration/tasks/00-install-beads-authorizer-bootstrap.md",
+        "canonical_external_ref": "spec-task:specs/mardi-gras-agentic-integration/tasks/00-install-beads-authorizer-bootstrap.md",
+        "metadata": {
+          "budget": "48 turns",
+          "definition_hash": "5c0b2eca01b22273d7f88b5d00b580c5ea5109298b4fec0989e770b179b29600",
+          "registration_state": "pending",
+          "rigor": "production",
+          "source": "specs/mardi-gras-agentic-integration/tasks/00-install-beads-authorizer-bootstrap.md",
+          "touch": [
+            "agentic/authority.py",
+            "agentic/bd.py",
+            "agentic/cli.py",
+            "agentic/schema/bd-authority-transaction-v1.json",
+            "agentic/schema/bd-authority-v1.json",
+            "specs/mardi-gras-agentic-integration/migrate-registration.py",
+            "specs/mardi-gras-agentic-integration/tests/test_beads_authority_provider.sh",
+            "specs/mardi-gras-agentic-integration/trusted-beads-releases-v1.json",
+            "specs/toolkit-core-simplification/surface-inventory/mardi-gras-00d-beads-authority.json",
+            "tests/inventory/mardi-gras-00d-beads-authority.json",
+            "tests/test_agentic_bd_authority.py",
+            "tests/test_mardi_gras_registration_migration.py"
+          ]
+        },
+        "container": {
+          "issue_id": "agentic-j01",
+          "relation": "related",
+          "phase": "initial"
+        },
+        "dependency_refs": [
+          "spec-task:specs/mardi-gras-agentic-integration/tasks/00-add-beads-supersession-authority.md"
+        ]
+      }
+    }
+  ]
+}

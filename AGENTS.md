@@ -37,6 +37,7 @@ ready`, claims the selected issue, and closes it after verification. Use
 
 - **bd (beads) is the canonical live state** for task status, dependencies, and ready-work (agentic-core-redesign cutover). Task-file `Status:` headers in `specs/*/tasks/*.md` are frozen display: no live procedure scans or updates them. `agentic register-spec` reads authored definitions once to create absent issues and edges.
 - `specs/QUEUE.md` is the wave plan—dispatch order, not live state.
+- Registered-definition immutability preserves each task's provenance; it does not freeze the workset forever. If genuinely new mandatory scope appears after registration, re-read the live bd graph, author a new immutable dependent task, add it and its edges through the guarded coordinator, and expose it only in a later freshly sealed wave. Never rewrite a registered task file or live acceptance/notes to smuggle new scope to a pointer-only worker. If the requirement was already part of an existing definition, repair that existing owner instead of inventing an extension.
 - `./specs/status.sh` renders the live dashboard from bd on demand (`bd ready` + `bd list`).
 - In-flight session handoffs land in bd, not on disk: `/handoff` opens one `handoff`-labeled issue per parked session, linked by a `tracks` dependency to every issue it leaves open. `bd list --label handoff --status=open` is the discovery surface the resume hook and `/resume-handoff` both read; `/resume-handoff` closes that issue once the work is picked back up.
 

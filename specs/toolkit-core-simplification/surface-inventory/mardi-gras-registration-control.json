@@ -1,0 +1,40 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "mardi-gras-registration-control",
+  "frozen_sha256": "9f7eea25741c1ac15eb36188ef77e451d642c8e18049fdfde69262bc3b33365b",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_mardi_gras_bootstrap_registration.py::test_complete_fake_backed_bootstrap_is_serial_and_idempotent"
+      ],
+      "content_sha256": "51e423279adc397c4f4827668f6e0b9bfcb30c7db43c70f0dcf9b79038093cbf",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_mardi_gras_bootstrap_registration.py",
+      "path": "tests/test_mardi_gras_bootstrap_registration.py",
+      "rationale": "Pre-registration coverage for source-attested, crash-recoverable Bootstrap Tasks 00A through 00D.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_mardi_gras_registration_migration.py::test_crash_rerun_completes_without_duplicate_mutation_or_release"
+      ],
+      "content_sha256": "431cd0fbbdd7eb2f16a5f3ed174006495525ca1ab3d487a0102d9ca8d7de305e",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_mardi_gras_registration_migration.py",
+      "path": "tests/test_mardi_gras_registration_migration.py",
+      "rationale": "Pre-registration migration controls that Bootstrap Task 00D later extends with the real provider-integration fixtures.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "fragment": "mardi-gras-registration-control",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_mardi_gras_bootstrap_registration.py",
+      "runner": "pytest",
+      "serial": false
+    },
+    {
+      "disposition": "retain",
+      "path": "tests/test_mardi_gras_registration_migration.py",
+      "runner": "pytest",
+      "serial": false
+    }
+  ]
+}
