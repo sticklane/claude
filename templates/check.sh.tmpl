@@ -17,6 +17,37 @@ run_stage() { # run_stage <name> <command...>
   printf 'check: %s ok\n' "$desc"
 }
 
+# CHECK_SCOPE holds the changed paths, one per line, and is set by
+# .claude/hooks/stop-gate.sh. Unset or empty means the scope is unknown — a
+# manual run, CI, or a merge gate — and every stage runs.
+#
+# Only a stage that reads exactly ONE language's sources may be scoped.
+# Integration stages (browser suites, cross-stack smoke tests) stay on plain
+# run_stage: a change in one language is precisely what breaks them, so
+# scoping a browser suite to its own directory scopes out the case it exists
+# to catch.
+scope_matches() { # scope_matches <glob-list>
+  [ -n "${CHECK_SCOPE:-}" ] || return 0
+  while IFS= read -r scope_path; do
+    [ -n "$scope_path" ] || continue
+    for scope_glob in $1; do
+      case "$scope_path" in $scope_glob) return 0 ;; esac
+    done
+  done <<EOF
+$CHECK_SCOPE
+EOF
+  return 1
+}
+
+run_scoped_stage() { # run_scoped_stage <glob-list> <name> <command...>
+  globs="$1"; shift
+  if ! scope_matches "$globs"; then
+    printf 'check: %s skipped — no matching change (%s)\n' "$1" "$globs"
+    return 0
+  fi
+  run_stage "$@"
+}
+
 # --- Vale prose lint (opt-in) --------------------------------------------
 # Prose linting for ORIENTATION DOCS ONLY — README.md, AGENTS.md, docs/*.md.
 # Never point it at task files, specs/, or skill bodies (machine-parsed
