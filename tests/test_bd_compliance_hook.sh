@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Tests for .claude/hooks/bd-compliance.sh (specs/beads-daily-skill/SPEC.md,
+# Tests for hooks/bd-compliance/check.sh (specs/beads-daily-skill/SPEC.md,
 # "The compliance Stop hook"): a session that claimed a still-open bd issue is
 # blocked at Stop, and stops being blocked once the issue is closed. Runs
 # against a throwaway bd-tracked fixture repo in a temp dir.
 set -u
 
 TOOLKIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-HOOK="$TOOLKIT_DIR/.claude/hooks/bd-compliance.sh"
+HOOK="$TOOLKIT_DIR/hooks/bd-compliance/check.sh"
 
 for dep in bd jq git; do
   if ! command -v "$dep" >/dev/null 2>&1; then

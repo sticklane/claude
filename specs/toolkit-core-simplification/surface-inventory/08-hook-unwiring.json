@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "08-hook-unwiring",
+  "frozen_sha256": "335ff094e0138a5d1239fc31686a3680a783770db145f606cc4231b79eb1979e",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_bd_compliance_hook.sh#assert:382202953cfcfc5e199ad1b183e9da4e1d67fa6b763eb83239b47fa1a8a9ee3d"
+      ],
+      "content_sha256": "1c36c8e01fdf65dbdd74a183872f46d6babda96457b011a85c6da18070c38b5d",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_bd_compliance_hook.sh",
+      "path": "tests/test_bd_compliance_hook.sh",
+      "rationale": "Baseline pinned this retain. The repo unwired its Stop hooks on 2026-07-29, so the installed .claude/hooks/ copy this test drove is gone and it now targets hooks/bd-compliance/check.sh, the source of truth. This is the retain-vs-repair call agentic-00w was blocked on, answered by the wiring decision.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

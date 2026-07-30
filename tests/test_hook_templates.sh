@@ -460,10 +460,10 @@ git -C "$PLUGIN_REPO" clean -fdq
 # (.claude/hooks/stop-gate.sh) as well as the copy install-gates deploys
 # (templates/stop-gate.sh), so both are exercised directly here.
 
-INSTALLED_GATE="$TOOLKIT_DIR/.claude/hooks/stop-gate.sh"
-assert "installed stop-gate.sh exists and is executable" test -x "$INSTALLED_GATE"
-
-for gate in "$STOP_GATE" "$INSTALLED_GATE"; do
+# The installed copy is gone: this repo unwired its Stop gate on 2026-07-29,
+# so only the shipped template is exercised. bin/install-gates deploying it
+# into a consuming repo stays covered by tests/test_install_gates.sh.
+for gate in "$STOP_GATE"; do
   label="$(basename "$(dirname "$gate")")/$(basename "$gate")"
   git -C "$DOCS_REPO" checkout -q -- .
   git -C "$DOCS_REPO" clean -fdq

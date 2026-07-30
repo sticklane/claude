@@ -234,12 +234,6 @@
     },
     {
       "disposition": "retain",
-      "path": "tests/test_self_gate_wiring.sh",
-      "runner": "bash",
-      "serial": false
-    },
-    {
-      "disposition": "retain",
       "path": "tests/test_session_refresh_hook.sh",
       "runner": "bash",
       "serial": false
