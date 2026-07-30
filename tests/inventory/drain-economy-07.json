@@ -1,0 +1,12 @@
+{
+  "fragment": "drain-economy-07",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_acceptance_block_grammar.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

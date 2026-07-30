@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "drain-economy-07",
+  "frozen_sha256": "1f4f6857d5199f094fefa52515714db27d8b404a5062a581112fbe1ef937450d",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_acceptance_block_grammar.sh#assert:bcab7ccaba12568aa37a0fbef4e20035bcb3fdac4febb1028d3e2b9ae250746a"
+      ],
+      "content_sha256": "0d4137190c5a2052756ed68c521a8073bd0d20ae7a1a0a26ab9bab018c25257b",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_acceptance_block_grammar.sh",
+      "path": "tests/test_acceptance_block_grammar.sh",
+      "rationale": "Reference parser and fixture suite for the acceptance-block grammar documented in docs/memory/acceptance-block-grammar.md (specs/drain-economy EP11). repair, not retain: bin/spec-gate (task 08) consumes this grammar and /critique's READY bar (task 13) gates on it, so the suite must still gain cases as those consumers land.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
