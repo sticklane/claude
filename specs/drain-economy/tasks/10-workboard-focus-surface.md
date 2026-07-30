@@ -7,7 +7,7 @@ Depends on: 09
 Priority: P2
 Budget: 30 turns
 Spec: ../SPEC.md (requirement EP14 workboard half, decision D8)
-Touch: .claude/skills/workboard/workboard.py, .claude/skills/workboard/test_workboard.py, .claude/skills/workboard/reference.md, tests/inventory/drain-economy.json
+Touch: .claude/skills/workboard/workboard.py, .claude/skills/workboard/test_workboard.py, .claude/skills/workboard/reference.md, tests/inventory/drain-economy-10.json
 
 ## Goal
 

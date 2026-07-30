@@ -7,7 +7,7 @@ Depends on: none
 Priority: P0
 Budget: 25 turns
 Spec: ../SPEC.md (requirements EP11, decision D2)
-Touch: docs/memory/acceptance-block-grammar.md, .claude/skills/idea/SKILL.md, tests/test_acceptance_block_grammar.sh, tests/inventory/drain-economy.json, specs/toolkit-core-simplification/surface-inventory/drain-economy.json
+Touch: docs/memory/acceptance-block-grammar.md, .claude/skills/idea/SKILL.md, tests/test_acceptance_block_grammar.sh, tests/inventory/drain-economy-07.json, specs/toolkit-core-simplification/surface-inventory/drain-economy-07.json
 
 ## Goal
 
@@ -41,18 +41,23 @@ syntax, ids, and tier marking.
    the grammar has one executable definition before any consumer exists.
 2. Write `docs/memory/acceptance-block-grammar.md`: the line grammar, id
    stability rules (ids never renumber once published; a removed criterion's id
-   is retired, not reused), the `cheap` / `expensive` tier meaning as
-   spec-gate's `--tier` filter, and a pointer to the depth ladder in
+   is retired, not reused), and a pointer to the depth ladder in
    `docs/memory/anchored-acceptance-criteria.md` for how deep a criterion
    should reach.
-3. Update `.claude/skills/idea/SKILL.md`'s SPEC.md template so generated
+3. State the two rules the tiers actually encode, per the spec's D11/D12 and
+   EP11: `cheap` is what an unattended worker may execute under the command
+   policy, `expensive` is a paid or gated run only a human launches and whose
+   result a human records in `acceptance-status.json`; and every criterion of
+   either tier is read-only or idempotent, building any state it needs in a
+   fixture rather than in the live tracker or working tree.
+4. Update `.claude/skills/idea/SKILL.md`'s SPEC.md template so generated
    acceptance criteria carry ids and tiers, keeping the existing
    end-with-an-end-to-end-check instruction.
-4. State the lazy-backfill rule in the grammar doc: a focus spec whose block
+5. State the lazy-backfill rule in the grammar doc: a focus spec whose block
    does not parse gets one blocking child, "conform acceptance block to
    grammar", filed by the drain that hit it — never a guess at what the
    criterion meant.
-5. Register the new doc and test in the surface and test inventories.
+6. Register the new doc and test in the surface and test inventories.
 
 ## Acceptance
 
@@ -60,6 +65,12 @@ syntax, ids, and tier marking.
       failures, and its conforming-block case recovers every id and tier. **L2**
 - [ ] The malformed fixtures each fail: missing id, unknown tier, no command,
       duplicate ids — asserted inside the test above, one case each. **L2**
+- [ ] `grep -c 'read-only' docs/memory/acceptance-block-grammar.md` → ≥ 1 and
+      `grep -c 'expensive' docs/memory/acceptance-block-grammar.md` → ≥ 1, with
+      the human-launched and human-recorded rule stated on the expensive tier
+      (both verified 0 in the repo's docs today, 2026-07-30). **L0** — Depth
+      ceiling: the rules bind authors and `/critique`'s READY bar (task 13);
+      their behavioral complement is task 13's NOT-READY eval fixture.
 - [ ] `grep -c 'acceptance-block grammar' docs/memory/acceptance-block-grammar.md`
       → ≥ 1 and `grep -c 'anchored-acceptance-criteria' docs/memory/acceptance-block-grammar.md`
       → ≥ 1 (the phrase verified 0 across the repo's docs today,

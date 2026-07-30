@@ -7,7 +7,7 @@ Depends on: 03
 Priority: P1
 Budget: 30 turns
 Spec: ../SPEC.md (requirements EP5, EP7, decision D4)
-Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, tests/test_drain_run_bead.sh, tests/inventory/drain-economy.json, evals/drain/05-run-bead/setup.sh, evals/drain/05-run-bead/prompt.txt, evals/drain/05-run-bead/assert.sh, evals/drain/05-run-bead/allowed-tools.txt, evals/drain/05-run-bead/skill-deps.txt, evals/drain/05-run-bead/timeout-seconds.txt
+Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, tests/test_drain_run_bead.sh, tests/inventory/drain-economy-04.json, evals/drain/05-run-bead/setup.sh, evals/drain/05-run-bead/prompt.txt, evals/drain/05-run-bead/assert.sh, evals/drain/05-run-bead/allowed-tools.txt, evals/drain/05-run-bead/skill-deps.txt, evals/drain/05-run-bead/timeout-seconds.txt
 
 ## Goal
 
@@ -33,6 +33,13 @@ The narration line's grammar is fixed by the spec:
 Task 02 already wrote the focus-transition line; this task states where the run
 log lives and that the transition line is written to it too.
 
+This task also owns the **spillover-event record**, deliberately: task 02
+writes the spillover branch and its narration, but the bead that a spillover
+event is recorded on does not exist until this task creates it. Adding the
+record here — rather than leaving task 02 to improvise a surface — is what
+keeps `bin/drain-report`'s "spillover events with reasons" section (EP6) from
+rendering an empty list against a mechanism that fired.
+
 ## Steps
 
 1. Write the failing test first: `tests/test_drain_run_bead.sh` over
@@ -52,9 +59,14 @@ log lives and that the transition line is written to it too.
    than 24h rather than opening a second.
 4. Edit the loop step that collects verdicts so one narration line is emitted
    per collected verdict, to both the session and the run log.
-5. Keep SKILL.md under its size budget — the grammar detail belongs in
+5. Add the spillover-event record to task 02's blocked-frontier branch: each
+   spillover appends an event to the run bead carrying the abandoned focus, the
+   destination, and the reason (the `ask:` count, or the policy reason code
+   that demoted a `run:`). Extend `tests/test_drain_run_bead.sh` to assert the
+   recorded event's fields parse — this is the input EP6's report reads.
+6. Keep SKILL.md under its size budget — the grammar detail belongs in
    `reference.md`.
-6. Author `evals/drain/05-run-bead/`: a fixture run whose assertions check that
+7. Author `evals/drain/05-run-bead/`: a fixture run whose assertions check that
    a `drain-run` bead exists naming the focus, that it closes, and that the run
    log holds one closure line per closed issue.
 
@@ -69,6 +81,9 @@ log lives and that the transition line is written to it too.
       proving the narration grammar landed inside a named reference section
       rather than loose in the file (the literal `in focus` verified 0 in both
       drain files today, 2026-07-30). **L0** — Depth ceiling: as above.
+- [ ] The spillover-event assertion passes: a fixture spillover records an
+      event whose focus, destination, and reason fields parse — asserted in
+      `tests/test_drain_run_bead.sh`. **L2**
 - [ ] `wc -l < .claude/skills/drain/SKILL.md` → < 500. **L1**
 - [ ] `ls evals/drain/05-run-bead/ | wc -l` → 6, and
       `grep -c 'drain-run' evals/drain/05-run-bead/assert.sh` → ≥ 1. **L1**

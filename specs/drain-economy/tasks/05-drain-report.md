@@ -7,7 +7,7 @@ Depends on: 04
 Priority: P1
 Budget: 40 turns
 Spec: ../SPEC.md (requirements EP6, decisions D3, D6)
-Touch: bin/drain-report, tests/test_drain_report.sh, tests/inventory/drain-economy.json, specs/toolkit-core-simplification/surface-inventory/drain-economy.json
+Touch: bin/drain-report, tests/test_drain_report.sh, tests/fixtures/drain-report, tests/inventory/drain-economy-05.json, specs/toolkit-core-simplification/surface-inventory/drain-economy-05.json
 
 ## Goal
 
@@ -68,6 +68,13 @@ than computing a fallback number. It must NOT render a live view (task 06's
 - [ ] `bin/drain-report <spillover-fixture-id> | head -20 | grep -n 'blocked-on-you' | cut -d: -f1`
       → a line number smaller than that of any other section header, proving
       the lead-with-focus ordering. **L2**
+- [ ] `bin/drain-report tests/fixtures/drain-report/imported | grep -c 'imported blocking work'`
+      → 1, and the donor spec's slug appears on that line — the only check
+      that EP17's attribution half was implemented rather than merely
+      specified. **L2**
+- [ ] Spillover fixture: the report's spillover section lists each event with
+      its reason, matching the events task 04 recorded on the run bead —
+      asserted in the test. **L2**
 - [ ] `grep -rc 'claude\|Agent(' bin/drain-report` → 0, proving zero model
       calls (D3). **L1**
 - [ ] `python3 scripts/inventory-core-surface.py --root . --check specs/toolkit-core-simplification/BASELINE.json 2>&1 | grep -c 'unclassified\|drift'` → 0. **L2**

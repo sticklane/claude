@@ -7,7 +7,7 @@ Depends on: 04
 Priority: P2
 Budget: 35 turns
 Spec: ../SPEC.md (requirements EP9, EP10)
-Touch: agentic/audit.py, bin/janitor, tests/test_agentic_audit.py, tests/test_janitor_triage.sh, tests/inventory/drain-economy.json
+Touch: agentic/audit.py, bin/janitor, tests/test_agentic_audit.py, tests/test_janitor_triage.sh, tests/inventory/drain-economy-11.json
 
 ## Goal
 

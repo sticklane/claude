@@ -7,18 +7,22 @@ Depends on: 04, 08
 Priority: P1
 Budget: 30 turns
 Spec: ../SPEC.md (requirement EP20)
-Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, evals/drain/06-ceremony/setup.sh, evals/drain/06-ceremony/prompt.txt, evals/drain/06-ceremony/assert.sh, evals/drain/06-ceremony/allowed-tools.txt, evals/drain/06-ceremony/skill-deps.txt, evals/drain/06-ceremony/timeout-seconds.txt, tests/inventory/drain-economy.json
+Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, evals/drain/06-ceremony/setup.sh, evals/drain/06-ceremony/prompt.txt, evals/drain/06-ceremony/assert.sh, evals/drain/06-ceremony/allowed-tools.txt, evals/drain/06-ceremony/skill-deps.txt, evals/drain/06-ceremony/timeout-seconds.txt, tests/inventory/drain-economy-12.json
 
 ## Goal
 
 Finishing a feature becomes a mechanical ceremony rather than a judgment call.
 When the focus frontier is empty with no open blocked or deferred items in
-scope, drain runs `bin/spec-gate <slug> --tier all`. Green: it dispatches the
+scope, drain runs `bin/spec-gate <slug> --tier cheap` — never `--tier all`, so
+no paid or gated criterion fires unattended. The ceremony is green when the
+cheap tier passes **and** every `expensive` criterion already carries a
+human-recorded pass in `acceptance-status.json`. Green: it dispatches the
 spec-completion review, files the evidence, appends the historical entry to
 `specs/QUEUE.md`, removes the slug from NOW.md, sets the spec `Status: done`,
 and closes the run bead with the ceremony recorded. Red: each failing criterion
 files a blocking child and the run continues — the gate's failures *are* the
-new frontier.
+new frontier. A missing expensive record is neither green nor red: the ceremony
+blocks and files an `ask:` naming the eval run the human owes.
 
 ## Touch
 
@@ -35,7 +39,8 @@ as it already works rather than defining a new review.
 
 1. Add the ceremony to `.claude/skills/drain/SKILL.md` at the point the loop
    detects an empty focus frontier: the emptiness precondition (no open
-   blocked or deferred items in scope), the `--tier all` gate run, and the two
+   blocked or deferred items in scope), the `--tier cheap` gate run, the
+   recorded-expensive check, and the two
    branches.
 2. Write the green branch as an ordered checklist so a worker cannot land half
    of it: review dispatched, evidence filed, QUEUE.md history appended, slug
@@ -44,13 +49,19 @@ as it already works rather than defining a new review.
 3. Write the red branch: one blocking child per failing criterion, each citing
    its criterion id from `acceptance-status.json`, the run bead left open, and
    the run continuing on the new frontier.
-4. State the NOW.md write boundary explicitly: the completion removal is the
+4. Write the third branch the spec's D-level decision creates: a cheap-green
+   spec whose `expensive` criteria have no recorded pass does not complete —
+   the ceremony halts and files an `ask:` naming the criterion id and the run
+   the human owes. This is the branch that keeps a paid eval from firing
+   unattended, so it is the one to make unmissable in the prose.
+5. State the NOW.md write boundary explicitly: the completion removal is the
    only machine edit to that file.
-5. Put the checklist's long form in `reference.md` if SKILL.md would exceed its
+6. Put the checklist's long form in `reference.md` if SKILL.md would exceed its
    size budget; the branch points themselves stay in SKILL.md.
-6. Author `evals/drain/06-ceremony/` with both fixtures: a green-gate spec that
-   completes the full checklist, and a red-gate spec that files one blocking
-   child per failing criterion and keeps the run open.
+7. Author `evals/drain/06-ceremony/` with three fixtures: a green-gate spec
+   that completes the full checklist, a red-gate spec that files one blocking
+   child per failing criterion and keeps the run open, and a cheap-green spec
+   with an unrecorded expensive criterion that halts and files the `ask:`.
 
 ## Acceptance
 
@@ -65,7 +76,9 @@ as it already works rather than defining a new review.
 - [ ] `wc -l < .claude/skills/drain/SKILL.md` → < 500. **L1**
 - [ ] `ls evals/drain/06-ceremony/ | wc -l` → 6, and
       `grep -c 'acceptance-status.json' evals/drain/06-ceremony/assert.sh` → ≥ 1. **L1**
-- [ ] `bash evals/run.sh drain` → both ceremony fixtures pass. **L3** —
+- [ ] `awk '/^## Archive on completion/{f=1} f&&/^## The batch interview/{exit} f' .claude/skills/drain/SKILL.md | grep -c -- '--tier all'`
+      → 0, proving the unattended ceremony never launches the paid tier. **L1**
+- [ ] `bash evals/run.sh drain` → all three ceremony fixtures pass. **L3** —
       `manual-pending`: paid headless session; a human runs it and records the
       result (`docs/memory/unattended-worker-tool-limits.md`).
 - [ ] `bash scripts/check.sh` → `check.sh: green`. **L2**

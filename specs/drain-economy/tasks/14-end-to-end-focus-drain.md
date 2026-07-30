@@ -7,7 +7,7 @@ Depends on: 05, 06, 09, 10, 11, 12, 13
 Priority: P2
 Budget: 25 turns
 Spec: ../SPEC.md (acceptance criterion A22)
-Touch: evals/drain/07-focus-e2e/setup.sh, evals/drain/07-focus-e2e/prompt.txt, evals/drain/07-focus-e2e/assert.sh, evals/drain/07-focus-e2e/allowed-tools.txt, evals/drain/07-focus-e2e/skill-deps.txt, evals/drain/07-focus-e2e/timeout-seconds.txt, tests/inventory/drain-economy.json
+Touch: evals/drain/07-focus-e2e/setup.sh, evals/drain/07-focus-e2e/prompt.txt, evals/drain/07-focus-e2e/assert.sh, evals/drain/07-focus-e2e/allowed-tools.txt, evals/drain/07-focus-e2e/skill-deps.txt, evals/drain/07-focus-e2e/timeout-seconds.txt, tests/inventory/drain-economy-14.json
 
 ## Goal
 

@@ -3,11 +3,11 @@
 <!-- Registration fields (Depends on, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. Status and Priority are frozen authoring-time display only: bd owns their live values. -->
 
 Status: pending
-Depends on: 01
+Depends on: 00, 01
 Priority: P1
 Budget: 35 turns
-Spec: ../SPEC.md (requirements EP18, EP19, decisions D8, D9, D10)
-Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, tests/test_drain_spillover.sh, tests/inventory/drain-economy.json, evals/drain/04-spillover/setup.sh, evals/drain/04-spillover/prompt.txt, evals/drain/04-spillover/assert.sh, evals/drain/04-spillover/allowed-tools.txt, evals/drain/04-spillover/skill-deps.txt, evals/drain/04-spillover/timeout-seconds.txt
+Spec: ../SPEC.md (requirements EP18, EP19, decisions D8, D9, D10, D11)
+Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, tests/test_drain_spillover.sh, tests/inventory/drain-economy-02.json, evals/drain/04-spillover/setup.sh, evals/drain/04-spillover/prompt.txt, evals/drain/04-spillover/assert.sh, evals/drain/04-spillover/allowed-tools.txt, evals/drain/04-spillover/skill-deps.txt, evals/drain/04-spillover/timeout-seconds.txt
 
 ## Goal
 
@@ -25,25 +25,37 @@ under a bounded slot count without becoming a second focus.
 
 The selector and NOW.md parsing are task 01's and already landed; this task
 adds the blocked-frontier branch and the chores lane to the same loop. It must
-NOT touch the filing/triage economy (task 03), the run bead (task 04 — record
-the spillover event through whatever recording surface exists at implementation
-time and leave the bead's shape to that task), or the completion ceremony
-(task 12). The command policy referenced here is the existing acceptance-command
-policy — reuse it by reference, never fork a second policy.
+NOT touch the filing/triage economy (task 03) or the completion ceremony
+(task 12).
+
+Two boundaries matter here because both were live ambiguities before this
+revision:
+
+- **The command policy is task 00's, whole.** This task calls
+  `bin/command-policy` and acts on its verdict; it never decides what makes a
+  command acceptable and never adds a second check of its own. A policy gap
+  found here is filed as blocking work against task 00.
+- **The spillover-event record is task 04's.** Task 04 defines the run bead,
+  and it lands after this one, so this task writes the *narration* line and the
+  branch logic only. It must not invent a recording surface, and must not
+  write "record the event" as an unresolved instruction — task 04 adds the
+  record where the bead exists.
 
 ## Steps
 
 1. Write the failing test first: `tests/test_drain_spillover.sh` over
    `mktemp -d` fixtures, asserting the parts a script can own — the
-   `Unblock:` line parse (`run:` / `agent:` / `ask:`), the policy verdict that
-   demotes a rejected `run:` to `ask:`, and that a demoted command never
-   reaches execution (assert by observation: the fixture's sentinel file is
-   absent afterward, the same technique `tests/test_human_blockers.sh` uses).
+   `Unblock:` line parse (`run:` / `agent:` / `ask:`), and the demotion
+   *wiring*: a `run:` whose `bin/command-policy` verdict is reject becomes an
+   `ask:` carrying the policy's reason code, and the command never reaches
+   execution (assert by observation: the fixture's sentinel file is absent
+   afterward, the same technique `tests/test_human_blockers.sh` uses). The
+   policy's own accept/reject cases belong to task 00's suite, not this one —
+   assert that the verdict is *honored*, not that it is correct.
 2. Add the blocked-frontier branch to `.claude/skills/drain/SKILL.md`: the
    ordered attempt sequence, the re-read, the narration line
-   `focus <slug> blocked (ask: <n> items) → spilling to <next>`, the
-   record-the-event step, and the walk down NOW.md ending at the batch
-   interview when the list is exhausted.
+   `focus <slug> blocked (ask: <n> items) → spilling to <next>`, and the walk
+   down NOW.md ending at the batch interview when the list is exhausted.
 3. State D9's re-focus rule where the dispatch decision lives: every *new*
    dispatch re-evaluates from the top of NOW.md; in-flight tasks are never
    preempted; a transiently mixed window is expected.
@@ -63,6 +75,12 @@ policy — reuse it by reference, never fork a second policy.
 - [ ] `bash tests/test_drain_spillover.sh` → exits 0, reports 0 failures, and
       its output contains no `SENTINEL` line (a demoted `run:` that executed
       anyway would create one). **L2**
+- [ ] The demotion carries the policy's reason code through to the `ask:` item
+      — asserted in the test by matching the reason code
+      `bin/command-policy` returned, not by matching prose. **L2**
+- [ ] `grep -c 'command-policy' .claude/skills/drain/SKILL.md .claude/skills/drain/reference.md | grep -c ':0$'`
+      → 0, proving both files name the single policy implementation rather
+      than describing a check of their own. **L1**
 - [ ] `awk '/^## The loop/{f=1} f&&/^## Auto-breakdown/{exit} f' .claude/skills/drain/SKILL.md | grep -c 'spilling to'` → ≥ 1
       (verified 0 in the whole file today, 2026-07-30). **L0** — Depth
       ceiling: skill prose is not executable; the behavioral complement is the

@@ -7,7 +7,7 @@ Depends on: 07
 Priority: P2
 Budget: 25 turns
 Spec: ../SPEC.md (requirement EP16)
-Touch: .claude/skills/critique/SKILL.md, evals/critique, tests/inventory/drain-economy.json
+Touch: .claude/skills/critique/SKILL.md, evals/critique, tests/inventory/drain-economy-13.json
 
 ## Goal
 
@@ -33,15 +33,20 @@ boundary explicitly. It must not edit the grammar doc (task 07) or `bin/spec-gat
    parse under `docs/memory/acceptance-block-grammar.md` with each criterion
    mapping to ≥1 requirement; a non-parsing block is NOT READY citing the
    grammar by name, so the author knows what to fix.
-2. Add the contraction rule for re-critique: same spec, second pass → evaluate
+2. Add the read-only precondition alongside it: a criterion that mutates bd,
+   the working tree, or any live surface is NOT READY. This is the *only*
+   enforcement point for D12 — `bin/spec-gate` executes what it is handed and
+   does not sandbox it — so state the consequence, not just the rule.
+3. Add the contraction rule for re-critique: same spec, second pass → evaluate
    resolution of prior findings only; net-new findings go to the digest with
    enough context to act on, never into the findings file.
-3. Author an eval scenario under `evals/critique/` with two fixtures: a spec
-   whose acceptance block does not parse (expect NOT READY citing the grammar)
-   and a re-critique fixture carrying prior findings plus one net-new
-   observation (expect the verdict scoped to the prior findings and the new
-   observation in the digest).
-4. Register the new scenario in the test inventory and confirm
+4. Author an eval scenario under `evals/critique/` with three fixtures: a spec
+   whose acceptance block does not parse (expect NOT READY citing the grammar);
+   a spec whose block parses but whose criterion mutates live state (expect NOT
+   READY citing the read-only rule); and a re-critique fixture carrying prior
+   findings plus one net-new observation (expect the verdict scoped to the
+   prior findings and the new observation in the digest).
+5. Register the new scenario in the test inventory and confirm
    `evals/lint-eval-coverage.sh` still passes.
 
 ## Acceptance

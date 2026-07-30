@@ -7,7 +7,7 @@ Depends on: 04
 Priority: P2
 Budget: 30 turns
 Spec: ../SPEC.md (requirements EP8, decision D4)
-Touch: bin/drain-watch, tests/test_drain_watch.sh, tests/inventory/drain-economy.json, specs/toolkit-core-simplification/surface-inventory/drain-economy.json
+Touch: bin/drain-watch, tests/test_drain_watch.sh, tests/inventory/drain-economy-06.json, specs/toolkit-core-simplification/surface-inventory/drain-economy-06.json
 
 ## Goal
 

@@ -7,7 +7,7 @@ Depends on: 02
 Priority: P1
 Budget: 35 turns
 Spec: ../SPEC.md (requirements EP1, EP2, EP3, EP4, decisions D1, D5, D7)
-Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, .claude/skills/work/SKILL.md, agentic/ready.py, tests/test_drain_triage_economy.sh, tests/inventory/drain-economy.json
+Touch: .claude/skills/drain/SKILL.md, .claude/skills/drain/reference.md, .claude/skills/work/SKILL.md, agentic/ready.py, tests/test_drain_triage_economy.sh, tests/inventory/drain-economy-03.json
 
 ## Goal
 

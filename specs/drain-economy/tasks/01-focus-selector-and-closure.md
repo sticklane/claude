@@ -7,7 +7,7 @@ Depends on: none
 Priority: P0
 Budget: 40 turns
 Spec: ../SPEC.md (requirements EP0, EP17)
-Touch: .claude/skills/drain/SKILL.md, specs/NOW.md, specs/toolkit-core-simplification/surface-inventory/drain-economy.json, tests/test_drain_focus_selector.sh, tests/inventory/drain-economy.json, evals/drain/03-focus-select/setup.sh, evals/drain/03-focus-select/prompt.txt, evals/drain/03-focus-select/assert.sh, evals/drain/03-focus-select/allowed-tools.txt, evals/drain/03-focus-select/skill-deps.txt, evals/drain/03-focus-select/timeout-seconds.txt
+Touch: .claude/skills/drain/SKILL.md, specs/NOW.md, specs/toolkit-core-simplification/surface-inventory/drain-economy-01.json, tests/test_drain_focus_selector.sh, tests/inventory/drain-economy-01.json, evals/drain/03-focus-select/setup.sh, evals/drain/03-focus-select/prompt.txt, evals/drain/03-focus-select/assert.sh, evals/drain/03-focus-select/allowed-tools.txt, evals/drain/03-focus-select/skill-deps.txt, evals/drain/03-focus-select/timeout-seconds.txt
 
 ## Goal
 
@@ -31,16 +31,19 @@ all four edit the same SKILL.md and are serialized behind this task for that
 reason. `specs/QUEUE.md` is untouched here: its historical-banner role is
 unchanged and task 12 owns the one append.
 
-The inventory fragment this task writes covers the *existing* unclassified
-paths this spec's tasks edit — `.claude/skills/drain/reference.md`,
-`agentic/ready.py`, `agentic/audit.py`, `bin/janitor`,
-`.claude/skills/workboard/workboard.py`, and `specs/QUEUE.md` — plus this
-task's own new files. Later tasks register only the new files they add.
+The inventory fragment this task writes covers every *existing* path this
+spec's tasks edit — `.claude/skills/drain/reference.md`, `agentic/ready.py`,
+`agentic/audit.py`, `bin/janitor`, `.claude/skills/workboard/workboard.py`,
+`.claude/skills/workboard/reference.md`,
+`.claude/skills/workboard/test_workboard.py`, and `specs/QUEUE.md` — plus this
+task's own new files. Later tasks classify only the new files they create, each
+into its own numbered fragment (`drain-economy-NN.json`), so no two tasks ever
+write the same registry file.
 
 ## Steps
 
 1. Write the surface fragment
-   `specs/toolkit-core-simplification/surface-inventory/drain-economy.json`
+   `specs/toolkit-core-simplification/surface-inventory/drain-economy-01.json`
    first, following `codebase-memory-hard-cutover.json`'s shape
    (`schema_version: 2`, `git_blob_pin: 1`, a `frozen_sha256` over the
    canonical object without that field). Classify each existing path
@@ -76,7 +79,7 @@ task's own new files. Later tasks register only the new files they add.
    complement: a fixture repo with a two-slug NOW.md, ready work under both,
    and assertions that the run claims only slug[0]'s closure. Do not run it —
    see Acceptance.
-8. Register the new test in `tests/inventory/drain-economy.json` with
+8. Register the new test in `tests/inventory/drain-economy-01.json` with
    `"runner": "bash"`, matching the disposition vocabulary `scripts/check.sh`
    accepts (`retain`, `quarantine`, or `manual` — `repair` exists only in the
    surface inventory).
@@ -86,7 +89,7 @@ task's own new files. Later tasks register only the new files they add.
 - [ ] `bash tests/test_drain_focus_selector.sh` → exits 0, reports 0
       failures. **L2**
 - [ ] `python3 scripts/inventory-core-surface.py --root . --check specs/toolkit-core-simplification/BASELINE.json 2>&1 | grep -c 'unclassified\|drift'` → 0. **L2**
-- [ ] `python3 .claude/skills/breakdown/preflight-acceptance-inventory.py --baseline specs/toolkit-core-simplification/BASELINE.json --path .claude/skills/drain/reference.md --path agentic/ready.py --path agentic/audit.py --path bin/janitor --path .claude/skills/workboard/workboard.py --path specs/QUEUE.md` → `preflight: PASS`, exit 0. **L2**
+- [ ] `python3 .claude/skills/breakdown/preflight-acceptance-inventory.py --baseline specs/toolkit-core-simplification/BASELINE.json --path .claude/skills/drain/reference.md --path agentic/ready.py --path agentic/audit.py --path bin/janitor --path .claude/skills/workboard/workboard.py --path .claude/skills/workboard/reference.md --path .claude/skills/workboard/test_workboard.py --path specs/QUEUE.md` → `preflight: PASS`, exit 0. **L2**
 - [ ] `awk '/^## The loop/{f=1} f&&/^## Auto-breakdown/{exit} f' .claude/skills/drain/SKILL.md | grep -c 'focus-drain'` → ≥ 1
       (verified 0 in the whole file today, 2026-07-30; anchored to the loop
       section rather than a file-wide literal). **L0** — Depth ceiling: skill

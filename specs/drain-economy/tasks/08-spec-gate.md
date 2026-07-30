@@ -3,11 +3,11 @@
 <!-- Registration fields (Depends on, Budget, Touch, Rigor) are single-line `Key: value` headers above the first ## heading; body sections are never parsed by orchestrators. Status and Priority are frozen authoring-time display only: bd owns their live values. -->
 
 Status: pending
-Depends on: 07
+Depends on: 00, 07
 Priority: P1
 Budget: 40 turns
-Spec: ../SPEC.md (requirements EP12, decision D2)
-Touch: bin/spec-gate, tests/test_spec_gate.sh, tests/fixtures/spec-gate, tests/inventory/drain-economy.json, specs/toolkit-core-simplification/surface-inventory/drain-economy.json
+Spec: ../SPEC.md (requirement EP12, decisions D2, D11, D12)
+Touch: bin/spec-gate, tests/test_spec_gate.sh, tests/fixtures/spec-gate, tests/inventory/drain-economy-08.json, specs/toolkit-core-simplification/surface-inventory/drain-economy-08.json
 
 ## Goal
 
@@ -25,10 +25,16 @@ decides what to do about a failure — drain's ceremony (task 12) and the report
 (task 05) consume its output. It must NOT reach into `bin/spec-status` (task
 09), which derives a different set of numbers from bd history.
 
-Criteria are arbitrary shell commands out of a repository file, so the command
-policy matters: apply the same policy that gates `Unblock: run:` execution in
-task 02 rather than inventing a second one, and refuse — recording `skip` with
-a reason — rather than executing a rejected command.
+Criteria are commands read out of a repository file, so the command policy
+matters — and it is task 00's, entire. This task calls `bin/command-policy`,
+records `skip` with the reason it returns, and never executes a rejected
+command; it does not decide what makes a command acceptable and adds no second
+check. A policy gap found here is filed as blocking work against task 00.
+
+Criteria are read-only per D12, and the gate does not sandbox one that ignores
+that rule — enforcement is `/critique`'s READY bar (task 13). This task's own
+fixtures must therefore be exemplary: any state a fixture criterion needs, it
+builds under `mktemp -d`, never in the live tracker.
 
 ## Steps
 
