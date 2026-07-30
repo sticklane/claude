@@ -24,6 +24,10 @@ _DONE_STATUSES = {"closed", "done"}
 # ready-work") pins these two as blocking; discovered-from and the rest are
 # non-blocking.
 _BLOCKING_DEP_TYPES = {"blocks", "parent-child"}
+# An epic is a container: it closes after its children, so a parent-child edge
+# pointing at one must NOT gate its children. Treating it as blocking inverts
+# the dependency and deadlocks every task in the feature.
+_CONTAINER_TYPES = {"epic"}
 
 _GLOB_META_RE = re.compile(r"[*?\[]")
 
@@ -70,14 +74,40 @@ def issue_touch(issue):
     return {str(e).strip() for e in raw if str(e).strip()}
 
 
-def _blocker_ids(issue):
+def issue_type_of(issue):
+    return (issue.get("issue_type") or issue.get("type") or "task").lower()
+
+
+def is_container(issue):
+    """True for an epic — a grouping bead, never dispatchable work itself."""
+    return issue_type_of(issue) in _CONTAINER_TYPES
+
+
+def epic_id_of(issue, by_id):
+    """The id of this issue's epic, or None when it has no epic parent."""
+    for dep in issue.get("dependencies") or []:
+        if (dep.get("type") or "blocks") != "parent-child":
+            continue
+        tid = dep.get("depends_on_id") or dep.get("to")
+        target = by_id.get(tid) if tid else None
+        if target is not None and is_container(target):
+            return tid
+    return None
+
+
+def _blocker_ids(issue, by_id=None):
     """The depends-on ids of this issue's blocking dependency edges."""
     out = []
     for dep in issue.get("dependencies") or []:
-        if (dep.get("type") or "blocks") in _BLOCKING_DEP_TYPES:
-            tid = dep.get("depends_on_id") or dep.get("to")
-            if tid:
-                out.append(tid)
+        if (dep.get("type") or "blocks") not in _BLOCKING_DEP_TYPES:
+            continue
+        tid = dep.get("depends_on_id") or dep.get("to")
+        if not tid:
+            continue
+        target = by_id.get(tid) if by_id else None
+        if target is not None and is_container(target):
+            continue
+        out.append(tid)
     return out
 
 
@@ -112,18 +142,18 @@ def compute_frontier(issues):
     for c in claimed:
         claim_touch |= issue_touch(c)
 
-    open_issues = [i for i in issues if status_of(i) == "open"]
+    open_issues = [i for i in issues if status_of(i) == "open" and not is_container(i)]
 
     # Reverse edge map for unblocking power: blocker id -> dependent open ids.
     dependents = {}
     for i in open_issues:
-        for b in _blocker_ids(i):
+        for b in _blocker_ids(i, by_id):
             dependents.setdefault(b, set()).add(i["id"])
 
     dispatchable = []
     for i in open_issues:
         blocked = False
-        for b in _blocker_ids(i):
+        for b in _blocker_ids(i, by_id):
             tgt = by_id.get(b)
             if tgt is None or not is_done(tgt):
                 blocked = True
@@ -134,7 +164,28 @@ def compute_frontier(issues):
     def unblocking_power(i):
         return len(dependents.get(i["id"], ()))
 
-    dispatchable.sort(key=lambda i: (priority_of(i), -unblocking_power(i), i["id"]))
+    def group_rank(i):
+        """Sort a whole feature together, ranked by its epic's priority.
+
+        A task with no epic — janitorial work — ranks by its own priority, so a
+        P0 chore still precedes a P1 feature. Tasks sharing an epic sort
+        contiguously because the epic's id is the tiebreaker before any
+        per-task field.
+        """
+        epic_id = epic_id_of(i, by_id)
+        if epic_id is None:
+            return (priority_of(i), "")
+        epic = by_id.get(epic_id)
+        return (priority_of(epic) if epic else priority_of(i), epic_id)
+
+    dispatchable.sort(
+        key=lambda i: (
+            group_rank(i),
+            priority_of(i),
+            -unblocking_power(i),
+            i["id"],
+        )
+    )
 
     admissible = []
     admitted_touch = set(claim_touch)

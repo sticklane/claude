@@ -191,6 +191,93 @@ def test_ready_excludes_open_task_overlapping_a_claimed_task(tmp_path):
 
 
 @requires_bd
+def _epic(id_, title, priority=1):
+    return {
+        "id": id_,
+        "title": title,
+        "status": "open",
+        "priority": priority,
+        "issue_type": "epic",
+        "metadata": {},
+    }
+
+
+def _child_of(issue, epic_id):
+    """Attach a parent-child edge from a task issue to its epic."""
+    issue.setdefault("dependencies", []).append(
+        {"issue_id": issue["id"], "depends_on_id": epic_id, "type": "parent-child"}
+    )
+    return issue
+
+
+@requires_bd
+def test_ready_never_offers_an_epic_as_work(tmp_path):
+    """An epic groups work; it is not itself dispatchable."""
+    store = _seed(
+        tmp_path,
+        [
+            _epic("ep-a", "Epic: feature A", priority=0),
+            _child_of(_issue("t-a1", "task a1", priority=2, touch=["a.py"]), "ep-a"),
+        ],
+    )
+    ids = _ready_ids(store)
+    assert "ep-a" not in ids
+    assert "t-a1" in ids
+
+
+@requires_bd
+def test_ready_drains_the_highest_priority_epic_before_a_lower_one(tmp_path):
+    """Epic priority outranks task priority, so a feature drains as a unit.
+
+    Without grouping, b-hi (P0) would lead the flat queue. Its epic is P1, so
+    every task of the P0 epic comes first — the point of the epic bead.
+    """
+    store = _seed(
+        tmp_path,
+        [
+            _epic("ep-hi", "Epic: high", priority=0),
+            _epic("ep-lo", "Epic: low", priority=1),
+            _child_of(_issue("a-lo", "a low", priority=3, touch=["a.py"]), "ep-hi"),
+            _child_of(_issue("b-hi", "b high", priority=0, touch=["b.py"]), "ep-lo"),
+        ],
+    )
+    order = _ready_ids(store)
+    assert order.index("a-lo") < order.index("b-hi")
+
+
+@requires_bd
+def test_ready_keeps_one_epics_tasks_contiguous(tmp_path):
+    """Tasks of the same epic are not interleaved with another epic's."""
+    store = _seed(
+        tmp_path,
+        [
+            _epic("ep-1", "Epic: one", priority=0),
+            _epic("ep-2", "Epic: two", priority=1),
+            _child_of(_issue("x1", "x1", priority=0, touch=["x1.py"]), "ep-1"),
+            _child_of(_issue("x2", "x2", priority=3, touch=["x2.py"]), "ep-1"),
+            _child_of(_issue("y1", "y1", priority=0, touch=["y1.py"]), "ep-2"),
+        ],
+    )
+    order = _ready_ids(store)
+    assert order.index("x1") < order.index("x2") < order.index("y1")
+
+
+@requires_bd
+def test_ready_ranks_unparented_task_by_its_own_priority(tmp_path):
+    """Janitorial work carries no epic, so a P0 chore still beats a P1 feature."""
+    store = _seed(
+        tmp_path,
+        [
+            _epic("ep-f", "Epic: feature", priority=1),
+            _child_of(_issue("f1", "feature task", priority=0, touch=["f.py"]), "ep-f"),
+            _issue("chore", "janitorial", priority=0, touch=["c.py"]),
+        ],
+    )
+    order = _ready_ids(store)
+    assert order.index("chore") < order.index("f1")
+
+
+@requires_bd
 def test_ready_orders_higher_priority_first(tmp_path):
     store = _seed(
         tmp_path,
