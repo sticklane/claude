@@ -8,7 +8,11 @@ trap 'rm -rf "$TMP"' EXIT
 
 pass=0
 fail=0
-SLOW_PROBE_SLEEP=3771
+# expect_no_orphan scans and kills machine-wide on this token, and
+# scripts/check.sh runs suites concurrently, so the token must name only this
+# process's own probe child. The distinct leading digit and fixed width keep it
+# unmatchable against test_command_policy.sh's slow fixture.
+SLOW_PROBE_SLEEP="9$(printf '%05d' "$(($$ % 100000))")"
 
 ok() {
   pass=$((pass + 1))
@@ -156,17 +160,24 @@ expect_armed_repository_fires() {
 }
 
 expect_no_orphan() {
-  local name="$1" pattern="$2"
+  local name="$1" pattern="$2" deadline
   if ! command -v pgrep >/dev/null 2>&1; then
     nope "$name (no pgrep available to observe orphaned probe children)"
     return
   fi
-  if pgrep -f "$pattern" >/dev/null 2>&1; then
-    pkill -f "$pattern" >/dev/null 2>&1
-    nope "$name"
-  else
-    ok "$name"
-  fi
+  # The checker SIGKILLs the probe's process group, but the grandchild's
+  # teardown and reaping are asynchronous, so a single sample races a loaded
+  # scheduler. A real orphan sleeps for days and is still here at the bound.
+  deadline=$((SECONDS + 15))
+  while pgrep -f "$pattern" >/dev/null 2>&1; do
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      pkill -f "$pattern" >/dev/null 2>&1
+      nope "$name"
+      return
+    fi
+    sleep 0.1
+  done
+  ok "$name"
 }
 
 entry() {

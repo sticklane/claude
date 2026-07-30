@@ -14,7 +14,11 @@ trap 'rm -rf "$TMP"' EXIT
 
 pass=0
 fail=0
-SLOW_SLEEP=3771
+# scripts/check.sh runs suites concurrently and test_human_blockers.sh scans
+# and pkills machine-wide for its own probe's sleep. A token unique to this
+# process keeps that kill off this fixture; the distinct leading digit and
+# fixed width make the two suites' tokens unmatchable against each other.
+SLOW_SLEEP="8$(printf '%05d' "$(($$ % 100000))")"
 REJECT_CODES=""
 REJECT_CASES=0
 OUT=""
