@@ -7,3 +7,5 @@ test:tests/test_live_surface_retirement.sh
 hook:gate-scope-warn
 test:tests/test_gate_scope_warn.sh
 test:tests/test_self_gate_wiring.sh
+skill:impeccable
+skill:taste
