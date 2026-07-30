@@ -186,8 +186,10 @@ both single-line `Key: value` above the first `##` heading, like the task
 registration fields:
 
 - `Priority: P0`–`P3` — the feature's rank against other features. Absent
-  means P2. This is what orders the drain; a task's own `Priority:` only
-  orders it within its feature.
+  means P2. This is what orders the drain. Within a feature, tasks currently
+  order by dependency edges and id, not by their own `Priority:` header:
+  `register-spec` does not yet pass task priority to bd, so every task issue
+  lands at the default P2 (open issue `agentic-7t1w`).
 - `Kind: feature | janitorial` — absent means `feature`. Janitorial work gets
   no epic and is ranked by its own task priority, so a P0 chore still precedes
   a P1 feature.
