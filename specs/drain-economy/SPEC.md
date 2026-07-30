@@ -2,7 +2,7 @@
 
 Status: open
 Priority: P1
-Breakdown-ready: false
+Breakdown-ready: true
 
 ## Problem
 
@@ -15,15 +15,68 @@ A drain run is a stateless pump over a **global, dependency-gated task frontier*
 
 ## Solution
 
-Lift priority to the feature and give the run an accounting identity. A human-owned `specs/NOW.md` names the focus (WIP = 1); bare `/drain` drains that feature's dependency closure until done, spilling down the Now list only when the focus frontier is entirely blocked — after attempting mechanical unblocks — and returning to it the moment it unblocks. Featureless `chore` work gets one bounded slot. Discovered work splits into *blocking* (files as today, uncapped — it is scope truth) and *adjacent* (files to a `triage` label, admitted only at the batch interview, capped per run). Every run opens and closes a run bead carrying a computed report (adopting only the run-issue *convention* from parked `specs/agentic-dynamic-workflows/` item 7). Feature side: each spec's `## Acceptance criteria
+Lift priority to the feature and give the run an accounting identity. A human-owned `specs/NOW.md` names the focus (WIP = 1); bare `/drain` drains that feature's dependency closure until done, spilling down the Now list only when the focus frontier is entirely blocked — after attempting mechanical unblocks — and returning to it the moment it unblocks. Featureless `chore` work gets one bounded slot. Discovered work splits into *blocking* (files as today, uncapped — it is scope truth) and *adjacent* (files to a `triage` label, admitted only at the batch interview, capped per run). Every run opens and closes a run bead carrying a computed report (adopting only the run-issue *convention* from parked `specs/agentic-dynamic-workflows/` item 7). Feature side: each spec's `## Acceptance criteria` becomes machine-runnable with stable IDs, scored by `bin/spec-gate` into committed `acceptance-status.json`; `bin/spec-status` and workboard render per-feature proximity — acceptance green-count, blocked-on-you first, thrash flag, estimated passes — and feature completion becomes a mechanical ceremony (frontier empty + full gate green + spec-review filed). Progress is asked of the acceptance surface, never the task list: the plan answers with its size, which inflates; the territory answers with what passes.
 
-Every criterion is read-only per D12: nothing here mutates bd, the working
-tree, or any live surface — state a criterion needs, it builds under
-`mktemp -d` inside the test it names. `cheap` criteria run unattended under
-D11; the one `expensive` criterion is a paid eval only a human launches, whose
-result a human records in `acceptance-status.json`.
+## Design decisions
 
-- [ ] A1 (cheap): `bash tests/test_command_policy.sh` — the D11 policy accepts an allowlisted argv-0, refuses a shell metacharacter, refuses an unresolvable name, and its rejection path leaves no sentinel (D11, task 00)
+- **D1 — Blocking vs. adjacent discriminator.** An item is *blocking* iff its parent issue's (or the focus feature's) acceptance criteria cannot pass without it; everything else is adjacent. Blocking children are estimation error surfacing (legitimate, uncapped); adjacent items are proposals (capped, triaged). The worker states the failing criterion when filing blocking work.
+- **D2 — The acceptance surface is ground truth; the task list is an estimate.** Proximity = criteria passing now, computed by running them.
+- **D3 — Reports are computed, not prompted.** Every number derives from bd, `acceptance-status.json`, and the run log by script. Drain may append at most one paragraph of model prose.
+- **D4 — Run issue is a convention, not machinery.** `agentic dispatch/run/watch` stays parked under its existing Unblock condition; `bin/drain-watch` (EP8) reads the native harness progress stream and run log, and retires into `agentic watch` if that spec unparks.
+- **D5 — Triage is a label, not a status.** Labels exist in bd today; exclusion is a query change plus a conventions entry.
+- **D6 — Bugs get a phase pointer, never a fraction.** Pre-`fix-verified`, "how close" is a diagnosis question.
+- **D7 — Admission rate = human decision rate.** A queue only functions as a finish line if a human controls what counts as the finish. Agents propose; the batch interview admits; the human writes NOW.md.
+- **D8 — Spillover, never silence** *(resolved 2026-07-29: spillover chosen over strict halt)*. When the focus frontier is entirely blocked, drain attempts mechanical unblocks, then advances down the Now list — but the blocked focus stays the loudest fact in the system: narration announces it, the report leads with it, workboard badges it first. Spillover is permission to stay useful, not permission to go quiet.
+- **D9 — WIP = 1, re-focus at dispatch granularity** *(resolved 2026-07-29)*. All *new* dispatches go to the highest Now entry with ready work; in-flight tasks are never preempted. The instant the focus unblocks, new work returns to it; mixed in-flight tasks during a transition are expected and momentary.
+- **D10 — Featureless chores get one bounded slot** *(resolved 2026-07-29: allowed)*. `chore`-labeled beads may fill idle capacity without becoming a second focus: at most `CHORE_SLOTS` (default 1) concurrent, dispatched only when the focus/spillover frontier underfills the window, excluded from feature accounting, never a spillover trigger, never a completion blocker.
+- **D11 — One command policy, modeled on the probe contract** *(resolved 2026-07-30)*. EP18's `run:` unblocks and EP12's acceptance criteria are both file-sourced commands reaching `exec` inside an unattended loop, so they share one policy — and that policy mirrors `.claude/rules/human-blockers.md`'s probe contract, which already solves this problem in this repo. A command executes only if argv-0 resolves to a regular executable under an allowlisted root (the repo's `bin/`, or a named tool list), it runs directly and never through a shell, its arguments survive POSIX shell-word lexing with no ASCII control characters, its cwd is the repo root, and it runs under a bounded timeout with no network grant. A rejected command is never executed and always records its reason: EP18 demotes `run:` to `ask:`, EP12 records the criterion `skip`. The policy has exactly one implementation, owned by task 00; EP12's and EP18's tasks both depend on it and neither may author a second.
+- **D12 — Acceptance criteria are read-only** *(resolved 2026-07-30)*. `bin/spec-gate` runs criteria against the live repository on a schedule and commits the result, so a criterion that mutates state pollutes it every pass. Criteria must be read-only or idempotent; anything needing to create state creates it in a fixture under `mktemp -d` or `tests/fixtures/`, never in the live tracker or working tree. The gate does not sandbox a criterion that ignores this — enforcement is EP16's READY bar, at authoring time.
+
+## Requirements
+
+**Focus scheduling (drain core)**
+
+- **EP0 — Now line, selector, default flip.** `specs/NOW.md` is a human-edited-only ordered list of spec slugs (one line each, optional one-line why); `specs/QUEUE.md` stays historical per its own banner. Bare `/drain` means "focus-drain the top NOW.md entry with ready work"; `/drain specs/<slug>` is an explicit focus; `/drain --all` preserves today's whole-queue behavior and says so at launch. Empty NOW.md: drain states it and stops (suggesting `--all` or a slug); it never invents a focus.
+- **EP17 — Dependency-closure scope.** Focus scope = the spec's open beads ∪ the transitive closure of their *blocking* dependencies wherever those live (other specs or featureless), recomputed at every frontier read. Imported cross-spec deps are worked but reported under "imported blocking work (from `<slug>`)" and never mark the donor spec as in-progress for burnup.
+- **EP18 — Mechanical unblocks, then spillover, loudly.** When the focus frontier is entirely blocked: first attempt mechanical unblocks — execute `Unblock: run:` commands **only if** they pass the D11 command policy, whose single implementation this requirement consumes rather than defines (a rejected command demotes to `ask:` with its rejection reason recorded); dispatch `Unblock: agent:` prompts as scoped one-attempt workers; queue `ask:` items for the interview — then re-read the frontier. Still dead: emit narration `focus <slug> blocked (ask: <n> items) → spilling to <next>`, record the spillover event on the run bead, and proceed to the next NOW.md entry (walking the whole list; list exhausted → batch interview). The selector re-evaluates from NOW.md top at every dispatch (D9).
+- **EP19 — Chores lane.** Beads labeled `chore` dispatch per D10. Chore discoveries follow the same EP1-EP4 economy; chore results appear in a separate report section.
+- **EP20 — Feature completion ceremony.** When the focus frontier is empty with no open blocked/deferred items in scope: run `bin/spec-gate <slug> --tier cheap` — never `--tier all`, because an unattended worker must not launch a paid or gated criterion. The ceremony is green when the cheap tier passes **and** every `expensive` criterion already carries a human-recorded pass in `acceptance-status.json`; a missing expensive record blocks the ceremony and files an `ask:` naming the run the human owes. On green, dispatch the spec-completion review (existing practice — the Queue 6 evidence files), file its evidence, append the historical entry to QUEUE.md, remove the slug from NOW.md, set the spec `Status: done`, and close the run bead with the ceremony recorded. On red, each failing criterion files a blocking child per EP1 and the run continues — the gate failures *are* the new frontier.
+
+**Queue economy (drain edits)**
+
+- **EP1 — Discriminate discovered work.** Drain's filing step (SKILL.md step 3 and the workflow-compile bullet at SKILL.md:247) classifies each discovered item per D1. Blocking: `bd create --deps discovered-from:<id>` as today, citing the parent criterion it unblocks. Adjacent: EP2 path. The worker prompt (reference.md) carries the discriminator wording.
+- **EP2 — Triage admission.** Adjacent items file with label `triage`. Every ready query drain and `/work` issue excludes `triage`. The batch interview lists triage items with three verbs — promote (strip label), decline (close with label `declined-at-triage`), defer (leave). Decline and EP10 decay share one convention: both close the bead and both label why it died (`declined-at-triage` for a human decline, `triage-archived` for decay), so a single closed-plus-label query surfaces every dead triage item. Conventions doc gains both label entries.
+- **EP3 — Discovery budget.** At most `DRAIN_TRIAGE_CAP` (default 5) adjacent filings reach bd per run; overflow lands in the run report's "Discovered digest" with enough context to re-file by hand. Blocking children are exempt.
+- **EP4 — Severity floor.** Auto-filing (even to triage) requires the item to (a) block acceptance somewhere, or (b) violate a named rule in `.claude/rules/` or a repo invariant. Style and opportunity findings are digest-only. Mirrors the critic's high-signal doctrine (README.md:122-125).
+- **EP5 — Run issue.** Drain opens a run bead at launch — title `drain <focus-or-all> <ISO-date>`, label `drain-run`, body: NOW.md snapshot, launch argument, session id — and closes it at exit with the EP6 report. Interruption leaves it open; the next drain of the same focus reuses an open run bead younger than 24h.
+- **EP6 — Computed run report.** `bin/drain-report <run-bead-id>` emits, from bd and the run log only, leading with focus status: focus feature and its acceptance delta, blocked-on-you items first, spillover events with reasons; then closed (list), opened-blocking, opened-triage, declined, deferred, imported blocking work, chores section, discovered digest, net focus delta, tokens-per-closure read from the workflow journal only (the agentic meter is never consulted; no journal → the metric is omitted, never estimated), trailing net burn over the last 3 runs of this focus, and projected passes-to-done (suppressed below 2 data points). Zero model calls.
+- **EP7 — Loop narration.** After each collected verdict, one line to the session and the run log: `closed <id> (<i>/<n> in focus) · opened <b>b+<t>t · in-flight: <id> <role> attempt-<a>`, plus a line at every focus transition (EP18's wording) and at re-focus.
+- **EP8 — drain-watch.** `bin/drain-watch [run-bead-id]` tails the run log and the native workflow progress stream, one row per in-flight agent grouped by bd id: label, tier, state, attempt, tokens, elapsed; header row names the current focus. Read-only; degrades to run-log-only when no workflow stream exists.
+- **EP9 — Net-burn audit class.** `agentic audit` gains a class computed from `drain-run` beads: opened-admitted (blocking + promoted) minus closed per run; when the sum over 3 consecutive runs of one focus is positive, file one deduplicated bead naming the focus and ratio.
+- **EP10 — Janitor triage decay.** `janitor --scope triage` closes `triage` items untouched ≥ `TRIAGE_DECAY_DAYS` (default 14) with label `triage-archived`; honors `--dry-run`; counts in janitor's summary.
+
+**Per-spec proximity**
+
+- **EP11 — Machine-readable acceptance blocks.** `/idea`'s SPEC.md template criteria gain stable IDs and a grammar: `- [ ] A<k> (<cheap|expensive>): \`<command>\` — <expected>`. Grammar documented as a sibling of `docs/memory/anchored-acceptance-criteria.md`. The tiers name who may run a criterion, not merely how long it takes: `cheap` is anything an unattended worker may execute under D11; `expensive` is a paid or gated run — an eval scenario, a human-driven walk — that only a human launches, whose result a human records in `acceptance-status.json`. Every criterion of either tier obeys D12. Backfill is lazy: when a focus spec's block does not parse, drain files one blocking child "conform acceptance block to grammar" instead of guessing.
+- **EP12 — spec-gate.** `bin/spec-gate <slug> [--tier cheap|all]` parses the block, runs each criterion under the D11 policy — consuming its single implementation, never authoring a second — writes `specs/<slug>/acceptance-status.json` (`{id, tier, pass|fail|skip, ts}`), exit 0 iff all executed criteria pass. A policy-rejected criterion records `skip` with its reason and is never executed. Criteria are read-only per D12. Drain runs `--tier cheap` once per pass on the focus; `--tier all` is an operator or scheduler invocation only — never the unattended ceremony's (EP20). The JSON is committed so trend is a `git log` away.
+- **EP13 — Convergence and thrash derivation.** `bin/spec-status` derives per spec, degrading gracefully per missing source: tasks with ≥2 claims (bd history), DEFERRED-then-redispatched pairs, critique NOT-READY streak (`specs/<slug>/critique-findings.md` history), net frontier delta last pass. Thrash flag names the specific issues.
+- **EP14 — Status line and workboard surface.** `bin/spec-status [slug]` prints `slug · acceptance g/n · open k (b blocked-on-you) · last pass +Δgreen, net±m · thrash: <ids|none> · est <p> passes`; no slug: one line per spec with open work, NOW.md order first. agent-console's `/workboard` renders NOW.md at the top with the current focus, badges blocked-on-human strictly first, and shows a per-spec burnup (admitted vs closed cumulative).
+- **EP15 — Bug phase pointer.** Bug-labeled beads carry `phase:` metadata (`reproduced|localized|fix-proposed|fix-verified|regressions-green`); build/drain worker verdicts set it; EP14 shows the phase and suppresses fractions for bugs before `fix-verified`.
+- **EP16 — Critique READY bar and contraction.** `/critique`'s READY verdict additionally requires the acceptance block to parse under EP11's grammar, each criterion to map to ≥1 requirement, and each criterion to be read-only per D12 — the authoring-time gate that keeps a state-mutating criterion out of the committed gate loop, since `bin/spec-gate` executes what it is given. On re-critique of the same spec, the verdict evaluates resolution of prior findings only; net-new findings route to the run report digest, not the loop. Boundary: mechanical application and dedup of findings remain `specs/critique-findings-loop-closure/` scope.
+
+## Out of scope
+
+- Unparking `agentic dispatch/run/watch` — its Unblock condition stands; EP5/EP8 adopt one convention and one viewer.
+- LLM-estimated effort or calendar ETAs — only pass-count projection from measured net burn.
+- Mid-task preemption on re-focus (D9); a second concurrent focus (WIP stays 1); auto-editing NOW.md except the EP20 completion removal.
+- Modifying `critique-findings-loop-closure` requirements; cross-repo aggregation beyond workboard's existing scan; Codex/Antigravity parity for the watch stream (report and status are runtime-neutral via bd).
+- **Janitor's worktree-sweep rules.** EP10 adds one scope to `janitor`; the broader gap — that janitor sweeps only issue-owned `drain/` tuples, does not encode the branch-is-the-archive identity or the detached-HEAD exception, and cannot see foreign-runtime worktrees — is `agentic-zz3k`, filed from the 2026-07-29 manual sweep (29 worktrees → 7). Land EP10 with that issue rather than as a competing edit to the same SKILL.md.
+
+## Acceptance criteria
+
+Every criterion is read-only per D12: nothing here mutates bd, the working tree, or any live surface — state a criterion needs, it builds under `mktemp -d` inside the test it names. `cheap` criteria run unattended under D11; the one `expensive` criterion is a paid eval only a human launches, whose result a human records in `acceptance-status.json`.
+
+- [ ] A1 (cheap): `bash tests/test_command_policy.sh` — the D11 policy accepts an allowlisted argv-0, refuses a shell metacharacter, refuses an unresolvable name, and its rejection path leaves no sentinel (D11)
 - [ ] A2 (cheap): `grep -c 'blocking iff' .claude/skills/drain/SKILL.md` — ≥ 1; the discriminator wording is present in the filing step (EP1)
 - [ ] A3 (cheap): `bash tests/test_drain_triage_economy.sh` — a `triage`-labeled fixture issue never appears in the ready set, an unlabeled one does, and stripping the label returns it (EP2)
 - [ ] A4 (cheap): `grep -c 'DRAIN_TRIAGE_CAP' .claude/skills/drain/reference.md` — ≥ 1 with default 5 stated (EP3)
@@ -54,10 +107,11 @@ None. All three were resolved by Steven on 2026-07-30:
 - Tokens-per-closure reads the workflow journal only; the agentic meter is never consulted, and the metric is omitted rather than estimated when no journal exists (folded into EP6).
 - Declined triage and decayed triage share one convention — close the bead, label why (`declined-at-triage` / `triage-archived`) — so one query surfaces both (folded into EP2).
 
-Two more were raised by the 2026-07-30 critique and resolved the same day:
+Three more were raised by the 2026-07-30 critique and resolved the same day:
 
-- The command policy gating EP18's `run:` unblocks and EP12's criteria is pinned as D11, modeled on `.claude/rules/human-blockers.md`'s probe contract, with exactly one implementation owned by task 00 and consumed by tasks 02 and 08.
+- The command policy gating EP18's `run:` unblocks and EP12's criteria is pinned as D11, with exactly one implementation owned by task 00 and consumed by tasks 02 and 08.
 - The completion ceremony gates on `--tier cheap` plus a human-recorded `expensive` result rather than launching `--tier all` unattended (folded into EP11, EP12, EP20).
+- Acceptance criteria are read-only (D12), enforced at authoring time by EP16's READY bar.
 
 ## Parallelization map
 
