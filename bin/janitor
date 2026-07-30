@@ -73,6 +73,29 @@ need_cmd python3
 log_file=".beads/janitor-revival-log.jsonl"
 mkdir -p "$(dirname "$log_file")"
 
+candidate_records="$(mktemp)"
+
+candidate_path=""
+candidate_branch=""
+candidate_issue=""
+candidate_status=""
+candidate_category=""
+candidate_action=""
+candidate_reason=""
+
+record_candidate() {
+  jq -nc \
+    --arg path "$candidate_path" \
+    --arg branch "${candidate_branch:-detached}" \
+    --arg issue "${candidate_issue:--}" \
+    --arg status "${candidate_status:-unknown}" \
+    --arg category "${candidate_category:-unknown}" \
+    --arg action "${candidate_action:-skip}" \
+    --arg reason "${candidate_reason:--}" \
+    '{path:$path,branch:$branch,issue:$issue,status:$status,category:$category,action:$action,reason:$reason}' \
+    >> "$candidate_records"
+}
+
 log_event() {
   local etype="$1" iid="$2" ib="$3" ipath="$4" reason="$5" recover="$6"
   if [ "$dry_run" -eq 1 ]; then
@@ -391,10 +414,24 @@ PY
 
   skip_worktree() {
     log_event "skipped_ambiguous" "$1" "$2" "$3" "$4" "$5"
+    candidate_action="skip"
+    candidate_reason="$4"
     ((skipped+=1))
   }
 
   process_worktree() {
+    candidate_path="$1"
+    candidate_branch="$2"
+    candidate_issue=""
+    candidate_status="unknown"
+    candidate_category="unknown"
+    candidate_action="skip"
+    candidate_reason=""
+    classify_worktree "$@"
+    record_candidate
+  }
+
+  classify_worktree() {
     local wt_path="$1" wt_branch="$2" wt_detached="$3"
     local issue_id="" label="" rev="" state="" salvage_ref="" head_sha=""
     local candidate="" live_id="" closed_id=""
@@ -416,9 +453,9 @@ PY
     fi
 
     if [ "$wt_detached" -eq 1 ]; then
+      candidate_category="detached"
       if recently_active "$wt_path"; then
         skip_worktree "" "" "$wt_path" "skip cleanup: detached worktree active within ${worktree_idle_minutes}m" "true"
-        echo "left alone, detached worktree still active: $wt_path"
         return
       fi
       head_sha="$(git -C "$wt_path" rev-parse --verify --quiet HEAD 2>/dev/null || true)"
@@ -432,6 +469,7 @@ PY
         return
       fi
       wt_branch="refs/heads/salvage/$label"
+      candidate_branch="$wt_branch"
       rev="$head_sha"
       eligible=1
     else
@@ -461,6 +499,12 @@ PY
         fi
       done < <(issue_id_candidates "$label")
       issue_id="${live_id:-${closed_id:-$label}}"
+      candidate_issue="$issue_id"
+      if [ -n "$live_id" ]; then
+        candidate_status="in_progress"
+      elif [ -n "$closed_id" ]; then
+        candidate_status="closed"
+      fi
 
       if [ -n "$live_id" ]; then
         skip_worktree "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: issue still in progress" "false"
@@ -483,9 +527,14 @@ PY
     fi
 
     state="$(content_state "$wt_path" "$rev")"
+    if [ "$wt_detached" -eq 0 ]; then
+      candidate_category="$state"
+    fi
 
     if [ "$state" = "unique" ]; then
+      candidate_action="salvage-then-remove"
       if [ "$dry_run" -eq 1 ]; then
+        candidate_reason="would salvage unique content to salvage/$label, then remove"
         log_event "removed_worktree" "$issue_id" "$wt_branch" "$wt_path" "dry-run: would salvage unique content to salvage/$label then remove" "true"
         reclaimed_worktrees=$((reclaimed_worktrees+1))
         return
@@ -496,10 +545,13 @@ PY
         return
       fi
       salvaged_worktrees=$((salvaged_worktrees+1))
-      echo "salvaged worktree content to $salvage_ref ($wt_path)"
+      candidate_reason="salvaged to $salvage_ref"
+    else
+      candidate_action="remove"
     fi
 
     if [ "$dry_run" -eq 1 ]; then
+      candidate_reason="would remove $state worktree"
       log_event "removed_worktree" "$issue_id" "$wt_branch" "$wt_path" "dry-run: would remove $state worktree" "true"
       reclaimed_worktrees=$((reclaimed_worktrees+1))
       return
@@ -508,6 +560,7 @@ PY
     did_remove=1
     if git worktree remove --force "$wt_path" >/dev/null 2>&1; then
       reclaimed_worktrees=$((reclaimed_worktrees+1))
+      candidate_reason="${candidate_reason:+$candidate_reason; }$state worktree removed; branch retained as the archive"
       log_event "removed_worktree" "$issue_id" "$wt_branch" "$wt_path" "$state worktree removed; branch retained as the archive" "false"
     else
       skip_worktree "$issue_id" "$wt_branch" "$wt_path" "worktree remove failed" "true"
@@ -552,9 +605,12 @@ fi
 actioned_claims=$((reclaimed_claims + reclaimed_worktrees))
 
 if [ "$json" -eq 1 ]; then
-  printf '{"scope":"%s","dry_run":%s,"reclaimed_claims":%s,"reclaimed_worktrees":%s,"salvaged_worktrees":%s,"skipped":%s,"handoff_scope":%s}\n' \
-    "$scope" "$([ "$dry_run" -eq 1 ] && echo true || echo false)" "$reclaimed_claims" "$reclaimed_worktrees" "$salvaged_worktrees" "$skipped" "${open_handoffs}"
+  printf '{"scope":"%s","dry_run":%s,"reclaimed_claims":%s,"reclaimed_worktrees":%s,"salvaged_worktrees":%s,"skipped":%s,"candidates":%s,"handoff_scope":%s}\n' \
+    "$scope" "$([ "$dry_run" -eq 1 ] && echo true || echo false)" "$reclaimed_claims" "$reclaimed_worktrees" "$salvaged_worktrees" "$skipped" \
+    "$(jq -sc '.' "$candidate_records")" "${open_handoffs}"
 else
+  jq -r '"candidate: path=\(.path) branch=\(.branch) issue=\(.issue) status=\(.status) category=\(.category) action=\(.action) reason=\(.reason)"' \
+    "$candidate_records"
   echo "janitor summary:"
   echo "  scope=$scope"
   echo "  dry_run=$([ "$dry_run" -eq 1 ] && echo true || echo false)"
@@ -563,5 +619,7 @@ else
   echo "  salvaged_worktrees=$salvaged_worktrees"
   echo "  skipped_or_ambiguous=$skipped"
 fi
+
+rm -f "$candidate_records"
 
 exit 0

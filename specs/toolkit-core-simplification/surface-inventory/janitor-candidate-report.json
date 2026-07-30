@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "janitor-candidate-report",
+  "frozen_sha256": "9bbda433cc58ce03405df080f52bcb9211fe047c4fd2cd66b1b8c6436dbe5339",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_janitor_candidate_report.sh#assert:43b273e0ce26056b7aa2cd6eb50019d7492d1187e5f26095524cf8c3387149af"
+      ],
+      "content_sha256": "cdb1ca50a0ef16c57f7613b87908a8aba248b3038e5e0bb483d559d651d6ea62",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_janitor_candidate_report.sh",
+      "path": "tests/test_janitor_candidate_report.sh",
+      "rationale": "Coverage for bin/janitor's per-candidate report (agentic-hzr1): a dry run names every candidate worktree with its branch, owning issue and status, category, action, and a reason for each skip, and --json carries the same records as an array. It is a separate suite because the janitor-worktree-sweep fragment pins tests/test_janitor_worktree_sweep.sh as retain, freezing its bytes. Disposition is repair so this suite can grow with the report it covers.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
