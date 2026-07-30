@@ -1,5 +1,6 @@
 # Human blockers carry a staleness probe
 
+Breakdown-ready: true
 Priority: P1
 
 ## Problem
@@ -98,7 +99,9 @@ R2. A probe clause is `<name> [arg …]`, never a command line:
 - `<name>` matches `^[a-z0-9][a-z0-9-]*$` and resolves to
   `scripts/blocker-probes/<name>`, **relative to the git root containing the
   `HUMAN.md` being parsed** — the same directory used as the probe's cwd — so
-  each repository supplies its own probes. A name containing `/`, `.`, or any
+  each repository supplies its own probes. It must exist there as a regular
+  executable file; a name that does not resolve, or resolves to something not
+  executable, is a violation, never an `unknown`. A name containing `/`, `.`, or any
   other character is a violation. `none` is reserved and is not a legal probe
   name; the escape is recognized by matching the clause exactly as `none`
   followed by ` — `. There is no allowlist of binaries, because a binary
@@ -140,7 +143,7 @@ root's `HUMAN.md` — parses only unchecked `- [ ]` entries inside
 existing "tools skip checked entries" rule. It reports five labelled buckets:
 **still-blocked** (exit 0), **stale** (nonzero other than 3, within the
 timeout), **unknown** (exit 3 "cannot determine", timed out, or the script
-could not be executed), **unprobed**
+exists and is executable but `exec` failed), **unprobed**
 (`none — <reason>`, always listed with its reason), and **violation** (a
 missing or malformed clause, an unresolvable or non-executable probe name, or
 an unbalanced quote).
@@ -255,9 +258,12 @@ local, never reaching a foreign checkout.
       (verified 0 today, 2026-07-29) — covers R1. **L0**, gameable by typing
       the literal; its behavioral complement is the missing-clause fixture,
       which proves the grammar is enforced rather than merely written.
-- [ ] `ls scripts/blocker-probes/` lists at least one executable script, and
-      each one exits 0 and nonzero on inputs the suite fixes — covers R3.
-      **L2**; a probe script with no test is a probe nobody has run.
+- [ ] `ls scripts/blocker-probes/` lists at least one executable script; each
+      one exits 0, nonzero, and 3 on inputs the suite fixes, and each either
+      takes no arguments or validates them against a fixed set enumerated in
+      the script — covers R3. **L2**; a probe script with no test is a probe
+      nobody has run, and the argv fixture exercises a *fixture* probe, so
+      without this clause a shipped `git -C "$1"` probe passes everything.
 - [ ] `grep -c 'check-human-blockers' .claude/skills/drain/SKILL.md` → ≥ 1
       (verified 0 today, 2026-07-29) — covers R7 at **L0**; behavioral
       complement is the eval scenario below.
@@ -272,7 +278,7 @@ local, never reaching a foreign checkout.
       one and records the result on the task.
 - [ ] `grep -c '^- \[ \]' HUMAN.md` → ≤ 6 (17 today, 2026-07-29), and
       `bin/check-human-blockers` against the real file exits 0 with its
-      still-blocked plus unprobed buckets together listing exactly the
+      still-blocked, unprobed, and unknown buckets together listing exactly the
       surviving entries and its stale and violation buckets empty, **on a
       fresh clone of this repository with no sibling checkouts present** —
       covers R3's self-guarding requirement and R9. **L1**; a bare "exits 0"
