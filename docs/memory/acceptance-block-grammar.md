@@ -28,8 +28,12 @@ prose.
 - `<expected>` — non-empty prose stating what the command must produce.
   Requirement ids (`(R2)`, `(EP11)`) belong here.
 
-Continuation lines that do not start with `- ` are ignored, so a criterion's
-annotation may wrap. Ids must be unique within a block.
+A line that is not a list item at all — a wrapped annotation, a blank line, a
+paragraph — is ignored, so a criterion's annotation may wrap. A line that *is*
+a list item — anything whose first non-blank character is `-`, `*`, or `+`,
+at any indent — must be a conforming criterion or the whole block fails to
+parse. A mistyped bullet is never silently dropped from the recovered set.
+Ids must be unique within a block.
 
 ## Id stability
 
@@ -49,11 +53,11 @@ history.
 
 The tiers name **who may run a criterion**, not how long it takes.
 
-- **`cheap`** — anything an unattended worker may execute under the command
-  policy: argv-0 resolves to a regular executable under an allowlisted root,
-  it runs directly and never through a shell, its arguments survive POSIX
-  shell-word lexing with no ASCII control characters, cwd is the repo root,
-  bounded timeout, no network grant. Drain runs the cheap tier every pass.
+- **`cheap`** — anything an unattended worker may execute under the D11
+  command policy (`specs/drain-economy/SPEC.md`). D11 pins that policy to one
+  implementation, `bin/command-policy`, whose clauses are stated once in
+  `.claude/rules/file-sourced-commands.md`; this file cites them and never
+  restates them. Drain runs the cheap tier every pass.
 - **`expensive`** — a paid or gated run: an eval scenario, a human-driven
   browser walk, anything metered. **Only a human launches it, and a human
   records its result** in `specs/<slug>/acceptance-status.json`. No

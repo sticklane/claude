@@ -28,19 +28,18 @@ assert() {
   fi
 }
 
-# --- the reference parser ---------------------------------------------------
 # Reads a block on stdin. Prints one `A<k>|<tier>` record per criterion in
 # source order. Exits 0 when every criterion line conforms and every id is
 # unique; exits 1 with a reason on stderr otherwise.
 CRITERION_RE='^- \[[ x]\] (A[0-9]+) \((cheap|expensive)\): `([^`]+)` — (.+)$'
+LIST_ITEM_RE='^[[:space:]]*[-*+]'
 
 parse_acceptance_block() {
   local line seen=" " ids=0
   while IFS= read -r line; do
-    case "$line" in
-      '- '*) ;;
-      *) continue ;;
-    esac
+    if [[ ! "$line" =~ $LIST_ITEM_RE ]]; then
+      continue
+    fi
     if [[ ! "$line" =~ $CRITERION_RE ]]; then
       echo "non-conforming criterion line: $line" >&2
       return 1
@@ -63,8 +62,9 @@ parse_acceptance_block() {
   return 0
 }
 
+# $1 = file, $2 = heading. Emits the lines of that section, up to the next
+# `## ` heading.
 extract_block() {
-  # $1 = file, $2 = heading. Emits the criterion lines of that section.
   awk -v heading="$2" '
     $0 == heading { inblock = 1; next }
     inblock && /^## / { exit }
@@ -72,12 +72,12 @@ extract_block() {
   ' "$1"
 }
 
-# --- fixtures ---------------------------------------------------------------
 conforming="$tmp/conforming.md"
 cat >"$conforming" <<'BLOCK'
 - [ ] A1 (cheap): `bash tests/test_command_policy.sh` — exits 0 (R1)
 - [ ] A2 (cheap): `bin/spec-gate drain-economy --tier cheap` — exit 0 (R2)
 - [ ] A3 (expensive): `evals/run.sh drain` — the NOT-READY fixture is refused
+- [x] A4 (cheap): `bash tests/test_doc_links.sh` — exits 0 (R4)
 BLOCK
 
 missing_id="$tmp/missing-id.md"
@@ -101,20 +101,43 @@ cat >"$duplicate_ids" <<'BLOCK'
 - [ ] A1 (cheap): `bash tests/test_doc_links.sh` — exits 0
 BLOCK
 
-# --- conforming block: parses, and every id and tier is recovered -----------
+asterisk_bullet="$tmp/asterisk-bullet.md"
+cat >"$asterisk_bullet" <<'BLOCK'
+- [ ] A1 (cheap): `bash tests/test_command_policy.sh` — exits 0
+* [ ] A2 (cheap): `bash tests/test_doc_links.sh` — exits 0
+BLOCK
+
+indented_bullet="$tmp/indented-bullet.md"
+cat >"$indented_bullet" <<'BLOCK'
+- [ ] A1 (cheap): `bash tests/test_command_policy.sh` — exits 0
+  - [ ] A2 (cheap): `bash tests/test_doc_links.sh` — exits 0
+BLOCK
+
+unspaced_bullet="$tmp/unspaced-bullet.md"
+cat >"$unspaced_bullet" <<'BLOCK'
+- [ ] A1 (cheap): `bash tests/test_command_policy.sh` — exits 0
+-[ ] A2 (cheap): `bash tests/test_doc_links.sh` — exits 0
+BLOCK
+
+wrapped_annotation="$tmp/wrapped-annotation.md"
+cat >"$wrapped_annotation" <<'BLOCK'
+- [ ] A1 (cheap): `bash tests/test_command_policy.sh` — exits 0, covering
+      every rejection clause the policy states
+BLOCK
+
 recovered="$(parse_acceptance_block <"$conforming" 2>"$tmp/err")"
 status=$?
 assert "conforming block parses (exit 0)" "$status"
 expected_records='A1|cheap
 A2|cheap
-A3|expensive'
+A3|expensive
+A4|cheap'
 if [ "$recovered" = "$expected_records" ]; then
   assert "conforming block recovers every id and tier" 0
 else
   assert "conforming block recovers every id and tier (got: $recovered)" 1
 fi
 
-# --- malformed fixtures, one case each --------------------------------------
 reject_case() {
   local desc="$1" fixture="$2"
   if parse_acceptance_block <"$fixture" >/dev/null 2>&1; then
@@ -128,8 +151,16 @@ reject_case "a criterion with a missing id" "$missing_id"
 reject_case "a criterion with an unknown tier" "$unknown_tier"
 reject_case "a criterion with no backticked command" "$no_command"
 reject_case "a block with duplicate ids" "$duplicate_ids"
+reject_case "a criterion bulleted with '*' instead of '-'" "$asterisk_bullet"
+reject_case "a criterion indented under another list item" "$indented_bullet"
+reject_case "a criterion whose bullet has no trailing space" "$unspaced_bullet"
 
-# --- the /idea SPEC.md template emits the grammar ---------------------------
+if parse_acceptance_block <"$wrapped_annotation" >/dev/null 2>&1; then
+  assert "an indent-wrapped annotation line stays ignorable" 0
+else
+  assert "an indent-wrapped annotation line stays ignorable" 1
+fi
+
 idea_skill="$repo_root/.claude/skills/idea/SKILL.md"
 if [ ! -f "$idea_skill" ]; then
   assert "/idea SKILL.md exists" 1
@@ -150,7 +181,6 @@ else
   fi
 fi
 
-# --- the grammar doc exists and states its binding rules --------------------
 grammar_doc="$repo_root/docs/memory/acceptance-block-grammar.md"
 if [ ! -f "$grammar_doc" ]; then
   assert "docs/memory/acceptance-block-grammar.md exists" 1
