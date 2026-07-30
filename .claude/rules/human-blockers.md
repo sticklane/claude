@@ -11,7 +11,7 @@ narrative in the same file lives above it and is human-owned.
 Each open blocker is one checkbox line under the section:
 
 ```
-- [ ] <ISO date> · <source path> · <ask|run|provision|decide> — <plain-language action> — Blocks: <impact>
+- [ ] <ISO date> · <source path> · <ask|run|provision|decide> — <plain-language action> — Blocks: <impact> — Still-blocked: <probe name> [arg …]
 ```
 
 The type mirrors the `Unblock:` types so nothing new is invented: `ask` =
@@ -35,6 +35,33 @@ task 09 (notes CRUD), task 11 (MCP server)"), "Blocks: no other pending
 task" when nothing depends on it, or the one fixed stage a source type
 always gates (e.g. "Blocks: promotion of this stub to a dispatchable task").
 
+The `Still-blocked:` clause is mandatory and is the final element of the
+line, so an entry can be re-checked against the world instead of sitting
+until someone re-reads it. It is the text following the **last** occurrence
+of ` — Still-blocked: ` on the line, through end of line; the last
+occurrence is the parse rule because the `<plain-language action>` prose
+already contains ` — ` internally, so position alone cannot find it.
+
+The clause names a probe script and its literal arguments — never a command
+line. `<probe name>` matches `^[a-z0-9][a-z0-9-]*$` and resolves to
+`scripts/blocker-probes/<name>` relative to the git root holding this
+`HUMAN.md`, where it must exist as a regular executable file; a name that
+does not resolve, or resolves to something not executable, is a violation.
+Arguments are split with POSIX shell-word lexing and handed to the script as
+argv, which is run directly with that git root as its cwd — never through a
+shell, so `;` and `|` inside an argument are inert bytes reaching reviewed
+code. An unbalanced quote or an ASCII control character is a violation. The
+name `none` is reserved: `Still-blocked: none — <reason>` is the only legal
+escape from naming a probe.
+
+The probe's exit code is a three-value contract: **0 = still blocked**,
+**3 = cannot determine**, any other nonzero = stale. Three exists so that
+"I could not tell" cannot collapse into "the blocker dissolved" — a reader
+of the section withholds stale entries, so mapping an unreachable checkout
+onto stale would hide a live blocker. `bin/check-human-blockers` runs the
+probes and sorts the section into still-blocked, stale, unknown, unprobed,
+and violation.
+
 ## Rules
 
 - **Open items only, not a log.** The section lists blockers still open.
@@ -53,6 +80,13 @@ always gates (e.g. "Blocks: promotion of this stub to a dispatchable task").
   never edited by an agent.
 - **Append, don't reorder.** New entries append to the section; existing
   entries are not rewritten or reordered, only added or removed.
+- **Adding a missing `Still-blocked:` clause is the one sanctioned
+  rewrite.** It is the single exception to "append, don't reorder": an entry
+  that predates the clause requirement, or that arrives by merge without
+  one, is repaired in place rather than left as a permanent violation. The
+  requirement is retroactive — every unchecked entry needs a clause,
+  whenever it was filed — and `none — <reason>` is always available when no
+  runnable signal exists.
 - **`Blocks:` is mandatory.** Every entry filed after this change carries a
   `Blocks:` clause stating its impact; the clause is never omitted. A filer
   that cannot determine the impact writes `Blocks: unclear — <one-line

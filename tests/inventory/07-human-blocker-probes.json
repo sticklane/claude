@@ -1,0 +1,12 @@
+{
+  "fragment": "07-human-blocker-probes",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_human_blockers.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

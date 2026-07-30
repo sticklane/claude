@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+"""Report which HUMAN.md blockers still hold.
+
+Reads the ``## Agent-filed blockers`` section of a ``HUMAN.md``, runs each
+unchecked entry's ``Still-blocked:`` probe under the grammar in
+``.claude/rules/human-blockers.md``, and prints five labelled buckets.
+
+Exit codes: 0 when nothing is stale and nothing is a violation, 1 when at
+least one probe reports its blocker dissolved, 2 when any entry violates the
+grammar. The checker only reads; it never writes ``HUMAN.md`` or any other
+file.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import pathlib
+import re
+import shlex
+import signal
+import subprocess
+import sys
+
+SECTION_HEADING = "## Agent-filed blockers"
+CLAUSE_MARKER = " — Still-blocked: "
+ESCAPE_PREFIX = "none — "
+RESERVED_NAME = "none"
+PROBE_DIR = "scripts/blocker-probes"
+PROBE_NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f]")
+DEFAULT_TIMEOUT_SECONDS = 20.0
+BUCKETS = ("still-blocked", "stale", "unknown", "unprobed", "violation")
+
+
+def open_entries(text: str) -> list[str]:
+    entries: list[str] = []
+    inside = False
+    for line in text.splitlines():
+        if line.startswith("## "):
+            inside = line.strip() == SECTION_HEADING
+            continue
+        if inside and line.startswith("- [ ] "):
+            entries.append(line.rstrip())
+    return entries
+
+
+def entry_label(entry: str) -> str:
+    fields = entry[len("- [ ] "):].split(" · ")
+    source = fields[1].strip() if len(fields) > 1 else "unnamed source"
+    return f"{fields[0].strip()} · {source}"
+
+
+def entry_clause(entry: str) -> str | None:
+    marker = entry.rfind(CLAUSE_MARKER)
+    if marker == -1:
+        return None
+    return entry[marker + len(CLAUSE_MARKER):]
+
+
+def bucket_for_entry(
+    entry: str,
+    root: pathlib.Path,
+    timeout: float,
+) -> tuple[str, str]:
+    """Sort one entry into a bucket, validating its whole clause first."""
+    clause = entry_clause(entry)
+    if clause is None:
+        return "violation", "no Still-blocked: clause"
+    if CONTROL_CHARACTER.search(clause):
+        return "violation", "clause holds an ASCII control character"
+    if clause.startswith(ESCAPE_PREFIX):
+        reason = clause[len(ESCAPE_PREFIX):].strip()
+        if not reason:
+            return "violation", "the none escape needs a reason"
+        return "unprobed", reason
+    try:
+        words = shlex.split(clause, posix=True)
+    except ValueError as error:
+        return "violation", f"clause is not shell-word parsable: {error}"
+    if not words:
+        return "violation", "clause is empty"
+    name = words[0]
+    if name == RESERVED_NAME:
+        return "violation", "'none' is reserved for the 'none — <reason>' escape"
+    if not PROBE_NAME.match(name):
+        return "violation", f"probe name {name!r} is not [a-z0-9][a-z0-9-]*"
+    probe = root / PROBE_DIR / name
+    if not probe.is_file():
+        return "violation", f"{PROBE_DIR}/{name} does not exist"
+    if not os.access(probe, os.X_OK):
+        return "violation", f"{PROBE_DIR}/{name} is not executable"
+    return run_probe([str(probe), *words[1:]], root, timeout)
+
+
+def run_probe(
+    argv: list[str],
+    root: pathlib.Path,
+    timeout: float,
+) -> tuple[str, str]:
+    try:
+        probe = subprocess.Popen(
+            argv,
+            cwd=root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError as error:
+        return "unknown", f"could not be executed: {error}"
+    try:
+        returncode = probe.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        kill_process_group(probe)
+        return "unknown", f"timed out after {timeout:g}s"
+    if returncode == 0:
+        return "still-blocked", ""
+    if returncode == 3:
+        return "unknown", "probe cannot determine the answer (exit 3)"
+    return "stale", f"probe exited {returncode}"
+
+
+def kill_process_group(process: "subprocess.Popen[bytes]") -> None:
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except OSError:
+        process.kill()
+    process.wait()
+
+
+def probe_timeout_seconds() -> float:
+    raw = os.environ.get("HUMAN_BLOCKER_PROBE_TIMEOUT", "")
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_TIMEOUT_SECONDS
+    return value if value > 0 else DEFAULT_TIMEOUT_SECONDS
+
+
+def git_root(start: pathlib.Path) -> pathlib.Path | None:
+    completed = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return None
+    return pathlib.Path(completed.stdout.strip())
+
+
+def print_buckets(note: str, sorted_entries: dict[str, list[tuple[str, str]]]) -> None:
+    print(f"check-human-blockers: {note}")
+    for bucket in BUCKETS:
+        rows = sorted_entries[bucket]
+        print(f"{bucket} ({len(rows)}):")
+        for label, detail in rows:
+            suffix = f" — {detail}" if detail else ""
+            print(f"  - {label}{suffix}")
+
+
+def report(human_md: pathlib.Path, root: pathlib.Path) -> int:
+    sorted_entries: dict[str, list[tuple[str, str]]] = {
+        bucket: [] for bucket in BUCKETS
+    }
+    entries = open_entries(human_md.read_text(errors="replace"))
+    timeout = probe_timeout_seconds()
+    for entry in entries:
+        bucket, detail = bucket_for_entry(entry, root, timeout)
+        sorted_entries[bucket].append((entry_label(entry), detail))
+
+    print_buckets(f"{human_md} — {len(entries)} open entries", sorted_entries)
+    if sorted_entries["violation"]:
+        return 2
+    if sorted_entries["stale"]:
+        return 1
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Run each HUMAN.md blocker's staleness probe."
+    )
+    parser.add_argument(
+        "path",
+        nargs="?",
+        type=pathlib.Path,
+        help="HUMAN.md to check (default: the git root's HUMAN.md)",
+    )
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+
+    anchor = args.path.parent if args.path else pathlib.Path.cwd()
+    root = git_root(anchor)
+    if root is None:
+        print(
+            f"check-human-blockers: {anchor} is not inside a Git repository",
+            file=sys.stderr,
+        )
+        return 2
+    human_md = args.path if args.path else root / "HUMAN.md"
+    if not human_md.is_file():
+        print_buckets(
+            f"{human_md} does not exist",
+            {bucket: [] for bucket in BUCKETS},
+        )
+        return 0
+    return report(human_md, root)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
