@@ -77,20 +77,32 @@ gate already runs 5m10s (`agentic-7c7`), and probes may reach other checkouts.
 ## Requirements
 
 R1. `.claude/rules/human-blockers.md` defines a mandatory `Still-blocked:`
-clause as the final element of the entry line and states the exit-code
-contract (0 = still blocked, nonzero = stale). The parse rule is explicit: the
+clause as the final element of the entry line and states the three-value
+exit-code contract: **0 = still blocked**, **3 = cannot determine**, any other
+nonzero = stale. The third value exists because "I could not tell" must not
+collapse into "the blocker dissolved" — R7 withholds stale entries, so mapping
+an unreachable checkout onto stale would hide a live blocker from the human,
+which is this spec's own failure mode inverted. The parse rule is explicit: the
 clause is the text following the **last** occurrence of ` — Still-blocked: `
 on the line, through end of line — the existing `<plain-language action>` prose
 already contains ` — ` internally, so position alone is not a parse rule.
-`Still-blocked: none — <reason>` is the only legal escape.
+`Still-blocked: none — <reason>` is the only legal escape. Adding a missing
+clause to an existing entry is the one sanctioned exception to the rule's
+"existing entries are not rewritten or reordered" mandate — without it, R9's
+migration and any clause-less entry arriving by merge would be unrepairable
+violations. The clause requirement is retroactive: every unchecked entry needs
+one, whenever it was filed.
 
 R2. A probe clause is `<name> [arg …]`, never a command line:
 
 - `<name>` matches `^[a-z0-9][a-z0-9-]*$` and resolves to
-  `scripts/blocker-probes/<name>`, which must exist as a regular executable
-  file. A name containing `/`, `.`, or any other character is a violation.
-  There is no allowlist of binaries, because a binary allowlist is not a
-  boundary — see Solution.
+  `scripts/blocker-probes/<name>`, **relative to the git root containing the
+  `HUMAN.md` being parsed** — the same directory used as the probe's cwd — so
+  each repository supplies its own probes. A name containing `/`, `.`, or any
+  other character is a violation. `none` is reserved and is not a legal probe
+  name; the escape is recognized by matching the clause exactly as `none`
+  followed by ` — `. There is no allowlist of binaries, because a binary
+  allowlist is not a boundary — see Solution.
 - Arguments are split with POSIX shell-word lexing (`shlex.split(posix=True)`:
   single and double quotes, backslash escapes, no expansion of any kind). An
   unbalanced quote is a violation. Arguments are passed as argv to the script
@@ -109,16 +121,26 @@ blocker holds, so a condition whose natural command has inverted polarity
 (`bd list` succeeding *because* the blocker dissolved), or whose signal lives
 in stdout rather than an exit code (`specs/status.sh`), is inverted or parsed
 inside the script. Each script is read-only, self-guards any path it does not
-control (a probe touching another checkout returns the contract's "stale"
-rather than failing when that checkout is absent), and is usable from any
-clone of this repository.
+control — a probe whose target checkout is absent exits 3 (cannot determine),
+never 0 or 1 — and is usable from any clone of this repository.
+
+**A probe treats its argv as untrusted.** The clause's arguments come from the
+same hostile-input channel as the rest of the entry, so a script accepts either
+no arguments or arguments validated against an explicit fixed set enumerated in
+the script itself. It never uses an argument as a path it executes in, as a
+repository it runs a VCS command against, or as a string interpolated into a
+command. Without this, the round-2 bypass relocates: a probe of the plausible
+shape `git -C "$1" …` executes code when pointed at an attacker-planted
+directory carrying `core.fsmonitor` or `core.sshCommand` in its `.git/config`,
+with no shell anywhere in the path.
 
 R4. `bin/check-human-blockers [path/to/HUMAN.md]` — defaulting to the git
 root's `HUMAN.md` — parses only unchecked `- [ ]` entries inside
 `## Agent-filed blockers`; `- [x]` entries are skipped entirely, per the
 existing "tools skip checked entries" rule. It reports five labelled buckets:
-**still-blocked** (exit 0), **stale** (nonzero within the timeout),
-**unknown** (timed out, or the script could not be executed), **unprobed**
+**still-blocked** (exit 0), **stale** (nonzero other than 3, within the
+timeout), **unknown** (exit 3 "cannot determine", timed out, or the script
+could not be executed), **unprobed**
 (`none — <reason>`, always listed with its reason), and **violation** (a
 missing or malformed clause, an unresolvable or non-executable probe name, or
 an unbalanced quote).
@@ -142,11 +164,20 @@ verbatim alongside the grammar violation rather than withholding or aborting.
 R8. `tests/test_human_blockers.sh` drives the checker against fixture
 repositories covering: a probe exiting 0; a probe exiting nonzero; a missing
 clause; `none — <reason>`; a probe that hangs past the timeout; a `- [x]`
-entry whose clause is absent (must not trip exit 2); an unbalanced quote; and
-three **hostile clauses**, each asserted refused with exit 2 **and not
-executed**, proven by a sentinel file's absence:
-`bd list; touch SENTINEL`, `git -c alias.p=!touch\ SENTINEL p`, and
-`../../../bin/evil`. Every fixture case additionally asserts the fixture
+entry whose clause is absent (must not trip exit 2); an unbalanced quote; a
+probe whose target sibling path is deliberately absent, asserted to exit 3 into
+the unknown bucket without setting exit 1; and four **hostile clauses**, each
+asserted to leave no sentinel file.
+
+Three die at name resolution with exit 2 — `bd list; touch SENTINEL`,
+`git -c alias.p=!touch\ SENTINEL p`, and `../../../bin/evil`. The fourth
+exercises the **argument** grammar, which none of the first three reach: a real
+fixture probe invoked with a hostile argument — a path to a planted directory
+whose `.git/config` sets `core.fsmonitor` — asserted to leave no sentinel. That
+case is what proves R3's argv rule rather than R2's name rule, and its absence
+is what would let the round-2 bypass relocate into the scripts.
+
+Every fixture case additionally asserts the fixture
 `HUMAN.md`'s sha256 is unchanged and the fixture directory gained no files,
 which is the only observation that can prove R6.
 
@@ -195,10 +226,21 @@ local, never reaching a foreign checkout.
 - [ ] `bash tests/test_human_blockers.sh` exits 0 reporting 0 failures, and
       its cases cover every R8 fixture — covers R1, R2, R4, R5, R6, R8.
       **L2**: behavioral, driven against fixture repositories.
-- [ ] Within that suite, each of the three hostile clauses yields exit 2 and
-      `test ! -e "$FIXTURE/SENTINEL"` passes — refused, not merely reported.
-      The `git -c alias` case is the one that matters: it is the bypass that
-      defeated the previous binary-allowlist design — covers R2. **L2**.
+- [ ] Within that suite, each of the three name-grammar hostile clauses yields
+      exit 2 and `test ! -e "$FIXTURE/SENTINEL"` passes — refused, not merely
+      reported. The `git -c alias` case is the one that matters: it is the
+      bypass that defeated the previous binary-allowlist design — covers R2.
+      **L2**.
+- [ ] Within that suite, the argument-grammar hostile case — a real fixture
+      probe handed a planted `.git/config` directory — leaves no sentinel,
+      whatever exit code it produces — covers R3's argv rule. **L2**; the three
+      criteria above all die at name resolution and prove nothing about
+      arguments.
+- [ ] Within that suite, the absent-sibling-path probe lands in the unknown
+      bucket with exit 0, and no probe returning 3 is ever reported stale —
+      covers R1's three-value contract and R3's self-guard. **L2**; without
+      this, an unreachable checkout reads as "dissolved" and R7 withholds a
+      live blocker.
 - [ ] Within that suite, every case asserts the fixture `HUMAN.md`'s sha256 is
       byte-identical before and after the run and that the fixture directory
       gained no files, including on the exit-2 and timeout cases — covers R6.
