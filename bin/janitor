@@ -412,14 +412,14 @@ PY
     printf 'salvage/%s\n' "$label"
   }
 
-  skip_worktree() {
+  mark_worktree_skipped() {
     log_event "skipped_ambiguous" "$1" "$2" "$3" "$4" "$5"
     candidate_action="skip"
     candidate_reason="$4"
     ((skipped+=1))
   }
 
-  process_worktree() {
+  sweep_and_record_worktree() {
     candidate_path="$1"
     candidate_branch="$2"
     candidate_issue=""
@@ -427,45 +427,45 @@ PY
     candidate_category="unknown"
     candidate_action="skip"
     candidate_reason=""
-    classify_worktree "$@"
+    sweep_worktree "$@"
     record_candidate
   }
 
-  classify_worktree() {
+  sweep_worktree() {
     local wt_path="$1" wt_branch="$2" wt_detached="$3"
     local issue_id="" label="" rev="" state="" salvage_ref="" head_sha=""
     local candidate="" live_id="" closed_id=""
     local eligible=0
 
     if [ "$wt_path" = "$shared_checkout" ]; then
-      skip_worktree "" "$wt_branch" "$wt_path" "skip cleanup: shared checkout is never a removal candidate" "false"
+      mark_worktree_skipped "" "$wt_branch" "$wt_path" "skip cleanup: shared checkout is never a removal candidate" "false"
       return
     fi
 
     if [ ! -d "$wt_path" ]; then
-      skip_worktree "" "$wt_branch" "$wt_path" "stale branch path missing" "false"
+      mark_worktree_skipped "" "$wt_branch" "$wt_path" "stale branch path missing" "false"
       return
     fi
 
     if ! is_orchestrator_location "$wt_path"; then
-      skip_worktree "" "$wt_branch" "$wt_path" "candidate skipped: non-orchestrator worktree location" "false"
+      mark_worktree_skipped "" "$wt_branch" "$wt_path" "candidate skipped: non-orchestrator worktree location" "false"
       return
     fi
 
     if [ "$wt_detached" -eq 1 ]; then
       candidate_category="detached"
       if recently_active "$wt_path"; then
-        skip_worktree "" "" "$wt_path" "skip cleanup: detached worktree active within ${worktree_idle_minutes}m" "true"
+        mark_worktree_skipped "" "" "$wt_path" "skip cleanup: detached worktree active within ${worktree_idle_minutes}m" "true"
         return
       fi
       head_sha="$(git -C "$wt_path" rev-parse --verify --quiet HEAD 2>/dev/null || true)"
       if [ -z "$head_sha" ]; then
-        skip_worktree "" "" "$wt_path" "skip cleanup: detached worktree has no resolvable HEAD" "true"
+        mark_worktree_skipped "" "" "$wt_path" "skip cleanup: detached worktree has no resolvable HEAD" "true"
         return
       fi
       label="detached-$(git -C "$wt_path" rev-parse --short HEAD)"
       if [ "$dry_run" -eq 0 ] && ! git branch --force "salvage/$label" "$head_sha" >/dev/null 2>&1; then
-        skip_worktree "" "" "$wt_path" "skip cleanup: detached worktree commits could not be branched" "true"
+        mark_worktree_skipped "" "" "$wt_path" "skip cleanup: detached worktree commits could not be branched" "true"
         return
       fi
       wt_branch="refs/heads/salvage/$label"
@@ -476,13 +476,13 @@ PY
       case "$wt_branch" in
         refs/heads/*) ;;
         *)
-          skip_worktree "" "$wt_branch" "$wt_path" "skip non-checkout worktree branch entry" "false"
+          mark_worktree_skipped "" "$wt_branch" "$wt_path" "skip non-checkout worktree branch entry" "false"
           return
           ;;
       esac
 
       if ! is_orchestration_branch "$wt_branch"; then
-        skip_worktree "" "$wt_branch" "$wt_path" "candidate skipped: branch does not match orchestration patterns (drain|task)" "false"
+        mark_worktree_skipped "" "$wt_branch" "$wt_path" "candidate skipped: branch does not match orchestration patterns (drain|task)" "false"
         return
       fi
 
@@ -507,12 +507,12 @@ PY
       fi
 
       if [ -n "$live_id" ]; then
-        skip_worktree "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: issue still in progress" "false"
+        mark_worktree_skipped "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: issue still in progress" "false"
         return
       fi
 
       if branch_checked_out_elsewhere "$wt_branch" "$wt_path"; then
-        skip_worktree "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: branch checked out by another worktree" "false"
+        mark_worktree_skipped "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: branch checked out by another worktree" "false"
         return
       fi
 
@@ -521,7 +521,7 @@ PY
         eligible=1
       fi
       if [ "$eligible" -eq 0 ]; then
-        skip_worktree "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: issue neither closed nor branch merged into ${base_branch:-base}" "true"
+        mark_worktree_skipped "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: issue neither closed nor branch merged into ${base_branch:-base}" "true"
         return
       fi
     fi
@@ -541,7 +541,7 @@ PY
       fi
       salvage_ref="$(salvage_content "$wt_path" "$label" "$rev" || true)"
       if [ -z "$salvage_ref" ]; then
-        skip_worktree "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: unique worktree content could not be salvaged" "true"
+        mark_worktree_skipped "$issue_id" "$wt_branch" "$wt_path" "skip cleanup: unique worktree content could not be salvaged" "true"
         return
       fi
       salvaged_worktrees=$((salvaged_worktrees+1))
@@ -563,7 +563,7 @@ PY
       candidate_reason="${candidate_reason:+$candidate_reason; }$state worktree removed; branch retained as the archive"
       log_event "removed_worktree" "$issue_id" "$wt_branch" "$wt_path" "$state worktree removed; branch retained as the archive" "false"
     else
-      skip_worktree "$issue_id" "$wt_branch" "$wt_path" "worktree remove failed" "true"
+      mark_worktree_skipped "$issue_id" "$wt_branch" "$wt_path" "worktree remove failed" "true"
     fi
   }
 
@@ -572,7 +572,7 @@ PY
   wt_detached=0
   flush_worktree() {
     if [ -n "$wt_path" ] && { [ "$wt_detached" -eq 1 ] || [ -n "$wt_branch" ]; }; then
-      process_worktree "$wt_path" "$wt_branch" "$wt_detached"
+      sweep_and_record_worktree "$wt_path" "$wt_branch" "$wt_detached"
     fi
     wt_path=""
     wt_branch=""
