@@ -18,6 +18,7 @@ import os
 import pathlib
 import re
 import shlex
+import signal
 import subprocess
 import sys
 
@@ -98,22 +99,33 @@ def run_probe(
     timeout: float,
 ) -> tuple[str, str]:
     try:
-        completed = subprocess.run(
+        probe = subprocess.Popen(
             argv,
             cwd=root,
-            timeout=timeout,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            start_new_session=True,
         )
-    except subprocess.TimeoutExpired:
-        return "unknown", f"timed out after {timeout:g}s"
     except OSError as error:
         return "unknown", f"could not be executed: {error}"
-    if completed.returncode == 0:
+    try:
+        returncode = probe.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        kill_process_group(probe)
+        return "unknown", f"timed out after {timeout:g}s"
+    if returncode == 0:
         return "still-blocked", ""
-    if completed.returncode == 3:
+    if returncode == 3:
         return "unknown", "probe cannot determine the answer (exit 3)"
-    return "stale", f"probe exited {completed.returncode}"
+    return "stale", f"probe exited {returncode}"
+
+
+def kill_process_group(process: "subprocess.Popen[bytes]") -> None:
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except OSError:
+        process.kill()
+    process.wait()
 
 
 def probe_timeout_seconds() -> float:

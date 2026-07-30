@@ -8,6 +8,7 @@ trap 'rm -rf "$TMP"' EXIT
 
 pass=0
 fail=0
+SLOW_PROBE_SLEEP=3771
 
 ok() {
   pass=$((pass + 1))
@@ -40,7 +41,7 @@ new_fixture() {
     >"$fixture/scripts/blocker-probes/dissolved"
   printf '%s\n' '#!/usr/bin/env bash' 'exit 3' \
     >"$fixture/scripts/blocker-probes/undetermined"
-  printf '%s\n' '#!/usr/bin/env bash' 'sleep 30' 'exit 0' \
+  printf '%s\n' '#!/usr/bin/env bash' "sleep $SLOW_PROBE_SLEEP" 'exit 0' \
     >"$fixture/scripts/blocker-probes/slow"
   printf '%s\n' \
     '#!/usr/bin/env bash' \
@@ -51,7 +52,7 @@ new_fixture() {
     '  *) exit 3 ;;' \
     'esac' \
     'if [ ! -d "$target/.git" ]; then exit 3; fi' \
-    'if ! git -C "$target" rev-parse --git-dir >/dev/null 2>&1; then exit 3; fi' \
+    'if ! git -C "$target" status --porcelain >/dev/null 2>&1; then exit 3; fi' \
     'exit 0' >"$fixture/scripts/blocker-probes/sibling-queue"
   chmod 755 "$fixture/scripts/blocker-probes/"*
   printf '%s\n' '#!/usr/bin/env bash' 'exit 0' \
@@ -143,6 +144,31 @@ expect_no_sentinel() {
   test -z "$planted" && ok "$name" || nope "$name"
 }
 
+expect_armed_repository_fires() {
+  local name="$1" planted="$2"
+  git -C "$planted" status --porcelain >/dev/null 2>&1
+  if [ -e "$planted/SENTINEL" ]; then
+    ok "$name"
+  else
+    nope "$name (planted core.fsmonitor never fired)"
+  fi
+  rm -rf "$planted"
+}
+
+expect_no_orphan() {
+  local name="$1" pattern="$2"
+  if ! command -v pgrep >/dev/null 2>&1; then
+    nope "$name (no pgrep available to observe orphaned probe children)"
+    return
+  fi
+  if pgrep -f "$pattern" >/dev/null 2>&1; then
+    pkill -f "$pattern" >/dev/null 2>&1
+    nope "$name"
+  else
+    ok "$name"
+  fi
+}
+
 entry() {
   printf '%s %s · %s · decide — %s — Blocks: task 02 — Still-blocked: %s' \
     "$1" "$2" "$3" "$4" "$5"
@@ -194,6 +220,8 @@ write_human "$fixture" \
 run_checker "$fixture" 1
 expect_case "a probe past HUMAN_BLOCKER_PROBE_TIMEOUT is unknown, exit 0" 0 \
   'unknown (1):' 'timed out' 'stale (0):'
+expect_no_orphan "a timed-out probe leaves no orphaned grandchild process" \
+  "sleep $SLOW_PROBE_SLEEP"
 
 fixture="$(new_fixture resolved-entry)"
 write_human "$fixture" \
@@ -262,6 +290,9 @@ run_checker "$fixture"
 expect_case "a hostile probe argument is refused by the probe's fixed set" 0 \
   'unknown (1):' 'still-blocked (0):' 'stale (0):'
 expect_no_sentinel "hostile probe argument (armed core.fsmonitor) left no SENTINEL"
+expect_armed_repository_fires \
+  "the planted checkout does arm SENTINEL when git touches its index" \
+  "$fixture/planted"
 
 fixture="$(new_fixture unexecutable-probe)"
 write_human "$fixture" \
