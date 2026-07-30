@@ -115,9 +115,11 @@ assert_not "python fixture: no bare npx in check.sh or pre-commit" \
 assert_not "python fixture: no typecheck stage (mypy not configured)" \
   grep -q mypy "$PY_CHECK"
 
-fmt_ln="$(stage_line "$PY_CHECK" '^run_stage "format-check"')"
-lint_ln="$(stage_line "$PY_CHECK" '^run_stage "lint"')"
-test_ln="$(stage_line "$PY_CHECK" '^run_stage "tests"')"
+# Anchors accept either emitted form — run_stage, or run_scoped_stage with a
+# leading glob list — so they assert presence and order, not scoping policy.
+fmt_ln="$(stage_line "$PY_CHECK" '^run_[a-z_]*stage .*"format-check"')"
+lint_ln="$(stage_line "$PY_CHECK" '^run_[a-z_]*stage .*"lint"')"
+test_ln="$(stage_line "$PY_CHECK" '^run_[a-z_]*stage .*"tests"')"
 assert "python fixture: format-check stage present" test -n "$fmt_ln"
 assert "python fixture: lint stage present" test -n "$lint_ln"
 assert "python fixture: tests stage present" test -n "$test_ln"
@@ -203,7 +205,7 @@ assert "py-nofmt: check.sh lints with ruff" grep -q 'ruff check' "$PYNF/scripts/
 assert_not "py-nofmt: no format stage in check.sh" \
   grep -q 'format --check' "$PYNF/scripts/check.sh"
 assert_not "py-nofmt: no tests stage in check.sh" \
-  grep -q 'run_stage "tests"' "$PYNF/scripts/check.sh"
+  grep -q '^run_[a-z_]*stage .*"tests"' "$PYNF/scripts/check.sh"
 assert_not "py-nofmt: no format stage in pre-commit" \
   grep -q 'format --check' "$PYNF/.git/hooks/pre-commit"
 
@@ -230,7 +232,7 @@ chmod 755 "$PYV/.venv/bin/pytest"
 run_install "$PYV"
 assert_eq "py-venv: exits 0" 0 "$RI_EXIT"
 assert "py-venv: tests stage uses .venv/bin/pytest" \
-  grep -q 'run_stage "tests" \.venv/bin/pytest' "$PYV/scripts/check.sh"
+  grep -q '"tests" \.venv/bin/pytest' "$PYV/scripts/check.sh"
 assert_not "py-venv: tests stage does NOT use uv run pytest" \
   grep -q 'uv run pytest' "$PYV/scripts/check.sh"
 
