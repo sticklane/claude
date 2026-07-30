@@ -98,8 +98,8 @@ record why on the issue and leave it for the batch interview.
    queue.
 
 1. **Read the ready queue, scoped to the focus.** `bd ready --json` — the
-   unblocked, priority-sorted issues whose dependencies are closed. bd does
-   NOT compute file
+   unblocked, priority-sorted issues whose dependencies are closed.
+   bd does NOT compute file
    overlap for hand-filed issues (only `python3 -m agentic ready` applies the
    Touch-disjoint frontier), so Claude checks Touch disjointness itself when
    grouping issues into concurrent waves (a hand-filed issue with no Touch
