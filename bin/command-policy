@@ -1,0 +1,328 @@
+#!/usr/bin/env python3
+"""Decide whether a command parsed out of a repository file may execute.
+
+The policy is stated in ``.claude/rules/file-sourced-commands.md``: argv-0
+resolves to a regular executable under an allowlisted root, execution is
+direct and never through a shell, every word survives POSIX shell-word lexing
+and carries no ASCII control character or shell metacharacter, the cwd is the
+repository root, a bounded timeout applies, and the child inherits no network
+grant.
+
+Words arrive either already split (positional arguments) or as one
+file-sourced string (``--command``), which this program lexes. It decides and,
+unless ``--check-only`` is given, executes. It never interprets what a command
+means and knows nothing of drain, spec-gate, or acceptance criteria.
+
+Output is one JSON verdict object — ``verdict`` (accept, reject, timeout),
+``reason`` (a stable reason code, null when accepted), ``executed``, and
+``exit_code`` when a child ran. The verdict goes to stdout under
+``--check-only`` and to stderr otherwise, so an executed child owns stdout.
+
+Exit codes: an accepted command's own exit code, 78 for a rejection, 124 for a
+timeout, 2 for a usage error.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import pathlib
+import re
+import shlex
+import signal
+import subprocess
+import sys
+from typing import Any
+
+CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f]")
+SHELL_METACHARACTERS = frozenset(";|&`$()<>\\\n")
+REPOSITORY_ROOTS = ("bin", "scripts")
+SYSTEM_ROOTS = ("/bin", "/usr/bin", "/usr/local/bin", "/opt/homebrew/bin")
+NAMED_TOOLS = frozenset(
+    {"bash", "echo", "git", "grep", "make", "node", "npm", "python3"}
+)
+INHERITED_ENVIRONMENT = (
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "PATH",
+    "SHELL",
+    "TMPDIR",
+    "TZ",
+    "USER",
+)
+MAX_WORDS = 64
+MAX_ARGUMENT_CHARACTERS = 4096
+DEFAULT_TIMEOUT_SECONDS = 120.0
+REJECT_EXIT = 78
+TIMEOUT_EXIT = 124
+USAGE_EXIT = 2
+
+
+class Rejection(Exception):
+    """A refusal carrying the stable reason code its consumer records."""
+
+    def __init__(self, reason: str, detail: str) -> None:
+        super().__init__(detail)
+        self.reason = reason
+        self.detail = detail
+
+
+def lexed_words(command: str) -> list[str]:
+    try:
+        words = shlex.split(command, posix=True)
+    except ValueError as error:
+        raise Rejection(
+            "unbalanced-quote", f"command string is not shell-word parsable: {error}"
+        ) from error
+    if not words:
+        raise Rejection("unresolved-argv0", "command string holds no words")
+    return words
+
+
+def bounded(words: list[str]) -> None:
+    if len(words) > MAX_WORDS:
+        raise Rejection(
+            "too-many-arguments",
+            f"{len(words)} words exceed the {MAX_WORDS}-word bound",
+        )
+    for position, word in enumerate(words):
+        if len(word) > MAX_ARGUMENT_CHARACTERS:
+            raise Rejection(
+                "argument-too-long",
+                f"word {position} is {len(word)} characters, over the "
+                f"{MAX_ARGUMENT_CHARACTERS}-character bound",
+            )
+
+
+def inert(words: list[str]) -> None:
+    for position, word in enumerate(words):
+        if CONTROL_CHARACTER.search(word):
+            raise Rejection(
+                "control-character",
+                f"word {position} holds an ASCII control character",
+            )
+        for character in word:
+            if character in SHELL_METACHARACTERS:
+                raise Rejection(
+                    "shell-metacharacter",
+                    f"word {position} holds the shell metacharacter "
+                    f"{character!r}",
+                )
+        try:
+            shlex.split(word, posix=True)
+        except ValueError as error:
+            raise Rejection(
+                "unbalanced-quote",
+                f"word {position} is not shell-word parsable: {error}",
+            ) from error
+
+
+def resolved_argv0(name: str, root: pathlib.Path) -> pathlib.Path:
+    if "/" in name:
+        candidate = pathlib.Path(name)
+        found = candidate if candidate.is_absolute() else root / candidate
+        if not found.exists():
+            raise Rejection("unresolved-argv0", f"{name!r} resolves to no path")
+    else:
+        searched = [root / directory for directory in REPOSITORY_ROOTS]
+        searched.extend(pathlib.Path(directory) for directory in SYSTEM_ROOTS)
+        for directory in searched:
+            if (directory / name).exists():
+                found = directory / name
+                break
+        else:
+            raise Rejection(
+                "unresolved-argv0",
+                f"{name!r} is under no allowlisted root",
+            )
+    if not found.is_file():
+        raise Rejection("not-executable", f"{name!r} is not a regular file")
+    if not os.access(found, os.X_OK):
+        raise Rejection("not-executable", f"{name!r} is not executable")
+    return found
+
+
+def allowlisted(executable: pathlib.Path, root: pathlib.Path) -> None:
+    parent = pathlib.Path(os.path.realpath(executable)).parent
+    for directory in REPOSITORY_ROOTS:
+        if parent == pathlib.Path(os.path.realpath(root / directory)):
+            return
+    if executable.name in NAMED_TOOLS:
+        for directory in SYSTEM_ROOTS:
+            if parent == pathlib.Path(os.path.realpath(directory)):
+                return
+    raise Rejection(
+        "outside-allowlist",
+        f"{str(parent)!r} is not an allowlisted root",
+    )
+
+
+def vetted(words: list[str], root: pathlib.Path) -> list[str]:
+    bounded(words)
+    inert(words)
+    allowlisted(resolved_argv0(words[0], root), root)
+    return words
+
+
+def child_environment() -> dict[str, str]:
+    return {
+        name: os.environ[name]
+        for name in INHERITED_ENVIRONMENT
+        if name in os.environ
+    }
+
+
+def kill_process_group(process: "subprocess.Popen[bytes]") -> None:
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except OSError:
+        process.kill()
+    process.wait()
+
+
+def execute(
+    words: list[str],
+    root: pathlib.Path,
+    timeout: float,
+) -> dict[str, Any]:
+    argv = [str(resolved_argv0(words[0], root)), *words[1:]]
+    try:
+        process = subprocess.Popen(
+            argv,
+            cwd=root,
+            env=child_environment(),
+            start_new_session=True,
+        )
+    except OSError as error:
+        return verdict("reject", "unresolved-argv0", f"could not be executed: {error}")
+    try:
+        returncode = process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        kill_process_group(process)
+        return verdict(
+            "timeout",
+            "timeout",
+            f"exceeded the {timeout:g}s bound and was killed",
+            executed=True,
+        )
+    return verdict("accept", None, "", executed=True, exit_code=returncode)
+
+
+def verdict(
+    name: str,
+    reason: str | None,
+    detail: str,
+    executed: bool = False,
+    exit_code: int | None = None,
+) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "verdict": name,
+        "reason": reason,
+        "detail": detail,
+        "executed": executed,
+    }
+    if exit_code is not None:
+        record["exit_code"] = exit_code
+    return record
+
+
+def exit_code_for(record: dict[str, Any]) -> int:
+    if record["verdict"] == "reject":
+        return REJECT_EXIT
+    if record["verdict"] == "timeout":
+        return TIMEOUT_EXIT
+    code = record.get("exit_code", 0)
+    if code < 0:
+        return 128 - code
+    return code
+
+
+def timeout_seconds(requested: float | None) -> float:
+    if requested is not None:
+        return requested if requested > 0 else DEFAULT_TIMEOUT_SECONDS
+    try:
+        value = float(os.environ.get("COMMAND_POLICY_TIMEOUT", ""))
+    except ValueError:
+        return DEFAULT_TIMEOUT_SECONDS
+    return value if value > 0 else DEFAULT_TIMEOUT_SECONDS
+
+
+def repository_root(start: pathlib.Path) -> pathlib.Path | None:
+    completed = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return None
+    return pathlib.Path(completed.stdout.strip())
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Decide whether a file-sourced command may execute."
+    )
+    parser.add_argument(
+        "--command",
+        help="one file-sourced command string to lex into words",
+    )
+    parser.add_argument(
+        "--check-only",
+        action="store_true",
+        help="decide and report without executing",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        help=f"seconds the command may run (default {DEFAULT_TIMEOUT_SECONDS:g})",
+    )
+    parser.add_argument(
+        "words",
+        nargs=argparse.REMAINDER,
+        help="the command words, already split",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    words = [word for word in args.words if word != "--"]
+    if bool(args.command) == bool(words):
+        print(
+            "command-policy: give either --command <string> or command words",
+            file=sys.stderr,
+        )
+        return USAGE_EXIT
+
+    root = repository_root(pathlib.Path.cwd())
+    if root is None:
+        print(
+            f"command-policy: {pathlib.Path.cwd()} is not inside a Git repository",
+            file=sys.stderr,
+        )
+        return USAGE_EXIT
+
+    try:
+        vetted_words = vetted(
+            lexed_words(args.command) if args.command else words, root
+        )
+    except Rejection as rejection:
+        record = verdict("reject", rejection.reason, rejection.detail)
+        print(json.dumps(record, sort_keys=True), file=sys.stderr)
+        return exit_code_for(record)
+
+    if args.check_only:
+        record = verdict("accept", None, "")
+        print(json.dumps(record, sort_keys=True))
+        return 0
+
+    record = execute(vetted_words, root, timeout_seconds(args.timeout))
+    print(json.dumps(record, sort_keys=True), file=sys.stderr)
+    return exit_code_for(record)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
