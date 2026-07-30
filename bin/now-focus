@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Read ``specs/NOW.md`` and print the focus order it declares.
+
+``specs/NOW.md`` is the human-owned focus list. An entry is a markdown list
+line — ``- <slug>`` or ``* <slug>`` — carrying an optional one-line why after
+the slug. Headings, prose, HTML comments, ``#`` comments, and blank lines are
+ignored, so the file stays readable to the human who owns it.
+
+Exit codes: 0 with at least one slug on stdout, 2 when a line breaks the
+grammar, 3 when no focus is declared (empty list or absent file). Exit 3 is a
+legal state, not a failure: drain states it and stops rather than inventing a
+focus.
+"""
+
+from __future__ import annotations
+
+import argparse
+import pathlib
+import re
+import sys
+
+NOW_RELATIVE_PATH = "specs/NOW.md"
+SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+ENTRY_PATTERN = re.compile(r"^\s*[-*]\s+(?P<body>\S.*?)\s*$")
+WHY_SEPARATORS = ("—", " - ", ":")
+
+NO_FOCUS_ADVICE = (
+    f"{NOW_RELATIVE_PATH} declares no focus. "
+    "Run `/drain --all` for the whole queue, or `/drain specs/<slug>` to name "
+    "one. drain never invents a focus."
+)
+
+
+class GrammarError(Exception):
+    def __init__(self, line_number: int, line: str) -> None:
+        super().__init__(
+            f"{NOW_RELATIVE_PATH} line {line_number}: {line!r} is not a slug — "
+            "an entry is `- <slug>` with an optional one-line why, where a slug "
+            "is lowercase letters, digits, and hyphens."
+        )
+
+
+def split_entry(body: str) -> tuple[str, str]:
+    for separator in WHY_SEPARATORS:
+        head, found, tail = body.partition(separator)
+        if found:
+            return head.strip(), tail.strip()
+    return body.strip(), ""
+
+
+def parse_now(text: str) -> list[tuple[str, str]]:
+    entries: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        match = ENTRY_PATTERN.match(line)
+        if match is None:
+            continue
+        slug, why = split_entry(match.group("body"))
+        slug = slug.strip("`")
+        if not SLUG_PATTERN.fullmatch(slug):
+            raise GrammarError(line_number, line.strip())
+        if slug in seen:
+            continue
+        seen.add(slug)
+        entries.append((slug, why))
+    return entries
+
+
+def read_now(root: pathlib.Path) -> str | None:
+    now_file = root / NOW_RELATIVE_PATH
+    if not now_file.is_file():
+        return None
+    return now_file.read_text(encoding="utf-8")
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Print the focus order declared by specs/NOW.md."
+    )
+    parser.add_argument(
+        "--root",
+        type=pathlib.Path,
+        default=pathlib.Path.cwd(),
+        help="repository root holding specs/NOW.md (default: current directory)",
+    )
+    parser.add_argument(
+        "--top",
+        action="store_true",
+        help="print only the highest-priority entry",
+    )
+    parser.add_argument(
+        "--why",
+        action="store_true",
+        help="print each entry's optional why after a tab",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    text = read_now(args.root.resolve())
+    if text is None:
+        print(f"now-focus: no {NOW_RELATIVE_PATH} under {args.root}", file=sys.stderr)
+        print(f"now-focus: {NO_FOCUS_ADVICE}", file=sys.stderr)
+        return 3
+    try:
+        entries = parse_now(text)
+    except GrammarError as error:
+        print(f"now-focus: {error}", file=sys.stderr)
+        return 2
+    if not entries:
+        print(f"now-focus: {NO_FOCUS_ADVICE}", file=sys.stderr)
+        return 3
+    if args.top:
+        entries = entries[:1]
+    for slug, why in entries:
+        print(f"{slug}\t{why}" if args.why else slug)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
