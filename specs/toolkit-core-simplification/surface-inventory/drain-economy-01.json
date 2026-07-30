@@ -1,0 +1,23 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "drain-economy-01",
+  "frozen_sha256": "8aebb29acc2f45db3ebedd9eb1623d88a8cc4e0785dcf225a4544513e01f0a02",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [],
+      "content_sha256": "0269e4d0073623307db46b7a9e5a12f2de7dea22e8e7f61673264188c6bcbc38",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "measure-before-decision",
+      "identity": "test:tests/test_drain_focus_selector.sh",
+      "path": "tests/test_drain_focus_selector.sh",
+      "rationale": "New behavioral test for specs/NOW.md's grammar, the focus order it yields, and its empty-list state. measure-before-decision, never retain: the drain-economy tasks that follow extend this contract, and freezing it would re-create the deadlock this directory's README documents.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
