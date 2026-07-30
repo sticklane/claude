@@ -7,7 +7,7 @@ Depends on: none
 Priority: P0
 Budget: 40 turns
 Spec: ../SPEC.md (requirements EP0, EP17)
-Touch: .claude/skills/drain/SKILL.md, specs/NOW.md, specs/toolkit-core-simplification/surface-inventory/drain-economy-01.json, tests/test_drain_focus_selector.sh, tests/inventory/drain-economy-01.json, evals/drain/03-focus-select/setup.sh, evals/drain/03-focus-select/prompt.txt, evals/drain/03-focus-select/assert.sh, evals/drain/03-focus-select/allowed-tools.txt, evals/drain/03-focus-select/skill-deps.txt, evals/drain/03-focus-select/timeout-seconds.txt
+Touch: .claude/skills/drain/SKILL.md, specs/NOW.md, bin/now-focus, .claude-plugin/plugin.json, .codex-plugin/plugin.json, specs/toolkit-core-simplification/surface-inventory/drain-economy-01.json, tests/test_drain_focus_selector.sh, tests/inventory/drain-economy-01.json, evals/drain/03-focus-select/setup.sh, evals/drain/03-focus-select/prompt.txt, evals/drain/03-focus-select/assert.sh, evals/drain/03-focus-select/allowed-tools.txt, evals/drain/03-focus-select/skill-deps.txt, evals/drain/03-focus-select/timeout-seconds.txt
 
 ## Goal
 

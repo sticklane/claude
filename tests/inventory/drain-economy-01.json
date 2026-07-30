@@ -1,0 +1,12 @@
+{
+  "fragment": "drain-economy-01",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_drain_focus_selector.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

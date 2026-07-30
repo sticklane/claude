@@ -1,4 +1,7 @@
-# Frozen-inventory identities superseded by the hard cutover.
+# Frozen-inventory identities that no longer exist: retired by the hard
+# cutover, or removed later by a deliberate deletion. The fragments that
+# classify them are blob-pinned and cannot be edited, so an identity is
+# retired by listing it here.
 cli-command:ctx
 skill:ctx
 test:tests/test_ctx_capabilities.sh
@@ -7,3 +10,5 @@ test:tests/test_live_surface_retirement.sh
 hook:gate-scope-warn
 test:tests/test_gate_scope_warn.sh
 test:tests/test_self_gate_wiring.sh
+skill:impeccable
+skill:taste

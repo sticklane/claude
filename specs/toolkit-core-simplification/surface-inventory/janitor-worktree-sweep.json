@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "janitor-worktree-sweep",
+  "frozen_sha256": "e3497951273aa5ad0e07f66d7c7181768e9b04593785f0e5df9205dfed960a78",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_janitor_worktree_sweep.sh#assert:6b3fa2325112b7397d0e6583e89832fdf846e6fcd92b8f6f534f8c10886518ef"
+      ],
+      "content_sha256": "78a0bea0029bd80a1571704cc51abf9e3c59e636d6d68359d016d1e0923b7e87",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_janitor_worktree_sweep.sh",
+      "path": "tests/test_janitor_worktree_sweep.sh",
+      "rationale": "First canonical coverage for bin/janitor's worktree sweep (agentic-zz3k): a closed issue triggers reclamation while the branch is retained as the archive, a dirty worktree whose content equals a reachable commit is removed, content matching no commit is committed to a salvage/ ref before the directory goes, a recently active detached HEAD is left alone, an in-progress issue protects its worktree even when a closed parent epic shares the branch-name prefix, the shared checkout is never a removal candidate, and dry run removes nothing.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

@@ -88,6 +88,20 @@ purpose). Done or archived work is exempt unconditionally: a pre-ladder
 specs get their ladder levels reported informationally, without flipping the
 verdict.
 
+**`grep -v '^\./…'` exclusions are dead on this machine.** A criterion shaped
+`grep -rn '<needle>' . | grep -v '^\./excluded/' | wc -l` looks like it counts
+live hits outside an excluded tree. It does not: `grep` here is a shell
+function wrapping ugrep 7.5.0, which omits the leading `./` that GNU and BSD
+grep emit when recursing `.`, so every `^\./`-anchored exclusion silently
+matches nothing and the count includes the paths it was supposed to drop.
+Confirmed 2026-07-30 on `agentic-dnu1`, where two criteria returned 2 instead
+of 0 and bounced correct work; the same criteria pass when written
+prefix-tolerantly. Write the exclusion as `'^\(\./\)\?excluded/'`, or avoid the
+problem entirely by passing the excluded path to the search tool
+(`--exclude-dir`) instead of filtering its output. This failure is invisible in
+review — the pipeline is well-formed and the regex is valid — so it is caught
+only by running the criterion.
+
 **`pytest -k` across multiple file args deselects, it doesn't scope.** A
 command like `pytest -k Foo file_a.py file_b.py file_c.py` applies the `-k`
 filter globally across all three files, not just to `file_a.py` — any test
