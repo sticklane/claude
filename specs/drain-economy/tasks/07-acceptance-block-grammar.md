@@ -77,7 +77,7 @@ syntax, ids, and tier marking.
       2026-07-30). **L0** — Depth ceiling: a grammar document has no runtime;
       its behavioral complement is the parser test above and `bin/spec-gate`'s
       suite in task 08.
-- [ ] `awk '/^## Acceptance criteria/,/^## /' .claude/skills/idea/SKILL.md | grep -cE '^- \[ \] A[0-9]+ \((cheap|expensive)\):'`
+- [ ] `awk '/^## Acceptance criteria/{f=1;next} f&&/^## /{f=0} f' .claude/skills/idea/SKILL.md | grep -cE '^- \[ \] A[0-9]+ \((cheap|expensive)\):'`
       → ≥ 1, proving the template emits the grammar rather than describing
       it. **L1**
 - [ ] `git diff --name-only | grep -c '^specs/.*/SPEC.md$'` → 0, proving no

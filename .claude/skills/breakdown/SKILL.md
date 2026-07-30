@@ -131,7 +131,10 @@ python3 .claude/skills/breakdown/preflight-acceptance-inventory.py \
 
 Pass every explicit file path the criterion intends to create, edit, or delete.
 `repair` and `measure-before-decision` dispositions pass; `retain` fails with
-a refusal; unknown paths fail fast so they are classified before dispatch.
+a refusal; a path inside a scanned namespace but absent from the inventory
+fails fast so it is classified before dispatch. A path outside every scanned
+namespace — `bin/`, `scripts/`, `docs/`, `specs/`, `evals/`, `README` — can
+never be a surface, so it passes with a note on stderr rather than a refusal.
 
 4. Order tasks so each leaves the build green — no task may depend on a later
    one to compile or pass tests. Assign each task's `Priority:` by this
@@ -185,11 +188,11 @@ and parents every task in the spec to it. Two headers in `SPEC.md` drive it,
 both single-line `Key: value` above the first `##` heading, like the task
 registration fields:
 
-- `Priority: P0`–`P3` — the feature's rank against other features. Absent
-  means P2. This is what orders the drain. Within a feature, tasks currently
-  order by dependency edges and id, not by their own `Priority:` header:
-  `register-spec` does not yet pass task priority to bd, so every task issue
-  lands at the default P2 (open issue `agentic-7t1w`).
+- `Priority: P0`–`P3` — the rank against other work. Absent means P2. This is
+  what orders the drain, and it applies to a task's own header as well as a
+  feature's: `register-spec` reads the authored `Priority:` at create-only
+  registration, so the rubric below is what lands in bd. Re-registering an
+  existing issue never rewrites its priority.
 - `Kind: feature | janitorial` — absent means `feature`. Janitorial work gets
   no epic and is ranked by its own task priority, so a P0 chore still precedes
   a P1 feature.

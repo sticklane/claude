@@ -37,7 +37,7 @@ check_fail "retain-class path is refused" \
   python3 "$SCRIPT" --baseline "$BASELINE" --path "tests/test_agentic_bootstrap.sh"
 
 check_fail "unclassified path is refused" \
-  python3 "$SCRIPT" --baseline "$BASELINE" --path "tests/missing-surface-fixture.sh"
+  python3 "$SCRIPT" --baseline "$BASELINE" --path "tests/test_missing_surface_fixture.sh"
 
 echo "test_breakdown_inventory_preflight.sh: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

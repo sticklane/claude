@@ -14,6 +14,10 @@ from agentic.sync import repo_root
 SCHEMA_VERSION = 1
 EXTERNAL_REF_PREFIX = "spec-task:"
 EXTERNAL_REF_SPEC_PREFIX = "spec:"
+DEFAULT_PRIORITY = "2"
+
+_AUTHORED_PRIORITIES = frozenset("0123")
+_UNHASHED_FIELDS = frozenset({"priority"})
 
 _TITLE_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 _DEPENDS_RE = re.compile(r"^Depends on:\s*(.*?)\s*$", re.MULTILINE)
@@ -35,6 +39,13 @@ class RegistrationConflict(BdError):
 def _header(regex, text):
     match = regex.search(text)
     return match.group(1).strip() if match and match.group(1).strip() else None
+
+
+def _priority(text):
+    match = _PRIORITY_RE.search(text)
+    if match and match.group(1) in _AUTHORED_PRIORITIES:
+        return match.group(1)
+    return DEFAULT_PRIORITY
 
 
 def _repo_relative(path, root):
@@ -104,6 +115,7 @@ def parse_task(path, root):
             item.strip() for item in (touch or "").split(",") if item.strip()
         ),
         "budget": _header(_BUDGET_RE, text),
+        "priority": _priority(text),
         "rigor": _header(_RIGOR_RE, text) or "production",
         "prerequisites": [
             EXTERNAL_REF_PREFIX + dependency for dependency in prerequisite_paths
@@ -129,12 +141,11 @@ def parse_spec(spec_dir, root):
     if not title:
         raise BdError(f"{path}: spec requires a title")
     goal_match = _GOAL_RE.search(text)
-    priority_match = _PRIORITY_RE.search(text)
     return {
         "path": _repo_relative(path, root),
         "title": title,
         "goal": goal_match.group("body").strip() if goal_match else title,
-        "priority": priority_match.group(1) if priority_match else "2",
+        "priority": _priority(text),
     }
 
 
@@ -158,8 +169,18 @@ def _create_epic(spec, root):
 
 
 def definition_hash(task):
-    """SHA-256 of the task's canonical compact, sorted-key JSON definition."""
-    payload = json.dumps(task, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    """SHA-256 of the task's canonical compact, sorted-key JSON definition.
+
+    Priority is excluded. Registration is create-only, so a task re-authored at
+    a different level must register clean against the issue it already has
+    rather than raise a conflict against a priority bd alone now owns.
+    """
+    definition = {
+        key: value for key, value in task.items() if key not in _UNHASHED_FIELDS
+    }
+    payload = json.dumps(definition, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -200,6 +221,8 @@ def _create_issue(task, root):
             "--silent",
             "--type",
             "task",
+            "--priority",
+            task["priority"],
             "--description",
             task["goal"],
             "--external-ref",

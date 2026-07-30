@@ -1,0 +1,12 @@
+{
+  "fragment": "preflight-ownership-resolution",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_breakdown_preflight_ownership.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "breakdown-preflight-namespace",
+  "frozen_sha256": "11f1a114d78e9b8dfec27fc6edd05755d410a78ea480bb39cd5f73c458428e8f",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_breakdown_preflight_namespace.sh#assert:685e75a256d83bf1e1ea5b13565ee86144b0effe4ba6547aef06a5a967340f0b"
+      ],
+      "content_sha256": "3dca158cdd0c77242ff4e291565ee2405efd9b9cb406c3738a7633c304d0716a",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_breakdown_preflight_namespace.sh",
+      "path": "tests/test_breakdown_preflight_namespace.sh",
+      "rationale": "Canonical coverage for the /breakdown pre-flight namespace verdict: a path outside every namespace discover_surfaces scans reports out-of-inventory-namespace and passes instead of refusing, while a path in a scanned namespace that the inventory does not classify still refuses, including a not-yet-existing skill or hook, and a classified surface still passes.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
