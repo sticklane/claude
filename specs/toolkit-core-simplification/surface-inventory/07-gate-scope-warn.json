@@ -1,0 +1,55 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "07-gate-scope-warn",
+  "frozen_sha256": "b38be55064f91f10c106f1c60c52394acb1d125c186c108153a41efe13916139",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_gate_scope_warn.sh#assert:929cce283aa60c6a91ff0fe6c63c6d44acf6f6bd205ac111faa299969fa0610f"
+      ],
+      "content_sha256": "d93b0c669744c269c7b7ba7395a5cc900a56bbd5c3584d4d1f00800ebedb7033",
+      "dependents": [
+        "test:tests/test_gate_scope_warn.sh"
+      ],
+      "disposition": "repair",
+      "identity": "hook:gate-scope-warn",
+      "path": "hooks/gate-scope-warn/scope-check.sh",
+      "rationale": "User-level Stop hook reporting a gated repo whose project hooks did not load for this session.",
+      "replacement": null,
+      "surface_type": "hook"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_gate_scope_warn.sh#assert:929cce283aa60c6a91ff0fe6c63c6d44acf6f6bd205ac111faa299969fa0610f"
+      ],
+      "content_sha256": "b1d46c566244a516e061133fb9129ad7c40019d0b10de67bcf089f194a975e60",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_gate_scope_warn.sh",
+      "path": "tests/test_gate_scope_warn.sh",
+      "rationale": "Root delegation that puts the hook-local suite inside scripts/check.sh, which enumerates root tests only.",
+      "replacement": null,
+      "surface_type": "test"
+    },
+    {
+      "behavioral_tests": [
+        "tests/test_hook_templates.sh#assert:382202953cfcfc5e199ad1b183e9da4e1d67fa6b763eb83239b47fa1a8a9ee3d"
+      ],
+      "content_sha256": "a97d8a96b923e001423b6d8f687fdb6bbce1601e98e6a487e3b011c5b53050d9",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "repair",
+      "identity": "test:tests/test_hook_templates.sh",
+      "path": "tests/test_hook_templates.sh",
+      "rationale": "Baseline pinned this retain; the stop-gate no-change cache is new hook state its fixtures must reset between cases, so the file changes with the hook it covers and moves to repair.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}

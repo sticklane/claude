@@ -145,9 +145,36 @@ if docs_only_diff "$root"; then
   allow_stop
 fi
 
+# Re-running a multi-minute suite over a tree that has not changed since it
+# last passed buys nothing and costs the whole suite, every stop. Worse, a
+# CLEAN tree is deliberately not docs-only (above), so committing your work —
+# the tidy state — is what makes every subsequent stop pay in full. This keys
+# a pass to the exact tree that produced it: same tree, skip; anything moved,
+# run. A failing run records nothing, so a red tree re-runs until it is green.
+tree_state() { # tree_state <repo-root> — a content key for the working tree
+  local digest
+  digest="$(command -v shasum || command -v sha256sum)" || return 1
+  {
+    git -C "$1" rev-parse HEAD 2>/dev/null
+    git -C "$1" diff HEAD 2>/dev/null
+    git -C "$1" ls-files --others --exclude-standard -z 2>/dev/null \
+      | xargs -0 -I{} stat -f '%N %z %m' "$1/{}" 2>/dev/null \
+      || git -C "$1" ls-files --others --exclude-standard 2>/dev/null
+  } | "$digest" -a 256 2>/dev/null | cut -d' ' -f1
+}
+
+pass_marker="$(git -C "$root" rev-parse --git-dir 2>/dev/null)/agentic-stop-gate-pass"
+current_state="$(tree_state "$root" 2>/dev/null || true)"
+if [ -n "$current_state" ] && [ -r "$pass_marker" ] &&
+   [ "$(cat "$pass_marker" 2>/dev/null)" = "$current_state" ]; then
+  warn "tree unchanged since the last passing check; skipping"
+  allow_stop
+fi
+
 output="$(cd "$root" && bash "$check" 2>&1)"
 status=$?
 if [ "$status" -ne 0 ]; then
   block_stop "$output"
 fi
+[ -n "$current_state" ] && printf '%s\n' "$current_state" >"$pass_marker" 2>/dev/null
 allow_stop

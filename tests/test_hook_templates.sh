@@ -102,7 +102,7 @@ chmod 755 "$REPO/scripts/check.sh"
 run_hook "$STOP_GATE" "$json_stop_false" "$REPO"
 assert_eq "stop-gate exits 0 on green check" 0 "$RH_EXIT"
 assert "green check actually ran" test -f "$REPO/check-ran.marker"
-rm -f "$REPO/check-ran.marker"
+rm -f "$REPO/check-ran.marker" "$REPO/.git/agentic-stop-gate-pass"
 
 # --- stop-gate: repo root resolved from a subdirectory cwd ------------------
 
@@ -110,7 +110,7 @@ run_hook "$STOP_GATE" "$json_stop_false" "$REPO/sub dir"
 assert_eq "stop-gate exits 0 when run from repo subdir" 0 "$RH_EXIT"
 assert "check ran at repo root when hook cwd is a subdir" \
   test -f "$REPO/check-ran.marker"
-rm -f "$REPO/check-ran.marker"
+rm -f "$REPO/check-ran.marker" "$REPO/.git/agentic-stop-gate-pass"
 
 # --- stop-gate: cwd field in hook JSON locates the repo ---------------------
 
@@ -119,7 +119,7 @@ run_hook "$STOP_GATE" \
 assert_eq "stop-gate exits 0 using cwd from hook JSON" 0 "$RH_EXIT"
 assert "check ran in the repo named by hook JSON cwd" \
   test -f "$REPO/check-ran.marker"
-rm -f "$REPO/check-ran.marker"
+rm -f "$REPO/check-ran.marker" "$REPO/.git/agentic-stop-gate-pass"
 
 # --- stop-gate: stop_hook_active true -> exit 0, check NOT run (R10) --------
 
