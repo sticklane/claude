@@ -12,3 +12,5 @@ test:tests/test_gate_scope_warn.sh
 test:tests/test_self_gate_wiring.sh
 skill:impeccable
 skill:taste
+test:tests/test_mardi_gras_bootstrap_registration.py
+test:tests/test_mardi_gras_registration_migration.py

@@ -192,6 +192,62 @@ change.
   carries project identity, qualified symbols, paths, index/coverage state,
   and distilled graph evidence.
 
+## Writing Quality: AI Antipatterns to Avoid
+
+When responding to the user or publishing agent output, avoid these high-probability AI patterns. They signal chain-of-thought leaking into finished output.
+
+### 1. Meta-Discourse (Narration of Intent)
+
+**The pattern:** Starting with "Let me...", "Now I'll...", "First, let me..." — announcing what you're about to do instead of just doing it.
+
+**Rule:** Lead with substance. Delete any sentence that only announces what you're about to say.
+
+### 2. Corrective Restatement ("It's Not X, It's Y")
+
+**The pattern:** Negating one claim, asserting another — both often vague.
+
+**Rule:** State the mechanism concretely. Don't use negation to avoid explanation.
+
+### 3. Emphatic Padding ("X, and It's Critical/Important/Significant")
+
+**The pattern:** Stating a fact, then adding unsupported superlatives.
+
+**Rule:** Either explain WHY it matters with evidence, or cut the emphasis entirely.
+
+### 4. Parataxis (Chained Short Sentences Without Connectors)
+
+**The pattern:** Three or more short declarative sentences in a row without connective tissue.
+
+**Rule:** Connect related ideas with conjunctions (and, but, because, so) or semicolons.
+
+### 5. Blurry Words (Unqualified Abstractions)
+
+**The pattern:** Using "thing", "stuff", "aspect", "matter" without naming the actual noun.
+
+**Rule:** Every abstract placeholder is a red flag. Name the actual thing.
+
+### 6. Evaluative Vagueness (Praise Without Evidence)
+
+**The pattern:** Using "wonderful", "excellent", "powerful" without supporting details.
+
+**Rule:** Replace every evaluative adjective with a number or a concrete detail.
+
+### 7. Stock Openers (High-Probability Training Tokens)
+
+**The pattern:** "Got it!", "Great question!", "Thanks for asking!", "Perfect!"
+
+**Rule:** Delete the opener. Rewrite the next sentence to include any needed context.
+
+### Pre-Publish Checklist
+
+- [ ] Meta-discourse: Delete "Let me", "Now I'll", "First let me", "To answer your question"
+- [ ] Corrective restatement: Rewrite "it's not X, it's Y" with the mechanism
+- [ ] Emphatic padding: Add evidence or cut unsupported claims
+- [ ] Parataxis: Connect 3+ short sentences with conjunctions or semicolons
+- [ ] Blurry words: Replace "thing", "stuff", "aspect", "matter" with concrete nouns
+- [ ] Evaluative adjectives: Replace "wonderful", "excellent", "remarkable" with facts
+- [ ] Stock openers: Delete "Got it", "Great question", "Thanks for"
+
 ## Beads issue tracker
 
 bd (beads) is this repo's source of truth for task state: `bd prime`
