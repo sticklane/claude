@@ -98,10 +98,14 @@ Explicit exclusions, so an agent doesn't wander into them.
 
 ## Acceptance criteria
 
-Runnable checks, one per requirement where possible:
+Runnable checks, one per requirement where possible. One grammar per line —
+`- [ ] A<k> (<cheap|expensive>): \`<command>\` — <expected>` — ids never
+renumber, `cheap` is what an unattended worker may run and `expensive` is a
+paid or gated run only a human launches and records, and every criterion is
+read-only (docs/memory/acceptance-block-grammar.md):
 
-- [ ] `npm test -- x.test.ts` passes (covers R1–R3)
-- [ ] `curl -s localhost:3000/api/x | jq .status` → "ok"
+- [ ] A1 (cheap): `npm test -- x.test.ts` — passes, covering R1–R3
+- [ ] A2 (cheap): `bash tests/test_x_endpoint.sh` — the service answers /api/x with status "ok"
       End with one end-to-end check that exercises the feature as a user would.
 
 ## Open questions
