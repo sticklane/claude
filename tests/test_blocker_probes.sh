@@ -41,6 +41,18 @@ run_probe() {
   printf '%s' "$?"
 }
 
+plant_determinate_home() {
+  # A HOME under which every shipped probe answers definitely — never 3. The
+  # argv-refusal cases below run against it so that "refused the argument"
+  # (exit 3) is distinguishable from "ignored the argument and answered
+  # anyway"; under an unreachable HOME both look like exit 3 and the
+  # assertion would hold against a probe that never reads argv at all.
+  local home="$TMP/determinate"
+  mkdir -p "$home/ynab-mcp-new/.beads"
+  printf '%s\n' '{"id":"ynab-1"}' >"$home/ynab-mcp-new/.beads/issues.jsonl"
+  printf '%s' "$home"
+}
+
 plant_armed_repository() {
   # A directory whose .git/config runs a command on any git invocation that
   # honours it. A probe must never use argv as a repository it runs git in.
@@ -75,6 +87,7 @@ fi
 
 # --- the contract every shipped probe owns ---------------------------------
 armed="$(plant_armed_repository)"
+determinate="$(plant_determinate_home)"
 for probe in ${probes[@]+"${probes[@]}"}; do
   name="$(basename "$probe")"
 
@@ -92,10 +105,19 @@ for probe in ${probes[@]+"${probes[@]}"}; do
 
   # An unexpected argument is refused, never acted on: the probe reports
   # "cannot determine" (3) rather than guessing that the blocker dissolved.
-  status="$(run_probe "$probe" "$TMP/absent-home" "$armed")"
+  # Both cases run under a HOME the probe answers definitely from, so a probe
+  # that ignored argv would return that definite answer and fail them.
+  baseline="$(run_probe "$probe" "$determinate")"
+  if [ "$baseline" = 3 ]; then
+    nope "$name answers definitely under the determinate HOME — got 3, so the argv-refusal cases below cannot tell refusal from indifference; extend plant_determinate_home for $name"
+  else
+    ok "$name answers definitely under the determinate HOME (exit $baseline)"
+  fi
+
+  status="$(run_probe "$probe" "$determinate" "$armed")"
   expect_exit 3 "$status" "$name refuses an unexpected argument"
 
-  status="$(run_probe "$probe" "$TMP/absent-home" --root "$armed")"
+  status="$(run_probe "$probe" "$determinate" --root "$armed")"
   expect_exit 3 "$status" "$name refuses an unexpected option pair"
 
   if [ -e "$TMP/SENTINEL" ]; then

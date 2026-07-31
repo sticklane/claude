@@ -13,9 +13,9 @@ Touch: scripts/blocker-probes, HUMAN.md, tests/test_blocker_probes.sh, tests/inv
 
 `scripts/blocker-probes/` holds reviewed probe scripts that carry the exit
 contract, treat their argv as untrusted, and return 3 rather than guessing when
-a target checkout is absent. `HUMAN.md` drops from 17 open entries to at most
-7, each carrying a probe or `none — <reason>`, and
-`bin/check-human-blockers` exits 0 against it on a fresh clone.
+a target checkout is absent. Every open `HUMAN.md` entry carries a probe or
+`none — <reason>`, and `bin/check-human-blockers` exits 0 against it on a
+fresh clone.
 
 ## Touch
 
@@ -55,11 +55,10 @@ edit `.claude/skills/drain/SKILL.md` (task 03).
 ## Acceptance
 
 - [ ] `bash tests/test_blocker_probes.sh` → exits 0, reports 0 failures. **L2**
-- [ ] `grep -c '^- \[ \]' HUMAN.md` → ≤ 7 (17 today, 2026-07-29). **L1** — the
-      bound was 6 when authored; that number predated commit `6440f60e`, which
-      filed four Mardi Gras manual-pending entries after this spec's triage.
-      Collapsing the two duplicate Mardi Gras pairs into one entry each leaves
-      7, and deleting live blockers to reach 6 was declined (2026-07-30).
+- [ ] The open-entry count bound was dropped by decision on 2026-07-30, not
+      satisfied: the count is governed by whichever blockers genuinely exist,
+      so pinning a number invites the same staleness every time anything is
+      filed. Clause coverage, checked below, is what this task owes.
 - [ ] `bin/check-human-blockers` → exits 0, with its stale and violation
       buckets empty and its still-blocked, unprobed, and unknown buckets
       together listing exactly the surviving entries. **L2**
