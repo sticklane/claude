@@ -210,7 +210,12 @@ record why on the issue and leave it for the batch interview.
    line on a BLOCKED or DEFERRED verdict too: nothing is in flight for that id
    once its verdict is in hand. Remove any per-issue `.beads/drain-*`
    screening/task-input file at the same transition; it is transient prompt
-   staging, never durable drain state. On
+   staging, never durable drain state. Release the branch's worktrees in that
+   same unit with `bin/drain-release-worktrees <branch>`: it removes EVERY
+   worktree carrying that branch (salvaging unique content to a `salvage/` ref
+   before the directory goes) and deletes the branch once it is merged.
+   Iterating all of them is the point — `bin/janitor` refuses a branch checked
+   out twice, so unreleased duplicates block their own later cleanup. On
    worker or verifier FAIL, relaunch once one tier up
    (`.claude/rules/token-discipline.md`); a second failure records the cause
    on the issue and leaves it ready-or-blocked rather than thrashing. On
