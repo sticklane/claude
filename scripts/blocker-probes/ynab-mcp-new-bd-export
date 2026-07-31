@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Still-blocked probe for the ~/ynab-mcp-new bd-export blocker.
+#
+# The blocker holds while that repository's committed bd export is empty or
+# absent, because the export is the only copy of its queue anything outside bd
+# can read. Polarity is inverted from the natural command: `bd export`
+# succeeding there is what makes the blocker dissolve, so this script reports
+# the condition rather than the command's own status, and reads files only --
+# it never runs bd, git, or anything else inside a foreign checkout.
+#
+# Exit 0 while the blocker holds, 1 once a populated export exists, 3 when the
+# checkout is unreachable and the answer cannot be determined.
+set -u
+
+if [ "$#" -ne 0 ]; then
+  printf '%s: takes no arguments; refusing %d\n' "${0##*/}" "$#" >&2
+  exit 3
+fi
+
+home="${HOME-}"
+if [ -z "$home" ] || [ ! -d "$home" ]; then
+  exit 3
+fi
+
+beads="$home/ynab-mcp-new/.beads"
+if [ ! -d "$beads" ]; then
+  exit 3
+fi
+
+export_file="$beads/issues.jsonl"
+if [ ! -f "$export_file" ] || [ ! -s "$export_file" ]; then
+  exit 0
+fi
+
+exit 1
