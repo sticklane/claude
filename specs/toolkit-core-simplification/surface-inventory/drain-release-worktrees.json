@@ -1,0 +1,28 @@
+{
+  "$schema": "../surface.schema.json",
+  "fragment": "drain-release-worktrees",
+  "frozen_sha256": "66b628d9c7ed9566573fd6331ce9cdc14429dea4889cddc8a761bd7f02405041",
+  "git_blob_pin": 1,
+  "manifest_type": "fragment",
+  "schema_version": 2,
+  "surfaces": [
+    {
+      "behavioral_tests": [
+        "tests/test_drain_release_worktrees.sh#assert:4c950fa82ec2f4edd0a01a8a822eeedc5aad18003c02c218e8978983de05fa9c",
+        "tests/test_drain_release_worktrees.sh#assert:eaf6f33caa83f5249bdca6d37dc166b71cb9a2689f0a17e3a482cf357f548af8",
+        "tests/test_drain_release_worktrees.sh#assert:0046f3047c036fccb4c14d45a2264b3f7984df545c96bd1a7cbf23d1e2742dc8",
+        "tests/test_drain_release_worktrees.sh#assert:5049d29304219fe0ae94f567a999fde1820c52805e0d8bea69f1e00d33148eca"
+      ],
+      "content_sha256": "5dd3a69c38b8928a05c570e85430be2bad6e9a5e919c9c6df3f0d70bb1ff275c",
+      "dependents": [
+        "scripts/check.sh"
+      ],
+      "disposition": "retain",
+      "identity": "test:tests/test_drain_release_worktrees.sh",
+      "path": "tests/test_drain_release_worktrees.sh",
+      "rationale": "Canonical coverage for bin/drain-release-worktrees (agentic-v50x), the close-out step /drain's SKILL.md step 3 now calls: one invocation releases BOTH worktrees carrying a branch (the duplicate bin/janitor refuses), unique content reaches a salvage/ ref whose tracked and untracked bytes are recoverable while the directory is still present, a merged branch is deleted while an unmerged one is retained as the archive, and neither the shared checkout nor a worktree a live session is using is ever removed. The release cases run the no-flag invocation SKILL.md prescribes against backdated fixtures, so the shipped default idle window is what protects the live worktree and what a caller must pass --idle-minutes 0 to waive; a flag missing its operand exits 64 rather than looping. The script shares bin/janitor's classification through bin/lib/worktree-classify.sh rather than copying it, so this suite and tests/test_janitor_worktree_sweep.sh exercise one decision from two callers.",
+      "replacement": null,
+      "surface_type": "test"
+    }
+  ]
+}
