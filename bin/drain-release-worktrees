@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+# drain-release-worktrees: release every worktree carrying one branch.
+#
+# /drain calls this in the close-out unit that drops the inflight marker,
+# removes the staging file, and closes the issue. It iterates EVERY worktree on
+# the branch rather than resolving one, which is exactly the duplicate case
+# bin/janitor refuses with "branch checked out by another worktree".
+# Classification, salvage, the idle probe, and merge detection are shared with
+# bin/janitor through bin/lib/worktree-classify.sh — never copied.
+set -u
+
+lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib"
+# shellcheck source=lib/worktree-classify.sh
+. "$lib_dir/worktree-classify.sh"
+
+usage() {
+  cat <<'USAGE'
+Usage: drain-release-worktrees [--dry-run] [--idle-minutes N] [--json] <branch>
+
+<branch>            Branch to release, as drain/agentic-xxxx or refs/heads/...
+--dry-run           Report what would happen and change nothing
+--idle-minutes N    Skip a worktree touched within the last N minutes
+                    (default 5; 0 disables the skip). Drain reaches close-out
+                    only after the review barrier, the final gate, and the
+                    merge, so a worktree written to inside that window is
+                    being written by something other than the worker whose
+                    verdict drain just collected.
+--json              Print a machine-readable summary
+--help              Print this help
+USAGE
+  exit 64
+}
+
+dry_run=0
+json=0
+idle_minutes=5
+branch=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --dry-run) dry_run=1; shift ;;
+    --idle-minutes)
+      [ "$#" -ge 2 ] || { echo "drain-release-worktrees: --idle-minutes needs a value" >&2; usage; }
+      idle_minutes="$2"
+      shift 2
+      ;;
+    --json) json=1; shift ;;
+    --help|-h) usage ;;
+    -*) echo "drain-release-worktrees: unknown argument: $1" >&2; usage ;;
+    *)
+      if [ -n "$branch" ]; then
+        echo "drain-release-worktrees: unexpected argument: $1" >&2
+        usage
+      fi
+      branch="$1"
+      shift
+      ;;
+  esac
+done
+
+[ -n "$branch" ] || usage
+case "$idle_minutes" in
+  ''|*[!0-9]*) echo "drain-release-worktrees: --idle-minutes needs a whole number" >&2; usage ;;
+esac
+
+command -v git >/dev/null 2>&1 || { echo "drain-release-worktrees: git is required" >&2; exit 1; }
+command -v python3 >/dev/null 2>&1 || { echo "drain-release-worktrees: python3 is required" >&2; exit 1; }
+
+branch_ref="refs/heads/${branch#refs/heads/}"
+branch_name="${branch_ref#refs/heads/}"
+label="${branch_name#*/}"
+history_scan_limit=50
+
+worktrees="$(mktemp)"
+trap 'rm -f "$worktrees"' EXIT
+git worktree list --porcelain > "$worktrees" || {
+  echo "drain-release-worktrees: not inside a git repository" >&2
+  exit 1
+}
+repo_root="$(awk '$1=="worktree" {print $2; exit}' "$worktrees")"
+base_branch="$(worktree_detect_base_branch "$repo_root" || true)"
+
+released=0
+salvaged=0
+retained=0
+report=()
+
+note() { # note <path> <action> <reason>
+  report+=("worktree: path=$1 action=$2 reason=$3")
+}
+
+safe_label_suffix() { # safe_label_suffix <worktree_path>
+  basename "$1" | sed 's/[^A-Za-z0-9._-]/-/g'
+}
+
+release_worktree() { # release_worktree <path> <branch_ref>
+  local wt_path="$1" wt_branch="$2" state salvage_ref
+
+  [ "$wt_branch" = "$branch_ref" ] || return 0
+
+  if [ "$wt_path" = "$repo_root" ]; then
+    retained=$((retained + 1))
+    note "$wt_path" "skip" "shared checkout is never released"
+    return 0
+  fi
+  if [ ! -d "$wt_path" ]; then
+    note "$wt_path" "skip" "worktree directory already gone"
+    return 0
+  fi
+  if worktree_recently_active "$wt_path" "$idle_minutes"; then
+    retained=$((retained + 1))
+    note "$wt_path" "skip" "worktree active within ${idle_minutes}m; a live session may own it"
+    return 0
+  fi
+
+  state="$(worktree_content_state "$wt_path" "$branch_ref" "$history_scan_limit")"
+
+  if [ "$dry_run" -eq 1 ]; then
+    retained=$((retained + 1))
+    note "$wt_path" "would-release" "$state worktree"
+    return 0
+  fi
+
+  if [ "$state" = "unique" ]; then
+    salvage_ref="$(worktree_salvage_content "$wt_path" "$label-$(safe_label_suffix "$wt_path")" "$branch_ref" || true)"
+    if [ -z "$salvage_ref" ]; then
+      retained=$((retained + 1))
+      note "$wt_path" "skip" "unique content could not be salvaged"
+      return 0
+    fi
+    salvaged=$((salvaged + 1))
+  fi
+
+  if git -C "$repo_root" worktree remove --force "$wt_path" >/dev/null 2>&1; then
+    released=$((released + 1))
+    note "$wt_path" "released" "${state}${salvage_ref:+ salvaged to $salvage_ref}"
+  else
+    retained=$((retained + 1))
+    note "$wt_path" "skip" "worktree remove failed${salvage_ref:+; content salvaged to $salvage_ref}"
+  fi
+}
+
+wt_path=""
+wt_branch=""
+flush_worktree() {
+  if [ -n "$wt_path" ] && [ -n "$wt_branch" ]; then
+    release_worktree "$wt_path" "$wt_branch"
+  fi
+  wt_path=""
+  wt_branch=""
+}
+while IFS= read -r line; do
+  case "$line" in
+    worktree\ *) flush_worktree; wt_path="${line#worktree }" ;;
+    branch\ *) wt_branch="${line#branch }" ;;
+    "") flush_worktree ;;
+  esac
+done < "$worktrees"
+flush_worktree
+
+if [ "$released" -gt 0 ]; then
+  git -C "$repo_root" worktree prune
+fi
+
+branch_action="retained"
+branch_reason="branch left in place"
+if ! git -C "$repo_root" rev-parse --verify --quiet "$branch_ref" >/dev/null 2>&1; then
+  branch_reason="branch does not exist"
+elif [ "$dry_run" -eq 1 ]; then
+  branch_reason="dry run makes no branch decision"
+elif [ "$retained" -gt 0 ]; then
+  branch_reason="worktrees still carry the branch"
+else
+  worktree_branch_merged "$repo_root" "$base_branch" "$branch_ref"
+  case "$?" in
+    0)
+      if git -C "$repo_root" branch -D "$branch_name" >/dev/null 2>&1; then
+        branch_action="deleted"
+        branch_reason="merged into ${base_branch}"
+      else
+        branch_reason="merged into ${base_branch} but delete failed"
+      fi
+      ;;
+    1) branch_reason="not merged into ${base_branch}; the branch is the archive" ;;
+    *) branch_reason="merge status undetermined; refusing to delete" ;;
+  esac
+fi
+
+if [ "$json" -eq 1 ]; then
+  printf '{"branch":"%s","dry_run":%s,"released":%s,"salvaged":%s,"retained":%s,"branch_action":"%s","branch_reason":"%s"}\n' \
+    "$branch_name" "$([ "$dry_run" -eq 1 ] && echo true || echo false)" \
+    "$released" "$salvaged" "$retained" "$branch_action" "$branch_reason"
+else
+  for line in ${report[@]+"${report[@]}"}; do
+    printf '%s\n' "$line"
+  done
+  echo "drain-release-worktrees summary:"
+  echo "  branch=$branch_name"
+  echo "  dry_run=$([ "$dry_run" -eq 1 ] && echo true || echo false)"
+  echo "  released=$released"
+  echo "  salvaged=$salvaged"
+  echo "  retained=$retained"
+  echo "  branch_action=$branch_action ($branch_reason)"
+fi
+
+exit 0
