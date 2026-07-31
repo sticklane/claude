@@ -1,5 +1,4 @@
 Priority: P0
-Breakdown-ready: false
 
 # Verification machinery integrity
 
@@ -34,10 +33,16 @@ Fix the three causes rather than the nine symptoms.
 
 Liveness becomes one shared helper in `bin/lib/worktree-classify.sh` that asks
 the runtime's session inventory first (`claude agents --json`; `list_agents`
-under Codex) and falls back to mtime only when that inventory is unavailable,
-saying so. Both `bin/janitor` and `bin/drain-release-worktrees` call it, which
-also removes their incompatible windows — 1440 minutes and 5 minutes today for
-the same question.
+under Codex). It returns three values, never two: **live**, **not-live**, and
+**unknown**. When the inventory cannot be consulted the helper still reads
+mtime, but the result it returns is `unknown` — the mtime reading is reported
+as supporting detail, never promoted to a confident not-live. Both
+`bin/janitor` and `bin/drain-release-worktrees` call it, which also removes
+their incompatible windows — 1440 minutes and 5 minutes today for the same
+question. Both callers treat `unknown` as live and skip, because the
+destructive action is removal: the cost of skipping a dead worktree is one
+stale directory, and the cost of releasing a live one is another session's
+work.
 
 Test isolation follows a pattern this repo already has but applies
 inconsistently: `tests/test_sync_workflows.sh` and `tests/test_session_claims.sh`
@@ -64,18 +69,41 @@ requirement to that issue rather than duplicating it.
    `.claude/rules/human-blockers.md` already requires of blocker probes.
 2. **R2**: `bin/janitor` and `bin/drain-release-worktrees` both decide liveness
    through R1's function. Neither computes its own idle window; a single
-   default lives with the helper.
-3. **R3**: a worktree whose branch was just gated by the calling process is not
-   reported live on that basis alone. Concretely: releasing a branch
-   immediately after running the canonical gate inside its worktree releases
-   it, which is the `agentic-j7rw` failure.
+   default lives with the helper. **Both callers treat `unknown` as live and
+   skip.** Removal is the destructive action, so an undecidable answer must
+   never authorize it.
+3. **R3**: when the session inventory IS successfully consulted and reports no
+   owning session, a fresh mtime does not by itself make a worktree live —
+   that combination releases it. This is the `agentic-j7rw` failure, where
+   drain runs the canonical gate inside a worktree and the gate's own writes
+   then read as a live owner. **R3 applies only on a successful inventory
+   consult**; when the inventory is unavailable the result is `unknown` and R2
+   governs, so mtime is never discounted while it is the only evidence
+   available.
+   The mechanism is a caller-passed exclusion, not inference: the caller that
+   just ran the gate passes its own process group to the helper, and the
+   helper disregards mtime changes attributable to it. A worker must not
+   substitute a pre-gate mtime baseline, a marker file, or a time window —
+   those are different failure modes and this requirement names one.
 4. **R4**: `tests/test_status_cutover.sh` no longer reads the live bd database.
    It compares against a fixture or a single snapshot taken inside the test, so
    a concurrent `bd` write cannot change its verdict.
 5. **R5**: a lint refuses a test suite that reads shared machine or repository
    state — the live bd database, a machine-wide `pgrep -f`/`pkill -f`, or the
-   repository's real `.beads/`, worktrees, or `HUMAN.md` — unless that suite is
-   marked `serial` in its inventory row with a stated reason.
+   repository's real `.beads/`, worktrees, or `HUMAN.md`.
+   The `serial` inventory marking is **not** an exemption for machine-wide
+   signal patterns (`pkill -f`, `pgrep -f`): `serial` only orders suites within
+   a single `scripts/check.sh` run, while a machine-wide signal reaches a
+   concurrent drain worker or another session entirely, so it does not make
+   that class safe. `serial` may exempt only live-bd reads, and only with a
+   stated reason.
+   The lint is registered in the test inventory so `scripts/check.sh` runs it,
+   following the pattern `bin/check-token-discipline` uses via
+   `tests/test_check_token_discipline.sh`. A lint that exists but never
+   executes does not satisfy this requirement.
+   `tests/test_status_cutover.sh` and `tests/test_human_blockers.sh` are
+   isolated to fixtures, not merely marked — they are the two suites whose
+   failures were measured on 2026-07-30.
 6. **R6**: the lint itself demonstrably fails. It exits nonzero against a
    deliberately non-isolated fixture suite, proving it can detect the pattern
    rather than merely running.
@@ -84,15 +112,23 @@ requirement to that issue rather than duplicating it.
    fragment-supersedes-BASELINE path it already allows.
 8. **R8**: the test inventory gains a retirement value in its disposition
    vocabulary, so a deliberately removed test is representable without deleting
-   its row and its fragment.
+   its row and its fragment. `scripts/check.sh` dispatches on that value: a
+   retired row is **not executed and not reported as a failure**, and its
+   absent file is not a "inventoried test missing" error. Adding the value to
+   the vocabulary without the runtime branch leaves a retired test still being
+   run.
 9. **R9**: every pin or freeze diagnostic names its remedy. The git-blob-pin
    mismatch says the fragment must be introduced in final form and the branch
    rebuilt; the frozen-content-drift diagnostic says which supersession path
    applies.
 10. **R10**: bd issue `agentic-nac2` (`bin/spec-gate`) carries a recorded
-    requirement that a criterion is accepted only when it demonstrably fails
-    against a deliberately broken target. This spec does not implement
-    `spec-gate`; it records the requirement on that issue.
+    requirement, in exactly this sentence so a check can compare against it:
+
+    > A criterion is accepted only when it demonstrably fails against a
+    > deliberately broken target.
+
+    This spec does not implement `spec-gate`; it records that sentence on that
+    issue.
 
 ## Out of scope
 
@@ -120,14 +156,15 @@ Anchor checks run against on-disk state on 2026-07-30 and recorded inline.
 - [ ] A2 (cheap): `bash tests/test_worktree_liveness.sh` — passes, asserting the runtime inventory is consulted before any mtime read, and that an unavailable inventory yields the third "unknown" result rather than "not live". Covers R1. (L2)
 - [ ] A3 (cheap): `grep -c 'idle_minutes=' bin/drain-release-worktrees bin/janitor` — 0 in both. Each declares its own default today, verified 2026-07-30 (`bin/drain-release-worktrees:36` sets `idle_minutes=5`; `bin/janitor` carries `1440`). Covers R2. (L0)
 - [ ] A4 (cheap): `bash tests/test_worktree_liveness.sh` — includes a case that gates a branch inside its worktree, then releases it, and asserts the worktree is removed. Covers R3, the `agentic-j7rw` failure. (L2)
-- [ ] A5 (cheap): `bash tests/test_status_cutover.sh` — passes while a concurrent `bd create` runs against the live database. Covers R4. (L2)
-- [ ] A6 (cheap): `bash bin/check-test-isolation` — exits 0 against the repository's own suites. File absent today, verified 2026-07-30. Covers R5. (L2)
-- [ ] A7 (cheap): `bash tests/test_check_test_isolation.sh` — passes, and includes a case asserting the lint exits NONZERO against a fixture suite that reads live bd and a fixture suite that issues a machine-wide `pkill -f`. Covers R6 — this is the prove-it-can-fail property, so a lint that always exits 0 fails this criterion. (L2)
+- [ ] A5 (cheap): `bash bin/check-test-isolation tests/test_status_cutover.sh` — exits 0, proving the suite no longer reaches the live database. Deterministic by construction: it asserts the absence of a live-bd read rather than that one concurrent write happened to be survived, because a timing race can pass by luck and this spec's own subject is checks that pass without verifying. Covers R4. (L2)
+- [ ] A6 (cheap): `bash bin/check-test-isolation` — exits 0 against the repository's own suites, **and** `grep -c '"serial": true' tests/inventory/*.json` returns no more than 2 (today: 1, verified 2026-07-30 — only `test_agentic_latency.sh`). The second clause exists because the first is otherwise satisfiable by marking every offending suite serial instead of isolating it. File absent today, verified 2026-07-30. Covers R5. (L2)
+- [ ] A7 (cheap): `bash tests/test_check_test_isolation.sh` — passes, and includes a case asserting the lint exits NONZERO against a fixture suite that reads live bd and a fixture suite that issues a machine-wide `pkill -f`, and that marking the `pkill` fixture `serial` does NOT silence it. Covers R6 — this is the prove-it-can-fail property, so a lint that always exits 0 fails this criterion. (L2)
+- [ ] A7b (cheap): `grep -c 'check-test-isolation' tests/inventory/*.json` — at least 1, so `scripts/check.sh` actually runs the lint. Phrase absent today, verified 2026-07-30 (`grep -c` → 0). Covers R5's registration clause; without it A13 is green while the lint never executes. (L1)
 - [ ] A8 (cheap): `bash tests/test_inventory_supersession.sh` — passes, asserting a fragment supersedes an identity classified in another fragment, and that a genuine duplicate identity with no supersession marker still errors. Covers R7. (L2)
 - [ ] A9 (cheap): `bash tests/test_check_inventory.sh` — passes, including a case that retires a test through the new disposition without deleting its row. Covers R8. (L2)
 - [ ] A10 (cheap): `python3 scripts/inventory-core-surface.py --root . --check specs/toolkit-core-simplification/BASELINE.json` — exits 0, and the repo's existing inventories remain valid under R7's change. **This criterion already passes today (verified 2026-07-30, exit 0) and is deliberately a regression guard, not a new bar**: R7 loosens a duplicate-identity error, and the risk it carries is that existing inventories stop validating. Stated explicitly so it is not mistaken for evidence of new work — the same annotation discipline `docs/memory/anchored-acceptance-criteria.md` requires of any criterion whose expected result matches today's. (L2)
-- [ ] A11 (cheap): `bash tests/test_inventory_diagnostics.sh` — passes, asserting the git-blob-pin mismatch and frozen-content-drift diagnostics each contain a remedy clause naming the action to take. Covers R9. (L2)
-- [ ] A12 (cheap): `bd show agentic-nac2 --json` — its description or a comment records the prove-it-can-fail requirement verbatim. Covers R10. (L1; depth ceiling: this spec deliberately does not implement `spec-gate`, so the behavioural complement is `agentic-nac2`'s own acceptance.)
+- [ ] A11 (cheap): `bash tests/test_inventory_diagnostics.sh` — passes, asserting the git-blob-pin mismatch text contains `introduced in final form` and the frozen-content-drift text names its supersession path. Asserting the specific phrases, not "a remedy clause", because any string satisfies the latter. Covers R9. (L2)
+- [ ] A12 (cheap): `bd show agentic-nac2 --json | grep -c 'demonstrably fails against a deliberately broken target'` — returns at least 1, matching R10's quoted sentence exactly. The sentence is pinned in R10 so this check can decide; "records it verbatim" with no canonical text lets two workers write two sentences and both self-certify. Covers R10. (L1; depth ceiling: this spec deliberately does not implement `spec-gate`, so the behavioural complement is `agentic-nac2`'s own acceptance.)
 - [ ] A13 (cheap): `bash scripts/check.sh` — green, 0 FAIL lines, run with no concurrent `bd` writes. End-to-end.
 
 ## Open questions
