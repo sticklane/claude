@@ -1,0 +1,12 @@
+{
+  "fragment": "drain-release-worktrees",
+  "schema_version": 1,
+  "tests": [
+    {
+      "disposition": "retain",
+      "path": "tests/test_drain_release_worktrees.sh",
+      "runner": "bash",
+      "serial": false
+    }
+  ]
+}

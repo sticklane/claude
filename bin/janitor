@@ -2,6 +2,10 @@
 # janitor: reclaim stale session state and orchestration artifacts for swarm hygiene.
 set -u
 
+janitor_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib"
+# shellcheck source=lib/worktree-classify.sh
+. "$janitor_lib_dir/worktree-classify.sh"
+
 usage() {
   cat <<'USAGE'
 Usage: janitor [--dry-run] [--scope all|claims|drain|handoff] [--handoff-stale-days N] [--json]
@@ -150,44 +154,10 @@ age_days = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seco
 PY
 }
 
-detect_base_branch() {
-  if base_ref=$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null); then
-    echo "${base_ref#refs/remotes/}"
-    return 0
-  fi
-  for candidate in origin/main origin/master main master; do
-    if git rev-parse --verify --quiet "$candidate" >/dev/null 2>&1; then
-      echo "$candidate"
-      return 0
-    fi
-  done
-  return 1
-}
-
-base_branch="$(detect_base_branch || true)"
+base_branch="$(worktree_detect_base_branch . || true)"
 
 branch_merge_status() {
-  local branch_ref="$1"
-  local ahead_count
-
-  if [ -z "$base_branch" ]; then
-    return 2
-  fi
-  if ! git rev-parse --verify --quiet "$branch_ref" >/dev/null 2>&1; then
-    return 2
-  fi
-  if ! git rev-parse --verify --quiet "$base_branch" >/dev/null 2>&1; then
-    return 2
-  fi
-
-  ahead_count="$(git rev-list --left-right --count "$base_branch...$branch_ref" 2>/dev/null | awk '{print $2}' || true)"
-  if [ -z "$ahead_count" ]; then
-    return 2
-  fi
-  if [ "$ahead_count" -eq 0 ]; then
-    return 0
-  fi
-  return 1
+  worktree_branch_merged . "$base_branch" "$1"
 }
 
 is_orchestration_branch() {
@@ -333,39 +303,7 @@ if [ "$scope" = "all" ] || [ "$scope" = "drain" ]; then
   worktree_idle_minutes="${JANITOR_WORKTREE_IDLE_MINUTES:-1440}"
 
   recently_active() {
-    local wt_path="$1"
-    python3 - "$wt_path" "$worktree_idle_minutes" <<'PY'
-import os
-import sys
-import time
-
-path, minutes = sys.argv[1], float(sys.argv[2])
-gitlink = os.path.join(path, ".git")
-targets = [path, gitlink]
-gitdir = None
-if os.path.isdir(gitlink):
-  gitdir = gitlink
-elif os.path.isfile(gitlink):
-  try:
-    with open(gitlink, encoding="utf-8") as handle:
-      for line in handle:
-        if line.startswith("gitdir:"):
-          gitdir = line.split(":", 1)[1].strip()
-          break
-  except OSError:
-    gitdir = None
-if gitdir:
-  if not os.path.isabs(gitdir):
-    gitdir = os.path.join(path, gitdir)
-  targets += [gitdir, os.path.join(gitdir, "HEAD"), os.path.join(gitdir, "index")]
-newest = 0.0
-for target in targets:
-  try:
-    newest = max(newest, os.stat(target).st_mtime)
-  except OSError:
-    continue
-raise SystemExit(0 if (time.time() - newest) < minutes * 60.0 else 1)
-PY
+    worktree_recently_active "$1" "$worktree_idle_minutes"
   }
 
   is_orchestrator_location() {
@@ -378,38 +316,11 @@ PY
   }
 
   content_state() {
-    local wt_path="$1" rev="$2" commit
-    if [ -z "$(git -C "$wt_path" status --porcelain)" ]; then
-      echo clean
-      return
-    fi
-    if [ -z "$(git -C "$wt_path" ls-files --others --exclude-standard)" ]; then
-      while IFS= read -r commit; do
-        [ -n "$commit" ] || continue
-        if git -C "$wt_path" diff --quiet "$commit" 2>/dev/null; then
-          echo reconstructible
-          return
-        fi
-      done < <(git -C "$wt_path" rev-list --max-count="$history_scan_limit" "$rev" 2>/dev/null)
-    fi
-    echo unique
+    worktree_content_state "$1" "$2" "$history_scan_limit"
   }
 
   salvage_content() {
-    local wt_path="$1" label="$2" parent="$3" index tree commit
-    index="$(mktemp -u)"
-    GIT_INDEX_FILE="$index" git -C "$wt_path" add -A >/dev/null 2>&1 || { rm -f "$index"; return 1; }
-    tree="$(GIT_INDEX_FILE="$index" git -C "$wt_path" write-tree 2>/dev/null)"
-    rm -f "$index"
-    [ -n "$tree" ] || return 1
-    if [ -n "$parent" ] && git -C "$wt_path" rev-parse --verify --quiet "$parent" >/dev/null 2>&1; then
-      commit="$(git -C "$wt_path" commit-tree "$tree" -p "$parent" -m "janitor salvage of $label" 2>/dev/null)"
-    else
-      commit="$(git -C "$wt_path" commit-tree "$tree" -m "janitor salvage of $label" 2>/dev/null)"
-    fi
-    [ -n "$commit" ] || return 1
-    git branch --force "salvage/$label" "$commit" >/dev/null 2>&1 || return 1
-    printf 'salvage/%s\n' "$label"
+    worktree_salvage_content "$1" "$2" "$3"
   }
 
   mark_worktree_skipped() {
