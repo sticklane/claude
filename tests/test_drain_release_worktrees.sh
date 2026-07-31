@@ -49,6 +49,16 @@ run_release() { # run_release <repo> [args…]
   (cd "$repo" && bash "$RELEASE" "$@" 2>&1)
 }
 
+# Ages every mtime the shared idle probe reads, so a fixture stands in for a
+# worktree no session has touched. Without this a just-built fixture looks
+# live to the default idle window.
+backdate_worktree() { # backdate_worktree <worktree>
+  local wt="$1" gitdir stamp=200001010000
+  gitdir="$(git -C "$wt" rev-parse --absolute-git-dir)"
+  touch -t "$stamp" "$gitdir/HEAD" "$gitdir/index" "$wt/.git" 2>/dev/null || true
+  touch -t "$stamp" "$gitdir" "$wt" 2>/dev/null || true
+}
+
 # --- a merged branch carrying TWO worktrees releases both --------------------
 # This is the duplicate that bin/janitor refuses with "branch checked out by
 # another worktree", which is why drain needs its own release step.
@@ -60,7 +70,10 @@ commit_in "$DUP_WT/first" "worker output" "worker output"
 git -C "$DUP" worktree add -q --detach "$DUP_WT/second" main
 git -C "$DUP_WT/second" switch -q --ignore-other-worktrees drain/agentic-1111
 git -C "$DUP" merge -q --no-ff -m "merge worker branch" drain/agentic-1111
+backdate_worktree "$DUP_WT/first"
+backdate_worktree "$DUP_WT/second"
 
+# No flags: the invocation /drain's SKILL.md step 3 prescribes.
 DUP_OUT="$(run_release "$DUP" drain/agentic-1111)"; DUP_RC=$?
 assert "duplicate worktrees: release exits 0" "$(is "$DUP_RC" 0)"
 assert "duplicate worktrees: bin/drain-release-worktrees removes the first worktree on the branch" \
@@ -78,6 +91,7 @@ git -C "$UNIQ" worktree add -q -b drain/agentic-2222 "$UNIQ_WT/only" main
 commit_in "$UNIQ_WT/only" "committed work" "committed work"
 printf 'unique-payload\n' > "$UNIQ_WT/only/file.txt"
 printf 'untracked-payload\n' > "$UNIQ_WT/only/extra.txt"
+backdate_worktree "$UNIQ_WT/only"
 
 UNIQ_OUT="$(run_release "$UNIQ" drain/agentic-2222)"; UNIQ_RC=$?
 UNIQ_REF="$(git -C "$UNIQ" for-each-ref --format='%(refname)' 'refs/heads/salvage/*' | head -n 1)"
@@ -112,6 +126,7 @@ ORDER_WT="$ORDER/.claude/worktrees"
 git -C "$ORDER" worktree add -q -b drain/agentic-4444 "$ORDER_WT/only" main
 commit_in "$ORDER_WT/only" "committed work" "committed work"
 printf 'unsalvaged-payload\n' > "$ORDER_WT/only/file.txt"
+backdate_worktree "$ORDER_WT/only"
 ORDER_OUT="$(cd "$ORDER" && PATH="$SHIM:$PATH" bash "$RELEASE" drain/agentic-4444 2>&1)"; ORDER_RC=$?
 ORDER_REF="$(git -C "$ORDER" for-each-ref --format='%(refname)' 'refs/heads/salvage/*' | head -n 1)"
 assert "salvage ordering: release exits 0 when a removal fails" "$(is "$ORDER_RC" 0)"
@@ -138,11 +153,24 @@ git -C "$LIVE" worktree add -q -b drain/agentic-3333 "$LIVE_WT/busy" main
 commit_in "$LIVE_WT/busy" "live worker output" "live worker output"
 git -C "$LIVE" merge -q --no-ff -m "merge live branch" drain/agentic-3333
 touch "$LIVE_WT/busy"
-LIVE_OUT="$(run_release "$LIVE" --idle-minutes 60 drain/agentic-3333)"; LIVE_RC=$?
+# No flags again: the protection has to hold in the shipped invocation, not
+# only when a caller remembers to ask for it.
+LIVE_OUT="$(run_release "$LIVE" drain/agentic-3333)"; LIVE_RC=$?
 assert "live session: release exits 0" "$(is "$LIVE_RC" 0)"
-assert "live session: an active worktree is never removed" "$(present "$LIVE_WT/busy")"
+assert "live session: an active worktree is never removed by the default invocation" \
+  "$(present "$LIVE_WT/busy")"
 assert "live session: the branch is retained while a live worktree still holds it" \
   "$(ref_present "$LIVE" refs/heads/drain/agentic-3333)"
+
+OPT_OUT="$(run_release "$LIVE" --idle-minutes 0 drain/agentic-3333)"; OPT_RC=$?
+assert "idle opt-out: --idle-minutes 0 exits 0" "$(is "$OPT_RC" 0)"
+assert "idle opt-out: --idle-minutes 0 releases the worktree the default protected" \
+  "$(absent "$LIVE_WT/busy")"
+
+# --- a flag missing its operand errors instead of looping --------------------
+MISSING_OUT="$(cd "$LIVE" && timeout 10 bash "$RELEASE" --idle-minutes 2>&1)"; MISSING_RC=$?
+assert "missing operand: --idle-minutes without a value exits with the usage code" \
+  "$(is "$MISSING_RC" 64)"
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

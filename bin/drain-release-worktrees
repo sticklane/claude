@@ -20,8 +20,11 @@ Usage: drain-release-worktrees [--dry-run] [--idle-minutes N] [--json] <branch>
 <branch>            Branch to release, as drain/agentic-xxxx or refs/heads/...
 --dry-run           Report what would happen and change nothing
 --idle-minutes N    Skip a worktree touched within the last N minutes
-                    (default 0: no idle skip, because drain calls this only
-                    after collecting the worker's verdict and merging)
+                    (default 5; 0 disables the skip). Drain reaches close-out
+                    only after the review barrier, the final gate, and the
+                    merge, so a worktree written to inside that window is
+                    being written by something other than the worker whose
+                    verdict drain just collected.
 --json              Print a machine-readable summary
 --help              Print this help
 USAGE
@@ -30,12 +33,16 @@ USAGE
 
 dry_run=0
 json=0
-idle_minutes=0
+idle_minutes=5
 branch=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --dry-run) dry_run=1; shift ;;
-    --idle-minutes) idle_minutes="${2:-}"; shift 2 ;;
+    --idle-minutes)
+      [ "$#" -ge 2 ] || { echo "drain-release-worktrees: --idle-minutes needs a value" >&2; usage; }
+      idle_minutes="$2"
+      shift 2
+      ;;
     --json) json=1; shift ;;
     --help|-h) usage ;;
     -*) echo "drain-release-worktrees: unknown argument: $1" >&2; usage ;;
@@ -99,7 +106,7 @@ release_worktree() { # release_worktree <path> <branch_ref>
     note "$wt_path" "skip" "worktree directory already gone"
     return 0
   fi
-  if [ "$idle_minutes" -gt 0 ] && worktree_recently_active "$wt_path" "$idle_minutes"; then
+  if worktree_recently_active "$wt_path" "$idle_minutes"; then
     retained=$((retained + 1))
     note "$wt_path" "skip" "worktree active within ${idle_minutes}m; a live session may own it"
     return 0
