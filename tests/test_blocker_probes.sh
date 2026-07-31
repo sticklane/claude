@@ -42,11 +42,6 @@ run_probe() {
 }
 
 plant_determinate_home() {
-  # A HOME under which every shipped probe answers definitely — never 3. The
-  # argv-refusal cases below run against it so that "refused the argument"
-  # (exit 3) is distinguishable from "ignored the argument and answered
-  # anyway"; under an unreachable HOME both look like exit 3 and the
-  # assertion would hold against a probe that never reads argv at all.
   local home="$TMP/determinate"
   mkdir -p "$home/ynab-mcp-new/.beads"
   printf '%s\n' '{"id":"ynab-1"}' >"$home/ynab-mcp-new/.beads/issues.jsonl"
@@ -103,10 +98,6 @@ for probe in ${probes[@]+"${probes[@]}"}; do
     nope "$name matches the clause name grammar"
   fi
 
-  # An unexpected argument is refused, never acted on: the probe reports
-  # "cannot determine" (3) rather than guessing that the blocker dissolved.
-  # Both cases run under a HOME the probe answers definitely from, so a probe
-  # that ignored argv would return that definite answer and fail them.
   baseline="$(run_probe "$probe" "$determinate")"
   if [ "$baseline" = 3 ]; then
     nope "$name answers definitely under the determinate HOME — got 3, so the argv-refusal cases below cannot tell refusal from indifference; extend plant_determinate_home for $name"
@@ -167,14 +158,13 @@ if [ -x "$EXPORT_PROBE" ]; then
     nope "ynab-mcp-new-bd-export reports stale on a populated export — got exit $status"
   fi
 
-  # The probe reads; it must not repair, rewrite, or extend the checkout.
-  census_before="$(cd "$populated" && find . -type f | sort)"
+  census_before="$(cd "$populated" && find . -type f -exec shasum -a 256 {} + | sort)"
   run_probe "$EXPORT_PROBE" "$populated" >/dev/null
-  census_after="$(cd "$populated" && find . -type f | sort)"
+  census_after="$(cd "$populated" && find . -type f -exec shasum -a 256 {} + | sort)"
   if [ "$census_before" = "$census_after" ]; then
-    ok "ynab-mcp-new-bd-export leaves the target checkout unchanged"
+    ok "ynab-mcp-new-bd-export leaves every target-checkout file byte-identical"
   else
-    nope "ynab-mcp-new-bd-export leaves the target checkout unchanged"
+    nope "ynab-mcp-new-bd-export leaves every target-checkout file byte-identical"
   fi
 else
   nope "ynab-mcp-new-bd-export is a shipped executable probe"
