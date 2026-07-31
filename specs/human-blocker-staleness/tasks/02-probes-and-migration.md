@@ -17,6 +17,23 @@ a target checkout is absent. Every open `HUMAN.md` entry carries a probe or
 `none — <reason>`, and `bin/check-human-blockers` exits 0 against it on a
 fresh clone.
 
+The `HUMAN.md` open-entry count bound this task once carried was dropped by
+decision on 2026-07-30, not satisfied: the count is governed by whichever
+blockers genuinely exist, so pinning a number invites the same staleness every
+time anything is filed. Clause coverage, checked in Acceptance, is what this
+task owes instead.
+
+Discovered: `scripts/blocker-probes/ynab-mcp-new-bd-export` cannot be declared
+as a surface-inventory row. `discover_surfaces()`
+(scripts/inventory-core-surface.py:173-230) scans only `.claude/skills`,
+`.claude/agents`, `.claude/rules`, `hooks/`, `.claude/workflows`, `runtimes/`,
+and `agentic/cli.py` — never `scripts/` — so a declared row for that path fails
+the check as a missing non-retired surface. Fragment
+`08-blocker-probe-scripts` registers the probe's contract suite
+(`test:tests/test_blocker_probes.sh`) instead, which is what pins the probe's
+behavior. Teaching the scanner about `scripts/` is separate work owned by
+`scripts/inventory-core-surface.py`, not by this task.
+
 ## Touch
 
 Owns `scripts/blocker-probes/` and `HUMAN.md`. Must NOT edit
@@ -55,10 +72,6 @@ edit `.claude/skills/drain/SKILL.md` (task 03).
 ## Acceptance
 
 - [ ] `bash tests/test_blocker_probes.sh` → exits 0, reports 0 failures. **L2**
-- [ ] The open-entry count bound was dropped by decision on 2026-07-30, not
-      satisfied: the count is governed by whichever blockers genuinely exist,
-      so pinning a number invites the same staleness every time anything is
-      filed. Clause coverage, checked below, is what this task owes.
 - [ ] `bin/check-human-blockers` → exits 0, with its stale and violation
       buckets empty and its still-blocked, unprobed, and unknown buckets
       together listing exactly the surviving entries. **L2**
